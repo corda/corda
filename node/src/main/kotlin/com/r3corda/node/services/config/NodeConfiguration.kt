@@ -131,11 +131,11 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     override val trustStorePassword: String by conf
     override val dataSourceProperties: Properties by conf
     override val devMode: Boolean by conf.getOrElse { false }
-    val networkMapAddress: HostAndPort? = if (conf.hasPath("networkMapAddress")) HostAndPort.fromString(conf.getString("networkMapAddress")) else null
+    val networkMapAddress: HostAndPort? by conf.getOrElse { null }
     val useHTTPS: Boolean by conf
     val artemisAddress: HostAndPort by conf
     val webAddress: HostAndPort by conf
-    val messagingServerAddress: HostAndPort? = if (conf.hasPath("messagingServerAddress")) HostAndPort.fromString(conf.getString("messagingServerAddress")) else null
+    val messagingServerAddress: HostAndPort? by conf.getOrElse { null }
     val extraAdvertisedServiceIds: String by conf
 
     fun createNode(): Node {
@@ -146,7 +146,7 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
             }
         }
         if (networkMapAddress == null) advertisedServices.add(ServiceInfo(NetworkMapService.Type))
-        val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else NodeMessagingClient.makeNetworkMapAddress(networkMapAddress)
+        val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else NodeMessagingClient.makeNetworkMapAddress(networkMapAddress!!)
         return Node(this, networkMapMessageAddress, advertisedServices)
     }
 }
