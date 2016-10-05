@@ -52,19 +52,25 @@ object NotaryProtocol {
             val request = SignRequest(stx, serviceHub.storageService.myLegalIdentity)
             val response = sendAndReceive<Result>(notaryParty, request)
 
-            val notaryResult = validateResponse(response)
-            return notaryResult.sig ?: throw NotaryException(notaryResult.error!!)
+            return validateResponse(response)
         }
 
-        private fun validateResponse(response: UntrustworthyData<Result>): Result {
-            progressTracker.currentStep = VALIDATING
-
-            response.unwrap {
-                if (it.sig != null) validateSignature(it.sig, stx.txBits)
-                else if (it.error is NotaryError.Conflict) it.error.conflict.verified()
-                else if (it.error == null || it.error !is NotaryError)
-                    throw IllegalStateException("Received invalid result from Notary service '$notaryParty'")
-                return it
+        @Throws(NotaryException::class, IllegalStateException::class)
+        private fun validateResponse(response: UntrustworthyData<Result>): DigitalSignature.LegallyIdentifiable {
+            return response.unwrap { notaryResult ->
+                progressTracker.currentStep = VALIDATING
+                when (notaryResult) {
+                    is Result.Success -> {
+                        validateSignature(notaryResult.sig, stx.txBits)
+                        notaryResult.sig
+                    }
+                    is Result.Error -> {
+                        if (notaryResult.error is NotaryError.Conflict)
+                            notaryResult.error.conflict.verified()
+                        throw NotaryException(notaryResult.error)
+                    }
+                    else -> throw IllegalStateException("Received invalid result from Notary service '$notaryParty'")
+                }
             }
         }
 
@@ -98,9 +104,9 @@ object NotaryProtocol {
                 commitInputStates(wtx, reqIdentity)
 
                 val sig = sign(stx.txBits)
-                Result.noError(sig)
+                Result.Success(sig)
             } catch(e: NotaryException) {
-                Result.withError(e.error)
+                Result.Error(e.error)
             }
 
             send(otherSide, result)
@@ -144,11 +150,9 @@ object NotaryProtocol {
     /** TODO: The caller must authenticate instead of just specifying its identity */
     data class SignRequest(val tx: SignedTransaction, val callerIdentity: Party)
 
-    data class Result private constructor(val sig: DigitalSignature.LegallyIdentifiable?, val error: NotaryError?) {
-        companion object {
-            fun withError(error: NotaryError) = Result(null, error)
-            fun noError(sig: DigitalSignature.LegallyIdentifiable) = Result(sig, null)
-        }
+    sealed class Result {
+        class Error(val error: NotaryError): Result()
+        class Success(val sig: DigitalSignature.LegallyIdentifiable) : Result()
     }
 
 }
