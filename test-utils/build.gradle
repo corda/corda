@@ -1,5 +1,6 @@
 apply plugin: 'kotlin'
 apply plugin: QuasarPlugin
+apply plugin: DefaultPublishTasks
 
 repositories {
     mavenLocal()
@@ -46,3 +47,15 @@ dependencies {
 }
 
 quasarScan.dependsOn('classes', ':core:classes', ':contracts:classes')
+
+publishing {
+    publications {
+        testutils(MavenPublication) {
+            from components.java
+            artifactId 'test-utils'
+
+            artifact sourceJar
+            artifact javadocJar
+        }
+    }
+}
