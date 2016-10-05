@@ -40,6 +40,8 @@ import com.r3corda.node.services.network.NetworkMapService.RegistrationResponse
 import com.r3corda.node.services.network.NodeRegistration
 import com.r3corda.node.services.network.PersistentNetworkMapService
 import com.r3corda.node.services.persistence.*
+import com.r3corda.node.services.schema.HibernateObserver
+import com.r3corda.node.services.schema.NodeSchemaService
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.services.transactions.SimpleNotaryService
@@ -105,6 +107,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
         override val identityService: IdentityService get() = identity
         override val schedulerService: SchedulerService get() = scheduler
         override val clock: Clock = platformClock
+        override val schemaService: SchemaService get() = schemas
 
         // Internal only
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
@@ -147,6 +150,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
     lateinit var api: APIServer
     lateinit var scheduler: SchedulerService
     lateinit var protocolLogicFactory: ProtocolLogicRefFactory
+    lateinit var schemas: SchemaService
     val customServices: ArrayList<Any> = ArrayList()
     protected val runOnStop: ArrayList<Runnable> = ArrayList()
     lateinit var database: Database
@@ -190,6 +194,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
             checkpointStorage = storageServices.second
             netMapCache = InMemoryNetworkMapCache()
             net = makeMessagingService()
+            schemas = makeSchemaService()
             vault = makeVaultService()
 
             identity = makeIdentityService()
@@ -237,6 +242,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
             // Add vault observers
             CashBalanceAsMetricsObserver(services)
             ScheduledActivityObserver(services)
+            HibernateObserver(services)
 
             checkpointStorage.forEach {
                 isPreviousCheckpointsPresent = true
@@ -406,6 +412,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
 
     // TODO: sort out ordering of open & protected modifiers of functions in this class.
     protected open fun makeVaultService(): VaultService = NodeVaultService(services)
+
+    protected open fun makeSchemaService(): SchemaService = NodeSchemaService()
 
     open fun stop() {
         // TODO: We need a good way of handling "nice to have" shutdown events, especially those that deal with the

@@ -25,7 +25,7 @@ open class OpaqueBytes(val bits: ByteArray) {
     }
 
     override fun hashCode() = Arrays.hashCode(bits)
-    override fun toString() = "[" + BaseEncoding.base16().encode(bits) + "]"
+    override fun toString() = "[" + bits.toHexString() + "]"
 
     val size: Int get() = bits.size
 
@@ -34,3 +34,5 @@ open class OpaqueBytes(val bits: ByteArray) {
 }
 
 fun ByteArray.opaque(): OpaqueBytes = OpaqueBytes(this)
+fun ByteArray.toHexString() = BaseEncoding.base16().encode(this)
+fun String.parseAsHex() = BaseEncoding.base16().decode(this)

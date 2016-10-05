@@ -6,13 +6,21 @@ import com.r3corda.contracts.asset.InsufficientBalanceException
 import com.r3corda.contracts.asset.sumCashBy
 import com.r3corda.contracts.clause.AbstractIssue
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.*
+import com.r3corda.core.contracts.clauses.AnyComposition
+import com.r3corda.core.contracts.clauses.Clause
+import com.r3corda.core.contracts.clauses.GroupClauseVerifier
+import com.r3corda.core.contracts.clauses.verifyClause
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.crypto.toBase58String
 import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.random63BitValue
+import com.r3corda.core.schemas.MappedSchema
+import com.r3corda.core.schemas.PersistentState
+import com.r3corda.core.schemas.QueryableState
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.Emoji
+import com.r3corda.schemas.CommercialPaperSchemaV1
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -58,7 +66,7 @@ class CommercialPaper : Contract {
             override val owner: PublicKey,
             val faceValue: Amount<Issued<Currency>>,
             val maturityDate: Instant
-    ) : OwnableState, ICommercialPaperState {
+    ) : OwnableState, QueryableState, ICommercialPaperState {
         override val contract = CP_PROGRAM_ID
         override val participants: List<PublicKey>
             get() = listOf(owner)
@@ -75,6 +83,26 @@ class CommercialPaper : Contract {
         override fun withIssuance(newIssuance: PartyAndReference): ICommercialPaperState = copy(issuance = newIssuance)
         override fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
+
+        /** Object Relational Mapping support. */
+        override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CommercialPaperSchemaV1)
+
+        /** Object Relational Mapping support. */
+        override fun generateMappedObject(schema: MappedSchema): PersistentState {
+            return when (schema) {
+                is CommercialPaperSchemaV1 -> CommercialPaperSchemaV1.PersistentCommericalPaperState(
+                        issuanceParty = this.issuance.party.owningKey.toBase58String(),
+                        issuanceRef = this.issuance.reference.bits,
+                        owner = this.owner.toBase58String(),
+                        maturity = this.maturityDate,
+                        faceValue = this.faceValue.quantity,
+                        currency = this.faceValue.token.product.currencyCode,
+                        faceValueIssuerParty = this.faceValue.token.issuer.party.owningKey.toBase58String(),
+                        faceValueIssuerRef = this.faceValue.token.issuer.reference.bits
+                )
+                else -> throw IllegalArgumentException("Unrecognised schema $schema")
+            }
+        }
     }
 
     interface Clauses {

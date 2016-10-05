@@ -34,6 +34,7 @@ Read on to learn:
    transaction-data-types
    consensus
    messaging
+   persistence
    creating-a-cordapp
    running-the-demos
    node-administration
