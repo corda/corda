@@ -19,8 +19,8 @@ import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.api.AbstractNodeService
+import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
@@ -103,10 +103,17 @@ fun main(args: Array<String>) {
     val directory = Paths.get(baseDirectory, role.name.toLowerCase())
     log.info("Using base demo directory $directory")
 
+
+
     // Override the default config file (which you can find in the file "reference.conf") to give each node a name.
     val config = run {
         val myLegalName = role.legalName
-        NodeConfigurationFromConfig(NodeConfiguration.loadConfig(directory, allowMissingConfig = true, configOverrides = mapOf("myLegalName" to myLegalName)))
+        val configOverrides = mapOf(
+                "myLegalName" to myLegalName,
+                "artemisAddress" to myNetAddr.toString(),
+                "webAddress" to apiNetAddr.toString()
+        )
+        FullNodeConfiguration(NodeConfiguration.loadConfig(directory, allowMissingConfig = true, configOverrides = configOverrides))
     }
 
     // Which services will this instance of the node provide to the network?
@@ -125,7 +132,7 @@ fun main(args: Array<String>) {
 
     // And now construct then start the node object. It takes a little while.
     val node = logElapsedTime("Node startup", log) {
-        Node(myNetAddr, apiNetAddr, config, networkMapId, advertisedServices).setup().start()
+        Node(config, networkMapId, advertisedServices).setup().start()
     }
 
     // What happens next depends on the role. The recipient sits around waiting for a transaction. The sender role
