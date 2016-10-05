@@ -9,7 +9,6 @@ import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.services.messaging.NodeMessagingClient
@@ -327,7 +326,7 @@ class DriverDSL(
             serverAddress: HostAndPort
     ): Future<NodeMessagingClient> {
 
-        val nodeConfiguration = NodeConfigurationFromConfig(
+        val nodeConfiguration = FullNodeConfiguration(
                 NodeConfiguration.loadConfig(
                         baseDirectoryPath = Paths.get(baseDirectory, providedName),
                         allowMissingConfig = true,
@@ -356,7 +355,7 @@ class DriverDSL(
 
     override fun startLocalServer(): Future<ArtemisMessagingServer> {
         val name = "driver-local-server"
-        val config = NodeConfigurationFromConfig(
+        val config = FullNodeConfiguration(
                 NodeConfiguration.loadConfig(
                         baseDirectoryPath = Paths.get(baseDirectory, name),
                         allowMissingConfig = true,

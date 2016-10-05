@@ -23,8 +23,8 @@ import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.internal.Node
+import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
@@ -122,7 +122,7 @@ fun main(args: Array<String>) {
             Role.BUYER -> "Bank A"
             Role.SELLER -> "Bank B"
         }
-        NodeConfigurationFromConfig(NodeConfiguration.loadConfig(directory, allowMissingConfig = true, configOverrides = mapOf("myLegalName" to myLegalName)))
+        FullNodeConfiguration(NodeConfiguration.loadConfig(directory, allowMissingConfig = true, configOverrides = mapOf("myLegalName" to myLegalName)))
     }
 
     // Which services will this instance of the node provide to the network?

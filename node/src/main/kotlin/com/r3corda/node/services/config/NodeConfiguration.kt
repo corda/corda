@@ -124,18 +124,6 @@ fun Config.getProperties(path: String): Properties {
     return props
 }
 
-class NodeConfigurationFromConfig(val config: Config = ConfigFactory.load()) : NodeConfiguration {
-    override val basedir: Path by config
-    override val myLegalName: String by config
-    override val nearestCity: String by config
-    override val emailAddress: String by config
-    override val exportJMXto: String by config
-    override val keyStorePassword: String by config
-    override val trustStorePassword: String by config
-    override val dataSourceProperties: Properties by config
-    override val devMode: Boolean by config.getOrElse { false }
-}
-
 class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     override val basedir: Path by conf
     override val myLegalName: String by conf

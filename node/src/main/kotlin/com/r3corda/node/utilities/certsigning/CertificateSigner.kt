@@ -9,8 +9,8 @@ import com.r3corda.core.crypto.X509Utilities.addOrReplaceKey
 import com.r3corda.core.div
 import com.r3corda.core.minutes
 import com.r3corda.core.utilities.loggerFor
+import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.config.getValue
 import joptsimple.OptionParser
 import java.net.URL
@@ -131,7 +131,7 @@ fun main(args: Array<String>) {
     val configFile = if (cmdlineOptions.has(ParamsSpec.configFileArg)) Paths.get(cmdlineOptions.valueOf(ParamsSpec.configFileArg)) else null
 
     val config = NodeConfiguration.loadConfig(baseDirectoryPath, configFile, allowMissingConfig = true).let { config ->
-        object : NodeConfiguration by NodeConfigurationFromConfig(config) {
+        object : NodeConfiguration by FullNodeConfiguration(config) {
             val certificateSigningService: URL by config
         }
     }
