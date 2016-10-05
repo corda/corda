@@ -1,7 +1,6 @@
 package com.r3corda.node.internal
 
 import com.codahale.metrics.JmxReporter
-import com.google.common.net.HostAndPort
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceInfo
@@ -58,10 +57,8 @@ class ConfigurationException(message: String) : Exception(message)
  * @param clock The clock used within the node and by all protocols etc.
  * @param messagingServerAddr The address of the Artemis broker instance. If not provided the node will run one locally.
  */
-class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
-           override val configuration: FullNodeConfiguration, networkMapAddress: SingleMessageRecipient?,
-           advertisedServices: Set<ServiceInfo>, clock: Clock = NodeClock(),
-           val messagingServerAddr: HostAndPort? = null) : AbstractNode(configuration, networkMapAddress, advertisedServices, clock) {
+class Node(override val configuration: FullNodeConfiguration, networkMapAddress: SingleMessageRecipient?,
+           advertisedServices: Set<ServiceInfo>, clock: Clock = NodeClock()) : AbstractNode(configuration, networkMapAddress, advertisedServices, clock) {
     companion object {
         /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */
         @JvmField
@@ -119,9 +116,9 @@ class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
     private var shutdownThread: Thread? = null
 
     override fun makeMessagingService(): MessagingServiceInternal {
-        val serverAddr = messagingServerAddr ?: {
-            messageBroker = ArtemisMessagingServer(configuration, p2pAddr, services.networkMapCache)
-            p2pAddr
+        val serverAddr = configuration.messagingServerAddress ?: {
+            messageBroker = ArtemisMessagingServer(configuration, configuration.artemisAddress, services.networkMapCache)
+            configuration.artemisAddress
         }()
         val myIdentityOrNullIfNetworkMapService = if (networkMapService != null) services.storageService.myLegalIdentityKey.public else null
         return NodeMessagingClient(configuration, serverAddr, myIdentityOrNullIfNetworkMapService, serverThread,
@@ -177,13 +174,13 @@ class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
             sslContextFactory.setExcludeCipherSuites(".*NULL.*", ".*RC4.*", ".*MD5.*", ".*DES.*", ".*DSS.*")
             sslContextFactory.setIncludeCipherSuites(".*AES.*GCM.*")
             val sslConnector = ServerConnector(server, SslConnectionFactory(sslContextFactory, "http/1.1"), HttpConnectionFactory(httpsConfiguration))
-            sslConnector.port = webServerAddr.port
+            sslConnector.port = configuration.webAddress.port
             server.connectors = arrayOf<Connector>(sslConnector)
         } else {
             val httpConfiguration = HttpConfiguration()
             httpConfiguration.outputBufferSize = 32768
             val httpConnector = ServerConnector(server, HttpConnectionFactory(httpConfiguration))
-            httpConnector.port = webServerAddr.port
+            httpConnector.port = configuration.webAddress.port
             server.connectors = arrayOf<Connector>(httpConnector)
         }
 

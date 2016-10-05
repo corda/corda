@@ -6,7 +6,6 @@ import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.node.internal.Node
-import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.typesafe.config.Config
@@ -18,7 +17,6 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
@@ -133,13 +131,12 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     override val trustStorePassword: String by conf
     override val dataSourceProperties: Properties by conf
     override val devMode: Boolean by conf.getOrElse { false }
+    val networkMapAddress: HostAndPort? = if (conf.hasPath("networkMapAddress")) HostAndPort.fromString(conf.getString("networkMapAddress")) else null
     val useHTTPS: Boolean by conf
     val artemisAddress: HostAndPort by conf
     val webAddress: HostAndPort by conf
     val messagingServerAddress: HostAndPort? = if (conf.hasPath("messagingServerAddress")) HostAndPort.fromString(conf.getString("messagingServerAddress")) else null
-    val networkMapAddress: HostAndPort? = if (conf.hasPath("networkMapAddress")) HostAndPort.fromString(conf.getString("networkMapAddress")) else null
     val extraAdvertisedServiceIds: String by conf
-    val clock: Clock = NodeClock()
 
     fun createNode(): Node {
         val advertisedServices = mutableSetOf<ServiceInfo>()
@@ -150,14 +147,7 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
         }
         if (networkMapAddress == null) advertisedServices.add(ServiceInfo(NetworkMapService.Type))
         val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else NodeMessagingClient.makeNetworkMapAddress(networkMapAddress)
-        return Node(artemisAddress,
-                webAddress,
-                this,
-                networkMapMessageAddress,
-                advertisedServices,
-                clock,
-                messagingServerAddress
-        )
+        return Node(this, networkMapMessageAddress, advertisedServices)
     }
 }
 

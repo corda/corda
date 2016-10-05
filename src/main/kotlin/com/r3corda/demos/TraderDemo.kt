@@ -122,7 +122,12 @@ fun main(args: Array<String>) {
             Role.BUYER -> "Bank A"
             Role.SELLER -> "Bank B"
         }
-        FullNodeConfiguration(NodeConfiguration.loadConfig(directory, allowMissingConfig = true, configOverrides = mapOf("myLegalName" to myLegalName)))
+        val configOverrides = mapOf(
+                "myLegalName" to myLegalName,
+                "artemisAddress" to myNetAddr.toString(),
+                "webAddress" to apiNetAddr.toString()
+        )
+        FullNodeConfiguration(NodeConfiguration.loadConfig(directory, allowMissingConfig = true, configOverrides = configOverrides))
     }
 
     // Which services will this instance of the node provide to the network?
@@ -141,7 +146,7 @@ fun main(args: Array<String>) {
 
     // And now construct then start the node object. It takes a little while.
     val node = logElapsedTime("Node startup", log) {
-        Node(myNetAddr, apiNetAddr, config, networkMapId, advertisedServices).setup().start()
+        Node(config, networkMapId, advertisedServices).setup().start()
     }
 
     // What happens next depends on the role. The buyer sits around waiting for a trade to start. The seller role

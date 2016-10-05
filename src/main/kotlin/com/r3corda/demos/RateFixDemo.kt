@@ -65,14 +65,16 @@ fun main(args: Array<String>) {
             allowMissingConfig = true,
             configOverrides = mapOf(
                     "myLegalName" to "Rate fix demo node",
-                    "basedir" to dir.normalize().toString()
+                    "basedir" to dir.normalize().toString(),
+                    "artemisAddress" to myNetAddr.toString(),
+                    "webAddress" to apiAddr.toString()
             )
     )
 
     val nodeConfiguration = FullNodeConfiguration(config)
 
     val node = logElapsedTime("Node startup") {
-        Node(myNetAddr, apiAddr, nodeConfiguration, networkMapAddr, advertisedServices, DemoClock()).setup().start()
+        Node(nodeConfiguration, networkMapAddr, advertisedServices, DemoClock()).setup().start()
     }
     node.networkMapRegistrationFuture.get()
     val notaryNode = node.services.networkMapCache.notaryNodes[0]

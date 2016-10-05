@@ -318,7 +318,7 @@ private fun setup(params: CliParams.SetupNode): Int {
     }
 
     val configFile = params.dir.resolve("config")
-    val config = loadConfigFile(params.dir, configFile, params.defaultLegalName)
+    val config = loadConfigFile(params.dir, configFile, emptyMap(), params.defaultLegalName)
     if (!Files.exists(params.dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))) {
         createIdentities(config)
     }
@@ -406,7 +406,7 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
             }
 
     val node = logElapsedTime("Node startup", log) {
-        Node(params.networkAddress, params.apiAddress, config, networkMapId, advertisedServices, DemoClock()).setup().start()
+        Node(config, networkMapId, advertisedServices, DemoClock()).setup().start()
     }
 
     return node
@@ -447,15 +447,19 @@ private fun getNodeConfig(cliParams: CliParams.RunNode): FullNodeConfiguration {
     }
 
     val configFile = cliParams.dir.resolve("config")
-    return loadConfigFile(cliParams.dir, configFile, cliParams.defaultLegalName)
+    val configOverrides = mapOf(
+            "artemisAddress" to cliParams.networkAddress.toString(),
+            "webAddress" to cliParams.apiAddress.toString()
+    )
+    return loadConfigFile(cliParams.dir, configFile, configOverrides, cliParams.defaultLegalName)
 }
 
-private fun loadConfigFile(baseDir: Path, configFile: Path, defaultLegalName: String): FullNodeConfiguration {
+private fun loadConfigFile(baseDir: Path, configFile: Path, configOverrides: Map<String, String>, defaultLegalName: String): FullNodeConfiguration {
     if (!Files.exists(configFile)) {
         createDefaultConfigFile(configFile, defaultLegalName)
         log.warn("Default config created at $configFile.")
     }
-    return FullNodeConfiguration(NodeConfiguration.loadConfig(baseDir, configFileOverride = configFile))
+    return FullNodeConfiguration(NodeConfiguration.loadConfig(baseDir, configFileOverride = configFile, configOverrides = configOverrides))
 }
 
 private fun createIdentities(nodeConf: NodeConfiguration) {
