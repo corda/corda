@@ -243,7 +243,6 @@ task installTemplateNodes(dependsOn: 'buildCordaJAR') << {
         filter(org.apache.tools.ant.filters.FixCrLfFilter.class, eol: org.apache.tools.ant.filters.FixCrLfFilter.CrLf.newInstance("lf"))
         into "${buildDir}/nodes"
     }
-
 }
 
 publishing {
@@ -251,7 +250,9 @@ publishing {
         corda(MavenPublication) {
             artifactId 'corda'
 
-            artifact buildCordaJAR
+            artifact buildCordaJAR {
+                classifier ""
+            }
         }
     }
 }
