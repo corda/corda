@@ -34,6 +34,7 @@ apply plugin: 'application'
 apply plugin: 'project-report'
 apply plugin: QuasarPlugin
 apply plugin: 'com.github.ben-manes.versions'
+apply plugin: 'maven-publish'
 
 allprojects {
     apply plugin: 'java'
@@ -251,5 +252,16 @@ task installTemplateNodes(dependsOn: 'buildCordaJAR') << {
         filter(org.apache.tools.ant.filters.FixCrLfFilter.class, eol: org.apache.tools.ant.filters.FixCrLfFilter.CrLf.newInstance("lf"))
         into "${buildDir}/nodes"
     }
+}
 
+publishing {
+    publications {
+        corda(MavenPublication) {
+            artifactId 'corda'
+
+            artifact buildCordaJAR {
+                classifier ""
+            }
+        }
+    }
 }

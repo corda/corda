@@ -1,5 +1,6 @@
 apply plugin: 'kotlin'
 apply plugin: CanonicalizerPlugin
+apply plugin: DefaultPublishTasks
 
 repositories {
     mavenLocal()
@@ -24,6 +25,18 @@ sourceSets {
     test {
         resources {
             srcDir "../config/test"
+        }
+    }
+}
+
+publishing {
+    publications {
+        contracts(MavenPublication) {
+            from components.java
+            artifactId 'contracts'
+
+            artifact sourceJar
+            artifact javadocJar
         }
     }
 }
