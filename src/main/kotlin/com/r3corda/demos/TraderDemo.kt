@@ -46,7 +46,7 @@ import kotlin.test.assertEquals
 
 // TRADING DEMO
 //
-// Please see docs/build/html/running-the-trading-demo.html
+// Please see docs/build/html/running-the-demos.html
 //
 // This program is a simple driver for exercising the two party trading protocol. Until Corda has a unified node server
 // programs like this are required to wire up the pieces and run a demo scenario end to end.
