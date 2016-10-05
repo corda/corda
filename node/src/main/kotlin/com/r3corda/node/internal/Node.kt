@@ -45,7 +45,7 @@ class ConfigurationException(message: String) : Exception(message)
  * A Node manages a standalone server that takes part in the P2P network. It creates the services found in [ServiceHub],
  * loads important data off disk and starts listening for connections.
  *
- * @param configuration This is typically loaded from a .properties file.
+ * @param configuration This is typically loaded from a TypeSafe HOCON configuration file.
  * @param networkMapAddress An external network map service to use. Should only ever be null when creating the first
  * network map service, while bootstrapping a network.
  * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
@@ -111,10 +111,12 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
     private var shutdownThread: Thread? = null
 
     override fun makeMessagingService(): MessagingServiceInternal {
-        val serverAddr = configuration.messagingServerAddress ?: {
-            messageBroker = ArtemisMessagingServer(configuration, configuration.artemisAddress, services.networkMapCache)
-            configuration.artemisAddress
-        }()
+        val serverAddr = with(configuration) {
+            messagingServerAddress ?: {
+                messageBroker = ArtemisMessagingServer(this, artemisAddress, services.networkMapCache)
+                artemisAddress
+            }()
+        }
         val myIdentityOrNullIfNetworkMapService = if (networkMapService != null) services.storageService.myLegalIdentityKey.public else null
         return NodeMessagingClient(configuration, serverAddr, myIdentityOrNullIfNetworkMapService, serverThread,
                 persistenceTx = { body: () -> Unit -> databaseTransaction(database) { body() } })
