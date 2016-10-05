@@ -2,9 +2,11 @@ package com.r3corda.docs
 
 import com.google.common.net.HostAndPort
 import com.r3corda.client.CordaRPCClient
+import com.r3corda.core.transactions.SignedTransaction
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
 import org.graphstream.graph.implementations.SingleGraph
+import rx.Observable
 import java.nio.file.Paths
 import java.util.concurrent.CompletableFuture
 
@@ -34,7 +36,7 @@ fun main(args: Array<String>) {
     // END 2
 
     // START 3
-    val (transactions, futureTransactions) = proxy.verifiedTransactions()
+    val (transactions: List<SignedTransaction>, futureTransactions: Observable<SignedTransaction>) = proxy.verifiedTransactions()
     // END 3
 
     // START 4

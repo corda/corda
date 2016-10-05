@@ -4,7 +4,8 @@ Client RPC API
 ==============
 
 In this tutorial we will build a simple command line utility that connects to a node and dumps the transaction graph to
-the standard output. We will then put some simple visualisation on top.
+the standard output. We will then put some simple visualisation on top. For an explanation on how the RPC works see
+:doc:`clientrpc`.
 
 We start off by connecting to the node itself. For the purposes of the tutorial we will run the Trader demo on some
 local port and connect to the Buyer side. We will pass in the address as a command line argument. To connect to the node

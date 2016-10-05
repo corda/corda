@@ -15,6 +15,8 @@ detail on how to use this is provided in the docs for the proxy method.
    resources. When you're done with it, cast it to ``Closeable`` or ``AutoCloseable`` and close it. Don't create
    one for every call you make - create a proxy and reuse it.
 
+For a brief tutorial on how one can use the RPC API see :doc:`tutorial-clientrpc-api`.
+
 Observables
 -----------
 
