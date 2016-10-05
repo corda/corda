@@ -14,7 +14,7 @@ publishing {
     publications {
         core(MavenPublication) {
             from components.java
-            artifactId 'quasar'
+            artifactId 'quasarutils'
         }
     }
 }
