@@ -9,7 +9,6 @@ import com.r3corda.node.internal.Node
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
-import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
@@ -139,13 +138,11 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     val webAddress: HostAndPort by conf
     val messagingServerAddress: HostAndPort? = if (conf.hasPath("messagingServerAddress")) HostAndPort.fromString(conf.getString("messagingServerAddress")) else null
     val networkMapAddress: HostAndPort? = if (conf.hasPath("networkMapAddress")) HostAndPort.fromString(conf.getString("networkMapAddress")) else null
-    val hostNotaryServiceLocally: Boolean by conf
     val extraAdvertisedServiceIds: String by conf
     val clock: Clock = NodeClock()
 
     fun createNode(): Node {
         val advertisedServices = mutableSetOf<ServiceInfo>()
-        if (hostNotaryServiceLocally) advertisedServices.add(ServiceInfo(SimpleNotaryService.Type))
         if (!extraAdvertisedServiceIds.isNullOrEmpty()) {
             for (serviceId in extraAdvertisedServiceIds.split(",")) {
                 advertisedServices.add(ServiceInfo.parse(serviceId))

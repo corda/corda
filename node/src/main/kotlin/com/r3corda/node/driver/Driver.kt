@@ -14,7 +14,6 @@ import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
-import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.utilities.AffinityExecutor
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
@@ -292,7 +291,6 @@ class DriverDSL(
         val name = providedName ?: "${pickA(name)}-${messagingAddress.port}"
 
         val nodeDirectory = "$baseDirectory/$name"
-        val useNotary = advertisedServices.any { it.type.isSubTypeOf(NotaryService.Type) }
 
         val config = NodeConfiguration.loadConfig(
                 baseDirectoryPath = Paths.get(nodeDirectory),
@@ -302,7 +300,6 @@ class DriverDSL(
                         "basedir" to Paths.get(nodeDirectory).normalize().toString(),
                         "artemisAddress" to messagingAddress.toString(),
                         "webAddress" to apiAddress.toString(),
-                        "hostNotaryServiceLocally" to useNotary.toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
                         "networkMapAddress" to networkMapAddress.toString()
                 )
@@ -408,7 +405,6 @@ class DriverDSL(
                         "basedir" to Paths.get(nodeDirectory).normalize().toString(),
                         "artemisAddress" to networkMapAddress.toString(),
                         "webAddress" to apiAddress.toString(),
-                        "hostNotaryServiceLocally" to "false",
                         "extraAdvertisedServiceIds" to ""
                 )
         )
