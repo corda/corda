@@ -51,7 +51,7 @@ later version of a schema or even provide a ``MappedSchema`` not originally offe
 It is expected that multiple different contract state implementations might provide mappings to some common schema.
 For example an Interest Rate Swap contract and an Equity OTC Option contract might both provide a mapping to a common
 Derivative schema. The schemas should typically not be part of the contract itself and should exist independently of it
-to encourage re-use of a common set within a particular buisness area or Cordapp.
+to encourage re-use of a common set within a particular business area or Cordapp.
 
 ``MappedSchema`` offer a family name that is disambiguated using Java package style name-spacing derived from the class name
 of a *schema family* class that is constant across versions, allowing the ``SchemaService`` to select a preferred version
