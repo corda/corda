@@ -17,11 +17,14 @@ import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.services.api.AcceptsFileUpload
 import com.r3corda.node.services.api.ServiceHubInternal
+import com.r3corda.node.utilities.AbstractJDBCHashSet
 import com.r3corda.node.utilities.FiberBox
-import com.r3corda.node.utilities.JDBCHashSet
+import com.r3corda.node.utilities.JDBCHashedTable
+import com.r3corda.node.utilities.localDate
 import com.r3corda.protocols.RatesFixProtocol.*
-import com.r3corda.protocols.ServiceRequestMessage
 import com.r3corda.protocols.TwoPartyDealProtocol
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.io.InputStream
 import java.math.BigDecimal
 import java.security.KeyPair
@@ -125,8 +128,26 @@ object NodeInterestRates {
     @ThreadSafe
     class Oracle(val identity: Party, private val signingKey: KeyPair, val clock: Clock) {
 
+        private object Table : JDBCHashedTable("demo_interest_rate_fixes") {
+            val name = varchar("index_name", length = 255)
+            val forDay = localDate("for_day")
+            val ofTenor = varchar("of_tenor", length = 16)
+            val value = decimal("value", scale = 20, precision = 16)
+        }
+
         private class InnerState {
-            val fixes = JDBCHashSet<Fix>("interest_rate_fixes")
+            val fixes = object : AbstractJDBCHashSet<Fix, Table>(Table) {
+                override fun elementFromRow(row: ResultRow): Fix {
+                    return Fix(FixOf(row[table.name], row[table.forDay], Tenor(row[table.ofTenor])), row[table.value])
+                }
+
+                override fun addElementToInsert(insert: InsertStatement, entry: Fix, finalizables: MutableList<() -> Unit>) {
+                    insert[table.name] = entry.of.name
+                    insert[table.forDay] = entry.of.forDay
+                    insert[table.ofTenor] = entry.of.ofTenor.name
+                    insert[table.value] = entry.value
+                }
+            }
             var container: FixContainer = FixContainer(fixes)
         }
         private val mutex = FiberBox(InnerState())

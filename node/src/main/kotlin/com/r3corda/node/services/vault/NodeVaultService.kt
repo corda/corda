@@ -4,18 +4,17 @@ import com.google.common.collect.Sets
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.bufferUntilSubscribed
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.serialization.SingletonSerializeAsToken
-import com.r3corda.core.serialization.parseAsHex
-import com.r3corda.core.serialization.toHexString
 import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.utilities.AbstractJDBCHashSet
 import com.r3corda.node.utilities.JDBCHashedTable
+import com.r3corda.node.utilities.NODE_DATABASE_PREFIX
+import com.r3corda.node.utilities.stateRef
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import rx.Observable
@@ -39,20 +38,20 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         val log = loggerFor<NodeVaultService>()
     }
 
-    private object StatesSetTable : JDBCHashedTable("vault_unconsumed_states") {
-        val txhash = varchar("transaction_id", 64)
-        val index = integer("output_index")
+    private object StatesSetTable : JDBCHashedTable("${NODE_DATABASE_PREFIX}vault_unconsumed_states") {
+        val stateRef = stateRef("transaction_id", "output_index")
     }
 
     private val mutex = ThreadBox(object {
         val unconsumedStates = object : AbstractJDBCHashSet<StateRef, StatesSetTable>(StatesSetTable) {
-            override fun elementFromRow(it: ResultRow): StateRef = StateRef(SecureHash.SHA256(it[table.txhash].parseAsHex()), it[table.index])
+            override fun elementFromRow(row: ResultRow): StateRef = StateRef(row[table.stateRef.txId], row[table.stateRef.index])
 
-            override fun addElementToInsert(it: InsertStatement, entry: StateRef, finalizables: MutableList<() -> Unit>) {
-                it[table.txhash] = entry.txhash.bits.toHexString()
-                it[table.index] = entry.index
+            override fun addElementToInsert(insert: InsertStatement, entry: StateRef, finalizables: MutableList<() -> Unit>) {
+                insert[table.stateRef.txId] = entry.txhash
+                insert[table.stateRef.index] = entry.index
             }
         }
+
         val _updatesPublisher = PublishSubject.create<Vault.Update>()
 
         fun allUnconsumedStates(): Iterable<StateAndRef<ContractState>> {
