@@ -6,7 +6,9 @@ import com.pholser.junit.quickcheck.generator.java.lang.StringGenerator
 import com.pholser.junit.quickcheck.generator.java.util.ArrayListGenerator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.*
+import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.crypto.entropyToKeyPair
 import com.r3corda.core.serialization.OpaqueBytes
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -63,21 +65,21 @@ class StateRefGenerator: Generator<StateRef>(StateRef::class.java) {
     }
 }
 
-@Suppress("CAST_NEVER_SUCCEEDS")
+@Suppress("CAST_NEVER_SUCCEEDS", "UNCHECKED_CAST")
 class TransactionStateGenerator<T : ContractState>(val stateGenerator: Generator<T>) : Generator<TransactionState<T>>(TransactionState::class.java as Class<TransactionState<T>>) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): TransactionState<T> {
         return TransactionState(stateGenerator.generate(random, status), PartyGenerator().generate(random, status))
     }
 }
 
-@Suppress("CAST_NEVER_SUCCEEDS")
+@Suppress("CAST_NEVER_SUCCEEDS", "UNCHECKED_CAST")
 class IssuedGenerator<T>(val productGenerator: Generator<T>) : Generator<Issued<T>>(Issued::class.java as Class<Issued<T>>) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Issued<T> {
         return Issued(PartyAndReferenceGenerator().generate(random, status), productGenerator.generate(random, status))
     }
 }
 
-@Suppress("CAST_NEVER_SUCCEEDS")
+@Suppress("CAST_NEVER_SUCCEEDS", "UNCHECKED_CAST")
 class AmountGenerator<T>(val tokenGenerator: Generator<T>) : Generator<Amount<T>>(Amount::class.java as Class<Amount<T>>) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Amount<T> {
         return Amount(random.nextLong(0, 1000000), tokenGenerator.generate(random, status))
