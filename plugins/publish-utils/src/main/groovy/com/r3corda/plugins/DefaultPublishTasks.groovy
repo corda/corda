@@ -1,3 +1,5 @@
+package com.r3corda.plugins
+
 import org.gradle.api.*
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.javadoc.Javadoc

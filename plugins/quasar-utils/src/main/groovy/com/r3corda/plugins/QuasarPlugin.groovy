@@ -1,4 +1,4 @@
-package com.r3corda
+package com.r3corda.plugins
 
 import org.gradle.api.*
 import org.gradle.api.tasks.testing.Test
