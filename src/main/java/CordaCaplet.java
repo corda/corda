@@ -25,15 +25,15 @@ public class CordaCaplet extends Capsule {
         // defined as public static final fields on the Capsule class, therefore referential equality is safe.
         if(ATTR_APP_CLASS_PATH == attr) {
             T cp = super.attribute(attr);
-            List<Path> classpath = (List<Path>) cp;
-            return (T) augmentClasspath(classpath);
+            List<Path> classpath = augmentClasspath((List<Path>) cp, "plugins");
+            return (T) augmentClasspath(classpath, "dependencies");
         }
         return super.attribute(attr);
     }
 
     // TODO: Make directory configurable via the capsule manifest.
     // TODO: Add working directory variable to capsules string replacement variables.
-    private List<Path> augmentClasspath(List<Path> classpath) {
+    private List<Path> augmentClasspath(List<Path> classpath, String dirName) {
         File dir = new File("plugins");
         if(!dir.exists()) {
             dir.mkdir();
