@@ -12,7 +12,8 @@ repositories {
 
 publishing {
     publications {
-        core(MavenPublication) {
+        plugin(MavenPublication) {
+            group 'com.r3corda.plugins'
             from components.java
             artifactId 'quasar-utils'
         }
