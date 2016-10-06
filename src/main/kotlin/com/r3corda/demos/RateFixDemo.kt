@@ -10,8 +10,8 @@ import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.demos.api.NodeInterestRates
 import com.r3corda.node.internal.Node
+import com.r3corda.node.services.config.ConfigHelper
 import com.r3corda.node.services.config.FullNodeConfiguration
-import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.protocols.RatesFixProtocol
 import joptsimple.OptionParser
@@ -60,7 +60,7 @@ fun main(args: Array<String>) {
 
     val apiAddr = HostAndPort.fromParts(myNetAddr.hostText, myNetAddr.port + 1)
 
-    val config = NodeConfiguration.loadConfig(
+    val config = ConfigHelper.loadConfig(
             baseDirectoryPath = dir,
             allowMissingConfig = true,
             configOverrides = mapOf(

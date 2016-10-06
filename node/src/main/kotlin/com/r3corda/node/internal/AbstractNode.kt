@@ -25,6 +25,7 @@ import com.r3corda.core.utilities.debug
 import com.r3corda.node.api.APIServer
 import com.r3corda.node.services.api.*
 import com.r3corda.node.services.config.NodeConfiguration
+import com.r3corda.node.services.config.configureWithDevSSLCertificate
 import com.r3corda.node.services.events.NodeSchedulerService
 import com.r3corda.node.services.events.ScheduledActivityObserver
 import com.r3corda.node.services.identity.InMemoryIdentityService

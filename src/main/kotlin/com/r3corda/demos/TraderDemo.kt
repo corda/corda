@@ -23,8 +23,8 @@ import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.internal.Node
+import com.r3corda.node.services.config.ConfigHelper
 import com.r3corda.node.services.config.FullNodeConfiguration
-import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
@@ -131,7 +131,7 @@ fun main(args: Array<String>) {
                 "webAddress" to apiNetAddr.toString(),
                 "h2port" to h2Port.toString()
         )
-        FullNodeConfiguration(NodeConfiguration.loadConfig(directory, allowMissingConfig = true, configOverrides = configOverrides))
+        FullNodeConfiguration(ConfigHelper.loadConfig(directory, allowMissingConfig = true, configOverrides = configOverrides))
     }
 
     // Which services will this instance of the node provide to the network?

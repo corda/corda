@@ -1,7 +1,7 @@
 package com.r3corda.node
 
+import com.r3corda.node.services.config.ConfigHelper
 import com.r3corda.node.services.config.FullNodeConfiguration
-import com.r3corda.node.services.config.NodeConfiguration
 import joptsimple.OptionParser
 import org.slf4j.LoggerFactory
 import java.lang.management.ManagementFactory
@@ -36,7 +36,7 @@ fun main(args: Array<String>) {
 
     val baseDirectoryPath = if (cmdlineOptions.has(ParamsSpec.baseDirectoryArg)) Paths.get(cmdlineOptions.valueOf(ParamsSpec.baseDirectoryArg)) else Paths.get(".").normalize()
     val configFile = if (cmdlineOptions.has(ParamsSpec.configFileArg)) Paths.get(cmdlineOptions.valueOf(ParamsSpec.configFileArg)) else null
-    val conf = FullNodeConfiguration(NodeConfiguration.loadConfig(baseDirectoryPath, configFile))
+    val conf = FullNodeConfiguration(ConfigHelper.loadConfig(baseDirectoryPath, configFile))
     val dir = conf.basedir.toAbsolutePath().normalize()
     logInfo(args, dir)
 

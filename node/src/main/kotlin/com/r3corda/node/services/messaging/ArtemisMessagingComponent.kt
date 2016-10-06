@@ -9,6 +9,7 @@ import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.use
 import com.r3corda.node.services.config.NodeSSLConfiguration
+import com.r3corda.node.services.config.configureWithDevSSLCertificate
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory

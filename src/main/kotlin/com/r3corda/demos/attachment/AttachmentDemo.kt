@@ -1,39 +1,27 @@
 package com.r3corda.demos.attachment
 
 import com.google.common.net.HostAndPort
-import com.google.common.util.concurrent.ListenableFuture
-import com.r3corda.contracts.testing.fillWithSomeTestCash
-import com.r3corda.core.contracts.Amount
-import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.crypto.sha256
 import com.r3corda.core.failure
 import com.r3corda.core.logElapsedTime
 import com.r3corda.core.node.services.ServiceInfo
-import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.success
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.internal.Node
-import com.r3corda.node.services.api.AbstractNodeService
+import com.r3corda.node.services.config.ConfigHelper
 import com.r3corda.node.services.config.FullNodeConfiguration
-import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
-import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
-import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.protocols.FinalityProtocol
 import com.r3corda.testing.ALICE_KEY
 import joptsimple.OptionParser
-import org.bouncycastle.cms.Recipient
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.nio.file.Paths
-import java.util.*
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 import kotlin.test.assertEquals
@@ -113,7 +101,7 @@ fun main(args: Array<String>) {
                 "artemisAddress" to myNetAddr.toString(),
                 "webAddress" to apiNetAddr.toString()
         )
-        FullNodeConfiguration(NodeConfiguration.loadConfig(directory, allowMissingConfig = true, configOverrides = configOverrides))
+        FullNodeConfiguration(ConfigHelper.loadConfig(directory, allowMissingConfig = true, configOverrides = configOverrides))
     }
 
     // Which services will this instance of the node provide to the network?

@@ -9,6 +9,7 @@ import com.r3corda.core.crypto.X509Utilities.addOrReplaceKey
 import com.r3corda.core.div
 import com.r3corda.core.minutes
 import com.r3corda.core.utilities.loggerFor
+import com.r3corda.node.services.config.ConfigHelper
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.getValue
@@ -130,7 +131,7 @@ fun main(args: Array<String>) {
     val baseDirectoryPath = Paths.get(cmdlineOptions.valueOf(ParamsSpec.baseDirectoryArg))
     val configFile = if (cmdlineOptions.has(ParamsSpec.configFileArg)) Paths.get(cmdlineOptions.valueOf(ParamsSpec.configFileArg)) else null
 
-    val config = NodeConfiguration.loadConfig(baseDirectoryPath, configFile, allowMissingConfig = true).let { config ->
+    val config = ConfigHelper.loadConfig(baseDirectoryPath, configFile, allowMissingConfig = true).let { config ->
         object : NodeConfiguration by FullNodeConfiguration(config) {
             val certificateSigningService: URL by config
         }

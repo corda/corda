@@ -21,6 +21,7 @@ import com.r3corda.demos.utilities.putJson
 import com.r3corda.demos.utilities.uploadFile
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.internal.Node
+import com.r3corda.node.services.config.ConfigHelper
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.NodeMessagingClient
@@ -469,7 +470,7 @@ private fun loadConfigFile(baseDir: Path, configFile: Path, configOverrides: Map
         createDefaultConfigFile(configFile, defaultLegalName)
         log.warn("Default config created at $configFile.")
     }
-    return FullNodeConfiguration(NodeConfiguration.loadConfig(baseDir, configFileOverride = configFile, configOverrides = configOverrides))
+    return FullNodeConfiguration(ConfigHelper.loadConfig(baseDir, configFileOverride = configFile, configOverrides = configOverrides))
 }
 
 private fun createIdentities(nodeConf: NodeConfiguration) {

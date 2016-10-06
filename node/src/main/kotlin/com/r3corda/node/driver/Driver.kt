@@ -7,8 +7,8 @@ import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceInfo
+import com.r3corda.node.services.config.ConfigHelper
 import com.r3corda.node.services.config.FullNodeConfiguration
-import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.services.messaging.NodeMessagingClient
@@ -292,7 +292,7 @@ class DriverDSL(
 
         val nodeDirectory = "$baseDirectory/$name"
 
-        val config = NodeConfiguration.loadConfig(
+        val config = ConfigHelper.loadConfig(
                 baseDirectoryPath = Paths.get(nodeDirectory),
                 allowMissingConfig = true,
                 configOverrides = mapOf(
@@ -324,7 +324,7 @@ class DriverDSL(
     ): Future<NodeMessagingClient> {
 
         val nodeConfiguration = FullNodeConfiguration(
-                NodeConfiguration.loadConfig(
+                ConfigHelper.loadConfig(
                         baseDirectoryPath = Paths.get(baseDirectory, providedName),
                         allowMissingConfig = true,
                         configOverrides = mapOf(
@@ -353,7 +353,7 @@ class DriverDSL(
     override fun startLocalServer(): Future<ArtemisMessagingServer> {
         val name = "driver-local-server"
         val config = FullNodeConfiguration(
-                NodeConfiguration.loadConfig(
+                ConfigHelper.loadConfig(
                         baseDirectoryPath = Paths.get(baseDirectory, name),
                         allowMissingConfig = true,
                         configOverrides = mapOf(
@@ -397,7 +397,7 @@ class DriverDSL(
 
         val nodeDirectory = "$baseDirectory/$networkMapName"
 
-        val config = NodeConfiguration.loadConfig(
+        val config = ConfigHelper.loadConfig(
                 baseDirectoryPath = Paths.get(nodeDirectory),
                 allowMissingConfig = true,
                 configOverrides = mapOf(
