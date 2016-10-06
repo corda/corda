@@ -13,8 +13,8 @@ repositories {
 publishing {
     publications {
         plugin(MavenPublication) {
-            group 'com.r3corda.plugins'
             from components.java
+            groupId  'com.r3corda.plugins'
             artifactId 'publish-utils'
         }
     }
