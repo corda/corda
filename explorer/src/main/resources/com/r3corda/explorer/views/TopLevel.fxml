@@ -4,7 +4,5 @@
 <?import javafx.scene.layout.VBox?>
 
 <VBox fx:id="topLevel" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
-   <children>
-      <BorderPane fx:id="selectionBorderPane" />
-   </children>
+   <BorderPane fx:id="selectionBorderPane"/>
 </VBox>

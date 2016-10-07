@@ -3,13 +3,16 @@ package com.r3corda.client.model
 import com.r3corda.client.CordaRPCClient
 import com.r3corda.core.contracts.ClientToServiceCommand
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.services.messaging.ArtemisMessagingComponent
+import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.messaging.StateMachineInfo
 import com.r3corda.node.services.messaging.StateMachineUpdate
+import javafx.beans.property.SimpleObjectProperty
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.nio.file.Path
@@ -35,15 +38,19 @@ class NodeMonitorModel {
     private val transactionsSubject = PublishSubject.create<SignedTransaction>()
     private val stateMachineTransactionMappingSubject = PublishSubject.create<StateMachineTransactionMapping>()
     private val progressTrackingSubject = PublishSubject.create<ProgressTrackingEvent>()
+    private val networkMapSubject = PublishSubject.create<NetworkMapCache.MapChange>()
 
     val stateMachineUpdates: Observable<StateMachineUpdate> = stateMachineUpdatesSubject
     val vaultUpdates: Observable<Vault.Update> = vaultUpdatesSubject
     val transactions: Observable<SignedTransaction> = transactionsSubject
     val stateMachineTransactionMapping: Observable<StateMachineTransactionMapping> = stateMachineTransactionMappingSubject
     val progressTracking: Observable<ProgressTrackingEvent> = progressTrackingSubject
+    val networkMap: Observable<NetworkMapCache.MapChange> = networkMapSubject
 
     private val clientToServiceSource = PublishSubject.create<ClientToServiceCommand>()
     val clientToService: PublishSubject<ClientToServiceCommand> = clientToServiceSource
+
+    val proxyObservable = SimpleObjectProperty<CordaRPCOps?>()
 
     /**
      * Register for updates to/from a given vault.
@@ -89,9 +96,15 @@ class NodeMonitorModel {
         val (smTxMappings, futureSmTxMappings) = proxy.stateMachineRecordedTransactionMapping()
         futureSmTxMappings.startWith(smTxMappings).subscribe(stateMachineTransactionMappingSubject)
 
+        // Parties on network
+        val (parties, futurePartyUpdate) = proxy.networkMapUpdates()
+        futurePartyUpdate.startWith(parties.map { NetworkMapCache.MapChange(it, null, NetworkMapCache.MapChangeType.Added) }).subscribe(networkMapSubject)
+
         // Client -> Service
         clientToServiceSource.subscribe {
             proxy.executeCommand(it)
         }
+
+        proxyObservable.set(proxy)
     }
 }

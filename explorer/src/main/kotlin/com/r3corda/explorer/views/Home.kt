@@ -18,10 +18,8 @@ import javafx.scene.control.Label
 import javafx.scene.control.TitledPane
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.TilePane
-import org.fxmisc.easybind.EasyBind
 import tornadofx.View
 import java.util.*
-
 
 class Home : View() {
     override val root: TilePane by fxml()
@@ -31,6 +29,8 @@ class Home : View() {
 
     private val ourTransactionsPane: TitledPane by fxid()
     private val ourTransactionsLabel: Label by fxid()
+
+    private val newTransaction: TitledPane by fxid()
 
     private val selectedView: WritableValue<SelectedView> by writableValue(TopLevelModel::selectedView)
     private val cashStates: ObservableList<StateAndRef<Cash.State>> by observableList(ContractStateModel::cashStates)
@@ -61,6 +61,11 @@ class Home : View() {
         ourTransactionsPane.setOnMouseClicked { clickEvent ->
             if (clickEvent.button == MouseButton.PRIMARY) {
                 selectedView.value = SelectedView.Transaction
+            }
+        }
+        newTransaction.setOnMouseClicked { clickEvent ->
+            if (clickEvent.button == MouseButton.PRIMARY) {
+                selectedView.value = SelectedView.NewTransaction
             }
         }
 

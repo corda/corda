@@ -6,6 +6,7 @@ import com.r3corda.client.model.ProgressTrackingEvent
 import com.r3corda.core.bufferUntilSubscribed
 import com.r3corda.core.contracts.*
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
@@ -17,8 +18,12 @@ import com.r3corda.node.driver.startClient
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.messaging.StateMachineUpdate
 import com.r3corda.node.services.transactions.SimpleNotaryService
-import com.r3corda.testing.*
-import org.junit.*
+import com.r3corda.testing.expect
+import com.r3corda.testing.expectEvents
+import com.r3corda.testing.sequence
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
 import rx.Observable
 import rx.Observer
 import kotlin.concurrent.thread
@@ -37,7 +42,9 @@ class NodeMonitorModelTest {
     lateinit var progressTracking: Observable<ProgressTrackingEvent>
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update>
+    lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
     lateinit var clientToService: Observer<ClientToServiceCommand>
+    lateinit var newNode: (String) -> NodeInfo
 
     @Before
     fun start() {
@@ -49,7 +56,7 @@ class NodeMonitorModelTest {
                 aliceNode = aliceNodeFuture.get()
                 notaryNode = notaryNodeFuture.get()
                 aliceClient = startClient(aliceNode).get()
-
+                newNode = { nodeName -> startNode(nodeName).get() }
                 val monitor = NodeMonitorModel()
 
                 stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
@@ -57,11 +64,13 @@ class NodeMonitorModelTest {
                 progressTracking = monitor.progressTracking.bufferUntilSubscribed()
                 transactions = monitor.transactions.bufferUntilSubscribed()
                 vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
+                networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
                 clientToService = monitor.clientToService
 
                 monitor.register(aliceNode, aliceClient.config.certificatesPath)
                 driverStarted.set(Unit)
                 stopDriver.get()
+
             }
             driverStopped.set(Unit)
         }
@@ -72,6 +81,26 @@ class NodeMonitorModelTest {
     fun stop() {
         stopDriver.set(Unit)
         driverStopped.get()
+    }
+
+    @Test
+    fun testNetworkMapUpdate() {
+        newNode("Bob")
+        newNode("Charlie")
+        networkMapUpdates.expectEvents(isStrict = false) {
+            sequence(
+                    // TODO : Add test for remove when driver DSL support individual node shutdown.
+                    expect { output: NetworkMapCache.MapChange ->
+                        require(output.node.legalIdentity.name == "Alice") { output.node.legalIdentity.name }
+                    },
+                    expect { output: NetworkMapCache.MapChange ->
+                        require(output.node.legalIdentity.name == "Bob") { output.node.legalIdentity.name }
+                    },
+                    expect { output: NetworkMapCache.MapChange ->
+                        require(output.node.legalIdentity.name == "Charlie") { output.node.legalIdentity.name }
+                    }
+            )
+        }
     }
 
     @Test
