@@ -50,9 +50,6 @@ enum class Role(val legalName: String, val port: Int) {
 // which holds things like checkpoints, keys, databases, message logs etc.
 val DEFAULT_BASE_DIRECTORY = "./build/attachment-demo"
 
-val LOG_RECIPIENT = "demo.recipient"
-val LOG_SENDER = "demo.sender"
-
 val PROSPECTUS_HASH = SecureHash.parse("decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9")
 
 private val log: Logger = LoggerFactory.getLogger("AttachmentDemo")
@@ -86,7 +83,7 @@ fun main(args: Array<String>) {
     //
     // The first two strings correspond to the first argument to StateMachineManager.add() but the way we handle logging
     // for protocols will change in future.
-    LogHelper.setLevel("+${LOG_RECIPIENT}", "+${LOG_SENDER}", "-org.apache.activemq")
+    LogHelper.setLevel("-org.apache.activemq")
 
     val directory = Paths.get(baseDirectory, role.name.toLowerCase())
     log.info("Using base demo directory $directory")
@@ -183,7 +180,7 @@ private fun runSender(node: Node, otherSide: Party) {
 
     // Send the transaction to the other recipient
     val tx = ptx.toSignedTransaction()
-    serviceHub.startProtocol(LOG_SENDER, FinalityProtocol(tx, emptySet(), setOf(otherSide))).success {
+    serviceHub.startProtocol(FinalityProtocol(tx, emptySet(), setOf(otherSide))).success {
         thread {
             Thread.sleep(1000L) // Give the other side time to request the attachment
             node.stop()

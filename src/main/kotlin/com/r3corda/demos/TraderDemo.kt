@@ -187,7 +187,7 @@ private fun runSeller(node: Node, amount: Amount<Currency>, otherSide: Party) {
         tradeTX = node.smm.findStateMachines(TraderDemoProtocolSeller::class.java).single().second
     } else {
         val seller = TraderDemoProtocolSeller(otherSide, amount)
-        tradeTX = node.services.startProtocol("demo.seller", seller)
+        tradeTX = node.services.startProtocol(seller)
     }
 
     tradeTX.success {

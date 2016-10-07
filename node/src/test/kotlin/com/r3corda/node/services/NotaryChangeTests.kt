@@ -49,7 +49,7 @@ class NotaryChangeTests {
         val state = issueState(clientNodeA, oldNotaryNode)
         val newNotary = newNotaryNode.info.notaryIdentity
         val protocol = Instigator(state, newNotary)
-        val future = clientNodeA.services.startProtocol("notary-change", protocol)
+        val future = clientNodeA.services.startProtocol(protocol)
 
         net.runNetwork()
 
@@ -62,7 +62,7 @@ class NotaryChangeTests {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
         val newNotary = newNotaryNode.info.notaryIdentity
         val protocol = Instigator(state, newNotary)
-        val future = clientNodeA.services.startProtocol("notary-change", protocol)
+        val future = clientNodeA.services.startProtocol(protocol)
 
         net.runNetwork()
 
@@ -78,7 +78,7 @@ class NotaryChangeTests {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
         val newEvilNotary = Party("Evil Notary", generateKeyPair().public)
         val protocol = Instigator(state, newEvilNotary)
-        val future = clientNodeA.services.startProtocol("notary-change", protocol)
+        val future = clientNodeA.services.startProtocol(protocol)
 
         net.runNetwork()
 

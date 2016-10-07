@@ -45,7 +45,7 @@ class ResolveTransactionsProtocolTest {
     fun `resolve from two hashes`() {
         val (stx1, stx2) = makeTransactions()
         val p = ResolveTransactionsProtocol(setOf(stx2.id), a.info.legalIdentity)
-        val future = b.services.startProtocol("resolve", p)
+        val future = b.services.startProtocol(p)
         net.runNetwork()
         val results = future.get()
         assertEquals(listOf(stx1.id, stx2.id), results.map { it.id })
@@ -57,7 +57,7 @@ class ResolveTransactionsProtocolTest {
     fun `dependency with an error`() {
         val stx = makeTransactions(signFirstTX = false).second
         val p = ResolveTransactionsProtocol(setOf(stx.id), a.info.legalIdentity)
-        val future = b.services.startProtocol("resolve", p)
+        val future = b.services.startProtocol(p)
         net.runNetwork()
         assertFailsWith(SignatureException::class) {
             rootCauseExceptions { future.get() }
@@ -68,7 +68,7 @@ class ResolveTransactionsProtocolTest {
     fun `resolve from a signed transaction`() {
         val (stx1, stx2) = makeTransactions()
         val p = ResolveTransactionsProtocol(stx2, a.info.legalIdentity)
-        val future = b.services.startProtocol("resolve", p)
+        val future = b.services.startProtocol(p)
         net.runNetwork()
         future.get()
         assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
@@ -91,7 +91,7 @@ class ResolveTransactionsProtocolTest {
         }
         val p = ResolveTransactionsProtocol(setOf(cursor.id), a.info.legalIdentity)
         p.transactionCountLimit = 40
-        val future = b.services.startProtocol("resolve", p)
+        val future = b.services.startProtocol(p)
         net.runNetwork()
         assertFailsWith<ResolveTransactionsProtocol.ExcessivelyLargeTransactionGraph> {
             rootCauseExceptions { future.get() }
@@ -117,7 +117,7 @@ class ResolveTransactionsProtocolTest {
         a.services.recordTransactions(stx2, stx3)
 
         val p = ResolveTransactionsProtocol(setOf(stx3.id), a.info.legalIdentity)
-        val future = b.services.startProtocol("resolve", p)
+        val future = b.services.startProtocol(p)
         net.runNetwork()
         future.get()
     }
@@ -127,7 +127,7 @@ class ResolveTransactionsProtocolTest {
         val id = a.services.storageService.attachments.importAttachment("Some test file".toByteArray().opaque().open())
         val stx2 = makeTransactions(withAttachment = id).second
         val p = ResolveTransactionsProtocol(stx2, a.info.legalIdentity)
-        val future = b.services.startProtocol("resolve", p)
+        val future = b.services.startProtocol(p)
         net.runNetwork()
         future.get()
         assertNotNull(b.services.storageService.attachments.openAttachment(id))

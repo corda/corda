@@ -70,7 +70,7 @@ class APIServerImpl(val node: AbstractNode) : APIServer {
         if (type is ProtocolClassRef) {
             val protocolLogicRef = node.services.protocolLogicRefFactory.createKotlin(type.className, args)
             val protocolInstance = node.services.protocolLogicRefFactory.toProtocolLogic(protocolLogicRef)
-            return node.services.startProtocol(type.className, protocolInstance)
+            return node.services.startProtocol(protocolInstance)
         } else {
             throw UnsupportedOperationException("Unsupported ProtocolRef type: $type")
         }

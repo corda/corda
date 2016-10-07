@@ -166,7 +166,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
             val logic = protocolLogicRefFactory.toProtocolLogic(scheduledActivity.logicRef)
             log.trace { "Firing ProtocolLogic $logic" }
             // TODO: ProtocolLogic should be checkpointed by the time this returns
-            services.startProtocol("scheduled", logic)
+            services.startProtocol(logic)
         }
     }
 

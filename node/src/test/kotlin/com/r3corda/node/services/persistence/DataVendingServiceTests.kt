@@ -84,7 +84,7 @@ class DataVendingServiceTests {
 
     private fun MockNode.sendNotifyTx(tx: SignedTransaction, walletServiceNode: MockNode) {
         walletServiceNode.services.registerProtocolInitiator(NotifyTxProtocol::class, ::NotifyTransactionHandler)
-        services.startProtocol("notify-tx", NotifyTxProtocol(walletServiceNode.info.legalIdentity, tx))
+        services.startProtocol(NotifyTxProtocol(walletServiceNode.info.legalIdentity, tx))
         network.runNetwork()
     }
 

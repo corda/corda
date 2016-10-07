@@ -111,9 +111,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
         override val protocolLogicRefFactory: ProtocolLogicRefFactory get() = protocolLogicFactory
 
-        override fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
-            return smm.add(loggerName, logic).resultFuture
-        }
+        override fun <T> startProtocol(logic: ProtocolLogic<T>): ListenableFuture<T> = smm.add(logic).resultFuture
 
         override fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>) {
             require(markerClass !in protocolFactories) { "${markerClass.java.name} has already been used to register a protocol" }

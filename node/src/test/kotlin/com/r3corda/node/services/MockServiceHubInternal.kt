@@ -12,8 +12,8 @@ import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.api.MonitoringService
-import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.api.SchemaService
+import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.persistence.DataVending
 import com.r3corda.node.services.schema.NodeSchemaService
 import com.r3corda.node.services.statemachine.StateMachineManager
@@ -79,9 +79,7 @@ open class MockServiceHubInternal(
 
     override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(txStorageService, txs)
 
-    override fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
-        return smm.add(loggerName, logic).resultFuture
-    }
+    override fun <T> startProtocol(logic: ProtocolLogic<T>): ListenableFuture<T> = smm.add(logic).resultFuture
 
     override fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>) {
         protocolFactories[markerClass.java] = protocolFactory

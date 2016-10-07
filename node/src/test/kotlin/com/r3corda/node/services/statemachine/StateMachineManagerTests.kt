@@ -9,10 +9,10 @@ import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolSessionException
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize
+import com.r3corda.node.services.persistence.checkpoints
 import com.r3corda.node.services.statemachine.StateMachineManager.SessionData
 import com.r3corda.node.services.statemachine.StateMachineManager.SessionMessage
 import com.r3corda.testing.node.InMemoryMessagingNetwork
-import com.r3corda.node.services.persistence.checkpoints
 import com.r3corda.testing.node.MockNetwork
 import com.r3corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
@@ -44,7 +44,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `newly added protocol is preserved on restart`() {
-        node1.smm.add("test", ProtocolWithoutCheckpoints())
+        node1.smm.add(ProtocolWithoutCheckpoints())
         val restoredProtocol = node1.restartAndGetRestoredProtocol<ProtocolWithoutCheckpoints>()
         assertThat(restoredProtocol.protocolStarted).isTrue()
     }
@@ -52,7 +52,7 @@ class StateMachineManagerTests {
     @Test
     fun `protocol can lazily use the serviceHub in its constructor`() {
         val protocol = ProtocolWithLazyServiceHub()
-        node1.smm.add("test", protocol)
+        node1.smm.add(protocol)
         assertThat(protocol.lazyTime).isNotNull()
     }
 
@@ -60,7 +60,7 @@ class StateMachineManagerTests {
     fun `protocol restarted just after receiving payload`() {
         node2.services.registerProtocolInitiator(SendProtocol::class) { ReceiveThenSuspendProtocol(it) }
         val payload = random63BitValue()
-        node1.smm.add("test", SendProtocol(payload, node2.info.legalIdentity))
+        node1.smm.add(SendProtocol(payload, node2.info.legalIdentity))
 
         // We push through just enough messages to get only the SessionData sent
         // TODO We should be able to give runNetwork a predicate for when to stop
@@ -75,7 +75,7 @@ class StateMachineManagerTests {
     fun `protocol added before network map does run after init`() {
         val node3 = net.createNode(node1.info.address) //create vanilla node
         val protocol = ProtocolNoBlocking()
-        node3.smm.add("test", protocol)
+        node3.smm.add(protocol)
         assertEquals(false, protocol.protocolStarted) // Not started yet as no network activity has been allowed yet
         net.runNetwork() // Allow network map messages to flow
         assertEquals(true, protocol.protocolStarted) // Now we should have run the protocol
@@ -85,7 +85,7 @@ class StateMachineManagerTests {
     fun `protocol added before network map will be init checkpointed`() {
         var node3 = net.createNode(node1.info.address) //create vanilla node
         val protocol = ProtocolNoBlocking()
-        node3.smm.add("test", protocol)
+        node3.smm.add(protocol)
         assertEquals(false, protocol.protocolStarted) // Not started yet as no network activity has been allowed yet
         node3.stop()
 
@@ -109,7 +109,7 @@ class StateMachineManagerTests {
         val payload = random63BitValue()
         node1.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { SendProtocol(payload, it) }
         val receiveProtocol = ReceiveThenSuspendProtocol(node1.info.legalIdentity)
-        node2.smm.add("test", receiveProtocol) // Prepare checkpointed receive protocol
+        node2.smm.add(receiveProtocol) // Prepare checkpointed receive protocol
         node2.stop() // kill receiver
         val restoredProtocol = node2.restartAndGetRestoredProtocol<ReceiveThenSuspendProtocol>(node1.info.address)
         assertThat(restoredProtocol.receivedPayloads[0]).isEqualTo(payload)
@@ -135,7 +135,7 @@ class StateMachineManagerTests {
         }
 
         // Kick off first send and receive
-        node2.smm.add("test", PingPongProtocol(node3.info.legalIdentity, payload))
+        node2.smm.add(PingPongProtocol(node3.info.legalIdentity, payload))
         assertEquals(1, node2.checkpointStorage.checkpoints().count())
         // Restart node and thus reload the checkpoint and resend the message with same UUID
         node2.stop()
@@ -165,7 +165,7 @@ class StateMachineManagerTests {
         node2.services.registerProtocolInitiator(SendProtocol::class) { ReceiveThenSuspendProtocol(it) }
         node3.services.registerProtocolInitiator(SendProtocol::class) { ReceiveThenSuspendProtocol(it) }
         val payload = random63BitValue()
-        node1.smm.add("multiple-send", SendProtocol(payload, node2.info.legalIdentity, node3.info.legalIdentity))
+        node1.smm.add(SendProtocol(payload, node2.info.legalIdentity, node3.info.legalIdentity))
         net.runNetwork()
         val node2Protocol = node2.getSingleProtocol<ReceiveThenSuspendProtocol>().first
         val node3Protocol = node3.getSingleProtocol<ReceiveThenSuspendProtocol>().first
@@ -182,7 +182,7 @@ class StateMachineManagerTests {
         node2.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { SendProtocol(node2Payload, it) }
         node3.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { SendProtocol(node3Payload, it) }
         val multiReceiveProtocol = ReceiveThenSuspendProtocol(node2.info.legalIdentity, node3.info.legalIdentity)
-        node1.smm.add("multiple-receive", multiReceiveProtocol)
+        node1.smm.add(multiReceiveProtocol)
         net.runNetwork(1) // session handshaking
         // have the messages arrive in reverse order of receive
         node3.pumpReceive(false)
@@ -195,7 +195,7 @@ class StateMachineManagerTests {
     @Test
     fun `exception thrown on other side`() {
         node2.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { ExceptionProtocol }
-        val future = node1.smm.add("exception", ReceiveThenSuspendProtocol(node2.info.legalIdentity)).resultFuture
+        val future = node1.smm.add(ReceiveThenSuspendProtocol(node2.info.legalIdentity)).resultFuture
         net.runNetwork()
         assertThatThrownBy { future.get() }.hasCauseInstanceOf(ProtocolSessionException::class.java)
     }

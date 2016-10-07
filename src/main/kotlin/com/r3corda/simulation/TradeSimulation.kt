@@ -64,7 +64,7 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         showConsensusFor(listOf(buyer, seller, notary))
         showProgressFor(listOf(buyer, seller))
 
-        val sellerFuture = seller.services.startProtocol("bank.$sellerBankIndex.seller", sellerProtocol)
+        val sellerFuture = seller.services.startProtocol(sellerProtocol)
 
         return Futures.successfulAsList(buyerFuture, sellerFuture)
     }

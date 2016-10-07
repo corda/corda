@@ -84,7 +84,7 @@ fun main(args: Array<String>) {
     val tx = TransactionType.General.Builder(notaryNode.notaryIdentity)
     tx.addOutputState(TransactionState(Cash.State(1500.DOLLARS `issued by` node.info.legalIdentity.ref(1), node.info.legalIdentity.owningKey), notaryNode.notaryIdentity))
     val protocol = RatesFixProtocol(tx, rateOracle.serviceIdentities(InterestRateSwap.oracleType).first(), fixOf, expectedRate, rateTolerance)
-    node.services.startProtocol("demo.ratefix", protocol).get()
+    node.services.startProtocol(protocol).get()
     node.stop()
 
     // Show the user the output.

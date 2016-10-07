@@ -12,7 +12,6 @@ import com.r3corda.core.protocols.ProtocolSessionException
 import com.r3corda.core.protocols.ProtocolStateMachine
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.random63BitValue
-import com.r3corda.core.rootCause
 import com.r3corda.core.utilities.UntrustworthyData
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.ServiceHubInternal
@@ -24,25 +23,13 @@ import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.PrintWriter
-import java.io.StringWriter
 import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.ExecutionException
 
-/**
- * A ProtocolStateMachine instance is a suspendable fiber that delegates all actual logic to a [ProtocolLogic] instance.
- * For any given flow there is only one PSM, even if that protocol invokes subprotocols.
- *
- * These classes are created by the [StateMachineManager] when a new protocol is started at the topmost level. If
- * a protocol invokes a sub-protocol, then it will pass along the PSM to the child. The call method of the topmost
- * logic element gets to return the value that the entire state machine resolves to.
- */
 class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
                                   val logic: ProtocolLogic<R>,
-                                  scheduler: FiberScheduler,
-                                  private val loggerName: String)
-: Fiber<R>("protocol", scheduler), ProtocolStateMachine<R> {
+                                  scheduler: FiberScheduler) : Fiber<R>("protocol", scheduler), ProtocolStateMachine<R> {
 
     companion object {
         // Used to work around a small limitation in Quasar.
@@ -69,7 +56,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient private var _logger: Logger? = null
     override val logger: Logger get() {
         return _logger ?: run {
-            val l = LoggerFactory.getLogger(loggerName)
+            val l = LoggerFactory.getLogger(id.toString())
             _logger = l
             return l
         }
@@ -208,7 +195,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
             suspend(receiveRequest)
             receiveRequest.session.waitingForResponse = false
             getReceivedMessage()
-                    ?: throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but got nothing: $id $receiveRequest")
+                    ?: throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but got nothing: $receiveRequest")
         }
 
         if (receivedMessage is SessionEnd) {
@@ -217,7 +204,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
         } else if (receiveRequest.receiveType.isInstance(receivedMessage)) {
             return receiveRequest.receiveType.cast(receivedMessage)
         } else {
-            throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but got $receivedMessage: $id $receiveRequest")
+            throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but got $receivedMessage: $receiveRequest")
         }
     }
 
@@ -227,7 +214,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
         txTrampoline = TransactionManager.currentOrNull()
         StrandLocalTransactionManager.setThreadLocalTx(null)
         parkAndSerialize { fiber, serializer ->
-            logger.trace { "Suspended $id on $ioRequest" }
+            logger.trace { "Suspended on $ioRequest" }
             // restore the Tx onto the ThreadLocal so that we can commit the ensuing checkpoint to the DB
             StrandLocalTransactionManager.setThreadLocalTx(txTrampoline)
             txTrampoline = null
@@ -252,23 +239,18 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
     internal fun resume(scheduler: FiberScheduler) {
         try {
             if (fromCheckpoint) {
-                logger.info("$id resumed from checkpoint")
+                logger.info("Resumed from checkpoint")
                 fromCheckpoint = false
                 Fiber.unparkDeserialized(this, scheduler)
             } else if (state == State.NEW) {
-                logger.trace { "$id started" }
+                logger.trace("Started")
                 start()
             } else {
-                logger.trace { "$id resumed" }
+                logger.trace("Resumed")
                 Fiber.unpark(this, QUASAR_UNBLOCKER)
             }
         } catch (t: Throwable) {
-            logger.error("$id threw '${t.rootCause}'")
-            logger.trace {
-                val s = StringWriter()
-                t.rootCause.printStackTrace(PrintWriter(s))
-                "Stack trace of protocol error: $s"
-            }
+            logger.error("Error during resume", t)
         }
     }
 

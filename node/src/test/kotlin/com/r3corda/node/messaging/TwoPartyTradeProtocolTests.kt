@@ -23,13 +23,13 @@ import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.persistence.PerFileTransactionStorage
 import com.r3corda.node.services.persistence.StorageServiceImpl
+import com.r3corda.node.services.persistence.checkpoints
 import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.protocols.TwoPartyTradeProtocol.Buyer
 import com.r3corda.protocols.TwoPartyTradeProtocol.Seller
 import com.r3corda.testing.*
 import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.testing.node.MockNetwork
-import com.r3corda.node.services.persistence.checkpoints
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -396,7 +396,7 @@ class TwoPartyTradeProtocolTests {
             Buyer(otherParty, notaryNode.info.notaryIdentity, 1000.DOLLARS, CommercialPaper.State::class.java)
         }
         val seller = Seller(bobNode.info.legalIdentity, notaryNode.info, assetToSell, 1000.DOLLARS, ALICE_KEY)
-        val sellerResultFuture = aliceNode.smm.add("seller", seller).resultFuture
+        val sellerResultFuture = aliceNode.smm.add(seller).resultFuture
         return RunResult(buyerFuture, sellerResultFuture, seller.psm.id)
     }
 

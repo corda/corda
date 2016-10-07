@@ -27,8 +27,8 @@ import com.r3corda.node.services.api.CheckpointStorage
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
-import kotlinx.support.jdk8.collections.removeIf
 import com.r3corda.node.utilities.isolatedTransaction
+import kotlinx.support.jdk8.collections.removeIf
 import org.jetbrains.exposed.sql.Database
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -188,7 +188,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private fun resumeRestoredFiber(fiber: ProtocolStateMachineImpl<*>) {
         fiber.openSessions.values.forEach { openSessions[it.ourSessionId] = it }
         if (fiber.openSessions.values.any { it.waitingForResponse }) {
-            fiber.logger.info("Restored fiber pending on receive ${fiber.id}}")
+            fiber.logger.info("Restored, pending on receive")
         } else {
             resumeFiber(fiber)
         }
@@ -197,7 +197,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private fun onExistingSessionMessage(message: ExistingSessionMessage) {
         val session = openSessions[message.recipientSessionId]
         if (session != null) {
-            session.psm.logger.trace { "${session.psm.id} received $message on $session" }
+            session.psm.logger.trace { "Received $message on $session" }
             if (message is SessionEnd) {
                 openSessions.remove(message.recipientSessionId)
             }
@@ -231,13 +231,13 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             val protocolFactory = serviceHub.getProtocolFactory(markerClass)
             if (protocolFactory != null) {
                 val protocol = protocolFactory(otherParty)
-                val psm = createFiber(sessionInit.protocolName, protocol)
+                val psm = createFiber(protocol)
                 val session = ProtocolSession(protocol, otherParty, random63BitValue(), otherPartySessionId)
                 openSessions[session.ourSessionId] = session
                 psm.openSessions[Pair(protocol, otherParty)] = session
                 updateCheckpoint(psm)
                 sendSessionMessage(otherParty, SessionConfirm(otherPartySessionId, session.ourSessionId), psm)
-                psm.logger.debug { "Starting new ${psm.id} from $sessionInit on $session" }
+                psm.logger.debug { "Initiated from $sessionInit on $session" }
                 startFiber(psm)
             } else {
                 logger.warn("Unknown protocol marker class in $sessionInit")
@@ -268,9 +268,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         return createKryo(serializer.kryo)
     }
 
-    private fun <T> createFiber(loggerName: String, logic: ProtocolLogic<T>): ProtocolStateMachineImpl<T> {
+    private fun <T> createFiber(logic: ProtocolLogic<T>): ProtocolStateMachineImpl<T> {
         val id = StateMachineRunId.createRandom()
-        return ProtocolStateMachineImpl(id, logic, scheduler, loggerName).apply { initFiber(this) }
+        return ProtocolStateMachineImpl(id, logic, scheduler).apply { initFiber(this) }
     }
 
     private fun initFiber(psm: ProtocolStateMachineImpl<*>) {
@@ -333,12 +333,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     /**
-     * Kicks off a brand new state machine of the given class. It will log with the named logger.
+     * Kicks off a brand new state machine of the given class.
      * The state machine will be persisted when it suspends, with automated restart if the StateMachineManager is
      * restarted with checkpointed state machines in the storage service.
      */
-    fun <T> add(loggerName: String, logic: ProtocolLogic<T>): ProtocolStateMachine<T> {
-        val fiber = createFiber(loggerName, logic)
+    fun <T> add(logic: ProtocolLogic<T>): ProtocolStateMachine<T> {
+        val fiber = createFiber(logic)
         // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
         // on the protocol completion future inside that context. The problem is that any progress checkpoints are
         // unable to acquire the table lock and move forward till the calling transaction finishes.
@@ -389,7 +389,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val node = serviceHub.networkMapCache.getNodeByPublicKey(party.owningKey)
                 ?: throw IllegalArgumentException("Don't know about party $party")
         val logger = psm?.logger ?: logger
-        logger.trace { "${psm?.id} sending $message to party $party" }
+        logger.trace { "Sending $message to party $party" }
         serviceHub.networkService.send(sessionTopic, message, node.address)
     }
 

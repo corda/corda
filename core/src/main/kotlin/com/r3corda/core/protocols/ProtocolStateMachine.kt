@@ -14,11 +14,16 @@ data class StateMachineRunId private constructor(val uuid: UUID) {
         fun createRandom(): StateMachineRunId = StateMachineRunId(UUID.randomUUID())
     }
 
-    override fun toString(): String = "${javaClass.simpleName}($uuid)"
+    override fun toString(): String = "[$uuid]"
 }
 
 /**
- * The interface of [ProtocolStateMachineImpl] exposing methods and properties required by ProtocolLogic for compilation.
+ * A ProtocolStateMachine instance is a suspendable fiber that delegates all actual logic to a [ProtocolLogic] instance.
+ * For any given flow there is only one PSM, even if that protocol invokes subprotocols.
+ *
+ * These classes are created by the [StateMachineManager] when a new protocol is started at the topmost level. If
+ * a protocol invokes a sub-protocol, then it will pass along the PSM to the child. The call method of the topmost
+ * logic element gets to return the value that the entire state machine resolves to.
  */
 interface ProtocolStateMachine<R> {
     @Suspendable

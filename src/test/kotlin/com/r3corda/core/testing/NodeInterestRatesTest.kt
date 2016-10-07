@@ -152,7 +152,7 @@ class NodeInterestRatesTest {
         val protocol = RatesFixProtocol(tx, n2.info.serviceIdentities(NodeInterestRates.type).first(), fixOf, "0.675".bd, "0.1".bd)
         LogHelper.setLevel("rates")
         net.runNetwork()
-        val future = n1.services.startProtocol("rates", protocol)
+        val future = n1.services.startProtocol(protocol)
 
         net.runNetwork()
         future.get()

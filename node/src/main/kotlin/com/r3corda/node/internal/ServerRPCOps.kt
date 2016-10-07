@@ -79,7 +79,7 @@ class ServerRPCOps(
             val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
             val protocol = FinalityProtocol(tx, setOf(req), setOf(req.recipient))
             return TransactionBuildResult.ProtocolStarted(
-                    smm.add(BroadcastTransactionProtocol::class.java.simpleName, protocol).id,
+                    smm.add(protocol).id,
                     tx,
                     "Cash payment transaction generated"
             )
@@ -114,7 +114,7 @@ class ServerRPCOps(
             val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
             val protocol = FinalityProtocol(tx, setOf(req), participants)
             return TransactionBuildResult.ProtocolStarted(
-                    smm.add(BroadcastTransactionProtocol::class.java.simpleName, protocol).id,
+                    smm.add(protocol).id,
                     tx,
                     "Cash destruction transaction generated"
             )
@@ -134,7 +134,7 @@ class ServerRPCOps(
         // Issuance transactions do not need to be notarised, so we can skip directly to broadcasting it
         val protocol = BroadcastTransactionProtocol(tx, setOf(req), setOf(req.recipient))
         return TransactionBuildResult.ProtocolStarted(
-                smm.add(BroadcastTransactionProtocol::class.java.simpleName, protocol).id,
+                smm.add(protocol).id,
                 tx,
                 "Cash issuance completed"
         )

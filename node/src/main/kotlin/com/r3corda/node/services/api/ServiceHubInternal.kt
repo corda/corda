@@ -69,7 +69,7 @@ abstract class ServiceHubInternal : ServiceHub {
      *       between SMM and the scheduler.  That particular problem should also be resolved by the service manager work
      *       itself, at which point this method would not be needed (by the scheduler).
      */
-    abstract fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T>
+    abstract fun <T> startProtocol(logic: ProtocolLogic<T>): ListenableFuture<T>
 
     /**
      * Register the protocol factory we wish to use when a initiating party attempts to communicate with us. The
@@ -93,6 +93,6 @@ abstract class ServiceHubInternal : ServiceHub {
         val logicRef = protocolLogicRefFactory.create(logicType, *args)
         @Suppress("UNCHECKED_CAST")
         val logic = protocolLogicRefFactory.toProtocolLogic(logicRef) as ProtocolLogic<T>
-        return startProtocol(logicType.simpleName, logic)
+        return startProtocol(logic)
     }
 }

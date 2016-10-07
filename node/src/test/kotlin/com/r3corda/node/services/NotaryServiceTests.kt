@@ -96,8 +96,8 @@ class NotaryServiceTests {
 
         val firstSpend = NotaryProtocol.Client(stx)
         val secondSpend = NotaryProtocol.Client(stx)
-        clientNode.services.startProtocol("notary.first", firstSpend)
-        val future = clientNode.services.startProtocol("notary.second", secondSpend)
+        clientNode.services.startProtocol(firstSpend)
+        val future = clientNode.services.startProtocol(secondSpend)
 
         net.runNetwork()
 
@@ -110,7 +110,7 @@ class NotaryServiceTests {
 
     private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.LegallyIdentifiable> {
         val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.services.startProtocol("notary-test", protocol)
+        val future = clientNode.services.startProtocol(protocol)
         net.runNetwork()
         return future
     }
