@@ -1,6 +1,7 @@
 package com.r3corda.plugins
 
 import org.gradle.api.internal.file.AbstractFileCollection
+import org.gradle.api.Project
 
 /**
  * Represents a node that will be installed.

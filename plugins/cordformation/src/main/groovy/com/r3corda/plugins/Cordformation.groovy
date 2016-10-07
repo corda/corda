@@ -8,6 +8,10 @@ import org.gradle.api.Project
  * testing, and debugging. It will prepopulate several fields in the configuration and create a simple node runner.
  */
 class Cordformation implements Plugin<Project> {
+    void apply(Project project) {
+        
+    }
+
     /**
      * Gets a resource file from this plugin's JAR file.
      *
