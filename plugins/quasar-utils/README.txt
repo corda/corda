@@ -1,0 +1,1 @@
+Please see docs/source/cordapp-plugins.rst for more information.
