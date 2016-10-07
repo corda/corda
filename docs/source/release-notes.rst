@@ -3,8 +3,95 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
-Unreleased
-----------
+Milestone 4
+-----------
+
+New features in this release:
+
+* Persistence:
+
+    * States can now be written into a relational database and queried using JDBC. The schemas are defined by the
+      smart contracts and schema versioning is supported. It is reasonable to write an app that stores data in a mix
+      of global ledger transactions and local database tables which are joined on demand, using join key slots that
+      are present in many state definitions. Read more about :doc:`persistence`.
+    * The embedded H2 SQL database is now exposed by default to any tool that can speak JDBC. The database URL is
+      printed during node startup and can be used to explore the database, which contains both node internal data
+      and tables generated from ledger states.
+    * Protocol checkpoints are now stored in the database as well. Message processing is now atomic with protocol
+      checkpointing and run under the same RDBMS transaction.
+    * MQ message deduplication is now handled at the app layer and performed under the RDMS transaction, so
+      ensuring messages are only replayed if the RDMS transaction rolled back.
+    * "The wallet" has been renamed to "the vault".
+
+* Client RPC:
+
+    * New RPCs added to subscribe to snapshots and update streams state of the vault, currently executing protocols
+      and other important node information.
+    * New tutorial added that shows how to use the RPC API to draw live transaction graphs on screen.
+
+* Protocol framework:
+
+    * Large simplifications to the API. Session management is now handled automatically. Messages are now routed
+      based on identities rather than node IP addresses.
+
+* Decentralised consensus:
+
+    * A standalone one-node notary backed by a JDBC store has been added.
+    * A prototype RAFT based notary composed of multiple nodes is available on a branch.
+
+* Data model:
+
+    * Compound keys have been added as preparation for merging a distributed RAFT based notary. Compound keys
+      are trees of public keys in which interior nodes can have validity thresholds attached, thus allowing
+      boolean formulas of keys to be created. This is similar to Bitcoin's multi-sig support and the data model
+      is the same as the InterLedger Crypto-Conditions spec, which should aid interop in future. Read more about
+      key trees in the ":doc:`transaction-data-types`" article.
+    * A new tutorial has been added showing how to use transaction attachments in more detail.
+
+* Testnet
+
+    * Permissioning infrastructure phase one is built out. The node now has a notion of developer mode vs normal
+      mode. In developer mode it works like M3 and the SSL certificates used by nodes running on your local
+      machine all self-sign using a developer key included in the source tree. When developer mode is not active,
+      the node won't start until it has a signed certificate. Such a certificate can be obtained by simply running
+      an included command line utility which generates a CSR and submits it to a permissioning service, then waits
+      for the signed certificate to be returned. Note that currently there is no public Corda testnet, so we are
+      not currently running a permissioning service.
+
+* Standalone app development:
+
+    * The Corda libraries that app developers need to link against can now be installed into your local Maven
+      repository, where they can then be used like any other JAR. See :doc:`creating-a-cordapp`.
+
+* User interfaces:
+
+    * Infrastructure work on the node explorer is now complete: it is fully switched to using the MQ based RPC system.
+    * A library of additional reactive collections has been added. This API builds on top of Rx and the observable
+      collections API in Java 8 to give "live" data structures in which the state of the node and ledger can be
+      viewed as an ordinary Java ``List``s, ``Map``s and ``Set``s, but which also emit callbacks when these views
+      change, and which can have additional views derived in a functional manner (filtered, mapped, sorted, etc).
+      Finally, these views can then be bound directly into JavaFX UIs. This makes for a concise and functional
+      way of building application UIs that render data from the node, and the API is available for third party
+      app developers to use as well. We believe this will be highly productive and enjoyable for developers who
+      have the option of building JavaFX apps (vs web apps).
+    * The visual network simulator tool that was demoed back in April as part of the first Corda live demo has
+      been merged into the main repository.
+
+* Documentation
+
+    * New secure coding guidelines. Corda tries to eliminate as many security mistakes as practical via the type
+      system and other mechanically checkable processes, but there are still things that one must be aware of.
+    * New attachments tutorial.
+    * New Client RPC tutorial.
+    * More tutorials on how to build a standalone CorDapp.
+
+* Testing
+
+    * More integration testing support
+    * New micro-DSLs for expressing expected sequences of operations with more or less relaxed ordering constraints.
+    * QuickCheck generators to create streams of randomised transactions and other basic types. QuickCheck is a way
+      of writing unit tests that perform randomised fuzz testing of code, originally developed by the Haskell
+      community and now also available in Java.
 
 API changes:
 
@@ -15,6 +102,8 @@ API changes:
 * The ``UntrustworthyData<T>.validate`` method has been renamed to ``unwrap`` - the old name is now deprecated.
 * The wallet, wallet service, etc. are now vault, vault service, etc. These better reflect the intent that they
   are a generic secure data store, rather than something which holds cash.
+* The protocol send/receive APIs have changed to no longer require a session id. Please check the current version
+  of the protocol framework tutorial for more details.
 
 Milestone 3
 -----------

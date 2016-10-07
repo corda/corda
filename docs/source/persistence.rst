@@ -12,8 +12,8 @@ node's local vault as part of a transaction.
 
 .. note:: Presently the node includes an instance of the H2 database but any database that supports JDBC is a candidate and
    the node will in the future support a range of database implementations via their JDBC drivers.  Much of the node
-   internal state is also persisted there. If a node is using the default H2 JDBC configuration you should be able to connect
-   to the H2 instance using the JDBC URL output to the logs at startup of the form ``jdbc:h2:tcp://<host>:<port>/node``
+   internal state is also persisted there. You can access the internal H2 database via JDBC, please see the info
+   in ":doc:`node-administration`" for details.
 
 Schemas
 -------
