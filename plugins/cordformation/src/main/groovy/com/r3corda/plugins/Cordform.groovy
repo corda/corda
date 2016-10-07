@@ -2,27 +2,54 @@ package com.r3corda.plugins
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
-
 import java.nio.file.Path
 import java.nio.file.Paths
 
+/**
+ * Creates nodes based on the configuration of this task in the gradle configuration DSL.
+ *
+ * See documentation for examples.
+ */
 class Cordform extends DefaultTask {
     protected Path directory = Paths.get("./build/nodes")
     protected List<Node> nodes = new ArrayList<Node>()
     protected String networkMapNodeName
 
-    public String directory(String directory) {
+    /**
+     * Set the directory to install nodes into.
+     *
+     * @param directory The directory the nodes will be installed into.
+     * @return
+     */
+    public void directory(String directory) {
         this.directory = Paths.get(directory)
     }
 
-    public String networkMap(String nodeName) {
+    /**
+     * Set the network map node.
+     *
+     * @warning Ensure the node name is one of the configured nodes.
+     * @param nodeName The name of one the node that will host the network map.
+     */
+    public void networkMap(String nodeName) {
         networkMapNodeName = nodeName
     }
 
+    /**
+     * Add a node configuration.
+     *
+     * @param configureClosure A node configuration that will be deployed.
+     */
     public void node(Closure configureClosure) {
         nodes << project.configure(new Node(project), configureClosure)
     }
 
+    /**
+     * Returns a node by name.
+     *
+     * @param name The name of the node as specified in the node configuration DSL.
+     * @return A node instance.
+     */
     protected Node getNodeByName(String name) {
         for(Node node : nodes) {
             if(node.name.equals(networkMapNodeName)) {
@@ -33,6 +60,9 @@ class Cordform extends DefaultTask {
         return null
     }
 
+    /**
+     * Installs the run script into the nodes directory.
+     */
     protected void installRunScript() {
         project.copy {
             from Cordformation.getPluginFile(project, "com/r3corda/plugins/runnodes")
@@ -42,8 +72,11 @@ class Cordform extends DefaultTask {
         }
     }
 
+    /**
+     * This task action will create and install the nodes based on the node configurations added.
+     */
     @TaskAction
-    def build() {
+    void build() {
         installRunScript()
         Node networkMapNode = getNodeByName(networkMapNodeName)
         nodes.each {
