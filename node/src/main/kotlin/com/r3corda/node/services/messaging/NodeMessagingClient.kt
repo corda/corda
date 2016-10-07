@@ -9,11 +9,12 @@ import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.utilities.AffinityExecutor
-import com.r3corda.node.utilities.JDBCHashSet
+import com.r3corda.node.utilities.*
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.nio.file.FileSystems
 import java.security.PublicKey
 import java.time.Instant
@@ -102,8 +103,19 @@ class NodeMessagingClient(config: NodeConfiguration,
 
     private val state = ThreadBox(InnerState())
     private val handlers = CopyOnWriteArrayList<Handler>()
+
+    private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}message_ids") {
+        val uuid = uuidString("message_id")
+    }
+
     private val processedMessages: MutableSet<UUID> = Collections.synchronizedSet(if (persistentInbox) {
-        JDBCHashSet<UUID>("message_id", loadOnInit = true)
+        object : AbstractJDBCHashSet<UUID, Table>(Table, loadOnInit = true) {
+            override fun elementFromRow(row: ResultRow): UUID = row[table.uuid]
+
+            override fun addElementToInsert(insert: InsertStatement, entry: UUID, finalizables: MutableList<() -> Unit>) {
+                insert[table.uuid] = entry
+            }
+        }
     } else {
         HashSet<UUID>()
     })

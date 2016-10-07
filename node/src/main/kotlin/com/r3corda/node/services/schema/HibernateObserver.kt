@@ -49,24 +49,22 @@ class HibernateObserver(services: ServiceHubInternal) {
         // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
         val config = Configuration().setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.hbm2ddl.auto", "update")
-                .setProperty("hibernate.show_sql", "true")
-                .setProperty("hibernate_format_sql", "true")
+                .setProperty("hibernate.show_sql", "false")
+                .setProperty("hibernate.format_sql", "true")
         val options = schemaService.schemaOptions[schema]
         val databaseSchema = options?.databaseSchema
         if (databaseSchema != null) {
             logger.debug { "Database schema = $databaseSchema" }
             config.setProperty("hibernate.default_schema", databaseSchema)
         }
-        val tablePrefix = options?.tablePrefix
-        if (tablePrefix != null) {
-            logger.debug { "Table prefix = $tablePrefix" }
-            config.setPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
-                override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
-                    val default = super.toPhysicalTableName(name, context)
-                    return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
-                }
-            })
-        }
+        val tablePrefix = options?.tablePrefix ?: "contract_" // We always have this as the default for aesthetic reasons.
+        logger.debug { "Table prefix = $tablePrefix" }
+        config.setPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
+            override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
+                val default = super.toPhysicalTableName(name, context)
+                return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
+            }
+        })
         schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         val sessionFactory = config.buildSessionFactory()
         logger.info("Created session factory for schema $schema")

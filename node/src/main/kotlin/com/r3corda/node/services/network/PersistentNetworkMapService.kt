@@ -4,8 +4,10 @@ import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.node.services.api.ServiceHubInternal
-import com.r3corda.node.utilities.JDBCHashMap
-import java.util.*
+import com.r3corda.node.utilities.*
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.statements.InsertStatement
+import java.util.Collections.synchronizedMap
 
 /**
  * A network map service backed by a database to survive restarts of the node hosting it.
@@ -16,10 +18,27 @@ import java.util.*
  * exceptions.
  */
 class PersistentNetworkMapService(services: ServiceHubInternal) : AbstractNetworkMapService(services) {
+    private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}network_map_nodes") {
+        val nodeParty = party("node_party_name", "node_party_key")
+        val registrationInfo = blob("node_registration_info")
+    }
 
-    override val registeredNodes: MutableMap<Party, NodeRegistrationInfo> = Collections.synchronizedMap(JDBCHashMap("network_map_nodes", loadOnInit = true))
+    override val registeredNodes: MutableMap<Party, NodeRegistrationInfo> = synchronizedMap(object : AbstractJDBCHashMap<Party, NodeRegistrationInfo, Table>(Table, loadOnInit = true) {
+        override fun keyFromRow(row: ResultRow): Party = Party(row[table.nodeParty.name], row[table.nodeParty.owningKey])
 
-    override val subscribers = ThreadBox(JDBCHashMap<SingleMessageRecipient, LastAcknowledgeInfo>("network_map_subscribers", loadOnInit = true))
+        override fun valueFromRow(row: ResultRow): NodeRegistrationInfo = deserializeFromBlob(row[table.registrationInfo])
+
+        override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<Party, NodeRegistrationInfo>, finalizables: MutableList<() -> Unit>) {
+            insert[table.nodeParty.name] = entry.key.name
+            insert[table.nodeParty.owningKey] = entry.key.owningKey
+        }
+
+        override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<Party, NodeRegistrationInfo>, finalizables: MutableList<() -> Unit>) {
+            insert[table.registrationInfo] = serializeToBlob(entry.value, finalizables)
+        }
+    })
+
+    override val subscribers = ThreadBox(JDBCHashMap<SingleMessageRecipient, LastAcknowledgeInfo>("${NODE_DATABASE_PREFIX}network_map_subscribers", loadOnInit = true))
 
     init {
         // Initialise the network map version with the current highest persisted version, or zero if there are no entries.

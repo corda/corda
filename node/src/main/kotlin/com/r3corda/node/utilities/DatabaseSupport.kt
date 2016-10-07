@@ -1,15 +1,26 @@
 package com.r3corda.node.utilities
 
 import co.paralleluniverse.strands.Strand
+import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.crypto.parsePublicKeyBase58
+import com.r3corda.core.crypto.toBase58String
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.Transaction
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.TransactionInterface
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import java.io.Closeable
+import java.security.PublicKey
 import java.sql.Connection
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.*
+
+/**
+ * Table prefix for all tables owned by the node module.
+ */
+const val NODE_DATABASE_PREFIX = "node_"
 
 // TODO: Handle commit failure due to database unavailable.  Better to shutdown and await database reconnect/recovery.
 fun <T> databaseTransaction(db: Database, statement: Transaction.() -> T): T {
@@ -121,6 +132,82 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
             connection.close()
             threadLocal.set(outerTransaction)
         }
-
     }
+}
+
+// Composite columns for use with below Exposed helpers.
+data class PartyColumns(val name: Column<String>, val owningKey: Column<PublicKey>)
+data class StateRefColumns(val txId: Column<SecureHash>, val index: Column<Int>)
+
+/**
+ * [Table] column helpers for use with Exposed, as per [varchar] etc.
+ */
+fun Table.publicKey(name: String) = this.registerColumn<PublicKey>(name, PublicKeyColumnType)
+fun Table.secureHash(name: String) = this.registerColumn<SecureHash>(name, SecureHashColumnType)
+fun Table.party(nameColumnName: String, keyColumnName: String) = PartyColumns(this.varchar(nameColumnName, length = 255), this.publicKey(keyColumnName))
+fun Table.uuidString(name: String) = this.registerColumn<UUID>(name, UUIDStringColumnType)
+fun Table.localDate(name: String) = this.registerColumn<LocalDate>(name, LocalDateColumnType)
+fun Table.stateRef(txIdColumnName: String, indexColumnName: String) = StateRefColumns(this.secureHash(txIdColumnName), this.integer(indexColumnName))
+
+/**
+ * [ColumnType] for marshalling to/from database on behalf of [PublicKey].
+ */
+object PublicKeyColumnType : ColumnType() {
+    override fun sqlType(): String = "VARCHAR(255)"
+
+    override fun valueFromDB(value: Any): Any = parsePublicKeyBase58(value.toString())
+
+    override fun notNullValueToDB(value: Any): Any = if (value is PublicKey) value.toBase58String() else value
+}
+
+/**
+ * [ColumnType] for marshalling to/from database on behalf of [SecureHash].
+ */
+object SecureHashColumnType : ColumnType() {
+    override fun sqlType(): String = "VARCHAR(64)"
+
+    override fun valueFromDB(value: Any): Any = SecureHash.parse(value.toString())
+
+    override fun notNullValueToDB(value: Any): Any = if (value is SecureHash) value.toString() else value
+}
+
+/**
+ * [ColumnType] for marshalling to/from database on behalf of [UUID], always using a string representation.
+ */
+object UUIDStringColumnType : ColumnType() {
+    override fun sqlType(): String = "VARCHAR(36)"
+
+    override fun valueFromDB(value: Any): Any = UUID.fromString(value.toString())
+
+    override fun notNullValueToDB(value: Any): Any = if (value is UUID) value.toString() else value
+}
+
+/**
+ * [ColumnType] for marshalling to/from database on behalf of [java.time.LocalDate].
+ */
+object LocalDateColumnType : ColumnType() {
+    override fun sqlType(): String = "DATE"
+
+    override fun nonNullValueToString(value: Any): String {
+        if (value is String) return value
+
+        val localDate = when (value) {
+            is LocalDate -> value
+            is java.sql.Date -> value.toLocalDate()
+            is java.sql.Timestamp -> value.toLocalDateTime().toLocalDate()
+            else -> error("Unexpected value: $value")
+        }
+        return "'$localDate'"
+    }
+
+    override fun valueFromDB(value: Any): Any = when (value) {
+        is java.sql.Date -> value.toLocalDate()
+        is java.sql.Timestamp -> value.toLocalDateTime().toLocalDate()
+        is Long -> LocalDate.from(Instant.ofEpochMilli(value))
+        else -> value
+    }
+
+    override fun notNullValueToDB(value: Any): Any = if (value is LocalDate) {
+        java.sql.Date(value.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli())
+    } else value
 }

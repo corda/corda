@@ -1,5 +1,6 @@
 package com.r3corda.node.utilities
 
+import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.utilities.loggerFor
@@ -32,34 +33,37 @@ class JDBCHashMap<K : Any, V : Any>(tableName: String, loadOnInit: Boolean = fal
         val value = blob("value")
     }
 
-    override fun keyFromRow(it: ResultRow): K = deserializeFromBlob(it[table.key])
-    override fun valueFromRow(it: ResultRow): V = deserializeFromBlob(it[table.value])
+    override fun keyFromRow(row: ResultRow): K = deserializeFromBlob(row[table.key])
+    override fun valueFromRow(row: ResultRow): V = deserializeFromBlob(row[table.value])
 
-    override fun addKeyToInsert(it: InsertStatement, entry: Map.Entry<K, V>, finalizables: MutableList<() -> Unit>) {
-        it[table.key] = serializeToBlob(entry.key, finalizables)
+    override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<K, V>, finalizables: MutableList<() -> Unit>) {
+        insert[table.key] = serializeToBlob(entry.key, finalizables)
     }
 
-    override fun addValueToInsert(it: InsertStatement, entry: Map.Entry<K, V>, finalizables: MutableList<() -> Unit>) {
-        it[table.value] = serializeToBlob(entry.value, finalizables)
+    override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<K, V>, finalizables: MutableList<() -> Unit>) {
+        insert[table.value] = serializeToBlob(entry.value, finalizables)
     }
 
 }
 
-fun <T: Any> serializeToBlob(value: T, finalizables: MutableList<() -> Unit>): Blob {
-    val blob = TransactionManager.currentOrNull()!!.connection.createBlob()
+fun bytesToBlob(value: SerializedBytes<*>, finalizables: MutableList<() -> Unit>): Blob {
+    val blob = TransactionManager.current().connection.createBlob()
     finalizables += { blob.free() }
-    blob.setBytes(1, value.serialize().bits)
+    blob.setBytes(1, value.bits)
     return blob
 }
 
-fun <T : Any> deserializeFromBlob(blob: Blob): T {
+fun serializeToBlob(value: Any, finalizables: MutableList<() -> Unit>): Blob = bytesToBlob(value.serialize(), finalizables)
+
+fun <T: Any> bytesFromBlob(blob: Blob): SerializedBytes<T> {
     try {
-        val bytes = blob.getBytes(0, blob.length().toInt())
-        return bytes.deserialize()
+        return SerializedBytes(blob.getBytes(0, blob.length().toInt()))
     } finally {
         blob.free()
     }
 }
+
+fun <T : Any> deserializeFromBlob(blob: Blob): T = bytesFromBlob<T>(blob).deserialize()
 
 /**
  * A convenient JDBC table backed hash set with iteration order based on insertion order.
@@ -75,10 +79,10 @@ class JDBCHashSet<K : Any>(tableName: String, loadOnInit: Boolean = false) : Abs
         val key = blob("key")
     }
 
-    override fun elementFromRow(it: ResultRow): K = deserializeFromBlob(it[table.key])
+    override fun elementFromRow(row: ResultRow): K = deserializeFromBlob(row[table.key])
 
-    override fun addElementToInsert(it: InsertStatement, entry: K, finalizables: MutableList<() -> Unit>) {
-        it[table.key] = serializeToBlob(entry, finalizables)
+    override fun addElementToInsert(insert: InsertStatement, entry: K, finalizables: MutableList<() -> Unit>) {
+        insert[table.key] = serializeToBlob(entry, finalizables)
     }
 }
 
@@ -88,18 +92,18 @@ class JDBCHashSet<K : Any>(tableName: String, loadOnInit: Boolean = false) : Abs
  *
  * See [AbstractJDBCHashMap] for implementation details.
  */
-abstract class AbstractJDBCHashSet<K : Any, T : JDBCHashedTable>(protected val table: T, loadOnInit: Boolean = false) : MutableSet<K>, AbstractSet<K>() {
+abstract class AbstractJDBCHashSet<K : Any, out T : JDBCHashedTable>(protected val table: T, loadOnInit: Boolean = false) : MutableSet<K>, AbstractSet<K>() {
     protected val innerMap = object : AbstractJDBCHashMap<K, Unit, T>(table, loadOnInit) {
-        override fun keyFromRow(it: ResultRow): K = this@AbstractJDBCHashSet.elementFromRow(it)
+        override fun keyFromRow(row: ResultRow): K = this@AbstractJDBCHashSet.elementFromRow(row)
 
         // Return constant.
-        override fun valueFromRow(it: ResultRow) = Unit
+        override fun valueFromRow(row: ResultRow) = Unit
 
-        override fun addKeyToInsert(it: InsertStatement, entry: Map.Entry<K, Unit>, finalizables: MutableList<() -> Unit>) =
-                this@AbstractJDBCHashSet.addElementToInsert(it, entry.key, finalizables)
+        override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<K, Unit>, finalizables: MutableList<() -> Unit>) =
+                this@AbstractJDBCHashSet.addElementToInsert(insert, entry.key, finalizables)
 
         // No op as not actually persisted.
-        override fun addValueToInsert(it: InsertStatement, entry: Map.Entry<K, Unit>, finalizables: MutableList<() -> Unit>) {
+        override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<K, Unit>, finalizables: MutableList<() -> Unit>) {
         }
 
     }
@@ -133,7 +137,7 @@ abstract class AbstractJDBCHashSet<K : Any, T : JDBCHashedTable>(protected val t
      *
      * See example implementations in [JDBCHashSet].
      */
-    protected abstract fun elementFromRow(it: ResultRow): K
+    protected abstract fun elementFromRow(row: ResultRow): K
 
     /**
      * Implementation should marshall the element to the insert statement.
@@ -143,7 +147,7 @@ abstract class AbstractJDBCHashSet<K : Any, T : JDBCHashedTable>(protected val t
      *
      * See example implementations in [JDBCHashSet].
      */
-    protected abstract fun addElementToInsert(it: InsertStatement, entry: K, finalizables: MutableList<() -> Unit>)
+    protected abstract fun addElementToInsert(insert: InsertStatement, entry: K, finalizables: MutableList<() -> Unit>)
 }
 
 /**
@@ -177,7 +181,7 @@ abstract class AbstractJDBCHashSet<K : Any, T : JDBCHashedTable>(protected val t
  * TODO: if iterators are used extensively when loadOnInit=true, consider maintaining a collection of keys in iteration order to avoid sorting each time.
  * TODO: revisit whether we need the loadOnInit==true functionality and remove if not.
  */
-abstract class AbstractJDBCHashMap<K : Any, V : Any, T : JDBCHashedTable>(val table: T, val loadOnInit: Boolean = false) : MutableMap<K, V>, AbstractMap<K,V>() {
+abstract class AbstractJDBCHashMap<K : Any, V : Any, out T : JDBCHashedTable>(val table: T, val loadOnInit: Boolean = false) : MutableMap<K, V>, AbstractMap<K,V>() {
 
     companion object {
         protected val log = loggerFor<AbstractJDBCHashMap<*,*,*>>()
@@ -199,7 +203,7 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, T : JDBCHashedTable>(val ta
                     bucket.add(entry)
                 }
             }
-            log.trace { "Loaded ${size} entries on init for ${table.tableName} in ${elapsedMillis} millis." }
+            log.trace { "Loaded $size entries on init for ${table.tableName} in $elapsedMillis millis." }
         }
     }
 
@@ -271,10 +275,7 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, T : JDBCHashedTable>(val ta
         }
 
         override fun remove() {
-            val savedCurrent = current
-            if (savedCurrent == null) {
-                throw IllegalStateException("Not called next() yet or already removed.")
-            }
+            val savedCurrent = current ?: throw IllegalStateException("Not called next() yet or already removed.")
             current = null
             remove(savedCurrent.key)
         }
@@ -381,9 +382,9 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, T : JDBCHashedTable>(val ta
     }
 
     override fun get(key: K): V? {
-        for (entry in getBucket(key)) {
-            if (entry.key == key) {
-                return entry.value
+        for ((entryKey, value) in getBucket(key)) {
+            if (entryKey == key) {
+                return value
             }
         }
         return null
@@ -412,14 +413,14 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, T : JDBCHashedTable>(val ta
      *
      * See example implementations in [JDBCHashMap].
      */
-    protected abstract fun keyFromRow(it: ResultRow): K
+    protected abstract fun keyFromRow(row: ResultRow): K
 
     /**
      * Implementation should return the value object marshalled from the database table row.
      *
      * See example implementations in [JDBCHashMap].
      */
-    protected abstract fun valueFromRow(it: ResultRow): V
+    protected abstract fun valueFromRow(row: ResultRow): V
 
     /**
      * Implementation should marshall the key to the insert statement.
@@ -429,7 +430,7 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, T : JDBCHashedTable>(val ta
      *
      * See example implementations in [JDBCHashMap].
      */
-    protected abstract fun addKeyToInsert(it: InsertStatement, entry: Map.Entry<K, V>, finalizables: MutableList<() -> Unit>)
+    protected abstract fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<K, V>, finalizables: MutableList<() -> Unit>)
 
     /**
      * Implementation should marshall the value to the insert statement.
@@ -439,7 +440,7 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, T : JDBCHashedTable>(val ta
      *
      * See example implementations in [JDBCHashMap].
      */
-    protected abstract fun addValueToInsert(it: InsertStatement, entry: Map.Entry<K, V>, finalizables: MutableList<() -> Unit>)
+    protected abstract fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<K, V>, finalizables: MutableList<() -> Unit>)
 
     private fun createEntry(it: ResultRow) = NotReallyMutableEntry<K, V>(keyFromRow(it), valueFromRow(it), it[table.seqNo])
 

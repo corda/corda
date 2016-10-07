@@ -4,7 +4,9 @@ import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.services.KeyManagementService
 import com.r3corda.core.serialization.SingletonSerializeAsToken
-import com.r3corda.node.utilities.JDBCHashMap
+import com.r3corda.node.utilities.*
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -18,8 +20,26 @@ import java.util.*
  * This class needs database transactions to be in-flight during method calls and init.
  */
 class PersistentKeyManagementService(initialKeys: Set<KeyPair>) : SingletonSerializeAsToken(), KeyManagementService {
+
+    private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}our_key_pairs") {
+        val publicKey = publicKey("public_key")
+        val privateKey = blob("private_key")
+    }
+
     private class InnerState {
-        val keys = JDBCHashMap<PublicKey, PrivateKey>("key_pairs", loadOnInit = false)
+        val keys = object : AbstractJDBCHashMap<PublicKey, PrivateKey, Table>(Table, loadOnInit = false) {
+            override fun keyFromRow(row: ResultRow): PublicKey = row[table.publicKey]
+
+            override fun valueFromRow(row: ResultRow): PrivateKey = deserializeFromBlob(row[table.privateKey])
+
+            override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<PublicKey, PrivateKey>, finalizables: MutableList<() -> Unit>) {
+                insert[table.publicKey] = entry.key
+            }
+
+            override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<PublicKey, PrivateKey>, finalizables: MutableList<() -> Unit>) {
+                insert[table.privateKey] = serializeToBlob(entry.value, finalizables)
+            }
+        }
     }
 
     private val mutex = ThreadBox(InnerState())
