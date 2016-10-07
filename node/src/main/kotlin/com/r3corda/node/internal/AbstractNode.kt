@@ -153,7 +153,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
     lateinit var net: MessagingServiceInternal
     lateinit var netMapCache: NetworkMapCache
     lateinit var api: APIServer
-    lateinit var scheduler: SchedulerService
+    lateinit var scheduler: NodeSchedulerService
     lateinit var protocolLogicFactory: ProtocolLogicRefFactory
     lateinit var schemas: SchemaService
     val customServices: ArrayList<Any> = ArrayList()
@@ -257,6 +257,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
             smm.start()
+            scheduler.start()
         }
         started = true
         return this
