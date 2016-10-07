@@ -139,10 +139,11 @@ object TwoPartyDealProtocol {
             val stx: SignedTransaction = verifyPartialTransaction(getPartialTransaction())
 
             // These two steps could be done in parallel, in theory. Our framework doesn't support that yet though.
-            val ourSignature = signWithOurKey(stx)
-            val notarySignature = getNotarySignature(stx)
+            val ourSignature = computeOurSignature(stx)
+            val allPartySignedTx = stx + ourSignature
+            val notarySignature = getNotarySignature(allPartySignedTx)
 
-            val fullySigned = sendSignatures(stx, ourSignature, notarySignature)
+            val fullySigned = sendSignatures(allPartySignedTx, ourSignature, notarySignature)
 
             progressTracker.currentStep = RECORDING
 
@@ -167,16 +168,16 @@ object TwoPartyDealProtocol {
             return subProtocol(NotaryProtocol.Client(stx))
         }
 
-        open fun signWithOurKey(partialTX: SignedTransaction): DigitalSignature.WithKey {
+        open fun computeOurSignature(partialTX: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = SIGNING
             return myKeyPair.signWithECDSA(partialTX.txBits)
         }
 
         @Suspendable
-        private fun sendSignatures(partialTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
+        private fun sendSignatures(allPartySignedTx: SignedTransaction, ourSignature: DigitalSignature.WithKey,
                                    notarySignature: DigitalSignature.LegallyIdentifiable): SignedTransaction {
             progressTracker.currentStep = SENDING_SIGS
-            val fullySigned = partialTX + ourSignature + notarySignature
+            val fullySigned = allPartySignedTx + notarySignature
 
             logger.trace { "Built finished transaction, sending back to other party!" }
 

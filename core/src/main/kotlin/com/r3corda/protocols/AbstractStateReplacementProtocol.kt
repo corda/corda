@@ -79,7 +79,9 @@ abstract class AbstractStateReplacementProtocol<T> {
 
             val participantSignatures = parties.map { getParticipantSignature(it, stx) }
 
-            val allSignatures = participantSignatures + getNotarySignature(stx)
+            val allPartySignedTx = stx + participantSignatures
+
+            val allSignatures = participantSignatures + getNotarySignature(allPartySignedTx)
             parties.forEach { send(it, allSignatures) }
 
             return allSignatures
