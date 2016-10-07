@@ -8,8 +8,6 @@ import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.core.messaging.createMessage
-import com.r3corda.core.messaging.onNext
 import com.r3corda.core.node.CityDatabase
 import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
@@ -18,7 +16,6 @@ import com.r3corda.core.node.services.*
 import com.r3corda.core.node.services.NetworkMapCache.MapChangeType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
-import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
@@ -49,6 +46,7 @@ import com.r3corda.node.services.transactions.ValidatingNotaryService
 import com.r3corda.node.services.vault.CashBalanceAsMetricsObserver
 import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.*
+import com.r3corda.protocols.sendRequest
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
@@ -366,12 +364,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         val instant = platformClock.instant()
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, instant.toEpochMilli(), type, expires)
-        val sessionID = random63BitValue()
-        val request = NetworkMapService.RegistrationRequest(reg.toWire(storage.myLegalIdentityKey.private), net.myAddress, sessionID)
-        val message = net.createMessage(REGISTER_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, request.serialize().bits)
-        val future = net.onNext<RegistrationResponse>(REGISTER_PROTOCOL_TOPIC, sessionID, RunOnCallerThread)
-        net.send(message, networkMapAddr)
-        return future
+        val request = NetworkMapService.RegistrationRequest(reg.toWire(storage.myLegalIdentityKey.private), net.myAddress)
+        return net.sendRequest(REGISTER_PROTOCOL_TOPIC, request, networkMapAddr, RunOnCallerThread)
     }
 
     protected open fun makeKeyManagementService(): KeyManagementService = PersistentKeyManagementService(setOf(storage.myLegalIdentityKey))

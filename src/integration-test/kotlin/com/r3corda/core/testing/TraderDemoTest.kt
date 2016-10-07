@@ -26,7 +26,8 @@ class TraderDemoTest {
                     "--role", "BUYER",
                     "--network-address", buyerAddr.toString(),
                     "--api-address", buyerApiAddr.toString(),
-                    "--base-directory", baseDirectory
+                    "--base-directory", baseDirectory,
+                    "--h2-port", "0"
             )
             val proc = spawn("com.r3corda.demos.TraderDemoKt", args, "TradeDemoBuyer")
             NodeApi.ensureNodeStartsOrKill(proc, buyerApiAddr)
@@ -42,7 +43,8 @@ class TraderDemoTest {
                     "--network-address", sellerAddr.toString(),
                     "--api-address", sellerApiAddr.toString(),
                     "--other-network-address", buyerAddr.toString(),
-                    "--base-directory", baseDirectory
+                    "--base-directory", baseDirectory,
+                    "--h2-port", "0"
             )
             val proc = spawn("com.r3corda.demos.TraderDemoKt", args, "TradeDemoSeller")
             assertExitOrKill(proc)

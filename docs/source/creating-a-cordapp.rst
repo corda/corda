@@ -75,6 +75,18 @@ To enable remote debugging of the corda process use a command line such as:
 
 This command line will start the debugger on port 5005 and pause the process awaiting debugger attachment.
 
+Viewing persisted state of your Node
+------------------------------------
+
+To make examining the persisted contract states of your node or the internal node database tables easier, and providing you are
+using the default database configuration used for demos, you should be able to connect to the internal node database over
+a JDBC connection at the URL that is output to the logs at node start up.  That URL will be of the form ``jdbc:h2:tcp://<host>:<port>/node``.
+
+The user name and password for the login are as per the node data source configuration.
+
+The name and column layout of the internal node tables is in a state of flux and should not be relied upon to remain static
+at the present time, and should certainly be treated as read-only.
+
 .. _CordaPluginRegistry: api/com.r3corda.core.node/-corda-plugin-registry/index.html
 .. _ServiceHubInternal: api/com.r3corda.node.services.api/-service-hub-internal/index.html
 .. _ServiceHub: api/com.r3corda.node.services.api/-service-hub/index.html

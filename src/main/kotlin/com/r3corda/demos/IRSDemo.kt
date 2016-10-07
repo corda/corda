@@ -87,7 +87,8 @@ sealed class CliParams {
             val tradeWithIdentities: List<Path>,
             val uploadRates: Boolean,
             val defaultLegalName: String,
-            val autoSetup: Boolean // Run Setup for both nodes automatically with default arguments
+            val autoSetup: Boolean, // Run Setup for both nodes automatically with default arguments
+            val h2Port: Int
     ) : CliParams()
 
     /**
@@ -151,6 +152,12 @@ sealed class CliParams {
                     IRSDemoNode.NodeB -> Node.DEFAULT_PORT + 3
                 }
 
+        private fun defaultH2Port(node: IRSDemoNode) =
+                when (node) {
+                    IRSDemoNode.NodeA -> Node.DEFAULT_PORT + 4
+                    IRSDemoNode.NodeB -> Node.DEFAULT_PORT + 5
+                }
+
         private fun parseRunNode(options: OptionSet, node: IRSDemoNode): RunNode {
             val dir = nodeDirectory(options, node)
 
@@ -171,7 +178,8 @@ sealed class CliParams {
                     },
                     uploadRates = node == IRSDemoNode.NodeB,
                     defaultLegalName = legalName(node),
-                    autoSetup = !options.has(CliParamsSpec.baseDirectoryArg) && !options.has(CliParamsSpec.fakeTradeWithIdentityFile)
+                    autoSetup = !options.has(CliParamsSpec.baseDirectoryArg) && !options.has(CliParamsSpec.fakeTradeWithIdentityFile),
+                    h2Port = options.valueOf(CliParamsSpec.h2PortArg.defaultsTo(defaultH2Port(node)))
             )
         }
 
@@ -263,6 +271,7 @@ object CliParamsSpec {
     val fakeTradeWithIdentityFile =
             parser.accepts("fake-trade-with-identity-file", "Extra identities to be registered with the identity service")
             .withOptionalArg()
+    val h2PortArg = parser.accepts("h2-port").withRequiredArg().ofType(Int::class.java)
     val nonOptions = parser.nonOptions()
     val help = parser.accepts("help", "Prints this help").forHelp()
 }
@@ -449,7 +458,8 @@ private fun getNodeConfig(cliParams: CliParams.RunNode): FullNodeConfiguration {
     val configFile = cliParams.dir.resolve("config")
     val configOverrides = mapOf(
             "artemisAddress" to cliParams.networkAddress.toString(),
-            "webAddress" to cliParams.apiAddress.toString()
+            "webAddress" to cliParams.apiAddress.toString(),
+            "h2port" to cliParams.h2Port.toString()
     )
     return loadConfigFile(cliParams.dir, configFile, configOverrides, cliParams.defaultLegalName)
 }

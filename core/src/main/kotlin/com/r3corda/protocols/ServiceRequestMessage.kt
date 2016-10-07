@@ -1,35 +1,30 @@
 package com.r3corda.protocols
 
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.messaging.MessageRecipients
+import com.google.common.util.concurrent.ListenableFuture
+import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.core.node.services.NetworkMapCache
+import com.r3corda.core.messaging.onNext
+import com.r3corda.core.messaging.send
+import com.r3corda.core.node.services.DEFAULT_SESSION_ID
+import java.util.concurrent.Executor
 
 /**
- * Abstract superclass for request messages sent to services, which includes common
- * fields such as replyTo and sessionID.
+ * Abstract superclass for request messages sent to services which expect a reply.
  */
 interface ServiceRequestMessage {
     val sessionID: Long
-    fun getReplyTo(networkMapCache: NetworkMapCache): MessageRecipients
+    val replyTo: SingleMessageRecipient
 }
 
 /**
- * A message which specifies reply destination as a specific endpoint such as a monitoring client. This is of particular
- * use where we want to address a specific endpoint, not necessarily a specific user (for example if the same user logs
- * in on two machines, we want to consistently deliver messages as part of a session, to the same machine the session
- * started on).
+ * Sends a [ServiceRequestMessage] to [target] and returns a [ListenableFuture] of the response.
+ * @param R The type of the response.
  */
-interface DirectRequestMessage: ServiceRequestMessage {
-    val replyToRecipient: SingleMessageRecipient
-    override fun getReplyTo(networkMapCache: NetworkMapCache): MessageRecipients = replyToRecipient
-}
-
-interface PartyRequestMessage : ServiceRequestMessage {
-
-    val replyToParty: Party
-
-    override fun getReplyTo(networkMapCache: NetworkMapCache): MessageRecipients {
-        return networkMapCache.partyNodes.single { it.identity == replyToParty }.address
-    }
+fun <R : Any> MessagingService.sendRequest(topic: String,
+                                           request: ServiceRequestMessage,
+                                           target: SingleMessageRecipient,
+                                           executor: Executor? = null): ListenableFuture<R> {
+    val responseFuture = onNext<R>(topic, request.sessionID, executor)
+    send(topic, DEFAULT_SESSION_ID, request, target)
+    return responseFuture
 }

@@ -235,6 +235,35 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
 
     override fun makeUniquenessProvider() = PersistentUniquenessProvider()
 
+    /**
+     * If the node is persisting to an embedded H2 database, then expose this via TCP with a JDBC URL of the form:
+     * jdbc:h2:tcp://<host>:<port>/node
+     * with username and password as per the DataSource connection details.  The key element to enabling this support is to
+     * ensure that you specify a JDBC connection URL of the form jdbc:h2:file: in the node config and that you include
+     * the H2 option AUTO_SERVER_PORT set to the port you desire to use (0 will give a dynamically allocated port number)
+     * but exclude the H2 option AUTO_SERVER=TRUE.
+     * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
+     * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
+     */
+    override fun initialiseDatabasePersistence(insideTransaction: () -> Unit) {
+        val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
+        val h2Prefix = "jdbc:h2:file:"
+        if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
+            val h2Port = databaseUrl.substringAfter(";AUTO_SERVER_PORT=", "").substringBefore(';')
+            if (h2Port.isNotBlank()) {
+                val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
+                val server = org.h2.tools.Server.createTcpServer(
+                        "-tcpPort", h2Port,
+                        "-tcpAllowOthers",
+                        "-tcpDaemon",
+                        "-key", "node", databaseName)
+                val url = server.start().url
+                log.info("H2 JDBC url is jdbc:h2:$url/node")
+            }
+        }
+        super.initialiseDatabasePersistence(insideTransaction)
+    }
+
     override fun start(): Node {
         alreadyRunningNodeCheck()
         super.start()
