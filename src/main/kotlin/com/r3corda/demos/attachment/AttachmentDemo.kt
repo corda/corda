@@ -111,7 +111,7 @@ fun main(args: Array<String>) {
     // the map is not very helpful, but we need one anyway. So just make the recipient side run the network map as it's
     // the side that sticks around waiting for the sender.
     val networkMapId = if (role == Role.SENDER) {
-        advertisedServices = setOf(ServiceInfo(NetworkMapService.Type), ServiceInfo(SimpleNotaryService.Type))
+        advertisedServices = setOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
         null
     } else {
         advertisedServices = emptySet()
@@ -131,7 +131,7 @@ fun main(args: Array<String>) {
             node.networkMapRegistrationFuture.success {
                 // Pause a moment to give the network map time to update
                 Thread.sleep(100L)
-                val party = node.netMapCache.getNodeByLegalName(Role.RECIPIENT.legalName)?.identity ?: throw IllegalStateException("Cannot find other node?!")
+                val party = node.netMapCache.getNodeByLegalName(Role.RECIPIENT.legalName)?.legalIdentity ?: throw IllegalStateException("Cannot find other node?!")
                 runSender(node, party)
             }
         }

@@ -41,11 +41,11 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCache {
     override val networkMapNodes: List<NodeInfo>
-        get() = get(NetworkMapService.Type)
+        get() = get(NetworkMapService.type)
     override val regulators: List<NodeInfo>
-        get() = get(RegulatorService.Type)
+        get() = get(ServiceType.regulator)
     override val notaryNodes: List<NodeInfo>
-        get() = get(NotaryService.Type)
+        get() = get(ServiceType.notary)
     override val partyNodes: List<NodeInfo>
         get() = registeredNodes.map { it.value }
     private val _changed = PublishSubject.create<MapChange>()
@@ -58,10 +58,13 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     protected var registeredNodes = Collections.synchronizedMap(HashMap<Party, NodeInfo>())
 
     override fun get() = registeredNodes.map { it.value }
-    override fun get(serviceType: ServiceType) = registeredNodes.filterValues { it.advertisedServices.any { it.type.isSubTypeOf(serviceType) } }.map { it.value }
+    override fun get(serviceType: ServiceType) = registeredNodes.filterValues { it.advertisedServices.any { it.info.type.isSubTypeOf(serviceType) } }.map { it.value }
     override fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo? = get(type).firstOrNull()
-    override fun getNodeByLegalName(name: String) = get().singleOrNull { it.identity.name == name }
-    override fun getNodeByPublicKey(publicKey: PublicKey) = get().singleOrNull { it.identity.owningKey == publicKey }
+    override fun getNodeByLegalName(name: String) = get().singleOrNull { it.legalIdentity.name == name }
+    override fun getNodeByPublicKey(publicKey: PublicKey) = get().singleOrNull {
+        (it.legalIdentity.owningKey == publicKey)
+            || it.advertisedServices.any { it.identity.owningKey == publicKey }
+    }
 
     override fun addMapService(net: MessagingService, networkMapAddress: SingleMessageRecipient, subscribe: Boolean,
                                ifChangedSinceVer: Int?): ListenableFuture<Unit> {
@@ -96,7 +99,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     }
 
     override fun addNode(node: NodeInfo) {
-        val oldValue = registeredNodes.put(node.identity, node)
+        val oldValue = registeredNodes.put(node.legalIdentity, node)
         if (oldValue == null) {
             _changed.onNext(MapChange(node, oldValue, MapChangeType.Added))
         } else if(oldValue != node) {
@@ -105,7 +108,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     }
 
     override fun removeNode(node: NodeInfo) {
-        val oldValue = registeredNodes.remove(node.identity)
+        val oldValue = registeredNodes.remove(node.legalIdentity)
         _changed.onNext(MapChange(node, oldValue, MapChangeType.Removed))
     }
 

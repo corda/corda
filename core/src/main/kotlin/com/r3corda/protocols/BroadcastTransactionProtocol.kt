@@ -34,7 +34,7 @@ class BroadcastTransactionProtocol(val notarisedTransaction: SignedTransaction,
 
         // TODO: Messaging layer should handle this broadcast for us
         val msg = NotifyTxRequest(notarisedTransaction, events)
-        participants.filter { it != serviceHub.storageService.myLegalIdentity }.forEach { participant ->
+        participants.filter { it != serviceHub.myInfo.legalIdentity }.forEach { participant ->
             send(participant, msg)
         }
     }

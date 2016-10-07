@@ -44,7 +44,7 @@ class NodeMonitorModelTest {
         thread {
             driver {
                 val aliceNodeFuture = startNode("Alice")
-                val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.Type)))
+                val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
 
                 aliceNode = aliceNodeFuture.get()
                 notaryNode = notaryNodeFuture.get()
@@ -79,8 +79,8 @@ class NodeMonitorModelTest {
         clientToService.onNext(ClientToServiceCommand.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
-                recipient = aliceNode.identity,
-                notary = notaryNode.identity
+                recipient = aliceNode.legalIdentity,
+                notary = notaryNode.notaryIdentity
         ))
 
         vaultUpdates.expectEvents(isStrict = false) {
@@ -105,13 +105,13 @@ class NodeMonitorModelTest {
         clientToService.onNext(ClientToServiceCommand.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
-                recipient = aliceNode.identity,
-                notary = notaryNode.identity
+                recipient = aliceNode.legalIdentity,
+                notary = notaryNode.notaryIdentity
         ))
 
         clientToService.onNext(ClientToServiceCommand.PayCash(
-                amount = Amount(100, Issued(PartyAndReference(aliceNode.identity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
-                recipient = aliceNode.identity
+                amount = Amount(100, Issued(PartyAndReference(aliceNode.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
+                recipient = aliceNode.legalIdentity
         ))
 
         var issueSmId: StateMachineRunId? = null
@@ -146,7 +146,7 @@ class NodeMonitorModelTest {
                         val signaturePubKeys = tx.sigs.map { it.by }.toSet()
                         // Only Alice signed
                         require(signaturePubKeys.size == 1)
-                        require(signaturePubKeys.contains(aliceNode.identity.owningKey))
+                        require(signaturePubKeys.contains(aliceNode.legalIdentity.owningKey))
                         issueTx = tx
                     },
                     // MOVE
@@ -156,8 +156,8 @@ class NodeMonitorModelTest {
                         val signaturePubKeys = tx.sigs.map { it.by }.toSet()
                         // Alice and Notary signed
                         require(signaturePubKeys.size == 2)
-                        require(signaturePubKeys.contains(aliceNode.identity.owningKey))
-                        require(signaturePubKeys.contains(notaryNode.identity.owningKey))
+                        require(signaturePubKeys.contains(aliceNode.legalIdentity.owningKey))
+                        require(signaturePubKeys.contains(notaryNode.notaryIdentity.owningKey))
                         moveTx = tx
                     }
             )

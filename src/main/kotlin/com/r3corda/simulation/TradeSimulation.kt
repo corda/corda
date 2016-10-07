@@ -33,14 +33,16 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         val buyer = banks[buyerBankIndex]
         val seller = banks[sellerBankIndex]
 
-        buyer.services.fillWithSomeTestCash(1500.DOLLARS, notary.info.identity)
+        buyer.services.fillWithSomeTestCash(1500.DOLLARS, notary.info.notaryIdentity)
 
         val issuance = run {
-            val tx = CommercialPaper().generateIssue(seller.info.identity.ref(1, 2, 3), 1100.DOLLARS `issued by` DUMMY_CASH_ISSUER,
-                    Instant.now() + 10.days, notary.info.identity)
+            val tx = CommercialPaper().generateIssue(seller.info.legalIdentity.ref(1, 2, 3), 1100.DOLLARS `issued by` DUMMY_CASH_ISSUER,
+                    Instant.now() + 10.days, notary.info.notaryIdentity)
             tx.setTime(Instant.now(), 30.seconds)
-            tx.signWith(notary.storage.myLegalIdentityKey)
-            tx.signWith(seller.storage.myLegalIdentityKey)
+            val notaryKey = notary.services.notaryIdentityKey
+            val sellerKey = seller.services.legalIdentityKey
+            tx.signWith(notaryKey)
+            tx.signWith(sellerKey)
             tx.toSignedTransaction(true)
         }
         seller.services.recordTransactions(issuance)
@@ -48,15 +50,16 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         val amount = 1000.DOLLARS
 
         val buyerFuture = buyer.initiateSingleShotProtocol(Seller::class) {
-            Buyer(it, notary.info.identity, amount, CommercialPaper.State::class.java)
+            Buyer(it, notary.info.notaryIdentity, amount, CommercialPaper.State::class.java)
         }.flatMap { it.resultFuture }
 
+        val sellerKey = seller.services.legalIdentityKey
         val sellerProtocol = Seller(
-                buyer.info.identity,
+                buyer.info.legalIdentity,
                 notary.info,
                 issuance.tx.outRef<OwnableState>(0),
                 amount,
-                seller.storage.myLegalIdentityKey)
+                sellerKey)
 
         showConsensusFor(listOf(buyer, seller, notary))
         showProgressFor(listOf(buyer, seller))

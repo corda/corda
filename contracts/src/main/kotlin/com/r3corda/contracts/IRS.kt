@@ -188,7 +188,9 @@ class FloatingRatePaymentEvent(date: LocalDate,
 class InterestRateSwap() : Contract {
     override val legalContractReference = SecureHash.sha256("is_this_the_text_of_the_contract ? TBD")
 
-    object OracleType : ServiceType("corda.interest_rates")
+    companion object {
+        val oracleType = ServiceType.corda.getSubType("interest_rates")
+    }
 
     /**
      * This Common area contains all the information that is not leg specific.
@@ -657,7 +659,7 @@ class InterestRateSwap() : Contract {
         override val contract = IRS_PROGRAM_ID
 
         override val oracleType: ServiceType
-            get() = OracleType
+            get() = InterestRateSwap.oracleType
 
         override val ref = common.tradeID
 

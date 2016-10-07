@@ -42,7 +42,7 @@ import javax.annotation.concurrent.ThreadSafe
  * for signing.
  */
 object NodeInterestRates {
-    object Type : ServiceType("corda.interest_rates")
+    val type = ServiceType.corda.getSubType("interest_rates")
 
     /**
      * Register the protocol that is used with the Fixing integration tests.
@@ -55,25 +55,31 @@ object NodeInterestRates {
     /**
      * The Service that wraps [Oracle] and handles messages/network interaction/request scrubbing.
      */
-    class Service(services: ServiceHubInternal) : AcceptsFileUpload, SingletonSerializeAsToken() {
-        val ss = services.storageService
-        val oracle = Oracle(ss.myLegalIdentity, ss.myLegalIdentityKey, services.clock)
-
-        init {
-            services.registerProtocolInitiator(FixSignProtocol::class) { FixSignHandler(it, oracle) }
-            services.registerProtocolInitiator(FixQueryProtocol::class) { FixQueryHandler(it, oracle) }
+    class Service(val services: ServiceHubInternal) : AcceptsFileUpload, SingletonSerializeAsToken() {
+        val oracle: Oracle by lazy {
+            val myNodeInfo = services.myInfo
+            val myIdentity = myNodeInfo.serviceIdentities(type).first()
+            val mySigningKey = services.keyManagementService.toKeyPair(myIdentity.owningKey)
+            Oracle(myIdentity, mySigningKey, services.clock)
         }
 
+        init {
+            // Note access to the singleton oracle property is via the registered SingletonSerializeAsToken Service.
+            // Otherwise the Kryo serialisation of the call stack in the Quasar Fiber extends to include
+            // the framework Oracle and the protocol will crash.
+            services.registerProtocolInitiator(FixSignProtocol::class) { FixSignHandler(it, this) }
+            services.registerProtocolInitiator(FixQueryProtocol::class) { FixQueryHandler(it, this) }
+        }
 
-        private class FixSignHandler(val otherParty: Party, val oracle: Oracle) : ProtocolLogic<Unit>() {
+        private class FixSignHandler(val otherParty: Party, val service: Service) : ProtocolLogic<Unit>() {
             @Suspendable
             override fun call() {
                 val request = receive<SignRequest>(otherParty).unwrap { it }
-                send(otherParty, oracle.sign(request.tx))
+                send(otherParty, service.oracle.sign(request.tx))
             }
         }
 
-        private class FixQueryHandler(val otherParty: Party, val oracle: Oracle) : ProtocolLogic<Unit>() {
+        private class FixQueryHandler(val otherParty: Party, val service: Service) : ProtocolLogic<Unit>() {
 
             companion object {
                 object RECEIVED : ProgressTracker.Step("Received fix request")
@@ -89,7 +95,7 @@ object NodeInterestRates {
             @Suspendable
             override fun call(): Unit {
                 val request = receive<QueryRequest>(otherParty).unwrap { it }
-                val answers = oracle.query(request.queries, request.deadline)
+                val answers = service.oracle.query(request.queries, request.deadline)
                 progressTracker.currentStep = SENDING
                 send(otherParty, answers)
             }

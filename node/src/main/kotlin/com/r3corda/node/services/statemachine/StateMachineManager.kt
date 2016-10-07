@@ -386,7 +386,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun sendSessionMessage(party: Party, message: SessionMessage, psm: ProtocolStateMachineImpl<*>?) {
-        val node = serviceHub.networkMapCache.getNodeByLegalName(party.name)
+        val node = serviceHub.networkMapCache.getNodeByPublicKey(party.owningKey)
                 ?: throw IllegalArgumentException("Don't know about party $party")
         val logger = psm?.logger ?: logger
         logger.trace { "${psm?.id} sending $message to party $party" }

@@ -48,7 +48,6 @@ import javax.annotation.concurrent.ThreadSafe
 // a concept of identity changes over time, should that include the node for an identity? If so, that is likely to
 // replace this service.
 interface NetworkMapService {
-    object Type : ServiceType("corda.network_map")
 
     companion object {
         val DEFAULT_EXPIRATION_PERIOD = Period.ofWeeks(4)
@@ -63,6 +62,8 @@ interface NetworkMapService {
         val PUSH_ACK_PROTOCOL_TOPIC = "platform.network_map.push_ack"
 
         val logger = loggerFor<NetworkMapService>()
+
+        val type = ServiceType.corda.getSubType("network_map")
     }
 
     val nodes: List<NodeInfo>
@@ -270,7 +271,7 @@ abstract class AbstractNetworkMapService
         // Update the current value atomically, so that if multiple updates come
         // in on different threads, there is no risk of a race condition while checking
         // sequence numbers.
-        val registrationInfo = registeredNodes.compute(node.identity, { mapKey: Party, existing: NodeRegistrationInfo? ->
+        val registrationInfo = registeredNodes.compute(node.legalIdentity, { mapKey: Party, existing: NodeRegistrationInfo? ->
             changed = existing == null || existing.reg.serial < change.serial
             if (changed) {
                 when (change.type) {
@@ -332,7 +333,7 @@ class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddOrRemo
      */
     fun toWire(privateKey: PrivateKey): WireNodeRegistration {
         val regSerialized = this.serialize()
-        val regSig = privateKey.signWithECDSA(regSerialized.bits, node.identity.owningKey)
+        val regSig = privateKey.signWithECDSA(regSerialized.bits, node.legalIdentity.owningKey)
 
         return WireNodeRegistration(regSerialized, regSig)
     }
@@ -346,7 +347,7 @@ class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddOrRemo
 class WireNodeRegistration(raw: SerializedBytes<NodeRegistration>, sig: DigitalSignature.WithKey) : SignedData<NodeRegistration>(raw, sig) {
     @Throws(IllegalArgumentException::class)
     override fun verifyData(data: NodeRegistration) {
-        require(data.node.identity.owningKey == sig.by)
+        require(data.node.legalIdentity.owningKey == sig.by)
     }
 }
 

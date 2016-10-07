@@ -41,19 +41,19 @@ abstract class AbstractNetworkMapServiceTest {
 
         // Confirm the service contains no nodes as own node only registered if network is run.
         assertEquals(0, service().nodes.count())
-        assertNull(service().processQueryRequest(NetworkMapService.QueryIdentityRequest(registerNode.info.identity, mapServiceNode.info.address, Long.MIN_VALUE)).node)
+        assertNull(service().processQueryRequest(NetworkMapService.QueryIdentityRequest(registerNode.info.legalIdentity, mapServiceNode.info.address, Long.MIN_VALUE)).node)
 
         // Register the new node
         val instant = Instant.now()
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
-        val nodeKey = registerNode.storage.myLegalIdentityKey
+        val nodeKey = registerNode.services.legalIdentityKey
         val addChange = NodeRegistration(registerNode.info, instant.toEpochMilli(), AddOrRemove.ADD, expires)
         val addWireChange = addChange.toWire(nodeKey.private)
         service().processRegistrationChangeRequest(RegistrationRequest(addWireChange, mapServiceNode.info.address, Long.MIN_VALUE))
         swizzle()
 
         assertEquals(1, service().nodes.count())
-        assertEquals(registerNode.info, service().processQueryRequest(NetworkMapService.QueryIdentityRequest(registerNode.info.identity, mapServiceNode.info.address, Long.MIN_VALUE)).node)
+        assertEquals(registerNode.info, service().processQueryRequest(NetworkMapService.QueryIdentityRequest(registerNode.info.legalIdentity, mapServiceNode.info.address, Long.MIN_VALUE)).node)
 
         // Re-registering should be a no-op
         service().processRegistrationChangeRequest(RegistrationRequest(addWireChange, mapServiceNode.info.address, Long.MIN_VALUE))
@@ -67,7 +67,7 @@ abstract class AbstractNetworkMapServiceTest {
         assert(service().processRegistrationChangeRequest(RegistrationRequest(removeWireChange, mapServiceNode.info.address, Long.MIN_VALUE)).success)
         swizzle()
 
-        assertNull(service().processQueryRequest(NetworkMapService.QueryIdentityRequest(registerNode.info.identity, mapServiceNode.info.address, Long.MIN_VALUE)).node)
+        assertNull(service().processQueryRequest(NetworkMapService.QueryIdentityRequest(registerNode.info.legalIdentity, mapServiceNode.info.address, Long.MIN_VALUE)).node)
         swizzle()
 
         // Trying to de-register a node that doesn't exist should fail
@@ -88,7 +88,7 @@ abstract class AbstractNetworkMapServiceTest {
         assertEquals(2, fetchPsm.get()?.count())
 
         // Forcibly deregister the second node
-        val nodeKey = registerNode.storage.myLegalIdentityKey
+        val nodeKey = registerNode.services.legalIdentityKey
         val instant = Instant.now()
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(registerNode.info, instant.toEpochMilli()+1, AddOrRemove.REMOVE, expires)
@@ -126,7 +126,7 @@ abstract class AbstractNetworkMapServiceTest {
         assertEquals(0, service().getUnacknowledgedCount(registerNode.info.address, startingMapVersion))
 
         // Fire off an update
-        val nodeKey = registerNode.storage.myLegalIdentityKey
+        val nodeKey = registerNode.services.legalIdentityKey
         var seq = 0L
         val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         var reg = NodeRegistration(registerNode.info, seq++, AddOrRemove.ADD, expires)

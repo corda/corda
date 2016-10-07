@@ -7,6 +7,8 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.crypto.sha256
 import com.r3corda.core.messaging.MessagingService
+import com.r3corda.core.messaging.SingleMessageRecipient
+import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.*
 import com.r3corda.core.protocols.ProtocolLogic
@@ -52,7 +54,7 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
         }
     }
 
-    override val storageService: TxWritableStorageService = MockStorageService(myLegalIdentityKey = key)
+    override val storageService: TxWritableStorageService = MockStorageService()
     override val identityService: MockIdentityService = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
     override val keyManagementService: MockKeyManagementService = MockKeyManagementService(key)
 
@@ -61,6 +63,7 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = throw UnsupportedOperationException()
     override val schedulerService: SchedulerService get() = throw UnsupportedOperationException()
+    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {} , Party("MegaCorp", key.public))
 }
 
 @ThreadSafe
@@ -150,8 +153,6 @@ open class MockTransactionStorage : TransactionStorage {
 @ThreadSafe
 class MockStorageService(override val attachments: AttachmentStorage = MockAttachmentStorage(),
                          override val validatedTransactions: TransactionStorage = MockTransactionStorage(),
-                         override val myLegalIdentityKey: KeyPair = generateKeyPair(),
-                         override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public),
                          override val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage())
 : SingletonSerializeAsToken(), TxWritableStorageService
 

@@ -32,7 +32,7 @@ class ResolveTransactionsProtocolTest {
         val nodes = net.createSomeNodes()
         a = nodes.partyNodes[0]
         b = nodes.partyNodes[1]
-        notary = nodes.notaryNode.info.identity
+        notary = nodes.notaryNode.info.notaryIdentity
         net.runNetwork()
     }
 
@@ -44,7 +44,7 @@ class ResolveTransactionsProtocolTest {
     @Test
     fun `resolve from two hashes`() {
         val (stx1, stx2) = makeTransactions()
-        val p = ResolveTransactionsProtocol(setOf(stx2.id), a.info.identity)
+        val p = ResolveTransactionsProtocol(setOf(stx2.id), a.info.legalIdentity)
         val future = b.services.startProtocol("resolve", p)
         net.runNetwork()
         val results = future.get()
@@ -56,7 +56,7 @@ class ResolveTransactionsProtocolTest {
     @Test
     fun `dependency with an error`() {
         val stx = makeTransactions(signFirstTX = false).second
-        val p = ResolveTransactionsProtocol(setOf(stx.id), a.info.identity)
+        val p = ResolveTransactionsProtocol(setOf(stx.id), a.info.legalIdentity)
         val future = b.services.startProtocol("resolve", p)
         net.runNetwork()
         assertFailsWith(SignatureException::class) {
@@ -67,7 +67,7 @@ class ResolveTransactionsProtocolTest {
     @Test
     fun `resolve from a signed transaction`() {
         val (stx1, stx2) = makeTransactions()
-        val p = ResolveTransactionsProtocol(stx2, a.info.identity)
+        val p = ResolveTransactionsProtocol(stx2, a.info.legalIdentity)
         val future = b.services.startProtocol("resolve", p)
         net.runNetwork()
         future.get()
@@ -89,7 +89,7 @@ class ResolveTransactionsProtocolTest {
             a.services.recordTransactions(stx)
             cursor = stx
         }
-        val p = ResolveTransactionsProtocol(setOf(cursor.id), a.info.identity)
+        val p = ResolveTransactionsProtocol(setOf(cursor.id), a.info.legalIdentity)
         p.transactionCountLimit = 40
         val future = b.services.startProtocol("resolve", p)
         net.runNetwork()
@@ -116,7 +116,7 @@ class ResolveTransactionsProtocolTest {
 
         a.services.recordTransactions(stx2, stx3)
 
-        val p = ResolveTransactionsProtocol(setOf(stx3.id), a.info.identity)
+        val p = ResolveTransactionsProtocol(setOf(stx3.id), a.info.legalIdentity)
         val future = b.services.startProtocol("resolve", p)
         net.runNetwork()
         future.get()
@@ -126,7 +126,7 @@ class ResolveTransactionsProtocolTest {
     fun attachment() {
         val id = a.services.storageService.attachments.importAttachment("Some test file".toByteArray().opaque().open())
         val stx2 = makeTransactions(withAttachment = id).second
-        val p = ResolveTransactionsProtocol(stx2, a.info.identity)
+        val p = ResolveTransactionsProtocol(stx2, a.info.legalIdentity)
         val future = b.services.startProtocol("resolve", p)
         net.runNetwork()
         future.get()

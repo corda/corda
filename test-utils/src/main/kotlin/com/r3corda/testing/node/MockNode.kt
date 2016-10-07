@@ -107,7 +107,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeVaultService(): VaultService = InMemoryVaultService(services)
 
-        override fun makeKeyManagementService(): KeyManagementService = E2ETestKeyManagementService(setOf(storage.myLegalIdentityKey))
+        override fun makeKeyManagementService(): KeyManagementService = E2ETestKeyManagementService(partyKeys)
 
         override fun startMessagingService(cordaRPCOps: CordaRPCOps?) {
             // Nothing to do
@@ -129,7 +129,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun start(): MockNode {
             super.start()
-            mockNet.identities.add(storage.myLegalIdentity)
+            mockNet.identities.add(info.legalIdentity)
             return this
         }
 
@@ -212,7 +212,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     fun createTwoNodes(nodeFactory: Factory = defaultFactory, notaryKeyPair: KeyPair? = null): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
         return Pair(
-                createNode(null, -1, nodeFactory, true, null, notaryKeyPair, ServiceInfo(NetworkMapService.Type), ServiceInfo(SimpleNotaryService.Type)),
+                createNode(null, -1, nodeFactory, true, null, notaryKeyPair, ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)),
                 createNode(nodes[0].info.address, -1, nodeFactory, true, null)
         )
     }
@@ -229,9 +229,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      */
     fun createSomeNodes(numPartyNodes: Int = 2, nodeFactory: Factory = defaultFactory, notaryKeyPair: KeyPair? = DUMMY_NOTARY_KEY): BasketOfNodes {
         require(nodes.isEmpty())
-        val mapNode = createNode(null, nodeFactory = nodeFactory, advertisedServices = ServiceInfo(NetworkMapService.Type))
+        val mapNode = createNode(null, nodeFactory = nodeFactory, advertisedServices = ServiceInfo(NetworkMapService.type))
         val notaryNode = createNode(mapNode.info.address, nodeFactory = nodeFactory, keyPair = notaryKeyPair,
-                advertisedServices = ServiceInfo(SimpleNotaryService.Type))
+                advertisedServices = ServiceInfo(SimpleNotaryService.type))
         val nodes = ArrayList<MockNode>()
         repeat(numPartyNodes) {
             nodes += createPartyNode(mapNode.info.address)
@@ -240,7 +240,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null): MockNode {
-        return createNode(null, -1, defaultFactory, true, legalName, keyPair, ServiceInfo(NetworkMapService.Type), ServiceInfo(SimpleNotaryService.Type))
+        return createNode(null, -1, defaultFactory, true, legalName, keyPair, ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
     }
 
     fun createPartyNode(networkMapAddr: SingleMessageRecipient, legalName: String? = null, keyPair: KeyPair? = null): MockNode {

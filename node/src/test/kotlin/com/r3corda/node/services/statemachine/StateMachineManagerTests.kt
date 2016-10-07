@@ -60,7 +60,7 @@ class StateMachineManagerTests {
     fun `protocol restarted just after receiving payload`() {
         node2.services.registerProtocolInitiator(SendProtocol::class) { ReceiveThenSuspendProtocol(it) }
         val payload = random63BitValue()
-        node1.smm.add("test", SendProtocol(payload, node2.info.identity))
+        node1.smm.add("test", SendProtocol(payload, node2.info.legalIdentity))
 
         // We push through just enough messages to get only the SessionData sent
         // TODO We should be able to give runNetwork a predicate for when to stop
@@ -108,7 +108,7 @@ class StateMachineManagerTests {
     fun `protocol loaded from checkpoint will respond to messages from before start`() {
         val payload = random63BitValue()
         node1.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { SendProtocol(payload, it) }
-        val receiveProtocol = ReceiveThenSuspendProtocol(node1.info.identity)
+        val receiveProtocol = ReceiveThenSuspendProtocol(node1.info.legalIdentity)
         node2.smm.add("test", receiveProtocol) // Prepare checkpointed receive protocol
         node2.stop() // kill receiver
         val restoredProtocol = node2.restartAndGetRestoredProtocol<ReceiveThenSuspendProtocol>(node1.info.address)
@@ -135,7 +135,7 @@ class StateMachineManagerTests {
         }
 
         // Kick off first send and receive
-        node2.smm.add("test", PingPongProtocol(node3.info.identity, payload))
+        node2.smm.add("test", PingPongProtocol(node3.info.legalIdentity, payload))
         assertEquals(1, node2.checkpointStorage.checkpoints().count())
         // Restart node and thus reload the checkpoint and resend the message with same UUID
         node2.stop()
@@ -165,7 +165,7 @@ class StateMachineManagerTests {
         node2.services.registerProtocolInitiator(SendProtocol::class) { ReceiveThenSuspendProtocol(it) }
         node3.services.registerProtocolInitiator(SendProtocol::class) { ReceiveThenSuspendProtocol(it) }
         val payload = random63BitValue()
-        node1.smm.add("multiple-send", SendProtocol(payload, node2.info.identity, node3.info.identity))
+        node1.smm.add("multiple-send", SendProtocol(payload, node2.info.legalIdentity, node3.info.legalIdentity))
         net.runNetwork()
         val node2Protocol = node2.getSingleProtocol<ReceiveThenSuspendProtocol>().first
         val node3Protocol = node3.getSingleProtocol<ReceiveThenSuspendProtocol>().first
@@ -181,7 +181,7 @@ class StateMachineManagerTests {
         val node3Payload = random63BitValue()
         node2.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { SendProtocol(node2Payload, it) }
         node3.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { SendProtocol(node3Payload, it) }
-        val multiReceiveProtocol = ReceiveThenSuspendProtocol(node2.info.identity, node3.info.identity)
+        val multiReceiveProtocol = ReceiveThenSuspendProtocol(node2.info.legalIdentity, node3.info.legalIdentity)
         node1.smm.add("multiple-receive", multiReceiveProtocol)
         net.runNetwork(1) // session handshaking
         // have the messages arrive in reverse order of receive
@@ -195,7 +195,7 @@ class StateMachineManagerTests {
     @Test
     fun `exception thrown on other side`() {
         node2.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { ExceptionProtocol }
-        val future = node1.smm.add("exception", ReceiveThenSuspendProtocol(node2.info.identity)).resultFuture
+        val future = node1.smm.add("exception", ReceiveThenSuspendProtocol(node2.info.legalIdentity)).resultFuture
         net.runNetwork()
         assertThatThrownBy { future.get() }.hasCauseInstanceOf(ProtocolSessionException::class.java)
     }

@@ -12,7 +12,9 @@ import com.r3corda.protocols.NotaryProtocol
 class SimpleNotaryService(services: ServiceHubInternal,
                           val timestampChecker: TimestampChecker,
                           val uniquenessProvider: UniquenessProvider) : NotaryService(services) {
-    object Type : ServiceType("corda.notary.simple")
+    companion object {
+        val type = ServiceType.notary.getSubType("simple")
+    }
 
     override fun createProtocol(otherParty: Party): NotaryProtocol.Service {
         return NotaryProtocol.Service(otherParty, timestampChecker, uniquenessProvider)

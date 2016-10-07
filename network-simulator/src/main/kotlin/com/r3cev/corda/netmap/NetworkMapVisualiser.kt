@@ -236,7 +236,7 @@ class NetworkMapVisualiser : Application() {
                     if (change.tracker == tracker) {
                         // Protocol done; schedule it for removal in a few seconds. We batch them up to make nicer
                         // animations.
-                        println("Protocol done for ${node.info.identity.name}")
+                        println("Protocol done for ${node.info.legalIdentity.name}")
                         viewModel.doneTrackers += tracker
                     } else {
                         // Subprotocol is done; ignore it.
@@ -244,7 +244,7 @@ class NetworkMapVisualiser : Application() {
                 } else if (!viewModel.trackerBoxes.containsKey(tracker)) {
                     // New protocol started up; add.
                     val extraLabel = viewModel.simulation.extraNodeLabels[node]
-                    val label = if (extraLabel != null) "${node.storage.myLegalIdentity.name}: $extraLabel" else node.storage.myLegalIdentity.name
+                    val label = if (extraLabel != null) "${node.info.legalIdentity.name}: $extraLabel" else node.info.legalIdentity.name
                     val widget = view.buildProgressTrackerWidget(label, tracker.topLevelTracker)
                     bindProgressTracketWidget(tracker.topLevelTracker, widget)
                     println("Added: ${tracker}, ${widget}")

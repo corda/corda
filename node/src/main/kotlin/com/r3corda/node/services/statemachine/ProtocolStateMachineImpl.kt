@@ -187,7 +187,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
         val session = ProtocolSession(sessionProtocol, otherParty, random63BitValue(), null)
         openSessions[Pair(sessionProtocol, otherParty)] = session
         val counterpartyProtocol = sessionProtocol.getCounterpartyMarker(otherParty).name
-        val sessionInit = SessionInit(session.ourSessionId, serviceHub.storageService.myLegalIdentity, counterpartyProtocol)
+        val sessionInit = SessionInit(session.ourSessionId, serviceHub.myInfo.legalIdentity, counterpartyProtocol)
         val sessionInitResponse = sendAndReceiveInternal(session, sessionInit, SessionInitResponse::class.java)
         if (sessionInitResponse is SessionConfirm) {
             session.otherPartySessionId = sessionInitResponse.initiatedSessionId

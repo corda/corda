@@ -78,12 +78,12 @@ fun main(args: Array<String>) {
     }
     node.networkMapRegistrationFuture.get()
     val notaryNode = node.services.networkMapCache.notaryNodes[0]
-    val rateOracle = node.services.networkMapCache.get(InterestRateSwap.OracleType).first()
+    val rateOracle = node.services.networkMapCache.get(InterestRateSwap.oracleType).first()
 
     // Make a garbage transaction that includes a rate fix.
-    val tx = TransactionType.General.Builder(notaryNode.identity)
-    tx.addOutputState(TransactionState(Cash.State(1500.DOLLARS `issued by` node.storage.myLegalIdentity.ref(1), node.storage.myLegalIdentityKey.public), notaryNode.identity))
-    val protocol = RatesFixProtocol(tx, rateOracle.identity, fixOf, expectedRate, rateTolerance)
+    val tx = TransactionType.General.Builder(notaryNode.notaryIdentity)
+    tx.addOutputState(TransactionState(Cash.State(1500.DOLLARS `issued by` node.info.legalIdentity.ref(1), node.info.legalIdentity.owningKey), notaryNode.notaryIdentity))
+    val protocol = RatesFixProtocol(tx, rateOracle.serviceIdentities(InterestRateSwap.oracleType).first(), fixOf, expectedRate, rateTolerance)
     node.services.startProtocol("demo.ratefix", protocol).get()
     node.stop()
 

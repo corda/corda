@@ -141,7 +141,7 @@ fun main(args: Array<String>) {
     // the map is not very helpful, but we need one anyway. So just make the buyer side run the network map as it's
     // the side that sticks around waiting for the seller.
     val networkMapId = if (role == Role.BUYER) {
-        advertisedServices = setOf(ServiceInfo(NetworkMapService.Type), ServiceInfo(SimpleNotaryService.Type))
+        advertisedServices = setOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
         null
     } else {
         advertisedServices = emptySet()
@@ -160,7 +160,7 @@ fun main(args: Array<String>) {
         runBuyer(node, amount)
     } else {
         node.networkMapRegistrationFuture.success {
-            val party = node.netMapCache.getNodeByLegalName("Bank A")?.identity ?: throw IllegalStateException("Cannot find other node?!")
+            val party = node.netMapCache.getNodeByLegalName("Bank A")?.legalIdentity ?: throw IllegalStateException("Cannot find other node?!")
             runSeller(node, amount, party)
         }
     }
@@ -211,8 +211,8 @@ private fun runBuyer(node: Node, amount: Amount<Currency>) {
     // TODO: At some point this demo should be extended to have a central bank node.
     databaseTransaction(node.database) {
         node.services.fillWithSomeTestCash(300000.DOLLARS,
-                outputNotary = node.info.identity, // In this demo, the buyer and notary are the same.
-                ownedBy = node.storage.myLegalIdentityKey.public)
+                outputNotary = node.info.notaryIdentity, // In this demo, the buyer and notary are on the same node, but need to use right key.
+                ownedBy = node.info.legalIdentity.owningKey)
     }
 
     // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band
@@ -241,7 +241,7 @@ private class TraderDemoProtocolBuyer(val otherSide: Party,
         val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
         val buyer = TwoPartyTradeProtocol.Buyer(
                 otherSide,
-                notary.identity,
+                notary.notaryIdentity,
                 amount,
                 CommercialPaper.State::class.java)
 
@@ -304,7 +304,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
         progressTracker.currentStep = SELF_ISSUING
 
         val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
-        val cpOwnerKey = serviceHub.storageService.myLegalIdentityKey
+        val cpOwnerKey = serviceHub.legalIdentityKey
         val commercialPaper = selfIssueSomeCommercialPaper(cpOwnerKey.public, notary)
 
         progressTracker.currentStep = TRADING
@@ -330,7 +330,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
 
         val issuance: SignedTransaction = run {
             val tx = CommercialPaper().generateIssue(party.ref(1, 2, 3), 1100.DOLLARS `issued by` DUMMY_CASH_ISSUER,
-                    Instant.now() + 10.days, notaryNode.identity)
+                    Instant.now() + 10.days, notaryNode.notaryIdentity)
 
             // TODO: Consider moving these two steps below into generateIssue.
 
@@ -356,7 +356,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
 
         // Now make a dummy transaction that moves it to a new key, just to show that resolving dependencies works.
         val move: SignedTransaction = run {
-            val builder = TransactionType.General.Builder(notaryNode.identity)
+            val builder = TransactionType.General.Builder(notaryNode.notaryIdentity)
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
             builder.signWith(keyPair)
             val notarySignature = subProtocol(NotaryProtocol.Client(builder.toSignedTransaction(false)))

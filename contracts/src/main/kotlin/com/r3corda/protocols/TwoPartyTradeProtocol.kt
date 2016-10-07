@@ -8,6 +8,7 @@ import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.seconds
 import com.r3corda.core.transactions.SignedTransaction
@@ -113,7 +114,7 @@ object TwoPartyTradeProtocol {
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
-                val wtx: WireTransaction = it.verifySignatures(myKeyPair.public, notaryNode.identity.owningKey)
+                val wtx: WireTransaction = it.verifySignatures(myKeyPair.public, notaryNode.notaryIdentity.owningKey)
                 logger.trace { "Received partially signed transaction: ${it.id}" }
 
                 // Download and check all the things that this transaction depends on and verify it is contract-valid,

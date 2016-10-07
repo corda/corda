@@ -77,7 +77,7 @@ fun DriverDSLExposedInterface.startClient(localServer: ArtemisMessagingServer) =
 
 fun DriverDSLExposedInterface.startClient(remoteNodeInfo: NodeInfo, providedName: String? = null) =
         startClient(
-                providedName = providedName ?: "${remoteNodeInfo.identity.name}-client",
+                providedName = providedName ?: "${remoteNodeInfo.legalIdentity.name}-client",
                 serverAddress = ArtemisMessagingComponent.toHostAndPort(remoteNodeInfo.address)
         )
 
@@ -309,7 +309,7 @@ class DriverDSL(
             registerProcess(DriverDSL.startNode(config, quasarJarPath, debugPort))
             poll("network map cache for $name") {
                 networkMapCache.partyNodes.forEach {
-                    if (it.identity.name == name) {
+                    if (it.legalIdentity.name == name) {
                         return@poll it
                     }
                 }
@@ -383,7 +383,7 @@ class DriverDSL(
         networkMapCache.addMapService(networkMapClient, networkMapAddr, true)
         networkMapNodeInfo = poll("network map cache for $networkMapName") {
             networkMapCache.partyNodes.forEach {
-                if (it.identity.name == networkMapName) {
+                if (it.legalIdentity.name == networkMapName) {
                     return@poll it
                 }
             }

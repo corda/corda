@@ -36,18 +36,18 @@ class NotaryChangeTests {
         oldNotaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
                 keyPair = DUMMY_NOTARY_KEY,
-                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.Type), ServiceInfo(SimpleNotaryService.Type)))
+                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
         clientNodeA = net.createNode(networkMapAddress = oldNotaryNode.info.address)
         clientNodeB = net.createNode(networkMapAddress = oldNotaryNode.info.address)
-        newNotaryNode = net.createNode(networkMapAddress = oldNotaryNode.info.address, advertisedServices = ServiceInfo(SimpleNotaryService.Type))
+        newNotaryNode = net.createNode(networkMapAddress = oldNotaryNode.info.address, advertisedServices = ServiceInfo(SimpleNotaryService.type))
 
         net.runNetwork() // Clear network map registration messages
     }
 
     @Test
     fun `should change notary for a state with single participant`() {
-        val state = issueState(clientNodeA)
-        val newNotary = newNotaryNode.info.identity
+        val state = issueState(clientNodeA, oldNotaryNode)
+        val newNotary = newNotaryNode.info.notaryIdentity
         val protocol = Instigator(state, newNotary)
         val future = clientNodeA.services.startProtocol("notary-change", protocol)
 
@@ -59,8 +59,8 @@ class NotaryChangeTests {
 
     @Test
     fun `should change notary for a state with multiple participants`() {
-        val state = issueMultiPartyState(clientNodeA, clientNodeB)
-        val newNotary = newNotaryNode.info.identity
+        val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
+        val newNotary = newNotaryNode.info.notaryIdentity
         val protocol = Instigator(state, newNotary)
         val future = clientNodeA.services.startProtocol("notary-change", protocol)
 
@@ -75,7 +75,7 @@ class NotaryChangeTests {
 
     @Test
     fun `should throw when a participant refuses to change Notary`() {
-        val state = issueMultiPartyState(clientNodeA, clientNodeB)
+        val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
         val newEvilNotary = Party("Evil Notary", generateKeyPair().public)
         val protocol = Instigator(state, newEvilNotary)
         val future = clientNodeA.services.startProtocol("notary-change", protocol)
@@ -96,22 +96,27 @@ class NotaryChangeTests {
     //       - The transaction type is not a notary change transaction at all.
 }
 
-fun issueState(node: AbstractNode): StateAndRef<*> {
-    val tx = DummyContract.generateInitial(node.info.identity.ref(0), Random().nextInt(), DUMMY_NOTARY)
-    tx.signWith(node.storage.myLegalIdentityKey)
-    tx.signWith(DUMMY_NOTARY_KEY)
+fun issueState(node: AbstractNode, notaryNode: AbstractNode): StateAndRef<*> {
+    val tx = DummyContract.generateInitial(node.info.legalIdentity.ref(0), Random().nextInt(), notaryNode.info.notaryIdentity)
+    val nodeKey = node.services.legalIdentityKey
+    tx.signWith(nodeKey)
+    val notaryKeyPair = notaryNode.services.notaryIdentityKey
+    tx.signWith(notaryKeyPair)
     val stx = tx.toSignedTransaction()
     node.services.recordTransactions(listOf(stx))
     return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
 }
 
-fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode): StateAndRef<DummyContract.MultiOwnerState> {
+fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode, notaryNode: AbstractNode): StateAndRef<DummyContract.MultiOwnerState> {
     val state = TransactionState(DummyContract.MultiOwnerState(0,
-            listOf(nodeA.info.identity.owningKey, nodeB.info.identity.owningKey)), DUMMY_NOTARY)
-    val tx = TransactionType.NotaryChange.Builder(DUMMY_NOTARY).withItems(state)
-    tx.signWith(nodeA.storage.myLegalIdentityKey)
-    tx.signWith(nodeB.storage.myLegalIdentityKey)
-    tx.signWith(DUMMY_NOTARY_KEY)
+            listOf(nodeA.info.legalIdentity.owningKey, nodeB.info.legalIdentity.owningKey)), notaryNode.info.notaryIdentity)
+    val tx = TransactionType.NotaryChange.Builder(notaryNode.info.notaryIdentity).withItems(state)
+    val nodeAKey = nodeA.services.legalIdentityKey
+    val nodeBKey = nodeB.services.legalIdentityKey
+    tx.signWith(nodeAKey)
+    tx.signWith(nodeBKey)
+    val notaryKeyPair = notaryNode.services.notaryIdentityKey
+    tx.signWith(notaryKeyPair)
     val stx = tx.toSignedTransaction()
     nodeA.services.recordTransactions(listOf(stx))
     nodeB.services.recordTransactions(listOf(stx))
@@ -119,10 +124,11 @@ fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode): StateAndRef<
     return stateAndRef
 }
 
-fun issueInvalidState(node: AbstractNode, notary: Party = DUMMY_NOTARY): StateAndRef<*> {
-    val tx = DummyContract.generateInitial(node.info.identity.ref(0), Random().nextInt(), notary)
+fun issueInvalidState(node: AbstractNode, notary: Party): StateAndRef<*> {
+    val tx = DummyContract.generateInitial(node.info.legalIdentity.ref(0), Random().nextInt(), notary)
     tx.setTime(Instant.now(), 30.seconds)
-    tx.signWith(node.storage.myLegalIdentityKey)
+    val nodeKey = node.services.legalIdentityKey
+    tx.signWith(nodeKey)
     val stx = tx.toSignedTransaction(false)
     node.services.recordTransactions(listOf(stx))
     return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))

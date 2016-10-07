@@ -3,6 +3,7 @@ package com.r3corda.node.services
 import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.*
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
@@ -51,6 +52,8 @@ open class MockServiceHubInternal(
         get() = scheduler ?: throw UnsupportedOperationException()
     override val clock: Clock
         get() = overrideClock ?: throw UnsupportedOperationException()
+    override val myInfo: NodeInfo
+        get() = throw UnsupportedOperationException()
 
     override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
     override val protocolLogicRefFactory: ProtocolLogicRefFactory

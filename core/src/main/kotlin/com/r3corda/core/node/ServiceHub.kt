@@ -8,6 +8,7 @@ import com.r3corda.core.contracts.TransactionState
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.services.*
 import com.r3corda.core.protocols.ProtocolLogic
+import java.security.KeyPair
 import java.time.Clock
 
 /**
@@ -27,6 +28,7 @@ interface ServiceHub {
     val networkMapCache: NetworkMapCache
     val schedulerService: SchedulerService
     val clock: Clock
+    val myInfo: NodeInfo
 
     /**
      * Given a list of [SignedTransaction]s, writes them to the local storage for validated transactions and then
@@ -52,6 +54,23 @@ interface ServiceHub {
      * @throws IllegalProtocolLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
      */
     fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ListenableFuture<T>
+
+    /**
+     * Helper property to shorten code for fetching the Node's KeyPair associated with the
+     * public legalIdentity Party from the key management service.
+     * Typical use is during signing in protocols and for unit test signing.
+     */
+    val legalIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.legalIdentity.owningKey)
+
+    /**
+     * Helper property to shorten code for fetching the Node's KeyPair associated with the
+     * public notaryIdentity Party from the key management service. It is assumed that this is only
+     * used in contexts where the Node knows it is hosting a Notary Service. Otherwise, it will throw
+     * an IllegalArgumentException.
+     * Typical use is during signing in protocols and for unit test signing.
+     */
+    val notaryIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.notaryIdentity.owningKey)
+
 }
 /**
  * Given some [SignedTransaction]s, writes them to the local storage for validated transactions and then

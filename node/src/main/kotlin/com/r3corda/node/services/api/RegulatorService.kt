@@ -6,6 +6,7 @@ import com.r3corda.core.node.services.ServiceType
  * Placeholder interface for regulator services.
  */
 interface RegulatorService {
-    object Type : ServiceType("corda.regulator")
-
+    companion object {
+        val type = ServiceType.regulator
+    }
 }
