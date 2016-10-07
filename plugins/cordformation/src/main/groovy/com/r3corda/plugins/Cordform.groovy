@@ -34,9 +34,8 @@ class Cordform extends DefaultTask {
     }
 
     protected void installRunScript() {
-        project.delete("${directory}/runnodes")
         project.copy {
-            from "buildSrc/templates/runnodes"
+            from Cordformation.getPluginFile(project, "com/r3corda/plugins/runnodes")
             filter { String line -> line.replace("JAR_NAME", Node.JAR_NAME) }
             filter(org.apache.tools.ant.filters.FixCrLfFilter.class, eol: org.apache.tools.ant.filters.FixCrLfFilter.CrLf.newInstance("lf"))
             into "${directory}/"

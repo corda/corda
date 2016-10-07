@@ -116,18 +116,17 @@ class Node {
 
     private void installConfig() {
         project.copy {
-            from ('./buildSrc/templates/nodetemplate.conf') {
-                filter { it
-                        .replaceAll('@@name@@', name)
-                        .replaceAll('@@dirName@@', dirName)
-                        .replaceAll('@@nearestCity@@', nearestCity)
-                        .replaceAll('@@isNotary@@', isNotary.toString())
-                        .replaceAll('@@isHttps@@', isHttps.toString())
-                        .replaceAll('@@advertisedServices@@', advertisedServices.join(","))
-                        .replaceAll('@@networkMapAddress@@', networkMapAddress)
-                        .replaceAll('@@artemisPort@@', artemisPort.toString())
-                        .replaceAll('@@webPort@@', webPort.toString())
-                }
+            from Cordformation.getPluginFile(project, 'com/r3corda/plugins/nodetemplate.conf')
+            filter { it
+                    .replaceAll('@@name@@', name)
+                    .replaceAll('@@dirName@@', dirName)
+                    .replaceAll('@@nearestCity@@', nearestCity)
+                    .replaceAll('@@isNotary@@', isNotary.toString())
+                    .replaceAll('@@isHttps@@', isHttps.toString())
+                    .replaceAll('@@advertisedServices@@', advertisedServices.join(","))
+                    .replaceAll('@@networkMapAddress@@', networkMapAddress)
+                    .replaceAll('@@artemisPort@@', artemisPort.toString())
+                    .replaceAll('@@webPort@@', webPort.toString())
             }
             into nodeDir
             rename 'nodetemplate.conf', 'node.conf'
