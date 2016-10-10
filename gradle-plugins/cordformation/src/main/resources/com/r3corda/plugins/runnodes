@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Will attempt to execute a corda node within all subdirectories in the current working directory.
+# TODO: Use screens or separate windows when starting instances.
 
 set -euo pipefail
-trap 'kill $(jobs -p)' SIGINT SIGTERM EXIT
+trap 'kill $(jobs -p)' EXIT
 export CAPSULE_CACHE_DIR=cache
 
 function runNode {

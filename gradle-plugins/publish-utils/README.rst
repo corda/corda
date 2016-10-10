@@ -1,10 +1,6 @@
 Publish Utils
 =============
 
-Plugin Maven Name::
-
-    publish-utils
-
 Publishing utilities adds a couple of tasks to any project it is applied to that hide some boilerplate that would
 otherwise be placed in the Cordapp template's build.gradle.
 

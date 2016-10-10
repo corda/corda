@@ -1,11 +1,6 @@
 Quasar Utils
 ============
 
-
-Plugin Maven Name::
-
-    quasar-utils
-
 Quasar utilities adds several tasks and configuration that provide a default Quasar setup and removes some boilerplate.
 One line must be added to your build.gradle once you apply this plugin:
 
