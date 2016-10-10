@@ -641,7 +641,7 @@ int CLoader::load_enclave(SGXLaunchToken *lc, int debug, const metadata_t *metad
     }
 
     ret = build_image(lc, &sgx_misc_attr.secs_attr, prd_css_file, &sgx_misc_attr);
-    //return platform capability if fail. Otherwise, return secs.attr.
+    //Update misc_attr with secs.attr upon success.
     if(SGX_SUCCESS == ret)
     {
         if(misc_attr)
@@ -649,16 +649,6 @@ int CLoader::load_enclave(SGXLaunchToken *lc, int debug, const metadata_t *metad
             memcpy_s(misc_attr, sizeof(sgx_misc_attribute_t), &sgx_misc_attr, sizeof(sgx_misc_attribute_t));
             //When run here EINIT success, so SGX_FLAGS_INITTED should be set by ucode. uRTS align it with EINIT instruction.
             misc_attr->secs_attr.flags |= SGX_FLAGS_INITTED;
-        }
-    }
-    else
-    {
-        if(misc_attr)
-        {
-            sgx_misc_attribute_t plat_cap;
-            memset(&plat_cap, 0, sizeof(plat_cap));
-            get_enclave_creator()->get_plat_cap(&plat_cap);
-            memcpy_s(misc_attr, sizeof(sgx_misc_attribute_t), &plat_cap, sizeof(sgx_misc_attribute_t));
         }
     }
 
