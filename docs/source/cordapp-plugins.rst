@@ -6,9 +6,9 @@ Building Plugins
 
 To build the plugins that Cordapps require run the following from the root of the Corda project:
 
-..code-block::
+.. code-block:: text
 
-    gradlew publishToMavenLocal
+    ./gradlew publishToMavenLocal
 
 The plugins will now be installed to MavenLocal.
 
@@ -18,7 +18,7 @@ Installing Plugins
 To use the plugins, if you are not already using the Cordapp template project, you must modify your build.gradle. Add
 the following segments to the relevant part of your build.gradle.
 
-..code-block::
+.. code-block::
 
     buildscript {
         ext.corda_version = '<enter the corda version you build against here>'
@@ -54,7 +54,7 @@ To use this plugin you must add a new task that is of the type `com.r3corda.plug
 the nodes you wish to deploy with the Node and nodes configuration DSL. This DSL is specified in the JavaDoc but
 an example of this is in the template-cordapp and below is a three node example;
 
-..code-block::
+.. code-block:: text
 
     task deployNodes(type: com.r3corda.plugins.Cordform, dependsOn: ['build']) {
         directory "./build/nodes" // The output directory
@@ -112,7 +112,7 @@ There are two tasks exposed: `sourceJar` and `javadocJar` and both return a `Fil
 
 It is used within the `publishing` block of a build.gradle as such;
 
-..code-block::
+.. code-block:: text
 
     // This will publish the sources, javadoc, and Java components to Maven.
     // See the `maven-publish` plugin for more info: https://docs.gradle.org/current/userguide/publishing_maven.html
@@ -137,14 +137,14 @@ Plugin Maven Name::
 Quasar utilities adds several tasks and configuration that provide a default Quasar setup and removes some boilerplate.
 One line must be added to your build.gradle once you apply this plugin:
 
-..code-block::
+.. code-block:: text
 
     quasarScan.dependsOn('classes')
 
 If any sub-projects are added that this project depends on then add the gradle target for that project to the depends
 on statement. eg:
 
-..code-block::
+.. code-block:: text
 
     quasarScan.dependsOn('classes', 'subproject:subsubproject', ...)
 
