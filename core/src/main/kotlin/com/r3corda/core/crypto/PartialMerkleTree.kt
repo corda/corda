@@ -120,4 +120,38 @@ class PartialMerkleTree(
 
     }
 
+    fun verify(leavesHashes: List<SecureHash>, merkleRoot: SecureHash): Boolean{
+        includeIdx = 0 //todo check that
+        hashIdx = 0
+        val hashesUsed = ArrayList<SecureHash>()
+        val verifyRoot = verifyTree(treeHeight, 0, hashesUsed)
+        //It means that we obtained more/less hashes than needed. Or different sets of hashes.
+        //Ordering insensitive.
+        if(leavesHashes.size != hashesUsed.size || leavesHashes.minus(hashesUsed).isNotEmpty())
+            return false
+        return (verifyRoot == merkleRoot) //Correctness of hashes is checked by folding the tree.
+    }
+
+    private fun verifyTree(height: Int, position: Int, hashesUsed: MutableList<SecureHash>): SecureHash {
+        if(includeIdx >= includeBranch.size)
+            throw MerkleTreeException("Included nodes list index overflow.")
+        val isParent = includeBranch[includeIdx]
+        includeIdx++
+        if (height == 0 || !isParent) {
+            if(hashIdx >branchHashes.size)
+                throw MerkleTreeException("Branch hashes index overflow.")
+            val hash = branchHashes[hashIdx]
+            hashIdx++
+            if(height == 0 && isParent)
+                hashesUsed.add(hash) //todo or hash into a tree
+            return hash
+        } else {
+            val left: SecureHash = verifyTree(height - 1, position * 2, hashesUsed)
+            val right: SecureHash = when{
+                position * 2 + 1 < treeWidth(height, leavesSize)-1 -> verifyTree(height - 1, position * 2 + 1, hashesUsed)
+                else -> left
+            }
+            return left.hashConcat(right)
+        }
+    }
 }
