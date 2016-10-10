@@ -58,7 +58,7 @@ Now we can start the trader demo as per described in :doc:`running-the-demos`::
 In another terminal we can connect to it with our client::
 
     # Connect to localhost:31337
-    ./docs/source/code/build/install/docs/source/code/bin/client-rpc-tutorial localhost:31337 Print
+    ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial localhost:31337 Print
 
 We should see some ``NODE``-s printed. This is because the buyer self-issues some cash for the demo.
 Unless we ran the seller before we shouldn't see any ``EDGE``-s because the cash hasn't been spent yet.
