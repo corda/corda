@@ -105,6 +105,7 @@ interface CordaRPCOps : RPCOps {
 
     /**
      * Executes the given command, possibly triggering cash creation etc.
+     * TODO: The signature of this is weird because it's the remains of an old service call, we should have a call for each command instead.
      */
     fun executeCommand(command: ClientToServiceCommand): TransactionBuildResult
 }
