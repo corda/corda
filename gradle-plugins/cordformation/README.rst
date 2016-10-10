@@ -48,7 +48,7 @@ an example of this is in the template-cordapp and below is a three node example;
         }
     }
 
-You can create more configurations by with new tasks that extend Cordform.
+You can create more configurations with new tasks that extend Cordform.
 
 New nodes can be added by simply adding another node block and giving it a different name, directory and ports. When you
 run this task it will install the nodes to the directory specified and a script will be generated (for UNIX users only

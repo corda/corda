@@ -30,7 +30,7 @@ class Cordform extends DefaultTask {
      * Set the network map node.
      *
      * @warning Ensure the node name is one of the configured nodes.
-     * @param nodeName The name of one the node that will host the network map.
+     * @param nodeName The name of the node that will host the network map.
      */
     public void networkMap(String nodeName) {
         networkMapNodeName = nodeName
