@@ -171,9 +171,11 @@ To build against Corda and the plugins that cordapps use, update your build.grad
         ... other dependencies here ...
     }
 
-.. code-block::
+    ... your tasks ...
 
-    ...
+    // Sets the classes for Quasar to scan. Loaded by the the quasar-utils plugin.
+    quasarScan.dependsOn('classes', ... your dependent subprojects...)
+
 
 Cordformation
 =============
