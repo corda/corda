@@ -12,6 +12,8 @@ import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.utilities.awaitWithDeadline
+import com.r3corda.node.utilities.databaseTransaction
+import org.jetbrains.exposed.sql.Database
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executor
@@ -38,7 +40,8 @@ import javax.annotation.concurrent.ThreadSafe
  * activity.  Only replace this for unit testing purposes.  This is not the executor the [ProtocolLogic] is launched on.
  */
 @ThreadSafe
-class NodeSchedulerService(private val services: ServiceHubInternal,
+class NodeSchedulerService(private val database: Database,
+                           private val services: ServiceHubInternal,
                            private val protocolLogicRefFactory: ProtocolLogicRefFactory = ProtocolLogicRefFactory(),
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor())
 : SchedulerService, SingletonSerializeAsToken() {
@@ -121,7 +124,9 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
         try {
-            runScheduledActionForState(scheduledState)
+            databaseTransaction(database) {
+                runScheduledActionForState(scheduledState)
+            }
         } finally {
             // Unschedule once complete (or checkpointed)
             mutex.locked {

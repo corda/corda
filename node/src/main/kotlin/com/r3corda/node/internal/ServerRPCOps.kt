@@ -6,7 +6,9 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.node.ServiceHub
+import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.messaging.StateMachineInfo
@@ -37,7 +39,12 @@ class ServerRPCOps(
             Pair(vault.states.toList(), updates)
         }
     }
-    override fun verifiedTransactions() = services.storageService.validatedTransactions.track()
+    override fun verifiedTransactions(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
+        return databaseTransaction(database) {
+            services.storageService.validatedTransactions.track()
+        }
+    }
+
     override fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>> {
         val (allStateMachines, changes) = smm.track()
         return Pair(
@@ -45,7 +52,11 @@ class ServerRPCOps(
                 changes.map { StateMachineUpdate.fromStateMachineChange(it) }
         )
     }
-    override fun stateMachineRecordedTransactionMapping() = services.storageService.stateMachineRecordedTransactionMapping.track()
+    override fun stateMachineRecordedTransactionMapping(): Pair<List<StateMachineTransactionMapping>, Observable<StateMachineTransactionMapping>> {
+        return databaseTransaction(database) {
+            services.storageService.stateMachineRecordedTransactionMapping.track()
+        }
+    }
 
     override fun executeCommand(command: ClientToServiceCommand): TransactionBuildResult {
         return databaseTransaction(database) {

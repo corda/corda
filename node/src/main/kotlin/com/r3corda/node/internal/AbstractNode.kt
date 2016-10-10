@@ -123,7 +123,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             return protocolFactories[markerClass]
         }
 
-        override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(storage, txs)
+        override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+            databaseTransaction(database) {
+                recordTransactionsInternal(storage, txs)
+            }
+        }
     }
 
     val info: NodeInfo by lazy {
@@ -206,7 +210,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             // the identity key. But the infrastructure to make that easy isn't here yet.
             keyManagement = makeKeyManagementService()
             api = APIServerImpl(this@AbstractNode)
-            scheduler = NodeSchedulerService(services)
+            scheduler = NodeSchedulerService(database, services)
 
             protocolLogicFactory = initialiseProtocolLogicFactory()
 
@@ -440,7 +444,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
     protected open fun initialiseStorageService(dir: Path): Pair<TxWritableStorageService, CheckpointStorage> {
         val attachments = makeAttachmentStorage(dir)
         val checkpointStorage = initialiseCheckpointService(dir)
-        val transactionStorage = PerFileTransactionStorage(dir.resolve("transactions"))
+        val transactionStorage = DBTransactionStorage()
         _servicesThatAcceptUploads += attachments
         // Populate the partyKeys set.
         obtainKeyPair(dir, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME)

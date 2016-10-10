@@ -8,6 +8,7 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.serialization.opaque
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.node.MockNetwork
 import com.r3corda.protocols.ResolveTransactionsProtocol
 import com.r3corda.testing.*
@@ -49,8 +50,10 @@ class ResolveTransactionsProtocolTest {
         net.runNetwork()
         val results = future.get()
         assertEquals(listOf(stx1.id, stx2.id), results.map { it.id })
-        assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
-        assertEquals(stx2, b.storage.validatedTransactions.getTransaction(stx2.id))
+        databaseTransaction(b.database) {
+            assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
+            assertEquals(stx2, b.storage.validatedTransactions.getTransaction(stx2.id))
+        }
     }
 
     @Test
@@ -71,9 +74,11 @@ class ResolveTransactionsProtocolTest {
         val future = b.services.startProtocol(p)
         net.runNetwork()
         future.get()
-        assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
-        // But stx2 wasn't inserted, just stx1.
-        assertNull(b.storage.validatedTransactions.getTransaction(stx2.id))
+        databaseTransaction(b.database) {
+            assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
+            // But stx2 wasn't inserted, just stx1.
+            assertNull(b.storage.validatedTransactions.getTransaction(stx2.id))
+        }
     }
 
     @Test
@@ -86,7 +91,9 @@ class ResolveTransactionsProtocolTest {
             val stx = DummyContract.move(cursor.tx.outRef(0), MINI_CORP_PUBKEY)
                     .addSignatureUnchecked(NullSignature)
                     .toSignedTransaction(false)
-            a.services.recordTransactions(stx)
+            databaseTransaction(a.database) {
+                a.services.recordTransactions(stx)
+            }
             cursor = stx
         }
         val p = ResolveTransactionsProtocol(setOf(cursor.id), a.info.legalIdentity)
@@ -114,7 +121,9 @@ class ResolveTransactionsProtocolTest {
             toSignedTransaction()
         }
 
-        a.services.recordTransactions(stx2, stx3)
+        databaseTransaction(a.database) {
+            a.services.recordTransactions(stx2, stx3)
+        }
 
         val p = ResolveTransactionsProtocol(setOf(stx3.id), a.info.legalIdentity)
         val future = b.services.startProtocol(p)
@@ -148,7 +157,9 @@ class ResolveTransactionsProtocolTest {
             it.signWith(DUMMY_NOTARY_KEY)
             it.toSignedTransaction()
         }
-        a.services.recordTransactions(dummy1, dummy2)
+        databaseTransaction(a.database) {
+            a.services.recordTransactions(dummy1, dummy2)
+        }
         return Pair(dummy1, dummy2)
     }
 }
