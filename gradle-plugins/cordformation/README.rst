@@ -17,7 +17,7 @@ an example of this is in the template-cordapp and below is a three node example;
 
     task deployNodes(type: com.r3corda.plugins.Cordform, dependsOn: ['build']) {
         directory "./build/nodes" // The output directory
-        networkMap "Notary" // This will resolve a node in this configuration
+        networkMap "Notary" // The artemis address of the node named here will be used as the networkMapAddress on all other nodes.
         node {
             name "Notary"
             dirName "notary"
@@ -48,10 +48,10 @@ an example of this is in the template-cordapp and below is a three node example;
         }
     }
 
-Because it is a task you can create multiple tasks with multiple configurations that you use commonly.
+You can create more configurations by with new tasks that extend Cordform.
 
 New nodes can be added by simply adding another node block and giving it a different name, directory and ports. When you
-run this task it will install the nodes to the directory specified and a script will be generated (for *nix users only
+run this task it will install the nodes to the directory specified and a script will be generated (for UNIX users only
 at present) to run the nodes with one command.
 
 Other cordapps can also be specified if they are already specified as classpath or compile dependencies in your
