@@ -122,9 +122,14 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
                                           payload: Any,
                                           receiveType: Class<T>,
                                           sessionProtocol: ProtocolLogic<*>): UntrustworthyData<T> {
-        val session = getSession(otherParty, sessionProtocol)
-        val sendSessionData = createSessionData(session, payload)
-        val receivedSessionData = sendAndReceiveInternal(session, sendSessionData, SessionData::class.java)
+        val (session, new) = getSession(otherParty, sessionProtocol, payload)
+        val receivedSessionData = if (new) {
+            // Only do a receive here as the session init has carried the payload
+            receiveInternal<SessionData>(session)
+        } else {
+            val sendSessionData = createSessionData(session, payload)
+            sendAndReceiveInternal<SessionData>(session, sendSessionData)
+        }
         return UntrustworthyData(receiveType.cast(receivedSessionData.payload))
     }
 
@@ -132,15 +137,18 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun <T : Any> receive(otherParty: Party,
                                    receiveType: Class<T>,
                                    sessionProtocol: ProtocolLogic<*>): UntrustworthyData<T> {
-        val receivedSessionData = receiveInternal(getSession(otherParty, sessionProtocol), SessionData::class.java)
+        val session = getSession(otherParty, sessionProtocol, null).first
+        val receivedSessionData = receiveInternal<SessionData>(session)
         return UntrustworthyData(receiveType.cast(receivedSessionData.payload))
     }
 
     @Suspendable
     override fun send(otherParty: Party, payload: Any, sessionProtocol: ProtocolLogic<*>) {
-        val session = getSession(otherParty, sessionProtocol)
-        val sendSessionData = createSessionData(session, payload)
-        sendInternal(session, sendSessionData)
+        val (session, new) = getSession(otherParty, sessionProtocol, payload)
+        if (!new) {
+            // Don't send the payload again if it was already piggy-backed on a session init
+            sendInternal(session, createSessionData(session, payload))
+        }
     }
 
     private fun createSessionData(session: ProtocolSession, payload: Any): SessionData {
@@ -155,27 +163,31 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    private fun <T : SessionMessage> receiveInternal(session: ProtocolSession, receiveType: Class<T>): T {
-        return suspendAndExpectReceive(ReceiveOnly(session, receiveType))
+    private inline fun <reified M : SessionMessage> receiveInternal(session: ProtocolSession): M {
+        return suspendAndExpectReceive(ReceiveOnly(session, M::class.java))
+    }
+
+    private inline fun <reified M : SessionMessage> sendAndReceiveInternal(session: ProtocolSession, message: SessionMessage): M {
+        return suspendAndExpectReceive(SendAndReceive(session, message, M::class.java))
     }
 
     @Suspendable
-    private fun <T : SessionMessage> sendAndReceiveInternal(session: ProtocolSession, message: SessionMessage, receiveType: Class<T>): T {
-        return suspendAndExpectReceive(SendAndReceive(session, message, receiveType))
+    private fun getSession(otherParty: Party, sessionProtocol: ProtocolLogic<*>, firstPayload: Any?): Pair<ProtocolSession, Boolean> {
+        val session = openSessions[Pair(sessionProtocol, otherParty)]
+        return if (session != null) {
+            Pair(session, false)
+        } else {
+            Pair(startNewSession(otherParty, sessionProtocol, firstPayload), true)
+        }
     }
 
     @Suspendable
-    private fun getSession(otherParty: Party, sessionProtocol: ProtocolLogic<*>): ProtocolSession {
-        return openSessions[Pair(sessionProtocol, otherParty)] ?: startNewSession(otherParty, sessionProtocol)
-    }
-
-    @Suspendable
-    private fun startNewSession(otherParty: Party, sessionProtocol: ProtocolLogic<*>) : ProtocolSession {
+    private fun startNewSession(otherParty: Party, sessionProtocol: ProtocolLogic<*>, firstPayload: Any?) : ProtocolSession {
         val session = ProtocolSession(sessionProtocol, otherParty, random63BitValue(), null)
         openSessions[Pair(sessionProtocol, otherParty)] = session
         val counterpartyProtocol = sessionProtocol.getCounterpartyMarker(otherParty).name
-        val sessionInit = SessionInit(session.ourSessionId, serviceHub.myInfo.legalIdentity, counterpartyProtocol)
-        val sessionInitResponse = sendAndReceiveInternal(session, sessionInit, SessionInitResponse::class.java)
+        val sessionInit = SessionInit(session.ourSessionId, serviceHub.myInfo.legalIdentity, counterpartyProtocol, firstPayload)
+        val sessionInitResponse = sendAndReceiveInternal<SessionInitResponse>(session, sessionInit)
         if (sessionInitResponse is SessionConfirm) {
             session.otherPartySessionId = sessionInitResponse.initiatedSessionId
             return session
@@ -186,21 +198,26 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    private fun <T : SessionMessage> suspendAndExpectReceive(receiveRequest: ReceiveRequest<T>): T {
+    private fun <M : SessionMessage> suspendAndExpectReceive(receiveRequest: ReceiveRequest<M>): M {
         fun getReceivedMessage(): ExistingSessionMessage? = receiveRequest.session.receivedMessages.poll()
 
-        val receivedMessage = getReceivedMessage() ?: run {
-            // Suspend while we wait for the receive
-            receiveRequest.session.waitingForResponse = true
+        val polledMessage = getReceivedMessage()
+        val receivedMessage = if (polledMessage != null) {
+            if (receiveRequest is SendAndReceive) {
+                // We've already received a message but we suspend so that the send can be performed
+                suspend(receiveRequest)
+            }
+            polledMessage
+        } else {
+            // Suspend while we wait for a receive
             suspend(receiveRequest)
-            receiveRequest.session.waitingForResponse = false
             getReceivedMessage()
                     ?: throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but got nothing: $receiveRequest")
         }
 
         if (receivedMessage is SessionEnd) {
             openSessions.values.remove(receiveRequest.session)
-            throw ProtocolSessionException("Counterparty on ${receiveRequest.session.otherParty} has prematurely ended")
+            throw ProtocolSessionException("Counterparty on ${receiveRequest.session.otherParty} has prematurely ended on $receiveRequest")
         } else if (receiveRequest.receiveType.isInstance(receivedMessage)) {
             return receiveRequest.receiveType.cast(receivedMessage)
         } else {
@@ -213,6 +230,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
         // we have to pass the Thread local Transaction across via a transient field as the Fiber Park swaps them out.
         txTrampoline = TransactionManager.currentOrNull()
         StrandLocalTransactionManager.setThreadLocalTx(null)
+        ioRequest.session.waitingForResponse = true
         parkAndSerialize { fiber, serializer ->
             logger.trace { "Suspended on $ioRequest" }
             // restore the Tx onto the ThreadLocal so that we can commit the ensuing checkpoint to the DB
@@ -228,6 +246,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
                 processException(t)
             }
         }
+        ioRequest.session.waitingForResponse = false
         createTransaction()
     }
 

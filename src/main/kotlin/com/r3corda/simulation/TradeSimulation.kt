@@ -11,6 +11,7 @@ import com.r3corda.core.contracts.`issued by`
 import com.r3corda.core.days
 import com.r3corda.core.flatMap
 import com.r3corda.core.node.recordTransactions
+import com.r3corda.core.protocols.ProtocolStateMachine
 import com.r3corda.core.seconds
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.protocols.TwoPartyTradeProtocol.Buyer
@@ -51,7 +52,7 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
 
         val buyerFuture = buyer.initiateSingleShotProtocol(Seller::class) {
             Buyer(it, notary.info.notaryIdentity, amount, CommercialPaper.State::class.java)
-        }.flatMap { it.resultFuture }
+        }.flatMap { (it.psm as ProtocolStateMachine<SignedTransaction>).resultFuture  }
 
         val sellerKey = seller.services.legalIdentityKey
         val sellerProtocol = Seller(

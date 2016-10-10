@@ -233,6 +233,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 val protocol = protocolFactory(otherParty)
                 val psm = createFiber(protocol)
                 val session = ProtocolSession(protocol, otherParty, random63BitValue(), otherPartySessionId)
+                if (sessionInit.firstPayload != null) {
+                    session.receivedMessages += SessionData(session.ourSessionId, sessionInit.firstPayload)
+                }
                 openSessions[session.ourSessionId] = session
                 psm.openSessions[Pair(protocol, otherParty)] = session
                 updateCheckpoint(psm)
@@ -400,7 +403,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val recipientSessionId: Long
     }
 
-    data class SessionInit(val initiatorSessionId: Long, val initiatorParty: Party, val protocolName: String) : SessionMessage
+    data class SessionInit(val initiatorSessionId: Long,
+                           val initiatorParty: Party,
+                           val protocolName: String,
+                           val firstPayload: Any?) : SessionMessage
 
     interface SessionInitResponse : ExistingSessionMessage
 

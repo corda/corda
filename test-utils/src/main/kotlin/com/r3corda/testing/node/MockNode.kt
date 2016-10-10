@@ -1,5 +1,6 @@
 package com.r3corda.testing.node
 
+import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
 import com.r3corda.core.crypto.Party
@@ -27,6 +28,7 @@ import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.services.transactions.ValidatingNotaryService
 import com.r3corda.node.utilities.databaseTransaction
 import org.slf4j.Logger
+import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
@@ -49,7 +51,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   private val threadPerNode: Boolean = false,
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
     private var counter = 0
-    val filesystem = com.google.common.jimfs.Jimfs.newFileSystem(com.google.common.jimfs.Configuration.unix())
+    val filesystem: FileSystem = Jimfs.newFileSystem(unix())
     val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped)
 
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
@@ -138,7 +140,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // It is used from the network visualiser tool.
         @Suppress("unused") val place: PhysicalLocation get() = findMyLocation()!!
 
-        fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer? {
+        fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
             return (net as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
         }
 

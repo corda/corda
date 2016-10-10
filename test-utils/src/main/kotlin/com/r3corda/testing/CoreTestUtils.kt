@@ -12,11 +12,11 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.core.protocols.ProtocolStateMachine
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.node.internal.AbstractNode
+import com.r3corda.node.services.statemachine.ProtocolStateMachineImpl
 import com.r3corda.node.services.statemachine.StateMachineManager.Change
 import com.r3corda.node.utilities.AddOrRemove.ADD
 import com.r3corda.testing.node.MockIdentityService
@@ -138,20 +138,20 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
 /**
  * The given protocol factory will be used to initiate just one instance of a protocol of type [P] when a counterparty
  * protocol requests for it using [markerClass].
- * @return Returns a [ListenableFuture] holding the single [ProtocolStateMachine] created by the request.
+ * @return Returns a [ListenableFuture] holding the single [ProtocolStateMachineImpl] created by the request.
  */
-inline fun <R, reified P : ProtocolLogic<R>> AbstractNode.initiateSingleShotProtocol(
+inline fun <reified P : ProtocolLogic<*>> AbstractNode.initiateSingleShotProtocol(
         markerClass: KClass<out ProtocolLogic<*>>,
-        noinline protocolFactory: (Party) -> P): ListenableFuture<ProtocolStateMachine<R>> {
+        noinline protocolFactory: (Party) -> P): ListenableFuture<P> {
     services.registerProtocolInitiator(markerClass, protocolFactory)
 
-    val future = SettableFuture.create<ProtocolStateMachine<R>>()
+    val future = SettableFuture.create<P>()
 
     val subscriber = object : Subscriber<Change>() {
         override fun onNext(change: Change) {
             if (change.logic is P && change.addOrRemove == ADD) {
                 unsubscribe()
-                future.set(change.logic.psm as ProtocolStateMachine<R>)
+                future.set(change.logic as P)
             }
         }
         override fun onError(e: Throwable) {

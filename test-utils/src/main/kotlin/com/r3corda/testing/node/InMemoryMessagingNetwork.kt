@@ -223,7 +223,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
         private val state = ThreadBox(InnerState())
         private val processedMessages: MutableSet<UUID> = Collections.synchronizedSet(HashSet<UUID>())
 
-        override val myAddress: SingleMessageRecipient = handle
+        override val myAddress: Handle get() = handle
 
         private val backgroundThread = if (manuallyPumped) null else
             thread(isDaemon = true, name = "In-memory message dispatcher") {

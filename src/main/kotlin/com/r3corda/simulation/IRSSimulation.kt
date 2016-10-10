@@ -12,6 +12,7 @@ import com.r3corda.core.contracts.UniqueIdentifier
 import com.r3corda.core.flatMap
 import com.r3corda.core.map
 import com.r3corda.core.node.services.linearHeadsOfType
+import com.r3corda.core.protocols.ProtocolStateMachine
 import com.r3corda.core.success
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.protocols.TwoPartyDealProtocol.Acceptor
@@ -111,7 +112,9 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity
         irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity
 
-        val acceptorTx = node2.initiateSingleShotProtocol(Instigator::class) { Acceptor(it) }.flatMap { it.resultFuture }
+        val acceptorTx = node2.initiateSingleShotProtocol(Instigator::class) { Acceptor(it) }.flatMap {
+            (it.psm as ProtocolStateMachine<SignedTransaction>).resultFuture
+        }
 
         showProgressFor(listOf(node1, node2))
         showConsensusFor(listOf(node1, node2, regulators[0]))

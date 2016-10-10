@@ -7,6 +7,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
+import com.r3corda.core.map
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.services.*
 import com.r3corda.core.protocols.ProtocolStateMachine
@@ -143,15 +144,15 @@ class TwoPartyTradeProtocolTests {
 
             // Everything is on this thread so we can now step through the protocol one step at a time.
             // Seller Alice already sent a message to Buyer Bob. Pump once:
-            bobNode.pumpReceive(false)
+            bobNode.pumpReceive()
 
             // Bob sends a couple of queries for the dependencies back to Alice. Alice reponds.
-            aliceNode.pumpReceive(false)
-            bobNode.pumpReceive(false)
-            aliceNode.pumpReceive(false)
-            bobNode.pumpReceive(false)
-            aliceNode.pumpReceive(false)
-            bobNode.pumpReceive(false)
+            aliceNode.pumpReceive()
+            bobNode.pumpReceive()
+            aliceNode.pumpReceive()
+            bobNode.pumpReceive()
+            aliceNode.pumpReceive()
+            bobNode.pumpReceive()
 
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
             assertThat(bobNode.checkpointStorage.checkpoints()).hasSize(1)
@@ -164,7 +165,7 @@ class TwoPartyTradeProtocolTests {
 
             // Alice doesn't know that and carries on: she wants to know about the cash transactions he's trying to use.
             // She will wait around until Bob comes back.
-            assertThat(aliceNode.pumpReceive(false)).isNotNull()
+            assertThat(aliceNode.pumpReceive()).isNotNull()
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
@@ -386,7 +387,7 @@ class TwoPartyTradeProtocolTests {
 
     private data class RunResult(
             // The buyer is not created immediately, only when the seller starts running
-            val buyer: Future<ProtocolStateMachine<SignedTransaction>>,
+            val buyer: Future<ProtocolStateMachine<*>>,
             val sellerResult: Future<SignedTransaction>,
             val sellerId: StateMachineRunId
     )
@@ -394,7 +395,7 @@ class TwoPartyTradeProtocolTests {
     private fun runBuyerAndSeller(assetToSell: StateAndRef<OwnableState>) : RunResult {
         val buyerFuture = bobNode.initiateSingleShotProtocol(Seller::class) { otherParty ->
             Buyer(otherParty, notaryNode.info.notaryIdentity, 1000.DOLLARS, CommercialPaper.State::class.java)
-        }
+        }.map { it.psm }
         val seller = Seller(bobNode.info.legalIdentity, notaryNode.info, assetToSell, 1000.DOLLARS, ALICE_KEY)
         val sellerResultFuture = aliceNode.smm.add(seller).resultFuture
         return RunResult(buyerFuture, sellerResultFuture, seller.psm.id)
