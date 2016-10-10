@@ -1,0 +1,363 @@
+\documentclass{article}
+\author{Mike Hearn}
+\date{December, 2016}
+\title{Corda: A distributed ledger}
+%%\setlength{\parskip}{\baselineskip}
+\usepackage{amsfonts}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{epigraph}
+\usepackage{graphicx}
+\graphicspath{ {images/} }
+\usepackage[export]{adjustbox}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage[super,comma,sort&compress]{natbib}
+\usepackage[nottoc]{tocbibind}
+\usepackage[parfill]{parskip}
+\usepackage{textcomp}
+%\usepackage[natbibapa]{apacite}
+\renewcommand{\thefootnote}{\alph{footnote}}
+
+%\epigraphfontsize{\small\itshape}
+\setlength\epigraphwidth{4.5cm}
+\setlength\epigraphrule{0pt}
+
+\begin{document}
+
+\maketitle
+%\epigraphfontsize{\small\itshape}
+
+%\renewcommand{\abstractname}{An introduction}
+\begin{center}
+Version 1.0
+
+\emph{Confidential: Pre-Publication Draft For R3 DLG}
+\end{center}
+
+\vspace{10mm}
+
+\begin{abstract}
+
+A decentralised database with minimal trust between nodes would allow for the creation of a global ledger. Such a ledger
+would not only be capable of implementing cryptocurrencies but also have many useful applications in finance, trade,
+supply chain tracking and more. We present Corda, a decentralised global database, and describe in detail how it
+achieves the goal of providing a robust and easy to use platform for decentralised app development. We elaborate on the
+high level description provided in the paper \emph{Corda: An introduction}\cite{CordaIntro} and provide a detailed
+technical overview, but assume no prior knowledge of the platform.
+
+\end{abstract}
+\newpage
+\tableofcontents
+\newpage
+\section{Introduction}
+
+In many industries significant effort is needed to keep organisation-specific databases in sync with each
+other. In the financial sector the effort of keeping different databases synchronised, reconciling them to ensure
+they actually are synchronised and resolving the `breaks' that occur when they are not represents a significant
+fraction of the total work a bank actually does!
+
+Why not just use a shared relational database? This would certainly solve a lot of problems with only existing technology,
+but it would also raise more questions than answers:
+
+\begin{itemize}
+\item Who would run this database? Where would we find a sufficient supply of angels to own it?
+\item In which countries would it be hosted? What would stop that country abusing the mountain of sensitive information it would have?
+\item What if it got hacked?
+\item Can you actually scale a relational database to fit the entire financial system within it?
+\item What happens if The Financial System\texttrademark~needs to go down for maintenance?
+\item What kind of nightmarish IT bureaucracy would guard changes to the database schemas?
+\item How would you manage access control?
+\end{itemize}
+
+We can imagine many other questions. A decentralised database attempts to answer them.
+
+In this paper we differentiate between a \emph{decentralised} database and a \emph{distributed} database. A distributed
+database like BigTable\cite{BigTable} scales to large datasets and transaction volumes by spreading the data over many
+computers. However it is assumed that the computers in question are all run by a single homogenous organisation and that
+the nodes comprising the database all trust each other not to misbehave or leak data. In a decentralised database, such
+as the one underpinning Bitcoin\cite{Bitcoin}, the nodes make much weaker trust assumptions and actively cross-check
+each others work. Such databases trade off performance and usability in order to gain security and global acceptance.
+
+\emph{Corda} is a decentralised database platform with the following novel features:
+
+\begin{itemize}
+\item New transaction types can be defined using JVM\cite{JVM} bytecode.
+\item Transactions may execute in parallel, on different nodes, without either node being aware of the other's transactions.
+\item Nodes are arranged in an authenticated peer to peer network. All communication is direct.
+\item There is no block chain\cite{Bitcoin}. Transaction races are deconflicted using pluggable \emph{notaries}. A single
+Corda network may contain multiple notaries that provide their guarantees using a variety of different algorithms. Thus
+Corda is not tied to any particular consensus algorithm.
+\item Data is shared on a need-to-know basis. Nodes provide the dependency graph of a transaction they are sending to
+another node on demand, but there is no global broadcast of \emph{all} transactions.
+\item Bytecode-to-bytecode transpilation is used to allow complex, multi-step transaction building protocols called
+\emph{flows} to be modelled as blocking code. The code is transformed into an asynchronous state machine, with
+checkpoints written to the node's backing database when messages are sent and received. A node may potentially have
+millions of flows active at once and they may last days, across node restarts and even upgrades. Flows expose progress
+information to node administrators and users and may interact with people as well as other nodes.
+\item The data model allows for arbitrary object graphs to be stored in the ledger. These graphs are called \emph{states} and are the atomic unit of data.
+\item The platform provides a rich type system for the representation of things like dates, currencies, legal entities and so on.
+\item States can declare a relational mapping and can be queried using SQL.
+\item Integration with existing systems is considered from the start. The network can support rapid bulk data imports
+from other database systems without placing load on the network. Global ledger data can be joined with existing,
+internal RDBMS tables thanks to slots in the state definitions that are reserved for join keys. Events on the ledger
+are exposed via an embedded JMS compatible message broker.
+\item States can declare scheduled events. For example an interest rate swap state may declare fixing events.
+\end{itemize}
+
+Comparisons with Bitcoin and Ethereum will be provided throughout.
+
+\newpage
+
+\section{Overview}
+
+Corda is a platform for the writing of ``CorDapps'': applications that extend the global database with new capabilities.
+Such apps define new data types, new inter-node protocols and the ``smart contracts'' that determine allowed changes.
+
+What is a smart contract? That depends on the model of computation we are talking about. There are two competing
+computational models used in decentralised databases: the virtual computer model and the UTXO model.
+
+\paragraph{Virtual computers.}In Ethereum the database is modelled as the memory of a shared global computer. This
+computer's state is replicated across thousands of individual physical computers and has a single thread of execution,
+defined by a Nakamoto block chain\cite{Bitcoin}. Inside this computer live a set of objects in the classical OOP sense:
+code and data tightly bound together. Each object is identified by an address and these objects, called `contracts',
+expose methods. These methods may be invoked either by other methods, or by initiating calls submitted by users of the
+network via a transaction. In this model the term \emph{smart contract} can refer both to the code and sometimes a
+particular instantiation of the code and data (an object). Access control is implemented by exposing the identity of the
+caller to a method's implementation: this identity is derived from the signatures on a transaction. A transaction is
+considered valid if the execution it triggers does not throw any exceptions.
+
+\paragraph{UTXO model.}In Bitcoin the database can be viewed as a set of rows. Each row is identified by a
+\texttt{(hash:number)} pair and contains two columns: \texttt{value}, specifying a quantity of bitcoin, and
+\texttt{scriptPubKey} which contains a small bytecode program that validates any transaction that wishes to consume that
+row. Rows cannot be changed: transactions can only delete rows and add new rows. Deleted rows are called transaction
+`inputs' and added rows are called transaction `outputs'. The identity of a row is therefore derived from the hash of
+the transaction that created it and the index of the output inside that transaction. In practice of course there is no
+requirement to actually delete a row when a transaction consumes it, and the first versions of the Bitcoin software
+simply marked them as spent. It was only later that the database was changed to physically delete used rows, in order to
+improve performance. The bytecode programs typically check for the presence of a signature over the transaction from a
+particular public key, hence the name \texttt{scriptPubKey}. However this is not required, and it's possible to craft
+more complex conditions such as requiring a subset of a group of keys, or the presence of a password (note that a
+password by itself would not be sufficient to secure access to the row). A transaction is considered valid if there is
+at least one input, the inputs point to rows that are not yet spent and the data in the inputs satisfies the bytecode
+programs for each row. A special kind of transaction, called a \emph{coinbase transaction}, is allowed to violate these
+rules and may have inputs that don't refer to any existing row: such a transaction is allowed exactly once per block in
+the block chain and as a result is only ever created by the miners who extend that chain.
+
+It is vital to observe that the two data models use the term \emph{smart contract} to mean completely different
+things. In the virtual computer model a smart contract is essentially like an object or class in object-oriented
+programming: a group of mutable variables accessed via callable methods which can change those variables in arbitrary ways.
+In the UTXO model a smart contract is a predicate: a function that yields either \texttt{true} or \texttt{false} and
+which cannot change anything in the database by itself.
+
+A deeper discussion of the tradeoffs between the different approaches can be found in a later section.
+
+Corda uses the UTXO model and as a result its transactions are structurally similar to Bitcoin transactions: they have
+inputs, outputs and signatures. Unlike Bitcoin, Corda database rows can contain arbitrary data, not just a value field.
+Because the data consumed and added by transactions is not necessarily a set of key/value pairs, we don't talk about rows
+but rather \emph{states}. Like Bitcoin, Corda states are associated with bytecode programs that must accept a transaction
+for it to be valid, but unlike Bitcoin, a transaction must satisfy the programs for both the input and output states
+at once. \emph{Issuance transactions} may append new states to the database without consuming any existing states but
+unlike in Bitcoin these transactions are not special and may be created at any time, by anyone.
+
+In contrast to both Bitcoin and Ethereum, Corda does not order transactions using a block chain and by implication does
+not use miners or proof-of-work. Instead each state points to a \emph{notary}, which is a service that guarantees it
+will sign a transaction only if all the input states are un-consumed. A transaction is not allowed to consume states
+controlled by multiple notaries and thus there is never any need for two-phase commit between notaries. If a combination of
+states would cross notaries then a special transaction type is used to move them onto a single notary first.
+
+Notaries are expected to be composed of multiple mutually distrusting parties who use a byzantine fault
+tolerant algorithm like HoneyBadgerBFT\cite{HBBFT} to reach consensus. Notaries are identified by and sign with compound
+public keys that conceptually follow the Interledger Crypto-Conditions specification\cite{ILPCC}. Note that whilst it
+would be conventional to use a BFT algorithm for a notary service, there is no requirement to do so and in cases where
+the legal system is sufficient to ensure protocol compliance a higher performance algorithm like RAFT may be used.
+Because multiple notaries can co-exist a single network may provide a single global BFT notary for
+general use and region-specific RAFT notaries for low latency trading within a unified regulatory area, for example
+London or New York.
+
+The Corda transaction format has various other features which are described in later sections.
+
+\section{The peer to peer network}
+
+\subsection{Network overview}
+A Corda network consists of the following components:
+
+\begin{itemize}
+\item Nodes, communicating using AMQP/1.0 over TLS. Nodes use a relational database for data storage.
+\item A permissioning service that automates the process of provisioning TLS certificates.
+\item A network map service that publishes information about nodes on the network.
+\item One or more notary services. A notary may itself be distributed over multiple nodes.
+\item Zero or more oracle services. An oracle is a well known service that signs transactions if they state a fact
+and that fact is considered to be true. This is how the ledger can be connected to the real world, despite being
+fully deterministic.
+\end{itemize}
+
+A purely in-memory implementation of the messaging subsystem is provided which can inject simulated latency between
+nodes and visualise communications between them. This can be useful for debugging, testing and educational purposes.
+
+Oracles and notaries are covered in later sections.
+
+\subsection{Identity and the permissioning service}
+
+Unlike Bitcoin and Ethereum, Corda is designed for semi-private networks in which admission requires obtaining an
+identity signed by a root authority. This assumption is pervasive - the flow API provides messaging in terms of identities,
+with routing and delivery to underlying nodes being handled automatically. There is no global broadcast at any point.
+
+This `identity' does not have to be a legal or true identity. In the same way that an email address is a globally
+unique pseudonym that is ultimately rooted by the top of the DNS hierarchy, so too can a Corda network work with
+arbitrary self-selected usernames. The permissioning service can implement any policy it likes as long as the
+identities it signs are globally unique. Thus an entirely anonymous Corda network is possible if a suitable
+IP obfuscation system like Tor is also used.
+
+Whilst simple string identities are likely sufficient for some networks, the financial industry typically requires some
+level of \emph{know your customer} checking, and differentiation between different legal entities that may share
+the same brand name. Corda reuses the standard PKIX infrastructure for connecting public keys to identities and thus
+names are actually X.500 names. When a single string is sufficient the \emph{common name} field can be used alone,
+similar to the web PKI. In more complex deployments the additional structure X.500 provides may be useful to
+differentiate between entities with the same name. For example there are at least five different companies called
+\emph{American Savings Bank} and in the past there may have been more than 40 independent banks with that name.
+
+More complex notions of identity that may attest to many time-varying attributes are not handled at this layer of the
+system: the base identity is always just an X.500 name. Note that even though messaging is always identified, transactions
+themselves may still contain anonymous public keys.
+
+\subsection{The network map}
+
+Every network require a network map service, which may itself be composed of multiple cooperating nodes. This is
+similar to Tor's concept of \emph{directory authorities}. The network map publishes the IP addresses through which
+every node on the network can be reached, along with the identity certificates of those nodes and the services they
+provide. On receiving a connection nodes check that the connecting node is in the network map.
+
+The network map abstracts the underlying IP addresses of the nodes from more useful business concepts like identities
+and services. Each participant on the network, called a \emph{party}, publishes one or more IP addresses in the
+network map. Equivalent domain names may be helpful for debugging but are not required. User interfaces and APIs
+always work in terms of identities - there is thus no equivalent to Bitcoin's notion of an address (hashed public key),
+and user-facing applications rely on auto-completion and search rather than QRcodes to identify a logical recipient.
+
+It is possible to subscribe to network map changes and registering with the map is the first thing a node does at
+startup. Nodes may optionally advertise their nearest city for load balancing and network visualisation purposes.
+
+The map is a document that may be cached and distributed throughout the network. The map is therefore not required
+to be highly available: if the map service becomes unreachable new nodes may not join the network and existing nodes
+may not change their advertised service set, but otherwise things continue as normal.
+
+\subsection{Message delivery}
+
+The network is structurally similar to the email network. Nodes are expected to be long lived but may depart
+temporarily due to crashes, connectivity interruptions or maintenance. Messages are written to disk
+and delivery is retried until the remote node has acknowledged a message, at which point it is expected to have
+either reliably stored the message or processed it completely. Connections between nodes are built and torn down as
+needed: there is no assumption of constant connectivity. An ideal network would be entirely flat with high quality
+connectivity between all nodes, but Corda recognises that this is not always compatible with common network
+setups and thus the message routing component of a node can be separated from the rest and run outside the firewall.
+In this way nodes that do not have duplex connectivity can still take part in the network as first class citizens.
+Additionally a single node may have multiple advertised IP addresses.
+
+The reference implementation provides this functionality using the Apache Artemis message broker, through which it
+obtains journalling, load balancing, flow control, high availability clustering, streaming of messages too large to fit
+in RAM and many other useful features. The network uses the \emph{AMQP/1.0}\cite{AMQP} protocol which is a widely
+implemented binary messaging standard, combined with TLS to secure messages in transit and authenticate the endpoints.
+
+\subsection{Serialization, sessioning, deduplication and signing}
+
+All messages are encoded using a compact binary format. Each message has a UUID set in an AMQP header which is used
+as a deduplication key, thus accidentally redelivered messages will be ignored.
+
+% TODO: Describe the serialization format in more detail once finalised.
+
+Messages may also have an associated organising 64-bit \emph{session ID}. Note that this is distinct from the AMQP
+notion of a session. Sessions can be long lived and persist across node restarts and network outages. They exist in order
+to group messages that are part of a \emph{flow}, described in more detail below.
+
+Messages that are successfully processed by a node generate a signed acknowledgement message called a `receipt'. Note that
+this is distinct from the unsigned acknowledgements that live at the AMQP level and which simply flag that a message was
+successfully downloaded over the wire. A receipt may be generated some time after the message is processed in the case
+where acknowledgements are being batched to amortise signing overhead, and the receipt identifies the message by the hash
+of its content. The purpose of the receipts is to give a node undeniable evidence that a counterparty received a
+notification that would stand up later in a dispute mediation process. Corda does not attempt to support deniable
+messaging.
+
+\newpage
+\section{Flow framework}
+
+It is common in decentralised ledger systems for complex multi-party protocols to be needed. The Bitcoin payment channel
+protocol\cite{PaymentChannels} involves two parties putting money into a multi-signature pot, then iterating with your
+counterparty a shared transaction that spends that pot, with extra transactions used for the case where one party or the
+other fails to terminate properly. Such protocols typically involve reliable private message passing, checkpointing to
+disk, signing of transactions, interaction with the p2p network, reporting progress to the user, maintaining a complex
+state machine with timeouts and error cases, and possibly interaction with internal systems on either side. All
+this can become quite involved. The implementation of Bitcoin payment channels in the bitcoinj library is approximately
+9000 lines of Java, very little of which involves cryptography.
+
+As another example, the core Bitcoin protocol only
+allows you to append transactions to the ledger. Transmitting other information that might be useful such as a text message,
+refund address, identity information and so on is not supported and must be handled in some other way - typically by
+wrapping the raw ledger transaction bytes in a larger message that adds the desired metadata and giving responsibility
+for broadcasting the embedded transaction to the recipient, as in Bitcoin's BIP 70\cite{BIP70}.
+
+In Corda transaction data is not globally broadcast. Instead it is transmitted to the relevant parties only when they
+need to see it. Moreover even quite simple use cases - like sending cash - may involve a multi-step negotiation between
+counterparties and the involvement of a third party such as a notary. Additional information that isn't put into the
+ledger is considered essential, as opposed to nice-to-have. Thus unlike traditional blockchain systems in which the primary
+form of communication is global broadcast, in Corda \emph{all} communication takes the form of small multi-party sub-protocols
+called flows.
+
+The flow framework presents a programming model that looks to the developer as if they have the ability to run millions
+of long lived threads which can survive node restarts, and even node upgrades. APIs are provided to send and receive
+object graphs to and from other identities on the network, embed sub-flows, and report progress to observers. In this
+way business logic can be expressed at a very high level, with the details of making it reliable and efficient
+abstracted away. This is achieved with the following components.
+
+\paragraph{Just-in-time state machine compiler.}Code that is written in a blocking manner typically cannot be stopped
+and transparently restarted later. The first time a flow's \texttt{call} method is invoked a bytecode-to-bytecode
+transformation occurs that rewrites the classes into a form that implements a resumable state machine. These state
+machines are sometimes called fibers or coroutines, and the transformation engine Corda uses is capable of rewriting
+code arbitrarily deep in the stack on the fly. The developer may thus break his or her logic into multiple methods and
+classes, use loops, and generally structure their program as if it were executing in a single blocking thread. There's only a
+small list of things they should not do: sleeping, directly accessing the network APIs, or doing other tasks that might
+block outside of the framework.
+
+\paragraph{Transparent checkpointing.}When a flow wishes to wait for a message from another party (or input from a
+human being) the underlying stack frames are suspended onto the heap, then crawled and serialized into the node's
+underlying relational database using an object serialization framework. The written objects are prefixed with small
+schema definitions that allow some measure of portability across changes to the layout of objects, although
+portability across changes to the stack layout is left for future work. Flows are resumed and suspended on demand, meaning
+it is feasible to have far more flows active at once than would fit in memory. The checkpointing process is atomic with
+changes to local storage and acknowledgement of network messages.
+
+\paragraph{Identity to IP address mapping.}Flows are written in terms of identities. The framework takes care of routing
+messages to the right IP address for a given identity, following movements that may take place whilst the flow is active
+and handling load balancing for multi-homed parties as appropriate.
+
+\paragraph{A library of subflows.}Flows can invoke sub-flows, and a library of flows is provided to automate common tasks
+like notarising a transaction or atomically swapping ownership of two assets.
+
+\paragraph{Progress reporting.}Flows can provide a progress tracker that indicates which step they are up to. Steps can
+have human-meaningful labels, along with other tagged data like a progress bar. Progress trackers are hierarchical and
+steps can have sub-trackers for invoked sub-flows.
+
+\paragraph{Flow hospital.}Flows can pause if they throw exceptions or explicitly request human assistance. A flow that
+has stopped appears in the \emph{flow hospital} where the node's administrator may decide to kill the flow or provide it
+with a solution. The ability to request manual solutions is useful for cases where the other side isn't sure why you
+are contacting them, for example, the specified reason for sending a payment is not recognised, or when the asset used for
+a payment is not considered acceptable.
+
+% TODO: Event scheduling
+% TODO: Data model: commands, attachments
+% TODO: Cash and IOU modelling
+% TODO: Notaries
+% TODO: App platform and JVM sandboxing
+% TODO: Client side signing devices
+% TODO: Client RPC and reactive collections
+% TODO: Integration with existing database systems
+% TODO: Privacy techniques
+% TODO: Experimental contract DSL?
+
+\section{Conclusion}
+
+TODO
+
+\bibliographystyle{unsrt}
+\bibliography{Ref}
+
+\end{document}
