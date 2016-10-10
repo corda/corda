@@ -11,7 +11,6 @@ import java.util.*
  * they are added to the [StateMachineManager].
  */
 class ANSIProgressObserver(val smm: StateMachineManager) {
-
     init {
         smm.changes.subscribe { change ->
             when (change.addOrRemove) {
