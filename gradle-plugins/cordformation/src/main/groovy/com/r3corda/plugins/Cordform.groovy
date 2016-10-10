@@ -68,6 +68,7 @@ class Cordform extends DefaultTask {
         project.copy {
             from Cordformation.getPluginFile(project, "com/r3corda/plugins/runnodes")
             filter { String line -> line.replace("JAR_NAME", Node.JAR_NAME) }
+            // Replaces end of line with lf to avoid issues with the bash interpreter and Windows style line endings.
             filter(org.apache.tools.ant.filters.FixCrLfFilter.class, eol: org.apache.tools.ant.filters.FixCrLfFilter.CrLf.newInstance("lf"))
             into "${directory}/"
         }
