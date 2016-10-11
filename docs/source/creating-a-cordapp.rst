@@ -212,28 +212,28 @@ is a three node example;
             dirName "notary"
             nearestCity "London"
             notary true // Sets this node to be a notary
-            advertisedServices = []
+            advertisedServices []
             artemisPort 12345
             webPort 12346
-            cordapps = []
+            cordapps []
         }
         node {
             name "NodeA"
             dirName "nodea"
             nearestCity "London"
-            advertisedServices = []
+            advertisedServices []
             artemisPort 31337
             webPort 31339
-            cordapps = []
+            cordapps []
         }
         node {
             name "NodeB"
             dirName "nodeb"
             nearestCity "New York"
-            advertisedServices = []
+            advertisedServices []
             artemisPort 31338
             webPort 31340
-            cordapps = []
+            cordapps []
         }
     }
 

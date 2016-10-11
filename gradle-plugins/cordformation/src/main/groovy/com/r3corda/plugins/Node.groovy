@@ -1,6 +1,5 @@
 package com.r3corda.plugins
 
-import groovy.text.SimpleTemplateEngine
 import org.gradle.api.internal.file.AbstractFileCollection
 import org.gradle.api.Project
 import java.nio.file.Files
@@ -9,8 +8,6 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
 import com.typesafe.config.ConfigRenderOptions
-
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter
 
 /**
  * Represents a node that will be installed.
@@ -23,10 +20,18 @@ class Node {
      * Name of the node.
      */
     public String name
-    private String dirName
-    private List<String> advertisedServices = []
+    /**
+     * A list of advertised services ID strings.
+     */
+    protected List<String> advertisedServices = []
+    /**
+     * Set thThe list of cordapps to install to the plugins directory.
+     *
+     * @note Your app will be installed by default and does not need to be included here.
+     */
     protected List<String> cordapps = []
 
+    private String dirName
     private Config config = ConfigFactory.empty()
     //private Map<String, Object> config = new HashMap<String, Object>()
     private File nodeDir
@@ -71,15 +76,6 @@ class Node {
     }
 
     /**
-     * Set the advertised services for this node.
-     *
-     * @param advertisedServices A list of advertised services ID strings.
-     */
-    void advertisedServices(List<String> advertisedServices) {
-        config = config.withValue("extraAdvertisedServiceIds", ConfigValueFactory.fromAnyRef(advertisedServices.join(",")))
-    }
-
-    /**
      * Set the artemis port for this node.
      *
      * @param artemisPort The artemis messaging queue port.
@@ -109,16 +105,6 @@ class Node {
     void networkMapAddress(String networkMapAddress) {
         config = config.withValue("networkMapAddress",
                 ConfigValueFactory.fromAnyRef(networkMapAddress))
-    }
-
-    /**
-     * Set the list of cordapps to use on this node.
-     *
-     * @note Your app will be installed by default and does not need to be included here.
-     * @param cordapps The list of cordapps to install to the plugins directory.
-     */
-    void cordapps(List<String> cordapps) {
-        this.cordapps = cordapps
     }
 
     Node(Project project) {
@@ -201,6 +187,10 @@ class Node {
      * Installs the configuration file to this node's directory and detokenises it.
      */
     private void installConfig() {
+        // Adding required default values
+        config = config.withValue('extraAdvertisedServiceIds',
+                ConfigValueFactory.fromAnyRef(advertisedServices.join(',')))
+
         def configFileText = config.root().render(new ConfigRenderOptions(false, false, true, false)).split("\n").toList()
         Files.write(new File(nodeDir, 'node.conf').toPath(), configFileText, StandardCharsets.UTF_8)
     }
