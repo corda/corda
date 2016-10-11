@@ -198,7 +198,7 @@ class Node {
                     "dirName": dirName,
                     "nearestCity": nearestCity,
                     "isHttps": isHttps,
-                    "advertisedServices": advertisedServices,
+                    "advertisedServices": advertisedServices.join(","),
                     "networkMapAddress": networkMapAddress,
                     "artemisPort": artemisPort.toString(),
                     "webPort": webPort.toString()
