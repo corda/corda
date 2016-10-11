@@ -1,19 +1,20 @@
 package com.r3corda.core.transactions
 
 import com.r3corda.core.contracts.Command
+import com.r3corda.core.crypto.MerkleTreeException
 import com.r3corda.core.crypto.PartialMerkleTree
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.sha256
 import com.r3corda.core.serialization.serialize
 import java.util.*
 
-/* Creation and verification of a Merkle Tree for a Wire Transaction
-* Tree should be the same no matter the ordering of outputs, inputs, attachments and commands. */
-
-/* Transaction is split into following blocks:
-inputs, outputs, commands, attachments' refs
-If a row in a tree has odd number of elements - the final hash is hashed with itself.
-*/
+/**
+ * Creation and verification of a Merkle Tree for a Wire Transaction.
+ *
+ * Tree should be the same no matter the ordering of outputs, inputs, attachments and commands.
+ * Transaction is split into following blocks: inputs, outputs, commands, attachments' refs.
+ * If a row in a tree has an odd number of elements - the final hash is hashed with itself.
+ */
 
 fun SecureHash.hashConcat(other: SecureHash) = (this.bits + other.bits).sha256()
 
@@ -50,8 +51,10 @@ class MerkleTransaction(
             return blocks
         }
 
-        /* Start building a Merkle tree from the transaction.
-        Calls helper tailrecursive function with an accumulator and initial hashedBlocks */
+        /**
+         *  Start building a Merkle tree from the transaction.
+         *  Calls helper tailrecursive function with an accumulator and initial hashedBlocks.
+         */
         fun buildMerkleTree(wtx: WireTransaction): MutableList<SecureHash>{
             val blocks = getTransactionBlocks(wtx)
             val hashedBlocks: MutableList<SecureHash> = ArrayList()
@@ -73,7 +76,7 @@ class MerkleTransaction(
                 var i = 0
                 while(i < lastHashList.size){
                     val left = lastHashList[i]
-                    //If there is an odd number of elements, the last element is hashed with itself
+                    //If there is an odd number of elements, the last element is hashed with itself.
                     val right = lastHashList[Math.min(i+1, lastHashList.size - 1)]
                     val combined = left.hashConcat(right)
                     resultHashes.add(combined)
