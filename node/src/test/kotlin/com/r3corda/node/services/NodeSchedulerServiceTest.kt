@@ -85,7 +85,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
         dataSource = dataSourceAndDatabase.first
         val database = dataSourceAndDatabase.second
-        scheduler = NodeSchedulerService(services, factory, schedulerGatedExecutor)
+        scheduler = NodeSchedulerService(database, services, factory, schedulerGatedExecutor)
         smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
         val mockSMM = StateMachineManager(services, listOf(services), PerFileCheckpointStorage(fs.getPath("checkpoints")), smmExecutor, database)
         mockSMM.changes.subscribe { change ->

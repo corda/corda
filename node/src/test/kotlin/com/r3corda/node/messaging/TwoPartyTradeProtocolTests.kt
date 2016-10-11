@@ -21,10 +21,7 @@ import com.r3corda.core.utilities.LogHelper
 import com.r3corda.core.utilities.TEST_TX_TIME
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.persistence.NodeAttachmentService
-import com.r3corda.node.services.persistence.PerFileTransactionStorage
-import com.r3corda.node.services.persistence.StorageServiceImpl
-import com.r3corda.node.services.persistence.checkpoints
+import com.r3corda.node.services.persistence.*
 import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.protocols.TwoPartyTradeProtocol.Buyer
 import com.r3corda.protocols.TwoPartyTradeProtocol.Seller
@@ -32,6 +29,7 @@ import com.r3corda.testing.*
 import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
+import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -126,6 +124,8 @@ class TwoPartyTradeProtocolTests {
             notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
             aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
             bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
+            aliceNode.disableDBCloseOnStop()
+            bobNode.disableDBCloseOnStop()
             val aliceKey = aliceNode.services.legalIdentityKey
             val notaryKey = notaryNode.services.notaryIdentityKey
 
@@ -157,7 +157,14 @@ class TwoPartyTradeProtocolTests {
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
             assertThat(bobNode.checkpointStorage.checkpoints()).hasSize(1)
 
-            val bobTransactionsBeforeCrash = (bobNode.storage.validatedTransactions as PerFileTransactionStorage).transactions
+            val storage = bobNode.storage.validatedTransactions
+            val bobTransactionsBeforeCrash = if (storage is PerFileTransactionStorage) {
+                storage.transactions
+            } else if (storage is DBTransactionStorage) {
+                databaseTransaction(bobNode.database) {
+                    storage.transactions
+                }
+            } else throw IllegalArgumentException("Unknown storage implementation")
             assertThat(bobTransactionsBeforeCrash).isNotEmpty()
 
             // .. and let's imagine that Bob's computer has a power cut. He now has nothing now beyond what was on disk.
@@ -186,12 +193,20 @@ class TwoPartyTradeProtocolTests {
             assertThat(bobFuture.get()).isEqualTo(aliceFuture.get())
 
             assertThat(bobNode.smm.findStateMachines(Buyer::class.java)).isEmpty()
+            databaseTransaction(bobNode.database) {
+                assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
+            }
+            databaseTransaction(aliceNode.database) {
+                assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
+            }
 
-            assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
-            assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
+            databaseTransaction(bobNode.database) {
+                val restoredBobTransactions = bobTransactionsBeforeCrash.filter { bobNode.storage.validatedTransactions.getTransaction(it.id) != null }
+                assertThat(restoredBobTransactions).containsAll(bobTransactionsBeforeCrash)
+            }
 
-            val restoredBobTransactions = bobTransactionsBeforeCrash.filter { bobNode.storage.validatedTransactions.getTransaction(it.id) != null }
-            assertThat(restoredBobTransactions).containsAll(bobTransactionsBeforeCrash)
+            aliceNode.manuallyCloseDB()
+            bobNode.manuallyCloseDB()
         }
     }
 
@@ -209,7 +224,7 @@ class TwoPartyTradeProtocolTests {
                             transactionStorage: TransactionStorage,
                             stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage
                     ): StorageServiceImpl {
-                        return StorageServiceImpl(attachments, RecordingTransactionStorage(transactionStorage), stateMachineRecordedTransactionMappingStorage)
+                        return StorageServiceImpl(attachments, RecordingTransactionStorage(database, transactionStorage), stateMachineRecordedTransactionMappingStorage)
                     }
                 }
             }
@@ -529,9 +544,11 @@ class TwoPartyTradeProtocolTests {
     }
 
 
-    class RecordingTransactionStorage(val delegate: TransactionStorage) : TransactionStorage {
+    class RecordingTransactionStorage(val database: Database, val delegate: TransactionStorage) : TransactionStorage {
         override fun track(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
-            return delegate.track()
+            return databaseTransaction(database) {
+                delegate.track()
+            }
         }
 
         val records: MutableList<TxRecord> = Collections.synchronizedList(ArrayList<TxRecord>())
@@ -539,13 +556,17 @@ class TwoPartyTradeProtocolTests {
             get() = delegate.updates
 
         override fun addTransaction(transaction: SignedTransaction) {
-            records.add(TxRecord.Add(transaction))
-            delegate.addTransaction(transaction)
+            databaseTransaction(database) {
+                records.add(TxRecord.Add(transaction))
+                delegate.addTransaction(transaction)
+            }
         }
 
         override fun getTransaction(id: SecureHash): SignedTransaction? {
-            records.add(TxRecord.Get(id))
-            return delegate.getTransaction(id)
+            return databaseTransaction(database) {
+                records.add(TxRecord.Get(id))
+                delegate.getTransaction(id)
+            }
         }
     }
 
