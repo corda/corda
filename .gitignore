@@ -4,8 +4,8 @@
 .settings
 tags
 .DS_Store
-*.orig
 *.log
+*.orig
 
 # Created by .ignore support plugin (hsz.mobi)
 
