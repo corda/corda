@@ -3,26 +3,32 @@ package com.r3corda.plugins
 import groovy.text.SimpleTemplateEngine
 import org.gradle.api.internal.file.AbstractFileCollection
 import org.gradle.api.Project
+import java.nio.file.Files
+import java.nio.charset.StandardCharsets
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigValueFactory
+import com.typesafe.config.ConfigRenderOptions
+
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter
 
 /**
  * Represents a node that will be installed.
  */
 class Node {
     static final String JAR_NAME = 'corda.jar'
+    static final String DEFAULT_HOST = 'localhost'
 
     /**
      * Name of the node.
      */
     public String name
     private String dirName
-    private String nearestCity
-    private Boolean isHttps = false
     private List<String> advertisedServices = []
-    private Integer artemisPort
-    private Integer webPort
-    private String networkMapAddress = ""
     protected List<String> cordapps = []
 
+    private Config config = ConfigFactory.empty()
+    //private Map<String, Object> config = new HashMap<String, Object>()
     private File nodeDir
     private def project
 
@@ -33,6 +39,7 @@ class Node {
      */
     void name(String name) {
         this.name = name
+        config = config.withValue("myLegalName", ConfigValueFactory.fromAnyRef(name))
     }
 
     /**
@@ -42,6 +49,7 @@ class Node {
      */
     void dirName(String dirName) {
         this.dirName = dirName
+        config = config.withValue("basedir", ConfigValueFactory.fromAnyRef(dirName))
     }
 
     /**
@@ -50,7 +58,7 @@ class Node {
      * @param nearestCity The name of the nearest city to the node.
      */
     void nearestCity(String nearestCity) {
-        this.nearestCity = nearestCity
+        config = config.withValue("nearestCity", ConfigValueFactory.fromAnyRef(nearestCity))
     }
 
     /**
@@ -59,7 +67,7 @@ class Node {
      * @param isHttps True if this node uses HTTPS communication.
      */
     void https(Boolean isHttps) {
-        this.isHttps = isHttps
+        config = config.withValue("useHTTPS", ConfigValueFactory.fromAnyRef(isHttps))
     }
 
     /**
@@ -68,7 +76,7 @@ class Node {
      * @param advertisedServices A list of advertised services ID strings.
      */
     void advertisedServices(List<String> advertisedServices) {
-        this.advertisedServices = advertisedServices
+        config = config.withValue("extraAdvertisedServiceIds", ConfigValueFactory.fromAnyRef(advertisedServices.join(",")))
     }
 
     /**
@@ -77,7 +85,8 @@ class Node {
      * @param artemisPort The artemis messaging queue port.
      */
     void artemisPort(Integer artemisPort) {
-        this.artemisPort = artemisPort
+        config = config.withValue("artemisAddress",
+                ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$artemisPort".toString()))
     }
 
     /**
@@ -86,7 +95,8 @@ class Node {
      * @param webPort The web port number for this node.
      */
     void webPort(Integer webPort) {
-        this.webPort = webPort
+        config = config.withValue("webAddress",
+                ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$webPort".toString()))
     }
 
     /**
@@ -97,7 +107,8 @@ class Node {
      * @param networkMapAddress Network map address.
      */
     void networkMapAddress(String networkMapAddress) {
-        this.networkMapAddress = networkMapAddress
+        config = config.withValue("networkMapAddress",
+                ConfigValueFactory.fromAnyRef(networkMapAddress))
     }
 
     /**
@@ -134,7 +145,7 @@ class Node {
      * @return This node's artemis address.
      */
     String getArtemisAddress() {
-        return "localhost:" + artemisPort
+        return config.getString("artemisAddress")
     }
 
     /**
@@ -190,26 +201,8 @@ class Node {
      * Installs the configuration file to this node's directory and detokenises it.
      */
     private void installConfig() {
-        project.copy {
-            from Cordformation.getPluginFile(project, 'com/r3corda/plugins/nodetemplate.conf')
-            filter {
-                def binding = [
-                    "name": name,
-                    "dirName": dirName,
-                    "nearestCity": nearestCity,
-                    "isHttps": isHttps,
-                    "advertisedServices": advertisedServices.join(","),
-                    "networkMapAddress": networkMapAddress,
-                    "artemisPort": artemisPort.toString(),
-                    "webPort": webPort.toString()
-                ]
-
-                def engine = new SimpleTemplateEngine()
-                engine.createTemplate(it).make(binding)
-            }
-            into nodeDir
-            rename 'nodetemplate.conf', 'node.conf'
-        }
+        def configFileText = config.root().render(new ConfigRenderOptions(false, false, true, false)).split("\n").toList()
+        Files.write(new File(nodeDir, 'node.conf').toPath(), configFileText, StandardCharsets.UTF_8)
     }
 
     /**
