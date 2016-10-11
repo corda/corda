@@ -21,7 +21,6 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executor
 import javax.annotation.concurrent.ThreadSafe
 
 // TODO: Stop the wallet explorer and other clients from using this class and get rid of persistentInbox
@@ -92,8 +91,7 @@ class NodeMessagingClient(config: NodeConfiguration,
     }
 
     /** A registration to handle messages of different types */
-    data class Handler(val executor: Executor?,
-                       val topicSession: TopicSession,
+    data class Handler(val topicSession: TopicSession,
                        val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
     /**
@@ -369,15 +367,13 @@ class NodeMessagingClient(config: NodeConfiguration,
         }
     }
 
-    override fun addMessageHandler(topic: String, sessionID: Long, executor: Executor?,
-                                   callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
-            = addMessageHandler(TopicSession(topic, sessionID), executor, callback)
+    override fun addMessageHandler(topic: String, sessionID: Long, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
+            = addMessageHandler(TopicSession(topic, sessionID), callback)
 
     override fun addMessageHandler(topicSession: TopicSession,
-                                   executor: Executor?,
                                    callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
         require(!topicSession.isBlank()) { "Topic must not be blank, as the empty topic is a special case." }
-        val handler = Handler(executor, topicSession, callback)
+        val handler = Handler(topicSession, callback)
         handlers.add(handler)
         val messagesToRedeliver = state.locked {
             val messagesToRedeliver = undeliveredMessages

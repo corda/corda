@@ -117,6 +117,8 @@ class StateMachineManagerTests {
         val payload = random63BitValue()
         node1.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { SendProtocol(payload, it) }
         node2.smm.add(ReceiveThenSuspendProtocol(node1.info.legalIdentity)) // Prepare checkpointed receive protocol
+        // Make sure the add() has finished initial processing.
+        node2.smm.executor.flush()
         node2.stop() // kill receiver
         val restoredProtocol = node2.restartAndGetRestoredProtocol<ReceiveThenSuspendProtocol>(node1)
         assertThat(restoredProtocol.receivedPayloads[0]).isEqualTo(payload)
@@ -137,6 +139,8 @@ class StateMachineManagerTests {
         // Kick off first send and receive
         node2.smm.add(PingPongProtocol(node3.info.legalIdentity, payload))
         assertEquals(1, node2.checkpointStorage.checkpoints().size)
+        // Make sure the add() has finished initial processing.
+        node2.smm.executor.flush()
         // Restart node and thus reload the checkpoint and resend the message with same UUID
         node2.stop()
         val node2b = net.createNode(node1.info.address, node2.id, advertisedServices = *node2.advertisedServices.toTypedArray())

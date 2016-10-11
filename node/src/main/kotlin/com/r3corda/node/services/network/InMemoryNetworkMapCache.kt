@@ -3,7 +3,6 @@ package com.r3corda.node.services.network
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.contracts.Contract
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.map
@@ -20,12 +19,10 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
-import com.r3corda.node.services.api.RegulatorService
 import com.r3corda.node.services.network.NetworkMapService.Companion.FETCH_PROTOCOL_TOPIC
 import com.r3corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_PROTOCOL_TOPIC
 import com.r3corda.node.services.network.NetworkMapService.FetchMapResponse
 import com.r3corda.node.services.network.NetworkMapService.SubscribeResponse
-import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.protocols.sendRequest
 import rx.Observable
@@ -70,7 +67,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
                                ifChangedSinceVer: Int?): ListenableFuture<Unit> {
         if (subscribe && !registeredForPush) {
             // Add handler to the network, for updates received from the remote network map service.
-            net.addMessageHandler(NetworkMapService.PUSH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, null) { message, r ->
+            net.addMessageHandler(NetworkMapService.PUSH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID) { message, r ->
                 try {
                     val req = message.data.deserialize<NetworkMapService.Update>()
                     val ackMessage = net.createMessage(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC, DEFAULT_SESSION_ID,
@@ -88,7 +85,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
         // Fetch the network map and register for updates at the same time
         val req = NetworkMapService.FetchMapRequest(subscribe, ifChangedSinceVer, net.myAddress)
-        val future = net.sendRequest<FetchMapResponse>(FETCH_PROTOCOL_TOPIC, req, networkMapAddress, RunOnCallerThread).map { resp ->
+        val future = net.sendRequest<FetchMapResponse>(FETCH_PROTOCOL_TOPIC, req, networkMapAddress).map { resp ->
             // We may not receive any nodes back, if the map hasn't changed since the version specified
             resp.nodes?.forEach { processRegistration(it) }
             Unit
@@ -120,7 +117,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override fun deregisterForUpdates(net: MessagingService, service: NodeInfo): ListenableFuture<Unit> {
         // Fetch the network map and register for updates at the same time
         val req = NetworkMapService.SubscribeRequest(false, net.myAddress)
-        val future = net.sendRequest<SubscribeResponse>(SUBSCRIPTION_PROTOCOL_TOPIC, req, service.address, RunOnCallerThread).map {
+        val future = net.sendRequest<SubscribeResponse>(SUBSCRIPTION_PROTOCOL_TOPIC, req, service.address).map {
             if (it.confirmed) Unit else throw NetworkCacheError.DeregistrationFailed()
         }
         _registrationFuture.setFuture(future)

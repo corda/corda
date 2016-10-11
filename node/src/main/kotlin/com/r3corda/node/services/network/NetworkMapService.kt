@@ -154,7 +154,7 @@ abstract class AbstractNetworkMapService
         handlers += addMessageHandler(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC,
                 { req: NetworkMapService.SubscribeRequest -> processSubscriptionRequest(req) }
         )
-        handlers += net.addMessageHandler(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, null) { message, r ->
+        handlers += net.addMessageHandler(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC, DEFAULT_SESSION_ID) { message, r ->
             val req = message.data.deserialize<NetworkMapService.UpdateAcknowledge>()
             processAcknowledge(req)
         }
