@@ -12,6 +12,12 @@
 <tbody>
 <tr>
 <td>
+<a href="-config-helper/index.html">ConfigHelper</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">ConfigHelper</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="-full-node-configuration/index.html">FullNodeConfiguration</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">FullNodeConfiguration</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></code></td>
@@ -21,12 +27,6 @@
 <a href="-node-configuration/index.html">NodeConfiguration</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">NodeConfiguration</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-node-s-s-l-configuration/index.html"><span class="identifier">NodeSSLConfiguration</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="-node-configuration-from-config/index.html">NodeConfigurationFromConfig</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">NodeConfigurationFromConfig</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -46,6 +46,14 @@
 <h3>Functions</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="configure-with-dev-s-s-l-certificate.html">configureWithDevSSLCertificate</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="-node-s-s-l-configuration/index.html"><span class="identifier">NodeSSLConfiguration</span></a><span class="symbol">.</span><span class="identifier">configureWithDevSSLCertificate</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Strictly for dev only automatically construct a server certificate/private key signed from
+the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.</p>
+</td>
+</tr>
 <tr>
 <td>
 <a href="get-or-else.html">getOrElse</a></td>

@@ -40,6 +40,21 @@ state from being serialized in checkpoints.</p>
 </tr>
 <tr>
 <td>
+<a href="legal-identity-key.html">legalIdentityKey</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">legalIdentityKey</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code><p>Helper property to shorten code for fetching the Nodes KeyPair associated with the
+public legalIdentity Party from the key management service.
+Typical use is during signing in protocols and for unit test signing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="my-info.html">myInfo</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">myInfo</span><span class="symbol">: </span><a href="../-node-info/index.html"><span class="identifier">NodeInfo</span></a></code></td>
+</tr>
+<tr>
+<td>
 <a href="network-map-cache.html">networkMapCache</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkMapCache</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a></code></td>
@@ -49,6 +64,17 @@ state from being serialized in checkpoints.</p>
 <a href="network-service.html">networkService</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkService</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="notary-identity-key.html">notaryIdentityKey</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">notaryIdentityKey</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code><p>Helper property to shorten code for fetching the Nodes KeyPair associated with the
+public notaryIdentity Party from the key management service. It is assumed that this is only
+used in contexts where the Node knows it is hosting a Notary Service. Otherwise, it will throw
+an IllegalArgumentException.
+Typical use is during signing in protocols and for unit test signing.</p>
+</td>
 </tr>
 <tr>
 <td>
@@ -93,8 +119,6 @@ state from being serialized in checkpoints.</p>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.ServiceHub$recordTransactions(kotlin.collections.Iterable((com.r3corda.core.transactions.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a list of <a href="../../com.r3corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>s, writes them to the local storage for validated transactions and then
 sends them to the vault for further processing.</p>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="com.r3corda.core.node.ServiceHub$recordTransactions(kotlin.Array((com.r3corda.core.transactions.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Given some <a href="../../com.r3corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>s, writes them to the local storage for validated transactions and then
-sends them to the vault for further processing.</p>
 </td>
 </tr>
 </tbody>
@@ -109,6 +133,14 @@ sends them to the vault for further processing.</p>
 <code><span class="keyword">fun </span><span class="identifier">ServiceHub</span><span class="symbol">.</span><span class="identifier">fillWithSomeTestCash</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/howMuch">howMuch</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/outputNotary">outputNotary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a>&nbsp;<span class="symbol">=</span>&nbsp;DUMMY_NOTARY<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/atLeastThisManyStates">atLeastThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;3<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/atMostThisManyStates">atMostThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;10<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/rng">rng</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Random.html"><span class="identifier">Random</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Random()<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a>&nbsp;<span class="symbol">=</span>&nbsp;OpaqueBytes(ByteArray(1, { 1 }))<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/ownedBy">ownedBy</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-vault/index.html"><span class="identifier">Vault</span></a></code><p>Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
 to the vault. This is intended for unit tests. The cash is issued by <a href="../../com.r3corda.contracts.asset/-d-u-m-m-y_-c-a-s-h_-i-s-s-u-e-r.html">DUMMY_CASH_ISSUER</a> and owned by the legal
 identity key from the storage service.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../record-transactions.html">recordTransactions</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">ServiceHub</span><span class="symbol">.</span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="com.r3corda.core.node$recordTransactions(com.r3corda.core.node.ServiceHub, kotlin.Array((com.r3corda.core.transactions.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given some <a href="../../com.r3corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>s, writes them to the local storage for validated transactions and then
+sends them to the vault for further processing.</p>
 </td>
 </tr>
 </tbody>

@@ -61,12 +61,33 @@ increase the feature set in the future.</p>
 </tr>
 <tr>
 <td>
+<a href="-service-info/index.html">ServiceInfo</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ServiceInfo</span></code><p>A container for additional information for an advertised service.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-service-type/index.html">ServiceType</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ServiceType</span></code><p>Identifier for service types a node can expose over the network to other peers. These types are placed into network
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">ServiceType</span></code><p>Identifier for service types a node can expose over the network to other peers. These types are placed into network
 map advertisements. Services that are purely local and are not providing functionality to other parts of the network
 dont need a declared service type.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="-state-machine-recorded-transaction-mapping-storage/index.html">StateMachineRecordedTransactionMappingStorage</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">StateMachineRecordedTransactionMappingStorage</span></code><p>This is the interface to storage storing state machine -&gt; recorded tx mappings. Any time a transaction is recorded
+during a protocol run <a href="-state-machine-recorded-transaction-mapping-storage/add-mapping.html">addMapping</a> should be called.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-state-machine-transaction-mapping/index.html">StateMachineTransactionMapping</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">StateMachineTransactionMapping</span></code></td>
 </tr>
 <tr>
 <td>
@@ -145,6 +166,17 @@ consumed by someone else first</p>
 </tr>
 </tbody>
 </table>
+<h3>Extensions for External Classes</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="kotlin.collections.-iterable/index.html">kotlin.collections.Iterable</a></td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
 <h3>Properties</h3>
 <table>
 <tbody>
@@ -161,6 +193,12 @@ specific session ID has been established).</p>
 <h3>Functions</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="deals-with.html">dealsWith</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-deal-state/index.html"><span class="identifier">DealState</span></a><span class="symbol">&gt;</span> <a href="-vault-service/index.html"><span class="identifier">VaultService</span></a><span class="symbol">.</span><span class="identifier">dealsWith</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services$dealsWith(com.r3corda.core.node.services.VaultService, com.r3corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
 <tr>
 <td>
 <a href="linear-heads-of-type.html">linearHeadsOfType</a></td>

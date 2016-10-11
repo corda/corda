@@ -21,19 +21,6 @@
 </tr>
 </tbody>
 </table>
-<h3>Properties</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="topic.html">topic</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">topic</span><span class="symbol">: </span><span class="identifier">String</span></code><p>The topic to use when communicating with other parties. If more than one topic is required then use sub-protocols.
-Note that this is temporary until protocol sessions are properly implemented.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3>Inherited Properties</h3>
 <table>
 <tbody>
@@ -58,6 +45,23 @@ helpful with the progress reports. If this protocol is invoked as a sub-protocol
 tracker will be made a child of the current step in the parent. If its null, this protocol doesnt track
 progress.</p>
 </td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="assemble-proposal.html">assembleProposal</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">assembleProposal</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.protocols.NotaryChangeProtocol.Instigator$assembleProposal(com.r3corda.core.contracts.StateRef, com.r3corda.core.crypto.Party, com.r3corda.core.transactions.SignedTransaction)/stateRef">stateRef</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.protocols.NotaryChangeProtocol.Instigator$assembleProposal(com.r3corda.core.contracts.StateRef, com.r3corda.core.crypto.Party, com.r3corda.core.transactions.SignedTransaction)/modification">modification</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.protocols.NotaryChangeProtocol.Instigator$assembleProposal(com.r3corda.core.contracts.StateRef, com.r3corda.core.crypto.Party, com.r3corda.core.transactions.SignedTransaction)/stx">stx</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../-abstract-state-replacement-protocol/-proposal/index.html"><span class="identifier">Proposal</span></a><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="assemble-tx.html">assembleTx</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">assembleTx</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

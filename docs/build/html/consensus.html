@@ -92,16 +92,19 @@
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Consensus model</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#notary">Notary</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#multiple-notaries">Multiple notaries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#notary">Notary</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#multiple-notaries">Multiple notaries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#changing-notaries">Changing notaries</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#validation">Validation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#timestamping">Timestamping</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#running-a-notary-service">Running a Notary Service</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-a-notary-service">Running a notary service</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#obtaining-a-signature">Obtaining a signature</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#changing-notaries">Changing notaries</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
@@ -113,12 +116,12 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#protocols">Protocols</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#contracts">Contracts</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Contracts</span></p>
 <ul>
@@ -220,9 +223,8 @@ or provides conflict information for any input state that had been consumed by a
 In doing so, the notary provides the point of finality in the system. Until the notary signature is obtained, parties cannot be sure that an equally valid, but conflicting transaction,
 will not be regarded as confirmed. After the signature is obtained, the parties know that the inputs to this transaction have been uniquely consumed by this transaction.
 Hence it is the point at which we can say finality has occurred.</p>
-</div>
 <div class="section" id="multiple-notaries">
-<h2>Multiple notaries<a class="headerlink" href="#multiple-notaries" title="Permalink to this headline">¶</a></h2>
+<h3>Multiple notaries<a class="headerlink" href="#multiple-notaries" title="Permalink to this headline">¶</a></h3>
 <p>More than one notary can exist in the network. This gives the following benefits:</p>
 <ul class="simple">
 <li><strong>Custom behaviour</strong>. We can have both validating and privacy preserving Notaries &#8211; parties can make a choice based on their specific requirements</li>
@@ -234,6 +236,30 @@ In cases where a transaction involves states controlled by multiple notaries, th
 This is achieved by using a special type of transaction that doesn&#8217;t modify anything but the notary pointer of the state.
 Ensuring that all input states point to the same notary is the responsibility of each involved party
 (it is another condition for an output state of the transaction to be <strong>valid</strong>)</p>
+</div>
+<div class="section" id="changing-notaries">
+<h3>Changing notaries<a class="headerlink" href="#changing-notaries" title="Permalink to this headline">¶</a></h3>
+<p>To change the notary for an input state, use the <code class="docutils literal"><span class="pre">NotaryChangeProtocol</span></code>. For example:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Suspendable</span>
+<span class="k">fun</span> <span class="nf">changeNotary</span><span class="p">(</span><span class="n">originalState</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">ContractState</span><span class="p">&gt;,</span>
+                 <span class="n">newNotary</span><span class="p">:</span> <span class="n">Party</span><span class="p">):</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">ContractState</span><span class="p">&gt;</span> <span class="p">{</span>
+    <span class="k">val</span> <span class="py">protocol</span> <span class="p">=</span> <span class="n">NotaryChangeProtocol</span><span class="p">.</span><span class="n">Instigator</span><span class="p">(</span><span class="n">originalState</span><span class="p">,</span> <span class="n">newNotary</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">subProtocol</span><span class="p">(</span><span class="n">protocol</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The protocol will:</p>
+<ol class="arabic simple">
+<li>Construct a transaction with the old state as the input and the new state as the output</li>
+<li>Obtain signatures from all <em>participants</em> (a participant is any party that is able to consume this state in a valid transaction, as defined by the state itself)</li>
+<li>Obtain the <em>old</em> notary signature</li>
+<li>Record and distribute the final transaction to the participants so that everyone possesses the new state</li>
+</ol>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Eventually this will be handled automatically on demand.</p>
+</div>
+</div>
 </div>
 <div class="section" id="validation">
 <h2>Validation<a class="headerlink" href="#validation" title="Permalink to this headline">¶</a></h2>
@@ -292,7 +318,7 @@ clocks at the US Naval Observatory. This time feed is extremely accurate and ava
 </div>
 </div>
 <div class="section" id="running-a-notary-service">
-<h2>Running a Notary Service<a class="headerlink" href="#running-a-notary-service" title="Permalink to this headline">¶</a></h2>
+<h2>Running a notary service<a class="headerlink" href="#running-a-notary-service" title="Permalink to this headline">¶</a></h2>
 <p>At present we have two basic implementations that store committed input states in memory:</p>
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">SimpleNotaryService</span></code> &#8211; commits the provided transaction without any validation</li>
@@ -336,28 +362,6 @@ can be used when writing a custom protocol:</p>
 </pre></div>
 </div>
 <p>Conflict handling and resolution is currently the responsibility of the protocol author.</p>
-</div>
-<div class="section" id="changing-notaries">
-<h2>Changing notaries<a class="headerlink" href="#changing-notaries" title="Permalink to this headline">¶</a></h2>
-<p>To change the notary for an input state, use the <code class="docutils literal"><span class="pre">NotaryChangeProtocol</span></code>. For example:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">fun</span> <span class="nf">changeNotary</span><span class="p">(</span><span class="n">originalState</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">ContractState</span><span class="p">&gt;,</span>
-                 <span class="n">newNotary</span><span class="p">:</span> <span class="n">Party</span><span class="p">):</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">ContractState</span><span class="p">&gt;</span> <span class="p">{</span>
-    <span class="k">val</span> <span class="py">protocol</span> <span class="p">=</span> <span class="n">NotaryChangeProtocol</span><span class="p">.</span><span class="n">Instigator</span><span class="p">(</span><span class="n">originalState</span><span class="p">,</span> <span class="n">newNotary</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">subProtocol</span><span class="p">(</span><span class="n">protocol</span><span class="p">)</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>The protocol will:</p>
-<ol class="arabic simple">
-<li>Construct a transaction with the old state as the input and the new state as the output</li>
-<li>Obtain signatures from all <em>participants</em> (a participant is any party that is able to consume this state in a valid transaction, as defined by the state itself)</li>
-<li>Obtain the <em>old</em> notary signature</li>
-<li>Record and distribute the final transaction to the participants so that everyone possesses the new state</li>
-</ol>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Eventually this will be handled automatically on demand.</p>
-</div>
 </div>
 </div>
 

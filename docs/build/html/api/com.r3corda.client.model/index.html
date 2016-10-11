@@ -19,6 +19,12 @@
 </tr>
 <tr>
 <td>
+<a href="-diff/index.html">Diff</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Diff</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="-exchange-rate/index.html">ExchangeRate</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">ExchangeRate</span></code></td>
@@ -35,20 +41,14 @@ TODO hook up an actual oracle</p>
 <td>
 <a href="-gathered-transaction-data/index.html">GatheredTransactionData</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">GatheredTransactionData</span></code></td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">GatheredTransactionData</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="-gathered-transaction-data-model/index.html">GatheredTransactionDataModel</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">GatheredTransactionDataModel</span></code><p>This model provides an observable list of states relating to the creation of a transaction not yet on ledger.</p>
+<code><span class="keyword">class </span><span class="identifier">GatheredTransactionDataModel</span></code><p>This model provides an observable list of transactions and what state machines/protocols recorded them</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="-gathered-transaction-data-writable/index.html">GatheredTransactionDataWritable</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">GatheredTransactionDataWritable</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-gathered-transaction-data/index.html"><span class="identifier">GatheredTransactionData</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -60,8 +60,23 @@ TODO hook up an actual oracle</p>
 <td>
 <a href="-node-monitor-model/index.html">NodeMonitorModel</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">NodeMonitorModel</span></code><p>This model exposes raw event streams to and from the <a href="#">NodeMonitorService</a> through a <a href="../com.r3corda.client/-node-monitor-client/index.html">NodeMonitorClient</a></p>
+<code><span class="keyword">class </span><span class="identifier">NodeMonitorModel</span></code><p>This model exposes raw event streams to and from the node.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="-partially-resolved-transaction/index.html">PartiallyResolvedTransaction</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">PartiallyResolvedTransaction</span></code><p><a href="-partially-resolved-transaction/index.html">PartiallyResolvedTransaction</a> holds a <a href="../com.r3corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a> that has zero or more inputs resolved. The intent is
+to prepare clients for cases where an input can only be resolved in the future/cannot be resolved at all (for example
+because of permissioning)</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-progress-tracking-event/index.html">ProgressTrackingEvent</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ProgressTrackingEvent</span></code></td>
 </tr>
 <tr>
 <td>
@@ -71,15 +86,15 @@ TODO hook up an actual oracle</p>
 </tr>
 <tr>
 <td>
-<a href="-state-machine-status/index.html">StateMachineStatus</a></td>
+<a href="-state-machine-data/index.html">StateMachineData</a></td>
 <td>
-<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">StateMachineStatus</span></code></td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">StateMachineData</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="-states-modification/index.html">StatesModification</a></td>
+<a href="-state-machine-status/index.html">StateMachineStatus</a></td>
 <td>
-<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">StatesModification</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">StateMachineStatus</span></code></td>
 </tr>
 <tr>
 <td>
@@ -159,6 +174,12 @@ are global.</p>
 <a href="observer.html">observer</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">M</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">observer</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.client.model$observer(kotlin.Function1((com.r3corda.client.model.observer.M, ((com.r3corda.client.model.observer.T)))))/observerProperty">observerProperty</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">M</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="subject.html">subject</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">M</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">subject</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.client.model$subject(kotlin.Function1((com.r3corda.client.model.subject.M, ((com.r3corda.client.model.subject.T, )))))/subjectProperty">subjectProperty</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">M</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">,</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
 <tr>
 <td>

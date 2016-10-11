@@ -70,7 +70,7 @@ until <a href="start.html">start</a> is called.</p>
 <td>
 <a href="proxy.html">proxy</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">proxy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.client.CordaRPCClient$proxy(java.time.Duration, kotlin.Int)/timeout">timeout</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.client.CordaRPCClient$proxy(java.time.Duration, kotlin.Int)/minVersion">minVersion</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;0<span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.messaging/-corda-r-p-c-ops.html"><span class="identifier">CordaRPCOps</span></a></code><p>Returns a fresh proxy that lets you invoke RPCs on the server. Calls on it block, and if the server throws an
+<code><span class="keyword">fun </span><span class="identifier">proxy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.client.CordaRPCClient$proxy(java.time.Duration, kotlin.Int)/timeout">timeout</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.client.CordaRPCClient$proxy(java.time.Duration, kotlin.Int)/minVersion">minVersion</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;0<span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.messaging/-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a></code><p>Returns a fresh proxy that lets you invoke RPCs on the server. Calls on it block, and if the server throws an
 exception then it will be rethrown on the client. Proxies are thread safe but only one RPC can be in flight at
 once. If youd like to perform multiple RPCs in parallel, use this function multiple times to get multiple
 proxies.</p>
@@ -100,9 +100,7 @@ unfortunately Artemis tends to bury the exception when the password is wrong.</p
 <td>
 <a href="../../com.r3corda.node.services.messaging/-artemis-messaging-component/configure-with-dev-s-s-l-certificate.html">configureWithDevSSLCertificate</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">configureWithDevSSLCertificate</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Strictly for dev only automatically construct a server certificate/private key signed from
-the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.</p>
-</td>
+<code><span class="keyword">fun </span><span class="identifier">configureWithDevSSLCertificate</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>

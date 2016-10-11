@@ -93,6 +93,7 @@
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
@@ -104,12 +105,12 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#protocols">Protocols</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#contracts">Contracts</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Contracts</span></p>
 <ul>
@@ -125,7 +126,7 @@
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Release notes</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#unreleased">Unreleased</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-4">Milestone 4</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-3">Milestone 3</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-2">Milestone 2</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-1">Milestone 1</a></li>
@@ -182,8 +183,126 @@
   <div class="section" id="release-notes">
 <h1>Release notes<a class="headerlink" href="#release-notes" title="Permalink to this headline">¶</a></h1>
 <p>Here are brief summaries of what&#8217;s changed between each snapshot release.</p>
-<div class="section" id="unreleased">
-<h2>Unreleased<a class="headerlink" href="#unreleased" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="milestone-4">
+<h2>Milestone 4<a class="headerlink" href="#milestone-4" title="Permalink to this headline">¶</a></h2>
+<p>New features in this release:</p>
+<ul>
+<li><p class="first">Persistence:</p>
+<blockquote>
+<div><ul class="simple">
+<li>States can now be written into a relational database and queried using JDBC. The schemas are defined by the
+smart contracts and schema versioning is supported. It is reasonable to write an app that stores data in a mix
+of global ledger transactions and local database tables which are joined on demand, using join key slots that
+are present in many state definitions. Read more about <a class="reference internal" href="persistence.html"><span class="doc">Persistence</span></a>.</li>
+<li>The embedded H2 SQL database is now exposed by default to any tool that can speak JDBC. The database URL is
+printed during node startup and can be used to explore the database, which contains both node internal data
+and tables generated from ledger states.</li>
+<li>Protocol checkpoints are now stored in the database as well. Message processing is now atomic with protocol
+checkpointing and run under the same RDBMS transaction.</li>
+<li>MQ message deduplication is now handled at the app layer and performed under the RDMS transaction, so
+ensuring messages are only replayed if the RDMS transaction rolled back.</li>
+<li>&#8220;The wallet&#8221; has been renamed to &#8220;the vault&#8221;.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Client RPC:</p>
+<blockquote>
+<div><ul class="simple">
+<li>New RPCs added to subscribe to snapshots and update streams state of the vault, currently executing protocols
+and other important node information.</li>
+<li>New tutorial added that shows how to use the RPC API to draw live transaction graphs on screen.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Protocol framework:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Large simplifications to the API. Session management is now handled automatically. Messages are now routed
+based on identities rather than node IP addresses.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Decentralised consensus:</p>
+<blockquote>
+<div><ul class="simple">
+<li>A standalone one-node notary backed by a JDBC store has been added.</li>
+<li>A prototype RAFT based notary composed of multiple nodes is available on a branch.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Data model:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Compound keys have been added as preparation for merging a distributed RAFT based notary. Compound keys
+are trees of public keys in which interior nodes can have validity thresholds attached, thus allowing
+boolean formulas of keys to be created. This is similar to Bitcoin&#8217;s multi-sig support and the data model
+is the same as the InterLedger Crypto-Conditions spec, which should aid interop in future. Read more about
+key trees in the &#8220;<a class="reference internal" href="transaction-data-types.html"><span class="doc">Data types</span></a>&#8221; article.</li>
+<li>A new tutorial has been added showing how to use transaction attachments in more detail.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Testnet</p>
+<blockquote>
+<div><ul class="simple">
+<li>Permissioning infrastructure phase one is built out. The node now has a notion of developer mode vs normal
+mode. In developer mode it works like M3 and the SSL certificates used by nodes running on your local
+machine all self-sign using a developer key included in the source tree. When developer mode is not active,
+the node won&#8217;t start until it has a signed certificate. Such a certificate can be obtained by simply running
+an included command line utility which generates a CSR and submits it to a permissioning service, then waits
+for the signed certificate to be returned. Note that currently there is no public Corda testnet, so we are
+not currently running a permissioning service.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Standalone app development:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The Corda libraries that app developers need to link against can now be installed into your local Maven
+repository, where they can then be used like any other JAR. See <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">Creating a Cordapp</span></a>.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">User interfaces:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Infrastructure work on the node explorer is now complete: it is fully switched to using the MQ based RPC system.</li>
+<li>A library of additional reactive collections has been added. This API builds on top of Rx and the observable
+collections API in Java 8 to give &#8220;live&#8221; data structures in which the state of the node and ledger can be
+viewed as an ordinary Java <code class="docutils literal"><span class="pre">List</span></code>, <code class="docutils literal"><span class="pre">Map</span></code> and <code class="docutils literal"><span class="pre">Set</span></code>, but which also emit callbacks when these views
+change, and which can have additional views derived in a functional manner (filtered, mapped, sorted, etc).
+Finally, these views can then be bound directly into JavaFX UIs. This makes for a concise and functional
+way of building application UIs that render data from the node, and the API is available for third party
+app developers to use as well. We believe this will be highly productive and enjoyable for developers who
+have the option of building JavaFX apps (vs web apps).</li>
+<li>The visual network simulator tool that was demoed back in April as part of the first Corda live demo has
+been merged into the main repository.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Documentation</p>
+<blockquote>
+<div><ul class="simple">
+<li>New secure coding guidelines. Corda tries to eliminate as many security mistakes as practical via the type
+system and other mechanically checkable processes, but there are still things that one must be aware of.</li>
+<li>New attachments tutorial.</li>
+<li>New Client RPC tutorial.</li>
+<li>More tutorials on how to build a standalone CorDapp.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Testing</p>
+<blockquote>
+<div><ul class="simple">
+<li>More integration testing support</li>
+<li>New micro-DSLs for expressing expected sequences of operations with more or less relaxed ordering constraints.</li>
+<li>QuickCheck generators to create streams of randomised transactions and other basic types. QuickCheck is a way
+of writing unit tests that perform randomised fuzz testing of code, originally developed by the Haskell
+community and now also available in Java.</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
 <p>API changes:</p>
 <ul class="simple">
 <li>The transaction types (Signed, Wire, LedgerTransaction) have moved to <code class="docutils literal"><span class="pre">com.r3corda.core.transactions</span></code>. You can
@@ -193,6 +312,8 @@ location.</li>
 <li>The <code class="docutils literal"><span class="pre">UntrustworthyData&lt;T&gt;.validate</span></code> method has been renamed to <code class="docutils literal"><span class="pre">unwrap</span></code> - the old name is now deprecated.</li>
 <li>The wallet, wallet service, etc. are now vault, vault service, etc. These better reflect the intent that they
 are a generic secure data store, rather than something which holds cash.</li>
+<li>The protocol send/receive APIs have changed to no longer require a session id. Please check the current version
+of the protocol framework tutorial for more details.</li>
 </ul>
 </div>
 <div class="section" id="milestone-3">
@@ -240,7 +361,7 @@ also provided so if you spot any issues with it, you can send us patches.</li>
 <li><p class="first">Big improvements to the interest rate swap app:</p>
 <blockquote>
 <div><ul class="simple">
-<li>A new web app demonstrating the IRS contract has been added. This can x``be used as an example for how to interact with
+<li>A new web app demonstrating the IRS contract has been added. This can be used as an example for how to interact with
 the Corda API from the web.</li>
 <li>Simplifications to the way the demo is used from the command line.</li>
 <li><a class="reference internal" href="contract-irs.html"><span class="doc">Detailed documentation on how the contract works and can be used</span></a> has been written.</li>

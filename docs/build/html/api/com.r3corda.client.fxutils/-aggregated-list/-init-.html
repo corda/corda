@@ -13,7 +13,10 @@
 <p>Changes done to elements of the input list are reflected in the observable list of the respective group, whereas
 additions/removals of elements in the underlying list are reflected in the exposed <a href="#">ObservableList</a>&lt;<a href="#">A</a>&gt; by
 adding/deleting aggregations as expected.</p>
-<p>The ordering of the exposed list is based on the <a href="#">hashCode</a> of keys.</p>
+<p>The ordering of the exposed list is based on the <a href="#">hashCode</a> of keys.
+The ordering of the groups themselves is based on the <a href="#">hashCode</a> of elements.</p>
+<p>Warning: If there are two elements <a href="#">E</a> in the source list that have the same <a href="#">hashCode</a> then it is not deterministic
+which one will be removed if one is removed from the source list</p>
 <p>Example:
 val statesGroupedByCurrency = AggregatedList(states, { state -&gt; state.currency }) { currency, group -&gt;
 object {

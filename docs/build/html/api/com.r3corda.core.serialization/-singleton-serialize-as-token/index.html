@@ -109,10 +109,24 @@ that also encompasses the <a href="#">Vault</a> observer for processing transact
 </tr>
 <tr>
 <td>
+<a href="../../com.r3corda.node.services.schema/-node-schema-service/index.html">NodeSchemaService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeSchemaService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.api/-schema-service/index.html"><span class="identifier">SchemaService</span></a><span class="symbol">, </span><span class="identifier">SingletonSerializeAsToken</span></code><p>Most basic implementation of <a href="../../com.r3corda.node.services.api/-schema-service/index.html">SchemaService</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../../com.r3corda.node.services.vault/-node-vault-service/index.html">NodeVaultService</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">NodeVaultService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../com.r3corda.core.node.services/-vault-service/index.html"><span class="identifier">VaultService</span></a></code><p>Currently, the node vault service is a very simple RDBMS backed implementation.  It will change significantly when
 we add further functionality as the design for the vault and vault service matures.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.transactions/-notary-service/index.html">NotaryService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">NotaryService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>A Notary service acts as the final signer of a transaction ensuring two things:</p>
 </td>
 </tr>
 <tr>
@@ -135,6 +149,41 @@ we add further functionality as the design for the vault and vault service matur
 <td>
 <code><span class="keyword">class </span><span class="identifier">ProtocolLogicRefFactory</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>A class for conversion to and from <a href="../../com.r3corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a> and <a href="../../com.r3corda.core.protocols/-protocol-logic-ref/index.html">ProtocolLogicRef</a> instances.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.clientapi/-fixing-session-initiation/-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services/-notary-change/-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>A service that monitors the network for requests for changing the notary of a state,
+and immediately runs the <a href="../../com.r3corda.protocols/-notary-change-protocol/index.html">NotaryChangeProtocol</a> if the auto-accept criteria are met.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.persistence/-data-vending/-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>This class sets up network message handlers for requests from peers for data keyed by hash. It is a piece of simple
+glue that sits between the network layer and the database layer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.demos.api/-node-interest-rates/-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.api/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">, </span><span class="identifier">SingletonSerializeAsToken</span></code><p>The Service that wraps <a href="../../com.r3corda.demos.api/-node-interest-rates/-oracle/index.html">Oracle</a> and handles messages/network interaction/request scrubbing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.demos.protocols/-auto-offer-protocol/-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code></td>
 </tr>
 <tr>
 <td>

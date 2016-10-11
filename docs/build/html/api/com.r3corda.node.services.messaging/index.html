@@ -33,7 +33,7 @@
 </tr>
 <tr>
 <td>
-<a href="-corda-r-p-c-ops.html">CordaRPCOps</a></td>
+<a href="-corda-r-p-c-ops/index.html">CordaRPCOps</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">CordaRPCOps</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-r-p-c-ops/index.html"><span class="identifier">RPCOps</span></a></code><p>RPC operations that the node exposes to clients using the Java client library. These can be called from
 client apps and are implemented by the node in the <a href="#">ServerRPCOps</a> class.</p>
@@ -72,6 +72,24 @@ are handled, this is probably the wrong system.</p>
 <code><span class="keyword">interface </span><span class="identifier">RPCOps</span></code><p>Base interface that all RPC servers must implement. Note: in Corda theres only one RPC interface. This base
 interface is here in case we split the RPC system out into a separate library one day.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="-state-machine-info/index.html">StateMachineInfo</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">StateMachineInfo</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-state-machine-update/index.html">StateMachineUpdate</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">StateMachineUpdate</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-transaction-build-result/index.html">TransactionBuildResult</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">TransactionBuildResult</span></code></td>
 </tr>
 </tbody>
 </table>

@@ -78,8 +78,8 @@ keys in this vault, you must inform the vault service so it can update its inter
 <td>
 <a href="updates.html">updates</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">updates</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Get a synchronous Observable of updates.  When observations are pushed to the Observer, the vault will already
-incorporate the update.</p>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">updates</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Vault will already incorporate
+the update.</p>
 </td>
 </tr>
 </tbody>
@@ -93,6 +93,14 @@ incorporate the update.</p>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">notifyAll</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.InMemoryVaultService$notifyAll(kotlin.collections.Iterable((com.r3corda.core.transactions.WireTransaction)))/txns">txns</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-vault/index.html"><span class="identifier">Vault</span></a></code><p>Possibly update the vault by marking as spent states that these transactions consume, and adding any relevant
 new states that they create. You should only insert transactions that have been successfully verified here</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="track.html">track</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">track</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-vault/index.html"><span class="identifier">Vault</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the
+first subscriber is registered so as to avoid racing with early updates.</p>
 </td>
 </tr>
 </tbody>
@@ -138,6 +146,12 @@ new states that they create. You should only insert transactions that have been 
 <h3>Extension Functions</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.core.node.services/deals-with.html">dealsWith</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-deal-state/index.html"><span class="identifier">DealState</span></a><span class="symbol">&gt;</span> <a href="../../com.r3corda.core.node.services/-vault-service/index.html"><span class="identifier">VaultService</span></a><span class="symbol">.</span><span class="identifier">dealsWith</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services$dealsWith(com.r3corda.core.node.services.VaultService, com.r3corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
 <tr>
 <td>
 <a href="../../com.r3corda.core.node.services/linear-heads-of-type.html">linearHeadsOfType</a></td>

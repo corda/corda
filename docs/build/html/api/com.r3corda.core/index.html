@@ -68,12 +68,6 @@ again.</p>
 </tr>
 <tr>
 <td>
-<a href="java.util.concurrent.-future/index.html">java.util.concurrent.Future</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="kotlin.-double/index.html">kotlin.Double</a></td>
 <td>
 </td>
@@ -139,6 +133,13 @@ again.</p>
 </tr>
 <tr>
 <td>
+<a href="catch.html">catch</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">catch</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core$catch(((com.r3corda.core.catch.T)), kotlin.Function0((com.r3corda.core.catch.T)))/block">block</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Executes the given block and sets the future to either the result, or any exception that was thrown.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="extract-zip-file.html">extractZipFile</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">extractZipFile</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core$extractZipFile(java.nio.file.Path, java.nio.file.Path)/zipPath">zipPath</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core$extractZipFile(java.nio.file.Path, java.nio.file.Path)/toPath">toPath</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a path to a zip file, extracts it to the given directory.</p>
@@ -153,9 +154,21 @@ again.</p>
 </tr>
 <tr>
 <td>
+<a href="flat-map.html">flatMap</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">F</span><span class="symbol">, </span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">F</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">flatMap</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core$flatMap(((com.r3corda.core.flatMap.F)), kotlin.Function1((com.r3corda.core.flatMap.F, ((com.r3corda.core.flatMap.T)))))/mapper">mapper</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">F</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="log-elapsed-time.html">logElapsedTime</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">logElapsedTime</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core$logElapsedTime(kotlin.String, , kotlin.Function0((com.r3corda.core.logElapsedTime.T)))/label">label</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core$logElapsedTime(kotlin.String, , kotlin.Function0((com.r3corda.core.logElapsedTime.T)))/logger">logger</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.core$logElapsedTime(kotlin.String, , kotlin.Function0((com.r3corda.core.logElapsedTime.T)))/body">body</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="map.html">map</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">F</span><span class="symbol">, </span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">F</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">map</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core$map(((com.r3corda.core.map.F)), kotlin.Function1((com.r3corda.core.map.F, com.r3corda.core.map.T)))/mapper">mapper</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">F</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -163,13 +176,6 @@ again.</p>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">random63BitValue</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Long</span></code><p>Returns a random positive long generated using a secure RNG. This function sacrifies a bit of entropy in order to
 avoid potential bugs where the value is used in a context where negative numbers are not expected.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="set-from.html">setFrom</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">setFrom</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core$setFrom(((com.r3corda.core.setFrom.T)), , kotlin.Function0((com.r3corda.core.setFrom.T)))/logger">logger</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.core$setFrom(((com.r3corda.core.setFrom.T)), , kotlin.Function0((com.r3corda.core.setFrom.T)))/block">block</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Executes the given block and sets the future to either the result, or any exception that was thrown.</p>
 </td>
 </tr>
 <tr>

@@ -41,6 +41,13 @@ provided directly by this clause.</p>
 </tr>
 <tr>
 <td>
+<a href="-filter-on/index.html">FilterOn</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FilterOn</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">K</span><span class="symbol">&gt;</span></code><p>Filter the states that are passed through to the wrapped clause, to restrict them to a specific type.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-first-composition/index.html">FirstComposition</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">FirstComposition</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-composite-clause/index.html"><span class="identifier">CompositeClause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">K</span><span class="symbol">&gt;</span></code><p>Compose a number of clauses, such that the first match is run, and it errors if none is run.</p>

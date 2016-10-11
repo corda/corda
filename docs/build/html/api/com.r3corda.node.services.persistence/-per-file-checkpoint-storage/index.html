@@ -28,15 +28,6 @@
 <tbody>
 <tr>
 <td>
-<a href="checkpoints.html">checkpoints</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">checkpoints</span><span class="symbol">: </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.node.services.api/-checkpoint/index.html"><span class="identifier">Checkpoint</span></a><span class="symbol">&gt;</span></code><p>Returns a snapshot of all the checkpoints in the store.
-This may return more checkpoints than were added to this instance of the store; for example if the store persists
-checkpoints to disk.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="store-dir.html">storeDir</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">storeDir</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></code></td>
@@ -51,6 +42,15 @@ checkpoints to disk.</p>
 <a href="add-checkpoint.html">addCheckpoint</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">addCheckpoint</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.persistence.PerFileCheckpointStorage$addCheckpoint(com.r3corda.node.services.api.Checkpoint)/checkpoint">checkpoint</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.api/-checkpoint/index.html"><span class="identifier">Checkpoint</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Add a new checkpoint to the store.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="for-each.html">forEach</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">forEach</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.persistence.PerFileCheckpointStorage$forEach(kotlin.Function1((com.r3corda.node.services.api.Checkpoint, kotlin.Boolean)))/block">block</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../com.r3corda.node.services.api/-checkpoint/index.html"><span class="identifier">Checkpoint</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Allows the caller to process safely in a thread safe fashion the set of all checkpoints.
+The checkpoints are only valid during the lifetime of a single call to the block, to allow memory management.
+Return false from the block to terminate further iteration.</p>
 </td>
 </tr>
 <tr>

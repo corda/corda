@@ -42,6 +42,12 @@
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">protocolLogicRefFactory</span><span class="symbol">: </span><a href="../../com.r3corda.core.protocols/-protocol-logic-ref-factory/index.html"><span class="identifier">ProtocolLogicRefFactory</span></a></code></td>
 </tr>
+<tr>
+<td>
+<a href="schema-service.html">schemaService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">schemaService</span><span class="symbol">: </span><a href="../-schema-service/index.html"><span class="identifier">SchemaService</span></a></code></td>
+</tr>
 </tbody>
 </table>
 <h3>Inherited Properties</h3>
@@ -67,9 +73,35 @@
 </tr>
 <tr>
 <td>
+<a href="../../com.r3corda.core.node/-service-hub/legal-identity-key.html">legalIdentityKey</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">legalIdentityKey</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code><p>Helper property to shorten code for fetching the Nodes KeyPair associated with the
+public legalIdentity Party from the key management service.
+Typical use is during signing in protocols and for unit test signing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.node/-service-hub/my-info.html">myInfo</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">myInfo</span><span class="symbol">: </span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a></code></td>
+</tr>
+<tr>
+<td>
 <a href="../../com.r3corda.core.node/-service-hub/network-map-cache.html">networkMapCache</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkMapCache</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.node/-service-hub/notary-identity-key.html">notaryIdentityKey</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">notaryIdentityKey</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code><p>Helper property to shorten code for fetching the Nodes KeyPair associated with the
+public notaryIdentity Party from the key management service. It is assumed that this is only
+used in contexts where the Node knows it is hosting a Notary Service. Otherwise, it will throw
+an IllegalArgumentException.
+Typical use is during signing in protocols and for unit test signing.</p>
+</td>
 </tr>
 <tr>
 <td>
@@ -96,6 +128,13 @@
 <tbody>
 <tr>
 <td>
+<a href="get-protocol-factory.html">getProtocolFactory</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getProtocolFactory</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.ServiceHubInternal$getProtocolFactory(java.lang.Class((kotlin.Any)))/markerClass">markerClass</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="symbol">(</span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span></code><p>Return the protocol factory that has been registered with <a href="get-protocol-factory.html#com.r3corda.node.services.api.ServiceHubInternal$getProtocolFactory(java.lang.Class((kotlin.Any)))/markerClass">markerClass</a>, or null if no factory is found.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="invoke-protocol-async.html">invokeProtocolAsync</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">invokeProtocolAsync</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.ServiceHubInternal$invokeProtocolAsync(java.lang.Class((com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.ServiceHubInternal.invokeProtocolAsync.T)))), kotlin.Array((kotlin.Any)))/logicType">logicType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="keyword">vararg</span> <span class="identifier" id="com.r3corda.node.services.api.ServiceHubInternal$invokeProtocolAsync(java.lang.Class((com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.ServiceHubInternal.invokeProtocolAsync.T)))), kotlin.Array((kotlin.Any)))/args">args</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Will check <a href="invoke-protocol-async.html#com.r3corda.node.services.api.ServiceHubInternal$invokeProtocolAsync(java.lang.Class((com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.ServiceHubInternal.invokeProtocolAsync.T)))), kotlin.Array((kotlin.Any)))/logicType">logicType</a> and <a href="invoke-protocol-async.html#com.r3corda.node.services.api.ServiceHubInternal$invokeProtocolAsync(java.lang.Class((com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.ServiceHubInternal.invokeProtocolAsync.T)))), kotlin.Array((kotlin.Any)))/args">args</a> against a whitelist and if acceptable then construct and initiate the protocol.</p>
@@ -103,9 +142,19 @@
 </tr>
 <tr>
 <td>
+<a href="register-protocol-initiator.html">registerProtocolInitiator</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">registerProtocolInitiator</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.ServiceHubInternal$registerProtocolInitiator(kotlin.reflect.KClass((kotlin.Any)), kotlin.Function1((com.r3corda.core.crypto.Party, com.r3corda.core.protocols.ProtocolLogic((kotlin.Any)))))/markerClass">markerClass</span><span class="symbol">:</span>&nbsp;<span class="identifier">KClass</span><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.ServiceHubInternal$registerProtocolInitiator(kotlin.reflect.KClass((kotlin.Any)), kotlin.Function1((com.r3corda.core.crypto.Party, com.r3corda.core.protocols.ProtocolLogic((kotlin.Any)))))/protocolFactory">protocolFactory</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Register the protocol factory we wish to use when a initiating party attempts to communicate with us. The
+registration is done against a marker <a href="#">KClass</a> which is sent in the session handshake by the other party. If this
+marker class has been registered then the corresponding factory will be used to create the protocol which will
+communicate with the other side. If there is no mapping then the session attempt is rejected.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="start-protocol.html">startProtocol</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">startProtocol</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.ServiceHubInternal$startProtocol(kotlin.String, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.ServiceHubInternal.startProtocol.T)))/loggerName">loggerName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.ServiceHubInternal$startProtocol(kotlin.String, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.ServiceHubInternal.startProtocol.T)))/logic">logic</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>TODO: borrowing this method from service manager work in another branch.  Its required to avoid circular dependency
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">startProtocol</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.ServiceHubInternal$startProtocol(com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.ServiceHubInternal.startProtocol.T)))/logic">logic</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>TODO: borrowing this method from service manager work in another branch.  Its required to avoid circular dependency
 between SMM and the scheduler.  That particular problem should also be resolved by the service manager work
 itself, at which point this method would not be needed (by the scheduler).</p>
 </td>
@@ -128,8 +177,6 @@ itself, at which point this method would not be needed (by the scheduler).</p>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.ServiceHub$recordTransactions(kotlin.collections.Iterable((com.r3corda.core.transactions.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a list of <a href="../../com.r3corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>s, writes them to the local storage for validated transactions and then
 sends them to the vault for further processing.</p>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="com.r3corda.core.node.ServiceHub$recordTransactions(kotlin.Array((com.r3corda.core.transactions.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Given some <a href="../../com.r3corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>s, writes them to the local storage for validated transactions and then
-sends them to the vault for further processing.</p>
 </td>
 </tr>
 </tbody>
@@ -144,6 +191,14 @@ sends them to the vault for further processing.</p>
 <code><span class="keyword">fun </span><a href="../../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">.</span><span class="identifier">fillWithSomeTestCash</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/howMuch">howMuch</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/outputNotary">outputNotary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a>&nbsp;<span class="symbol">=</span>&nbsp;DUMMY_NOTARY<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/atLeastThisManyStates">atLeastThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;3<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/atMostThisManyStates">atMostThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;10<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/rng">rng</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Random.html"><span class="identifier">Random</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Random()<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a>&nbsp;<span class="symbol">=</span>&nbsp;OpaqueBytes(ByteArray(1, { 1 }))<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes, java.security.PublicKey)/ownedBy">ownedBy</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-vault/index.html"><span class="identifier">Vault</span></a></code><p>Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
 to the vault. This is intended for unit tests. The cash is issued by <a href="../../com.r3corda.contracts.asset/-d-u-m-m-y_-c-a-s-h_-i-s-s-u-e-r.html">DUMMY_CASH_ISSUER</a> and owned by the legal
 identity key from the storage service.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.node/record-transactions.html">recordTransactions</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">.</span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="com.r3corda.core.node$recordTransactions(com.r3corda.core.node.ServiceHub, kotlin.Array((com.r3corda.core.transactions.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given some <a href="../../com.r3corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>s, writes them to the local storage for validated transactions and then
+sends them to the vault for further processing.</p>
 </td>
 </tr>
 </tbody>

@@ -8,7 +8,7 @@
 <br/>
 <h1>proxy</h1>
 <a name="com.r3corda.client.CordaRPCClient$proxy(java.time.Duration, kotlin.Int)"></a>
-<code><span class="keyword">fun </span><span class="identifier">proxy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.client.CordaRPCClient$proxy(java.time.Duration, kotlin.Int)/timeout">timeout</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.client.CordaRPCClient$proxy(java.time.Duration, kotlin.Int)/minVersion">minVersion</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;0<span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.messaging/-corda-r-p-c-ops.html"><span class="identifier">CordaRPCOps</span></a></code><br/>
+<code><span class="keyword">fun </span><span class="identifier">proxy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.client.CordaRPCClient$proxy(java.time.Duration, kotlin.Int)/timeout">timeout</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.client.CordaRPCClient$proxy(java.time.Duration, kotlin.Int)/minVersion">minVersion</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;0<span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.messaging/-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a></code><br/>
 <p>Returns a fresh proxy that lets you invoke RPCs on the server. Calls on it block, and if the server throws an
 exception then it will be rethrown on the client. Proxies are thread safe but only one RPC can be in flight at
 once. If youd like to perform multiple RPCs in parallel, use this function multiple times to get multiple
@@ -20,7 +20,7 @@ thread safe though so requires no extra synchronisation.</p>
 <p>By default there are no timeouts on calls. RPCs can survive temporary losses or changes in connectivity,
 like switching between wifi networks. You can specify a timeout on the level of a proxy. If a call times
 out it will throw <a href="#">RPCException.Deadline</a>.</p>
-<p>The <a href="../../com.r3corda.node.services.messaging/-corda-r-p-c-ops.html">CordaRPCOps</a> defines what client RPCs are available. If an RPC returns an <a href="#">Observable</a> anywhere in the
+<p>The <a href="../../com.r3corda.node.services.messaging/-corda-r-p-c-ops/index.html">CordaRPCOps</a> defines what client RPCs are available. If an RPC returns an <a href="#">Observable</a> anywhere in the
 object graph returned then the server-side observable is transparently linked to a messaging queue, and that
 queue linked to another observable on the client side here. <emph>You are expected to use it</emph>. The server will begin
 buffering messages immediately that it will expect you to drain by subscribing to the returned observer. You can

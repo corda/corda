@@ -23,14 +23,20 @@
 <td>
 <a href="-acceptor/index.html">Acceptor</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Acceptor</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-deal-state/index.html"><span class="identifier">DealState</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-secondary/index.html"><span class="identifier">Secondary</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>One side of the protocol for inserting a pre-agreed deal.</p>
+<code><span class="keyword">class </span><span class="identifier">Acceptor</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-secondary/index.html"><span class="identifier">Secondary</span></a><span class="symbol">&lt;</span><a href="-auto-offer/index.html"><span class="identifier">AutoOffer</span></a><span class="symbol">&gt;</span></code><p>One side of the protocol for inserting a pre-agreed deal.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="-auto-offer/index.html">AutoOffer</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">AutoOffer</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="-fixer/index.html">Fixer</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Fixer</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-secondary/index.html"><span class="identifier">Secondary</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span></code><p>One side of the fixing protocol for an interest rate swap, but could easily be generalised further.</p>
+<code><span class="keyword">class </span><span class="identifier">Fixer</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-secondary/index.html"><span class="identifier">Secondary</span></a><span class="symbol">&lt;</span><a href="-fixing-session/index.html"><span class="identifier">FixingSession</span></a><span class="symbol">&gt;</span></code><p>One side of the fixing protocol for an interest rate swap, but could easily be generalised further.</p>
 </td>
 </tr>
 <tr>
@@ -42,16 +48,16 @@
 </tr>
 <tr>
 <td>
-<a href="-fixing-session-initiation/index.html">FixingSessionInitiation</a></td>
+<a href="-fixing-session/index.html">FixingSession</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">FixingSessionInitiation</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-handshake-message/index.html"><span class="identifier">HandshakeMessage</span></a></code><p>Used to set up the session between <a href="-floater/index.html">Floater</a> and <a href="-fixer/index.html">Fixer</a></p>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">FixingSession</span></code><p>Used to set up the session between <a href="-floater/index.html">Floater</a> and <a href="-fixer/index.html">Fixer</a></p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="-floater/index.html">Floater</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Floater</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-primary/index.html"><span class="identifier">Primary</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span></code><p>One side of the fixing protocol for an interest rate swap, but could easily be generalised furher.</p>
+<code><span class="keyword">class </span><span class="identifier">Floater</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-primary/index.html"><span class="identifier">Primary</span></a></code><p>One side of the fixing protocol for an interest rate swap, but could easily be generalised furher.</p>
 </td>
 </tr>
 <tr>
@@ -64,14 +70,22 @@
 <td>
 <a href="-instigator/index.html">Instigator</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Instigator</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-deal-state/index.html"><span class="identifier">DealState</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-primary/index.html"><span class="identifier">Primary</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>One side of the protocol for inserting a pre-agreed deal.</p>
+<code><span class="keyword">class </span><span class="identifier">Instigator</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-primary/index.html"><span class="identifier">Primary</span></a></code><p>One side of the protocol for inserting a pre-agreed deal.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-marker-for-bogus-regulator-protocol.html">MarkerForBogusRegulatorProtocol</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MarkerForBogusRegulatorProtocol</span></code><p><a href="-primary/index.html">Primary</a> at the end sends the signed tx to all the regulator parties. This a seperate workflow which needs a
+sepearate session with the regulator. This interface is used to do that in <a href="-primary/get-counterparty-marker.html">Primary.getCounterpartyMarker</a>.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="-primary/index.html">Primary</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Primary</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">U</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code><p>Abstracted bilateral deal protocol participant that initiates communication/handshake.</p>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Primary</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code><p>Abstracted bilateral deal protocol participant that initiates communication/handshake.</p>
 </td>
 </tr>
 <tr>
@@ -103,24 +117,6 @@
 <a href="-deal-ref-mismatch-exception/index.html">DealRefMismatchException</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">DealRefMismatchException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
-</tr>
-</tbody>
-</table>
-<h3>Properties</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="-d-e-a-l_-t-o-p-i-c.html">DEAL_TOPIC</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">DEAL_TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-f-i-x_-i-n-i-t-i-a-t-e_-t-o-p-i-c.html">FIX_INITIATE_TOPIC</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">FIX_INITIATE_TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code><p>This topic exists purely for <a href="-fixing-session-initiation/index.html">FixingSessionInitiation</a> to be sent from <a href="-fixing-role-decider/index.html">FixingRoleDecider</a> to <a href="#">FixingSessionInitiationHandler</a></p>
-</td>
 </tr>
 </tbody>
 </table>

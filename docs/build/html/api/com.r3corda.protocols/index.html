@@ -29,16 +29,6 @@ protocols.</p>
 </tr>
 <tr>
 <td>
-<a href="-direct-request-message/index.html">DirectRequestMessage</a></td>
-<td>
-<code><span class="keyword">interface </span><span class="identifier">DirectRequestMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a></code><p>A message which specifies reply destination as a specific endpoint such as a monitoring client. This is of particular
-use where we want to address a specific endpoint, not necessarily a specific user (for example if the same user logs
-in on two machines, we want to consistently deliver messages as part of a session, to the same machine the session
-started on).</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="-fetch-attachments-protocol/index.html">FetchAttachmentsProtocol</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">FetchAttachmentsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-fetch-data-protocol/index.html"><span class="identifier">FetchDataProtocol</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-attachment/index.html"><span class="identifier">Attachment</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">&gt;</span></code><p>Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
@@ -68,15 +58,6 @@ attachments are saved to local storage automatically.</p>
 </tr>
 <tr>
 <td>
-<a href="-handshake-message/index.html">HandshakeMessage</a></td>
-<td>
-<code><span class="keyword">interface </span><span class="identifier">HandshakeMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-party-request-message/index.html"><span class="identifier">PartyRequestMessage</span></a></code><p>A Handshake message is sent to initiate communication between two protocol instances. It contains the two session IDs
-the two protocols will need to communicate.
-Note: This is a temperary interface and will be removed once the protocol session work is implemented.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="-notary-change-protocol/index.html">NotaryChangeProtocol</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">NotaryChangeProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-state-replacement-protocol/index.html"><span class="identifier">AbstractStateReplacementProtocol</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span></code><p>A protocol to be used for changing a states Notary. This is required since all input states to a transaction
@@ -94,12 +75,6 @@ must point to the same notary.</p>
 <a href="-notary-protocol/index.html">NotaryProtocol</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">NotaryProtocol</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-party-request-message/index.html">PartyRequestMessage</a></td>
-<td>
-<code><span class="keyword">interface </span><span class="identifier">PartyRequestMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -124,8 +99,7 @@ checked again.</p>
 <td>
 <a href="-service-request-message/index.html">ServiceRequestMessage</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">ServiceRequestMessage</span></code><p>Abstract superclass for request messages sent to services, which includes common
-fields such as replyTo and sessionID.</p>
+<code><span class="keyword">interface </span><span class="identifier">ServiceRequestMessage</span></code><p>Abstract superclass for request messages sent to services which expect a reply.</p>
 </td>
 </tr>
 <tr>
@@ -176,6 +150,18 @@ indeed valid.</p>
 <a href="-state-replacement-exception/index.html">StateReplacementException</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">StateReplacementException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="send-request.html">sendRequest</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">sendRequest</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.protocols$sendRequest(com.r3corda.core.messaging.MessagingService, kotlin.String, com.r3corda.protocols.ServiceRequestMessage, com.r3corda.core.messaging.SingleMessageRecipient, java.util.concurrent.Executor)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.protocols$sendRequest(com.r3corda.core.messaging.MessagingService, kotlin.String, com.r3corda.protocols.ServiceRequestMessage, com.r3corda.core.messaging.SingleMessageRecipient, java.util.concurrent.Executor)/request">request</span><span class="symbol">:</span>&nbsp;<a href="-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.protocols$sendRequest(com.r3corda.core.messaging.MessagingService, kotlin.String, com.r3corda.protocols.ServiceRequestMessage, com.r3corda.core.messaging.SingleMessageRecipient, java.util.concurrent.Executor)/target">target</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.protocols$sendRequest(com.r3corda.core.messaging.MessagingService, kotlin.String, com.r3corda.protocols.ServiceRequestMessage, com.r3corda.core.messaging.SingleMessageRecipient, java.util.concurrent.Executor)/executor">executor</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code><p>Sends a <a href="-service-request-message/index.html">ServiceRequestMessage</a> to <a href="send-request.html#com.r3corda.protocols$sendRequest(com.r3corda.core.messaging.MessagingService, kotlin.String, com.r3corda.protocols.ServiceRequestMessage, com.r3corda.core.messaging.SingleMessageRecipient, java.util.concurrent.Executor)/target">target</a> and returns a <a href="#">ListenableFuture</a> of the response.</p>
+</td>
 </tr>
 </tbody>
 </table>

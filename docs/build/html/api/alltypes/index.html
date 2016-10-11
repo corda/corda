@@ -214,6 +214,14 @@ properties loaded from the attachments.  And perhaps the authenticated user for 
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.client.fxutils/-associated-list/index.html">com.r3corda.client.fxutils.AssociatedList</a></td>
+<td>
+<p><a href="../com.r3corda.client.fxutils/-associated-list/index.html">AssociatedList</a> creates an <a href="#">ObservableMap</a> from an <a href="#">ObservableList</a> by associating each list element with a unique key.
+It is <emph>not</emph> allowed to have several elements map to the same value</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts/-attachment/index.html">com.r3corda.core.contracts.Attachment</a></td>
 <td>
 <p>An attachment is a ZIP (or an optionally signed JAR) that contains one or more files. Attachments are meant to
@@ -331,6 +339,21 @@ the same transaction.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.schemas/-cash-schema.html">com.r3corda.schemas.CashSchema</a></td>
+<td>
+<p>An object used to fully qualify the <a href="../com.r3corda.schemas/-cash-schema.html">CashSchema</a> family name (i.e. independent of version).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.schemas/-cash-schema-v1/index.html">com.r3corda.schemas.CashSchemaV1</a></td>
+<td>
+<p>First version of a cash contract ORM schema that maps all fields of the <a href="#">Cash</a> contract state as it stood
+at the time of writing.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.utilities.certsigning/-certificate-signer/index.html">com.r3corda.node.utilities.certsigning.CertificateSigner</a></td>
 <td>
 <p>This check the <a href="#">certificatePath</a> for certificates required to connect to the Corda network.
@@ -410,12 +433,6 @@ provided directly by this clause.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.node.services.monitor/-client-to-service-command-message/index.html">com.r3corda.node.services.monitor.ClientToServiceCommandMessage</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.node.utilities/java.time.-clock/index.html">java.time.Clock</a> (extensions in package com.r3corda.node.utilities)</td>
 <td>
 </td>
@@ -423,6 +440,12 @@ provided directly by this clause.</p>
 <tr>
 <td>
 <a href="../com.r3corda.core.contracts/kotlin.collections.-collection/index.html">kotlin.collections.Collection</a> (extensions in package com.r3corda.core.contracts)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.client.fxutils/kotlin.collections.-collection/index.html">kotlin.collections.Collection</a> (extensions in package com.r3corda.client.fxutils)</td>
 <td>
 </td>
 </tr>
@@ -466,6 +489,21 @@ provided directly by this clause.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.schemas/-commercial-paper-schema.html">com.r3corda.schemas.CommercialPaperSchema</a></td>
+<td>
+<p>An object used to fully qualify the <a href="../com.r3corda.schemas/-commercial-paper-schema.html">CommercialPaperSchema</a> family name (i.e. independent of version).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.schemas/-commercial-paper-schema-v1/index.html">com.r3corda.schemas.CommercialPaperSchemaV1</a></td>
+<td>
+<p>First version of a commercial paper contract ORM schema that maps all fields of the <a href="#">CommercialPaper</a> contract state
+as it stood at the time of writing.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts/-commodity/index.html">com.r3corda.core.contracts.Commodity</a></td>
 <td>
 <p>Class representing a commodity, as an equivalent to the <a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html">Currency</a> class. This exists purely to enable the
@@ -492,10 +530,24 @@ internal accounting by the issuer (it might be, for example, a warehouse and/or 
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.client.fxutils/-concatenated-list/index.html">com.r3corda.client.fxutils.ConcatenatedList</a></td>
+<td>
+<p><a href="../com.r3corda.client.fxutils/-concatenated-list/index.html">ConcatenatedList</a> takes a list of lists and concatenates them. Any change to the underlying lists or the outer list
+is propagated as expected.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.servlets/-config/index.html">com.r3corda.node.servlets.Config</a></td>
 <td>
 <p>Primary purpose is to install Kotlin extensions for Jackson ObjectMapper so data classes work
 and to organise serializers / deserializers for java.time.* classes as necessary.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.config/-config-helper/index.html">com.r3corda.node.services.config.ConfigHelper</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -578,7 +630,7 @@ useful tasks. See the documentation for <a href="../com.r3corda.client/-corda-r-
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.node.services.messaging/-corda-r-p-c-ops.html">com.r3corda.node.services.messaging.CordaRPCOps</a></td>
+<a href="../com.r3corda.node.services.messaging/-corda-r-p-c-ops/index.html">com.r3corda.node.services.messaging.CordaRPCOps</a></td>
 <td>
 <p>RPC operations that the node exposes to clients using the Java client library. These can be called from
 client apps and are implemented by the node in the <a href="#">ServerRPCOps</a> class.</p>
@@ -601,6 +653,13 @@ client apps and are implemented by the node in the <a href="#">ServerRPCOps</a> 
 <td>
 <a href="../com.r3corda.core.testing/-currency-generator/index.html">com.r3corda.core.testing.CurrencyGenerator</a></td>
 <td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.persistence/-d-b-checkpoint-storage/index.html">com.r3corda.node.services.persistence.DBCheckpointStorage</a></td>
+<td>
+<p>Simple checkpoint key value storage in DB using the underlying JDBCHashMap and transactional context of the call sites.</p>
 </td>
 </tr>
 <tr>
@@ -666,21 +725,15 @@ implementation of general protocols that manipulate many agreement types.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.node.services.monitor/-deregister-request/index.html">com.r3corda.node.services.monitor.DeregisterRequest</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.node.services.monitor/-deregister-response/index.html">com.r3corda.node.services.monitor.DeregisterResponse</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.core.serialization/-deserialize-as-kotlin-object-def.html">com.r3corda.core.serialization.DeserializeAsKotlinObjectDef</a></td>
 <td>
 <p>Marker interface for kotlin object definitions so that they are deserialized as the singleton instance.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.client.model/-diff/index.html">com.r3corda.client.model.Diff</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -690,16 +743,6 @@ implementation of general protocols that manipulate many agreement types.</p>
 <p>A wrapper around a digital signature. The covering field is a generic tag usable by whatever is interpreting the
 signature. It isnt used currently, but experience from Bitcoin suggests such a feature is useful, especially when
 building partially signed transactions.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.protocols/-direct-request-message/index.html">com.r3corda.protocols.DirectRequestMessage</a></td>
-<td>
-<p>A message which specifies reply destination as a specific endpoint such as a monitoring client. This is of particular
-use where we want to address a specific endpoint, not necessarily a specific user (for example if the same user logs
-in on two machines, we want to consistently deliver messages as part of a session, to the same machine the session
-started on).</p>
 </td>
 </tr>
 <tr>
@@ -884,6 +927,13 @@ attachments are saved to local storage automatically.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.contracts.clauses/-filter-on/index.html">com.r3corda.core.contracts.clauses.FilterOn</a></td>
+<td>
+<p>Filter the states that are passed through to the wrapped clause, to restrict them to a specific type.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.protocols/-finality-protocol/index.html">com.r3corda.protocols.FinalityProtocol</a></td>
 <td>
 <p>Finalise a transaction by notarising it, then recording it locally, and then sending it to all involved parties.</p>
@@ -936,7 +986,7 @@ Assumes that the rate is valid.</p>
 <td>
 <a href="../com.r3corda.node.services.clientapi/-fixing-session-initiation/index.html">com.r3corda.node.services.clientapi.FixingSessionInitiation</a></td>
 <td>
-<p>This is a temporary handler required for establishing random sessionIDs for the <a href="#">Fixer</a> and <a href="#">Floater</a> as part of
+<p>This is a temporary handler required for establishing random sessionIDs for the <a href="../com.r3corda.protocols/-two-party-deal-protocol/-fixer/index.html">Fixer</a> and <a href="../com.r3corda.protocols/-two-party-deal-protocol/-floater/index.html">Floater</a> as part of
 running scheduled fixings for the <a href="#">InterestRateSwap</a> contract.</p>
 </td>
 </tr>
@@ -1015,12 +1065,6 @@ container), shares of the same class in a specific company are fungible and coun
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core/java.util.concurrent.-future/index.html">java.util.concurrent.Future</a> (extensions in package com.r3corda.core)</td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.client.model/-gathered-transaction-data/index.html">com.r3corda.client.model.GatheredTransactionData</a></td>
 <td>
 </td>
@@ -1029,13 +1073,7 @@ container), shares of the same class in a specific company are fungible and coun
 <td>
 <a href="../com.r3corda.client.model/-gathered-transaction-data-model/index.html">com.r3corda.client.model.GatheredTransactionDataModel</a></td>
 <td>
-<p>This model provides an observable list of states relating to the creation of a transaction not yet on ledger.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.client.model/-gathered-transaction-data-writable/index.html">com.r3corda.client.model.GatheredTransactionDataWritable</a></td>
-<td>
+<p>This model provides an observable list of transactions and what state machines/protocols recorded them</p>
 </td>
 </tr>
 <tr>
@@ -1059,11 +1097,9 @@ container), shares of the same class in a specific company are fungible and coun
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.protocols/-handshake-message/index.html">com.r3corda.protocols.HandshakeMessage</a></td>
+<a href="../com.r3corda.node.services.schema/-hibernate-observer/index.html">com.r3corda.node.services.schema.HibernateObserver</a></td>
 <td>
-<p>A Handshake message is sent to initiate communication between two protocol instances. It contains the two session IDs
-the two protocols will need to communicate.
-Note: This is a temperary interface and will be removed once the protocol session work is implemented.</p>
+<p>A vault observer that extracts Object Relational Mappings for contract states that support it, and persists them with Hibernate.</p>
 </td>
 </tr>
 <tr>
@@ -1133,6 +1169,13 @@ set via the constructor and the class is immutable.</p>
 <td>
 <a href="../com.r3corda.node.services.network/-in-memory-network-map-service/index.html">com.r3corda.node.services.network.InMemoryNetworkMapService</a></td>
 <td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.persistence/-in-memory-state-machine-recorded-transaction-mapping-storage/index.html">com.r3corda.node.services.persistence.InMemoryStateMachineRecordedTransactionMappingStorage</a></td>
+<td>
+<p>This is a temporary in-memory storage of a state machine id -&gt; txhash mapping</p>
 </td>
 </tr>
 <tr>
@@ -1260,6 +1303,12 @@ quantifiable with integer quantities.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.node.services/kotlin.collections.-iterable/index.html">kotlin.collections.Iterable</a> (extensions in package com.r3corda.core.node.services)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core/kotlin.collections.-iterable/index.html">kotlin.collections.Iterable</a> (extensions in package com.r3corda.core)</td>
 <td>
 </td>
@@ -1336,6 +1385,14 @@ call out to a hardware security module that enforces various auditing and freque
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.client.fxutils/-left-outer-joined-map/index.html">com.r3corda.client.fxutils.LeftOuterJoinedMap</a></td>
+<td>
+<p><a href="../com.r3corda.client.fxutils/-left-outer-joined-map/index.html">LeftOuterJoinedMap</a> implements a special case of a left outer join where were matching on primary keys of both
+tables.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.math/-linear-interpolator/index.html">com.r3corda.core.math.LinearInterpolator</a></td>
 <td>
 <p>Interpolates values between the given data points using straight lines.</p>
@@ -1362,6 +1419,13 @@ call out to a hardware security module that enforces various auditing and freque
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.utilities/-local-date-column-type/index.html">com.r3corda.node.utilities.LocalDateColumnType</a></td>
+<td>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="#">java.time.LocalDate</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.utilities/-log-helper/index.html">com.r3corda.core.utilities.LogHelper</a></td>
 <td>
 <p>A configuration helper that allows modifying the log level for specific loggers</p>
@@ -1371,6 +1435,31 @@ call out to a hardware security module that enforces various auditing and freque
 <td>
 <a href="../com.r3corda.core/kotlin.-long/index.html">kotlin.Long</a> (extensions in package com.r3corda.core)</td>
 <td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.client.fxutils/-map-values-list/index.html">com.r3corda.client.fxutils.MapValuesList</a></td>
+<td>
+<p><a href="../com.r3corda.client.fxutils/-map-values-list/index.html">MapValuesList</a> takes an <a href="#">ObservableMap</a> and returns its values as an <a href="#">ObservableList</a>.
+The order of returned elements is deterministic but unspecified.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.client.fxutils/-mapped-list/index.html">com.r3corda.client.fxutils.MappedList</a></td>
+<td>
+<p>This is a variant of <a href="#">EasyBind.map</a> where the mapped list is backed, therefore the mapping function will only be run
+when an element is inserted or updated.
+Use this instead of <a href="#">EasyBind.map</a> to trade off memory vs CPU, or if (god forbid) the mapped function is side-effecting.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.schemas/-mapped-schema/index.html">com.r3corda.core.schemas.MappedSchema</a></td>
+<td>
+<p>A database schema that might be configured for this node.  As well as a name and version for identifying the schema,
+also list the classes that may be used in the generated object graph in order to configure the ORM tool.</p>
 </td>
 </tr>
 <tr>
@@ -1606,12 +1695,6 @@ loads important data off disk and starts listening for connections.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.node.services.config/-node-configuration-from-config/index.html">com.r3corda.node.services.config.NodeConfigurationFromConfig</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.core.node/-node-info/index.html">com.r3corda.core.node.NodeInfo</a></td>
 <td>
 <p>Info about a network node that acts on behalf of some form of contract party.</p>
@@ -1642,24 +1725,9 @@ Artemis is a message queue broker and here we run a client connecting to the spe
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.client/-node-monitor-client/index.html">com.r3corda.client.NodeMonitorClient</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.client.model/-node-monitor-model/index.html">com.r3corda.client.model.NodeMonitorModel</a></td>
 <td>
-<p>This model exposes raw event streams to and from the <a href="#">NodeMonitorService</a> through a <a href="../com.r3corda.client/-node-monitor-client/index.html">NodeMonitorClient</a></p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.node.services.monitor/-node-monitor-service/index.html">com.r3corda.node.services.monitor.NodeMonitorService</a></td>
-<td>
-<p>Service which allows external clients to monitor the nodes vault and state machine manager, as well as trigger
-actions within the node. The service also sends requests for user input back to clients, for example to enter
-additional information while a protocol runs, or confirm an action.</p>
+<p>This model exposes raw event streams to and from the node.</p>
 </td>
 </tr>
 <tr>
@@ -1687,6 +1755,13 @@ additional information while a protocol runs, or confirm an action.</p>
 <td>
 <p>A first pass of a simple <a href="../com.r3corda.core.node.services/-scheduler-service/index.html">SchedulerService</a> that works with <a href="#">MutableClock</a>s for testing, demonstrations and simulations
 that also encompasses the <a href="#">Vault</a> observer for processing transactions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.schema/-node-schema-service/index.html">com.r3corda.node.services.schema.NodeSchemaService</a></td>
+<td>
+<p>Most basic implementation of <a href="../com.r3corda.node.services.api/-schema-service/index.html">SchemaService</a>.</p>
 </td>
 </tr>
 <tr>
@@ -1784,6 +1859,12 @@ to be netted/merged, with settlement only for any remainder amount.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.client.fxutils/javafx.collections.-observable-map/index.html">javafx.collections.ObservableMap</a> (extensions in package com.r3corda.client.fxutils)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.client.fxutils/javafx.beans.value.-observable-value/index.html">javafx.beans.value.ObservableValue</a> (extensions in package com.r3corda.client.fxutils)</td>
 <td>
 </td>
@@ -1835,6 +1916,15 @@ functionality to Java, but it wont arrive for a few years yet</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.client.model/-partially-resolved-transaction/index.html">com.r3corda.client.model.PartiallyResolvedTransaction</a></td>
+<td>
+<p><a href="../com.r3corda.client.model/-partially-resolved-transaction/index.html">PartiallyResolvedTransaction</a> holds a <a href="../com.r3corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a> that has zero or more inputs resolved. The intent is
+to prepare clients for cases where an input can only be resolved in the future/cannot be resolved at all (for example
+because of permissioning)</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.crypto/-party/index.html">com.r3corda.core.crypto.Party</a></td>
 <td>
 <p>A <a href="../com.r3corda.core.crypto/-party/index.html">Party</a> is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate.</p>
@@ -1856,13 +1946,13 @@ ledger. The reference is intended to be encrypted so its meaningless to anyone o
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.testing/-party-generator/index.html">com.r3corda.core.testing.PartyGenerator</a></td>
+<a href="../com.r3corda.node.utilities/-party-columns/index.html">com.r3corda.node.utilities.PartyColumns</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.protocols/-party-request-message/index.html">com.r3corda.protocols.PartyRequestMessage</a></td>
+<a href="../com.r3corda.core.testing/-party-generator/index.html">com.r3corda.core.testing.PartyGenerator</a></td>
 <td>
 </td>
 </tr>
@@ -1923,6 +2013,21 @@ ledger. The reference is intended to be encrypted so its meaningless to anyone o
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.schemas/-persistent-state/index.html">com.r3corda.core.schemas.PersistentState</a></td>
+<td>
+<p>A super class for all mapped states exported to a schema that ensures the <a href="../com.r3corda.core.contracts/-state-ref/index.html">StateRef</a> appears on the database row.  The
+<a href="../com.r3corda.core.contracts/-state-ref/index.html">StateRef</a> will be set to the correct value by the framework (theres no need to set during mapping generation by the state itself).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.schemas/-persistent-state-ref/index.html">com.r3corda.core.schemas.PersistentStateRef</a></td>
+<td>
+<p>Embedded <a href="../com.r3corda.core.contracts/-state-ref/index.html">StateRef</a> representation used in state mapping.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.services.transactions/-persistent-uniqueness-provider/index.html">com.r3corda.node.services.transactions.PersistentUniquenessProvider</a></td>
 <td>
 <p>A RDBMS backed Uniqueness provider</p>
@@ -1968,6 +2073,12 @@ Labels should not refer to non-landmarks, for example, they should not contain t
 <p>A progress tracker helps surface information about the progress of an operation to a user interface or API of some
 kind. It lets you define a set of <emph>steps</emph> that represent an operation. A step is represented by an object (typically
 a singleton).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.client.model/-progress-tracking-event/index.html">com.r3corda.client.model.ProgressTrackingEvent</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -2027,17 +2138,22 @@ a node crash, how many instances of your protocol there are running and so on.</
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.protocols/-protocol-session-exception/index.html">com.r3corda.core.protocols.ProtocolSessionException</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.protocols/-protocol-state-machine/index.html">com.r3corda.core.protocols.ProtocolStateMachine</a></td>
 <td>
-<p>The interface of <a href="#">ProtocolStateMachineImpl</a> exposing methods and properties required by ProtocolLogic for compilation.</p>
+<p>A ProtocolStateMachine instance is a suspendable fiber that delegates all actual logic to a <a href="../com.r3corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a> instance.
+For any given flow there is only one PSM, even if that protocol invokes subprotocols.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="../com.r3corda.node.services.statemachine/-protocol-state-machine-impl/index.html">com.r3corda.node.services.statemachine.ProtocolStateMachineImpl</a></td>
 <td>
-<p>A ProtocolStateMachine instance is a suspendable fiber that delegates all actual logic to a <a href="../com.r3corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a> instance.
-For any given flow there is only one PSM, even if that protocol invokes subprotocols.</p>
 </td>
 </tr>
 <tr>
@@ -2054,8 +2170,30 @@ For any given flow there is only one PSM, even if that protocol invokes subproto
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.utilities/-public-key-column-type/index.html">com.r3corda.node.utilities.PublicKeyColumnType</a></td>
+<td>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html">PublicKey</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.testing/-public-key-generator/index.html">com.r3corda.core.testing.PublicKeyGenerator</a></td>
 <td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.crypto/-public-key-tree/index.html">com.r3corda.core.crypto.PublicKeyTree</a></td>
+<td>
+<p>A tree data structure that enables the representation of composite public keys.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.schemas/-queryable-state/index.html">com.r3corda.core.schemas.QueryableState</a></td>
+<td>
+<p>A contract state that may be mapped to database schemas configured for this node to support querying for,
+or filtering of, states.</p>
 </td>
 </tr>
 <tr>
@@ -2137,6 +2275,14 @@ for each step.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.client.fxutils/-read-only-backed-observable-map-base/index.html">com.r3corda.client.fxutils.ReadOnlyBackedObservableMapBase</a></td>
+<td>
+<p><a href="../com.r3corda.client.fxutils/-read-only-backed-observable-map-base/index.html">ReadOnlyBackedObservableMapBase</a> is a base class implementing all abstract functions required for an <a href="#">ObservableMap</a>
+using a backing HashMap that subclasses should modify.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.node.services/-read-only-transaction-storage/index.html">com.r3corda.core.node.services.ReadOnlyTransactionStorage</a></td>
 <td>
 <p>Thread-safe storage of transactions.</p>
@@ -2171,21 +2317,17 @@ e.g. LIBOR 6M as of 17 March 2016. Hence it requires a source (name) and a value
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.node.services.monitor/-register-request/index.html">com.r3corda.node.services.monitor.RegisterRequest</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.node.services.monitor/-register-response/index.html">com.r3corda.node.services.monitor.RegisterResponse</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.node.services.api/-regulator-service/index.html">com.r3corda.node.services.api.RegulatorService</a></td>
 <td>
 <p>Placeholder interface for regulator services.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.client.fxutils/-replayed-list/index.html">com.r3corda.client.fxutils.ReplayedList</a></td>
+<td>
+<p>This list type just replays changes propagated from the underlying source list. Used for testing changes and backing a
+non-backed observable</p>
 </td>
 </tr>
 <tr>
@@ -2216,6 +2358,12 @@ checked again.</p>
 <td>
 <p>This represents a transient exception or condition that might no longer be thrown if the operation is re-run or called
 again.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.demos.attachment/-role/index.html">com.r3corda.demos.attachment.Role</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -2271,10 +2419,24 @@ increase the feature set in the future.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.services.api/-schema-service/index.html">com.r3corda.node.services.api.SchemaService</a></td>
+<td>
+<p>A configuration and customisation point for Object Relational Mapping of contract state objects.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.crypto/-secure-hash/index.html">com.r3corda.core.crypto.SecureHash</a></td>
 <td>
 <p>Container for a cryptographically secure hash value.
 Provides utilities for generating a cryptographic hash using different algorithms (currently only SHA-256 supported).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.utilities/-secure-hash-column-type/index.html">com.r3corda.node.utilities.SecureHashColumnType</a></td>
+<td>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="../com.r3corda.core.crypto/-secure-hash/index.html">SecureHash</a>.</p>
 </td>
 </tr>
 <tr>
@@ -2356,6 +2518,14 @@ thread (i.e. serially). Arguments are serialised and deserialised automatically.
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.node/-service-entry/index.html">com.r3corda.core.node.ServiceEntry</a></td>
+<td>
+<p>Information for an advertised service including the service specific identity information.
+The identity can be used in protocols and is distinct from the Nodes legalIdentity</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.node/-service-hub/index.html">com.r3corda.core.node.ServiceHub</a></td>
 <td>
 <p>A service hub simply vends references to the other services a node has. Some of those services may be missing or
@@ -2371,17 +2541,16 @@ functionality and you dont want to hard-code which types in the interface.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.protocols/-service-request-message/index.html">com.r3corda.protocols.ServiceRequestMessage</a></td>
+<a href="../com.r3corda.core.node.services/-service-info/index.html">com.r3corda.core.node.services.ServiceInfo</a></td>
 <td>
-<p>Abstract superclass for request messages sent to services, which includes common
-fields such as replyTo and sessionID.</p>
+<p>A container for additional information for an advertised service.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.node.services.monitor/-service-to-client-event/index.html">com.r3corda.node.services.monitor.ServiceToClientEvent</a></td>
+<a href="../com.r3corda.protocols/-service-request-message/index.html">com.r3corda.protocols.ServiceRequestMessage</a></td>
 <td>
-<p>Events triggered by changes in the node, and sent to monitoring client(s).</p>
+<p>Abstract superclass for request messages sent to services which expect a reply.</p>
 </td>
 </tr>
 <tr>
@@ -2479,10 +2648,36 @@ Points at which polynomial pieces connect are known as <emph>knots</emph>.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.client.model/-state-machine-data/index.html">com.r3corda.client.model.StateMachineData</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.messaging/-state-machine-info/index.html">com.r3corda.node.services.messaging.StateMachineInfo</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.services.statemachine/-state-machine-manager/index.html">com.r3corda.node.services.statemachine.StateMachineManager</a></td>
 <td>
 <p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="../com.r3corda.core.protocols/-protocol-state-machine/index.html">ProtocolStateMachine</a> objects.
 Each such object represents an instantiation of a (two-party) protocol that has reached a particular point.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.node.services/-state-machine-recorded-transaction-mapping-storage/index.html">com.r3corda.core.node.services.StateMachineRecordedTransactionMappingStorage</a></td>
+<td>
+<p>This is the interface to storage storing state machine -&gt; recorded tx mappings. Any time a transaction is recorded
+during a protocol run <a href="../com.r3corda.core.node.services/-state-machine-recorded-transaction-mapping-storage/add-mapping.html">addMapping</a> should be called.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.protocols/-state-machine-run-id/index.html">com.r3corda.core.protocols.StateMachineRunId</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -2493,10 +2688,28 @@ Each such object represents an instantiation of a (two-party) protocol that has 
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.node.services/-state-machine-transaction-mapping/index.html">com.r3corda.core.node.services.StateMachineTransactionMapping</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.messaging/-state-machine-update/index.html">com.r3corda.node.services.messaging.StateMachineUpdate</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts/-state-ref/index.html">com.r3corda.core.contracts.StateRef</a></td>
 <td>
 <p>A stateref is a pointer (reference) to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which
 transaction defined the state and where in that transaction it was.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.utilities/-state-ref-columns/index.html">com.r3corda.node.utilities.StateRefColumns</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -2520,18 +2733,6 @@ transaction defined the state and where in that transaction it was.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.node.services.monitor/-state-snapshot-message/index.html">com.r3corda.node.services.monitor.StateSnapshotMessage</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.client.model/-states-modification/index.html">com.r3corda.client.model.StatesModification</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.node.api/-states-query/index.html">com.r3corda.node.api.StatesQuery</a></td>
 <td>
 <p>Extremely rudimentary query language which should most likely be replaced with a product.</p>
@@ -2549,6 +2750,20 @@ anything like that, this interface is only big enough to support the prototyping
 <tr>
 <td>
 <a href="../com.r3corda.node.services.persistence/-storage-service-impl/index.html">com.r3corda.node.services.persistence.StorageServiceImpl</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.utilities/-strand-local-transaction-manager/index.html">com.r3corda.node.utilities.StrandLocalTransactionManager</a></td>
+<td>
+<p>A relatively close copy of the <a href="#">ThreadLocalTransactionManager</a> in Exposed but with the following adjustments to suit
+our environment:</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.serialization/kotlin.-string/index.html">kotlin.String</a> (extensions in package com.r3corda.core.serialization)</td>
 <td>
 </td>
 </tr>
@@ -2651,7 +2866,7 @@ then B and C trade with each other, then C and A etc).</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.node.services.monitor/-transaction-build-result/index.html">com.r3corda.node.services.monitor.TransactionBuildResult</a></td>
+<a href="../com.r3corda.node.services.messaging/-transaction-build-result/index.html">com.r3corda.node.services.messaging.TransactionBuildResult</a></td>
 <td>
 </td>
 </tr>
@@ -2775,6 +2990,13 @@ and seller) and the following steps:</p>
 <a href="../com.r3corda.core.contracts/-type-only-command-data/index.html">com.r3corda.core.contracts.TypeOnlyCommandData</a></td>
 <td>
 <p>Commands that inherit from this are intended to have no data items: its only their presence that matters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.utilities/-u-u-i-d-string-column-type/index.html">com.r3corda.node.utilities.UUIDStringColumnType</a></td>
+<td>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="http://docs.oracle.com/javase/6/docs/api/java/util/UUID.html">UUID</a>, always using a string representation.</p>
 </td>
 </tr>
 <tr>

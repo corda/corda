@@ -32,7 +32,7 @@
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Running the demos" href="running-the-demos.html"/>
-        <link rel="prev" title="Networking and messaging" href="messaging.html"/> 
+        <link rel="prev" title="Persistence" href="persistence.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -93,6 +93,7 @@
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Creating a Cordapp</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#app-plugins">App Plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#services">Services</a></li>
@@ -100,6 +101,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#installing-apps">Installing Apps</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#starting-your-node">Starting your Node</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#debugging-your-node">Debugging your Node</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#viewing-persisted-state-of-your-node">Viewing persisted state of your Node</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#building-against-corda">Building Against Corda</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
@@ -112,12 +115,12 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#protocols">Protocols</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#contracts">Contracts</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Contracts</span></p>
 <ul>
@@ -251,6 +254,44 @@ case the <code class="docutils literal"><span class="pre">node_dir</span></code>
 <p><code class="docutils literal"><span class="pre">java</span> <span class="pre">-Dcapsule.jvm.args=&quot;-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005&quot;</span> <span class="pre">-jar</span> <span class="pre">corda.jar</span></code></p>
 <p>This command line will start the debugger on port 5005 and pause the process awaiting debugger attachment.</p>
 </div>
+<div class="section" id="viewing-persisted-state-of-your-node">
+<h2>Viewing persisted state of your Node<a class="headerlink" href="#viewing-persisted-state-of-your-node" title="Permalink to this headline">¶</a></h2>
+<p>To make examining the persisted contract states of your node or the internal node database tables easier, and providing you are
+using the default database configuration used for demos, you should be able to connect to the internal node database over
+a JDBC connection at the URL that is output to the logs at node start up.  That URL will be of the form <code class="docutils literal"><span class="pre">jdbc:h2:tcp://&lt;host&gt;:&lt;port&gt;/node</span></code>.</p>
+<p>The user name and password for the login are as per the node data source configuration.</p>
+<p>The name and column layout of the internal node tables is in a state of flux and should not be relied upon to remain static
+at the present time, and should certainly be treated as read-only.</p>
+</div>
+<div class="section" id="building-against-corda">
+<h2>Building Against Corda<a class="headerlink" href="#building-against-corda" title="Permalink to this headline">¶</a></h2>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">This feature is subject to rapid change</p>
+</div>
+<p>Corda now supports publishing to Maven local to build against it. To publish to Maven local run the following in the
+root directory of Corda</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>./gradlew publishToMavenLocal
+</pre></div>
+</div>
+<p>This will publish corda-$version.jar, contracts-$version.jar, core-$version.jar and node-$version.jar to the
+group com.r3corda. You can now depend on these as you normally would a Maven dependency.</p>
+<p>In Gradle you can depend on these by adding/modifying your build.gradle file to contain the following:</p>
+<div class="highlight-groovy"><div class="highlight"><pre><span></span><span class="n">repositories</span> <span class="o">{</span>
+    <span class="n">mavenLocal</span><span class="o">()</span>
+    <span class="o">...</span> <span class="n">other</span> <span class="n">repositories</span> <span class="n">here</span> <span class="o">...</span>
+<span class="o">}</span>
+
+<span class="n">dependencies</span> <span class="o">{</span>
+    <span class="n">compile</span> <span class="s2">&quot;com.r3corda:core:$corda_version&quot;</span>
+    <span class="n">compile</span> <span class="s2">&quot;com.r3corda:contracts:$corda_version&quot;</span>
+    <span class="n">compile</span> <span class="s2">&quot;com.r3corda:node:$corda_version&quot;</span>
+    <span class="n">compile</span> <span class="s2">&quot;com.r3corda:corda:$corda_version&quot;</span>
+    <span class="o">...</span> <span class="n">other</span> <span class="n">dependencies</span> <span class="n">here</span> <span class="o">...</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
 </div>
 
 
@@ -263,7 +304,7 @@ case the <code class="docutils literal"><span class="pre">node_dir</span></code>
         <a href="running-the-demos.html" class="btn btn-neutral float-right" title="Running the demos" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="messaging.html" class="btn btn-neutral" title="Networking and messaging" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="persistence.html" class="btn btn-neutral" title="Persistence" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

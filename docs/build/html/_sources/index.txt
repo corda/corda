@@ -34,6 +34,7 @@ Read on to learn:
    transaction-data-types
    consensus
    messaging
+   persistence
    creating-a-cordapp
    running-the-demos
    node-administration
@@ -47,8 +48,10 @@ Read on to learn:
    tutorial-contract
    tutorial-contract-clauses
    tutorial-test-dsl
+   tutorial-clientrpc-api
    protocol-state-machines
    oracles
+   tutorial-attachments
    event-scheduling
    secure-coding-guidelines
 
@@ -74,4 +77,3 @@ Read on to learn:
    network-simulator
    codestyle
    building-the-docs
-

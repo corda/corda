@@ -7,7 +7,7 @@
 <a href="../index.html">com.r3corda.node.services.transactions</a>&nbsp;/&nbsp;<a href=".">NotaryService</a><br/>
 <br/>
 <h1>NotaryService</h1>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">NotaryService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.api/-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code><br/>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">NotaryService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code><br/>
 <p>A Notary service acts as the final signer of a transaction ensuring two things:</p>
 <ul><li><p>The (optional) timestamp of the transaction is valid.</p>
 </li><li><p>None of the referenced input states have previously been consumed by a transaction signed by this Notary
@@ -18,17 +18,6 @@ A transaction has to be signed by a Notary to be considered valid (except for ou
 <br/>
 <br/>
 <br/>
-<h3>Types</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="-type.html">Type</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">Type</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a></code></td>
-</tr>
-</tbody>
-</table>
 <h3>Constructors</h3>
 <table>
 <tbody>
@@ -36,55 +25,20 @@ A transaction has to be signed by a Notary to be considered valid (except for ou
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">NotaryService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$<init>(com.r3corda.node.services.api.ServiceHubInternal, com.r3corda.core.node.services.TimestampChecker, com.r3corda.core.node.services.UniquenessProvider)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.api/-service-hub-internal/index.html"><span class="identifier">ServiceHubInternal</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$<init>(com.r3corda.node.services.api.ServiceHubInternal, com.r3corda.core.node.services.TimestampChecker, com.r3corda.core.node.services.UniquenessProvider)/timestampChecker">timestampChecker</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-timestamp-checker/index.html"><span class="identifier">TimestampChecker</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$<init>(com.r3corda.node.services.api.ServiceHubInternal, com.r3corda.core.node.services.TimestampChecker, com.r3corda.core.node.services.UniquenessProvider)/uniquenessProvider">uniquenessProvider</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a><span class="symbol">)</span></code><p>A Notary service acts as the final signer of a transaction ensuring two things:</p>
+<code><span class="identifier">NotaryService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$<init>(com.r3corda.node.services.api.ServiceHubInternal)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.api/-service-hub-internal/index.html"><span class="identifier">ServiceHubInternal</span></a><span class="symbol">)</span></code><p>A Notary service acts as the final signer of a transaction ensuring two things:</p>
 </td>
 </tr>
 </tbody>
 </table>
-<h3>Properties</h3>
+<h3>Functions</h3>
 <table>
 <tbody>
 <tr>
 <td>
-<a href="logger.html">logger</a></td>
+<a href="create-protocol.html">createProtocol</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">logger</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="protocol-factory.html">protocolFactory</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">protocolFactory</span><span class="symbol">: </span><a href="../../com.r3corda.protocols/-notary-protocol/-factory/index.html"><span class="identifier">Factory</span></a></code><p>Implement a factory that specifies the transaction commit protocol for the notary service to use</p>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">createProtocol</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$createProtocol(com.r3corda.core.crypto.Party)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.protocols/-notary-protocol/-service/index.html"><span class="identifier">Service</span></a></code><p>Implement a factory that specifies the transaction commit protocol for the notary service to use</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="timestamp-checker.html">timestampChecker</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">timestampChecker</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-timestamp-checker/index.html"><span class="identifier">TimestampChecker</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="uniqueness-provider.html">uniquenessProvider</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">uniquenessProvider</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a></code></td>
-</tr>
-</tbody>
-</table>
-<h3>Inherited Properties</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="../../com.r3corda.node.services.api/-abstract-node-service/net.html">net</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">net</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.node.services.api/-abstract-node-service/services.html">services</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">services</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.api/-service-hub-internal/index.html"><span class="identifier">ServiceHubInternal</span></a></code></td>
 </tr>
 </tbody>
 </table>
@@ -93,23 +47,9 @@ A transaction has to be signed by a Notary to be considered valid (except for ou
 <tbody>
 <tr>
 <td>
-<a href="../../com.r3corda.node.services.api/-abstract-node-service/add-message-handler.html">addMessageHandler</a></td>
+<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/to-token.html">toToken</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.protocols/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((com.r3corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((com.r3corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((com.r3corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/exceptionConsumer">exceptionConsumer</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../com.r3corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code><p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
-common boilerplate code. Exceptions are caught and passed to the provided consumer.  If you just want a simple
-acknowledgement response with no content, use <a href="#">com.r3corda.core.messaging.Ack</a>.</p>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.protocols/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code><p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
-common boilerplate code. Exceptions are propagated to the messaging layer.  If you just want a simple
-acknowledgement response with no content, use <a href="#">com.r3corda.core.messaging.Ack</a>.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.node.services.api/-abstract-node-service/add-protocol-handler.html">addProtocolHandler</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">H</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.protocols/-handshake-message/index.html"><span class="identifier">HandshakeMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addProtocolHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))), kotlin.Function2((((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)), com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))), kotlin.Function2((((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)), com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, kotlin.Unit)))/loggerName">loggerName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))), kotlin.Function2((((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)), com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, kotlin.Unit)))/protocolFactory">protocolFactory</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">H</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))), kotlin.Function2((((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)), com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, kotlin.Unit)))/onResultFuture">onResultFuture</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">H</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Register a handler to kick-off a protocol when a <a href="../../com.r3corda.protocols/-handshake-message/index.html">HandshakeMessage</a> is received by the node. This performs the
-necessary steps to enable communication between the two protocols, including calling ProtocolLogic.registerSession.</p>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">H</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.protocols/-handshake-message/index.html"><span class="identifier">HandshakeMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addProtocolHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))))/loggerName">loggerName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))))/protocolFactory">protocolFactory</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">H</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toToken</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization.SingletonSerializeAsToken$toToken(com.r3corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.serialization/-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
 </tr>
 </tbody>
 </table>

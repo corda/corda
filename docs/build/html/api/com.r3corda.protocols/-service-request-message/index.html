@@ -8,13 +8,18 @@
 <br/>
 <h1>ServiceRequestMessage</h1>
 <code><span class="keyword">interface </span><span class="identifier">ServiceRequestMessage</span></code><br/>
-<p>Abstract superclass for request messages sent to services, which includes common
-fields such as replyTo and sessionID.</p>
+<p>Abstract superclass for request messages sent to services which expect a reply.</p>
 <br/>
 <br/>
 <h3>Properties</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="reply-to.html">replyTo</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">replyTo</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a></code></td>
+</tr>
 <tr>
 <td>
 <a href="session-i-d.html">sessionID</a></td>
@@ -23,41 +28,32 @@ fields such as replyTo and sessionID.</p>
 </tr>
 </tbody>
 </table>
-<h3>Functions</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="get-reply-to.html">getReplyTo</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getReplyTo</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.protocols.ServiceRequestMessage$getReplyTo(com.r3corda.core.node.services.NetworkMapCache)/networkMapCache">networkMapCache</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a></code></td>
-</tr>
-</tbody>
-</table>
 <h3>Inheritors</h3>
 <table>
 <tbody>
 <tr>
 <td>
-<a href="../-direct-request-message/index.html">DirectRequestMessage</a></td>
+<a href="../../com.r3corda.node.services.network/-network-map-service/-fetch-map-request/index.html">FetchMapRequest</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">DirectRequestMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ServiceRequestMessage</span></code><p>A message which specifies reply destination as a specific endpoint such as a monitoring client. This is of particular
-use where we want to address a specific endpoint, not necessarily a specific user (for example if the same user logs
-in on two machines, we want to consistently deliver messages as part of a session, to the same machine the session
-started on).</p>
-</td>
+<code><span class="keyword">class </span><span class="identifier">FetchMapRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ServiceRequestMessage</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.node.services.network/-network-map-service/-network-map-request-message/index.html">NetworkMapRequestMessage</a></td>
+<a href="../../com.r3corda.node.services.network/-network-map-service/-query-identity-request/index.html">QueryIdentityRequest</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">NetworkMapRequestMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ServiceRequestMessage</span></code></td>
+<code><span class="keyword">class </span><span class="identifier">QueryIdentityRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ServiceRequestMessage</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../-party-request-message/index.html">PartyRequestMessage</a></td>
+<a href="../../com.r3corda.node.services.network/-network-map-service/-registration-request/index.html">RegistrationRequest</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">PartyRequestMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ServiceRequestMessage</span></code></td>
+<code><span class="keyword">class </span><span class="identifier">RegistrationRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ServiceRequestMessage</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.network/-network-map-service/-subscribe-request/index.html">SubscribeRequest</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">SubscribeRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ServiceRequestMessage</span></code></td>
 </tr>
 </tbody>
 </table>

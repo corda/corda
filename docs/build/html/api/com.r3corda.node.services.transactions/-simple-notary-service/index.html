@@ -11,17 +11,6 @@
 <p>A simple Notary service that does not perform transaction validation</p>
 <br/>
 <br/>
-<h3>Types</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="-type.html">Type</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">Type</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a></code></td>
-</tr>
-</tbody>
-</table>
 <h3>Constructors</h3>
 <table>
 <tbody>
@@ -39,33 +28,38 @@
 <tbody>
 <tr>
 <td>
-<a href="logger.html">logger</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">logger</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="protocol-factory.html">protocolFactory</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">protocolFactory</span><span class="symbol">: </span><a href="../../com.r3corda.protocols/-notary-protocol/-default-factory/index.html"><span class="identifier">DefaultFactory</span></a></code><p>Implement a factory that specifies the transaction commit protocol for the notary service to use</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3>Inherited Properties</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="../-notary-service/timestamp-checker.html">timestampChecker</a></td>
+<a href="timestamp-checker.html">timestampChecker</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">timestampChecker</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-timestamp-checker/index.html"><span class="identifier">TimestampChecker</span></a></code></td>
 </tr>
 <tr>
 <td>
-<a href="../-notary-service/uniqueness-provider.html">uniquenessProvider</a></td>
+<a href="uniqueness-provider.html">uniquenessProvider</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">uniquenessProvider</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="create-protocol.html">createProtocol</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">createProtocol</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.transactions.SimpleNotaryService$createProtocol(com.r3corda.core.crypto.Party)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.protocols/-notary-protocol/-service/index.html"><span class="identifier">Service</span></a></code><p>Implement a factory that specifies the transaction commit protocol for the notary service to use</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="type.html">type</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">type</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a></code></td>
 </tr>
 </tbody>
 </table>

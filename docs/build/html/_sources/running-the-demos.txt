@@ -144,3 +144,33 @@ Now open your web browser to this URL:
 To use the demos click the "Create Deal" button, fill in the form, then click the "Submit" button. Now you will be
 able to use the time controls at the top left of the home page to run the fixings. Click any individual trade in the
 blotter to view it.
+
+
+
+Attachment demo
+----------------
+
+Open two terminals, and in the first run:
+
+**Windows**::
+
+    gradlew.bat & .\build\install\r3prototyping\bin\attachment-demo --role=RECIPIENT
+
+**Other**::
+
+    ./gradlew installDist && ./build/install/r3prototyping/bin/attachment-demo --role=RECIPIENT
+
+It will compile things, if necessary, then create a directory named attachment-demo/buyer with a bunch of files inside and
+start the node. You should see it waiting for a trade to begin.
+
+In the second terminal, run:
+
+**Windows**::
+
+    .\build\install\r3prototyping\bin\attachment-demo --role=SENDER
+
+**Other**::
+
+    ./build/install/r3prototyping/bin/attachment-demo --role=SENDER
+
+You should see some log lines scroll past, and within a few seconds the message "File received - we're happy!" should be printed.

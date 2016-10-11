@@ -11,20 +11,6 @@
 <p>Thread-safe storage of fiber checkpoints.</p>
 <br/>
 <br/>
-<h3>Properties</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="checkpoints.html">checkpoints</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">checkpoints</span><span class="symbol">: </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../-checkpoint/index.html"><span class="identifier">Checkpoint</span></a><span class="symbol">&gt;</span></code><p>Returns a snapshot of all the checkpoints in the store.
-This may return more checkpoints than were added to this instance of the store; for example if the store persists
-checkpoints to disk.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3>Functions</h3>
 <table>
 <tbody>
@@ -33,6 +19,15 @@ checkpoints to disk.</p>
 <a href="add-checkpoint.html">addCheckpoint</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addCheckpoint</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.CheckpointStorage$addCheckpoint(com.r3corda.node.services.api.Checkpoint)/checkpoint">checkpoint</span><span class="symbol">:</span>&nbsp;<a href="../-checkpoint/index.html"><span class="identifier">Checkpoint</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Add a new checkpoint to the store.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="for-each.html">forEach</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">forEach</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.CheckpointStorage$forEach(kotlin.Function1((com.r3corda.node.services.api.Checkpoint, kotlin.Boolean)))/block">block</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../-checkpoint/index.html"><span class="identifier">Checkpoint</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Allows the caller to process safely in a thread safe fashion the set of all checkpoints.
+The checkpoints are only valid during the lifetime of a single call to the block, to allow memory management.
+Return false from the block to terminate further iteration.</p>
 </td>
 </tr>
 <tr>
@@ -48,6 +43,13 @@ in the store. Doing so will throw an <a href="http://docs.oracle.com/javase/6/do
 <h3>Inheritors</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.persistence/-d-b-checkpoint-storage/index.html">DBCheckpointStorage</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DBCheckpointStorage</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">CheckpointStorage</span></code><p>Simple checkpoint key value storage in DB using the underlying JDBCHashMap and transactional context of the call sites.</p>
+</td>
+</tr>
 <tr>
 <td>
 <a href="../../com.r3corda.node.services.persistence/-per-file-checkpoint-storage/index.html">PerFileCheckpointStorage</a></td>

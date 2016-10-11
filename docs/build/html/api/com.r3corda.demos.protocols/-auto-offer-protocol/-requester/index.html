@@ -15,12 +15,6 @@
 <tbody>
 <tr>
 <td>
-<a href="-a-n-n-o-u-n-c-i-n-g.html">ANNOUNCING</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">ANNOUNCING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
-</tr>
-<tr>
-<td>
 <a href="-d-e-a-l-i-n-g/index.html">DEALING</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">DEALING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
@@ -61,14 +55,6 @@
 helpful with the progress reports. If this protocol is invoked as a sub-protocol of another, then the
 tracker will be made a child of the current step in the parent. If its null, this protocol doesnt track
 progress.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="topic.html">topic</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">topic</span><span class="symbol">: </span><span class="identifier">String</span></code><p>The topic to use when communicating with other parties. If more than one topic is required then use sub-protocols.
-Note that this is temporary until protocol sessions are properly implemented.</p>
 </td>
 </tr>
 </tbody>
@@ -118,19 +104,19 @@ access this lazily or from inside <a href="../../../com.r3corda.core.protocols/-
 <tbody>
 <tr>
 <td>
-<a href="../../../com.r3corda.core.protocols/-protocol-logic/receive.html">receive</a></td>
+<a href="../../../com.r3corda.core.protocols/-protocol-logic/get-counterparty-marker.html">getCounterpartyMarker</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(com.r3corda.core.crypto.Party, java.lang.Class((com.r3corda.core.protocols.ProtocolLogic.receive.T)))/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(com.r3corda.core.crypto.Party, java.lang.Class((com.r3corda.core.protocols.ProtocolLogic.receive.T)))/receiveType">receiveType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(com.r3corda.core.crypto.Party)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">getCounterpartyMarker</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$getCounterpartyMarker(com.r3corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span></code><p>Return the marker <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html">Class</a> which <a href="../../../com.r3corda.core.protocols/-protocol-logic/get-counterparty-marker.html#com.r3corda.core.protocols.ProtocolLogic$getCounterpartyMarker(com.r3corda.core.crypto.Party)/party">party</a> has used to register the counterparty protocol that is to execute on the
+other side. The default implementation returns the class object of this ProtocolLogic, but any <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html">Class</a> instance
+will do as long as the other side registers with it.</p>
+</td>
 </tr>
 <tr>
 <td>
-<a href="../../../com.r3corda.core.protocols/-protocol-logic/register-session.html">registerSession</a></td>
+<a href="../../../com.r3corda.core.protocols/-protocol-logic/receive.html">receive</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">registerSession</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$registerSession(com.r3corda.protocols.HandshakeMessage)/receivedHandshake">receivedHandshake</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.protocols/-handshake-message/index.html"><span class="identifier">HandshakeMessage</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>If a node receives a <a href="../../../com.r3corda.protocols/-handshake-message/index.html">HandshakeMessage</a> it needs to call this method on the initiated receipt protocol to enable
-communication between it and the sender protocol. Calling this method, and other initiation steps, are already
-handled by AbstractNodeService.addProtocolHandler.</p>
-</td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(com.r3corda.core.crypto.Party)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(com.r3corda.core.crypto.Party, java.lang.Class((com.r3corda.core.protocols.ProtocolLogic.receive.T)))/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(com.r3corda.core.crypto.Party, java.lang.Class((com.r3corda.core.protocols.ProtocolLogic.receive.T)))/receiveType">receiveType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -149,9 +135,15 @@ handled by AbstractNodeService.addProtocolHandler.</p>
 <td>
 <a href="../../../com.r3corda.core.protocols/-protocol-logic/sub-protocol.html">subProtocol</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span> <span class="identifier">subProtocol</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$subProtocol(com.r3corda.core.protocols.ProtocolLogic((com.r3corda.core.protocols.ProtocolLogic.subProtocol.R)), kotlin.Boolean)/subLogic">subLogic</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$subProtocol(com.r3corda.core.protocols.ProtocolLogic((com.r3corda.core.protocols.ProtocolLogic.subProtocol.R)), kotlin.Boolean)/inheritParentSessions">inheritParentSessions</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">R</span></code><p>Invokes the given subprotocol by simply passing through this <a href="../../../com.r3corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a>s reference to the
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span> <span class="identifier">subProtocol</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$subProtocol(com.r3corda.core.protocols.ProtocolLogic((com.r3corda.core.protocols.ProtocolLogic.subProtocol.R)), kotlin.Boolean)/subLogic">subLogic</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$subProtocol(com.r3corda.core.protocols.ProtocolLogic((com.r3corda.core.protocols.ProtocolLogic.subProtocol.R)), kotlin.Boolean)/shareParentSessions">shareParentSessions</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">R</span></code><p>Invokes the given subprotocol by simply passing through this <a href="../../../com.r3corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a>s reference to the
 <a href="../../../com.r3corda.core.protocols/-protocol-state-machine/index.html">ProtocolStateMachine</a> and then calling the <a href="../../../com.r3corda.core.protocols/-protocol-logic/call.html">call</a> method.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="../../../com.r3corda.core.protocols/-protocol-logic/track.html">track</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">track</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">?</span></code></td>
 </tr>
 </tbody>
 </table>

@@ -39,8 +39,8 @@ keys in this vault, you must inform the vault service so it can update its inter
 <td>
 <a href="updates.html">updates</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">updates</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Get a synchronous Observable of updates.  When observations are pushed to the Observer, the vault will already
-incorporate the update.</p>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">updates</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Vault will already incorporate
+the update.</p>
 </td>
 </tr>
 </tbody>
@@ -78,6 +78,14 @@ new states that they create. You should only insert transactions that have been 
 </tr>
 <tr>
 <td>
+<a href="track.html">track</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">track</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-vault/index.html"><span class="identifier">Vault</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the
+first subscriber is registered so as to avoid racing with early updates.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="when-consumed.html">whenConsumed</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">whenConsumed</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.VaultService$whenConsumed(com.r3corda.core.contracts.StateRef)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Provide a <a href="#">Future</a> for when a <a href="../../com.r3corda.core.contracts/-state-ref/index.html">StateRef</a> is consumed, which can be very useful in building tests.</p>
@@ -88,6 +96,12 @@ new states that they create. You should only insert transactions that have been 
 <h3>Extension Functions</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="../deals-with.html">dealsWith</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-deal-state/index.html"><span class="identifier">DealState</span></a><span class="symbol">&gt;</span> <span class="identifier">VaultService</span><span class="symbol">.</span><span class="identifier">dealsWith</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services$dealsWith(com.r3corda.core.node.services.VaultService, com.r3corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
 <tr>
 <td>
 <a href="../linear-heads-of-type.html">linearHeadsOfType</a></td>

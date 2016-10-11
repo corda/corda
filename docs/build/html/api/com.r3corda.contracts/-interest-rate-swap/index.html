@@ -66,12 +66,6 @@ copy / update for each transition).</p>
 </tr>
 <tr>
 <td>
-<a href="-oracle-type.html">OracleType</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">OracleType</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a></code></td>
-</tr>
-<tr>
-<td>
 <a href="-state/index.html">State</a></td>
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-fixable-deal-state/index.html"><span class="identifier">FixableDealState</span></a><span class="symbol">, </span><a href="../../com.r3corda.core.contracts/-schedulable-state/index.html"><span class="identifier">SchedulableState</span></a></code><p>The state class contains the 4 major data classes.</p>
@@ -134,6 +128,17 @@ Must throw an exception if theres a problem that should prevent state transition
 rather than an argument so that additional data can be added without breaking binary compatibility with
 existing contract code.</p>
 </td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="oracle-type.html">oracleType</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">oracleType</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a></code></td>
 </tr>
 </tbody>
 </table>
