@@ -29,25 +29,44 @@ class MerkleTransaction(
             val merkleRoot = merkleTree.last()
 
             val allLeavesHashes: MutableList<SecureHash> = ArrayList()
+
+            //todo naive version with inputs, outputs, attachemets each as one block
             getTransactionBlocks(wtx).mapTo(allLeavesHashes, { it.sha256() })
             val filteredCommands: MutableList<Command> = ArrayList()
             val includeLeaves: MutableList<Boolean> = ArrayList()
-            wtx.commands.forEach {
-                val include = filterFunction(it)
-                if(include) filteredCommands.add(it)
-                includeLeaves.add(include)
-            }
+
+            filterLeaves(filterFunction, wtx, includeLeaves, filteredCommands)
 
             val pmt = PartialMerkleTree.build(includeLeaves, allLeavesHashes)
             return MerkleTransaction(merkleRoot, filteredCommands, pmt)
         }
 
-        /* Function that splits the transaction into serialized blocks.
-        Blocks: inputs, outputs, attachments, commands. */
+        //todo type -> only on in, out, att, cmd
+        private fun filterLeaves(filterFunction: (Command) -> Boolean,
+                                    wtx: WireTransaction,
+                                    includeLeaves: MutableList<Boolean>,
+                                    filteredCommands: MutableList<Command> ){
+            //todo glued together for now
+            val tmpArr = arrayListOf(false, false, false)
+            includeLeaves.addAll(tmpArr)
+            val orderedCmds = wtx.commands.sortedBy { it.toString() }
+
+            orderedCmds.forEach { //todo should go on all in/outputs etc.
+                val include = filterFunction(it)
+                if(include) filteredCommands.add(it)
+                includeLeaves.add(include)
+            }
+        }
+        /**
+         *  Function that splits the transaction into serialized blocks.
+         *  Blocks: inputs, outputs, attachments, commands.
+         */
         private fun getTransactionBlocks(wtx: WireTransaction) : MutableList<ByteArray> {
             val blocks: MutableList<ByteArray> = ArrayList()
-            val toBlockList = listOf(wtx.inputs, wtx.outputs, wtx.attachments, wtx.commands) //todo ordering
-            toBlockList.flatMapTo(blocks, { listOf(it.serialize().bits) } )
+            val toBlockList = listOf(wtx.inputs, wtx.outputs, wtx.attachments)
+            val orderedCmds = wtx.commands.sortedBy { it.toString() }
+            toBlockList.mapTo(blocks, { it.serialize().bits } )
+            blocks.addAll(orderedCmds.map { it.serialize().bits })
             return blocks
         }
 
@@ -91,6 +110,8 @@ class MerkleTransaction(
     //todo exception
     fun verify():Boolean{
         val hashes: List<SecureHash> = filteredCommands.map { it.serialize().sha256() }
+        if(hashes.size == 0)
+            throw MerkleTreeException("Transaction without included leaves.")
         return partialMerkleTree.verify(hashes, merkleRoot)
     }
 }
