@@ -206,10 +206,10 @@ is a three node example;
 
     task deployNodes(type: com.r3corda.plugins.Cordform, dependsOn: ['build']) {
         directory "./build/nodes" // The output directory
-        networkMap "Notary" // The artemis address of the node named here will be used as the networkMapAddress on all other nodes.
+        networkMap "Controller" // The artemis address of the node named here will be used as the networkMapAddress on all other nodes.
         node {
-            name "Notary"
-            dirName "notary"
+            name "Controller"
+            dirName "controller"
             nearestCity "London"
             notary true // Sets this node to be a notary
             advertisedServices []
