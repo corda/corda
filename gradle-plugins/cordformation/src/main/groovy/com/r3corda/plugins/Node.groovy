@@ -16,7 +16,6 @@ class Node {
     public String name
     private String dirName
     private String nearestCity
-    private Boolean isNotary = false
     private Boolean isHttps = false
     private List<String> advertisedServices = []
     private Integer artemisPort
@@ -52,15 +51,6 @@ class Node {
      */
     void nearestCity(String nearestCity) {
         this.nearestCity = nearestCity
-    }
-
-    /**
-     * Sets whether this node will be a notary
-     *
-     * @param isNotary True if this node is a notary.
-     */
-    void notary(Boolean isNotary) {
-        this.isNotary = isNotary
     }
 
     /**
@@ -207,7 +197,6 @@ class Node {
                     "name": name,
                     "dirName": dirName,
                     "nearestCity": nearestCity,
-                    "isNotary": isNotary,
                     "isHttps": isHttps,
                     "advertisedServices": advertisedServices,
                     "networkMapAddress": networkMapAddress,
