@@ -1,0 +1,23 @@
+apply plugin: 'maven-publish'
+apply plugin: 'groovy'
+
+dependencies {
+    compile gradleApi()
+    compile localGroovy()
+
+    compile "com.typesafe:config:1.3.0"
+}
+
+repositories {
+    mavenCentral()
+}
+
+publishing {
+    publications {
+        plugin(MavenPublication) {
+            from components.java
+            groupId  'com.r3corda.plugins'
+            artifactId 'cordformation'
+        }
+    }
+}

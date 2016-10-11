@@ -264,6 +264,9 @@ task installTemplateNodes(dependsOn: 'buildCordaJAR') << {
     }
 }
 
+// Aliasing the publishToMavenLocal for simplicity.
+task(install, dependsOn: 'publishToMavenLocal')
+
 publishing {
     publications {
         corda(MavenPublication) {

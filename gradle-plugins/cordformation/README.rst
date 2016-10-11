@@ -1,0 +1,1 @@
+Please refer to the documentation in <corda-root>/doc/build/html/creating-a-cordapp.html#cordformation.
