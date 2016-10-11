@@ -130,7 +130,7 @@ Using Gradle Plugins
 To use the plugins, if you are not already using the Cordapp template project, you must modify your build.gradle. Add
 the following segments to the relevant part of your build.gradle.
 
-Template Build.gradle
+Template build.gradle
 =====================
 
 To build against Corda and the plugins that cordapps use, update your build.gradle to contain the following:
