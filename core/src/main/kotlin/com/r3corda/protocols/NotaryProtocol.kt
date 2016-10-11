@@ -48,6 +48,11 @@ object NotaryProtocol {
             check(wtx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) {
                 "Input states must have the same Notary"
             }
+            try {
+                stx.verifySignatures(notaryParty.owningKey)
+            } catch (ex: SignedTransaction.SignaturesMissingException) {
+                throw NotaryException(NotaryError.SignaturesMissing(ex.missing))
+            }
 
             val request = SignRequest(stx, serviceHub.myInfo.legalIdentity)
             val response = sendAndReceive<Result>(notaryParty, request)

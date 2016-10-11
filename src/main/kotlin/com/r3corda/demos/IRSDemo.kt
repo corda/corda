@@ -27,6 +27,7 @@ import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
+import com.r3corda.node.services.transactions.ValidatingNotaryService
 import com.r3corda.testing.node.MockNetwork
 import joptsimple.OptionParser
 import joptsimple.OptionSet
@@ -406,7 +407,7 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
     val networkMapId =
             when (params.node) {
                 IRSDemoNode.NodeA -> {
-                    advertisedServices = setOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
+                    advertisedServices = setOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type))
                     null
                 }
                 IRSDemoNode.NodeB -> {

@@ -66,9 +66,10 @@ class ValidatingNotaryServiceTests {
             tx.toSignedTransaction(false)
         }
 
-        val future = runClient(stx)
-
-        val ex = assertFailsWith(ExecutionException::class) { future.get() }
+        val ex = assertFailsWith(ExecutionException::class) {
+            val future = runClient(stx)
+            future.get()
+        }
         val notaryError = (ex.cause as NotaryException).error
         assertThat(notaryError).isInstanceOf(NotaryError.SignaturesMissing::class.java)
 

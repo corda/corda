@@ -28,7 +28,7 @@ import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
-import com.r3corda.node.services.transactions.SimpleNotaryService
+import com.r3corda.node.services.transactions.ValidatingNotaryService
 import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.TwoPartyTradeProtocol
@@ -141,7 +141,7 @@ fun main(args: Array<String>) {
     // the map is not very helpful, but we need one anyway. So just make the buyer side run the network map as it's
     // the side that sticks around waiting for the seller.
     val networkMapId = if (role == Role.BUYER) {
-        advertisedServices = setOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
+        advertisedServices = setOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type))
         null
     } else {
         advertisedServices = emptySet()

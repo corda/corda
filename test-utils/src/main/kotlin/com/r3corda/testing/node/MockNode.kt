@@ -24,6 +24,7 @@ import com.r3corda.node.services.persistence.DBCheckpointStorage
 import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.services.transactions.SimpleNotaryService
+import com.r3corda.node.services.transactions.ValidatingNotaryService
 import com.r3corda.node.utilities.databaseTransaction
 import org.slf4j.Logger
 import java.nio.file.Files
@@ -240,7 +241,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null): MockNode {
-        return createNode(null, -1, defaultFactory, true, legalName, keyPair, ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
+        return createNode(null, -1, defaultFactory, true, legalName, keyPair, ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type))
     }
 
     fun createPartyNode(networkMapAddr: SingleMessageRecipient, legalName: String? = null, keyPair: KeyPair? = null): MockNode {
