@@ -1,5 +1,6 @@
 package com.r3corda.plugins
 
+import groovy.text.SimpleTemplateEngine
 import org.gradle.api.internal.file.AbstractFileCollection
 import org.gradle.api.Project
 
@@ -201,16 +202,21 @@ class Node {
     private void installConfig() {
         project.copy {
             from Cordformation.getPluginFile(project, 'com/r3corda/plugins/nodetemplate.conf')
-            filter { it
-                    .replaceAll('@@name@@', name)
-                    .replaceAll('@@dirName@@', dirName)
-                    .replaceAll('@@nearestCity@@', nearestCity)
-                    .replaceAll('@@isNotary@@', isNotary.toString())
-                    .replaceAll('@@isHttps@@', isHttps.toString())
-                    .replaceAll('@@advertisedServices@@', advertisedServices.join(","))
-                    .replaceAll('@@networkMapAddress@@', networkMapAddress)
-                    .replaceAll('@@artemisPort@@', artemisPort.toString())
-                    .replaceAll('@@webPort@@', webPort.toString())
+            filter {
+                def binding = [
+                    "name": name,
+                    "dirName": dirName,
+                    "nearestCity": nearestCity,
+                    "isNotary": isNotary,
+                    "isHttps": isHttps,
+                    "advertisedServices": advertisedServices,
+                    "networkMapAddress": networkMapAddress,
+                    "artemisPort": artemisPort.toString(),
+                    "webPort": webPort.toString()
+                ]
+
+                def engine = new SimpleTemplateEngine()
+                engine.createTemplate(it).make(binding)
             }
             into nodeDir
             rename 'nodetemplate.conf', 'node.conf'
