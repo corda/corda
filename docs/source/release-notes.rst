@@ -68,7 +68,7 @@ New features in this release:
     * Infrastructure work on the node explorer is now complete: it is fully switched to using the MQ based RPC system.
     * A library of additional reactive collections has been added. This API builds on top of Rx and the observable
       collections API in Java 8 to give "live" data structures in which the state of the node and ledger can be
-      viewed as an ordinary Java ``List``s, ``Map``s and ``Set``s, but which also emit callbacks when these views
+      viewed as an ordinary Java ``List``, ``Map`` and ``Set``, but which also emit callbacks when these views
       change, and which can have additional views derived in a functional manner (filtered, mapped, sorted, etc).
       Finally, these views can then be bound directly into JavaFX UIs. This makes for a concise and functional
       way of building application UIs that render data from the node, and the API is available for third party

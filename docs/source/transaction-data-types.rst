@@ -146,7 +146,7 @@ that has been signed by a set of parties.
    fleshed out.
 
 Multi-signature support
-----------------------
+-----------------------
 
 Corda supports scenarios where more than one key or party is required to authorise a state object transition, for example:
 "Either the CEO or 3 out of 5 of his assistants need to provide signatures".
