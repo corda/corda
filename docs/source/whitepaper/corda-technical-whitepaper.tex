@@ -30,7 +30,7 @@
 
 %\renewcommand{\abstractname}{An introduction}
 \begin{center}
-Version 1.0
+Version 0.1
 
 \emph{Confidential: Pre-Publication Draft For R3 DLG}
 \end{center}
@@ -77,7 +77,7 @@ database like BigTable\cite{BigTable} scales to large datasets and transaction v
 computers. However it is assumed that the computers in question are all run by a single homogenous organisation and that
 the nodes comprising the database all trust each other not to misbehave or leak data. In a decentralised database, such
 as the one underpinning Bitcoin\cite{Bitcoin}, the nodes make much weaker trust assumptions and actively cross-check
-each others work. Such databases trade off performance and usability in order to gain security and global acceptance.
+each other's work. Such databases trade off performance and usability in order to gain security and global acceptance.
 
 \emph{Corda} is a decentralised database platform with the following novel features:
 
@@ -102,7 +102,7 @@ information to node administrators and users and may interact with people as wel
 from other database systems without placing load on the network. Global ledger data can be joined with existing,
 internal RDBMS tables thanks to slots in the state definitions that are reserved for join keys. Events on the ledger
 are exposed via an embedded JMS compatible message broker.
-\item States can declare scheduled events. For example an interest rate swap state may declare fixing events.
+\item States can declare scheduled events. For example a bond state may declare an automatic transition to a ``in default'' state if it is not repaid in time.
 \end{itemize}
 
 Comparisons with Bitcoin and Ethereum will be provided throughout.
@@ -115,44 +115,15 @@ Corda is a platform for the writing of ``CorDapps'': applications that extend th
 Such apps define new data types, new inter-node protocols and the ``smart contracts'' that determine allowed changes.
 
 What is a smart contract? That depends on the model of computation we are talking about. There are two competing
-computational models used in decentralised databases: the virtual computer model and the UTXO model.
+computational models used in decentralised databases: the virtual computer model and the UTXO model. The virtual
+computer model is used by Ethereum\cite{Ethereum}. It models the database as the in-memory state of a
+global computer with a single thread of execution determined by the block chain. In the UTXO model, as used in
+Bitcoin, the database is a set of immutable rows keyed by \texttt{(hash:output index)}. Transactions define
+outputs that append new rows and inputs which consume existing rows. The term ``smart contract'' has a different
+meaning in each model. A deeper discussion of the tradeoffs and terminology in the different approaches can
+be found in the Corda introductory paper\cite{CordaIntro}.
 
-\paragraph{Virtual computers.}In Ethereum the database is modelled as the memory of a shared global computer. This
-computer's state is replicated across thousands of individual physical computers and has a single thread of execution,
-defined by a Nakamoto block chain\cite{Bitcoin}. Inside this computer live a set of objects in the classical OOP sense:
-code and data tightly bound together. Each object is identified by an address and these objects, called `contracts',
-expose methods. These methods may be invoked either by other methods, or by initiating calls submitted by users of the
-network via a transaction. In this model the term \emph{smart contract} can refer both to the code and sometimes a
-particular instantiation of the code and data (an object). Access control is implemented by exposing the identity of the
-caller to a method's implementation: this identity is derived from the signatures on a transaction. A transaction is
-considered valid if the execution it triggers does not throw any exceptions.
-
-\paragraph{UTXO model.}In Bitcoin the database can be viewed as a set of rows. Each row is identified by a
-\texttt{(hash:number)} pair and contains two columns: \texttt{value}, specifying a quantity of bitcoin, and
-\texttt{scriptPubKey} which contains a small bytecode program that validates any transaction that wishes to consume that
-row. Rows cannot be changed: transactions can only delete rows and add new rows. Deleted rows are called transaction
-`inputs' and added rows are called transaction `outputs'. The identity of a row is therefore derived from the hash of
-the transaction that created it and the index of the output inside that transaction. In practice of course there is no
-requirement to actually delete a row when a transaction consumes it, and the first versions of the Bitcoin software
-simply marked them as spent. It was only later that the database was changed to physically delete used rows, in order to
-improve performance. The bytecode programs typically check for the presence of a signature over the transaction from a
-particular public key, hence the name \texttt{scriptPubKey}. However this is not required, and it's possible to craft
-more complex conditions such as requiring a subset of a group of keys, or the presence of a password (note that a
-password by itself would not be sufficient to secure access to the row). A transaction is considered valid if there is
-at least one input, the inputs point to rows that are not yet spent and the data in the inputs satisfies the bytecode
-programs for each row. A special kind of transaction, called a \emph{coinbase transaction}, is allowed to violate these
-rules and may have inputs that don't refer to any existing row: such a transaction is allowed exactly once per block in
-the block chain and as a result is only ever created by the miners who extend that chain.
-
-It is vital to observe that the two data models use the term \emph{smart contract} to mean completely different
-things. In the virtual computer model a smart contract is essentially like an object or class in object-oriented
-programming: a group of mutable variables accessed via callable methods which can change those variables in arbitrary ways.
-In the UTXO model a smart contract is a predicate: a function that yields either \texttt{true} or \texttt{false} and
-which cannot change anything in the database by itself.
-
-A deeper discussion of the tradeoffs between the different approaches can be found in a later section.
-
-Corda uses the UTXO model and as a result its transactions are structurally similar to Bitcoin transactions: they have
+We use the UTXO model and as a result our transactions are structurally similar to Bitcoin transactions: they have
 inputs, outputs and signatures. Unlike Bitcoin, Corda database rows can contain arbitrary data, not just a value field.
 Because the data consumed and added by transactions is not necessarily a set of key/value pairs, we don't talk about rows
 but rather \emph{states}. Like Bitcoin, Corda states are associated with bytecode programs that must accept a transaction
@@ -277,7 +248,6 @@ of its content. The purpose of the receipts is to give a node undeniable evidenc
 notification that would stand up later in a dispute mediation process. Corda does not attempt to support deniable
 messaging.
 
-\newpage
 \section{Flow framework}
 
 It is common in decentralised ledger systems for complex multi-party protocols to be needed. The Bitcoin payment channel
@@ -342,20 +312,22 @@ with a solution. The ability to request manual solutions is useful for cases whe
 are contacting them, for example, the specified reason for sending a payment is not recognised, or when the asset used for
 a payment is not considered acceptable.
 
-% TODO: Event scheduling
-% TODO: Data model: commands, attachments
-% TODO: Cash and IOU modelling
-% TODO: Notaries
-% TODO: App platform and JVM sandboxing
-% TODO: Client side signing devices
-% TODO: Client RPC and reactive collections
-% TODO: Integration with existing database systems
-% TODO: Privacy techniques
-% TODO: Experimental contract DSL?
+\section{Data model}
+\subsection{Commands}
+\subsection{Identity lookups}
+\subsection{Attachments, legal prose and bytecode}
+\subsection{Merkle-structured transactions}
+\subsection{Encumbrances}
+\subsection{Contract constraints}
+\section{Cash and Obligations}
+\section{Integration with existing infrastructure}
+\section{Deterministic JVM}
+\section{Notaries}
+\section{Secure signing devices}
+\section{Client RPC and reactive collections}
+\section{Event scheduling}
 
 \section{Conclusion}
-
-TODO
 
 \bibliographystyle{unsrt}
 \bibliography{Ref}
