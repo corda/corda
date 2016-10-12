@@ -131,7 +131,7 @@ To use the plugins, if you are not already using the Cordapp template project, y
 the following segments to the relevant part of your build.gradle.
 
 Template build.gradle
-=====================
+---------------------
 
 To build against Corda and the plugins that cordapps use, update your build.gradle to contain the following:
 
@@ -191,7 +191,7 @@ To build against Corda and the plugins that cordapps use, update your build.grad
 
 
 Cordformation
-=============
+-------------
 
 Cordformation is the local node deployment system for Cordapps, the nodes generated are intended to be used for
 experimenting, debugging, and testing node configurations and setups but not intended for production or testnet

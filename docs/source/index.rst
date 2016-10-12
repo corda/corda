@@ -53,7 +53,6 @@ Read on to learn:
    oracles
    tutorial-attachments
    event-scheduling
-   secure-coding-guidelines
 
 .. toctree::
    :maxdepth: 2
@@ -72,6 +71,7 @@ Read on to learn:
    :maxdepth: 2
    :caption: Appendix
 
+   secure-coding-guidelines
    release-process
    release-notes
    network-simulator
