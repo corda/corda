@@ -1,5 +1,6 @@
 package com.r3corda.node.utilities
 
+import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.Uninterruptibles
 import com.r3corda.core.utilities.loggerFor
 import java.util.*
@@ -41,19 +42,20 @@ interface AffinityExecutor : Executor {
     }
 
     /**
-     * Posts a no-op task to the executor and blocks this thread waiting for it to complete. This can be useful in
-     * tests when you want to be sure that a previous task submitted via [execute] has completed.
+     * Run the executor until there are no tasks pending and none executing.
      */
-    fun flush() {
-        fetchFrom { }
-    }
+    fun flush()
 
     /**
      * An executor backed by thread pool (which may often have a single thread) which makes it easy to schedule
      * tasks in the future and verify code is running on the executor.
      */
-    class ServiceAffinityExecutor(threadName: String, numThreads: Int) : AffinityExecutor,
+    open class ServiceAffinityExecutor(threadName: String, numThreads: Int) : AffinityExecutor,
             ThreadPoolExecutor(numThreads, numThreads, 0L, TimeUnit.MILLISECONDS, LinkedBlockingQueue<Runnable>()) {
+        companion object {
+            val logger = loggerFor<ServiceAffinityExecutor>()
+        }
+
         private val threads = Collections.synchronizedSet(HashSet<Thread>())
         private val uncaughtExceptionHandler = Thread.currentThread().uncaughtExceptionHandler
 
@@ -82,8 +84,11 @@ interface AffinityExecutor : Executor {
 
         override val isOnThread: Boolean get() = Thread.currentThread() in threads
 
-        companion object {
-            val logger = loggerFor<ServiceAffinityExecutor>()
+        override fun flush() {
+            do {
+                val f = SettableFuture.create<Boolean>()
+                execute { f.set(queue.isEmpty() && activeCount == 1) }
+            } while (!f.get())
         }
     }
 
@@ -110,12 +115,9 @@ interface AffinityExecutor : Executor {
         }
 
         val taskQueueSize: Int get() = commandQ.size
-    }
 
-    companion object {
-        val SAME_THREAD: AffinityExecutor = object : AffinityExecutor {
-            override val isOnThread: Boolean get() = true
-            override fun execute(command: Runnable) = command.run()
+        override fun flush() {
+            throw UnsupportedOperationException()
         }
     }
 }

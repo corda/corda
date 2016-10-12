@@ -6,7 +6,6 @@ import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.messaging.onNext
 import com.r3corda.core.messaging.send
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
-import java.util.concurrent.Executor
 
 /**
  * Abstract superclass for request messages sent to services which expect a reply.
@@ -22,9 +21,8 @@ interface ServiceRequestMessage {
  */
 fun <R : Any> MessagingService.sendRequest(topic: String,
                                            request: ServiceRequestMessage,
-                                           target: SingleMessageRecipient,
-                                           executor: Executor? = null): ListenableFuture<R> {
-    val responseFuture = onNext<R>(topic, request.sessionID, executor)
+                                           target: SingleMessageRecipient): ListenableFuture<R> {
+    val responseFuture = onNext<R>(topic, request.sessionID)
     send(topic, DEFAULT_SESSION_ID, request, target)
     return responseFuture
 }

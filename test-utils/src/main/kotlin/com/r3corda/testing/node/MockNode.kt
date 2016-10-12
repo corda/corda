@@ -16,6 +16,7 @@ import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.services.api.CheckpointStorage
+import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
 import com.r3corda.node.services.messaging.CordaRPCOps
@@ -26,6 +27,8 @@ import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.services.transactions.ValidatingNotaryService
+import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import com.r3corda.node.utilities.databaseTransaction
 import org.slf4j.Logger
 import java.nio.file.FileSystem
@@ -33,6 +36,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.util.*
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
@@ -50,7 +55,7 @@ import java.util.*
 class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   private val threadPerNode: Boolean = false,
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
-    private var counter = 0
+    private var nextNodeId = 0
     val filesystem: FileSystem = Jimfs.newFileSystem(unix())
     val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped)
 
@@ -80,21 +85,47 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
     }
 
+    /**
+     * Because this executor is shared, we need to be careful about nodes shutting it down.
+     */
+    private val sharedUserCount = AtomicInteger(0)
+    private val sharedServerThread =
+            object : ServiceAffinityExecutor("Mock network shared node thread", 1) {
+
+                override fun shutdown() {
+                    // We don't actually allow the shutdown of the network-wide shared thread pool until all references to
+                    // it have been shutdown.
+                    if (sharedUserCount.decrementAndGet() == 0) {
+                        super.shutdown()
+                    }
+                }
+
+                override fun awaitTermination(timeout: Long, unit: TimeUnit): Boolean {
+                    if (!isShutdown) {
+                        flush()
+                        return true
+                    } else {
+                        return super.awaitTermination(timeout, unit)
+                    }
+                }
+            }
+
     open class MockNode(config: NodeConfiguration, val mockNet: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                         advertisedServices: Set<ServiceInfo>, val id: Int, val keyPair: KeyPair?) : AbstractNode(config, networkMapAddr, advertisedServices, TestClock()) {
         override val log: Logger = loggerFor<MockNode>()
-        override val serverThread: com.r3corda.node.utilities.AffinityExecutor =
+        override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
-                    com.r3corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor("Mock node thread", 1)
-                else
-                    com.r3corda.node.utilities.AffinityExecutor.Companion.SAME_THREAD
+                    ServiceAffinityExecutor("Mock node thread", 1)
+                else {
+                    mockNet.sharedUserCount.incrementAndGet()
+                    mockNet.sharedServerThread
+                }
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
-
-        override fun makeMessagingService(): com.r3corda.node.services.api.MessagingServiceInternal {
+        override fun makeMessagingService(): MessagingServiceInternal {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
-            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, configuration.myLegalName,
+            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, serverThread, configuration.myLegalName,
                     persistenceTx = { body: () -> Unit -> databaseTransaction(database) { body() } }).start().get()
         }
 
@@ -159,7 +190,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                    start: Boolean = true, legalName: String? = null, keyPair: KeyPair? = null,
                    vararg advertisedServices: ServiceInfo): MockNode {
         val newNode = forcedID == -1
-        val id = if (newNode) counter++ else forcedID
+        val id = if (newNode) nextNodeId++ else forcedID
 
         val path = filesystem.getPath("/nodes/$id")
         if (newNode)

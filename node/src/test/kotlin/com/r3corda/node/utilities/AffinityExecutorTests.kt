@@ -3,7 +3,6 @@ package com.r3corda.node.utilities
 import org.junit.After
 import org.junit.Test
 import java.util.*
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
@@ -12,30 +11,30 @@ import kotlin.test.assertFails
 import kotlin.test.assertNotEquals
 
 class AffinityExecutorTests {
-    @Test fun `AffinityExecutor SAME_THREAD executes on calling thread`() {
-        assert(AffinityExecutor.SAME_THREAD.isOnThread)
-
-        run {
-            val thatThread = CompletableFuture<Thread>()
-            AffinityExecutor.SAME_THREAD.execute { thatThread.complete(Thread.currentThread()) }
-            assertEquals(Thread.currentThread(), thatThread.get())
-        }
-        run {
-            val thatThread = CompletableFuture<Thread>()
-            AffinityExecutor.SAME_THREAD.executeASAP { thatThread.complete(Thread.currentThread()) }
-            assertEquals(Thread.currentThread(), thatThread.get())
-        }
-    }
-
-    var executor: AffinityExecutor.ServiceAffinityExecutor? = null
+    var _executor: AffinityExecutor.ServiceAffinityExecutor? = null
+    val executor: AffinityExecutor.ServiceAffinityExecutor get() = _executor!!
 
     @After fun shutdown() {
-        executor?.shutdown()
+        _executor?.shutdown()
+        _executor = null
+    }
+
+    @Test fun `flush handles nested executes`() {
+        _executor = AffinityExecutor.ServiceAffinityExecutor("test4", 1)
+        var nestedRan = false
+        val latch = CountDownLatch(1)
+        executor.execute {
+            latch.await()
+            executor.execute { nestedRan = true }
+        }
+        latch.countDown()
+        executor.flush()
+        assert(nestedRan)
     }
 
     @Test fun `single threaded affinity executor runs on correct thread`() {
         val thisThread = Thread.currentThread()
-        val executor = AffinityExecutor.ServiceAffinityExecutor("test thread", 1)
+        _executor = AffinityExecutor.ServiceAffinityExecutor("test thread", 1)
         assert(!executor.isOnThread)
         assertFails { executor.checkOnThread() }
 
@@ -55,7 +54,7 @@ class AffinityExecutorTests {
     }
 
     @Test fun `pooled executor`() {
-        val executor = AffinityExecutor.ServiceAffinityExecutor("test2", 3)
+        _executor = AffinityExecutor.ServiceAffinityExecutor("test2", 3)
         assert(!executor.isOnThread)
 
         val latch = CountDownLatch(1)
@@ -89,7 +88,7 @@ class AffinityExecutorTests {
         // Run in a separate thread to avoid messing with any default exception handlers in the unit test thread.
         thread {
             Thread.currentThread().setUncaughtExceptionHandler { thread, throwable -> exception.set(throwable) }
-            val executor = AffinityExecutor.ServiceAffinityExecutor("test3", 1)
+            _executor = AffinityExecutor.ServiceAffinityExecutor("test3", 1)
             executor.execute {
                 throw Exception("foo")
             }

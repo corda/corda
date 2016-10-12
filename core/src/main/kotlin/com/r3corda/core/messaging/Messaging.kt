@@ -9,7 +9,6 @@ import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import java.time.Instant
 import java.util.*
-import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.annotation.concurrent.ThreadSafe
 
@@ -26,11 +25,8 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 interface MessagingService {
     /**
-     * The provided function will be invoked for each received message whose topic matches the given string, on the given
-     * executor.
-     *
-     * If no executor is received then the callback will run on threads provided by the messaging service, and the
-     * callback is expected to be thread safe as a result.
+     * The provided function will be invoked for each received message whose topic matches the given string.  The callback
+     * will run on threads provided by the messaging service, and the callback is expected to be thread safe as a result.
      *
      * The returned object is an opaque handle that may be used to un-register handlers later with [removeMessageHandler].
      * The handle is passed to the callback as well, to avoid race conditions whereby the callback wants to unregister
@@ -41,14 +37,11 @@ interface MessagingService {
      * @param sessionID identifier for the session the message is part of. For services listening before
      * a session is established, use [DEFAULT_SESSION_ID].
      */
-    fun addMessageHandler(topic: String = "", sessionID: Long = DEFAULT_SESSION_ID, executor: Executor? = null, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
+    fun addMessageHandler(topic: String = "", sessionID: Long = DEFAULT_SESSION_ID, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
 
     /**
-     * The provided function will be invoked for each received message whose topic and session matches, on the
-     * given executor.
-     *
-     * If no executor is received then the callback will run on threads provided by the messaging service, and the
-     * callback is expected to be thread safe as a result.
+     * The provided function will be invoked for each received message whose topic and session matches.  The callback
+     * will run on threads provided by the messaging service, and the callback is expected to be thread safe as a result.
      *
      * The returned object is an opaque handle that may be used to un-register handlers later with [removeMessageHandler].
      * The handle is passed to the callback as well, to avoid race conditions whereby the callback wants to unregister
@@ -56,7 +49,7 @@ interface MessagingService {
      *
      * @param topicSession identifier for the topic and session to listen for messages arriving on.
      */
-    fun addMessageHandler(topicSession: TopicSession, executor: Executor? = null, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
+    fun addMessageHandler(topicSession: TopicSession, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
 
     /**
      * Removes a handler given the object returned from [addMessageHandler]. The callback will no longer be invoked once
@@ -111,8 +104,8 @@ fun MessagingService.createMessage(topic: String, sessionID: Long = DEFAULT_SESS
  * @param sessionID identifier for the session the message is part of. For services listening before
  * a session is established, use [DEFAULT_SESSION_ID].
  */
-fun MessagingService.runOnNextMessage(topic: String, sessionID: Long, executor: Executor? = null, callback: (Message) -> Unit)
-        = runOnNextMessage(TopicSession(topic, sessionID), executor, callback)
+fun MessagingService.runOnNextMessage(topic: String, sessionID: Long, callback: (Message) -> Unit)
+        = runOnNextMessage(TopicSession(topic, sessionID), callback)
 
 /**
  * Registers a handler for the given topic and session that runs the given callback with the message and then removes
@@ -121,9 +114,9 @@ fun MessagingService.runOnNextMessage(topic: String, sessionID: Long, executor: 
  *
  * @param topicSession identifier for the topic and session to listen for messages arriving on.
  */
-inline fun MessagingService.runOnNextMessage(topicSession: TopicSession, executor: Executor? = null, crossinline callback: (Message) -> Unit) {
+inline fun MessagingService.runOnNextMessage(topicSession: TopicSession, crossinline callback: (Message) -> Unit) {
     val consumed = AtomicBoolean()
-    addMessageHandler(topicSession, executor) { msg, reg ->
+    addMessageHandler(topicSession) { msg, reg ->
         removeMessageHandler(reg)
         check(!consumed.getAndSet(true)) { "Called more than once" }
         check(msg.topicSession == topicSession) { "Topic/session mismatch: ${msg.topicSession} vs $topicSession" }
@@ -135,9 +128,9 @@ inline fun MessagingService.runOnNextMessage(topicSession: TopicSession, executo
  * Returns a [ListenableFuture] of the next message payload ([Message.data]) which is received on the given topic and sessionId.
  * The payload is deserilaized to an object of type [M]. Any exceptions thrown will be captured by the future.
  */
-fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long, executor: Executor? = null): ListenableFuture<M> {
+fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long): ListenableFuture<M> {
     val messageFuture = SettableFuture.create<M>()
-    runOnNextMessage(topic, sessionId, executor) { message ->
+    runOnNextMessage(topic, sessionId) { message ->
         messageFuture.catch {
             message.data.deserialize<M>()
         }

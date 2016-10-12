@@ -4,7 +4,6 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
-import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.messaging.SingleMessageRecipient
@@ -374,7 +373,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         val reg = NodeRegistration(info, instant.toEpochMilli(), type, expires)
         val legalIdentityKey = obtainLegalIdentityKey()
         val request = NetworkMapService.RegistrationRequest(reg.toWire(legalIdentityKey.private), net.myAddress)
-        return net.sendRequest(REGISTER_PROTOCOL_TOPIC, request, networkMapAddr, RunOnCallerThread)
+        return net.sendRequest(REGISTER_PROTOCOL_TOPIC, request, networkMapAddr)
     }
 
     protected open fun makeKeyManagementService(): KeyManagementService = PersistentKeyManagementService(partyKeys)
