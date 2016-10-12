@@ -242,17 +242,20 @@ Let's implement the ``Seller.call`` method. This will be run when the protocol i
       @Suspendable
       override fun call(): SignedTransaction {
           val partialTX: SignedTransaction = receiveAndCheckProposedTransaction()
-          val ourSignature: DigitalSignature.WithKey = signWithOurKey(partialTX)
-          val notarySignature = getNotarySignature(partialTX)
-          val result: SignedTransaction = sendSignatures(partialTX, ourSignature, notarySignature)
+          val ourSignature: DigitalSignature.WithKey = computeOurSignature(partialTX)
+          val allPartySignedTx = partialTX + ourSignature
+          val notarySignature = getNotarySignature(allPartySignedTx)
+          val result: SignedTransaction = sendSignatures(allPartySignedTx, ourSignature, notarySignature)
           return result
       }
 
 Here we see the outline of the procedure. We receive a proposed trade transaction from the buyer and check that it's
-valid. Then we sign with our own key and request a notary to assert with another signature that the
+valid. The buyer has already attached their signature before sending it. Then we calculate and attach our own signature so that the transaction is
+now signed by both the buyer and the seller. We then send this request to a notary to assert with another signature that the
 timestamp in the transaction (if any) is valid and there are no double spends, and send back both
-our signature and the notaries signature. Finally, we hand back to the code that invoked the protocol the
-finished transaction.
+our signature and the notaries signature. Note we should not send to the notary until all other required signatures have been appended
+as the notary may validate the signatures as well as verifying for itself the transactional integrity.
+Finally, we hand back to the code that invoked the protocol the finished transaction.
 
 Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
 
@@ -369,12 +372,12 @@ Here's the rest of the code:
 
    .. sourcecode:: kotlin
 
-      open fun signWithOurKey(partialTX: SignedTransaction) = myKeyPair.signWithECDSA(partialTX.txBits)
+      open fun computeOurSignature(partialTX: SignedTransaction) = myKeyPair.signWithECDSA(partialTX.txBits)
 
       @Suspendable
-      private fun sendSignatures(partialTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
+      private fun sendSignatures(allPartySignedTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
                                  notarySignature: DigitalSignature.LegallyIdentifiable): SignedTransaction {
-          val fullySigned = partialTX + ourSignature + notarySignature
+          val fullySigned = allPartySignedTX + notarySignature
           logger.trace { "Built finished transaction, sending back to secondary!" }
           send(otherSide, SignaturesFromSeller(ourSignature, notarySignature))
           return fullySigned

@@ -95,6 +95,9 @@
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#template-build-gradle">Template build.gradle</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#cordformation">Cordformation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
@@ -399,19 +402,22 @@ is a seller (<code class="docutils literal"><span class="pre">Seller::class</spa
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Suspendable</span>
 <span class="k">override</span> <span class="k">fun</span> <span class="nf">call</span><span class="p">():</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
     <span class="k">val</span> <span class="py">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">receiveAndCheckProposedTransaction</span><span class="p">()</span>
-    <span class="k">val</span> <span class="py">ourSignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span> <span class="p">=</span> <span class="n">signWithOurKey</span><span class="p">(</span><span class="n">partialTX</span><span class="p">)</span>
-    <span class="k">val</span> <span class="py">notarySignature</span> <span class="p">=</span> <span class="n">getNotarySignature</span><span class="p">(</span><span class="n">partialTX</span><span class="p">)</span>
-    <span class="k">val</span> <span class="py">result</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">sendSignatures</span><span class="p">(</span><span class="n">partialTX</span><span class="p">,</span> <span class="n">ourSignature</span><span class="p">,</span> <span class="n">notarySignature</span><span class="p">)</span>
+    <span class="k">val</span> <span class="py">ourSignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span> <span class="p">=</span> <span class="n">computeOurSignature</span><span class="p">(</span><span class="n">partialTX</span><span class="p">)</span>
+    <span class="k">val</span> <span class="py">allPartySignedTx</span> <span class="p">=</span> <span class="n">partialTX</span> <span class="p">+</span> <span class="n">ourSignature</span>
+    <span class="k">val</span> <span class="py">notarySignature</span> <span class="p">=</span> <span class="n">getNotarySignature</span><span class="p">(</span><span class="n">allPartySignedTx</span><span class="p">)</span>
+    <span class="k">val</span> <span class="py">result</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">sendSignatures</span><span class="p">(</span><span class="n">allPartySignedTx</span><span class="p">,</span> <span class="n">ourSignature</span><span class="p">,</span> <span class="n">notarySignature</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">result</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 </div>
 <p>Here we see the outline of the procedure. We receive a proposed trade transaction from the buyer and check that it&#8217;s
-valid. Then we sign with our own key and request a notary to assert with another signature that the
+valid. The buyer has already attached their signature before sending it. Then we calculate and attach our own signature so that the transaction is
+now signed by both the buyer and the seller. We then send this request to a notary to assert with another signature that the
 timestamp in the transaction (if any) is valid and there are no double spends, and send back both
-our signature and the notaries signature. Finally, we hand back to the code that invoked the protocol the
-finished transaction.</p>
+our signature and the notaries signature. Note we should not send to the notary until all other required signatures have been appended
+as the notary may validate the signatures as well as verifying for itself the transactional integrity.
+Finally, we hand back to the code that invoked the protocol the finished transaction.</p>
 <p>Let&#8217;s fill out the <code class="docutils literal"><span class="pre">receiveAndCheckProposedTransaction()</span></code> method.</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Suspendable</span>
@@ -515,12 +521,12 @@ leak will come later.</p>
 well (but having handled the fact that some signatures are missing ourselves).</p>
 <p>Here&#8217;s the rest of the code:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">open</span> <span class="k">fun</span> <span class="nf">signWithOurKey</span><span class="p">(</span><span class="n">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">)</span> <span class="p">=</span> <span class="n">myKeyPair</span><span class="p">.</span><span class="n">signWithECDSA</span><span class="p">(</span><span class="n">partialTX</span><span class="p">.</span><span class="n">txBits</span><span class="p">)</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">open</span> <span class="k">fun</span> <span class="nf">computeOurSignature</span><span class="p">(</span><span class="n">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">)</span> <span class="p">=</span> <span class="n">myKeyPair</span><span class="p">.</span><span class="n">signWithECDSA</span><span class="p">(</span><span class="n">partialTX</span><span class="p">.</span><span class="n">txBits</span><span class="p">)</span>
 
 <span class="n">@Suspendable</span>
-<span class="k">private</span> <span class="k">fun</span> <span class="nf">sendSignatures</span><span class="p">(</span><span class="n">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">,</span> <span class="n">ourSignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span><span class="p">,</span>
+<span class="k">private</span> <span class="k">fun</span> <span class="nf">sendSignatures</span><span class="p">(</span><span class="n">allPartySignedTX</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">,</span> <span class="n">ourSignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span><span class="p">,</span>
                            <span class="n">notarySignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span><span class="p">):</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
-    <span class="k">val</span> <span class="py">fullySigned</span> <span class="p">=</span> <span class="n">partialTX</span> <span class="p">+</span> <span class="n">ourSignature</span> <span class="p">+</span> <span class="n">notarySignature</span>
+    <span class="k">val</span> <span class="py">fullySigned</span> <span class="p">=</span> <span class="n">allPartySignedTX</span> <span class="p">+</span> <span class="n">notarySignature</span>
     <span class="n">logger</span><span class="p">.</span><span class="n">trace</span> <span class="p">{</span> <span class="s">&quot;Built finished transaction, sending back to secondary!&quot;</span> <span class="p">}</span>
     <span class="n">send</span><span class="p">(</span><span class="n">otherSide</span><span class="p">,</span> <span class="n">SignaturesFromSeller</span><span class="p">(</span><span class="n">ourSignature</span><span class="p">,</span> <span class="n">notarySignature</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">fullySigned</span>
