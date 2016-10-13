@@ -32,7 +32,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     val tx: WireTransaction by lazy { WireTransaction.deserialize(txBits) }
 
     /** A transaction ID is the hash of the [WireTransaction]. Thus adding or removing a signature does not change it. */
-    override val id: SecureHash get() = txBits.hash
+    override val id: SecureHash get() = tx.id
 
     class SignaturesMissingException(val missing: Set<PublicKey>, val descriptions: List<String>, override val id: SecureHash) : NamedByHash, SignatureException() {
         override fun toString(): String {

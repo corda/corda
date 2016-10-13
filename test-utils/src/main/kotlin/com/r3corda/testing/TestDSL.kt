@@ -250,7 +250,7 @@ data class TestLedgerDSLInterpreter private constructor (
             labelToOutputStateAndRefs[label] = wireTransaction.outRef(index)
         }
 
-        transactionMap[wireTransaction.serialized.hash] =
+        transactionMap[wireTransaction.id] =
                 WireTransactionWithLocation(transactionLabel, wireTransaction, transactionLocation)
 
         return wireTransaction
