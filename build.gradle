@@ -186,8 +186,6 @@ quasarScan.dependsOn('classes', 'core:classes', 'contracts:classes', 'node:class
 
 applicationDistribution.into("bin") {
     from(getAttachmentDemo)
-    from(getRateFixDemo)
-    from(getIRSDemo)
     from(getTraderDemo)
     fileMode = 0755
 }
