@@ -451,7 +451,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             // Ensure all required keys exist.
             obtainKeyPair(configuration.basedir, service.type.id + "-private-key", service.type.id + "-public", service.type.id)
         }
-        val stateMachineTransactionMappingStorage = InMemoryStateMachineRecordedTransactionMappingStorage()
+        val stateMachineTransactionMappingStorage = DBTransactionMappingStorage()
         return Pair(
                 constructStorageService(attachments, transactionStorage, stateMachineTransactionMappingStorage),
                 checkpointStorage
