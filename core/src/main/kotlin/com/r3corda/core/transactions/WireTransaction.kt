@@ -41,9 +41,9 @@ class WireTransaction(
 //    override val id: SecureHash get() = serialized.hash //todo remove
 
 
-    //We need cashed leaves hashed for Partial Merkle Tree calculation.
+    //We need cashed leaves hashes for id and Partial Merkle Tree calculation.
     @Volatile @Transient private var cachedLeavesHashes: List<SecureHash>? = null
-    val allLeavesHashes: List<SecureHash> get() = cachedLeavesHashes ?: calculateLeavesHashes().apply { cachedLeavesHashes }
+    val allLeavesHashes: List<SecureHash> get() = cachedLeavesHashes ?: calculateLeavesHashes().apply { cachedLeavesHashes = this }
 
     //TODO There is a problem with that it's failing 4 tests. Also in few places in code, there was reference to tx.serialized.hash
     //  instead of tx.id.

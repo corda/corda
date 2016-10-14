@@ -8,12 +8,17 @@ class MerkleTreeException(val reason: String) : Exception() {
     override fun toString() = "Partial Merkle Tree exception. Reason: $reason"
 }
 
+//For convenient binary tree calculations.
 fun <T: Number> log2(x: T): Double{
     return Math.log(x.toDouble())/Math.log(2.0)
 }
 
 /**
- * TODO description
+ * Building and verification of merkle branch. [branchHashes] - minimal set of hashes needed to check given subset of leaves.
+ * [includeBranch] - path telling us how tree was traversed and which hashes are included in branchHashes.
+ * [leavesSize] - number of all leaves in the original full Merkle tree.
+
+ * If we include l2 in a PMT. includeBranch will be equal to: [], branchHashes will be the hashes of: [] TODO examples
  */
 class PartialMerkleTree(
         val branchHashes: List<SecureHash>,
@@ -22,7 +27,7 @@ class PartialMerkleTree(
         val leavesSize: Int
 ){
     companion object{
-        private var hashIdx = 0
+        private var hashIdx = 0 //Counters used in tree verification.
         private var includeIdx = 0
 
         /**
@@ -45,7 +50,7 @@ class PartialMerkleTree(
          * [includeBranch] - gives a path of traversal in a tree: false indicates that traversal stopped at given node
          * and it's hash is stored.
          * For true, algorithm continued to the subtree starting at that node (unless it reached leaves' level).
-         * Hashes of leaves included in that partial tree are stored - that set is checked later durign verification stage.
+         * Hashes of leaves included in that partial tree are stored - that set is checked later during verification stage.
          */
         private fun whichNodesInBranch(
                 height: Int,
@@ -73,7 +78,7 @@ class PartialMerkleTree(
         /**
          *  Calculation of the node's hash using stack.
          *  Elements are pushed with an information about at what height they are in the tree.
-        */
+         */
         private fun treeHash(position: Int, height: Int, allLeavesHashes: List<SecureHash>): SecureHash {
             var (startIdx, endIdx) = getNodeLeafRange(height, position, allLeavesHashes.size)
             val stack = Stack<Pair<Int, SecureHash>>()
@@ -142,24 +147,26 @@ class PartialMerkleTree(
         //Ordering insensitive.
         if(leavesHashes.size != hashesUsed.size || leavesHashes.minus(hashesUsed).isNotEmpty())
             return false
-        return (verifyRoot == merkleRoot) //Correctness of hashes is checked by folding the partial tree.
+        //Correctness of hashes is checked by folding the partial tree and comparing roots.
+        return (verifyRoot == merkleRoot)
     }
 
-    //Traverses the tree in the same order as it was build consuming includeBranch and branchHashes.
+    //Traverses the tree in the same order as it was built consuming includeBranch and branchHashes.
     private fun verifyTree(height: Int, position: Int, hashesUsed: MutableList<SecureHash>): SecureHash {
         if(includeIdx >= includeBranch.size)
             throw MerkleTreeException("Included nodes list index overflow.")
         val isParent = includeBranch[includeIdx]
         includeIdx++
-        if (height == 0 || !isParent) {
+        if (height == 0 || !isParent) { //Hash included in a branch was reached.
             if(hashIdx >branchHashes.size)
                 throw MerkleTreeException("Branch hashes index overflow.")
             val hash = branchHashes[hashIdx]
             hashIdx++
+            //It means that this leaf was included as part of original partial tree. It's hash is stored for later comparision.
             if(height == 0 && isParent)
                 hashesUsed.add(hash)
             return hash
-        } else {
+        } else { //Continue tree verification to left and right nodes and hash them together.
             val left: SecureHash = verifyTree(height - 1, position * 2, hashesUsed)
             val right: SecureHash = when{
                 position * 2 + 1 < treeWidth(height-1, leavesSize) -> verifyTree(height - 1, position * 2 + 1, hashesUsed)

@@ -24,10 +24,13 @@ fun WireTransaction.buildFilteredTransaction(filterFuns: FilterFuns): MerkleTran
     return MerkleTransaction.buildMerkleTransaction(this, filterFuns)
 }
 
+/**
+ * All leaves hashes are needed for calculation of transaction id and partial merkle branches.
+ */
 fun WireTransaction.calculateLeavesHashes(): List<SecureHash>{
     val resultHashes = ArrayList<SecureHash>()
     val entries = listOf(inputs, outputs, attachments, commands)
-    entries.forEach { it.sortedBy { x-> x.hashCode() }.mapTo(resultHashes, { xy -> serializedHash(x) }) }
+    entries.forEach { it.sortedBy { x-> x.hashCode() }.mapTo(resultHashes, { x -> serializedHash(x) }) }
     return resultHashes
 }
 
@@ -35,14 +38,14 @@ fun SecureHash.hashConcat(other: SecureHash) = (this.bits + other.bits).sha256()
 fun <T: Any> serializedHash(x: T) = x.serialize().hash
 
 /**
- * Builds the tree from bottom to top. Takes as an argument list of leaves hashes.
+ * Builds the tree from bottom to top. Takes as an argument list of leaves hashes. Used later as WireTransaction id.
  */
 tailrec fun getMerkleRoot(
         lastHashList: List<SecureHash>): SecureHash{
     if(lastHashList.size < 1)
         throw MerkleTreeException("Cannot calculate Merkle root on empty hash list.")
     if(lastHashList.size == 1) {
-        return lastHashList[0]
+        return lastHashList[0] //Root reached.
     }
     else{
         val newLevelHashes: MutableList<SecureHash> = ArrayList()
@@ -76,7 +79,11 @@ class FilteredLeaves(
     }
 }
 
-open class FilterFuns(val filterInputs: (StateRef) -> Boolean = { false },
+/**
+ * Holds filter functions on transactions fields.
+ * Functions are used to build a partial tree only out of some subset of original transaction fields.
+ */
+class FilterFuns(val filterInputs: (StateRef) -> Boolean = { false },
                       val filterOutputs: (TransactionState<ContractState>) -> Boolean = { false },
                       val filterAttachments: (SecureHash) -> Boolean = { false },
                       val filterCommands: (Command) -> Boolean = { false }){

@@ -18,12 +18,7 @@ import com.r3corda.testing.*
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-
-//todo
-//verification - different root
-//tests failsWith
 
 class PartialMerkleTreeTest{
     val nodes = "abcdef"
@@ -72,16 +67,15 @@ class PartialMerkleTreeTest{
         assertEquals(node, mr)
     }
 
-//    @Test
-//    fun `building Merkle tree odd number of nodes`(){
-//        val odd = hashed.subList(0, 3)
-//        val h1 = hashed[0].hashConcat(hashed[1])
-//        val h2 = hashed[2].hashConcat(hashed[2])
-//        val mtl = MerkleTransaction.Companion.buildMerkleTree(odd)
-//        assertEquals(6, mtl.size)
-//        assertEquals(h1, mtl[3])
-//        assertEquals(h2, mtl[4])
-//    }
+    @Test
+    fun `building Merkle tree odd number of nodes`(){
+        val odd = hashed.subList(0, 3)
+        val h1 = hashed[0].hashConcat(hashed[1])
+        val h2 = hashed[2].hashConcat(hashed[2])
+        val expected = h1.hashConcat(h2)
+        val root = getMerkleRoot(odd)
+        assertEquals(root, expected)
+    }
 
     @Test
     fun `building Merkle tree for a transaction`(){
@@ -105,7 +99,11 @@ class PartialMerkleTreeTest{
         tx2.addCommand(Cash.Commands.Issue(0), ALICE_PUBKEY)
         tx2.addCommand(Cash.Commands.Issue(1), ALICE_PUBKEY)
         val wtx2 = tx2.toWireTransaction()
+        val mt1 = wtx1.buildFilteredTransaction(filterFuns)
+        val mt2 = wtx2.buildFilteredTransaction(filterFuns)
         assertEquals(wtx1.id, wtx2.id)
+        assert(mt1.verify(wtx1.id))
+        assert(mt2.verify(wtx2.id))
     }
 
     //Partial Merkle Tree building tests
@@ -140,5 +138,14 @@ class PartialMerkleTreeTest{
         val inclHashes = listOf(hashed[3], hashed[5], hashed[0])
         val pmt = PartialMerkleTree.build(includeLeaves, hashed)
         assertFalse(pmt.verify(inclHashes, root))
+    }
+
+    @Test
+    fun `verify Partial Merkle Tree - wrong root`(){
+        val includeLeaves = listOf(false, false, false, true, false, true)
+        val inclHashes = listOf(hashed[3], hashed[5])
+        val pmt = PartialMerkleTree.build(includeLeaves, hashed)
+        val wrongRoot = hashed[3].hashConcat(hashed[5])
+        assertFalse(pmt.verify(inclHashes, wrongRoot))
     }
 }
