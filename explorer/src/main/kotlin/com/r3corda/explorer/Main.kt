@@ -32,8 +32,8 @@ class Main : App() {
                 val aliceNodeFuture = startNode("Alice")
                 val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
 
-                val aliceNode = aliceNodeFuture.get()
-                val notaryNode = notaryNodeFuture.get()
+                val aliceNode = aliceNodeFuture.get().nodeInfo
+                val notaryNode = notaryNodeFuture.get().nodeInfo
 
                 Models.get<IdentityModel>(Main::class).notary.set(notaryNode.notaryIdentity)
                 Models.get<IdentityModel>(Main::class).myIdentity.set(aliceNode.legalIdentity)
