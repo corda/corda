@@ -5,12 +5,16 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.node.services.config.ConfigHelper
 import com.r3corda.node.services.config.FullNodeConfiguration
+import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.services.messaging.NodeMessagingClient
+import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.utilities.JsonSupport
 import com.typesafe.config.Config
@@ -25,6 +29,7 @@ import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.*
+import kotlin.concurrent.thread
 
 /**
  * This file defines a small "Driver" DSL for starting up nodes.
@@ -52,7 +57,7 @@ interface DriverDSLExposedInterface {
      * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
      * @return The [NodeInfo] of the started up node retrieved from the network map service.
      */
-    fun startNode(providedName: String? = null, advertisedServices: Set<ServiceInfo> = setOf()): Future<NodeInfo>
+    fun startNode(providedName: String? = null, advertisedServices: Set<ServiceInfo> = setOf()): Future<DriverNodeInfo>
 
     fun waitForAllNodesToFinish()
 }
@@ -61,6 +66,8 @@ interface DriverDSLInternalInterface : DriverDSLExposedInterface {
     fun start()
     fun shutdown()
 }
+
+data class DriverNodeInfo(val nodeInfo: NodeInfo, val messagingAddress: HostAndPort, val apiAddress: HostAndPort)
 
 sealed class PortAllocation {
     abstract fun nextPort(): Int
@@ -276,7 +283,7 @@ class DriverDSL(
         }
     }
 
-    override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>): Future<NodeInfo> {
+    override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>): Future<DriverNodeInfo> {
         val messagingAddress = portAllocation.nextHostAndPort()
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
