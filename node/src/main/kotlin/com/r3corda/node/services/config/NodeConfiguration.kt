@@ -9,6 +9,7 @@ import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.typesafe.config.Config
 import java.nio.file.Path
+import java.time.Clock
 import java.util.*
 
 interface NodeSSLConfiguration {
@@ -46,6 +47,7 @@ class FullNodeConfiguration(config: Config) : NodeConfiguration {
     val webAddress: HostAndPort by config
     val messagingServerAddress: HostAndPort? by config.getOrElse { null }
     val extraAdvertisedServiceIds: String by config
+    val clock: Clock by config
 
     fun createNode(): Node {
         val advertisedServices = mutableSetOf<ServiceInfo>()
@@ -56,7 +58,7 @@ class FullNodeConfiguration(config: Config) : NodeConfiguration {
         }
         if (networkMapAddress == null) advertisedServices.add(ServiceInfo(NetworkMapService.type))
         val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else NodeMessagingClient.makeNetworkMapAddress(networkMapAddress!!)
-        return Node(this, networkMapMessageAddress, advertisedServices)
+        return Node(this, networkMapMessageAddress, advertisedServices, clock)
     }
 }
 

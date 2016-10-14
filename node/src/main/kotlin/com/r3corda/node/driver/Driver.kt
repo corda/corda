@@ -9,6 +9,7 @@ import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceInfo
+import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.config.ConfigHelper
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingComponent
@@ -27,12 +28,13 @@ import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
+import java.time.Clock
 import java.util.*
 import java.util.concurrent.*
 import kotlin.concurrent.thread
 
 /**
- * This file defines a small "Driver" DSL for starting up nodes.
+ * This file defines a small "Driver" DSL for starting up nodes that is only intended for development, demos and tests.
  *
  * The process the driver is run in behaves as an Artemis client and starts up other processes. Namely it first
  * bootstraps a network map service to allow the specified nodes to connect to, then starts up the actual nodes.
@@ -113,6 +115,7 @@ fun <A> driver(
         baseDirectory: String = "build/${getTimestampAsDirectoryName()}",
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        clock: Clock = NodeClock(),
         isDebug: Boolean = false,
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
@@ -120,6 +123,7 @@ fun <A> driver(
                 portAllocation = portAllocation,
                 debugPortAllocation = debugPortAllocation,
                 baseDirectory = baseDirectory,
+                clock = clock,
                 isDebug = isDebug
         ),
         coerce = { it },
@@ -199,10 +203,11 @@ fun <A> poll(pollName: String, pollIntervalMs: Long = 500, warnCount: Int = 120,
     return result
 }
 
-class DriverDSL(
+open class DriverDSL(
         val portAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
         val baseDirectory: String,
+        val clock: Clock,
         val isDebug: Boolean
 ) : DriverDSLInternalInterface {
     private val networkMapName = "NetworkMapService"
@@ -326,6 +331,7 @@ class DriverDSL(
                 configOverrides = mapOf(
                         "myLegalName" to networkMapName,
                         "basedir" to Paths.get(nodeDirectory).normalize().toString(),
+                        "clock" to clock,
                         "artemisAddress" to networkMapAddress.toString(),
                         "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to ""
