@@ -66,7 +66,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         )
         ) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Currency>>>
-                    = tx.groupStates<State, Issued<Currency>> { it.issuanceDef }
+                    = tx.groupStates<State, Issued<Currency>> { it.amount.token }
         }
 
         class Issue : AbstractIssue<State, Commands, Currency>(
@@ -90,16 +90,14 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: PublicKey)
         : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
-        override val deposit = amount.token.issuer
-        override val exitKeys = setOf(owner, deposit.party.owningKey)
+        override val exitKeys = setOf(owner, amount.token.issuer.party.owningKey)
         override val contract = CASH_PROGRAM_ID
-        override val issuanceDef = amount.token
         override val participants = listOf(owner)
 
         override fun move(newAmount: Amount<Issued<Currency>>, newOwner: PublicKey): FungibleAsset<Currency>
                 = copy(amount = amount.copy(newAmount.quantity, amount.token), owner = newOwner)
 
-        override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
+        override fun toString() = "${Emoji.bagOfCash}Cash($amount at ${amount.token.issuer} owned by ${owner.toStringShort()})"
 
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
 
@@ -197,8 +195,8 @@ fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>): Amount<Is
 }
 
 fun Cash.State.ownedBy(owner: PublicKey) = copy(owner = owner)
-fun Cash.State.issuedBy(party: Party) = copy(amount = Amount(amount.quantity, issuanceDef.copy(issuer = deposit.copy(party = party))))
-fun Cash.State.issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, issuanceDef.copy(issuer = deposit)))
+fun Cash.State.issuedBy(party: Party) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party))))
+fun Cash.State.issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = deposit)))
 fun Cash.State.withDeposit(deposit: PartyAndReference): Cash.State = copy(amount = amount.copy(token = amount.token.copy(issuer = deposit)))
 
 infix fun Cash.State.`owned by`(owner: PublicKey) = ownedBy(owner)

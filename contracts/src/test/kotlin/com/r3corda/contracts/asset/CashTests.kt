@@ -43,7 +43,7 @@ class CashTests {
     val outState = issuerInState.copy(owner = DUMMY_PUBKEY_2)
 
     fun Cash.State.editDepositRef(ref: Byte) = copy(
-            amount = Amount(amount.quantity, token = amount.token.copy(deposit.copy(reference = OpaqueBytes.of(ref))))
+            amount = Amount(amount.quantity, token = amount.token.copy(amount.token.issuer.copy(reference = OpaqueBytes.of(ref))))
     )
 
     lateinit var services: MockServices
@@ -173,7 +173,7 @@ class CashTests {
         assertTrue(tx.inputs.isEmpty())
         val s = tx.outputs[0].data as Cash.State
         assertEquals(100.DOLLARS `issued by` MINI_CORP.ref(12, 34), s.amount)
-        assertEquals(MINI_CORP, s.deposit.party)
+        assertEquals(MINI_CORP, s.amount.token.issuer.party)
         assertEquals(DUMMY_PUBKEY_1, s.owner)
         assertTrue(tx.commands[0].value is Cash.Commands.Issue)
         assertEquals(MINI_CORP_PUBKEY, tx.commands[0].signers[0])
@@ -650,22 +650,22 @@ class CashTests {
         val oneThousandDollarsFromMini = Cash.State(1000.DOLLARS `issued by` MINI_CORP.ref(3), MEGA_CORP_PUBKEY)
 
         // Obviously it must be possible to aggregate states with themselves
-        assertEquals(fiveThousandDollarsFromMega.issuanceDef, fiveThousandDollarsFromMega.issuanceDef)
+        assertEquals(fiveThousandDollarsFromMega.amount.token, fiveThousandDollarsFromMega.amount.token)
 
         // Owner is not considered when calculating whether it is possible to aggregate states
-        assertEquals(fiveThousandDollarsFromMega.issuanceDef, twoThousandDollarsFromMega.issuanceDef)
+        assertEquals(fiveThousandDollarsFromMega.amount.token, twoThousandDollarsFromMega.amount.token)
 
         // States cannot be aggregated if the deposit differs
-        assertNotEquals(fiveThousandDollarsFromMega.issuanceDef, oneThousandDollarsFromMini.issuanceDef)
-        assertNotEquals(twoThousandDollarsFromMega.issuanceDef, oneThousandDollarsFromMini.issuanceDef)
+        assertNotEquals(fiveThousandDollarsFromMega.amount.token, oneThousandDollarsFromMini.amount.token)
+        assertNotEquals(twoThousandDollarsFromMega.amount.token, oneThousandDollarsFromMini.amount.token)
 
         // States cannot be aggregated if the currency differs
-        assertNotEquals(oneThousandDollarsFromMini.issuanceDef,
-                Cash.State(1000.POUNDS `issued by` MINI_CORP.ref(3), MEGA_CORP_PUBKEY).issuanceDef)
+        assertNotEquals(oneThousandDollarsFromMini.amount.token,
+                Cash.State(1000.POUNDS `issued by` MINI_CORP.ref(3), MEGA_CORP_PUBKEY).amount.token)
 
         // States cannot be aggregated if the reference differs
-        assertNotEquals(fiveThousandDollarsFromMega.issuanceDef, (fiveThousandDollarsFromMega `with deposit` defaultIssuer).issuanceDef)
-        assertNotEquals((fiveThousandDollarsFromMega `with deposit` defaultIssuer).issuanceDef, fiveThousandDollarsFromMega.issuanceDef)
+        assertNotEquals(fiveThousandDollarsFromMega.amount.token, (fiveThousandDollarsFromMega `with deposit` defaultIssuer).amount.token)
+        assertNotEquals((fiveThousandDollarsFromMega `with deposit` defaultIssuer).amount.token, fiveThousandDollarsFromMega.amount.token)
     }
 
     @Test

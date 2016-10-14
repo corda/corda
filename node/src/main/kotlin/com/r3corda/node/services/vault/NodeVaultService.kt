@@ -147,7 +147,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         var acceptableCoins = run {
             val ofCurrency = assetsStates.filter { it.state.data.amount.token.product == currency }
             if (onlyFromParties != null)
-                ofCurrency.filter { it.state.data.deposit.party in onlyFromParties }
+                ofCurrency.filter { it.state.data.amount.token.issuer.party in onlyFromParties }
             else
                 ofCurrency
         }
@@ -160,13 +160,13 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, amount)
         val takeChangeFrom = gathered.firstOrNull()
         val change = if (takeChangeFrom != null && gatheredAmount > amount) {
-            Amount(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
+            Amount(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.amount.token)
         } else {
             null
         }
         val keysUsed = gathered.map { it.state.data.owner }.toSet()
 
-        val states = gathered.groupBy { it.state.data.deposit }.map {
+        val states = gathered.groupBy { it.state.data.amount.token.issuer }.map {
             val coins = it.value
             val totalAmount = coins.map { it.state.data.amount }.sumOrThrow()
             deriveState(coins.first().state, totalAmount, to)

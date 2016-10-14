@@ -245,7 +245,7 @@ class ObligationTests {
         val obligationAliceToBob = oneMillionDollars.OBLIGATION between Pair(ALICE, BOB_PUBKEY)
         val obligationBobToAlice = oneMillionDollars.OBLIGATION between Pair(BOB, ALICE_PUBKEY)
         val tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-            Obligation<Currency>().generatePaymentNetting(this, obligationAliceToBob.issuanceDef, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
+            Obligation<Currency>().generatePaymentNetting(this, obligationAliceToBob.amount.token, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
             signWith(ALICE_KEY)
             signWith(BOB_KEY)
             signWith(DUMMY_NOTARY_KEY)
@@ -259,7 +259,7 @@ class ObligationTests {
         val obligationAliceToBob = oneMillionDollars.OBLIGATION between Pair(ALICE, BOB_PUBKEY)
         val obligationBobToAlice = (2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION between Pair(BOB, ALICE_PUBKEY)
         val tx = TransactionType.General.Builder(null).apply {
-            Obligation<Currency>().generatePaymentNetting(this, obligationAliceToBob.issuanceDef, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
+            Obligation<Currency>().generatePaymentNetting(this, obligationAliceToBob.amount.token, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
             signWith(ALICE_KEY)
             signWith(BOB_KEY)
         }.toSignedTransaction().tx
@@ -453,7 +453,7 @@ class ObligationTests {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Alice's $1,000,000")
                 output("Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB_PUBKEY }
-                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.issuanceDef)) }
+                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
                 this.verifies()
             }
@@ -467,7 +467,7 @@ class ObligationTests {
                 input(500000.DOLLARS.CASH `issued by` defaultIssuer `owned by` ALICE_PUBKEY)
                 output("Alice's $500,000 obligation to Bob") { halfAMillionDollars.OBLIGATION between Pair(ALICE, BOB_PUBKEY) }
                 output("Bob's $500,000") { 500000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB_PUBKEY }
-                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.issuanceDef)) }
+                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
                 this.verifies()
             }
@@ -480,7 +480,7 @@ class ObligationTests {
                 input(defaultedObligation) // Alice's defaulted $1,000,000 obligation to Bob
                 input(1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` ALICE_PUBKEY)
                 output("Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB_PUBKEY }
-                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.issuanceDef)) }
+                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
                 this `fails with` "all inputs are in the normal state"
             }
@@ -493,7 +493,7 @@ class ObligationTests {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Alice's $1,000,000")
                 output("Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB_PUBKEY }
-                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.issuanceDef)) }
+                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
                 this `fails with` "amount in settle command"
             }
@@ -517,7 +517,7 @@ class ObligationTests {
                 input("Alice's 1 FCOJ obligation to Bob")
                 input("Alice's 1 FCOJ")
                 output("Bob's 1 FCOJ") { CommodityContract.State(oneUnitFcoj, BOB_PUBKEY) }
-                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneUnitFcoj.quantity, oneUnitFcojObligation.issuanceDef)) }
+                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneUnitFcoj.quantity, oneUnitFcojObligation.amount.token)) }
                 command(ALICE_PUBKEY) { CommodityContract.Commands.Move(Obligation<Commodity>().legalContractReference) }
                 verifies()
             }
@@ -648,13 +648,13 @@ class ObligationTests {
             output { outState.copy(quantity = inState.quantity - 200.DOLLARS.quantity) }
 
             tweak {
-                command(DUMMY_PUBKEY_1) { Obligation.Commands.Exit(Amount(100.DOLLARS.quantity, inState.issuanceDef)) }
+                command(DUMMY_PUBKEY_1) { Obligation.Commands.Exit(Amount(100.DOLLARS.quantity, inState.amount.token)) }
                 command(DUMMY_PUBKEY_1) { Obligation.Commands.Move() }
                 this `fails with` "the amounts balance"
             }
 
             tweak {
-                command(DUMMY_PUBKEY_1) { Obligation.Commands.Exit(Amount(200.DOLLARS.quantity, inState.issuanceDef)) }
+                command(DUMMY_PUBKEY_1) { Obligation.Commands.Exit(Amount(200.DOLLARS.quantity, inState.amount.token)) }
                 this `fails with` "required com.r3corda.core.contracts.FungibleAsset.Commands.Move command"
 
                 tweak {
@@ -679,10 +679,10 @@ class ObligationTests {
 
             this `fails with` "for reference [00] at issuer MegaCorp the amounts balance"
 
-            command(DUMMY_PUBKEY_1) { Obligation.Commands.Exit(Amount(200.DOLLARS.quantity, inState.issuanceDef.copy(product = megaCorpDollarSettlement))) }
+            command(DUMMY_PUBKEY_1) { Obligation.Commands.Exit(Amount(200.DOLLARS.quantity, inState.amount.token.copy(product = megaCorpDollarSettlement))) }
             this `fails with` "for reference [00] at issuer MegaCorp the amounts balance"
 
-            command(DUMMY_PUBKEY_1) { Obligation.Commands.Exit(Amount(200.POUNDS.quantity, inState.issuanceDef.copy(product = megaCorpPoundSettlement))) }
+            command(DUMMY_PUBKEY_1) { Obligation.Commands.Exit(Amount(200.POUNDS.quantity, inState.amount.token.copy(product = megaCorpPoundSettlement))) }
             this.verifies()
         }
     }
