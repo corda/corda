@@ -1,5 +1,6 @@
 apply plugin: 'kotlin'
 apply plugin: QuasarPlugin
+apply plugin: DefaultPublishTasks
 
 repositories {
     mavenLocal()
@@ -33,6 +34,18 @@ sourceSets {
     test {
         resources {
             srcDir "../config/test"
+        }
+    }
+}
+
+publishing {
+    publications {
+        clients(MavenPublication) {
+            from components.java
+            artifactId 'client'
+
+            artifact sourceJar
+            artifact javadocJar
         }
     }
 }
