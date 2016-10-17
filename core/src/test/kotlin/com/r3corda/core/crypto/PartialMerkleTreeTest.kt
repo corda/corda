@@ -22,13 +22,9 @@ import kotlin.test.assertFalse
 
 class PartialMerkleTreeTest{
     val nodes = "abcdef"
-    val hashed: MutableList<SecureHash> = ArrayList()
+    val hashed = nodes.map { it.serialize().sha256() }
     val root = SecureHash.Companion.parse("F6D8FB3720114F8D040D64F633B0D9178EB09A55AA7D62FAE1A070D1BF561051")
-    var firstTwo:SecureHash
-    init {
-        nodes.mapTo(hashed, { it.serialize().sha256() })
-        firstTwo = hashed[0].hashConcat(hashed[1])
-    }
+
     private fun makeTX() = TransactionType.General.Builder(DUMMY_NOTARY).withItems(
             1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY)
 
@@ -54,7 +50,7 @@ class PartialMerkleTreeTest{
 
     //Building full Merkle Tree tests.
     @Test
-    fun `building not full Merkle tree with 6 nodes`(){
+    fun `building Merkle tree with 6 nodes - no rightmost nodes`(){
         assertEquals(6, hashed.size)
         val mr = getMerkleRoot(hashed)
         assertEquals(root, mr)
