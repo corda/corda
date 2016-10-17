@@ -3,10 +3,12 @@ package com.r3corda.core.testing
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.bufferUntilSubscribed
 import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.serialization.SingletonSerializeAsToken
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
@@ -103,6 +105,11 @@ open class InMemoryVaultService(protected val services: ServiceHub) : SingletonS
         }
         return changedVault
     }
+
+    override fun generateSpend(tx: TransactionBuilder, amount: Amount<Currency>, to: PublicKey, onlyFromParties: Set<Party>?): Pair<TransactionBuilder, List<PublicKey>> {
+        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
 
     private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>): Boolean {
         return if (state is OwnableState) {

@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.transactions.WireTransaction
 import rx.Observable
 import java.security.KeyPair
@@ -154,6 +155,15 @@ interface VaultService {
         }
         return future
     }
+
+    /**
+     * Fungible Asset operations
+     **/
+    @Throws(InsufficientBalanceException::class)
+    fun generateSpend(tx: TransactionBuilder,
+                      amount: Amount<Currency>,
+                      to: PublicKey,
+                      onlyFromParties: Set<Party>? = null): Pair<TransactionBuilder, List<PublicKey>>
 }
 
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)

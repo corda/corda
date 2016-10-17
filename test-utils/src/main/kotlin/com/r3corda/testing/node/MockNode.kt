@@ -27,6 +27,7 @@ import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.services.transactions.ValidatingNotaryService
+import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import com.r3corda.node.utilities.databaseTransaction
@@ -139,7 +140,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
 
-        override fun makeVaultService(): VaultService = InMemoryVaultService(services)
+        override fun makeVaultService(): VaultService = NodeVaultService(services)
 
         override fun makeKeyManagementService(): KeyManagementService = E2ETestKeyManagementService(partyKeys)
 

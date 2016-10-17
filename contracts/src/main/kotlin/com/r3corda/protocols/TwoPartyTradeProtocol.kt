@@ -239,26 +239,27 @@ object TwoPartyTradeProtocol {
 
         private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
             val ptx = TransactionType.General.Builder(notary)
-            // Add input and output states for the movement of cash, by using the Cash contract to generate the states.
-            val vault = serviceHub.vaultService.currentVault
-            val cashStates = vault.statesOfType<Cash.State>()
-            val cashSigningPubKeys = Cash().generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey, cashStates)
+
+            // Add input and output states for the movement of cash, by using the Cash contract to generate the states
+            val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey)
+
             // Add inputs/outputs/a command for the movement of the asset.
-            ptx.addInputState(tradeRequest.assetForSale)
+            tx.addInputState(tradeRequest.assetForSale)
+
             // Just pick some new public key for now. This won't be linked with our identity in any way, which is what
             // we want for privacy reasons: the key is here ONLY to manage and control ownership, it is not intended to
             // reveal who the owner actually is. The key management service is expected to derive a unique key from some
             // initial seed in order to provide privacy protection.
             val freshKey = serviceHub.keyManagementService.freshKey()
             val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public)
-            ptx.addOutputState(state, tradeRequest.assetForSale.state.notary)
-            ptx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
+            tx.addOutputState(state, tradeRequest.assetForSale.state.notary)
+            tx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
 
             // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
             // to have one.
             val currentTime = serviceHub.clock.instant()
-            ptx.setTime(currentTime, 30.seconds)
-            return Pair(ptx, cashSigningPubKeys)
+            tx.setTime(currentTime, 30.seconds)
+            return Pair(tx, cashSigningPubKeys)
         }
     }
 }

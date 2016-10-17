@@ -88,14 +88,18 @@ class VaultWithCashTest {
                 Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
                 signWith(MEGA_CORP_KEY)
             }.toSignedTransaction()
-            val myOutput = usefulTX.toLedgerTransaction(services).outRef<Cash.State>(0)
+
+            assertNull(vault.cashBalances[USD])
+            services.recordTransactions(usefulTX)
 
             // A tx that spends our money.
             val spendTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                Cash().generateSpend(this, 80.DOLLARS, BOB_PUBKEY, listOf(myOutput))
+                vault.generateSpend(this, 80.DOLLARS, BOB_PUBKEY)
                 signWith(freshKey)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
+
+            assertEquals(100.DOLLARS, vault.cashBalances[USD])
 
             // A tx that doesn't send us anything.
             val irrelevantTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
@@ -104,14 +108,11 @@ class VaultWithCashTest {
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
 
-            assertNull(services.vaultService.cashBalances[USD])
-            services.recordTransactions(usefulTX)
-            assertEquals(100.DOLLARS, services.vaultService.cashBalances[USD])
             services.recordTransactions(irrelevantTX)
-            assertEquals(100.DOLLARS, services.vaultService.cashBalances[USD])
+            assertEquals(100.DOLLARS, vault.cashBalances[USD])
             services.recordTransactions(spendTX)
 
-            assertEquals(20.DOLLARS, services.vaultService.cashBalances[USD])
+            assertEquals(20.DOLLARS, vault.cashBalances[USD])
 
             // TODO: Flesh out these tests as needed.
         }

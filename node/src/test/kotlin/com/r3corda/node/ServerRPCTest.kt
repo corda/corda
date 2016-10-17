@@ -7,7 +7,6 @@ import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.transactions.SignedTransaction
-import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.node.internal.ServerRPCOps
 import com.r3corda.node.services.messaging.StateMachineUpdate
 import com.r3corda.node.services.network.NetworkMapService
