@@ -13,17 +13,9 @@ import com.r3corda.node.services.api.ServiceHubInternal
  */
 class ScheduledActivityObserver(val services: ServiceHubInternal) {
     init {
-        // TODO: Need to consider failure scenarios.  This needs to run if the TX is successfully recorded
         services.vaultService.updates.subscribe { update ->
             update.consumed.forEach { services.schedulerService.unscheduleStateActivity(it) }
             update.produced.forEach { scheduleStateActivity(it, services.protocolLogicRefFactory) }
-        }
-
-        // In the short term, to get restart-able IRS demo, re-initialise from vault state
-        // TODO: there's a race condition here.  We need to move persistence into the scheduler but that is a bigger
-        //       change so I want to revisit as a distinct branch/PR.
-        for (state in services.vaultService.currentVault.statesOfType<SchedulableState>()) {
-            scheduleStateActivity(state, services.protocolLogicRefFactory)
         }
     }
 

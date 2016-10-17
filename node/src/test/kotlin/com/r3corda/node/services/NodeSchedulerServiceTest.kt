@@ -17,12 +17,14 @@ import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.node.utilities.configureDatabase
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.ALICE_KEY
 import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.testing.node.MockKeyManagementService
 import com.r3corda.testing.node.TestClock
 import com.r3corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
+import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -55,6 +57,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     lateinit var scheduler: NodeSchedulerService
     lateinit var smmExecutor: AffinityExecutor.ServiceAffinityExecutor
     lateinit var dataSource: Closeable
+    lateinit var database: Database
     lateinit var countDown: CountDownLatch
     lateinit var smmHasRemovedAllProtocols: CountDownLatch
 
@@ -84,17 +87,20 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         calls = 0
         val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
         dataSource = dataSourceAndDatabase.first
-        val database = dataSourceAndDatabase.second
-        scheduler = NodeSchedulerService(database, services, factory, schedulerGatedExecutor)
-        smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
-        val mockSMM = StateMachineManager(services, listOf(services), PerFileCheckpointStorage(fs.getPath("checkpoints")), smmExecutor, database)
-        mockSMM.changes.subscribe { change ->
-            if (change.addOrRemove == AddOrRemove.REMOVE && mockSMM.allStateMachines.isEmpty()) {
-                smmHasRemovedAllProtocols.countDown()
+        database = dataSourceAndDatabase.second
+        databaseTransaction(database) {
+            scheduler = NodeSchedulerService(database, services, factory, schedulerGatedExecutor)
+            smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
+            val mockSMM = StateMachineManager(services, listOf(services, scheduler), PerFileCheckpointStorage(fs.getPath("checkpoints")), smmExecutor, database)
+            mockSMM.changes.subscribe { change ->
+                if (change.addOrRemove == AddOrRemove.REMOVE && mockSMM.allStateMachines.isEmpty()) {
+                    smmHasRemovedAllProtocols.countDown()
+                }
             }
+            mockSMM.start()
+            services.smm = mockSMM
+            scheduler.start()
         }
-        mockSMM.start()
-        services.smm = mockSMM
     }
 
     @After
@@ -233,7 +239,9 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         scheduleTX(time, 3)
 
         backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }
-        scheduler.unscheduleStateActivity(scheduledRef1!!.ref)
+        databaseTransaction(database) {
+            scheduler.unscheduleStateActivity(scheduledRef1!!.ref)
+        }
         testClock.advanceBy(1.days)
         countDown.await()
         assertThat(calls).isEqualTo(3)
@@ -249,7 +257,9 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }
         assertThat(calls).isEqualTo(0)
 
-        scheduler.unscheduleStateActivity(scheduledRef1!!.ref)
+        databaseTransaction(database) {
+            scheduler.unscheduleStateActivity(scheduledRef1!!.ref)
+        }
         testClock.advanceBy(1.days)
         assertThat(calls).isEqualTo(0)
         backgroundExecutor.shutdown()
@@ -270,7 +280,9 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
             services.recordTransactions(usefulTX)
             scheduledRef = ScheduledStateRef(StateRef(txHash, 0), state.instant)
-            scheduler.scheduleStateActivity(scheduledRef!!)
+            databaseTransaction(database) {
+                scheduler.scheduleStateActivity(scheduledRef!!)
+            }
         }
         return scheduledRef
     }
