@@ -350,7 +350,11 @@ class TwoPartyTradeProtocolTests {
             net.runNetwork() // Clear network map registration messages
 
             val aliceTxStream = aliceNode.storage.validatedTransactions.track().second
-            val aliceTxMappings = aliceNode.storage.stateMachineRecordedTransactionMapping.track().second
+            // TODO: Had to put this temp val here to avoid compiler crash. Put back inside [databaseTransaction] if the compiler stops crashing.
+            val aliceMappingsStorage = aliceNode.storage.stateMachineRecordedTransactionMapping
+            val aliceTxMappings = databaseTransaction(aliceNode.database) {
+                aliceMappingsStorage.track().second
+            }
             val aliceSmId = runBuyerAndSeller("alice's paper".outputStateAndRef()).sellerId
 
             net.runNetwork()
