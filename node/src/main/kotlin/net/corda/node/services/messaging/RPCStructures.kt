@@ -3,6 +3,7 @@
 package net.corda.node.services.messaging
 
 import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
@@ -13,6 +14,7 @@ import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.guava.*
 import net.corda.contracts.asset.Cash
 import net.corda.core.ErrorOr
+import net.corda.core.TransientProperty
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
@@ -31,11 +33,13 @@ import net.corda.node.services.User
 import net.corda.protocols.CashProtocolResult
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
+import org.apache.activemq.artemis.api.core.SimpleString
 import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Notification
 import rx.Observable
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
@@ -198,6 +202,8 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(ServiceType.parse("ab").javaClass)
         register(WorldCoordinate::class.java)
         register(HostAndPort::class.java)
+        register(SimpleString::class.java)
+        register(ServiceEntry::class.java)
         // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
         register(IllegalArgumentException::class.java)
         // Kryo couldn't serialize Collections.unmodifiableCollection in Throwable correctly, causing null pointer exception when try to access the deserialize object.
@@ -207,6 +213,8 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(Collections.unmodifiableList(emptyList<String>()).javaClass)
         register(PermissionException::class.java)
         register(ProtocolHandle::class.java)
+        register(KryoException::class.java)
+        register(StringBuffer::class.java)
     }
 
     // Helper method, attempt to reduce boiler plate code

@@ -170,5 +170,7 @@ sealed class NotaryError {
 
     class TransactionInvalid : NotaryError()
 
-    class SignaturesMissing(val missingSigners: Set<PublicKeyTree>) : NotaryError()
+    class SignaturesMissing(val missingSigners: Set<PublicKeyTree>) : NotaryError() {
+        override fun toString() = "Missing signatures from: ${missingSigners.map { it.toBase58String() }}"
+    }
 }

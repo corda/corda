@@ -159,4 +159,3 @@ data class ProtocolHandle<A>(
         val progress: Observable<ProgressTracker.Change>,
         val returnValue: Observable<A>
 )
-
