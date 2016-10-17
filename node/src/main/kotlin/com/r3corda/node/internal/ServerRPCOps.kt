@@ -5,7 +5,9 @@ import com.r3corda.contracts.asset.InsufficientBalanceException
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.toStringShort
+import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
+import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.transactions.SignedTransaction
@@ -32,6 +34,10 @@ class ServerRPCOps(
         val database: Database
 ) : CordaRPCOps {
     override val protocolVersion: Int = 0
+
+    override fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>> {
+        return services.networkMapCache.track()
+    }
 
     override fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>> {
         return databaseTransaction(database) {
@@ -153,5 +159,4 @@ class ServerRPCOps(
 
     class InputStateRefResolveFailed(stateRefs: List<StateRef>) :
             Exception("Failed to resolve input StateRefs $stateRefs")
-
 }

@@ -8,8 +8,8 @@ import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import org.slf4j.LoggerFactory
-import java.security.PublicKey
 import rx.Observable
+import java.security.PublicKey
 
 /**
  * A network map contains lists of nodes on the network along with information about their identity keys, services
@@ -23,7 +23,7 @@ interface NetworkMapCache {
     }
 
     enum class MapChangeType { Added, Removed, Modified }
-    data class MapChange(val node: NodeInfo, val prevNodeInfo: NodeInfo?, val type: MapChangeType )
+    data class MapChange(val node: NodeInfo, val prevNodeInfo: NodeInfo?, val type: MapChangeType)
 
     /** A list of nodes that advertise a network map service */
     val networkMapNodes: List<NodeInfo>
@@ -42,6 +42,12 @@ interface NetworkMapCache {
      * elsewhere.
      */
     val regulators: List<NodeInfo>
+
+    /**
+     * Atomically get the current party nodes and a stream of updates. Note that the Observable buffers updates until the
+     * first subscriber is registered so as to avoid racing with early updates.
+     */
+    fun track(): Pair<List<NodeInfo>, Observable<MapChange>>
 
     /**
      * Get a copy of all nodes in the map.

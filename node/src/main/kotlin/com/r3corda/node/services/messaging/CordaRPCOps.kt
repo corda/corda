@@ -3,6 +3,8 @@ package com.r3corda.node.services.messaging
 import com.r3corda.core.contracts.ClientToServiceCommand
 import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.StateAndRef
+import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
@@ -102,6 +104,12 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun stateMachineRecordedTransactionMapping(): Pair<List<StateMachineTransactionMapping>, Observable<StateMachineTransactionMapping>>
+
+    /**
+     * Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.
+     */
+    @RPCReturnsObservables
+    fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>>
 
     /**
      * Executes the given command, possibly triggering cash creation etc.

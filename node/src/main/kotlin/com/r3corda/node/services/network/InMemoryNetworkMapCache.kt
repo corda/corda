@@ -3,6 +3,7 @@ package com.r3corda.node.services.network
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
+import com.r3corda.core.bufferUntilSubscribed
 import com.r3corda.core.contracts.Contract
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.map
@@ -23,6 +24,7 @@ import com.r3corda.node.services.network.NetworkMapService.Companion.FETCH_PROTO
 import com.r3corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_PROTOCOL_TOPIC
 import com.r3corda.node.services.network.NetworkMapService.FetchMapResponse
 import com.r3corda.node.services.network.NetworkMapService.SubscribeResponse
+import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.protocols.sendRequest
 import rx.Observable
@@ -53,6 +55,18 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
     private var registeredForPush = false
     protected var registeredNodes = Collections.synchronizedMap(HashMap<Party, NodeInfo>())
+
+    override fun track(): Pair<List<NodeInfo>, Observable<MapChange>> {
+        synchronized(_changed) {
+            fun NodeInfo.isCordaService(): Boolean {
+                return advertisedServices.any { it.info.type in setOf(SimpleNotaryService.type, NetworkMapService.type) }
+            }
+
+            val currentParties = partyNodes.filter { !it.isCordaService() }
+            val changes = changed.filter { !it.node.isCordaService() }
+            return Pair(currentParties, changes.bufferUntilSubscribed())
+        }
+    }
 
     override fun get() = registeredNodes.map { it.value }
     override fun get(serviceType: ServiceType) = registeredNodes.filterValues { it.advertisedServices.any { it.info.type.isSubTypeOf(serviceType) } }.map { it.value }
@@ -96,17 +110,22 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     }
 
     override fun addNode(node: NodeInfo) {
-        val oldValue = registeredNodes.put(node.legalIdentity, node)
-        if (oldValue == null) {
-            _changed.onNext(MapChange(node, oldValue, MapChangeType.Added))
-        } else if(oldValue != node) {
-            _changed.onNext(MapChange(node, oldValue, MapChangeType.Modified))
+        synchronized(_changed) {
+            val oldValue = registeredNodes.put(node.legalIdentity, node)
+            if (oldValue == null) {
+                _changed.onNext(MapChange(node, oldValue, MapChangeType.Added))
+            } else if (oldValue != node) {
+                _changed.onNext(MapChange(node, oldValue, MapChangeType.Modified))
+            }
         }
+
     }
 
     override fun removeNode(node: NodeInfo) {
-        val oldValue = registeredNodes.remove(node.legalIdentity)
-        _changed.onNext(MapChange(node, oldValue, MapChangeType.Removed))
+        synchronized(_changed) {
+            val oldValue = registeredNodes.remove(node.legalIdentity)
+            _changed.onNext(MapChange(node, oldValue, MapChangeType.Removed))
+        }
     }
 
     /**

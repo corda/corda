@@ -5,13 +5,17 @@ import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.esotericsoftware.kryo.serializers.DefaultSerializers
+import com.esotericsoftware.kryo.serializers.JavaSerializer
+import com.google.common.net.HostAndPort
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.ErrorOr
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.DigitalSignature
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.crypto.*
+import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.PhysicalLocation
+import com.r3corda.core.node.ServiceEntry
+import com.r3corda.core.node.services.NetworkMapCache
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
@@ -163,15 +167,40 @@ private class RPCKryo(private val observableSerializer: Serializer<Observable<An
         register(setOf(Unit).javaClass) // SingletonSet
         register(TransactionBuildResult.ProtocolStarted::class.java)
         register(TransactionBuildResult.Failed::class.java)
-
+        register(ServiceEntry::class.java)
+        register(NodeInfo::class.java)
+        register(PhysicalLocation::class.java)
+        register(NetworkMapCache.MapChange::class.java)
+        register(NetworkMapCache.MapChangeType::class.java)
+        register(ArtemisMessagingComponent.NodeAddress::class.java,
+                read = { kryo, input -> ArtemisMessagingComponent.NodeAddress(parsePublicKeyBase58(kryo.readObject(input, String::class.java)), kryo.readObject(input, HostAndPort::class.java)) },
+                write = { kryo, output, nodeAddress ->
+                    kryo.writeObject(output, nodeAddress.identity.toBase58String())
+                    kryo.writeObject(output, nodeAddress.hostAndPort)
+                }
+        )
+        register(HostAndPort::class.java)
+        register(ServiceInfo::class.java, read = { kryo, input -> ServiceInfo.parse(input.readString()) }, write = Kryo::writeObject)
         // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
         register(IllegalArgumentException::class.java)
+        // Kryo couldn't serialize Collections.unmodifiableCollection in Throwable correctly, causing null pointer exception when try to access the deserialize object.
+        register(NoSuchElementException::class.java, JavaSerializer())
         register(RPCException::class.java)
-        register(Array<StackTraceElement>::class.java, object : Serializer<Array<StackTraceElement>>() {
-            override fun read(kryo: Kryo, input: Input, type: Class<Array<StackTraceElement>>): Array<StackTraceElement> = emptyArray()
-            override fun write(kryo: Kryo, output: Output, `object`: Array<StackTraceElement>) {}
-        })
+        register(Array<StackTraceElement>::class.java, read = { kryo, input -> emptyArray() }, write = { kryo, output, o -> })
         register(Collections.unmodifiableList(emptyList<String>()).javaClass)
+    }
+
+    // Helper method, attempt to reduce boiler plate code
+    private fun <T> register(type: Class<T>, read: (Kryo, Input) -> T, write: (Kryo, Output, T) -> Unit) {
+        register(type, object : Serializer<T>() {
+            override fun read(kryo: Kryo, input: Input, type: Class<T>?): T {
+                return read(kryo, input)
+            }
+
+            override fun write(kryo: Kryo, output: Output, o: T) {
+                write(kryo, output, o)
+            }
+        })
     }
 
     val observableRegistration: Registration? = if (observableSerializer != null) register(Observable::class.java, observableSerializer) else null
