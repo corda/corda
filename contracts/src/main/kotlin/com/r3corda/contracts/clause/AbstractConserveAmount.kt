@@ -1,9 +1,9 @@
 package com.r3corda.contracts.clause
 
-import com.r3corda.contracts.asset.FungibleAsset
-import com.r3corda.contracts.asset.InsufficientBalanceException
-import com.r3corda.contracts.asset.sumFungibleOrNull
-import com.r3corda.contracts.asset.sumFungibleOrZero
+import com.r3corda.core.contracts.FungibleAsset
+import com.r3corda.core.contracts.InsufficientBalanceException
+import com.r3corda.core.contracts.sumFungibleOrNull
+import com.r3corda.core.contracts.sumFungibleOrZero
 import com.r3corda.core.contracts.*
 import com.r3corda.core.contracts.clauses.Clause
 import com.r3corda.core.crypto.Party

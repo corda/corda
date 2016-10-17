@@ -1,8 +1,8 @@
 package com.r3corda.contracts
 
 import com.r3corda.contracts.asset.Cash
-import com.r3corda.contracts.asset.FungibleAsset
-import com.r3corda.contracts.asset.InsufficientBalanceException
+import com.r3corda.core.contracts.FungibleAsset
+import com.r3corda.core.contracts.InsufficientBalanceException
 import com.r3corda.contracts.asset.sumCashBy
 import com.r3corda.contracts.clause.AbstractIssue
 import com.r3corda.core.contracts.*

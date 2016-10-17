@@ -9,6 +9,7 @@ import rx.Observable
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.util.*
 
 /**
  * Session ID to use for services listening for the first message in a session (before a
@@ -99,6 +100,12 @@ interface VaultService {
      * the update.
      */
     val updates: Observable<Vault.Update>
+
+    /**
+     * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+     * which we have no cash evaluate to null (not present in map), not 0.
+     */
+    val cashBalances: Map<Currency, Amount<Currency>>
 
     /**
      * Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the

@@ -2,7 +2,6 @@ package com.r3corda.node.services
 
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
-import com.r3corda.contracts.asset.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.node.recordTransactions
@@ -105,14 +104,14 @@ class VaultWithCashTest {
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
 
-            assertNull(vault.currentVault.cashBalances[USD])
+            assertNull(services.vaultService.cashBalances[USD])
             services.recordTransactions(usefulTX)
-            assertEquals(100.DOLLARS, vault.currentVault.cashBalances[USD])
+            assertEquals(100.DOLLARS, services.vaultService.cashBalances[USD])
             services.recordTransactions(irrelevantTX)
-            assertEquals(100.DOLLARS, vault.currentVault.cashBalances[USD])
+            assertEquals(100.DOLLARS, services.vaultService.cashBalances[USD])
             services.recordTransactions(spendTX)
 
-            assertEquals(20.DOLLARS, vault.currentVault.cashBalances[USD])
+            assertEquals(20.DOLLARS, services.vaultService.cashBalances[USD])
 
             // TODO: Flesh out these tests as needed.
         }

@@ -61,7 +61,7 @@ class ObligationTests {
             tweak {
                 output { outState }
                 // No command arguments
-                this `fails with` "required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command"
+                this `fails with` "required com.r3corda.core.contracts.FungibleAsset.Commands.Move command"
             }
             tweak {
                 output { outState }
@@ -655,7 +655,7 @@ class ObligationTests {
 
             tweak {
                 command(DUMMY_PUBKEY_1) { Obligation.Commands.Exit(Amount(200.DOLLARS.quantity, inState.issuanceDef)) }
-                this `fails with` "required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command"
+                this `fails with` "required com.r3corda.core.contracts.FungibleAsset.Commands.Move command"
 
                 tweak {
                     command(DUMMY_PUBKEY_1) { Obligation.Commands.Move() }

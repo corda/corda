@@ -196,18 +196,6 @@ fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>): Amount<Is
     return filterIsInstance<Cash.State>().map { it.amount }.sumOrZero(currency)
 }
 
-/**
- * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
- * which we have no cash evaluate to null (not present in map), not 0.
- */
-val Vault.cashBalances: Map<Currency, Amount<Currency>> get() = states.
-        // Select the states we own which are cash, ignore the rest, take the amounts.
-        mapNotNull { (it.state.data as? Cash.State)?.amount }.
-        // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
-        groupBy { it.token.product }.
-        // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
-        mapValues { it.value.map { Amount(it.quantity, it.token.product) }.sumOrThrow() }
-
 fun Cash.State.ownedBy(owner: PublicKey) = copy(owner = owner)
 fun Cash.State.issuedBy(party: Party) = copy(amount = Amount(amount.quantity, issuanceDef.copy(issuer = deposit.copy(party = party))))
 fun Cash.State.issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, issuanceDef.copy(issuer = deposit)))
