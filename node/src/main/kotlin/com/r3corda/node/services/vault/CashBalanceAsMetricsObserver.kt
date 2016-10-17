@@ -1,8 +1,7 @@
 package com.r3corda.node.services.vault
 
 import com.codahale.metrics.Gauge
-import com.r3corda.contracts.asset.cashBalances
-import com.r3corda.core.node.services.Vault
+import com.r3corda.core.node.services.VaultService
 import com.r3corda.node.services.api.ServiceHubInternal
 import java.util.*
 
@@ -13,7 +12,7 @@ class CashBalanceAsMetricsObserver(val serviceHubInternal: ServiceHubInternal) {
     init {
         // TODO: Need to consider failure scenarios.  This needs to run if the TX is successfully recorded
         serviceHubInternal.vaultService.updates.subscribe { update ->
-            exportCashBalancesViaMetrics(serviceHubInternal.vaultService.currentVault)
+            exportCashBalancesViaMetrics(serviceHubInternal.vaultService)
         }
     }
 
@@ -24,7 +23,7 @@ class CashBalanceAsMetricsObserver(val serviceHubInternal: ServiceHubInternal) {
 
     private val balanceMetrics = HashMap<Currency, BalanceMetric>()
 
-    private fun exportCashBalancesViaMetrics(vault: Vault) {
+    private fun exportCashBalancesViaMetrics(vault: VaultService) {
         // This is just for demo purposes. We probably shouldn't expose balances via JMX in a real node as that might
         // be commercially sensitive info that the sysadmins aren't even meant to know.
         //

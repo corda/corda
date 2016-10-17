@@ -10,7 +10,6 @@ import com.r3corda.core.node.services.KeyManagementService
 import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.random63BitValue
-import com.r3corda.core.testing.InMemoryVaultService
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
@@ -23,6 +22,7 @@ import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.services.transactions.ValidatingNotaryService
+import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import org.slf4j.Logger
@@ -125,7 +125,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
 
-        override fun makeVaultService(): VaultService = InMemoryVaultService(services)
+        override fun makeVaultService(): VaultService = NodeVaultService(services)
 
         override fun makeKeyManagementService(): KeyManagementService = E2ETestKeyManagementService(partyKeys)
 

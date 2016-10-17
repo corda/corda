@@ -1,15 +1,32 @@
 package com.r3corda.contracts.asset
 
+import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.crypto.generateKeyPair
+import com.r3corda.core.node.services.Vault
+import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.serialization.OpaqueBytes
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_PUBKEY_1
 import com.r3corda.core.utilities.DUMMY_PUBKEY_2
+import com.r3corda.core.utilities.LogHelper
+import com.r3corda.node.services.vault.NodeVaultService
+import com.r3corda.node.utilities.configureDatabase
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.*
+import com.r3corda.testing.node.MockKeyManagementService
+import com.r3corda.testing.node.MockServices
+import com.r3corda.testing.node.makeTestDataSourceProperties
+import org.jetbrains.exposed.sql.Database
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
+import java.io.Closeable
+import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 import kotlin.test.*
@@ -29,6 +46,51 @@ class CashTests {
             amount = Amount(amount.quantity, token = amount.token.copy(deposit.copy(reference = OpaqueBytes.of(ref))))
     )
 
+    lateinit var services: MockServices
+    val vault: VaultService get() = services.vaultService
+    lateinit var dataSource: Closeable
+    lateinit var database: Database
+    lateinit var vaultService: Vault
+
+    @Before
+    fun setUp() {
+        LogHelper.setLevel(NodeVaultService::class)
+        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
+        dataSource = dataSourceAndDatabase.first
+        database = dataSourceAndDatabase.second
+        databaseTransaction(database) {
+            services = object : MockServices() {
+                override val keyManagementService: MockKeyManagementService = MockKeyManagementService(MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY)
+                override val vaultService: VaultService = NodeVaultService(this)
+
+                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+                    for (stx in txs) {
+                        storageService.validatedTransactions.addTransaction(stx)
+                    }
+                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
+                    vaultService.notifyAll(txs.map { it.tx })
+                }
+            }
+
+            services.fillWithSomeTestCash(howMuch = 100.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
+                    issuedBy = MEGA_CORP.ref(1), issuerKey = MEGA_CORP_KEY, ownedBy = OUR_PUBKEY_1)
+            services.fillWithSomeTestCash(howMuch = 400.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
+                    issuedBy = MEGA_CORP.ref(1), issuerKey = MEGA_CORP_KEY, ownedBy = OUR_PUBKEY_1)
+            services.fillWithSomeTestCash(howMuch = 80.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
+                    issuedBy = MINI_CORP.ref(1), issuerKey = MINI_CORP_KEY, ownedBy = OUR_PUBKEY_1)
+            services.fillWithSomeTestCash(howMuch = 80.SWISS_FRANCS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
+                    issuedBy = MINI_CORP.ref(1), issuerKey = MINI_CORP_KEY, ownedBy = OUR_PUBKEY_1)
+
+            vaultService = services.vaultService.currentVault
+        }
+    }
+
+    @After
+    fun tearDown() {
+        LogHelper.reset(NodeVaultService::class)
+        dataSource.close()
+    }
+
     @Test
     fun trivial() {
         transaction {
@@ -42,7 +104,7 @@ class CashTests {
             tweak {
                 output { outState }
                 // No command arguments
-                this `fails with` "required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command"
+                this `fails with` "required com.r3corda.core.contracts.FungibleAsset.Commands.Move command"
             }
             tweak {
                 output { outState }
@@ -312,7 +374,7 @@ class CashTests {
 
             tweak {
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
-                this `fails with` "required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command"
+                this `fails with` "required com.r3corda.core.contracts.FungibleAsset.Commands.Move command"
 
                 tweak {
                     command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
@@ -402,7 +464,9 @@ class CashTests {
     //
     // Spend tx generation
 
-    val OUR_PUBKEY_1 = DUMMY_PUBKEY_1
+    val OUR_KEY: KeyPair by lazy { generateKeyPair() }
+    val OUR_PUBKEY_1: PublicKey get() = OUR_KEY.public
+
     val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
 
     fun makeCash(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1) =
@@ -428,8 +492,10 @@ class CashTests {
     }
 
     fun makeSpend(amount: Amount<Currency>, dest: PublicKey): WireTransaction {
-        val tx = TransactionType.General.Builder(DUMMY_NOTARY)
-        Cash().generateSpend(tx, amount, dest, WALLET)
+        var tx = TransactionType.General.Builder(DUMMY_NOTARY)
+        databaseTransaction(database) {
+            vault.generateSpend(tx, amount, dest)
+        }
         return tx.toWireTransaction()
     }
 
@@ -485,58 +551,92 @@ class CashTests {
 
     @Test
     fun generateSimpleDirectSpend() {
-        val wtx = makeSpend(100.DOLLARS, THEIR_PUBKEY_1)
-        assertEquals(WALLET[0].ref, wtx.inputs[0])
-        assertEquals(WALLET[0].state.data.copy(owner = THEIR_PUBKEY_1), wtx.outputs[0].data)
-        assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
+
+        databaseTransaction(database) {
+
+            val wtx = makeSpend(100.DOLLARS, THEIR_PUBKEY_1)
+
+            val vaultState = vaultService.states.elementAt(0) as StateAndRef<Cash.State>
+            assertEquals(vaultState.ref, wtx.inputs[0])
+            assertEquals(vaultState.state.data.copy(owner = THEIR_PUBKEY_1), wtx.outputs[0].data)
+            assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
+        }
     }
 
     @Test
     fun generateSimpleSpendWithParties() {
-        val tx = TransactionType.General.Builder(DUMMY_NOTARY)
-        Cash().generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, WALLET, setOf(MINI_CORP))
-        assertEquals(WALLET[2].ref, tx.inputStates()[0])
+
+        databaseTransaction(database) {
+
+            val tx = TransactionType.General.Builder(DUMMY_NOTARY)
+            vault.generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, setOf(MINI_CORP))
+
+            assertEquals(vaultService.states.elementAt(2).ref, tx.inputStates()[0])
+        }
     }
 
     @Test
     fun generateSimpleSpendWithChange() {
-        val wtx = makeSpend(10.DOLLARS, THEIR_PUBKEY_1)
-        assertEquals(WALLET[0].ref, wtx.inputs[0])
-        assertEquals(WALLET[0].state.data.copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
-        assertEquals(WALLET[0].state.data.copy(amount = 90.DOLLARS `issued by` defaultIssuer), wtx.outputs[1].data)
-        assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
+
+        databaseTransaction(database) {
+
+            val wtx = makeSpend(10.DOLLARS, THEIR_PUBKEY_1)
+
+            val vaultState = vaultService.states.elementAt(0) as StateAndRef<Cash.State>
+            assertEquals(vaultState.ref, wtx.inputs[0])
+            assertEquals(vaultState.state.data.copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
+            assertEquals(vaultState.state.data.copy(amount = 90.DOLLARS `issued by` defaultIssuer), wtx.outputs[1].data)
+            assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
+        }
     }
 
     @Test
     fun generateSpendWithTwoInputs() {
-        val wtx = makeSpend(500.DOLLARS, THEIR_PUBKEY_1)
-        assertEquals(WALLET[0].ref, wtx.inputs[0])
-        assertEquals(WALLET[1].ref, wtx.inputs[1])
-        assertEquals(WALLET[0].state.data.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
-        assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
+
+        databaseTransaction(database) {
+            val wtx = makeSpend(500.DOLLARS, THEIR_PUBKEY_1)
+
+            val vaultState0 = vaultService.states.elementAt(0) as StateAndRef<Cash.State>
+            val vaultState1 = vaultService.states.elementAt(1)
+            assertEquals(vaultState0.ref, wtx.inputs[0])
+            assertEquals(vaultState1.ref, wtx.inputs[1])
+            assertEquals(vaultState0.state.data.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
+            assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
+        }
     }
 
     @Test
     fun generateSpendMixedDeposits() {
-        val wtx = makeSpend(580.DOLLARS, THEIR_PUBKEY_1)
-        assertEquals(3, wtx.inputs.size)
-        assertEquals(WALLET[0].ref, wtx.inputs[0])
-        assertEquals(WALLET[1].ref, wtx.inputs[1])
-        assertEquals(WALLET[2].ref, wtx.inputs[2])
-        assertEquals(WALLET[0].state.data.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
-        assertEquals(WALLET[2].state.data.copy(owner = THEIR_PUBKEY_1), wtx.outputs[1].data)
-        assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
+
+        databaseTransaction(database) {
+            val wtx = makeSpend(580.DOLLARS, THEIR_PUBKEY_1)
+            assertEquals(3, wtx.inputs.size)
+
+            val vaultState0 = vaultService.states.elementAt(0) as StateAndRef<Cash.State>
+            val vaultState1 = vaultService.states.elementAt(1)
+            val vaultState2 = vaultService.states.elementAt(2) as StateAndRef<Cash.State>
+            assertEquals(vaultState0.ref, wtx.inputs[0])
+            assertEquals(vaultState1.ref, wtx.inputs[1])
+            assertEquals(vaultState2.ref, wtx.inputs[2])
+            assertEquals(vaultState0.state.data.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
+            assertEquals(vaultState2.state.data.copy(owner = THEIR_PUBKEY_1), wtx.outputs[1].data)
+            assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
+        }
     }
 
     @Test
     fun generateSpendInsufficientBalance() {
-        val e: InsufficientBalanceException = assertFailsWith("balance") {
-            makeSpend(1000.DOLLARS, THEIR_PUBKEY_1)
-        }
-        assertEquals((1000 - 580).DOLLARS, e.amountMissing)
 
-        assertFailsWith(InsufficientBalanceException::class) {
-            makeSpend(81.SWISS_FRANCS, THEIR_PUBKEY_1)
+        databaseTransaction(database) {
+
+            val e: InsufficientBalanceException = assertFailsWith("balance") {
+                makeSpend(1000.DOLLARS, THEIR_PUBKEY_1)
+            }
+            assertEquals((1000 - 580).DOLLARS, e.amountMissing)
+
+            assertFailsWith(InsufficientBalanceException::class) {
+                makeSpend(81.SWISS_FRANCS, THEIR_PUBKEY_1)
+            }
         }
     }
 

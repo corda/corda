@@ -1,9 +1,9 @@
 package com.r3corda.contracts.clause
 
-import com.r3corda.contracts.asset.FungibleAsset
-import com.r3corda.contracts.asset.InsufficientBalanceException
-import com.r3corda.contracts.asset.sumFungibleOrNull
-import com.r3corda.contracts.asset.sumFungibleOrZero
+import com.r3corda.core.contracts.FungibleAsset
+import com.r3corda.core.contracts.InsufficientBalanceException
+import com.r3corda.core.contracts.sumFungibleOrNull
+import com.r3corda.core.contracts.sumFungibleOrZero
 import com.r3corda.core.contracts.*
 import com.r3corda.core.contracts.clauses.Clause
 import com.r3corda.core.crypto.Party
@@ -83,90 +83,6 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
         tx.addCommand(generateMoveCommand(), gathered.map { it.state.data.owner })
         tx.addCommand(generateExitCommand(amountIssued), gathered.flatMap { it.state.data.exitKeys })
         return amountIssued.token.issuer.party.owningKey
-    }
-
-    /**
-     * Generate a transaction that consumes one or more of the given input states to move assets to the given pubkey.
-     * Note that the vault is not updated: it's up to you to do that.
-     *
-     * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
-     *                        of given parties. This can be useful if the party you're trying to pay has expectations
-     *                        about which type of asset claims they are willing to accept.
-     */
-    @Throws(InsufficientBalanceException::class)
-    fun generateSpend(tx: TransactionBuilder,
-                      amount: Amount<T>,
-                      to: PublicKey,
-                      assetsStates: List<StateAndRef<S>>,
-                      onlyFromParties: Set<Party>? = null,
-                      deriveState: (TransactionState<S>, Amount<Issued<T>>, PublicKey) -> TransactionState<S>,
-                      generateMoveCommand: () -> CommandData): List<PublicKey> {
-        // Discussion
-        //
-        // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
-        //
-        // First we must select a set of asset states (which for convenience we will call 'coins' here, as in bitcoinj).
-        // The input states can be considered our "vault", and may consist of different products, and with different
-        // issuers and deposits.
-        //
-        // Coin selection is a complex problem all by itself and many different approaches can be used. It is easily
-        // possible for different actors to use different algorithms and approaches that, for example, compete on
-        // privacy vs efficiency (number of states created). Some spends may be artificial just for the purposes of
-        // obfuscation and so on.
-        //
-        // Having selected input states of the correct asset, we must craft output states for the amount we're sending and
-        // the "change", which goes back to us. The change is required to make the amounts balance. We may need more
-        // than one change output in order to avoid merging assets from different deposits. The point of this design
-        // is to ensure that ledger entries are immutable and globally identifiable.
-        //
-        // Finally, we add the states to the provided partial transaction.
-
-        val currency = amount.token
-        var acceptableCoins = run {
-            val ofCurrency = assetsStates.filter { it.state.data.amount.token.product == currency }
-            if (onlyFromParties != null)
-                ofCurrency.filter { it.state.data.deposit.party in onlyFromParties }
-            else
-                ofCurrency
-        }
-        tx.notary = acceptableCoins.firstOrNull()?.state?.notary
-        // TODO: We should be prepared to produce multiple transactions spending inputs from
-        // different notaries, or at least group states by notary and take the set with the
-        // highest total value
-        acceptableCoins = acceptableCoins.filter { it.state.notary == tx.notary }
-
-        val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, amount)
-        val takeChangeFrom = gathered.firstOrNull()
-        val change = if (takeChangeFrom != null && gatheredAmount > amount) {
-            Amount(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
-        } else {
-            null
-        }
-        val keysUsed = gathered.map { it.state.data.owner }.toSet()
-
-        val states = gathered.groupBy { it.state.data.deposit }.map {
-            val coins = it.value
-            val totalAmount = coins.map { it.state.data.amount }.sumOrThrow()
-            deriveState(coins.first().state, totalAmount, to)
-        }
-
-        val outputs = if (change != null) {
-            // Just copy a key across as the change key. In real life of course, this works but leaks private data.
-            // In bitcoinj we derive a fresh key here and then shuffle the outputs to ensure it's hard to follow
-            // value flows through the transaction graph.
-            val changeKey = gathered.first().state.data.owner
-            // Add a change output and adjust the last output downwards.
-            states.subList(0, states.lastIndex) +
-                    states.last().let { deriveState(it, it.data.amount - change, it.data.owner) } +
-                    deriveState(gathered.last().state, change, changeKey)
-        } else states
-
-        for (state in gathered) tx.addInputState(state)
-        for (state in outputs) tx.addOutputState(state)
-        // What if we already have a move command with the right keys? Filter it out here or in platform code?
-        val keysList = keysUsed.toList()
-        tx.addCommand(generateMoveCommand(), keysList)
-        return keysList
     }
 
     override fun verify(tx: TransactionForContract,

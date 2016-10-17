@@ -33,7 +33,7 @@ public class CashTestsJava {
                 tx.tweak(tw -> {
                     tw.output(outState);
                     // No command arguments
-                    return tw.failsWith("required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command");
+                    return tw.failsWith("required com.r3corda.core.contracts.FungibleAsset.Commands.Move command");
                 });
                 tx.tweak(tw -> {
                     tw.output(outState);

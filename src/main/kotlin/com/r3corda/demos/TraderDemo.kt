@@ -5,7 +5,6 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.contracts.CommercialPaper
 import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
-import com.r3corda.contracts.asset.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
@@ -258,7 +257,7 @@ private class TraderDemoProtocolBuyer(val otherSide: Party,
     }
 
     private fun logBalance() {
-        val balances = serviceHub.vaultService.currentVault.cashBalances.entries.map { "${it.key.currencyCode} ${it.value}" }
+        val balances = serviceHub.vaultService.cashBalances.entries.map { "${it.key.currencyCode} ${it.value}" }
         logger.info("Remaining balance: ${balances.joinToString()}")
     }
 

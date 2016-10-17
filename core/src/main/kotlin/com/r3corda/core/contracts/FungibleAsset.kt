@@ -1,6 +1,5 @@
-package com.r3corda.contracts.asset
+package com.r3corda.core.contracts
 
-import com.r3corda.core.contracts.*
 import java.security.PublicKey
 
 class InsufficientBalanceException(val amountMissing: Amount<*>) : Exception() {

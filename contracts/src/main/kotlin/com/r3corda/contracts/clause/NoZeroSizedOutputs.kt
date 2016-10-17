@@ -1,6 +1,6 @@
 package com.r3corda.contracts.clause
 
-import com.r3corda.contracts.asset.FungibleAsset
+import com.r3corda.core.contracts.FungibleAsset
 import com.r3corda.core.contracts.*
 import com.r3corda.core.contracts.clauses.Clause
 

@@ -7,11 +7,11 @@ import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.transactions.SignedTransaction
-import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.node.internal.ServerRPCOps
 import com.r3corda.node.services.messaging.StateMachineUpdate
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.expect
 import com.r3corda.testing.expectEvents
 import com.r3corda.testing.node.MockNetwork
@@ -54,7 +54,9 @@ class ServerRPCTest {
         val ref = OpaqueBytes(ByteArray(1) {1})
 
         // Check the monitoring service wallet is empty
-        assertFalse(aliceNode.services.vaultService.currentVault.states.iterator().hasNext())
+        databaseTransaction(aliceNode.database) {
+            assertFalse(aliceNode.services.vaultService.currentVault.states.iterator().hasNext())
+        }
 
         // Tell the monitoring service node to issue some cash
         val recipient = aliceNode.info.legalIdentity

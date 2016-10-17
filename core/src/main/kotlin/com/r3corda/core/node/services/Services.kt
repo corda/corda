@@ -4,11 +4,13 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.transactions.WireTransaction
 import rx.Observable
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.util.*
 
 /**
  * Session ID to use for services listening for the first message in a session (before a
@@ -101,6 +103,20 @@ interface VaultService {
     val updates: Observable<Vault.Update>
 
     /**
+     * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+     * which we have no cash evaluate to null (not present in map), not 0.
+     */
+    @Suppress("UNCHECKED_CAST")
+    val cashBalances: Map<Currency, Amount<Currency>>
+        get() = currentVault.states.
+                // Select the states we own which are cash, ignore the rest, take the amounts.
+                mapNotNull { (it.state.data as? FungibleAsset<Currency>)?.amount }.
+                // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
+                groupBy { it.token.product }.
+                // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
+                mapValues { it.value.map { Amount(it.quantity, it.token.product) }.sumOrThrow() }
+
+    /**
      * Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the
      * first subscriber is registered so as to avoid racing with early updates.
      */
@@ -147,6 +163,15 @@ interface VaultService {
         }
         return future
     }
+
+    /**
+     * Fungible Asset operations
+     **/
+    @Throws(InsufficientBalanceException::class)
+    fun generateSpend(tx: TransactionBuilder,
+                      amount: Amount<Currency>,
+                      to: PublicKey,
+                      onlyFromParties: Set<Party>? = null): Pair<TransactionBuilder, List<PublicKey>>
 }
 
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)

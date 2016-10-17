@@ -7,6 +7,7 @@ import com.r3corda.core.contracts.Timestamp;
 import com.r3corda.core.contracts.TransactionForContract.*;
 import com.r3corda.core.contracts.clauses.*;
 import com.r3corda.core.crypto.*;
+import com.r3corda.core.node.services.*;
 import com.r3corda.core.transactions.*;
 import kotlin.*;
 import org.jetbrains.annotations.*;
@@ -304,8 +305,8 @@ public class JavaCommercialPaper implements Contract {
         return new TransactionType.General.Builder(notary).withItems(output, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
     }
 
-    public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> vault) throws InsufficientBalanceException {
-        new Cash().generateSpend(tx, StructuresKt.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), vault, null);
+    public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, VaultService vault) throws InsufficientBalanceException {
+        vault.generateSpend(tx, StructuresKt.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), null);
         tx.addInputState(paper);
         tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getData().getOwner()));
     }
