@@ -30,7 +30,7 @@ fun WireTransaction.buildFilteredTransaction(filterFuns: FilterFuns): MerkleTran
 fun WireTransaction.calculateLeavesHashes(): List<SecureHash>{
     val resultHashes = ArrayList<SecureHash>()
     val entries = listOf(inputs, outputs, attachments, commands)
-    entries.forEach { it.sortedBy { x-> x.hashCode() }.mapTo(resultHashes, { x -> serializedHash(x) }) }
+    entries.forEach { it.mapTo(resultHashes, { x -> serializedHash(x) }) }
     return resultHashes
 }
 
@@ -114,27 +114,11 @@ class MerkleTransaction(
          */
         fun buildMerkleTransaction(wtx: WireTransaction,
                                    filterFuns: FilterFuns
-        ): MerkleTransaction {
-            val includeLeaves: MutableList<Boolean> = ArrayList()
-
-            val filteredInputs: MutableList<StateRef> = ArrayList()
-            val filteredOutputs: MutableList<TransactionState<ContractState>> = ArrayList()
-            val filteredAttachments: MutableList<SecureHash> = ArrayList()
-            val filteredCommands: MutableList<Command> = ArrayList()
-
-            //It's a little evil, I needed a way of building at once few lists.
-            fun <T: Any> filterLeaves(el: T, destination: MutableList<T>){
-                val include = filterFuns.genericFilter(el)
-                if (include) destination.add(el)
-                includeLeaves.add(include)
-            }
-
-            //TODO Ordering by hashCode
-            wtx.inputs.sortedBy { it.hashCode() }.forEach { filterLeaves(it, filteredInputs) }
-            wtx.outputs.sortedBy { it.hashCode() }.forEach { filterLeaves(it, filteredOutputs) }
-            wtx.attachments.sortedBy { it.hashCode() }.forEach { filterLeaves(it, filteredAttachments) }
-            wtx.commands.sortedBy { it.hashCode() }.forEach { filterLeaves(it, filteredCommands) }
-
+        ): FilteredTransaction {
+            val filteredInputs = wtx.inputs.filter { filterFuns.genericFilter(it) }
+            val filteredOutputs = wtx.outputs.filter { filterFuns.genericFilter(it) }
+            val filteredAttachments = wtx.attachments.filter { filterFuns.genericFilter(it) }
+            val filteredCommands = wtx.commands.filter { filterFuns.genericFilter(it) }
             val filteredLeaves = FilteredLeaves(filteredInputs, filteredOutputs, filteredAttachments, filteredCommands)
 
             val pmt = PartialMerkleTree.build(includeLeaves, wtx.allLeavesHashes)
