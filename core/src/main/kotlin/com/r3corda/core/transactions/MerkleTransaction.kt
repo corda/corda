@@ -4,30 +4,32 @@ import com.r3corda.core.contracts.Command
 import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.contracts.TransactionState
-import com.r3corda.core.crypto.MerkleTreeException
-import com.r3corda.core.crypto.PartialMerkleTree
-import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.crypto.sha256
+import com.r3corda.core.crypto.*
 import com.r3corda.core.serialization.serialize
 import java.util.*
 
 /**
  * Creation and verification of a Merkle Tree for a Wire Transaction.
  *
- * Tree should be the same no matter the ordering of outputs, inputs, attachments and commands.
- * Transaction is split into following blocks: inputs, outputs, commands, attachments' refs.
+ * See: https://en.wikipedia.org/wiki/Merkle_tree
+ *
+ * Transaction is split into following blocks: inputs, outputs, commands, attachments' refs. Merkle Tree is kept in
+ * a recursive data structure. Building is done bottom up, from all leaves' hashes.
  * If a row in a tree has an odd number of elements - the final hash is hashed with itself.
  */
 
 //Todo It's just mess, move it to wtx
-fun WireTransaction.buildFilteredTransaction(filterFuns: FilterFuns): MerkleTransaction{
-    return MerkleTransaction.buildMerkleTransaction(this, filterFuns)
+/**
+ * Build filtered transaction using provided filtering functions.
+ */
+fun WireTransaction.buildFilteredTransaction(filterFuns: FilterFuns): FilteredTransaction {
+    return FilteredTransaction.buildMerkleTransaction(this, filterFuns)
 }
 
 /**
- * All leaves hashes are needed for calculation of transaction id and partial merkle branches.
+ * Calculation of all leaves hashes that are needed for calculation of transaction id and partial Merkle branches.
  */
-fun WireTransaction.calculateLeavesHashes(): List<SecureHash>{
+fun WireTransaction.calculateLeavesHashes(): List<SecureHash> {
     val resultHashes = ArrayList<SecureHash>()
     val entries = listOf(inputs, outputs, attachments, commands)
     entries.forEach { it.mapTo(resultHashes, { x -> serializedHash(x) }) }
@@ -37,28 +39,55 @@ fun WireTransaction.calculateLeavesHashes(): List<SecureHash>{
 fun SecureHash.hashConcat(other: SecureHash) = (this.bits + other.bits).sha256()
 fun <T: Any> serializedHash(x: T) = x.serialize().hash
 
-/**
- * Builds the tree from bottom to top. Takes as an argument list of leaves hashes. Used later as WireTransaction id.
- */
-tailrec fun getMerkleRoot(
-        lastHashList: List<SecureHash>): SecureHash{
-    if(lastHashList.size < 1)
-        throw MerkleTreeException("Cannot calculate Merkle root on empty hash list.")
-    if(lastHashList.size == 1) {
-        return lastHashList[0] //Root reached.
+sealed class MerkleTree(val hash: SecureHash) {
+    class Leaf(val value: SecureHash): MerkleTree(value)
+    class Node(val value: SecureHash, val left: MerkleTree, val right: MerkleTree): MerkleTree(value)
+    //DuplicatedLeaf is storing a hash of the righmost node that had to be duplicated to obtain the tree.
+    //That duplication can cause problems while building and verifying partial tree (especially for trees with duplicate
+    //attachments or commands).
+    class DuplicatedLeaf(val value: SecureHash): MerkleTree(value)
+
+    fun hashNodes(right: MerkleTree): MerkleTree {
+        val newHash = this.hash.hashConcat(right.hash)
+        return Node(newHash, this, right)
     }
-    else{
-        val newLevelHashes: MutableList<SecureHash> = ArrayList()
+}
+//todo -> to wire transaction
+/**
+ * Merkle tree building using hashes.
+ */
+fun getMerkleTree(allLeavesHashes: List<SecureHash>): MerkleTree {
+    val leaves = allLeavesHashes.map { MerkleTree.Leaf(it) }
+    return buildMerkleTree(leaves)
+}
+
+/**
+ * Tailrecursive function for building a tree bottom up.
+ * @param lastNodesList MerkleTree nodes from previous level.
+ * @return Tree root.
+ */
+tailrec fun buildMerkleTree(lastNodesList: List<MerkleTree>): MerkleTree {
+    if (lastNodesList.size < 1)
+        throw MerkleTreeException("Cannot calculate Merkle root on empty hash list.")
+    if (lastNodesList.size == 1) {
+        return lastNodesList[0] //Root reached.
+    } else {
+        val newLevelHashes: MutableList<MerkleTree> = ArrayList()
         var i = 0
-        while(i < lastHashList.size){
-            val left = lastHashList[i]
-            //If there is an odd number of elements, the last element is hashed with itself.
-            val right = lastHashList[Math.min(i+1, lastHashList.size - 1)]
-            val combined = left.hashConcat(right)
+        while (i < lastNodesList.size) {
+            val left = lastNodesList[i]
+            val n = lastNodesList.size
+            val right = when {
+                //If there is an odd number of elements at this level,
+                //the last element is hashed with itself and stored as a Leaf.
+                i+1 > n-1 -> MerkleTree.DuplicatedLeaf(lastNodesList[n-1].hash)
+                else -> lastNodesList[i+1]
+            }
+            val combined = left.hashNodes(right)
             newLevelHashes.add(combined)
             i+=2
         }
-        return getMerkleRoot(newLevelHashes)
+        return buildMerkleTree(newLevelHashes)
     }
 }
 
@@ -70,7 +99,7 @@ class FilteredLeaves(
         val outputs: List<TransactionState<ContractState>>,
         val attachments: List<SecureHash>,
         val commands: List<Command>
-){
+) {
     fun getFilteredHashes(): List<SecureHash>{
         val resultHashes = ArrayList<SecureHash>()
         val entries = listOf(inputs, outputs, attachments, commands)
@@ -86,8 +115,8 @@ class FilteredLeaves(
 class FilterFuns(val filterInputs: (StateRef) -> Boolean = { false },
                       val filterOutputs: (TransactionState<ContractState>) -> Boolean = { false },
                       val filterAttachments: (SecureHash) -> Boolean = { false },
-                      val filterCommands: (Command) -> Boolean = { false }){
-    fun <T: Any> genericFilter(elem: T): Boolean{
+                      val filterCommands: (Command) -> Boolean = { false }) {
+    fun <T: Any> genericFilter(elem: T): Boolean {
         return when (elem) {
             is StateRef -> filterInputs(elem)
             is TransactionState<*> -> filterOutputs(elem)
@@ -100,13 +129,13 @@ class FilterFuns(val filterInputs: (StateRef) -> Boolean = { false },
 
 /**
  * Class representing merkleized filtered transaction.
- * filteredLeaves - are the leaves included in a filtered transaction.
- * partialMerkleTree - Merkle branch needed to verify that filtered transaction.
+ * @param filteredLeaves Leaves included in a filtered transaction.
+ * @param partialMerkleTree Merkle branch needed to verify filteredLeaves.
  */
-class MerkleTransaction(
+class FilteredTransaction(
         val filteredLeaves: FilteredLeaves,
         val partialMerkleTree: PartialMerkleTree
-){
+) {
     companion object {
         /**
          * Construction of filtered transaction with Partial Merkle Tree, takes WireTransaction and filtering functions
@@ -121,19 +150,18 @@ class MerkleTransaction(
             val filteredCommands = wtx.commands.filter { filterFuns.genericFilter(it) }
             val filteredLeaves = FilteredLeaves(filteredInputs, filteredOutputs, filteredAttachments, filteredCommands)
 
-            val pmt = PartialMerkleTree.build(includeLeaves, wtx.allLeavesHashes)
-            return MerkleTransaction(filteredLeaves, pmt)
+            val pmt = PartialMerkleTree.build(wtx.merkleTree, filteredLeaves.getFilteredHashes())
+            return FilteredTransaction(filteredLeaves, pmt)
         }
     }
 
-    //todo exception
     /**
-     * Runs verification of Partial Merkle Branch with provided merkleRoot.
+     * Runs verification of Partial Merkle Branch with merkleRootHash.
      */
-    fun verify(merkleRoot: SecureHash):Boolean{
+    fun verify(merkleRootHash: SecureHash): Boolean {
         val hashes: List<SecureHash> = filteredLeaves.getFilteredHashes()
-        if(hashes.size == 0)
+        if (hashes.size == 0)
             throw MerkleTreeException("Transaction without included leaves.")
-        return partialMerkleTree.verify(hashes, merkleRoot)
+        return partialMerkleTree.verify(merkleRootHash, hashes)
     }
 }
