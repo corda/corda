@@ -38,16 +38,15 @@ class WireTransaction(
     // Cache the serialised form of the transaction and its hash to give us fast access to it.
     @Volatile @Transient private var cachedBits: SerializedBytes<WireTransaction>? = null
     val serialized: SerializedBytes<WireTransaction> get() = cachedBits ?: serialize().apply { cachedBits = this }
-//    override val id: SecureHash get() = serialized.hash //todo remove
 
-
-    //We need cashed leaves hashes for id and Partial Merkle Tree calculation.
+    //We need cashed leaves hashes and whole tree for an id and Partial Merkle Tree calculation.
     @Volatile @Transient private var cachedLeavesHashes: List<SecureHash>? = null
     val allLeavesHashes: List<SecureHash> get() = cachedLeavesHashes ?: calculateLeavesHashes().apply { cachedLeavesHashes = this }
 
-    //TODO There is a problem with that it's failing 4 tests. Also in few places in code, there was reference to tx.serialized.hash
-    //  instead of tx.id.
-    override val id: SecureHash get() = getMerkleRoot(allLeavesHashes)
+    @Volatile @Transient var cachedTree: MerkleTree? = null
+    val merkleTree: MerkleTree get() = cachedTree ?: MerkleTree.getMerkleTree(allLeavesHashes).apply { cachedTree = this }
+    //TODO There is a problem with that, it's failing 4 tests.
+    override val id: SecureHash get() = merkleTree.hash
 
     companion object {
         fun deserialize(bits: SerializedBytes<WireTransaction>, kryo: Kryo = THREAD_LOCAL_KRYO.get()): WireTransaction {
