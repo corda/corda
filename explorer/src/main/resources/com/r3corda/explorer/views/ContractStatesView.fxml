@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<GridPane hgap="10" styleClass="expand-row" stylesheets="@../css/wallet.css" vgap="10" xmlns="http://javafx.com/javafx/8.0.112-ea" xmlns:fx="http://javafx.com/fxml/1">
+    <TitledPane fx:id="inputPane" collapsible="false" text="Input" GridPane.fillWidth="true">
+        <ListView fx:id="inputs"/>
+    </TitledPane>
+
+    <Label GridPane.columnIndex="1">
+        <graphic>
+            <FontAwesomeIconView glyphName="PLAY" glyphSize="40" style="-fx-fill: rgb(20, 136, 204);"/>
+        </graphic>
+    </Label>
+
+    <TitledPane fx:id="outputPane" collapsible="false" text="Outputs" GridPane.columnIndex="2">
+        <ListView fx:id="outputs" maxWidth="Infinity"/>
+    </TitledPane>
+
+    <TitledPane fx:id="signaturesPane" collapsible="false" text="Signatures" GridPane.columnSpan="3" GridPane.rowIndex="1">
+        <ListView fx:id="signatures"/>
+    </TitledPane>
+
+    <columnConstraints>
+        <ColumnConstraints hgrow="ALWAYS"/>
+        <ColumnConstraints/>
+        <ColumnConstraints hgrow="ALWAYS"/>
+    </columnConstraints>
+    <rowConstraints>
+        <RowConstraints vgrow="ALWAYS"/>
+        <RowConstraints/>
+    </rowConstraints>
+</GridPane>

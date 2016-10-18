@@ -6,12 +6,9 @@ import com.r3corda.client.model.NodeMonitorModel
 import com.r3corda.client.model.observableList
 import com.r3corda.client.model.observableValue
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.serialization.OpaqueBytes
-import com.r3corda.explorer.components.ExceptionDialog
 import com.r3corda.explorer.model.CashTransaction
-import com.r3corda.explorer.model.IdentityModel
 import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.messaging.TransactionBuildResult
 import javafx.beans.binding.Bindings
@@ -22,8 +19,8 @@ import javafx.collections.ObservableList
 import javafx.scene.Node
 import javafx.scene.Parent
 import javafx.scene.control.*
-import javafx.util.StringConverter
 import javafx.util.converter.BigDecimalStringConverter
+import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.View
 import java.math.BigDecimal
 import java.util.*
@@ -43,21 +40,20 @@ class NewTransaction : View() {
     private val transactionTypeCB: ChoiceBox<CashTransaction> by fxid()
     private val amount: TextField by fxid()
     private val currency: ChoiceBox<Currency> by fxid()
-
-    private val networkIdentities: ObservableList<NodeInfo> by observableList(NetworkIdentityModel::networkIdentities)
-
-    private val rpcProxy: ObservableValue<CordaRPCOps?> by observableValue(NodeMonitorModel::proxyObservable)
-    private val myIdentity: ObservableValue<Party?> by observableValue(IdentityModel::myIdentity)
-    private val notary: ObservableValue<Party?> by observableValue(IdentityModel::notary)
-
     private val issueRefLabel: Label by fxid()
     private val issueRefTextField: TextField by fxid()
+
+    // Inject data
+    private val parties: ObservableList<NodeInfo> by observableList(NetworkIdentityModel::parties)
+    private val rpcProxy: ObservableValue<CordaRPCOps?> by observableValue(NodeMonitorModel::proxyObservable)
+    private val myIdentity: ObservableValue<NodeInfo?> by observableValue(NetworkIdentityModel::myIdentity)
+    private val notaries: ObservableList<NodeInfo> by observableList(NetworkIdentityModel::notaries)
 
     private fun ObservableValue<*>.isNotNull(): BooleanBinding {
         return Bindings.createBooleanBinding({ this.value != null }, arrayOf(this))
     }
 
-    fun resetScreen() {
+    private fun resetScreen() {
         partyBChoiceBox.valueProperty().set(null)
         transactionTypeCB.valueProperty().set(null)
         currency.valueProperty().set(null)
@@ -66,28 +62,22 @@ class NewTransaction : View() {
 
     init {
         // Disable everything when not connected to node.
-        val enableProperty = myIdentity.isNotNull().and(notary.isNotNull()).and(rpcProxy.isNotNull())
+        val notariesNotNullBinding = Bindings.createBooleanBinding({ notaries.isNotEmpty() }, arrayOf(notaries))
+        val enableProperty = myIdentity.isNotNull().and(rpcProxy.isNotNull()).and(notariesNotNullBinding)
         root.disableProperty().bind(enableProperty.not())
         transactionTypeCB.items = FXCollections.observableArrayList(CashTransaction.values().asList())
 
         // Party A textfield always display my identity name, not editable.
         partyATextField.isEditable = false
-        partyATextField.textProperty().bind(myIdentity.map { it?.name ?: "" })
+        partyATextField.textProperty().bind(myIdentity.map { it?.legalIdentity?.name ?: "" })
         partyALabel.textProperty().bind(transactionTypeCB.valueProperty().map { it?.partyNameA?.let { "$it : " } })
         partyATextField.visibleProperty().bind(transactionTypeCB.valueProperty().map { it?.partyNameA }.isNotNull())
 
         partyBLabel.textProperty().bind(transactionTypeCB.valueProperty().map { it?.partyNameB?.let { "$it : " } })
-        partyBChoiceBox.visibleProperty().bind(transactionTypeCB.valueProperty().map { it?.partyNameB }.isNotNull())
-        partyBChoiceBox.items = networkIdentities
-
-        partyBChoiceBox.converter = object : StringConverter<NodeInfo?>() {
-            override fun toString(node: NodeInfo?): String {
-                return node?.legalIdentity?.name ?: ""
-            }
-
-            override fun fromString(string: String?): NodeInfo {
-                throw UnsupportedOperationException("not implemented")
-            }
+        partyBChoiceBox.apply {
+            visibleProperty().bind(transactionTypeCB.valueProperty().map { it?.partyNameB }.isNotNull())
+            partyBChoiceBox.items = parties
+            converter = stringConverter { it?.legalIdentity?.name ?: "" }
         }
 
         // BigDecimal text Formatter, restricting text box input to decimal values.
@@ -123,7 +113,8 @@ class NewTransaction : View() {
         executeButton.setOnAction { event ->
             // Null checks to ensure these observable values are set, execute button should be disabled if any of these value are null, this extra checks are for precaution and getting non-nullable values without using !!.
             myIdentity.value?.let { myIdentity ->
-                notary.value?.let { notary ->
+                // TODO : Allow user to chose which notary to use?
+                notaries.first()?.let { notary ->
                     rpcProxy.value?.let { rpcProxy ->
                         Triple(myIdentity, notary, rpcProxy)
                     }
@@ -131,13 +122,14 @@ class NewTransaction : View() {
             }?.let {
                 val (myIdentity, notary, rpcProxy) = it
                 transactionTypeCB.value?.let {
+                    // Default issuer reference to 1 if not specified.
                     val issueRef = OpaqueBytes(if (issueRefTextField.text.trim().isNotBlank()) issueRefTextField.text.toByteArray() else ByteArray(1, { 1 }))
+                    // TODO : Change these commands into individual RPC methods instead of using executeCommand.
                     val command = when (it) {
-                        CashTransaction.Issue -> ClientToServiceCommand.IssueCash(Amount(textFormatter.value, currency.value), issueRef, partyBChoiceBox.value.legalIdentity, notary)
-                        CashTransaction.Pay -> ClientToServiceCommand.PayCash(Amount(textFormatter.value, Issued(PartyAndReference(myIdentity, issueRef), currency.value)), partyBChoiceBox.value.legalIdentity)
+                        CashTransaction.Issue -> ClientToServiceCommand.IssueCash(Amount(textFormatter.value, currency.value), issueRef, partyBChoiceBox.value.legalIdentity, notary.notaryIdentity)
+                        CashTransaction.Pay -> ClientToServiceCommand.PayCash(Amount(textFormatter.value, Issued(PartyAndReference(myIdentity.legalIdentity, issueRef), currency.value)), partyBChoiceBox.value.legalIdentity)
                         CashTransaction.Exit -> ClientToServiceCommand.ExitCash(Amount(textFormatter.value, currency.value), issueRef)
                     }
-
                     val dialog = Alert(Alert.AlertType.INFORMATION).apply {
                         headerText = null
                         contentText = "Transaction Started."
@@ -165,8 +157,7 @@ class NewTransaction : View() {
                         dialog.close()
                         ExceptionDialog(it.source.exception).apply {
                             initOwner((event.target as Node).scene.window)
-                            showAndWait()
-                        }
+                        }.showAndWait()
                     }
                 }
             }

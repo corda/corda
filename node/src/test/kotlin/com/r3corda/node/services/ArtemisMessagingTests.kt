@@ -1,6 +1,11 @@
 package com.r3corda.node.services
 
 import com.google.common.net.HostAndPort
+import com.r3corda.core.contracts.ClientToServiceCommand
+import com.r3corda.core.contracts.ContractState
+import com.r3corda.core.contracts.StateAndRef
+import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.createMessage

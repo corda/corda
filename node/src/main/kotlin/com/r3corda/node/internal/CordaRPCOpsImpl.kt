@@ -77,6 +77,10 @@ class CordaRPCOpsImpl(
         }
     }
 
+    override fun nodeIdentity(): NodeInfo {
+        return services.myInfo
+    }
+
     override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
         return databaseTransaction(database) {
            services.vaultService.addNoteToTransaction(txnId, txnNote)

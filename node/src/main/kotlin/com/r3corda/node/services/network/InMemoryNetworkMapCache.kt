@@ -25,7 +25,6 @@ import com.r3corda.node.services.network.NetworkMapService.Companion.FETCH_PROTO
 import com.r3corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_PROTOCOL_TOPIC
 import com.r3corda.node.services.network.NetworkMapService.FetchMapResponse
 import com.r3corda.node.services.network.NetworkMapService.SubscribeResponse
-import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.protocols.sendRequest
 import rx.Observable
@@ -59,13 +58,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
     override fun track(): Pair<List<NodeInfo>, Observable<MapChange>> {
         synchronized(_changed) {
-            fun NodeInfo.isCordaService(): Boolean {
-                return advertisedServices.any { it.info.type in setOf(SimpleNotaryService.type, NetworkMapService.type) }
-            }
-
-            val currentParties = partyNodes.filter { !it.isCordaService() }
-            val changes = changed.filter { !it.node.isCordaService() }
-            return Pair(currentParties, changes.bufferUntilSubscribed())
+            return Pair(partyNodes, _changed.bufferUntilSubscribed())
         }
     }
 

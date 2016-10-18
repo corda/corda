@@ -1,60 +1,72 @@
 package com.r3corda.explorer
 
+import com.r3corda.client.mock.EventGenerator
 import com.r3corda.client.model.Models
 import com.r3corda.client.model.NodeMonitorModel
 import com.r3corda.core.node.services.ServiceInfo
-import com.r3corda.explorer.model.IdentityModel
+import com.r3corda.explorer.views.runInFxApplicationThread
 import com.r3corda.node.driver.PortAllocation
 import com.r3corda.node.driver.driver
-import com.r3corda.node.services.config.configureTestSSL
+import com.r3corda.node.services.config.FullNodeConfiguration
+import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import javafx.stage.Stage
+import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.App
+import java.util.*
 
+/**
+ * Main class for Explorer, you will need Tornado FX to run the explorer.
+ */
 class Main : App() {
     override val primaryView = MainWindow::class
 
     override fun start(stage: Stage) {
-
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             throwable.printStackTrace()
-            System.exit(1)
+            // Show exceptions in exception dialog.
+            runInFxApplicationThread {
+                // [showAndWait] need to be in the FX thread
+                ExceptionDialog(throwable).showAndWait()
+                System.exit(1)
+            }
+        }
+        super.start(stage)
+    }
+}
+
+/**
+ *  This main method will starts 3 nodes (Notary, Alice and Bob) locally for UI testing, they will be on localhost:20002, 20004, 20006 respectively.
+ */
+fun main(args: Array<String>) {
+    val portAllocation = PortAllocation.Incremental(20000)
+    driver(portAllocation = portAllocation) {
+        val notary = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+        val alice = startNode("Alice")
+        val bob = startNode("Bob")
+
+        val notaryNode = notary.get()
+        val aliceNode = alice.get()
+        val bobNode = bob.get()
+
+        arrayOf(notaryNode, aliceNode, bobNode).forEach {
+            println("${it.nodeInfo.legalIdentity} started on ${ArtemisMessagingComponent.toHostAndPort(it.nodeInfo.address)}")
         }
 
-        super.start(stage)
+        // Register with alice to use alice's RPC proxy to create random events.
+        Models.get<NodeMonitorModel>(Main::class).register(ArtemisMessagingComponent.toHostAndPort(aliceNode.nodeInfo.address), FullNodeConfiguration(aliceNode.config), "user1", "test")
+        val rpcProxy = Models.get<NodeMonitorModel>(Main::class).proxyObservable.get()
 
-        // start the driver on another thread
-        // TODO Change this to connecting to an actual node (specified on cli/in a config) once we're happy with the code
-        Thread({
-            val portAllocation = PortAllocation.Incremental(20000)
-            driver(portAllocation = portAllocation) {
-
-                val aliceNodeFuture = startNode("Alice")
-                val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-
-                val aliceNode = aliceNodeFuture.get().nodeInfo
-                val notaryNode = notaryNodeFuture.get().nodeInfo
-
-                Models.get<IdentityModel>(Main::class).notary.set(notaryNode.notaryIdentity)
-                Models.get<IdentityModel>(Main::class).myIdentity.set(aliceNode.legalIdentity)
-                Models.get<NodeMonitorModel>(Main::class).register(aliceNode, configureTestSSL(), "user1", "test")
-
-                startNode("Bob").get()
-
-/*                for (i in 0 .. 10000) {
-                    Thread.sleep(500)
-
-                    val eventGenerator = EventGenerator(
-                            parties = listOf(aliceNode.legalIdentity),
-                            notary = notaryNode.notaryIdentity
-                    )
-
-                    eventGenerator.clientToServiceCommandGenerator.map { command ->
-                        aliceOutStream.onNext(command)
-                    }.generate(Random())
-                }*/
-                waitForAllNodesToFinish()
-            }
-        }).start()
+        for (i in 0..10000) {
+            Thread.sleep(500)
+            val eventGenerator = EventGenerator(
+                    parties = listOf(aliceNode.nodeInfo.legalIdentity, bobNode.nodeInfo.legalIdentity),
+                    notary = notaryNode.nodeInfo.notaryIdentity
+            )
+            eventGenerator.clientToServiceCommandGenerator.map { command ->
+                rpcProxy?.executeCommand(command)
+            }.generate(Random())
+        }
+        waitForAllNodesToFinish()
     }
 }

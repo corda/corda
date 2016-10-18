@@ -16,7 +16,9 @@ import com.r3corda.node.driver.driver
 import com.r3corda.node.internal.CordaRPCOpsImpl
 import com.r3corda.node.services.User
 import com.r3corda.node.services.config.configureTestSSL
+import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.messaging.StateMachineUpdate
+import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.testing.expect
 import com.r3corda.testing.expectEvents
@@ -30,7 +32,6 @@ import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.thread
 
 class NodeMonitorModelTest {
-
     lateinit var aliceNode: NodeInfo
     lateinit var notaryNode: NodeInfo
     val stopDriver = CountDownLatch(1)
@@ -67,7 +68,7 @@ class NodeMonitorModelTest {
                 networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
                 clientToService = monitor.clientToService
 
-                monitor.register(aliceNode, configureTestSSL(), cashUser.username, cashUser.password)
+                monitor.register(ArtemisMessagingComponent.toHostAndPort(aliceNode.address), configureTestSSL(), cashUser.username, cashUser.password)
                 driverStarted.countDown()
                 stopDriver.await()
             }
@@ -85,20 +86,22 @@ class NodeMonitorModelTest {
     fun `network map update`() {
         newNode("Bob")
         newNode("Charlie")
-        networkMapUpdates.expectEvents(isStrict = false) {
-            sequence(
-                    // TODO : Add test for remove when driver DSL support individual node shutdown.
-                    expect { output: NetworkMapCache.MapChange ->
-                        require(output.node.legalIdentity.name == "Alice") { output.node.legalIdentity.name }
-                    },
-                    expect { output: NetworkMapCache.MapChange ->
-                        require(output.node.legalIdentity.name == "Bob") { output.node.legalIdentity.name }
-                    },
-                    expect { output: NetworkMapCache.MapChange ->
-                        require(output.node.legalIdentity.name == "Charlie") { output.node.legalIdentity.name }
-                    }
-            )
-        }
+        networkMapUpdates.filter { !it.node.advertisedServices.any { it.info.type.isNotary() } }
+                .filter { !it.node.advertisedServices.any { it.info.type == NetworkMapService.type } }
+                .expectEvents(isStrict = false) {
+                    sequence(
+                            // TODO : Add test for remove when driver DSL support individual node shutdown.
+                            expect { output: NetworkMapCache.MapChange ->
+                                require(output.node.legalIdentity.name == "Alice") { "Expecting : Alice, Actual : ${output.node.legalIdentity.name}" }
+                            },
+                            expect { output: NetworkMapCache.MapChange ->
+                                require(output.node.legalIdentity.name == "Bob") { "Expecting : Bob, Actual : ${output.node.legalIdentity.name}" }
+                            },
+                            expect { output: NetworkMapCache.MapChange ->
+                                require(output.node.legalIdentity.name == "Charlie") { "Expecting : Charlie, Actual : ${output.node.legalIdentity.name}" }
+                            }
+                    )
+                }
     }
 
     @Test
