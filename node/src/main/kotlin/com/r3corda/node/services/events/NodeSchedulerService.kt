@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.contracts.SchedulableState
+import com.r3corda.core.contracts.ScheduledActivity
 import com.r3corda.core.contracts.ScheduledStateRef
 import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.node.services.SchedulerService
@@ -167,17 +168,27 @@ class NodeSchedulerService(private val database: Database,
         override fun call(): Unit {
             progressTracker.currentStep = RUNNING
 
+            // Ensure we are still scheduled.
+            val scheduledLogic: ProtocolLogic<*>? = getScheduledLogic()
+            if(scheduledLogic != null) {
+                subProtocol(scheduledLogic)
+            }
+        }
+
+        private fun getScheduledaActivity(): ScheduledActivity? {
             val txState = serviceHub.loadState(scheduledState.ref)
             val state = txState.data as SchedulableState
-            val scheduledActivity = try {
+            return try {
                 // This can throw as running contract code.
                 state.nextScheduledActivity(scheduledState.ref, scheduler.protocolLogicRefFactory)
             } catch(e: Exception) {
                 logger.error("Attempt to run scheduled state $scheduledState resulted in error.", e)
                 null
             }
+        }
 
-            // Ensure we are still scheduled.
+        private fun getScheduledLogic(): ProtocolLogic<*>? {
+            val scheduledActivity = getScheduledaActivity()
             var scheduledLogic: ProtocolLogic<*>? = null
             scheduler.mutex.locked {
                 // need to remove us from those scheduled, but only if we are still next
@@ -206,9 +217,7 @@ class NodeSchedulerService(private val database: Database,
                 recomputeEarliest()
                 scheduler.rescheduleWakeUp()
             }
-            if(scheduledLogic != null) {
-                subProtocol(scheduledLogic!!)
-            }
+            return scheduledLogic
         }
     }
 }

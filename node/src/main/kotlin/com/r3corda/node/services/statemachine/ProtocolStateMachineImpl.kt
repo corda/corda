@@ -240,7 +240,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
                 actionOnSuspend(ioRequest)
             } catch (t: Throwable) {
                 // Do not throw exception again - Quasar completely bins it.
-                logger.warn("Captured exception which was swallowed by Quasar", t)
+                logger.warn("Captured exception which was swallowed by Quasar for $logic at ${fiber.stackTrace.toList().joinToString("\n")}", t)
                 // TODO When error handling is introduced, look into whether we should be deleting the checkpoint and
                 // completing the Future
                 processException(t)
