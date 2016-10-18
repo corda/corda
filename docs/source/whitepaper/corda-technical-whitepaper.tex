@@ -17,6 +17,8 @@
 \usepackage[parfill]{parskip}
 \usepackage{textcomp}
 \usepackage{scrextend}
+\usepackage{cleveref}
+\crefformat{section}{\S#2#1#3}
 \addtokomafont{labelinglabel}{\sffamily}
 %\usepackage[natbibapa]{apacite}
 \renewcommand{\thefootnote}{\alph{footnote}}
@@ -107,6 +109,7 @@ are exposed via an embedded JMS compatible message broker.
 \item States can declare scheduled events. For example a bond state may declare an automatic transition to a ``in default'' state if it is not repaid in time.
 \end{itemize}
 
+Corda follows a general philosophy of reusing existing proven software systems and infrastructure where possible.
 Comparisons with Bitcoin and Ethereum will be provided throughout.
 
 \newpage
@@ -114,7 +117,7 @@ Comparisons with Bitcoin and Ethereum will be provided throughout.
 \section{Overview}
 
 Corda is a platform for the writing of ``CorDapps'': applications that extend the global database with new capabilities.
-Such apps define new data types, new inter-node protocols and the ``smart contracts'' that determine allowed changes.
+Such apps define new data types, new inter-node protocol flows and the ``smart contracts'' that determine allowed changes.
 
 What is a smart contract? That depends on the model of computation we are talking about. There are two competing
 computational models used in decentralised databases: the virtual computer model and the UTXO model. The virtual
@@ -396,10 +399,10 @@ the transaction will not be valid unless every key listed in every command has a
 structures are themselves opaque. In this way algorithmic agility is retained: new signature algorithms can be deployed
 without adjusting the code of the smart contracts themselves.
 
-\subsection{Compound keys}
+\subsection{Compound keys}\label{sec:compound-keys}
 
 The term ``public key'' in the description above actually refers to a \emph{compound key}. Compound keys are trees in
-which leafs are regular cryptographic public keys with an accompanying algorithm identifiers. Nodes in the tree specify
+which leaves are regular cryptographic public keys with an accompanying algorithm identifiers. Nodes in the tree specify
 both the weights of each child and a threshold weight that must be met. The validty of a set of signatures can be
 determined by walking the tree bottom-up, summing the weights of the keys that have a valid signature and comparing
 against the threshold. By using weights and thresholds a variety of conditions can be encoded, including boolean
@@ -468,9 +471,10 @@ Smart contracts in Corda are defined using JVM bytecode as specified in \emph{``
 with some small differences that are described in a later section. A contract is simply a class that implements
 the \texttt{Contract} interface, which in turn exposes a single function called \texttt{verify}. The verify
 function is passed a transaction and either throws an exception if the transaction is considered to be invalid,
-or returns with no result if the transaction is valid. Embedding the JVM specification in the Corda specification
-enables developers to write code in a variety of languages, use well developed toolchains, and to reuse code
-already authored in Java or other JVM compatible languages.
+or returns with no result if the transaction is valid. The set of verify functions to use is the union of the contracts
+specified by each state (which may be expressed as constraints, see \cref{sec:contract-constraints}). Embedding the
+JVM specification in the Corda specification enables developers to write code in a variety of languages, use well
+developed toolchains, and to reuse code already authored in Java or other JVM compatible languages.
 
 The Java standards also specify a comprehensive type system for expressing common business data. Time and calendar
 handling is provided by an implementation of the JSR 310 specification, decimal calculations can be performed either
@@ -492,6 +496,8 @@ be referenced in this way. Attachments are intended for data on the ledger that 
 over and over again. Data files are accessed by contract code using the same APIs as any file on the classpath
 would be accessed. The platform imposes some restrictions on what kinds of data can be included in attachments
 along with size limits, to avoid people placing inappropriate files on the global ledger (videos, PowerPoints etc).
+
+% TODO: No such abuse limits are currently in place.
 
 Note that the creator of a transaction gets to choose which files are attached. Therefore, it is typical that
 states place constraints on the data they're willing to accept. Attachments \emph{provide} data but do not
@@ -584,27 +590,236 @@ efficiency hit of always linking transient public keys to longer term keys with 
 
 % TODO: Discuss the crypto suites used in Corda.
 
-\subsection{Merkle-structured transactions}
+\subsection{Oracles and tearoffs}
+
+It is sometimes convenient to reveal a small part of a transaction to a counterparty in a way that allows them
+to check the signatures and sign it themselves. A typical use case for this is an \emph{oracle}, defined as a
+network service that is trusted to sign transactions containing statements about the world outside the ledger
+only if the statements are true.
+
+Here are some example statements an oracle might check:
+
+\begin{itemize}
+\item The price of a stock at a particular moment was X.
+\item An agreed upon interest rate at a particular moment was Y.
+\item If a specific organisation has declared bankruptcy.
+\item Weather conditions in a particular place at a particular time.
+\end{itemize}
+
+It is worth asking why a smart contract cannot simply fetch this information from some internet server itself: why
+do we insist on this notion of an oracle. The reason is that all calculations on the ledger must be deterministic.
+Everyone must be able to check the validity of a transaction and arrive at exactly the same answer, at any time (including years into the future),
+on any kind of computer. If a smart contract could do things like read the system clock or fetch arbitrary web pages
+then it would be possible for some computers to conclude a transaction was valid, whilst others concluded it was
+not (e.g. if the remote server had gone offline). Solving this problem means all the data needed to check the
+transaction must be in the ledger, which in turn implies that we must accept the point of view of some specific
+observer. That way there can be no disagreement about what happened.
+
+One way to implement oracles would be to have them sign a small data structure which is then embedded somewhere
+in a transaction (in a state or command). We take a different approach in which oracles sign the entire transaction,
+and data the oracle doesn't need to see is ``torn off'' before the transaction is sent. This is done by structuring
+the transaction as a Merkle hash tree so that the hash used for the signing operation is the root. By presenting a
+counterparty with the data elements that are needed along with the Merkle branches linking them to the root hash,
+that counterparty can sign the entire transaction whilst only being able to see some of it. Additionally, if the
+counterparty needs to be convinced that some third party has already signed the transaction, that is also
+straightforward. Typically an oracle will be presented with the Merkle branches for the command or state that
+contains the data, and the timestamp field, and nothing else. The resulting signature contains flag bits indicating which
+parts of the structure were presented for signing to avoid a single signature covering more than expected.
+
+% TODO: The flag bits are unused in the current reference implementation.
+
+There are a couple of reasons to take this more indirect approach. One is to keep a single signature checking
+code path. By ensuring there is only one place in a transaction where signatures may be found, algorithmic
+agility and parallel/batch verification are easy to implement. When a signature may be found in any arbitrary
+location in a transaction's data structures, and where verification may be controlled by the contract code itself (as in Bitcoin),
+it becomes harder to maximise signature checking efficiency. As signature checks are often one of the slowest parts
+of a block chain system, it is desirable to preserve these capabilities.
+
+Another reason is to provide oracles with a business model. If oracles just signed statements and nothing else then
+it would be difficult to run an oracle in which there are only a small number of potential statements, but
+determining their truth is very expensive. People could share the signed statements and reuse them in many different
+transactions, meaning the cost of issuing the initial signatures would have to be very high, perhaps
+unworkably high. Because oracles sign specific transactions, not specific statements, an oracle that is charging
+for its services can amortise the cost of determining the truth of a statement over many users who cannot then
+share the signature itself (because it covers a one-time-use structure by definition).
+
 \subsection{Encumbrances}
-\subsection{Contract constraints}
 
-% TODO: Contract constraints aren't designed yet.
+Each state in a transaction specifies a contract (boolean function) that is invoked with the entire transaction as input. All contracts must accept
+in order for the transaction to be considered valid. Sometimes we would like to compose the behaviours of multiple
+different contracts. Consider the notion of a ``time lock'' - a restriction on a state that prevents it being
+modified (i.e. sold) until a certain time. This is a general piece of logic that could apply to many kinds of
+assets. Whilst such logic could be implemented in a library and then called from every contract that might want
+to benefit from it, that requires all contract authors to think ahead and include the functionality. It would be
+better if we could mandate that the time lock logic ran along side the contract that governs the locked state.
 
-\section{Cash and Obligations}
+Consider an asset that is supposed to remain frozen until a time is reached. Encumbrances allow a state to specify another
+state that must be present in any transaction that consumes it. For example, a time lock contract can define a state that
+contains the time at which the lock expires, and a simple contract that just compares that time against the transaction
+timestamp. The asset state can be included in a spend-to-self transaction that doesn't change the ownership of the asset
+but does include a time lock state in the outputs. Now if the asset state is used, the time lock state must also be used, and
+that triggers the execution of the time lock contract.
+
+Encumbered states can only point to one encumbrance state, but that state can itself point to another and so on,
+resulting in a chain of encumbrances all of which must be satisfied.
+
+% TODO: Diagram for how this is arranged
+
+An encumbrance state must be present in the same transaction as the encumbered state, as states refer to each other
+by index alone.
+
+% TODO: Interaction of enumbrances with notary change transactions.
+
+\subsection{Contract constraints}\label{sec:contract-constraints}
+
+The simplest way of tying states to the contract code that defines them is by hash. This works for very simple
+and stable programs, but more complicated contracts may need to be upgraded. In this case it may be preferable
+for states to refer to contracts by the identity of the signer. Because contracts are stored in zip files, and
+because a Java Archive (JAR) file is just a zip with some extra files inside, it is possible to use the standard
+JAR signing infrastructure to identify the source of contract code. Simple constraints such as "any contract of
+this name signed by these keys" allow for some upgrade flexibility, at the cost of increased exposure to rogue
+contract developers. Requiring combinations of signatures helps reduce the risk of a rogue or hacked developer
+publishing a bad contract version, at the cost of increased difficulty in releasing new versions. State creators
+may also specify third parties they wish to review contract code. Regardless of which set of tradeoffs is chosen,
+the framework can accomodate them.
+
+A contract constraint may use a compound key of the type described in \cref{sec:compound-keys}. The standard JAR
+signing protocol allows for multiple signatures from different private keys, thus being able to satisfy compound
+keys. The allowed signing algorithms are \texttt{SHA256withRSA} and \texttt{SHA256withECDSA}. Note that the
+cryptographic algorithms used for code signing may not always be the same as those used for transaction signing,
+as for code signing we place initial focus on being able to re-use the infrastructure.
+
+% TODO: Contract constraints aren't implemented yet so this design may change based on feedback.
+
+\section{Assets and obligations}
+
+A ledger that cannot record the ownership of assets is not very useful. We define a set of classes that model
+asset-like behaviour and provide some platform contracts to ensure interoperable notions of cash and obligations.
+
+We define the notion of an \texttt{OwnableState}, implemented as an interface which any state may conform to. Ownable
+states are required to have an \texttt{owner} field which is a compound key (see \cref{sec:compound-keys}). This is
+utilised by generic code in the vault (see \cref{sec:vault}) to manipulate ownable states.
+
+% TODO: Currently OwnableState.owner is just a regular PublicKey.
+
+From \texttt{OwnableState} we derive a \texttt{FungibleAsset} concept to represent assets of measurable quantity, in
+which units are sufficiently similar to represented together in a single ledger state. Making that concrete, pound notes
+are a fungible asset: regardless of whether you represent \pounds10 as a single \pounds10 note or two notes of \pounds5
+each the total value is the same. Other kinds of fungible asset could be barrels of Brent Oil (but not all kinds of
+crude oil worldwide, because oil comes in different grades which are not interchangeable), litres of clean water,
+kilograms of bananas, units of a stock and so on.
+
+When cash is represented on a digital ledger an additional complication can arise: for national ``fiat'' currencies
+the ledger merely records an entity that has a liability which may be redeemed for some other form (physical currency,
+a wire transfer via some other ledger system, etc). This means that two ledger entries of \pounds1000 may \emph{not}
+be entirely fungible because all the entries really represent is a claim on an issuer, which - if it is not a central
+bank - may go bankrupt. Even assuming defaults never happen, the data representing where an asset may be redeemed
+must be tracked through the chain of custody, so `exiting' the asset from the ledger and thus claiming physical
+ownership can be done.
+
+The Corda type system supports the encoding of this complexity. The \texttt{Amount<T>} type defines an integer
+quantity of some token. This type does not support fractional quantities so when used to represent national
+currencies the quantity must be measured in pennies, with sub-penny amount requiring the use of some other type.
+The token can be represented by any type. A common token type to use is \texttt{Issued<T>}, which defines a token
+issued by some party. It encapsulates what the asset is, who issued it, and an opaque reference field that is not
+parsed by the platform - it is intended to help the issuer keep track of e.g. an account number, the location where
+the asset can be found in storage, etc.
+
+% TODO: FungibleState description
+% TODO: Obligations
+
 \section{Non-asset instruments}
 \section{Integration with existing infrastructure}
+
 \section{Deterministic JVM}
+
+It is important that all nodes that process a transaction always agree on whether it is valid or not. Because
+transaction types are defined using JVM bytecode, this means the execution of that bytecode must be fully
+deterministic. Out of the box a standard JVM is not fully deterministic, thus we must make some modifications
+in order to satisfy our requirements. Non-determinism could come from the following sources:
+
+\begin{itemize}
+\item Sources of external input e.g. the file system, network, system properties, clocks.
+\item Random number generators.
+\item Different decisions about when to terminate long running programs.
+\item \texttt{Object.hashCode()}, which is typically implemented either by returning a pointer address or by
+assigning the object a random number. This can surface as different iteration orders over hash maps and hash sets.
+\item Differences in hardware floating point arithmetic.
+\item Multi-threading.
+\item Differences in API implementations between nodes.
+\item Garbage collector callbacks.
+\end{itemize}
+
+To ensure that the contract verify function is fully pure even in the face of infinite loops we construct a new
+type of JVM sandbox. It utilises a bytecode static analysis and rewriting pass, along with a small JVM patch that
+allows the sandbox to control the behaviour of hashcode generation. Contract code is rewritten the first time
+it needs to be executed and then stored for future use.
+
+The bytecode analysis and rewrite performs the following tasks:
+
+\begin{itemize}
+\item Inserts calls to an accounting object before expensive bytecodes. The goal of this rewrite is to deterministically
+terminate code that has run for an unacceptably long amount of time or used an unacceptable amount of memory. Expensive
+bytecodes include method invocation, allocation, backwards jumps and throwing exceptions.
+\item Prevents exception handlers from catching \texttt{Throwable}, \texttt{Error} or \texttt{ThreadDeath}.
+\item Adjusts constant pool references to relink the code against a `shadow' JDK, which duplicates a subset of the regular
+JDK but inside a dedicated sandbox package. The shadow JDK is missing functionality that contract code shouldn't have access
+to, such as file IO or external entropy.
+\item Sets the \texttt{strictfp} flag on all methods, which requires the JVM to do floating point arithmetic in a hardware
+independent fashion. Whilst we anticipate that floating point arithmetic is unlikely to feature in most smart contracts
+(big integer and big decimal libraries are available), it is available for those who want to use it.
+% TODO: The sandbox code doesn't flip the strictfp flag yet.
+\item Forbids \texttt{invokedynamic} bytecode except in special cases, as the libraries that support this functionality have
+historically had security problems and it is primarily needed only by scripting languages. Support for the specific
+lambda and string concatenation metafactories used by Java code itself are allowed.
+% TODO: The sandbox doesn't allow lambda/string concat(j9) metafactories at the moment.
+\item Forbids native methods.
+\item Forbids finalizers.
+\end{itemize}
+
+The cost instrumentation strategy used is a simple one: just counting bytecodes that are known to be expensive to execute.
+Method size is limited and jumps count towards the budget, so such a strategy is guaranteed to eventually terminate. However
+it is still possible to construct bytecode sequences by hand that take excessive amounts of time to execute. The cost
+instrumentation is designed to ensure that infinite loops are terminated and that if the cost of verifying a transaction
+becomes unexpectedly large (e.g. contains algorithms with complexity exponential in transaction size) that all nodes agree
+precisely on when to quit. It is \emph{not} intended as a protection against denial of service attacks. If a node is sending
+you transactions that appear designed to simply waste your CPU time then simply blocking that node is sufficient to solve
+the problem, given the lack of global broadcast.
+
+Opcode budgets are separate per opcode type, so there is no unified cost model. Additionally the instrumentation is high
+overhead. A more sophisticated design would be to statically calculate bytecode costs as much as possible ahead of time,
+by instrumenting only the entry point of `accounting blocks', i.e. runs of basic blocks that end with either a method return
+or a backwards jump. Because only an abstract cost matters (this is not a profiler tool) and because the limits are expected
+to bet set relatively high, there is no need to instrument every basic block. Using the max of both sides of a branch is
+sufficient when neither branch target contains a backwards jump. This sort of design will be investigated if the per category
+opcode-at-a-time accounting turns out to be insufficient.
+
+A further complexity comes from the need to constrain memory usage. The sandbox imposes a quota on bytes \emph{allocated}
+rather than bytes \emph{retained} in order to simplify the implementation. This strategy is unnecessarily harsh on smart
+contracts that churn large quantities of garbage yet have relatively small peak heap sizes and, again, it may be that
+in practice a more sophisticated strategy that integrates with the GC is required in order to set quotas to a usefully
+generic level.
+
+Control over \texttt{Object.hashCode()} takes the form of new JNI calls that allow the JVM's thread local random number
+generator to be reseeded before execution begins. The seed is derived from the hash of the transaction being verified.
+
+Finally, it is important to note that not just smart contract code is instrumented, but all code that it can transitively
+reach. In particular this means that the `shadow JDK' is also instrumented and stored on disk ahead of time.
+
 \section{Notaries}
+\section{The vault}\label{sec:vault}
 \section{Clauses}
 \section{Secure signing devices}
 \section{Client RPC and reactive collections}
 \section{Event scheduling}
 \section{Future work}
 
-\paragraph Secure hardware
-\paragraph Zero knowledge proofs
+\paragraph{Secure hardware}
+\paragraph{Zero knowledge proofs}
 
 \section{Conclusion}
+
+\section{Acknowledgements}
 
 \bibliographystyle{unsrt}
 \bibliography{Ref}
