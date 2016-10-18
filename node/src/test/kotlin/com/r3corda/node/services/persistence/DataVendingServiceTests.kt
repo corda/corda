@@ -11,6 +11,7 @@ import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.node.services.persistence.DataVending.Service.NotifyTransactionHandler
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.protocols.BroadcastTransactionProtocol.NotifyTxRequest
 import com.r3corda.testing.MEGA_CORP
 import com.r3corda.testing.node.MockNetwork
@@ -45,15 +46,17 @@ class DataVendingServiceTests {
         val registerKey = registerNode.services.legalIdentityKey
         ptx.signWith(registerKey)
         val tx = ptx.toSignedTransaction()
-        assertEquals(0, vaultServiceNode.services.vaultService.currentVault.states.toList().size)
+        databaseTransaction(vaultServiceNode.database) {
+            assertEquals(0, vaultServiceNode.services.vaultService.currentVault.states.toList().size)
 
-        registerNode.sendNotifyTx(tx, vaultServiceNode)
+            registerNode.sendNotifyTx(tx, vaultServiceNode)
 
-        // Check the transaction is in the receiving node
-        val actual = vaultServiceNode.services.vaultService.currentVault.states.singleOrNull()
-        val expected = tx.tx.outRef<Cash.State>(0)
+            // Check the transaction is in the receiving node
+            val actual = vaultServiceNode.services.vaultService.currentVault.states.singleOrNull()
+            val expected = tx.tx.outRef<Cash.State>(0)
 
-        assertEquals(expected, actual)
+            assertEquals(expected, actual)
+        }
     }
 
     /**
@@ -74,12 +77,14 @@ class DataVendingServiceTests {
         val registerKey = registerNode.services.legalIdentityKey
         ptx.signWith(registerKey)
         val tx = ptx.toSignedTransaction(false)
-        assertEquals(0, vaultServiceNode.services.vaultService.currentVault.states.toList().size)
+        databaseTransaction(vaultServiceNode.database) {
+            assertEquals(0, vaultServiceNode.services.vaultService.currentVault.states.toList().size)
 
-        registerNode.sendNotifyTx(tx, vaultServiceNode)
+            registerNode.sendNotifyTx(tx, vaultServiceNode)
 
-        // Check the transaction is not in the receiving node
-        assertEquals(0, vaultServiceNode.services.vaultService.currentVault.states.toList().size)
+            // Check the transaction is not in the receiving node
+            assertEquals(0, vaultServiceNode.services.vaultService.currentVault.states.toList().size)
+        }
     }
 
     private fun MockNode.sendNotifyTx(tx: SignedTransaction, walletServiceNode: MockNode) {
