@@ -12,6 +12,9 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/contracts.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/contracts.iml" group="contracts" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/contracts_main.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/contracts_main.iml" group="contracts" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/contracts_test.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/contracts_test.iml" group="contracts" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/cordformation/cordformation.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/cordformation/cordformation.iml" group="gradle-plugins/cordformation" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/cordformation/cordformation_main.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/cordformation/cordformation_main.iml" group="gradle-plugins/cordformation" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/cordformation/cordformation_test.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/cordformation/cordformation_test.iml" group="gradle-plugins/cordformation" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/core/core.iml" filepath="$PROJECT_DIR$/.idea/modules/core/core.iml" group="core" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/core/core_main.iml" filepath="$PROJECT_DIR$/.idea/modules/core/core_main.iml" group="core" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/core/core_test.iml" filepath="$PROJECT_DIR$/.idea/modules/core/core_test.iml" group="core" />
@@ -24,16 +27,22 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/explorer/explorer.iml" filepath="$PROJECT_DIR$/.idea/modules/explorer/explorer.iml" group="explorer" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/explorer/explorer_main.iml" filepath="$PROJECT_DIR$/.idea/modules/explorer/explorer_main.iml" group="explorer" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/explorer/explorer_test.iml" filepath="$PROJECT_DIR$/.idea/modules/explorer/explorer_test.iml" group="explorer" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/gradle-plugins.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/gradle-plugins.iml" group="gradle-plugins" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/gradle-plugins_main.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/gradle-plugins_main.iml" group="gradle-plugins" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/gradle-plugins_test.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/gradle-plugins_test.iml" group="gradle-plugins" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated.iml" group="contracts/isolated" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_main.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_main.iml" group="contracts/isolated" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_test.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_test.iml" group="contracts/isolated" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/network-simulator/network-simulator.iml" filepath="$PROJECT_DIR$/.idea/modules/network-simulator/network-simulator.iml" group="network-simulator" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/network-simulator/network-simulator_main.iml" filepath="$PROJECT_DIR$/.idea/modules/network-simulator/network-simulator_main.iml" group="network-simulator" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/network-simulator/network-simulator_test.iml" filepath="$PROJECT_DIR$/.idea/modules/network-simulator/network-simulator_test.iml" group="network-simulator" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node.iml" group="node" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node_integrationTest.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node_integrationTest.iml" group="node" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node_main.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node_main.iml" group="node" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node_test.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node_test.iml" group="node" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/publish-utils/publish-utils.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/publish-utils/publish-utils.iml" group="gradle-plugins/publish-utils" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/publish-utils/publish-utils_main.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/publish-utils/publish-utils_main.iml" group="gradle-plugins/publish-utils" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/publish-utils/publish-utils_test.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/publish-utils/publish-utils_test.iml" group="gradle-plugins/publish-utils" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/quasar-utils/quasar-utils.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/quasar-utils/quasar-utils.iml" group="gradle-plugins/quasar-utils" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/quasar-utils/quasar-utils_main.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/quasar-utils/quasar-utils_main.iml" group="gradle-plugins/quasar-utils" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/quasar-utils/quasar-utils_test.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/quasar-utils/quasar-utils_test.iml" group="gradle-plugins/quasar-utils" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/r3prototyping.iml" filepath="$PROJECT_DIR$/.idea/modules/r3prototyping.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/r3prototyping_integrationTest.iml" filepath="$PROJECT_DIR$/.idea/modules/r3prototyping_integrationTest.iml" group="r3prototyping" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/r3prototyping_main.iml" filepath="$PROJECT_DIR$/.idea/modules/r3prototyping_main.iml" group="r3prototyping" />

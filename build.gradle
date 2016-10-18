@@ -110,7 +110,6 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.2"
-    compile 'com.squareup.okhttp3:okhttp:3.3.1'
     compile 'co.paralleluniverse:capsule:1.0.3'
 
     // Unit testing helpers.
@@ -128,22 +127,6 @@ dependencies {
 task getAttachmentDemo(type: CreateStartScripts) {
     mainClassName = "com.r3corda.demos.attachment.AttachmentDemoKt"
     applicationName = "attachment-demo"
-    defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
-    outputDir = new File(project.buildDir, 'scripts')
-    classpath = jar.outputs.files + project.configurations.runtime
-}
-
-task getRateFixDemo(type: CreateStartScripts) {
-    mainClassName = "com.r3corda.demos.RateFixDemoKt"
-    applicationName = "get-rate-fix"
-    defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
-    outputDir = new File(project.buildDir, 'scripts')
-    classpath = jar.outputs.files + project.configurations.runtime
-}
-
-task getIRSDemo(type: CreateStartScripts) {
-    mainClassName = "com.r3corda.demos.IRSDemoKt"
-    applicationName = "irsdemo"
     defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
     outputDir = new File(project.buildDir, 'scripts')
     classpath = jar.outputs.files + project.configurations.runtime
@@ -203,8 +186,6 @@ quasarScan.dependsOn('classes', 'core:classes', 'contracts:classes', 'node:class
 
 applicationDistribution.into("bin") {
     from(getAttachmentDemo)
-    from(getRateFixDemo)
-    from(getIRSDemo)
     from(getTraderDemo)
     fileMode = 0755
 }
