@@ -5,6 +5,7 @@ import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.node.internal.Node
+import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.typesafe.config.Config
@@ -31,7 +32,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val devMode: Boolean
 }
 
-class FullNodeConfiguration(config: Config) : NodeConfiguration {
+class FullNodeConfiguration(config: Config, val clock: Clock = NodeClock()) : NodeConfiguration {
     override val basedir: Path by config
     override val myLegalName: String by config
     override val nearestCity: String by config
@@ -47,7 +48,6 @@ class FullNodeConfiguration(config: Config) : NodeConfiguration {
     val webAddress: HostAndPort by config
     val messagingServerAddress: HostAndPort? by config.getOrElse { null }
     val extraAdvertisedServiceIds: String by config
-    val clock: Clock by config
 
     fun createNode(): Node {
         val advertisedServices = mutableSetOf<ServiceInfo>()

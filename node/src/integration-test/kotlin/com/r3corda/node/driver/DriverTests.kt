@@ -30,31 +30,31 @@ class DriverTests {
             val notary = startNode("TestNotary", setOf(ServiceInfo(SimpleNotaryService.type)))
             val regulator = startNode("Regulator", setOf(ServiceInfo(RegulatorService.type)))
 
-            nodeMustBeUp(notary.get(), "TestNotary")
-            nodeMustBeUp(regulator.get(), "Regulator")
+            nodeMustBeUp(notary.get().nodeInfo, "TestNotary")
+            nodeMustBeUp(regulator.get().nodeInfo, "Regulator")
             Pair(notary.get(), regulator.get())
         }
-        nodeMustBeDown(notary)
-        nodeMustBeDown(regulator)
+        nodeMustBeDown(notary.nodeInfo)
+        nodeMustBeDown(regulator.nodeInfo)
     }
 
     @Test
     fun startingNodeWithNoServicesWorks() {
         val noService = driver {
             val noService = startNode("NoService")
-            nodeMustBeUp(noService.get(), "NoService")
+            nodeMustBeUp(noService.get().nodeInfo, "NoService")
             noService.get()
         }
-        nodeMustBeDown(noService)
+        nodeMustBeDown(noService.nodeInfo)
     }
 
     @Test
     fun randomFreePortAllocationWorks() {
         val nodeInfo = driver(portAllocation = PortAllocation.RandomFree()) {
             val nodeInfo = startNode("NoService")
-            nodeMustBeUp(nodeInfo.get(), "NoService")
+            nodeMustBeUp(nodeInfo.get().nodeInfo, "NoService")
             nodeInfo.get()
         }
-        nodeMustBeDown(nodeInfo)
+        nodeMustBeDown(nodeInfo.nodeInfo)
     }
 }

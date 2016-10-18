@@ -331,7 +331,6 @@ open class DriverDSL(
                 configOverrides = mapOf(
                         "myLegalName" to networkMapName,
                         "basedir" to Paths.get(nodeDirectory).normalize().toString(),
-                        "clock" to clock,
                         "artemisAddress" to networkMapAddress.toString(),
                         "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to ""
