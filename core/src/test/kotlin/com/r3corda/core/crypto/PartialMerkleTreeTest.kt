@@ -105,6 +105,14 @@ class PartialMerkleTreeTest {
     }
 
     @Test
+    fun `build Partial Merkle Tree - only duplicate leaves, less included failure`() {
+        val leaves = "aaa"
+        val hashes = leaves.map { it.serialize().hash }
+        val mt = MerkleTree.getMerkleTree(hashes)
+        assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(mt, hashes.subList(0,1)) }
+    }
+
+    @Test
     fun `verify Partial Merkle Tree - too many leaves failure`() {
         val inclHashes = arrayListOf(hashed[3], hashed[5])
         val pmt = PartialMerkleTree.build(merkleTree, inclHashes)

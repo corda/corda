@@ -11,7 +11,7 @@ class MerkleTreeException(val reason: String): Exception() {
 
 /**
  * Building and verification of Partial Merkle Tree.
- * Partial Merkle Tree is a minimal tree needed to check that given set of leaves belongs to a full Merkle Tree.
+ * Partial Merkle Tree is a minimal tree needed to check that a given set of leaves belongs to a full Merkle Tree.
  *
  * Example of Merkle tree with 5 leaves.
  *
@@ -24,8 +24,8 @@ class MerkleTreeException(val reason: String): Exception() {
  *    l1 l2 l3 l4 l5->d(l5)
  *
  * l* denote hashes of leaves, h* - hashes of nodes below.
- * h5->d(h5) denotes duplication of left hand side node. These nodes are kept in a full tree as DuplicatedLeaf.
- * When filtering the tree for l5, we don't want to keep both l5 and it's duplicate (it can also be solved using null
+ * h5->d(h5) denotes duplication of the left hand side node. These nodes are kept in a full tree as DuplicatedLeaf.
+ * When filtering the tree for l5, we don't want to keep both l5 and its duplicate (it can also be solved using null
  * values in a tree, but this solution is clearer).
  *
  * Example of Partial tree based on the tree above.
@@ -87,28 +87,26 @@ class PartialMerkleTree(val root: PartialTree) {
                 includeHashes: List<SecureHash>,
                 usedHashes: MutableList<SecureHash>
         ): Pair<Boolean, PartialTree> {
-            if (root is MerkleTree.Leaf) {
-                if (root.value in includeHashes) {
-                    usedHashes.add(root.value)
-                    return Pair(true, PartialTree.IncludedLeaf(root.value))
-                } else return Pair(false, PartialTree.Leaf(root.value))
-            } else if (root is MerkleTree.DuplicatedLeaf) {
-                //Duplicate leaves should be stored as normal leaves not included ones.
-                return Pair(false, PartialTree.Leaf(root.value))
-            } else if (root is MerkleTree.Node) {
-                val leftNode = buildPartialTree(root.left, includeHashes, usedHashes)
-                val rightNode = buildPartialTree(root.right, includeHashes, usedHashes)
-                if (leftNode.first or rightNode.first) {
-                    //This node is on a path to some included leaves. Don't store hash.
-                    val newTree = PartialTree.Node(leftNode.second, rightNode.second)
-                    return Pair(true, newTree)
-                } else {
-                    //This node has no included leaves below. Cut the tree here and store a hash as a Leaf.
-                    val newTree = PartialTree.Leaf(root.value)
-                    return Pair(false, newTree)
+            return when (root) {
+                is MerkleTree.Leaf ->
+                    if (root.value in includeHashes) {
+                        usedHashes.add(root.value)
+                        Pair(true, PartialTree.IncludedLeaf(root.value))
+                    } else Pair(false, PartialTree.Leaf(root.value))
+                is MerkleTree.DuplicatedLeaf -> Pair(false, PartialTree.Leaf(root.value))
+                is MerkleTree.Node -> {
+                    val leftNode = buildPartialTree(root.left, includeHashes, usedHashes)
+                    val rightNode = buildPartialTree(root.right, includeHashes, usedHashes)
+                    if (leftNode.first or rightNode.first) {
+                        //This node is on a path to some included leaves. Don't store hash.
+                        val newTree = PartialTree.Node(leftNode.second, rightNode.second)
+                        return Pair(true, newTree)
+                    } else {
+                        //This node has no included leaves below. Cut the tree here and store a hash as a Leaf.
+                        val newTree = PartialTree.Leaf(root.value)
+                        return Pair(false, newTree)
+                    }
                 }
-            } else {
-                throw MerkleTreeException("Invalid MerkleTree.")
             }
         }
     }
@@ -121,7 +119,7 @@ class PartialMerkleTree(val root: PartialTree) {
         val usedHashes = ArrayList<SecureHash>()
         val verifyRoot = verify(root, usedHashes)
         //It means that we obtained more/less hashes than needed or different sets of hashes.
-        if(hashesToCheck.size != usedHashes.size || hashesToCheck.minus(usedHashes).isNotEmpty())
+        if (hashesToCheck.groupBy { it } != usedHashes.groupBy { it })
             return false
         return (verifyRoot == merkleRootHash)
     }
@@ -130,18 +128,18 @@ class PartialMerkleTree(val root: PartialTree) {
      * Recursive calculation of root of this partial tree.
      * Modifies usedHashes to later check for inclusion with hashes provided.
      */
-    private fun verify(node: PartialTree, usedHashes: MutableList<SecureHash>): SecureHash{
-        if (node is PartialTree.IncludedLeaf) {
-            usedHashes.add(node.hash)
-            return node.hash
-        } else if (node is PartialTree.Leaf ) {
-            return node.hash
-        } else if (node is PartialTree.Node) {
-            val leftHash = verify(node.left, usedHashes)
-            val rightHash = verify(node.right, usedHashes)
-            return leftHash.hashConcat(rightHash)
-        } else {
-            throw MerkleTreeException("Invalid node type.")
+    private fun verify(node: PartialTree, usedHashes: MutableList<SecureHash>): SecureHash {
+        return when (node) {
+            is PartialTree.IncludedLeaf -> {
+                usedHashes.add(node.hash)
+                node.hash
+            }
+            is PartialTree.Leaf -> node.hash
+            is PartialTree.Node -> {
+                val leftHash = verify(node.left, usedHashes)
+                val rightHash = verify(node.right, usedHashes)
+                return leftHash.hashConcat(rightHash)
+            }
         }
     }
 }

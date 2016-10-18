@@ -78,7 +78,7 @@ sealed class MerkleTree(val hash: SecureHash) {
                     val right = when {
                     //If there is an odd number of elements at this level,
                     //the last element is hashed with itself and stored as a Leaf.
-                        i+1 > n-1 -> MerkleTree.DuplicatedLeaf(lastNodesList[n-1].hash)
+                        i + 1 > n - 1 -> MerkleTree.DuplicatedLeaf(lastNodesList[n-1].hash)
                         else -> lastNodesList[i+1]
                     }
                     val combined = left.hashNodes(right)
@@ -112,10 +112,12 @@ class FilteredLeaves(
  * Holds filter functions on transactions fields.
  * Functions are used to build a partial tree only out of some subset of original transaction fields.
  */
-class FilterFuns(val filterInputs: (StateRef) -> Boolean = { false },
-                      val filterOutputs: (TransactionState<ContractState>) -> Boolean = { false },
-                      val filterAttachments: (SecureHash) -> Boolean = { false },
-                      val filterCommands: (Command) -> Boolean = { false }) {
+class FilterFuns(
+        val filterInputs: (StateRef) -> Boolean = { false },
+        val filterOutputs: (TransactionState<ContractState>) -> Boolean = { false },
+        val filterAttachments: (SecureHash) -> Boolean = { false },
+        val filterCommands: (Command) -> Boolean = { false }
+) {
     fun <T: Any> genericFilter(elem: T): Boolean {
         return when (elem) {
             is StateRef -> filterInputs(elem)
