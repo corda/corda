@@ -13,6 +13,7 @@ import com.r3corda.node.utilities.*
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
+import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.nio.file.FileSystems
@@ -53,8 +54,7 @@ class NodeMessagingClient(config: NodeConfiguration,
                           val serverHostPort: HostAndPort,
                           val myIdentity: PublicKey?,
                           val executor: AffinityExecutor,
-                          val persistentInbox: Boolean = true,
-                          val persistenceTx: (() -> Unit) -> Unit = { it() }) : ArtemisMessagingComponent(config), MessagingServiceInternal {
+                          val database: Database) : ArtemisMessagingComponent(config), MessagingServiceInternal {
     companion object {
         val log = loggerFor<NodeMessagingClient>()
 
@@ -106,23 +106,20 @@ class NodeMessagingClient(config: NodeConfiguration,
         val uuid = uuidString("message_id")
     }
 
-    private val processedMessages: MutableSet<UUID> = Collections.synchronizedSet(if (persistentInbox) {
+    private val processedMessages: MutableSet<UUID> = Collections.synchronizedSet(
         object : AbstractJDBCHashSet<UUID, Table>(Table, loadOnInit = true) {
             override fun elementFromRow(row: ResultRow): UUID = row[table.uuid]
 
             override fun addElementToInsert(insert: InsertStatement, entry: UUID, finalizables: MutableList<() -> Unit>) {
                 insert[table.uuid] = entry
             }
-        }
-    } else {
-        HashSet<UUID>()
-    })
+        })
 
     init {
         require(config.basedir.fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
     }
 
-    fun start(rpcOps: CordaRPCOps? = null) {
+    fun start(rpcOps: CordaRPCOps) {
         state.locked {
             check(!started) { "start can't be called twice" }
             started = true
@@ -146,7 +143,7 @@ class NodeMessagingClient(config: NodeConfiguration,
             val queueName = toQueueName(myAddress)
             val query = session.queueQuery(queueName)
             if (!query.isExists) {
-                session.createQueue(queueName, queueName, persistentInbox)
+                session.createQueue(queueName, queueName, true)
             }
             knownQueues.add(queueName)
             p2pConsumer = session.createConsumer(queueName)
@@ -154,13 +151,11 @@ class NodeMessagingClient(config: NodeConfiguration,
             // Create an RPC queue and consumer: this will service locally connected clients only (not via a
             // bridge) and those clients must have authenticated. We could use a single consumer for everything
             // and perhaps we should, but these queues are not worth persisting.
-            if (rpcOps != null) {
-                session.createTemporaryQueue(RPC_REQUESTS_QUEUE, RPC_REQUESTS_QUEUE)
-                session.createTemporaryQueue("activemq.notifications", "rpc.qremovals", "_AMQ_NotifType = 1")
-                rpcConsumer = session.createConsumer(RPC_REQUESTS_QUEUE)
-                rpcNotificationConsumer = session.createConsumer("rpc.qremovals")
-                dispatcher = createRPCDispatcher(state, rpcOps)
-            }
+            session.createTemporaryQueue(RPC_REQUESTS_QUEUE, RPC_REQUESTS_QUEUE)
+            session.createTemporaryQueue("activemq.notifications", "rpc.qremovals", "_AMQ_NotifType = 1")
+            rpcConsumer = session.createConsumer(RPC_REQUESTS_QUEUE)
+            rpcNotificationConsumer = session.createConsumer("rpc.qremovals")
+            dispatcher = createRPCDispatcher(state, rpcOps)
         }
     }
 
@@ -277,7 +272,7 @@ class NodeMessagingClient(config: NodeConfiguration,
             // Note that handlers may re-enter this class. We aren't holding any locks and methods like
             // start/run/stop have re-entrancy assertions at the top, so it is OK.
             executor.fetchFrom {
-                persistenceTx {
+                databaseTransaction(database) {
                     callHandlers(msg, deliverTo)
                 }
             }

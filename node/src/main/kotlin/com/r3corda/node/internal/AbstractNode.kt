@@ -435,7 +435,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
 
     protected abstract fun makeMessagingService(): MessagingServiceInternal
 
-    protected abstract fun startMessagingService(cordaRPCOps: CordaRPCOps?)
+    protected abstract fun startMessagingService(cordaRPCOps: CordaRPCOps)
 
     protected open fun initialiseCheckpointService(dir: Path): CheckpointStorage {
         return DBCheckpointStorage()

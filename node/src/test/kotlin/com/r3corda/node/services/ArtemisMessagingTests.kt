@@ -1,22 +1,37 @@
 package com.r3corda.node.services
 
 import com.google.common.net.HostAndPort
+import com.r3corda.core.contracts.ClientToServiceCommand
+import com.r3corda.core.contracts.ContractState
+import com.r3corda.core.contracts.StateAndRef
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.createMessage
+import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
+import com.r3corda.core.node.services.NetworkMapCache
+import com.r3corda.core.node.services.StateMachineTransactionMapping
+import com.r3corda.core.node.services.Vault
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingServer
-import com.r3corda.node.services.messaging.NodeMessagingClient
+import com.r3corda.node.services.messaging.*
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
+import com.r3corda.node.services.transactions.PersistentUniquenessProvider
 import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.node.utilities.configureDatabase
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.freeLocalHostAndPort
+import com.r3corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import rx.Observable
+import java.io.Closeable
 import java.net.ServerSocket
 import java.nio.file.Path
 import java.util.concurrent.LinkedBlockingQueue
@@ -33,11 +48,43 @@ class ArtemisMessagingTests {
     val identity = generateKeyPair()
 
     lateinit var config: NodeConfiguration
+    lateinit var dataSource: Closeable
+    lateinit var database: Database
 
     var messagingClient: NodeMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
 
     val networkMapCache = InMemoryNetworkMapCache()
+
+    val rpcOps = object : CordaRPCOps {
+        override val protocolVersion: Int
+            get() = throw UnsupportedOperationException()
+
+        override fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>> {
+            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
+        override fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>> {
+            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
+        override fun verifiedTransactions(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
+            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
+        override fun stateMachineRecordedTransactionMapping(): Pair<List<StateMachineTransactionMapping>, Observable<StateMachineTransactionMapping>> {
+            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
+        override fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>> {
+            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
+        override fun executeCommand(command: ClientToServiceCommand): TransactionBuildResult {
+            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
+    }
 
     @Before
     fun setUp() {
@@ -52,12 +99,18 @@ class ArtemisMessagingTests {
             override val keyStorePassword: String = "testpass"
             override val trustStorePassword: String = "trustpass"
         }
+        LogHelper.setLevel(PersistentUniquenessProvider::class)
+        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
+        dataSource = dataSourceAndDatabase.first
+        database = dataSourceAndDatabase.second
     }
 
     @After
     fun cleanUp() {
         messagingClient?.stop()
         messagingServer?.stop()
+        dataSource.close()
+        LogHelper.reset(PersistentUniquenessProvider::class)
     }
 
     @Test
@@ -73,7 +126,7 @@ class ArtemisMessagingTests {
         val remoteServerAddress = freeLocalHostAndPort()
 
         createMessagingServer(remoteServerAddress).start()
-        createMessagingClient(server = remoteServerAddress).start()
+        createMessagingClient(server = remoteServerAddress).start(rpcOps)
     }
 
     @Test
@@ -84,14 +137,14 @@ class ArtemisMessagingTests {
         createMessagingServer(serverAddress).start()
 
         messagingClient = createMessagingClient(server = invalidServerAddress)
-        assertThatThrownBy { messagingClient!!.start() }
+        assertThatThrownBy { messagingClient!!.start(rpcOps) }
         messagingClient = null
     }
 
     @Test
     fun `client should connect to local server`() {
         createMessagingServer().start()
-        createMessagingClient().start()
+        createMessagingClient().start(rpcOps)
     }
 
     @Test
@@ -101,7 +154,7 @@ class ArtemisMessagingTests {
         createMessagingServer().start()
 
         val messagingClient = createMessagingClient()
-        messagingClient.start()
+        messagingClient.start(rpcOps)
         thread { messagingClient.run() }
 
         messagingClient.addMessageHandler(topic) { message, r ->
@@ -117,9 +170,11 @@ class ArtemisMessagingTests {
     }
 
     private fun createMessagingClient(server: HostAndPort = hostAndPort): NodeMessagingClient {
-        return NodeMessagingClient(config, server, identity.public, AffinityExecutor.ServiceAffinityExecutor("ArtemisMessagingTests", 1), false).apply {
-            configureWithDevSSLCertificate()
-            messagingClient = this
+        return databaseTransaction(database) {
+            NodeMessagingClient(config, server, identity.public, AffinityExecutor.ServiceAffinityExecutor("ArtemisMessagingTests", 1), database).apply {
+                configureWithDevSSLCertificate()
+                messagingClient = this
+            }
         }
     }
 

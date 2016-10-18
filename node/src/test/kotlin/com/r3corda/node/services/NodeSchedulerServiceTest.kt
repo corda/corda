@@ -52,8 +52,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     val factory = ProtocolLogicRefFactory(mapOf(Pair(TestProtocolLogic::class.java.name, setOf(NodeSchedulerServiceTest::class.java.name, Integer::class.java.name))))
 
-    val services: MockServiceHubInternal
-
+    lateinit var  services: MockServiceHubInternal
     lateinit var scheduler: NodeSchedulerService
     lateinit var smmExecutor: AffinityExecutor.ServiceAffinityExecutor
     lateinit var dataSource: Closeable
@@ -72,13 +71,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val testReference: NodeSchedulerServiceTest
     }
 
-    init {
-        val kms = MockKeyManagementService(ALICE_KEY)
-        val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), persistenceTx = { it() })
-        services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
-            override val testReference = this@NodeSchedulerServiceTest
-        }
-    }
 
     @Before
     fun setup() {
@@ -89,6 +81,11 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
         databaseTransaction(database) {
+            val kms = MockKeyManagementService(ALICE_KEY)
+            val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), database)
+            services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
+                override val testReference = this@NodeSchedulerServiceTest
+            }
             scheduler = NodeSchedulerService(database, services, factory, schedulerGatedExecutor)
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
             val mockSMM = StateMachineManager(services, listOf(services, scheduler), PerFileCheckpointStorage(fs.getPath("checkpoints")), smmExecutor, database)

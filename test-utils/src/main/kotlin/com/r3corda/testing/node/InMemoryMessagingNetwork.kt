@@ -9,7 +9,9 @@ import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.MessagingServiceBuilder
 import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.node.InMemoryMessagingNetwork.InMemoryMessaging
+import org.jetbrains.exposed.sql.Database
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -80,10 +82,10 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
     @Synchronized
     fun createNode(manuallyPumped: Boolean,
                    executor: AffinityExecutor,
-                   persistenceTx: (() -> Unit) -> Unit)
+                   database: Database)
             : Pair<Handle, com.r3corda.node.services.api.MessagingServiceBuilder<InMemoryMessaging>> {
         check(counter >= 0) { "In memory network stopped: please recreate." }
-        val builder = createNodeWithID(manuallyPumped, counter, executor, persistenceTx = persistenceTx) as Builder
+        val builder = createNodeWithID(manuallyPumped, counter, executor, database = database) as Builder
         counter++
         val id = builder.id
         return Pair(id, builder)
@@ -98,9 +100,9 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
      * @param persistenceTx a lambda to wrap message handling in a transaction if necessary.
      */
     fun createNodeWithID(manuallyPumped: Boolean, id: Int, executor: AffinityExecutor, description: String? = null,
-                         persistenceTx: (() -> Unit) -> Unit)
+                         database: Database)
             : MessagingServiceBuilder<InMemoryMessaging> {
-        return Builder(manuallyPumped, Handle(id, description ?: "In memory node $id"), executor, persistenceTx)
+        return Builder(manuallyPumped, Handle(id, description ?: "In memory node $id"), executor, database = database)
     }
 
     interface LatencyCalculator {
@@ -140,11 +142,11 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
         messageReceiveQueues.clear()
     }
 
-    inner class Builder(val manuallyPumped: Boolean, val id: Handle, val executor: AffinityExecutor, val persistenceTx: (() -> Unit) -> Unit)
+    inner class Builder(val manuallyPumped: Boolean, val id: Handle, val executor: AffinityExecutor, val database: Database)
     : com.r3corda.node.services.api.MessagingServiceBuilder<InMemoryMessaging> {
         override fun start(): ListenableFuture<InMemoryMessaging> {
             synchronized(this@InMemoryMessagingNetwork) {
-                val node = InMemoryMessaging(manuallyPumped, id, executor, persistenceTx)
+                val node = InMemoryMessaging(manuallyPumped, id, executor, database)
                 handleEndpointMap[id] = node
                 return Futures.immediateFuture(node)
             }
@@ -208,7 +210,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
     inner class InMemoryMessaging(private val manuallyPumped: Boolean,
                                   private val handle: Handle,
                                   private val executor: AffinityExecutor,
-                                  private val persistenceTx: (() -> Unit) -> Unit)
+                                  private val database: Database)
     : SingletonSerializeAsToken(), com.r3corda.node.services.api.MessagingServiceInternal {
         inner class Handler(val topicSession: TopicSession,
                             val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
@@ -348,7 +350,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
 
             if (transfer.message.uniqueMessageId !in processedMessages) {
                 executor.execute {
-                    persistenceTx {
+                    databaseTransaction(database) {
                         for (handler in deliverTo) {
                             try {
                                 handler.callback(transfer.message, handler)
