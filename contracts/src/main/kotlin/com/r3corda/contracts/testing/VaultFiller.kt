@@ -6,6 +6,7 @@ import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
 import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Issued
+import com.r3corda.core.contracts.PartyAndReference
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.crypto.Party
@@ -14,6 +15,7 @@ import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.utilities.DUMMY_NOTARY
+import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 
@@ -34,7 +36,9 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     atMostThisManyStates: Int = 10,
                                     rng: Random = Random(),
                                     ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 1 })),
-                                    ownedBy: PublicKey? = null): Vault {
+                                    ownedBy: PublicKey? = null,
+                                    issuedBy: PartyAndReference = DUMMY_CASH_ISSUER,
+                                    issuerKey: KeyPair = DUMMY_CASH_ISSUER_KEY): Vault {
     val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
     val myKey: PublicKey = ownedBy ?: myInfo.legalIdentity.owningKey
@@ -43,8 +47,8 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
     val cash = Cash()
     val transactions: List<SignedTransaction> = amounts.map { pennies ->
         val issuance = TransactionType.General.Builder(null)
-        cash.generateIssue(issuance, Amount(pennies, Issued(DUMMY_CASH_ISSUER.copy(reference = ref), howMuch.token)), myKey, outputNotary)
-        issuance.signWith(DUMMY_CASH_ISSUER_KEY)
+        cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy.copy(reference = ref), howMuch.token)), myKey, outputNotary)
+        issuance.signWith(issuerKey)
 
         return@map issuance.toSignedTransaction(true)
     }

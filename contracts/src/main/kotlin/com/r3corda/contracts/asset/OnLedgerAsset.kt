@@ -47,25 +47,6 @@ abstract class OnLedgerAsset<T : Any, C: CommandData, S : FungibleAsset<T>> : Co
             generateExitCommand = { amount -> generateExitCommand(amount) }
     )
 
-
-    /**
-     * Generate a transaction that consumes one or more of the given input states to move assets to the given pubkey.
-     * Note that the vault is not updated: it's up to you to do that.
-     *
-     * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
-     *                        of given parties. This can be useful if the party you're trying to pay has expectations
-     *                        about which type of asset claims they are willing to accept.
-     */
-    @Throws(InsufficientBalanceException::class)
-    fun generateSpend(tx: TransactionBuilder,
-                      amount: Amount<T>,
-                      to: PublicKey,
-                      assetsStates: List<StateAndRef<S>>,
-                      onlyFromParties: Set<Party>? = null): List<PublicKey>
-        = conserveClause.generateSpend(tx, amount, to, assetsStates, onlyFromParties,
-            deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
-            generateMoveCommand = { generateMoveCommand() })
-
     abstract fun generateExitCommand(amount: Amount<Issued<T>>): FungibleAsset.Commands.Exit<T>
     abstract fun generateIssueCommand(): FungibleAsset.Commands.Issue
     abstract fun generateMoveCommand(): FungibleAsset.Commands.Move

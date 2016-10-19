@@ -7,6 +7,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
 import com.r3corda.core.node.recordTransactions
+import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.seconds
 import com.r3corda.core.transactions.LedgerTransaction
 import com.r3corda.core.transactions.SignedTransaction
@@ -14,8 +15,12 @@ import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.DUMMY_PUBKEY_1
 import com.r3corda.core.utilities.TEST_TX_TIME
+import com.r3corda.node.services.vault.NodeVaultService
+import com.r3corda.node.utilities.configureDatabase
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.node.MockServices
 import com.r3corda.testing.*
+import com.r3corda.testing.node.makeTestDataSourceProperties
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -199,62 +204,90 @@ class CommercialPaperTestsGeneric {
 
     @Test
     fun `issue move and then redeem`() {
-        val aliceServices = MockServices()
-        val alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS)
 
-        val bigCorpServices = MockServices()
-        val bigCorpVault = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS)
+        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
+        val database = dataSourceAndDatabase.second
+        databaseTransaction(database) {
 
-        // Propagate the cash transactions to each side.
-        aliceServices.recordTransactions(bigCorpVault.states.map { bigCorpServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
-        bigCorpServices.recordTransactions(alicesVault.states.map { aliceServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
+            val aliceServices = object : MockServices() {
+                override val vaultService: VaultService = NodeVaultService(this)
 
-        // BigCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
-        val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
-        val issuance = bigCorpServices.myInfo.legalIdentity.ref(1)
-        val issueTX: SignedTransaction =
-            CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                setTime(TEST_TX_TIME, 30.seconds)
-                signWith(bigCorpServices.key)
-                signWith(DUMMY_NOTARY_KEY)
-            }.toSignedTransaction()
+                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+                    for (stx in txs) {
+                        storageService.validatedTransactions.addTransaction(stx)
+                    }
+                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
+                    vaultService.notifyAll(txs.map { it.tx })
+                }
+            }
+            val alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1)
+            val aliceVaultService = aliceServices.vaultService
 
-        // Alice pays $9000 to BigCorp to own some of their debt.
-        val moveTX: SignedTransaction = run {
-            val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-            Cash().generateSpend(ptx, 9000.DOLLARS, bigCorpServices.key.public, alicesVault.statesOfType<Cash.State>())
-            CommercialPaper().generateMove(ptx, issueTX.tx.outRef(0), aliceServices.key.public)
-            ptx.signWith(bigCorpServices.key)
-            ptx.signWith(aliceServices.key)
-            ptx.signWith(DUMMY_NOTARY_KEY)
-            ptx.toSignedTransaction()
+            val bigCorpServices = object : MockServices() {
+                override val vaultService: VaultService = NodeVaultService(this)
+
+                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+                    for (stx in txs) {
+                        storageService.validatedTransactions.addTransaction(stx)
+                    }
+                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
+                    vaultService.notifyAll(txs.map { it.tx })
+                }
+            }
+            val bigCorpVault = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1)
+            val bigCorpVaultService = bigCorpServices.vaultService
+
+            // Propagate the cash transactions to each side.
+            aliceServices.recordTransactions(bigCorpVault.states.map { bigCorpServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
+            bigCorpServices.recordTransactions(alicesVault.states.map { aliceServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
+
+            // BigCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
+            val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
+            val issuance = bigCorpServices.myInfo.legalIdentity.ref(1)
+            val issueTX: SignedTransaction =
+                    CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
+                        setTime(TEST_TX_TIME, 30.seconds)
+                        signWith(bigCorpServices.key)
+                        signWith(DUMMY_NOTARY_KEY)
+                    }.toSignedTransaction()
+
+            // Alice pays $9000 to BigCorp to own some of their debt.
+            val moveTX: SignedTransaction = run {
+                val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
+                aliceVaultService.generateSpend(ptx, 9000.DOLLARS, bigCorpServices.key.public)
+                CommercialPaper().generateMove(ptx, issueTX.tx.outRef(0), aliceServices.key.public)
+                ptx.signWith(bigCorpServices.key)
+                ptx.signWith(aliceServices.key)
+                ptx.signWith(DUMMY_NOTARY_KEY)
+                ptx.toSignedTransaction()
+            }
+
+            fun makeRedeemTX(time: Instant): SignedTransaction {
+                val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
+                ptx.setTime(time, 30.seconds)
+                CommercialPaper().generateRedeem(ptx, moveTX.tx.outRef(1), bigCorpVaultService)
+                ptx.signWith(aliceServices.key)
+                ptx.signWith(bigCorpServices.key)
+                ptx.signWith(DUMMY_NOTARY_KEY)
+                return ptx.toSignedTransaction()
+            }
+
+            val tooEarlyRedemption = makeRedeemTX(TEST_TX_TIME + 10.days)
+            val validRedemption = makeRedeemTX(TEST_TX_TIME + 31.days)
+
+            // Verify the txns are valid and insert into both sides.
+            listOf(issueTX, moveTX).forEach {
+                it.toLedgerTransaction(aliceServices).verify()
+                aliceServices.recordTransactions(it)
+                bigCorpServices.recordTransactions(it)
+            }
+
+            val e = assertFailsWith(TransactionVerificationException::class) {
+                tooEarlyRedemption.toLedgerTransaction(aliceServices).verify()
+            }
+            assertTrue(e.cause!!.message!!.contains("paper must have matured"))
+
+            validRedemption.toLedgerTransaction(aliceServices).verify()
         }
-
-        fun makeRedeemTX(time: Instant): SignedTransaction {
-            val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-            ptx.setTime(time, 30.seconds)
-            CommercialPaper().generateRedeem(ptx, moveTX.tx.outRef(1), bigCorpVault.statesOfType<Cash.State>())
-            ptx.signWith(aliceServices.key)
-            ptx.signWith(bigCorpServices.key)
-            ptx.signWith(DUMMY_NOTARY_KEY)
-            return ptx.toSignedTransaction()
-        }
-
-        val tooEarlyRedemption = makeRedeemTX(TEST_TX_TIME + 10.days)
-        val validRedemption = makeRedeemTX(TEST_TX_TIME + 31.days)
-
-        // Verify the txns are valid and insert into both sides.
-        listOf(issueTX, moveTX).forEach {
-            it.toLedgerTransaction(aliceServices).verify()
-            aliceServices.recordTransactions(it)
-            bigCorpServices.recordTransactions(it)
-        }
-
-        val e = assertFailsWith(TransactionVerificationException::class) {
-            tooEarlyRedemption.toLedgerTransaction(aliceServices).verify()
-        }
-        assertTrue(e.cause!!.message!!.contains("paper must have matured"))
-
-        validRedemption.toLedgerTransaction(aliceServices).verify()
     }
 }

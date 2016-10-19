@@ -14,6 +14,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toBase58String
 import com.r3corda.core.crypto.toStringShort
+import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.schemas.MappedSchema
 import com.r3corda.core.schemas.PersistentState
@@ -218,10 +219,10 @@ class CommercialPaper : Contract {
      * @throws InsufficientBalanceException if the vault doesn't contain enough money to pay the redeemer.
      */
     @Throws(InsufficientBalanceException::class)
-    fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, vault: List<StateAndRef<Cash.State>>) {
+    fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, vault: VaultService) {
         // Add the cash movement using the states in our vault.
         val amount = paper.state.data.faceValue.let { amount -> Amount(amount.quantity, amount.token.product) }
-        Cash().generateSpend(tx, amount, paper.state.data.owner, vault)
+        vault.generateSpend(tx, amount, paper.state.data.owner)
         tx.addInputState(paper)
         tx.addCommand(CommercialPaper.Commands.Redeem(), paper.state.data.owner)
     }
