@@ -437,13 +437,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
 
     protected abstract fun startMessagingService(cordaRPCOps: CordaRPCOps)
 
-    protected open fun initialiseCheckpointService(dir: Path): CheckpointStorage {
-        return DBCheckpointStorage()
-    }
-
     protected open fun initialiseStorageService(dir: Path): Pair<TxWritableStorageService, CheckpointStorage> {
         val attachments = makeAttachmentStorage(dir)
-        val checkpointStorage = initialiseCheckpointService(dir)
+        val checkpointStorage = DBCheckpointStorage()
         val transactionStorage = DBTransactionStorage()
         _servicesThatAcceptUploads += attachments
         // Populate the partyKeys set.

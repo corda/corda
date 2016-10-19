@@ -86,8 +86,7 @@ class NodeMessagingClient(config: NodeConfiguration,
         var rpcConsumer: ClientConsumer? = null
         var rpcNotificationConsumer: ClientConsumer? = null
 
-        // TODO: This is not robust and needs to be replaced by more intelligently using the message queue server.
-        var undeliveredMessages = listOf<Message>()
+        var pendingRedelivery = JDBCHashSet<Message>("pending_messages",loadOnInit = true)
     }
 
     /** A registration to handle messages of different types */
@@ -254,10 +253,10 @@ class NodeMessagingClient(config: NodeConfiguration,
             // without causing log spam.
             log.warn("Received message for ${msg.topicSession} that doesn't have any registered handlers yet")
 
-            // This is a hack; transient messages held in memory isn't crash resistant.
-            // TODO: Use Artemis API more effectively so we don't pop messages off a queue that we aren't ready to use.
             state.locked {
-                undeliveredMessages += msg
+                databaseTransaction(database) {
+                    pendingRedelivery.add(msg)
+                }
             }
             return false
         }
@@ -371,9 +370,12 @@ class NodeMessagingClient(config: NodeConfiguration,
         val handler = Handler(topicSession, callback)
         handlers.add(handler)
         val messagesToRedeliver = state.locked {
-            val messagesToRedeliver = undeliveredMessages
-            undeliveredMessages = listOf()
-            messagesToRedeliver
+            val pending = ArrayList<Message>()
+            databaseTransaction(database) {
+                pending.addAll(pendingRedelivery)
+                pendingRedelivery.clear()
+            }
+            pending
         }
         messagesToRedeliver.forEach { deliver(it) }
         return handler

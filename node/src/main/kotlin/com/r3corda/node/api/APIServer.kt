@@ -43,7 +43,7 @@ interface APIServer {
     fun status(): Response
 
     /**
-     * Report this nodes configuration and identities.
+     * Report this node's configuration and identities.
      * Currently tunnels the NodeInfo as an encoding of the Kryo serialised form.
      * TODO this functionality should be available via the RPC
      */

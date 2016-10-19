@@ -155,16 +155,14 @@ class TwoPartyTradeProtocolTests {
             bobNode.pumpReceive()
 
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
-            assertThat(bobNode.checkpointStorage.checkpoints()).hasSize(1)
+            databaseTransaction(bobNode.database) {
+                assertThat(bobNode.checkpointStorage.checkpoints()).hasSize(1)
+            }
 
             val storage = bobNode.storage.validatedTransactions
-            val bobTransactionsBeforeCrash = if (storage is PerFileTransactionStorage) {
-                storage.transactions
-            } else if (storage is DBTransactionStorage) {
-                databaseTransaction(bobNode.database) {
-                    storage.transactions
-                }
-            } else throw IllegalArgumentException("Unknown storage implementation")
+            val bobTransactionsBeforeCrash = databaseTransaction(bobNode.database) {
+                (storage as DBTransactionStorage).transactions
+            }
             assertThat(bobTransactionsBeforeCrash).isNotEmpty()
 
             // .. and let's imagine that Bob's computer has a power cut. He now has nothing now beyond what was on disk.

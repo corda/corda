@@ -9,6 +9,7 @@ import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.MessagingServiceBuilder
 import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.node.utilities.JDBCHashSet
 import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.node.InMemoryMessagingNetwork.InMemoryMessaging
 import org.jetbrains.exposed.sql.Database
@@ -220,7 +221,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
 
         private inner class InnerState {
             val handlers: MutableList<Handler> = ArrayList()
-            val pendingRedelivery = LinkedList<MessageTransfer>()
+            val pendingRedelivery = JDBCHashSet<Message>("pending_messages",loadOnInit = true)
         }
 
         private val state = ThreadBox(InnerState())
@@ -246,11 +247,14 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
             check(running)
             val (handler, items) = state.locked {
                 val handler = Handler(topicSession, callback).apply { handlers.add(this) }
-                val items = ArrayList(pendingRedelivery)
-                pendingRedelivery.clear()
-                Pair(handler, items)
+                val pending = ArrayList<Message>()
+                databaseTransaction(database) {
+                    pending.addAll(pendingRedelivery)
+                    pendingRedelivery.clear()
+                }
+                Pair(handler, pending)
             }
-            for ((sender, message) in items) {
+            for (message in items) {
                 send(message, handle)
             }
             return handler
@@ -330,7 +334,9 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
                         // up a handler for yet. Most unit tests don't run threaded, but we want to test true parallelism at
                         // least sometimes.
                         log.warn("Message to ${transfer.message.topicSession} could not be delivered")
-                        pendingRedelivery.add(transfer)
+                        databaseTransaction(database) {
+                            pendingRedelivery.add(transfer.message)
+                        }
                         null
                     } else {
                         h
