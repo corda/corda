@@ -4,6 +4,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.node.api.StatesQuery
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.WireTransaction
@@ -40,6 +41,16 @@ interface APIServer {
     @Path("status")
     @Produces(MediaType.TEXT_PLAIN)
     fun status(): Response
+
+    /**
+     * Report this nodes configuration and identities.
+     * Currently tunnels the NodeInfo as an encoding of the Kryo serialised form.
+     * TODO this functionality should be available via the RPC
+     */
+    @GET
+    @Path("info")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun info(): NodeInfo
 
     /**
      * Query your "local" states (containing only outputs involving you) and return the hashes & indexes associated with them

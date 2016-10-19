@@ -1,32 +1,30 @@
 package com.r3corda.node.driver
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.node.services.config.ConfigHelper
 import com.r3corda.node.services.config.FullNodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.services.messaging.NodeMessagingClient
-import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
-import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.node.utilities.JsonSupport
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.io.InputStreamReader
 import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.*
-import kotlin.concurrent.thread
 
 /**
  * This file defines a small "Driver" DSL for starting up nodes.
@@ -56,30 +54,8 @@ interface DriverDSLExposedInterface {
      */
     fun startNode(providedName: String? = null, advertisedServices: Set<ServiceInfo> = setOf()): Future<NodeInfo>
 
-    /**
-     * Starts an [NodeMessagingClient].
-     *
-     * @param providedName name of the client, which will be used for creating its directory.
-     * @param serverAddress the artemis server to connect to, for example a [Node].
-     */
-    fun startClient(providedName: String, serverAddress: HostAndPort): Future<NodeMessagingClient>
-
-    /**
-     * Starts a local [ArtemisMessagingServer] of which there may only be one.
-     */
-    fun startLocalServer(): Future<ArtemisMessagingServer>
     fun waitForAllNodesToFinish()
-    val networkMapCache: NetworkMapCache
 }
-
-fun DriverDSLExposedInterface.startClient(localServer: ArtemisMessagingServer) =
-        startClient("driver-local-server-client", localServer.myHostPort)
-
-fun DriverDSLExposedInterface.startClient(remoteNodeInfo: NodeInfo, providedName: String? = null) =
-        startClient(
-                providedName = providedName ?: "${remoteNodeInfo.legalIdentity.name}-client",
-                serverAddress = ArtemisMessagingComponent.toHostAndPort(remoteNodeInfo.address)
-        )
 
 interface DriverDSLInternalInterface : DriverDSLExposedInterface {
     fun start()
@@ -222,11 +198,8 @@ class DriverDSL(
         val baseDirectory: String,
         val isDebug: Boolean
 ) : DriverDSLInternalInterface {
-    override val networkMapCache = InMemoryNetworkMapCache()
     private val networkMapName = "NetworkMapService"
     private val networkMapAddress = portAllocation.nextHostAndPort()
-    private var networkMapNodeInfo: NodeInfo? = null
-    private val identity = generateKeyPair()
 
     class State {
         val registeredProcesses = LinkedList<Process>()
@@ -284,6 +257,25 @@ class DriverDSL(
         addressMustNotBeBound(networkMapAddress)
     }
 
+    private fun queryNodeInfo(webAddress: HostAndPort): NodeInfo? {
+        val url = URL("http://${webAddress.toString()}/api/info")
+        try {
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "GET"
+            if (conn.responseCode != 200) {
+                return null
+            }
+            // For now the NodeInfo is tunneled in its Kryo format over the Node's Web interface.
+            val om = ObjectMapper()
+            val module = SimpleModule("NodeInfo")
+            module.addDeserializer(NodeInfo::class.java, JsonSupport.NodeInfoDeserializer)
+            om.registerModule(module)
+            return om.readValue(conn.inputStream, NodeInfo::class.java)
+        } catch(e: Exception) {
+            return null
+        }
+    }
+
     override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>): Future<NodeInfo> {
         val messagingAddress = portAllocation.nextHostAndPort()
         val apiAddress = portAllocation.nextHostAndPort()
@@ -307,88 +299,12 @@ class DriverDSL(
 
         return Executors.newSingleThreadExecutor().submit(Callable<NodeInfo> {
             registerProcess(DriverDSL.startNode(config, quasarJarPath, debugPort))
-            poll("network map cache for $name") {
-                networkMapCache.partyNodes.forEach {
-                    if (it.legalIdentity.name == name) {
-                        return@poll it
-                    }
-                }
-                null
-            }
+            queryNodeInfo(apiAddress)!!
         })
     }
-
-    override fun startClient(
-            providedName: String,
-            serverAddress: HostAndPort
-    ): Future<NodeMessagingClient> {
-
-        val nodeConfiguration = FullNodeConfiguration(
-                ConfigHelper.loadConfig(
-                        baseDirectoryPath = Paths.get(baseDirectory, providedName),
-                        allowMissingConfig = true,
-                        configOverrides = mapOf(
-                                "myLegalName" to providedName
-                        )
-                )
-        )
-        val client = NodeMessagingClient(nodeConfiguration,
-                serverHostPort = serverAddress,
-                myIdentity = identity.public,
-                executor = AffinityExecutor.ServiceAffinityExecutor(providedName, 1),
-                persistentInbox = false // Do not create a permanent queue for our transient UI identity
-        )
-
-        return Executors.newSingleThreadExecutor().submit(Callable<NodeMessagingClient> {
-            client.configureWithDevSSLCertificate()
-            client.start(null)
-            thread { client.run() }
-            state.locked {
-                clients.add(client)
-            }
-            client
-        })
-    }
-
-    override fun startLocalServer(): Future<ArtemisMessagingServer> {
-        val name = "driver-local-server"
-        val config = FullNodeConfiguration(
-                ConfigHelper.loadConfig(
-                        baseDirectoryPath = Paths.get(baseDirectory, name),
-                        allowMissingConfig = true,
-                        configOverrides = mapOf(
-                                "myLegalName" to name
-                        )
-                )
-        )
-        val server = ArtemisMessagingServer(config,
-                portAllocation.nextHostAndPort(),
-                networkMapCache
-        )
-        return Executors.newSingleThreadExecutor().submit(Callable<ArtemisMessagingServer> {
-            server.configureWithDevSSLCertificate()
-            server.start()
-            state.locked {
-                localServer = server
-            }
-            server
-        })
-    }
-
 
     override fun start() {
         startNetworkMapService()
-        val networkMapClient = startClient("driver-$networkMapName-client", networkMapAddress).get()
-        val networkMapAddr = NodeMessagingClient.makeNetworkMapAddress(networkMapAddress)
-        networkMapCache.addMapService(networkMapClient, networkMapAddr, true)
-        networkMapNodeInfo = poll("network map cache for $networkMapName") {
-            networkMapCache.partyNodes.forEach {
-                if (it.legalIdentity.name == networkMapName) {
-                    return@poll it
-                }
-            }
-            null
-        }
     }
 
     private fun startNetworkMapService() {

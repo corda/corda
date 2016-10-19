@@ -6,10 +6,13 @@ import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.explorer.model.IdentityModel
 import com.r3corda.node.driver.PortAllocation
 import com.r3corda.node.driver.driver
-import com.r3corda.node.driver.startClient
+import com.r3corda.node.services.config.NodeSSLConfiguration
+import com.r3corda.node.services.config.configureWithDevSSLCertificate
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import javafx.stage.Stage
 import tornadofx.App
+import java.nio.file.Files
+import java.nio.file.Path
 
 class Main : App() {
     override val primaryView = MainWindow::class
@@ -35,11 +38,19 @@ class Main : App() {
                 val aliceNode = aliceNodeFuture.get()
                 val notaryNode = notaryNodeFuture.get()
 
-                val aliceClient = startClient(aliceNode).get()
+                val sslConfig = object : NodeSSLConfiguration {
+                    override val certificatesPath: Path = Files.createTempDirectory("certs")
+                    override val keyStorePassword = "cordacadevpass"
+                    override val trustStorePassword = "trustpass"
+
+                    init {
+                        configureWithDevSSLCertificate()
+                    }
+                }
 
                 Models.get<IdentityModel>(Main::class).notary.set(notaryNode.notaryIdentity)
                 Models.get<IdentityModel>(Main::class).myIdentity.set(aliceNode.legalIdentity)
-                Models.get<NodeMonitorModel>(Main::class).register(aliceNode, aliceClient.config.certificatesPath)
+                Models.get<NodeMonitorModel>(Main::class).register(aliceNode, sslConfig.certificatesPath)
 
                 startNode("Bob").get()
 

@@ -4,6 +4,7 @@ import com.codahale.metrics.JmxReporter
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceInfo
+import com.r3corda.core.then
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
@@ -119,11 +120,10 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
         }
         val legalIdentity = obtainLegalIdentity()
         val myIdentityOrNullIfNetworkMapService = if (networkMapService != null) legalIdentity.owningKey else null
-        return NodeMessagingClient(configuration, serverAddr, myIdentityOrNullIfNetworkMapService, serverThread,
-                persistenceTx = { body: () -> Unit -> databaseTransaction(database) { body() } })
+        return NodeMessagingClient(configuration, serverAddr, myIdentityOrNullIfNetworkMapService, serverThread, database)
     }
 
-    override fun startMessagingService(cordaRPCOps: CordaRPCOps?) {
+    override fun startMessagingService(cordaRPCOps: CordaRPCOps) {
         // Start up the embedded MQ server
         messageBroker?.apply {
             runOnStop += Runnable { messageBroker?.stop() }
@@ -268,23 +268,25 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
     override fun start(): Node {
         alreadyRunningNodeCheck()
         super.start()
-        webServer = initWebServer()
-        // Begin exporting our own metrics via JMX.
-        JmxReporter.
-                forRegistry(services.monitoringService.metrics).
-                inDomain("com.r3cev.corda").
-                createsObjectNamesWith { type, domain, name ->
-                    // Make the JMX hierarchy a bit better organised.
-                    val category = name.substringBefore('.')
-                    val subName = name.substringAfter('.', "")
-                    if (subName == "")
-                        ObjectName("$domain:name=$category")
-                    else
-                        ObjectName("$domain:type=$category,name=$subName")
-                }.
-                build().
-                start()
-
+        // Only start the service API requests once the network map registration is complete
+        networkMapRegistrationFuture.then {
+            webServer = initWebServer()
+            // Begin exporting our own metrics via JMX.
+            JmxReporter.
+                    forRegistry(services.monitoringService.metrics).
+                    inDomain("com.r3cev.corda").
+                    createsObjectNamesWith { type, domain, name ->
+                        // Make the JMX hierarchy a bit better organised.
+                        val category = name.substringBefore('.')
+                        val subName = name.substringAfter('.', "")
+                        if (subName == "")
+                            ObjectName("$domain:name=$category")
+                        else
+                            ObjectName("$domain:type=$category,name=$subName")
+                    }.
+                    build().
+                    start()
+        }
         shutdownThread = thread(start = false) {
             stop()
         }

@@ -14,7 +14,8 @@ import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.driver.driver
-import com.r3corda.node.driver.startClient
+import com.r3corda.node.services.config.NodeSSLConfiguration
+import com.r3corda.node.services.config.configureWithDevSSLCertificate
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.messaging.StateMachineUpdate
 import com.r3corda.node.services.transactions.SimpleNotaryService
@@ -26,6 +27,8 @@ import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import rx.Observer
+import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.concurrent.thread
 
 class NodeMonitorModelTest {
@@ -55,9 +58,18 @@ class NodeMonitorModelTest {
 
                 aliceNode = aliceNodeFuture.get()
                 notaryNode = notaryNodeFuture.get()
-                aliceClient = startClient(aliceNode).get()
                 newNode = { nodeName -> startNode(nodeName).get() }
                 val monitor = NodeMonitorModel()
+
+                val sslConfig = object : NodeSSLConfiguration {
+                    override val certificatesPath: Path = Files.createTempDirectory("certs")
+                    override val keyStorePassword = "cordacadevpass"
+                    override val trustStorePassword = "trustpass"
+
+                    init {
+                        configureWithDevSSLCertificate()
+                    }
+                }
 
                 stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
                 stateMachineUpdates = monitor.stateMachineUpdates.bufferUntilSubscribed()
@@ -67,7 +79,7 @@ class NodeMonitorModelTest {
                 networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
                 clientToService = monitor.clientToService
 
-                monitor.register(aliceNode, aliceClient.config.certificatesPath)
+                monitor.register(aliceNode, sslConfig.certificatesPath)
                 driverStarted.set(Unit)
                 stopDriver.get()
 

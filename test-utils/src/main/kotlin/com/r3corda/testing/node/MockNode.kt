@@ -125,8 +125,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // through the java.nio API which we are already mocking via Jimfs.
         override fun makeMessagingService(): MessagingServiceInternal {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
-            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, serverThread, configuration.myLegalName,
-                    persistenceTx = { body: () -> Unit -> databaseTransaction(database) { body() } }).start().get()
+            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, serverThread, configuration.myLegalName, database).start().get()
         }
 
         override fun initialiseCheckpointService(dir: Path): CheckpointStorage {
@@ -143,7 +142,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeKeyManagementService(): KeyManagementService = E2ETestKeyManagementService(partyKeys)
 
-        override fun startMessagingService(cordaRPCOps: CordaRPCOps?) {
+        override fun startMessagingService(cordaRPCOps: CordaRPCOps) {
             // Nothing to do
         }
 

@@ -11,7 +11,10 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.r3corda.core.contracts.BusinessCalendar
 import com.r3corda.core.crypto.*
+import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.IdentityService
+import com.r3corda.core.serialization.deserialize
+import com.r3corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -53,6 +56,11 @@ object JsonSupport {
         // For public key trees
         cordaModule.addSerializer(PublicKeyTree::class.java, PublicKeyTreeSerializer)
         cordaModule.addDeserializer(PublicKeyTree::class.java, PublicKeyTreeDeserializer)
+
+        // For NodeInfo
+        // TODO this tunnels the Kryo representation as a Base58 encoded string. Replace when RPC supports this.
+        cordaModule.addSerializer(NodeInfo::class.java, NodeInfoSerializer)
+        cordaModule.addDeserializer(NodeInfo::class.java, NodeInfoDeserializer)
 
         mapper.registerModule(timeModule)
         mapper.registerModule(cordaModule)
@@ -99,6 +107,25 @@ object JsonSupport {
             val mapper = parser.codec as ServiceHubObjectMapper
             // TODO this needs to use some industry identifier(s) not just these human readable names
             return mapper.identities.partyFromName(parser.text) ?: throw JsonParseException(parser, "Could not find a Party with name: ${parser.text}")
+        }
+    }
+
+    object NodeInfoSerializer : JsonSerializer<NodeInfo>() {
+        override fun serialize(value: NodeInfo, gen: JsonGenerator, serializers: SerializerProvider) {
+            gen.writeString(Base58.encode(value.serialize().bits))
+        }
+    }
+
+    object NodeInfoDeserializer : JsonDeserializer<NodeInfo>() {
+        override fun deserialize(parser: JsonParser, context: DeserializationContext): NodeInfo {
+            if (parser.currentToken == JsonToken.FIELD_NAME) {
+                parser.nextToken()
+            }
+            try {
+                return Base58.decode(parser.text).deserialize<NodeInfo>()
+            } catch (e: Exception) {
+                throw JsonParseException(parser, "Invalid NodeInfo ${parser.text}: ${e.message}")
+            }
         }
     }
 
