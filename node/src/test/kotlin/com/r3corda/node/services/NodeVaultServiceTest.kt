@@ -1,15 +1,21 @@
 package com.r3corda.node.services
 
+import com.r3corda.contracts.asset.Cash
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.DOLLARS
+import com.r3corda.core.contracts.TransactionType
+import com.r3corda.core.contracts.`issued by`
 import com.r3corda.core.node.services.TxWritableStorageService
 import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.LogHelper
+import com.r3corda.node.services.schema.NodeSchemaService
 import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.configureDatabase
 import com.r3corda.node.utilities.databaseTransaction
+import com.r3corda.testing.MEGA_CORP
+import com.r3corda.testing.MEGA_CORP_KEY
 import com.r3corda.testing.node.MockServices
 import com.r3corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
@@ -19,6 +25,7 @@ import org.junit.Before
 import org.junit.Test
 import java.io.Closeable
 import java.util.*
+import kotlin.test.assertEquals
 
 class NodeVaultServiceTest {
     lateinit var dataSource: Closeable
@@ -73,6 +80,38 @@ class NodeVaultServiceTest {
 
             val w2 = services2.vaultService.currentVault
             assertThat(w2.states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun addNoteToTransaction() {
+
+        databaseTransaction(database) {
+            val services = object : MockServices() {
+                override val vaultService: VaultService = NodeVaultService(this)
+
+                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+                    for (stx in txs) {
+                        storageService.validatedTransactions.addTransaction(stx)
+                    }
+                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
+                    vaultService.notifyAll(txs.map { it.tx })
+                }
+            }
+
+            val freshKey = services.legalIdentityKey
+
+            // Issue a txn to Send us some Money
+            val usefulTX = TransactionType.General.Builder(null).apply {
+                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
+                signWith(MEGA_CORP_KEY)
+            }.toSignedTransaction()
+
+            services.recordTransactions(listOf(usefulTX))
+
+            services.vaultService.addNoteToTransaction(usefulTX.id, "Sample Note 1")
+            assertEquals(1, services.vaultService.currentVault.transactionNotes.toList().size)
+
         }
     }
 }

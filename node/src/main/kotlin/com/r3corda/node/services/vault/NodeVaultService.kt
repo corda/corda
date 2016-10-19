@@ -4,6 +4,7 @@ import com.google.common.collect.Sets
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.bufferUntilSubscribed
 import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.node.services.VaultService
@@ -11,10 +12,7 @@ import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
-import com.r3corda.node.utilities.AbstractJDBCHashSet
-import com.r3corda.node.utilities.JDBCHashedTable
-import com.r3corda.node.utilities.NODE_DATABASE_PREFIX
-import com.r3corda.node.utilities.stateRef
+import com.r3corda.node.utilities.*
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import rx.Observable
@@ -42,6 +40,11 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         val stateRef = stateRef("transaction_id", "output_index")
     }
 
+    private object TransactionNotesTable : JDBCHashedTable("${NODE_DATABASE_PREFIX}vault_txn_notes") {
+        val txnId = secureHash("txnId")
+        val notes = blob("notes")
+    }
+
     private val mutex = ThreadBox(object {
         val unconsumedStates = object : AbstractJDBCHashSet<StateRef, StatesSetTable>(StatesSetTable) {
             override fun elementFromRow(row: ResultRow): StateRef = StateRef(row[table.stateRef.txId], row[table.stateRef.index])
@@ -50,6 +53,28 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
                 insert[table.stateRef.txId] = entry.txhash
                 insert[table.stateRef.index] = entry.index
             }
+        }
+
+        val transactionNotes = object : AbstractJDBCHashMap<SecureHash, Set<String>, TransactionNotesTable>(TransactionNotesTable, loadOnInit = false) {
+            override fun keyFromRow(row: ResultRow): SecureHash {
+                return row[table.txnId]
+            }
+
+            override fun valueFromRow(row: ResultRow): Set<String> {
+                return deserializeFromBlob(row[table.notes])
+            }
+
+            override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, Set<String>>, finalizables: MutableList<() -> Unit>) {
+                insert[table.txnId] = entry.key
+            }
+
+            override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, Set<String>>, finalizables: MutableList<() -> Unit>) {
+                insert[table.notes] = serializeToBlob(entry.value, finalizables)
+            }
+        }
+
+        fun allTransactionNotes(): Map<SecureHash,Set<String>> {
+            return transactionNotes
         }
 
         val _updatesPublisher = PublishSubject.create<Vault.Update>()
@@ -75,14 +100,14 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         }
     })
 
-    override val currentVault: Vault get() = mutex.locked { Vault(allUnconsumedStates()) }
+    override val currentVault: Vault get() = mutex.locked { Vault(allUnconsumedStates(), allTransactionNotes()) }
 
     override val updates: Observable<Vault.Update>
         get() = mutex.locked { _updatesPublisher }
 
     override fun track(): Pair<Vault, Observable<Vault.Update>> {
         return mutex.locked {
-            Pair(Vault(allUnconsumedStates()), _updatesPublisher.bufferUntilSubscribed())
+            Pair(Vault(allUnconsumedStates(), allTransactionNotes()), _updatesPublisher.bufferUntilSubscribed())
         }
     }
 
@@ -104,6 +129,15 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             }
         }
         return currentVault
+    }
+
+
+    override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
+        mutex.locked {
+            transactionNotes.getOrPut(key = txnId, defaultValue = {
+                setOf(noteText)
+            }).plus(noteText)
+        }
     }
 
     private fun makeUpdate(tx: WireTransaction, netDelta: Vault.Update, ourKeys: Set<PublicKey>): Vault.Update {

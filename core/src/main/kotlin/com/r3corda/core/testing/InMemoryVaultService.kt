@@ -3,6 +3,7 @@ package com.r3corda.core.testing
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.bufferUntilSubscribed
 import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.node.services.VaultService
@@ -92,6 +93,10 @@ open class InMemoryVaultService(protected val services: ServiceHub) : SingletonS
             }
         }
         return changedVault
+    }
+
+    override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
+        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>): Boolean {
