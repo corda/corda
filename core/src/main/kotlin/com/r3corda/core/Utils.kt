@@ -13,8 +13,10 @@ import rx.Observable
 import rx.subjects.UnicastSubject
 import java.io.BufferedInputStream
 import java.io.InputStream
+import java.lang.Comparable
 import java.math.BigDecimal
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.time.Duration
 import java.time.temporal.Temporal
@@ -89,6 +91,7 @@ inline fun <T> SettableFuture<T>.catch(block: () -> T) {
 }
 
 fun <R> Path.use(block: (InputStream) -> R): R = Files.newInputStream(this).use(block)
+fun Path.exists(vararg options: LinkOption): Boolean = Files.exists(this, *options)
 
 // Simple infix function to add back null safety that the JDK lacks:  timeA until timeB
 infix fun Temporal.until(endExclusive: Temporal) = Duration.between(this, endExclusive)

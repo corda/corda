@@ -11,12 +11,13 @@ import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.utilities.*
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
+import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
+import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
-import java.nio.file.FileSystems
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -50,11 +51,11 @@ import javax.annotation.concurrent.ThreadSafe
  * in this class.
  */
 @ThreadSafe
-class NodeMessagingClient(config: NodeConfiguration,
+class NodeMessagingClient(override val config: NodeConfiguration,
                           val serverHostPort: HostAndPort,
                           val myIdentity: PublicKey?,
                           val executor: AffinityExecutor,
-                          val database: Database) : ArtemisMessagingComponent(config), MessagingServiceInternal {
+                          val database: Database) : ArtemisMessagingComponent(), MessagingServiceInternal {
     companion object {
         val log = loggerFor<NodeMessagingClient>()
 
@@ -114,10 +115,6 @@ class NodeMessagingClient(config: NodeConfiguration,
             }
         })
 
-    init {
-        require(config.basedir.fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
-    }
-
     fun start(rpcOps: CordaRPCOps) {
         state.locked {
             check(!started) { "start can't be called twice" }
@@ -131,7 +128,7 @@ class NodeMessagingClient(config: NodeConfiguration,
 
             // Create a session. Note that the acknowledgement of messages is not flushed to
             // the Artermis journal until the default buffer size of 1MB is acknowledged.
-            val session = clientFactory!!.createSession(true, true, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
+            val session = clientFactory!!.createSession("Node", "Node", false, true, true, locator.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
             this.session = session
             session.start()
 
@@ -221,8 +218,9 @@ class NodeMessagingClient(config: NodeConfiguration,
             val topic = message.getStringProperty(TOPIC_PROPERTY)
             val sessionID = message.getLongProperty(SESSION_ID_PROPERTY)
             // Use the magic deduplication property built into Artemis as our message identity too
-            val uuid = UUID.fromString(message.getStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID))
-            log.info("received message from: ${message.address} topic: $topic sessionID: $sessionID uuid: $uuid")
+            val uuid = UUID.fromString(message.getStringProperty(HDR_DUPLICATE_DETECTION_ID))
+            val user = message.getStringProperty(HDR_VALIDATED_USER)
+            log.info("Received message from: ${message.address} user: $user topic: $topic sessionID: $sessionID uuid: $uuid")
 
             val body = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
 
@@ -340,7 +338,7 @@ class NodeMessagingClient(config: NodeConfiguration,
                 putLongProperty(SESSION_ID_PROPERTY, sessionID)
                 writeBodyBufferBytes(message.data)
                 // Use the magic deduplication property built into Artemis as our message identity too
-                putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+                putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
             }
 
             if (knownQueues.add(queueName)) {
@@ -388,8 +386,8 @@ class NodeMessagingClient(config: NodeConfiguration,
     override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
         // TODO: We could write an object that proxies directly to an underlying MQ message here and avoid copying.
         return object : Message {
-            override val topicSession: TopicSession get() = topicSession
-            override val data: ByteArray get() = data
+            override val topicSession: TopicSession = topicSession
+            override val data: ByteArray = data
             override val debugTimestamp: Instant = Instant.now()
             override fun serialise(): ByteArray = this.serialise()
             override val uniqueMessageId: UUID = uuid
@@ -405,7 +403,7 @@ class NodeMessagingClient(config: NodeConfiguration,
                 val msg = session!!.createMessage(false).apply {
                     writeBodyBufferBytes(bits.bits)
                     // Use the magic deduplication property built into Artemis as our message identity too
-                    putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+                    putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
                 }
                 producer!!.send(toAddress, msg)
             }

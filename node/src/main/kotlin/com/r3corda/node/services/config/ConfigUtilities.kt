@@ -2,6 +2,7 @@ package com.r3corda.node.services.config
 
 import com.google.common.net.HostAndPort
 import com.r3corda.core.crypto.X509Utilities
+import com.r3corda.core.exists
 import com.r3corda.core.utilities.loggerFor
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
@@ -89,14 +90,24 @@ fun Config.getProperties(path: String): Properties {
  */
 fun NodeSSLConfiguration.configureWithDevSSLCertificate() {
     Files.createDirectories(certificatesPath)
-    if (!Files.exists(trustStorePath)) {
+    if (!trustStorePath.exists()) {
         Files.copy(javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordatruststore.jks"),
                 trustStorePath)
     }
-    if (!Files.exists(keyStorePath)) {
+    if (!keyStorePath.exists()) {
         val caKeyStore = X509Utilities.loadKeyStore(
                 javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordadevcakeys.jks"),
                 "cordacadevpass")
         X509Utilities.createKeystoreForSSL(keyStorePath, keyStorePassword, keyStorePassword, caKeyStore, "cordacadevkeypass")
+    }
+}
+
+// TODO Move this to CoreTestUtils.kt once we can pry this from the explorer
+fun configureTestSSL(): NodeSSLConfiguration = object : NodeSSLConfiguration {
+    override val certificatesPath = Files.createTempDirectory("certs")
+    override val keyStorePassword: String get() = "cordacadevpass"
+    override val trustStorePassword: String get() = "trustpass"
+    init {
+        configureWithDevSSLCertificate()
     }
 }

@@ -24,19 +24,12 @@ import kotlin.concurrent.thread
  * useful tasks. See the documentation for [proxy] or review the docsite to learn more about how this API works.
  */
 @ThreadSafe
-class CordaRPCClient(val host: HostAndPort, certificatesPath: Path) : Closeable, ArtemisMessagingComponent(sslConfig(certificatesPath)) {
+class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfiguration) : Closeable, ArtemisMessagingComponent() {
     companion object {
         private val rpcLog = LoggerFactory.getLogger("com.r3corda.rpc")
-
-        private fun sslConfig(certificatesPath: Path): NodeSSLConfiguration = object : NodeSSLConfiguration {
-            override val certificatesPath: Path = certificatesPath
-            override val keyStorePassword = "cordacadevpass"
-            override val trustStorePassword = "trustpass"
-        }
     }
 
     // TODO: Certificate handling for clients needs more work.
-
     private inner class State {
         var running = false
         lateinit var sessionFactory: ClientSessionFactory
@@ -57,7 +50,7 @@ class CordaRPCClient(val host: HostAndPort, certificatesPath: Path) : Closeable,
 
     /** Opens the connection to the server and registers a JVM shutdown hook to cleanly disconnect. */
     @Throws(ActiveMQNotConnectedException::class)
-    fun start() {
+    fun start(username: String, password: String) {
         state.locked {
             check(!running)
             checkStorePasswords()  // Check the password.
@@ -66,7 +59,7 @@ class CordaRPCClient(val host: HostAndPort, certificatesPath: Path) : Closeable,
             sessionFactory = serverLocator.createSessionFactory()
             // We use our initial connection ID as the queue namespace.
             myID = sessionFactory.connection.id as Int and 0x000000FFFFFF
-            session = sessionFactory.createSession()
+            session = sessionFactory.createSession(username, password, false, true, true, serverLocator.isPreAcknowledge, serverLocator.ackBatchSize)
             session.start()
             clientImpl = CordaRPCClientImpl(session, state.lock, myAddressPrefix)
             running = true
