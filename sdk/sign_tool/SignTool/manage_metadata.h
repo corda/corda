@@ -68,9 +68,9 @@ typedef enum _para_type_t
 typedef struct _xml_parameter_t
 {
     const char* name;       //the element name
-    uint32_t max_value;  
-    uint32_t min_value;
-    uint32_t value;         //parameter value. Initialized with the default value.
+    uint64_t max_value;
+    uint64_t min_value;
+    uint64_t value;         //parameter value. Initialized with the default value.
     uint32_t flag;          //Show whether it has been matched
 } xml_parameter_t;
 

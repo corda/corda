@@ -309,12 +309,12 @@ static bool fill_enclave_css(const IppsRSAPublicKeyState *pub_key, const xml_par
     }
 
     //hardware version
-    enclave_css.header.hw_version = para[HW].value;
+    enclave_css.header.hw_version = (uint32_t)para[HW].value;
 
     //****************************fill the body***********************
     // Misc_select/Misc_mask
-    enclave_css.body.misc_select = para[MISCSELECT].value;
-    enclave_css.body.misc_mask = para[MISCMASK].value;
+    enclave_css.body.misc_select = (uint32_t)para[MISCSELECT].value;
+    enclave_css.body.misc_mask = (uint32_t)para[MISCMASK].value;
     //low 64 bit
     enclave_css.body.attributes.flags = 0;
     enclave_css.body.attribute_mask.flags = ~SGX_FLAGS_DEBUG;
@@ -1088,8 +1088,8 @@ int main(int argc, char* argv[])
                                    {"HW", 0x10,0,0,0},
                                    {"TCSNum",0xFFFFFFFF,TCS_NUM_MIN,1,0},
                                    {"TCSPolicy",TCS_POLICY_UNBIND,TCS_POLICY_BIND,TCS_POLICY_UNBIND,0},
-                                   {"StackMaxSize",0xFFFFFFFF,STACK_SIZE_MIN,0x40000,0},
-                                   {"HeapMaxSize",0xFFFFFFFF,HEAP_SIZE_MIN,0x100000,0},
+                                   {"StackMaxSize",0x1FFFFFFFFF,STACK_SIZE_MIN,0x40000,0},
+                                   {"HeapMaxSize",0x1FFFFFFFFF,HEAP_SIZE_MIN,0x100000,0},
                                    {"MiscSelect", 0xFFFFFFFF, 0, DEFAULT_MISC_SELECT, 0},
                                    {"MiscMask", 0xFFFFFFFF, 0, DEFAULT_MISC_MASK, 0}};
 
