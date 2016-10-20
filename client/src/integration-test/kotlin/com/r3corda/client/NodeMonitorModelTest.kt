@@ -53,7 +53,7 @@ class NodeMonitorModelTest {
 
                 aliceNode = aliceNodeFuture.get().nodeInfo
                 notaryNode = notaryNodeFuture.get().nodeInfo
-                newNode = { nodeName -> startNode(nodeName).get() }
+                newNode = { nodeName -> startNode(nodeName).get().nodeInfo }
                 val monitor = NodeMonitorModel()
 
                 stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
