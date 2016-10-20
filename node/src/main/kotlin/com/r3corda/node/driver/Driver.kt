@@ -305,7 +305,8 @@ open class DriverDSL(
                         "artemisAddress" to messagingAddress.toString(),
                         "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
-                        "networkMapAddress" to networkMapAddress.toString()
+                        "networkMapAddress" to networkMapAddress.toString(),
+                        "clockClass" to clock.javaClass.name
                 )
         )
 
@@ -333,7 +334,8 @@ open class DriverDSL(
                         "basedir" to Paths.get(nodeDirectory).normalize().toString(),
                         "artemisAddress" to networkMapAddress.toString(),
                         "webAddress" to apiAddress.toString(),
-                        "extraAdvertisedServiceIds" to ""
+                        "extraAdvertisedServiceIds" to "",
+                        "clockClass" to clock.javaClass.name
                 )
         )
 

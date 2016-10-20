@@ -32,7 +32,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val devMode: Boolean
 }
 
-class FullNodeConfiguration(config: Config, val clock: Clock = NodeClock()) : NodeConfiguration {
+class FullNodeConfiguration(config: Config) : NodeConfiguration {
     override val basedir: Path by config
     override val myLegalName: String by config
     override val nearestCity: String by config
@@ -48,6 +48,7 @@ class FullNodeConfiguration(config: Config, val clock: Clock = NodeClock()) : No
     val webAddress: HostAndPort by config
     val messagingServerAddress: HostAndPort? by config.getOrElse { null }
     val extraAdvertisedServiceIds: String by config
+    val clockClass: String? by config.getOrElse { null }
 
     fun createNode(): Node {
         val advertisedServices = mutableSetOf<ServiceInfo>()
@@ -58,7 +59,11 @@ class FullNodeConfiguration(config: Config, val clock: Clock = NodeClock()) : No
         }
         if (networkMapAddress == null) advertisedServices.add(ServiceInfo(NetworkMapService.type))
         val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else NodeMessagingClient.makeNetworkMapAddress(networkMapAddress!!)
-        return Node(this, networkMapMessageAddress, advertisedServices, clock)
+        return if(clockClass != null) {
+             Node(this, networkMapMessageAddress, advertisedServices, Class.forName(clockClass).newInstance() as Clock)
+        } else {
+            Node(this, networkMapMessageAddress, advertisedServices)
+        }
     }
 }
 
