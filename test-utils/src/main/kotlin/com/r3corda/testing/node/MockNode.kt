@@ -11,7 +11,6 @@ import com.r3corda.core.node.services.KeyManagementService
 import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.random63BitValue
-import com.r3corda.core.testing.InMemoryVaultService
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode

@@ -7,7 +7,6 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.*
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
-import com.r3corda.core.testing.InMemoryVaultService
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
@@ -17,6 +16,7 @@ import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.persistence.DataVending
 import com.r3corda.node.services.schema.NodeSchemaService
 import com.r3corda.node.services.statemachine.StateMachineManager
+import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.testing.MOCK_IDENTITY_SERVICE
 import com.r3corda.testing.node.MockNetworkMapCache
 import com.r3corda.testing.node.MockStorageService
@@ -37,7 +37,7 @@ open class MockServiceHubInternal(
         val protocolFactory: ProtocolLogicRefFactory? = ProtocolLogicRefFactory(),
         val schemas: SchemaService? = NodeSchemaService()
 ) : ServiceHubInternal() {
-    override val vaultService: VaultService = customVault ?: InMemoryVaultService(this)
+    override val vaultService: VaultService = customVault ?: NodeVaultService(this)
     override val keyManagementService: KeyManagementService
         get() = keyManagement ?: throw UnsupportedOperationException()
     override val identityService: IdentityService

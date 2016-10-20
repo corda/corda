@@ -6,23 +6,25 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.days
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.recordTransactions
+import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRef
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.serialization.SingletonSerializeAsToken
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.node.services.events.NodeSchedulerService
 import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.statemachine.StateMachineManager
+import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.node.utilities.configureDatabase
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.ALICE_KEY
-import com.r3corda.testing.node.InMemoryMessagingNetwork
-import com.r3corda.testing.node.MockKeyManagementService
-import com.r3corda.testing.node.TestClock
-import com.r3corda.testing.node.makeTestDataSourceProperties
+import com.r3corda.testing.node.*
 import org.assertj.core.api.Assertions.assertThat
+import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -50,11 +52,12 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     val factory = ProtocolLogicRefFactory(mapOf(Pair(TestProtocolLogic::class.java.name, setOf(NodeSchedulerServiceTest::class.java.name, Integer::class.java.name))))
 
-    val services: MockServiceHubInternal
+    lateinit var services: MockServiceHubInternal
 
     lateinit var scheduler: NodeSchedulerService
     lateinit var smmExecutor: AffinityExecutor.ServiceAffinityExecutor
     lateinit var dataSource: Closeable
+    lateinit var database: Database
     lateinit var countDown: CountDownLatch
     lateinit var smmHasRemovedAllProtocols: CountDownLatch
 
@@ -69,14 +72,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val testReference: NodeSchedulerServiceTest
     }
 
-    init {
-        val kms = MockKeyManagementService(ALICE_KEY)
-        val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), persistenceTx = { it() })
-        services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
-            override val testReference = this@NodeSchedulerServiceTest
-        }
-    }
-
     @Before
     fun setup() {
         countDown = CountDownLatch(1)
@@ -84,7 +79,28 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         calls = 0
         val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
         dataSource = dataSourceAndDatabase.first
-        val database = dataSourceAndDatabase.second
+        database = dataSourceAndDatabase.second
+
+        // Switched from InMemoryVault usage to NodeVault
+        databaseTransaction(database) {
+            val services1 = object : MockServices() {
+                override val vaultService: VaultService = NodeVaultService(this)
+
+                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+                    for (stx in txs) {
+                        storageService.validatedTransactions.addTransaction(stx)
+                        vaultService.notify(stx.tx)
+                    }
+                }
+
+            }
+            val kms = MockKeyManagementService(ALICE_KEY)
+            val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), persistenceTx = { it() })
+            services = object : MockServiceHubInternal(customVault = services1.vaultService, overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
+                override val testReference = this@NodeSchedulerServiceTest
+            }
+        }
+
         scheduler = NodeSchedulerService(database, services, factory, schedulerGatedExecutor)
         smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
         val mockSMM = StateMachineManager(services, listOf(services), PerFileCheckpointStorage(fs.getPath("checkpoints")), smmExecutor, database)
@@ -257,20 +273,24 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     }
 
     private fun scheduleTX(instant: Instant, increment: Int = 1): ScheduledStateRef? {
-        var scheduledRef: ScheduledStateRef? = null
-        apply {
-            val freshKey = services.keyManagementService.freshKey()
-            val state = TestState(factory.create(TestProtocolLogic::class.java, increment), instant)
-            val usefulTX = TransactionType.General.Builder(null).apply {
-                addOutputState(state, DUMMY_NOTARY)
-                addCommand(Command(), freshKey.public)
-                signWith(freshKey)
-            }.toSignedTransaction()
-            val txHash = usefulTX.id
 
-            services.recordTransactions(usefulTX)
-            scheduledRef = ScheduledStateRef(StateRef(txHash, 0), state.instant)
-            scheduler.scheduleStateActivity(scheduledRef!!)
+        var scheduledRef: ScheduledStateRef? = null
+
+        databaseTransaction(database) {
+            apply {
+                val freshKey = services.keyManagementService.freshKey()
+                val state = TestState(factory.create(TestProtocolLogic::class.java, increment), instant)
+                val usefulTX = TransactionType.General.Builder(null).apply {
+                    addOutputState(state, DUMMY_NOTARY)
+                    addCommand(Command(), freshKey.public)
+                    signWith(freshKey)
+                }.toSignedTransaction()
+                val txHash = usefulTX.id
+
+                services.recordTransactions(usefulTX)
+                scheduledRef = ScheduledStateRef(StateRef(txHash, 0), state.instant)
+                scheduler.scheduleStateActivity(scheduledRef!!)
+            }
         }
         return scheduledRef
     }
