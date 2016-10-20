@@ -309,9 +309,9 @@ open class DriverDSL(
                 )
         )
 
-        return Executors.newSingleThreadExecutor().submit(Callable<NodeInfo> {
+        return Executors.newSingleThreadExecutor().submit(Callable<DriverNodeInfo> {
             registerProcess(DriverDSL.startNode(config, quasarJarPath, debugPort))
-            queryNodeInfo(apiAddress)!!
+            DriverNodeInfo(queryNodeInfo(apiAddress)!!, messagingAddress, apiAddress)
         })
     }
 
