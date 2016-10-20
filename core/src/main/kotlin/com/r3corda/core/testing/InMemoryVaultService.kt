@@ -42,16 +42,6 @@ open class InMemoryVaultService(protected val services: ServiceHub) : SingletonS
     override val updates: Observable<Vault.Update>
         get() = mutex.content._updatesPublisher
 
-    @Suppress("UNCHECKED_CAST")
-    override val cashBalances: Map<Currency, Amount<Currency>>
-        get() = currentVault.states.
-                // Select the states we own which are cash, ignore the rest, take the amounts.
-                mapNotNull { (it.state.data as? FungibleAsset<Currency>)?.amount }.
-                // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
-                groupBy { it.token.product }.
-                // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
-                mapValues { it.value.map { Amount(it.quantity, it.token.product) }.sumOrThrow() }
-
     override fun track(): Pair<Vault, Observable<Vault.Update>> {
         return mutex.locked {
             Pair(vault, updates.bufferUntilSubscribed())
@@ -107,7 +97,8 @@ open class InMemoryVaultService(protected val services: ServiceHub) : SingletonS
     }
 
     override fun generateSpend(tx: TransactionBuilder, amount: Amount<Currency>, to: PublicKey, onlyFromParties: Set<Party>?): Pair<TransactionBuilder, List<PublicKey>> {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+        // TODO: decommission entirely this Vault implementation
+        throw UnsupportedOperationException("Should be using NodeVaultService implementation!")
     }
 
 
