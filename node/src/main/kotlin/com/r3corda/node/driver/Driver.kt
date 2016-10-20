@@ -107,6 +107,7 @@ sealed class PortAllocation {
  *   and may be specified in [DriverDSL.startNode].
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
+ * @param clockClass A class that extends the Clock interface to use instead of the default NodeClock.
  * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
@@ -115,7 +116,7 @@ fun <A> driver(
         baseDirectory: String = "build/${getTimestampAsDirectoryName()}",
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
-        clock: Clock = NodeClock(),
+        clockClass: Class<*> = NodeClock::class.java,
         isDebug: Boolean = false,
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
@@ -123,7 +124,7 @@ fun <A> driver(
                 portAllocation = portAllocation,
                 debugPortAllocation = debugPortAllocation,
                 baseDirectory = baseDirectory,
-                clock = clock,
+                clockClass = clockClass,
                 isDebug = isDebug
         ),
         coerce = { it },
@@ -207,7 +208,7 @@ open class DriverDSL(
         val portAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
         val baseDirectory: String,
-        val clock: Clock,
+        val clockClass: Class<*>,
         val isDebug: Boolean
 ) : DriverDSLInternalInterface {
     private val networkMapName = "NetworkMapService"
@@ -306,7 +307,7 @@ open class DriverDSL(
                         "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
                         "networkMapAddress" to networkMapAddress.toString(),
-                        "clockClass" to clock.javaClass.name
+                        "clockClass" to clockClass.name
                 )
         )
 
@@ -335,7 +336,7 @@ open class DriverDSL(
                         "artemisAddress" to networkMapAddress.toString(),
                         "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to "",
-                        "clockClass" to clock.javaClass.name
+                        "clockClass" to clockClass.name
                 )
         )
 
