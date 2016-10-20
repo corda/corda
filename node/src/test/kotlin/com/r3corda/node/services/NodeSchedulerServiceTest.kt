@@ -12,7 +12,7 @@ import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.node.services.events.NodeSchedulerService
-import com.r3corda.node.services.persistence.PerFileCheckpointStorage
+import com.r3corda.node.services.persistence.DBCheckpointStorage
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
@@ -88,7 +88,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             }
             scheduler = NodeSchedulerService(database, services, factory, schedulerGatedExecutor)
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
-            val mockSMM = StateMachineManager(services, listOf(services, scheduler), PerFileCheckpointStorage(fs.getPath("checkpoints")), smmExecutor, database)
+            val mockSMM = StateMachineManager(services, listOf(services, scheduler), DBCheckpointStorage(), smmExecutor, database)
             mockSMM.changes.subscribe { change ->
                 if (change.addOrRemove == AddOrRemove.REMOVE && mockSMM.allStateMachines.isEmpty()) {
                     smmHasRemovedAllProtocols.countDown()
