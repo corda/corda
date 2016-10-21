@@ -134,6 +134,9 @@ dependencies {
     compile "org.hibernate:hibernate-core:5.2.2.Final"
     compile "org.hibernate:hibernate-java8:5.2.2.Final"
 
+    // For using caplet to build fatjar
+    compile 'co.paralleluniverse:capsule:1.0.3'
+
     // Integration test helpers
     integrationTestCompile 'junit:junit:4.12'
 
