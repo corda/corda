@@ -8,6 +8,7 @@ import com.r3corda.node.internal.Node
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
+import com.r3corda.node.utilities.TestClock
 import com.typesafe.config.Config
 import java.nio.file.Path
 import java.time.Clock
@@ -48,7 +49,7 @@ class FullNodeConfiguration(config: Config) : NodeConfiguration {
     val webAddress: HostAndPort by config
     val messagingServerAddress: HostAndPort? by config.getOrElse { null }
     val extraAdvertisedServiceIds: String by config
-    val clockClass: String? by config.getOrElse { null }
+    val useTestClock: Boolean by config.getOrElse { false }
 
     fun createNode(): Node {
         val advertisedServices = mutableSetOf<ServiceInfo>()
@@ -59,11 +60,7 @@ class FullNodeConfiguration(config: Config) : NodeConfiguration {
         }
         if (networkMapAddress == null) advertisedServices.add(ServiceInfo(NetworkMapService.type))
         val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else NodeMessagingClient.makeNetworkMapAddress(networkMapAddress!!)
-        return if (clockClass != null) {
-             Node(this, networkMapMessageAddress, advertisedServices, Class.forName(clockClass).newInstance() as Clock)
-        } else {
-            Node(this, networkMapMessageAddress, advertisedServices)
-        }
+        return Node(this, networkMapMessageAddress, advertisedServices, if(useTestClock == true) TestClock() else NodeClock())
     }
 }
 

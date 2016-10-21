@@ -59,7 +59,7 @@ interface DriverDSLExposedInterface {
      * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
      * @return The [NodeInfo] of the started up node retrieved from the network map service.
      */
-    fun startNode(providedName: String? = null, advertisedServices: Set<ServiceInfo> = setOf()): Future<DriverNodeInfo>
+    fun startNode(providedName: String? = null, advertisedServices: Set<ServiceInfo> = setOf()): Future<NodeInfoAndConfig>
 
     fun waitForAllNodesToFinish()
 }
@@ -69,7 +69,7 @@ interface DriverDSLInternalInterface : DriverDSLExposedInterface {
     fun shutdown()
 }
 
-data class DriverNodeInfo(val nodeInfo: NodeInfo, val messagingAddress: HostAndPort, val apiAddress: HostAndPort)
+data class NodeInfoAndConfig(val nodeInfo: NodeInfo, val config: Config)
 
 sealed class PortAllocation {
     abstract fun nextPort(): Int
@@ -116,7 +116,7 @@ fun <A> driver(
         baseDirectory: String = "build/${getTimestampAsDirectoryName()}",
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
-        clockClass: Class<*> = NodeClock::class.java,
+        useTestClock: Boolean = false,
         isDebug: Boolean = false,
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
@@ -124,7 +124,7 @@ fun <A> driver(
                 portAllocation = portAllocation,
                 debugPortAllocation = debugPortAllocation,
                 baseDirectory = baseDirectory,
-                clockClass = clockClass,
+                useTestClock = useTestClock,
                 isDebug = isDebug
         ),
         coerce = { it },
@@ -208,7 +208,7 @@ open class DriverDSL(
         val portAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
         val baseDirectory: String,
-        val clockClass: Class<*>,
+        val useTestClock: Boolean,
         val isDebug: Boolean
 ) : DriverDSLInternalInterface {
     private val networkMapName = "NetworkMapService"
@@ -289,7 +289,7 @@ open class DriverDSL(
         }
     }
 
-    override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>): Future<DriverNodeInfo> {
+    override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>): Future<NodeInfoAndConfig> {
         val messagingAddress = portAllocation.nextHostAndPort()
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
@@ -307,13 +307,13 @@ open class DriverDSL(
                         "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
                         "networkMapAddress" to networkMapAddress.toString(),
-                        "clockClass" to clockClass.name
+                        "useTestClock" to useTestClock
                 )
         )
 
-        return Executors.newSingleThreadExecutor().submit(Callable<DriverNodeInfo> {
+        return Executors.newSingleThreadExecutor().submit(Callable<NodeInfoAndConfig> {
             registerProcess(DriverDSL.startNode(config, quasarJarPath, debugPort))
-            DriverNodeInfo(queryNodeInfo(apiAddress)!!, messagingAddress, apiAddress)
+            NodeInfoAndConfig(queryNodeInfo(apiAddress)!!, config)
         })
     }
 
@@ -326,7 +326,6 @@ open class DriverDSL(
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
         val nodeDirectory = "$baseDirectory/$networkMapName"
-
         val config = ConfigHelper.loadConfig(
                 baseDirectoryPath = Paths.get(nodeDirectory),
                 allowMissingConfig = true,
@@ -336,7 +335,7 @@ open class DriverDSL(
                         "artemisAddress" to networkMapAddress.toString(),
                         "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to "",
-                        "clockClass" to clockClass.name
+                        "useTestClock" to useTestClock
                 )
         )
 
