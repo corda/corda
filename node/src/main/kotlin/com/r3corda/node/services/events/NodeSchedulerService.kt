@@ -45,7 +45,7 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class NodeSchedulerService(private val database: Database,
                            private val services: ServiceHubInternal,
-                           private val protocolLogicRefFactory: ProtocolLogicRefFactory = ProtocolLogicRefFactory(),
+                           private val protocolLogicRefFactory: ProtocolLogicRefFactory,
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor())
 : SchedulerService, SingletonSerializeAsToken() {
 
