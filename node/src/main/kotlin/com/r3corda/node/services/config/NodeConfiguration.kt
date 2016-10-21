@@ -52,6 +52,9 @@ class FullNodeConfiguration(config: Config) : NodeConfiguration {
     val useTestClock: Boolean by config.getOrElse { false }
 
     fun createNode(): Node {
+        // This is a sanity feature do not remove.
+        require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
+
         val advertisedServices = mutableSetOf<ServiceInfo>()
         if (!extraAdvertisedServiceIds.isNullOrEmpty()) {
             for (serviceId in extraAdvertisedServiceIds.split(",")) {
