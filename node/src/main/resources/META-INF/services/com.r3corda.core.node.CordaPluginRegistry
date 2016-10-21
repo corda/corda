@@ -1,4 +1,3 @@
 # Register a ServiceLoader service extending from com.r3corda.node.CordaPluginRegistry
-com.r3corda.node.services.clientapi.FixingSessionInitiation$Plugin
 com.r3corda.node.services.NotaryChange$Plugin
 com.r3corda.node.services.persistence.DataVending$Plugin
