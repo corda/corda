@@ -59,7 +59,7 @@ class FullNodeConfiguration(config: Config) : NodeConfiguration {
         }
         if (networkMapAddress == null) advertisedServices.add(ServiceInfo(NetworkMapService.type))
         val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else NodeMessagingClient.makeNetworkMapAddress(networkMapAddress!!)
-        return if(clockClass != null) {
+        return if (clockClass != null) {
              Node(this, networkMapMessageAddress, advertisedServices, Class.forName(clockClass).newInstance() as Clock)
         } else {
             Node(this, networkMapMessageAddress, advertisedServices)

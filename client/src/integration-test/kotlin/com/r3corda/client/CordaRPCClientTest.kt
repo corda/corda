@@ -25,8 +25,8 @@ class CordaRPCClientTest {
         val driverStarted = CountDownLatch(1)
         driverThread = thread {
             driver {
-                val nodeInfo = startNode().get()
-                client = CordaRPCClient(toHostAndPort(nodeInfo.address), configureTestSSL())
+                val driverInfo = startNode().get()
+                client = CordaRPCClient(toHostAndPort(driverInfo.nodeInfo.address), configureTestSSL())
                 driverStarted.countDown()
                 stopDriver.await()
             }
