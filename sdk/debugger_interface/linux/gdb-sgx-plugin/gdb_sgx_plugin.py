@@ -114,7 +114,7 @@ def target_path_to_host_path(target_path):
     #host_path = host_path[0:strlen-7]
     return host_path
 
-class enclave_info:
+class enclave_info(object):
     """Class to contain the enclave inforation,
     such as start address, stack addresses, stack size, etc.
     The enclave information is for one enclave."""
@@ -528,11 +528,11 @@ class UpdateOcallFrame(gdb.Breakpoint):
                 return False
             trusted_ocall_frame_tuple = struct.unpack_from(trusted_of_fmt, trusted_ocall_frame)
 
-            gdb_cmd = "set *(uintptr_t *)%#x = 0" %(ocall_frame)
+            gdb_cmd = "set *(uintptr_t *)%#x = 0" %(int(ocall_frame))
             gdb.execute(gdb_cmd, False, True)
-            gdb_cmd = "set *(uintptr_t *)%#x = %#x" %(ocall_frame+(2*SIZE), trusted_ocall_frame_tuple[11])
+            gdb_cmd = "set *(uintptr_t *)%#x = %#x" %(int(ocall_frame+(2*SIZE)), trusted_ocall_frame_tuple[11])
             gdb.execute(gdb_cmd, False, True)
-            gdb_cmd = "set *(uintptr_t *)%#x = %#x" %(ocall_frame+(3*SIZE), trusted_ocall_frame_tuple[19])
+            gdb_cmd = "set *(uintptr_t *)%#x = %#x" %(int(ocall_frame+(3*SIZE)), trusted_ocall_frame_tuple[19])
             gdb.execute(gdb_cmd, False, True)
 
         return False
@@ -582,7 +582,7 @@ def sgx_debugger_init():
 
 def exit_handler(event):
     # When the inferior exited, remove all enclave symbol
-    for key in ENCLAVES_ADDR.keys():
+    for key in list(ENCLAVES_ADDR.keys()):
         gdb.execute("remove-symbol-file -a %s" % (ENCLAVES_ADDR[key]), False, True)
     ENCLAVES_ADDR.clear()
 
