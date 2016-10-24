@@ -13,7 +13,6 @@ import rx.Observable
 import rx.subjects.UnicastSubject
 import java.io.BufferedInputStream
 import java.io.InputStream
-import java.lang.Comparable
 import java.math.BigDecimal
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -293,7 +292,7 @@ fun <T, I: Comparable<I>> Iterable<T>.isOrderedAndUnique(extractId: T.() -> I): 
         if (lastLast == null) {
             true
         } else {
-            lastLast.compareTo(extractId(it)) < 0
+            lastLast < extractId(it)
         }
     }
 }
