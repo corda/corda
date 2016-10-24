@@ -65,7 +65,7 @@ public:
     */
     virtual int add_enclave_page(sgx_enclave_id_t enclave_id, void *source, uint64_t offset, const sec_info_t &sinfo, uint32_t attr) = 0;
     virtual int init_enclave(sgx_enclave_id_t enclave_id, enclave_css_t *enclave_css, SGXLaunchToken *lc, le_prd_css_file_t *prd_css_file = NULL) = 0;
-    virtual int destroy_enclave(sgx_enclave_id_t enclave_id) = 0;
+    virtual int destroy_enclave(sgx_enclave_id_t enclave_id, uint64_t enclave_size = 0) = 0;
     virtual int initialize(sgx_enclave_id_t enclave_id) = 0;
     virtual bool use_se_hw() const = 0;
 

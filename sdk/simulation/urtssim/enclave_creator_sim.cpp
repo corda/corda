@@ -167,8 +167,9 @@ int EnclaveCreatorSim::get_misc_attr(sgx_misc_attribute_t *sgx_misc_attr, metada
     return SGX_SUCCESS;
 }
 
-int EnclaveCreatorSim::destroy_enclave(sgx_enclave_id_t enclave_id)
+int EnclaveCreatorSim::destroy_enclave(sgx_enclave_id_t enclave_id, uint64_t enclave_size)
 {
+    UNUSED(enclave_size);
     CEnclave *enclave = CEnclavePool::instance()->get_enclave(enclave_id);
 
     if(enclave == NULL)

@@ -240,7 +240,7 @@ void CEnclave::destroy()
     debug_enclave_info_t *debug_info = const_cast<debug_enclave_info_t *>(get_debug_info());
     generate_enclave_debug_event(URTS_EXCEPTION_PREREMOVEENCLAVE, debug_info);
 
-    get_enclave_creator()->destroy_enclave(ENCLAVE_ID_IOCTL);
+    get_enclave_creator()->destroy_enclave(ENCLAVE_ID_IOCTL, m_size);
 
     m_destroyed = true;
     //We are going to destory m_rwlock. At this point, maybe an ecall is in progress, and try to get m_rwlock.
