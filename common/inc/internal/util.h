@@ -58,6 +58,7 @@
 #define	ROUND_TO(x, align)  (((x) + ((align)-1)) & ~((align)-1))
 #define	ROUND_TO_PAGE(x)    ROUND_TO(x, SE_PAGE_SIZE)
 #define	TRIM_TO_PAGE(x) ((x) & ~(SE_PAGE_SIZE-1))
+#define PAGE_OFFSET(x) ((x) & (SE_PAGE_SIZE -1))
 #ifdef __cplusplus
 #define PAGE_ALIGN(t, x)	reinterpret_cast<t*>((reinterpret_cast<size_t>(x)+(SE_PAGE_SIZE-1)) & (~(SE_PAGE_SIZE-1)))
 #else
