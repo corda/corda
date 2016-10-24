@@ -107,7 +107,7 @@ sealed class PortAllocation {
  *   and may be specified in [DriverDSL.startNode].
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
- * @param clockClass A class that extends the Clock interface to use instead of the default NodeClock.
+ * @param useTestClock If true the test clock will be used in Node.
  * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
