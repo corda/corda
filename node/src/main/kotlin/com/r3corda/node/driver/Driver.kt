@@ -5,12 +5,17 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceInfo
+import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.config.ConfigHelper
 import com.r3corda.node.services.config.FullNodeConfiguration
+import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.services.messaging.NodeMessagingClient
+import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.utilities.JsonSupport
 import com.typesafe.config.Config
@@ -23,11 +28,13 @@ import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
+import java.time.Clock
 import java.util.*
 import java.util.concurrent.*
+import kotlin.concurrent.thread
 
 /**
- * This file defines a small "Driver" DSL for starting up nodes.
+ * This file defines a small "Driver" DSL for starting up nodes that is only intended for development, demos and tests.
  *
  * The process the driver is run in behaves as an Artemis client and starts up other processes. Namely it first
  * bootstraps a network map service to allow the specified nodes to connect to, then starts up the actual nodes.
@@ -52,7 +59,7 @@ interface DriverDSLExposedInterface {
      * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
      * @return The [NodeInfo] of the started up node retrieved from the network map service.
      */
-    fun startNode(providedName: String? = null, advertisedServices: Set<ServiceInfo> = setOf()): Future<NodeInfo>
+    fun startNode(providedName: String? = null, advertisedServices: Set<ServiceInfo> = setOf()): Future<NodeInfoAndConfig>
 
     fun waitForAllNodesToFinish()
 }
@@ -61,6 +68,8 @@ interface DriverDSLInternalInterface : DriverDSLExposedInterface {
     fun start()
     fun shutdown()
 }
+
+data class NodeInfoAndConfig(val nodeInfo: NodeInfo, val config: Config)
 
 sealed class PortAllocation {
     abstract fun nextPort(): Int
@@ -98,6 +107,7 @@ sealed class PortAllocation {
  *   and may be specified in [DriverDSL.startNode].
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
+ * @param useTestClock If true the test clock will be used in Node.
  * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
@@ -106,6 +116,7 @@ fun <A> driver(
         baseDirectory: String = "build/${getTimestampAsDirectoryName()}",
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        useTestClock: Boolean = false,
         isDebug: Boolean = false,
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
@@ -113,6 +124,7 @@ fun <A> driver(
                 portAllocation = portAllocation,
                 debugPortAllocation = debugPortAllocation,
                 baseDirectory = baseDirectory,
+                useTestClock = useTestClock,
                 isDebug = isDebug
         ),
         coerce = { it },
@@ -192,10 +204,11 @@ fun <A> poll(pollName: String, pollIntervalMs: Long = 500, warnCount: Int = 120,
     return result
 }
 
-class DriverDSL(
+open class DriverDSL(
         val portAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
         val baseDirectory: String,
+        val useTestClock: Boolean,
         val isDebug: Boolean
 ) : DriverDSLInternalInterface {
     private val networkMapName = "NetworkMapService"
@@ -276,7 +289,7 @@ class DriverDSL(
         }
     }
 
-    override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>): Future<NodeInfo> {
+    override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>): Future<NodeInfoAndConfig> {
         val messagingAddress = portAllocation.nextHostAndPort()
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
@@ -293,13 +306,14 @@ class DriverDSL(
                         "artemisAddress" to messagingAddress.toString(),
                         "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
-                        "networkMapAddress" to networkMapAddress.toString()
+                        "networkMapAddress" to networkMapAddress.toString(),
+                        "useTestClock" to useTestClock
                 )
         )
 
-        return Executors.newSingleThreadExecutor().submit(Callable<NodeInfo> {
+        return Executors.newSingleThreadExecutor().submit(Callable<NodeInfoAndConfig> {
             registerProcess(DriverDSL.startNode(config, quasarJarPath, debugPort))
-            queryNodeInfo(apiAddress)!!
+            NodeInfoAndConfig(queryNodeInfo(apiAddress)!!, config)
         })
     }
 
@@ -312,7 +326,6 @@ class DriverDSL(
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
         val nodeDirectory = "$baseDirectory/$networkMapName"
-
         val config = ConfigHelper.loadConfig(
                 baseDirectoryPath = Paths.get(nodeDirectory),
                 allowMissingConfig = true,
@@ -321,7 +334,8 @@ class DriverDSL(
                         "basedir" to Paths.get(nodeDirectory).normalize().toString(),
                         "artemisAddress" to networkMapAddress.toString(),
                         "webAddress" to apiAddress.toString(),
-                        "extraAdvertisedServiceIds" to ""
+                        "extraAdvertisedServiceIds" to "",
+                        "useTestClock" to useTestClock
                 )
         )
 

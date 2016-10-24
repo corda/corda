@@ -51,9 +51,9 @@ class NodeMonitorModelTest {
                 val aliceNodeFuture = startNode("Alice")
                 val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
 
-                aliceNode = aliceNodeFuture.get()
-                notaryNode = notaryNodeFuture.get()
-                newNode = { nodeName -> startNode(nodeName).get() }
+                aliceNode = aliceNodeFuture.get().nodeInfo
+                notaryNode = notaryNodeFuture.get().nodeInfo
+                newNode = { nodeName -> startNode(nodeName).get().nodeInfo }
                 val monitor = NodeMonitorModel()
 
                 stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
