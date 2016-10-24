@@ -212,7 +212,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             protocolLogicFactory = initialiseProtocolLogicFactory()
             scheduler = NodeSchedulerService(database, services, protocolLogicFactory)
 
-
             val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
 
             customServices.clear()
