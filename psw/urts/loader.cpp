@@ -438,7 +438,7 @@ int CLoader::build_image(SGXLaunchToken * const lc, sgx_attributes_t * const sec
     return SGX_SUCCESS;
 
 fail:
-    get_enclave_creator()->destroy_enclave(ENCLAVE_ID_IOCTL);
+    get_enclave_creator()->destroy_enclave(ENCLAVE_ID_IOCTL, m_secs.size);
 
     return ret;
 }
@@ -689,7 +689,7 @@ int CLoader::load_enclave_ex(SGXLaunchToken *lc, bool debug, const metadata_t *m
 
 int CLoader::destroy_enclave()
 {
-    return get_enclave_creator()->destroy_enclave(ENCLAVE_ID_IOCTL);
+    return get_enclave_creator()->destroy_enclave(ENCLAVE_ID_IOCTL, m_secs.size);
 }
 
 int CLoader::set_memory_protection()

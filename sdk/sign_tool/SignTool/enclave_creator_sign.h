@@ -49,7 +49,7 @@ public:
     int init_enclave(sgx_enclave_id_t enclave_id, enclave_css_t *enclave_css, SGXLaunchToken *lc, le_prd_css_file_t *prd_css_file);
     int get_misc_attr(sgx_misc_attribute_t *sgx_misc_attr, metadata_t *metadata, SGXLaunchToken * const lc, uint32_t flag);
     bool get_plat_cap(sgx_misc_attribute_t *se_attr);
-    int destroy_enclave(sgx_enclave_id_t enclave_id);
+    int destroy_enclave(sgx_enclave_id_t enclave_id, uint64_t enclave_size);
     int initialize(sgx_enclave_id_t enclave_id);
     bool use_se_hw() const;
 

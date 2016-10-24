@@ -236,9 +236,10 @@ int EnclaveCreatorST::get_misc_attr(sgx_misc_attribute_t *sgx_misc_attr, metadat
     return SGX_SUCCESS;
 }
 
-int EnclaveCreatorST::destroy_enclave(sgx_enclave_id_t enclave_id)
+int EnclaveCreatorST::destroy_enclave(sgx_enclave_id_t enclave_id, uint64_t enclave_size)
 {
     UNUSED(enclave_id);
+    UNUSED(enclave_size);
     SAFE_FREE_MM(m_ctx);
     return SGX_SUCCESS;
 }

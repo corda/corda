@@ -72,39 +72,38 @@ int EnclaveCreatorHW::error_driver2urts(int driver_error)
 
     switch(driver_error)
     {
-    case ISGX_ERROR:
+#if 0
+    case SGX_ERROR:
         if(ENOMEM == errno)
             ret = SGX_ERROR_OUT_OF_MEMORY;
         else
             ret = SGX_ERROR_NO_DEVICE;
         break;
-    case ISGX_INVALID_ATTRIBUTE:
+#endif
+    case SGX_INVALID_ATTRIBUTE:
         ret = SGX_ERROR_INVALID_ATTRIBUTE;
         break;
-    case ISGX_INVALID_MEASUREMENT:
+    case SGX_INVALID_MEASUREMENT:
         ret = SE_ERROR_INVALID_MEASUREMENT;
         break;
-    case ISGX_INVALID_SIG_STRUCT:
-    case ISGX_INVALID_SIGNATIRE:
+    case SGX_INVALID_SIG_STRUCT:
+    case SGX_INVALID_SIGNATURE:
         ret = SGX_ERROR_INVALID_SIGNATURE;
         break;
-    case ISGX_INVALID_LAUNCH_TOKEN:
-        ret = SE_ERROR_INVALID_LAUNCH_TOKEN;
-        break;
-    case ISGX_INVALID_CPUSVN:
+    case SGX_INVALID_CPUSVN:
         ret = SGX_ERROR_INVALID_CPUSVN;
         break;
-    case ISGX_INVALID_ISVSVN:
+    case SGX_INVALID_ISVSVN:
         ret = SGX_ERROR_INVALID_ISVSVN;
         break;
-    case ISGX_UNMASKED_EVENT:
+    case SGX_UNMASKED_EVENT:
         ret = SGX_ERROR_DEVICE_BUSY;
         break;
-    case (int)ISGX_POWER_LOST_ENCLAVE: // [-Wc++11-narrowing]
+    case (int)SGX_POWER_LOST_ENCLAVE: // [-Wc++11-narrowing]
         ret = SGX_ERROR_ENCLAVE_LOST;
         break;
     default:
-        SE_TRACE(SE_TRACE_WARNING, "unexpected error %#x from driver, should be uRTS/driver bug\n", ret);
+        SE_TRACE(SE_TRACE_WARNING, "unexpected error %#X from driver, should be uRTS/driver bug\n", driver_error);
         ret = SGX_ERROR_UNEXPECTED;
         break;
     }
@@ -116,15 +115,35 @@ int EnclaveCreatorHW::create_enclave(secs_t *secs, sgx_enclave_id_t *enclave_id,
 {
     assert(secs != NULL && enclave_id != NULL && start_addr != NULL);
     UNUSED(ae);
+    int ret = 0;
 
     if (false == open_se_device())
         return SGX_ERROR_NO_DEVICE;
 
     SE_TRACE(SE_TRACE_DEBUG, "\n secs.attibutes.flags = %llx, secs.attributes.xfrm = %llx \n"
              , secs->attributes.flags, secs->attributes.xfrm);
+    //SECS:BASEADDR must be naturally aligned on an SECS.SIZE boundary
+    void* enclave_base = mmap(NULL, (size_t)secs->size *2, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_SHARED, m_hdevice, 0);
 
-    struct isgx_create_param param = { secs, 0 };
-    int ret = ioctl(m_hdevice, ISGX_IOCTL_ENCLAVE_CREATE, &param);
+    if(enclave_base == NULL)
+    {
+        SE_TRACE(SE_TRACE_WARNING, "\nISGX_IOCTL_ENCLAVE_CREATE fails: mmap fail\n");
+        return SGX_ERROR_OUT_OF_MEMORY;
+    }
+    //find a suitable base for enclave
+    uint64_t base = (uint64_t)enclave_base + (secs->size - ((uint64_t)enclave_base % secs->size)) ;
+    secs->base = (void*)base;
+    //remove unneed page
+    munmap(enclave_base, (size_t)(secs->base) - (size_t)(enclave_base));
+
+    if(((uint64_t)(enclave_base) + secs->size *2) != ((uint64_t)secs->base + secs->size))
+    {
+        munmap((void*)((size_t)secs->base + secs->size), (size_t)(enclave_base) + (size_t)secs->size - (size_t)(secs->base));
+    }
+
+    struct sgx_enclave_create param = {0};
+    param.src = (__u64)(secs);
+    ret = ioctl(m_hdevice, SGX_IOC_ENCLAVE_CREATE, &param);
     if(ret) {
         SE_TRACE(SE_TRACE_WARNING, "\nISGX_IOCTL_ENCLAVE_CREATE fails: errno = %x\n", errno);
         return error_driver2urts(ret);
@@ -134,10 +153,11 @@ int EnclaveCreatorHW::create_enclave(secs_t *secs, sgx_enclave_id_t *enclave_id,
     if(0 == tmp)
         g_eid_high++;
     *enclave_id = ((uint64_t)g_eid_high << 32) | g_eid_low;
-    *start_addr = secs->base = (void *)param.addr;
+    *start_addr = secs->base;
 
     return SGX_SUCCESS;
 }
+
 
 int EnclaveCreatorHW::add_enclave_page(sgx_enclave_id_t enclave_id, void *src, uint64_t rva, const sec_info_t &sinfo, uint32_t attr)
 {
@@ -151,14 +171,15 @@ int EnclaveCreatorHW::add_enclave_page(sgx_enclave_id_t enclave_id, void *src, u
     }
 
     int ret = 0;
-    struct isgx_add_param addp = { 0, 0, 0, 0 };
+    struct sgx_enclave_add_page addp = { 0, 0, 0, 0 };
 
-    addp.addr = (unsigned long)enclave_id + (unsigned long)rva;
-    addp.user_addr = reinterpret_cast<unsigned long>(source);
-    addp.secinfo = (void *)const_cast<sec_info_t *>(&sinfo);
-    if(!((1<<DoEEXTEND) & attr))
-        addp.flags |= ISGX_ADD_SKIP_EEXTEND;
-    ret = ioctl(m_hdevice, ISGX_IOCTL_ENCLAVE_ADD_PAGE, &addp);
+    addp.addr = (__u64)enclave_id + (__u64)rva;
+    addp.src = reinterpret_cast<__u64>(source);
+    addp.secinfo = reinterpret_cast<__u64>(const_cast<sec_info_t *>(&sinfo));
+    if(((1<<DoEEXTEND) & attr))
+        addp.mrmask |= 0xFFFF;
+
+    ret = ioctl(m_hdevice, SGX_IOC_ENCLAVE_ADD_PAGE, &addp);
     if(ret) {
         SE_TRACE(SE_TRACE_WARNING, "\nAdd Page - %p to %p... FAIL\n", source, rva);
         return error_driver2urts(ret);
@@ -170,14 +191,14 @@ int EnclaveCreatorHW::add_enclave_page(sgx_enclave_id_t enclave_id, void *src, u
 int EnclaveCreatorHW::try_init_enclave(sgx_enclave_id_t enclave_id, enclave_css_t *enclave_css, token_t *launch)
 {
     int ret = 0;
-    struct isgx_init_param initp = { 0, NULL, NULL };
-    initp.addr = (unsigned long)enclave_id;
-    initp.sigstruct = reinterpret_cast<char*>(enclave_css);
+    struct sgx_enclave_init initp = { 0, 0, 0 };
+    initp.addr = (__u64)enclave_id;
+    initp.sigstruct = reinterpret_cast<__u64>(enclave_css);
     //launch should NOT be NULL, because it has been checked in urts_com.h::_create_enclave(...)
     assert(launch != NULL);
 
-    initp.einittoken = reinterpret_cast<void *>(launch);
-    ret = ioctl(m_hdevice, ISGX_IOCTL_ENCLAVE_INIT, &initp);
+    initp.einittoken = reinterpret_cast<__u64>(launch);
+    ret = ioctl(m_hdevice, SGX_IOC_ENCLAVE_INIT, &initp);
     if (ret) {
         SE_TRACE(SE_TRACE_WARNING, "\nISGX_IOCTL_ENCLAVE_INIT fails error = %x\n", ret);
         return error_driver2urts(ret);
@@ -195,14 +216,14 @@ int EnclaveCreatorHW::try_init_enclave(sgx_enclave_id_t enclave_id, enclave_css_
     return SGX_SUCCESS;
 }
 
-int EnclaveCreatorHW::destroy_enclave(sgx_enclave_id_t enclave_id)
+//for linux hw mode, enclave_id is actually start address here
+int EnclaveCreatorHW::destroy_enclave(sgx_enclave_id_t enclave_id, uint64_t enclave_size)
 {
     int ret = 0;
 
-    isgx_destroy_param param = { (unsigned long)enclave_id };
-    ret = ioctl(m_hdevice, ISGX_IOCTL_ENCLAVE_DESTROY, &param);
+    ret = munmap((void*)enclave_id, (size_t)enclave_size);
 
-    if (-1 == ret) {
+    if (0 != ret) {
         SE_TRACE(SE_TRACE_WARNING, "destroy SGX enclave failed, error = %d\n", errno);
         ret = SGX_ERROR_UNEXPECTED;
     }
