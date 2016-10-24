@@ -209,9 +209,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             // the identity key. But the infrastructure to make that easy isn't here yet.
             keyManagement = makeKeyManagementService()
             api = APIServerImpl(this@AbstractNode)
-            scheduler = NodeSchedulerService(database, services)
-
             protocolLogicFactory = initialiseProtocolLogicFactory()
+            scheduler = NodeSchedulerService(database, services, protocolLogicFactory)
 
             val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
 
