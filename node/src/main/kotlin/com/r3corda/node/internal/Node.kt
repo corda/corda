@@ -33,6 +33,7 @@ import org.glassfish.jersey.servlet.ServletContainer
 import org.jetbrains.exposed.sql.Database
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
+import java.lang.reflect.InvocationTargetException
 import java.nio.channels.FileLock
 import java.time.Clock
 import java.util.*
@@ -143,13 +144,18 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
 
         // Export JMX monitoring statistics and data over REST/JSON.
         if (configuration.exportJMXto.split(',').contains("http")) {
-            handlerCollection.addHandler(WebAppContext().apply {
-                // Find the jolokia WAR file on the classpath.
-                contextPath = "/monitoring/json"
-                setInitParameter("mimeType", "application/json")
-                val classpath = System.getProperty("java.class.path").split(System.getProperty("path.separator"))
-                war = classpath.first { it.contains("jolokia-agent-war-2") && it.endsWith(".war") }
-            })
+            val classpath = System.getProperty("java.class.path").split(System.getProperty("path.separator"))
+            val warpath = classpath.firstOrNull() { it.contains("jolokia-agent-war-2") && it.endsWith(".war") }
+            if (warpath != null) {
+                handlerCollection.addHandler(WebAppContext().apply {
+                    // Find the jolokia WAR file on the classpath.
+                    contextPath = "/monitoring/json"
+                    setInitParameter("mimeType", "application/json")
+                    war = warpath
+                })
+            } else {
+                log.warn("Unable to locate Jolokia WAR on classpath")
+            }
         }
 
         // API, data upload and download to services (attachments, rates oracles etc)
@@ -157,7 +163,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
 
         val server = Server()
 
-        if (configuration.useHTTPS) {
+        val connector = if (configuration.useHTTPS) {
             val httpsConfiguration = HttpConfiguration()
             httpsConfiguration.outputBufferSize = 32768
             httpsConfiguration.addCustomizer(SecureRequestCustomizer())
@@ -173,14 +179,16 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
             sslContextFactory.setIncludeCipherSuites(".*AES.*GCM.*")
             val sslConnector = ServerConnector(server, SslConnectionFactory(sslContextFactory, "http/1.1"), HttpConnectionFactory(httpsConfiguration))
             sslConnector.port = configuration.webAddress.port
-            server.connectors = arrayOf<Connector>(sslConnector)
+            sslConnector
         } else {
             val httpConfiguration = HttpConfiguration()
             httpConfiguration.outputBufferSize = 32768
             val httpConnector = ServerConnector(server, HttpConnectionFactory(httpConfiguration))
             httpConnector.port = configuration.webAddress.port
-            server.connectors = arrayOf<Connector>(httpConnector)
+            httpConnector
         }
+        server.connectors = arrayOf<Connector>(connector)
+        log.info("Starting web API server on port ${connector.port}")
 
         server.handler = handlerCollection
         runOnStop += Runnable { server.stop() }
@@ -203,8 +211,19 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
 
             val webAPIsOnClasspath = pluginRegistries.flatMap { x -> x.webApis }
             for (webapi in webAPIsOnClasspath) {
-                log.info("Add Plugin web API from attachment ${webapi.name}")
-                val customAPI = webapi.getConstructor(ServiceHub::class.java).newInstance(services)
+                log.info("Add plugin web API from attachment ${webapi.name}")
+                val constructor = try {
+                    webapi.getConstructor(ServiceHub::class.java)
+                } catch (ex: NoSuchMethodException) {
+                    log.error("Missing constructor ${webapi.name}(ServiceHub)")
+                    continue
+                }
+                val customAPI = try {
+                    constructor.newInstance(services)
+                } catch (ex: InvocationTargetException) {
+                    log.error("Constructor ${webapi.name}(ServiceHub) threw an error: ", ex.targetException)
+                    continue
+                }
                 resourceConfig.register(customAPI)
             }
 
@@ -270,7 +289,13 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
         super.start()
         // Only start the service API requests once the network map registration is complete
         networkMapRegistrationFuture.then {
-            webServer = initWebServer()
+            try {
+                webServer = initWebServer()
+            } catch(ex: Exception) {
+                // TODO: We need to decide if this is a fatal error, given the API is unavailable, or whether the API
+                //       is not critical and we continue anyway.
+                log.error("Web server startup failed", ex)
+            }
             // Begin exporting our own metrics via JMX.
             JmxReporter.
                     forRegistry(services.monitoringService.metrics).
