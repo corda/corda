@@ -134,7 +134,7 @@ dependencies {
     compile "org.hibernate:hibernate-core:5.2.2.Final"
     compile "org.hibernate:hibernate-java8:5.2.2.Final"
 
-    // For using caplet to build fatjar
+    // Capsule is a library for building independently executable fat JARs.
     compile 'co.paralleluniverse:capsule:1.0.3'
 
     // Integration test helpers
