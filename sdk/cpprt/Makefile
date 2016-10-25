@@ -79,9 +79,6 @@ $(CPPRT): $(OBJS) prepare-libunwind libunwind
 	$(CP) linux/libunwind/src/.libs/libunwind.a $(CPPRT)
 	$(AR) rs $@ $(OBJS)
 
-$(CPPRT): CC  = gcc
-$(CPPRT): CXX = g++
-
 .PHONY: libunwind
 libunwind:
 	cd linux/libunwind/ && ( test -f Makefile || ./autogen-linux.sh ) && $(MAKE) -j5
