@@ -164,7 +164,7 @@ private fun runSender(node: Node, otherSide: Party) {
     // Make sure we have the file in storage
     // TODO: We should have our own demo file, not share the trader demo file
     if (serviceHub.storageService.attachments.openAttachment(PROSPECTUS_HASH) == null) {
-        com.r3corda.demos.Role::class.java.getResourceAsStream("bank-of-london-cp.jar").use {
+        Role::class.java.getResourceAsStream("bank-of-london-cp.jar").use {
             val id = node.storage.attachments.importAttachment(it)
             assertEquals(PROSPECTUS_HASH, id)
         }
