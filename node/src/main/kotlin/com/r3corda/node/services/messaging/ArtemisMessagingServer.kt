@@ -4,14 +4,12 @@ import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.AddressFormatException
 import com.r3corda.core.div
-import com.r3corda.core.exists
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.services.NetworkMapCache
-import com.r3corda.core.use
 import com.r3corda.core.utilities.loggerFor
+import com.r3corda.node.services.RPCUserService
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingServer.NodeLoginModule.Companion.NODE_ROLE_NAME
-import com.r3corda.node.services.messaging.ArtemisMessagingServer.NodeLoginModule.Companion.RPC_ROLE_NAME
+import com.r3corda.node.services.messaging.ArtemisMessagingServer.NodeLoginModule.Companion.NODE_USER
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.core.config.BridgeConfiguration
 import org.apache.activemq.artemis.core.config.Configuration
@@ -25,8 +23,6 @@ import org.apache.activemq.artemis.spi.core.security.jaas.RolePrincipal
 import org.apache.activemq.artemis.spi.core.security.jaas.UserPrincipal
 import rx.Subscription
 import java.io.IOException
-import java.nio.file.Files
-import java.nio.file.Path
 import java.security.Principal
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
@@ -57,9 +53,11 @@ import javax.security.auth.spi.LoginModule
 @ThreadSafe
 class ArtemisMessagingServer(override val config: NodeConfiguration,
                              val myHostPort: HostAndPort,
-                             val networkMapCache: NetworkMapCache) : ArtemisMessagingComponent() {
+                             val networkMapCache: NetworkMapCache,
+                             val userService: RPCUserService) : ArtemisMessagingComponent() {
+
     companion object {
-        val log = loggerFor<ArtemisMessagingServer>()
+        private val log = loggerFor<ArtemisMessagingServer>()
     }
 
     private class InnerState {
@@ -187,20 +185,23 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
         isPersistIDCache = true
         isPopulateValidatedUser = true
-        setupUserRoles()
+        configureQueueSecurity()
     }
 
-    // This gives nodes full access and RPC clients only enough to do RPC
-    private fun ConfigurationImpl.setupUserRoles() {
-        // TODO COR-307
-        val nodeRole = Role(NODE_ROLE_NAME, true, true, true, true, true, true, true, true)
-        val clientRpcRole = restrictedRole(RPC_ROLE_NAME, consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true)
-        securityRoles = mapOf(
-                "#" to setOf(nodeRole),
-                "clients.*.rpc.responses.*" to setOf(nodeRole, clientRpcRole),
-                "clients.*.rpc.observations.*" to setOf(nodeRole, clientRpcRole),
-                RPC_REQUESTS_QUEUE to setOf(nodeRole, restrictedRole(RPC_ROLE_NAME, send = true))
-        )
+    private fun ConfigurationImpl.configureQueueSecurity() {
+        val nodeRPCSendRole = restrictedRole(NODE_USER, send = true)  // The node needs to be able to send responses on the client queues
+
+        for ((username) in userService.users) {
+            // Clients need to be able to consume the responses on their queues, and they're also responsible for creating and destroying them
+            val clientRole = restrictedRole(username, consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true)
+            securityRoles["$CLIENTS_PREFIX$username.rpc.*"] = setOf(nodeRPCSendRole, clientRole)
+        }
+
+        // TODO Restrict this down to just what the node needs
+        securityRoles["#"] = setOf(Role(NODE_USER, true, true, true, true, true, true, true, true))
+        securityRoles[RPC_REQUESTS_QUEUE] = setOf(
+                restrictedRole(NODE_USER, createNonDurableQueue = true, deleteNonDurableQueue = true),
+                restrictedRole(RPC_REQUESTS_QUEUE, send = true))  // Clients need to be able to send their requests
     }
 
     private fun restrictedRole(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false,
@@ -211,19 +212,10 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     }
 
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
-        val rpcUsersFile = config.basedir / "rpc-users.properties"
-        if (!rpcUsersFile.exists()) {
-            val users = Properties()
-            users["user1"] = "test"
-            Files.newOutputStream(rpcUsersFile).use {
-                users.store(it, null)
-            }
-        }
-
         val securityConfig = object : SecurityConfiguration() {
             // Override to make it work with our login module
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
-                val options = mapOf(NodeLoginModule.FILE_KEY to rpcUsersFile)
+                val options = mapOf(RPCUserService::class.java.name to userService)
                 return arrayOf(AppConfigurationEntry(name, REQUIRED, options))
             }
         }
@@ -277,29 +269,25 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     }
 
 
+    // We could have used the built-in PropertiesLoginModule but that exposes a roles properties file. Roles are used
+    // for queue access control and our RPC users must only have access to the queues they need and this cannot be allowed
+    // to be modified.
     class NodeLoginModule : LoginModule {
 
         companion object {
-            const val FILE_KEY = "rpc-users-file"
-            const val NODE_ROLE_NAME = "NodeRole"
-            const val RPC_ROLE_NAME = "RpcRole"
+            const val NODE_USER = "Node"
         }
 
-        private val users = Properties()
         private var loginSucceeded: Boolean = false
         private lateinit var subject: Subject
         private lateinit var callbackHandler: CallbackHandler
-        private lateinit var principals: List<Principal>
+        private lateinit var userService: RPCUserService
+        private val principals = ArrayList<Principal>()
 
         override fun initialize(subject: Subject, callbackHandler: CallbackHandler, sharedState: Map<String, *>, options: Map<String, *>) {
             this.subject = subject
             this.callbackHandler = callbackHandler
-            val rpcUsersFile = options[FILE_KEY] as Path
-            if (rpcUsersFile.exists()) {
-                rpcUsersFile.use {
-                    users.load(it)
-                }
-            }
+            userService = options[RPCUserService::class.java.name] as RPCUserService
         }
 
         override fun login(): Boolean {
@@ -316,14 +304,16 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
             val username = nameCallback.name ?: throw FailedLoginException("User name is null")
             val receivedPassword = passwordCallback.password ?: throw FailedLoginException("Password is null")
-            val password = if (username == "Node") "Node" else users[username] ?: throw FailedLoginException("User does not exist")
+            val password = if (username == NODE_USER) "Node" else userService.getUser(username)?.password ?: throw FailedLoginException("User does not exist")
             if (password != String(receivedPassword)) {
                 throw FailedLoginException("Password does not match")
             }
 
-            principals = listOf(
-                    UserPrincipal(username),
-                    RolePrincipal(if (username == "Node") NODE_ROLE_NAME else RPC_ROLE_NAME))
+            principals += UserPrincipal(username)
+            principals += RolePrincipal(username)  // The roles are configured using the usernames
+            if (username != NODE_USER) {
+                principals += RolePrincipal(RPC_REQUESTS_QUEUE)  // This enables the RPC client to send requests
+            }
 
             loginSucceeded = true
             return loginSucceeded

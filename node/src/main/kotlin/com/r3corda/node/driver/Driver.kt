@@ -5,33 +5,30 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.generateKeyPair
+import com.r3corda.core.div
 import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceInfo
-import com.r3corda.node.serialization.NodeClock
+import com.r3corda.core.utilities.loggerFor
+import com.r3corda.core.write
+import com.r3corda.node.services.User
 import com.r3corda.node.services.config.ConfigHelper
 import com.r3corda.node.services.config.FullNodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.services.messaging.NodeMessagingClient
-import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.utilities.JsonSupport
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.File
-import java.io.InputStreamReader
 import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.text.SimpleDateFormat
-import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset.UTC
+import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.*
-import kotlin.concurrent.thread
 
 /**
  * This file defines a small "Driver" DSL for starting up nodes that is only intended for development, demos and tests.
@@ -45,7 +42,7 @@ import kotlin.concurrent.thread
  * TODO The network map service bootstrap is hacky (needs to fake the service's public key in order to retrieve the true one), needs some thought.
  */
 
-private val log: Logger = LoggerFactory.getLogger(DriverDSL::class.java)
+private val log: Logger = loggerFor<DriverDSL>()
 
 /**
  * This is the interface that's exposed to DSL users.
@@ -57,9 +54,12 @@ interface DriverDSLExposedInterface {
      * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
      *   random. Note that this must be unique as the driver uses it as a primary key!
      * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
+     * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
      * @return The [NodeInfo] of the started up node retrieved from the network map service.
      */
-    fun startNode(providedName: String? = null, advertisedServices: Set<ServiceInfo> = setOf()): Future<NodeInfoAndConfig>
+    fun startNode(providedName: String? = null,
+                  advertisedServices: Set<ServiceInfo> = emptySet(),
+                  rpcUsers: List<User> = emptyList()): Future<NodeInfoAndConfig>
 
     fun waitForAllNodesToFinish()
 }
@@ -102,7 +102,7 @@ sealed class PortAllocation {
  *
  * The driver implicitly bootstraps a [NetworkMapService] that may be accessed through a local cache [DriverDSL.networkMapCache].
  *
- * @param baseDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
+ * @param driverDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
  *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
  *   and may be specified in [DriverDSL.startNode].
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
@@ -113,7 +113,7 @@ sealed class PortAllocation {
  * @return The value returned in the [dsl] closure.
   */
 fun <A> driver(
-        baseDirectory: String = "build/${getTimestampAsDirectoryName()}",
+        driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         useTestClock: Boolean = false,
@@ -123,7 +123,7 @@ fun <A> driver(
         driverDsl = DriverDSL(
                 portAllocation = portAllocation,
                 debugPortAllocation = debugPortAllocation,
-                baseDirectory = baseDirectory,
+                driverDirectory = driverDirectory,
                 useTestClock = useTestClock,
                 isDebug = isDebug
         ),
@@ -162,10 +162,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
 }
 
 private fun getTimestampAsDirectoryName(): String {
-    val tz = TimeZone.getTimeZone("UTC")
-    val df = SimpleDateFormat("yyyyMMddHHmmss")
-    df.timeZone = tz
-    return df.format(Date())
+    return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(UTC).format(Instant.now())
 }
 
 fun addressMustBeBound(hostAndPort: HostAndPort) {
@@ -207,7 +204,7 @@ fun <A> poll(pollName: String, pollIntervalMs: Long = 500, warnCount: Int = 120,
 open class DriverDSL(
         val portAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
-        val baseDirectory: String,
+        val driverDirectory: Path,
         val useTestClock: Boolean,
         val isDebug: Boolean
 ) : DriverDSLInternalInterface {
@@ -271,7 +268,7 @@ open class DriverDSL(
     }
 
     private fun queryNodeInfo(webAddress: HostAndPort): NodeInfo? {
-        val url = URL("http://${webAddress.toString()}/api/info")
+        val url = URL("http://$webAddress/api/info")
         try {
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
@@ -291,20 +288,20 @@ open class DriverDSL(
         }
     }
 
-    override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>): Future<NodeInfoAndConfig> {
+    override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>, rpcUsers: List<User>): Future<NodeInfoAndConfig> {
         val messagingAddress = portAllocation.nextHostAndPort()
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val name = providedName ?: "${pickA(name)}-${messagingAddress.port}"
 
-        val nodeDirectory = "$baseDirectory/$name"
+        val baseDirectory = driverDirectory / name
 
         val config = ConfigHelper.loadConfig(
-                baseDirectoryPath = Paths.get(nodeDirectory),
+                baseDirectoryPath = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = mapOf(
                         "myLegalName" to name,
-                        "basedir" to Paths.get(nodeDirectory).normalize().toString(),
+                        "basedir" to baseDirectory.normalize().toString(),
                         "artemisAddress" to messagingAddress.toString(),
                         "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
@@ -313,8 +310,16 @@ open class DriverDSL(
                 )
         )
 
+        val nodeConfig = FullNodeConfiguration(config)
+
+        nodeConfig.rpcUsersFile.write(createDirs = true) {
+            rpcUsers.map { it.username to "${it.password},${it.permissions.joinToString(",")}" }
+                    .toMap(Properties())
+                    .store(it, null)
+        }
+
         return Executors.newSingleThreadExecutor().submit(Callable<NodeInfoAndConfig> {
-            registerProcess(DriverDSL.startNode(config, quasarJarPath, debugPort))
+            registerProcess(DriverDSL.startNode(nodeConfig, quasarJarPath, debugPort))
             NodeInfoAndConfig(queryNodeInfo(apiAddress)!!, config)
         })
     }
@@ -327,13 +332,13 @@ open class DriverDSL(
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
-        val nodeDirectory = "$baseDirectory/$networkMapName"
+        val baseDirectory = driverDirectory / networkMapName
         val config = ConfigHelper.loadConfig(
-                baseDirectoryPath = Paths.get(nodeDirectory),
+                baseDirectoryPath = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = mapOf(
                         "myLegalName" to networkMapName,
-                        "basedir" to Paths.get(nodeDirectory).normalize().toString(),
+                        "basedir" to baseDirectory.normalize().toString(),
                         "artemisAddress" to networkMapAddress.toString(),
                         "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to "",
@@ -342,7 +347,7 @@ open class DriverDSL(
         )
 
         log.info("Starting network-map-service")
-        registerProcess(startNode(config, quasarJarPath, debugPort))
+        registerProcess(startNode(FullNodeConfiguration(config), quasarJarPath, debugPort))
     }
 
     companion object {
@@ -356,13 +361,12 @@ open class DriverDSL(
         fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]
 
         private fun startNode(
-                config: Config,
+                nodeConf: FullNodeConfiguration,
                 quasarJarPath: String,
                 debugPort: Int?
         ): Process {
-            val nodeConf = FullNodeConfiguration(config)
             // Write node.conf
-            writeConfig(nodeConf.basedir, "node.conf", config)
+            writeConfig(nodeConf.basedir, "node.conf", nodeConf.config)
 
             val className = "com.r3corda.node.MainKt" // cannot directly get class for this, so just use string
             val separator = System.getProperty("file.separator")

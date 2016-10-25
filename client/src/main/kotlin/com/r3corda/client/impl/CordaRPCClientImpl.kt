@@ -16,6 +16,7 @@ import com.r3corda.core.utilities.debug
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.messaging.*
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
+import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
@@ -42,7 +43,7 @@ import kotlin.reflect.jvm.javaMethod
  */
 class CordaRPCClientImpl(private val session: ClientSession,
                          private val sessionLock: ReentrantLock,
-                         private val myAddressPrefix: String) {
+                         private val username: String) {
     companion object {
         private val closeableCloseMethod = Closeable::close.javaMethod
         private val autocloseableCloseMethod = AutoCloseable::close.javaMethod
@@ -113,17 +114,19 @@ class CordaRPCClientImpl(private val session: ClientSession,
      */
     @ThreadSafe
     private inner class RPCProxyHandler(private val timeout: Duration?) : InvocationHandler, Closeable {
-        private val proxyAddress = "$myAddressPrefix.rpc.responses.${random63BitValue()}"
+        private val proxyAddress = constructAddress()
         private val consumer: ClientConsumer
 
         var serverProtocolVersion = 0
 
         init {
-            consumer = sessionLock.withLock{
+            consumer = sessionLock.withLock {
                 session.createTemporaryQueue(proxyAddress, proxyAddress)
                 session.createConsumer(proxyAddress)
             }
         }
+
+        private fun constructAddress() = "${ArtemisMessagingComponent.CLIENTS_PREFIX}$username.rpc.${random63BitValue()}"
 
         @Synchronized
         override fun invoke(proxy: Any, method: Method, args: Array<out Any>?): Any? {
@@ -187,13 +190,12 @@ class CordaRPCClientImpl(private val session: ClientSession,
             sessionLock.withLock {
                 val msg = createMessage(method)
                 val kryo = if (returnsObservables) maybePrepareForObservables(location, method, msg) else null
-                val argsArray = args ?: Array<Any?>(0) { null }
-                val serializedBytes = try {
-                    argsArray.serialize()
+                val serializedArgs = try {
+                    (args ?: emptyArray<Any?>()).serialize()
                 } catch (e: KryoException) {
                     throw RPCException("Could not serialize RPC arguments", e)
                 }
-                msg.writeBodyBufferBytes(serializedBytes.bits)
+                msg.writeBodyBufferBytes(serializedArgs.bits)
                 producer!!.send(ArtemisMessagingComponent.RPC_REQUESTS_QUEUE, msg)
                 return kryo
             }
@@ -201,12 +203,12 @@ class CordaRPCClientImpl(private val session: ClientSession,
 
         private fun maybePrepareForObservables(location: Throwable, method: Method, msg: ClientMessage): Kryo {
             // Create a temporary queue just for the emissions on any observables that are returned.
-            val qName = "$myAddressPrefix.rpc.observations.${random63BitValue()}"
-            session.createTemporaryQueue(qName, qName)
-            msg.putStringProperty(ClientRPCRequestMessage.OBSERVATIONS_TO, qName)
+            val observationsQueueName = constructAddress()
+            session.createTemporaryQueue(observationsQueueName, observationsQueueName)
+            msg.putStringProperty(ClientRPCRequestMessage.OBSERVATIONS_TO, observationsQueueName)
             // And make sure that we deserialise observable handles so that they're linked to the right
             // queue. Also record a bit of metadata for debugging purposes.
-            return createRPCKryo(observableSerializer = ObservableDeserializer(qName, method.name, location))
+            return createRPCKryo(observableSerializer = ObservableDeserializer(observationsQueueName, method.name, location))
         }
 
         private fun createMessage(method: Method): ClientMessage {
@@ -214,7 +216,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
                 putStringProperty(ClientRPCRequestMessage.METHOD_NAME, method.name)
                 putStringProperty(ClientRPCRequestMessage.REPLY_TO, proxyAddress)
                 // Use the magic deduplication property built into Artemis as our message identity too
-                putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+                putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
             }
         }
 

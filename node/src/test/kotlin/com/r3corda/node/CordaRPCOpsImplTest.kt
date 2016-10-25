@@ -7,7 +7,10 @@ import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.transactions.SignedTransaction
-import com.r3corda.node.internal.ServerRPCOps
+import com.r3corda.node.internal.CordaRPCOpsImpl
+import com.r3corda.node.services.User
+import com.r3corda.node.services.messaging.CURRENT_RPC_USER
+import com.r3corda.node.services.messaging.PermissionException
 import com.r3corda.node.services.messaging.StateMachineUpdate
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
@@ -17,20 +20,19 @@ import com.r3corda.testing.expectEvents
 import com.r3corda.testing.node.MockNetwork
 import com.r3corda.testing.node.MockNetwork.MockNode
 import com.r3corda.testing.sequence
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
-/**
- * Unit tests for the node monitoring service.
- */
-class ServerRPCTest {
+class CordaRPCOpsImplTest {
+
     lateinit var network: MockNetwork
     lateinit var aliceNode: MockNode
     lateinit var notaryNode: MockNode
-    lateinit var rpc: ServerRPCOps
+    lateinit var rpc: CordaRPCOpsImpl
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update>
@@ -41,7 +43,8 @@ class ServerRPCTest {
         val networkMap = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
         aliceNode = network.createNode(networkMapAddress = networkMap.info.address)
         notaryNode = network.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type), networkMapAddress = networkMap.info.address)
-        rpc = ServerRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database)
+        rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
+        CURRENT_RPC_USER.set(User("user", "pwd", permissions = setOf(CordaRPCOpsImpl.CASH_PERMISSION)))
 
         stateMachineUpdates = rpc.stateMachinesAndUpdates().second
         transactions = rpc.verifiedTransactions().second
@@ -96,7 +99,7 @@ class ServerRPCTest {
     }
 
     @Test
-    fun issueAndMoveWorks() {
+    fun `issue and move`() {
 
         rpc.executeCommand(ClientToServiceCommand.IssueCash(
                 amount = Amount(100, USD),
@@ -172,6 +175,19 @@ class ServerRPCTest {
                         require(update.produced.size == 1) { update.produced.size }
                     }
             )
+        }
+    }
+
+    @Test
+    fun `cash command by user not permissioned for cash`() {
+        CURRENT_RPC_USER.set(User("user", "pwd", permissions = emptySet()))
+        assertThatExceptionOfType(PermissionException::class.java).isThrownBy {
+            rpc.executeCommand(ClientToServiceCommand.IssueCash(
+                    amount = Amount(100, USD),
+                    issueRef = OpaqueBytes(ByteArray(1, { 1 })),
+                    recipient = aliceNode.info.legalIdentity,
+                    notary = notaryNode.info.notaryIdentity
+            ))
         }
     }
 }

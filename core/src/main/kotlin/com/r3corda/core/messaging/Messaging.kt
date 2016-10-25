@@ -179,7 +179,6 @@ interface Message {
     val data: ByteArray
     val debugTimestamp: Instant
     val uniqueMessageId: UUID
-    fun serialise(): ByteArray
 }
 
 /** A singleton that's useful for validating topic strings */

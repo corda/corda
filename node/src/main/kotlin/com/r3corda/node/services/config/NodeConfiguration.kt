@@ -11,7 +11,6 @@ import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.utilities.TestClock
 import com.typesafe.config.Config
 import java.nio.file.Path
-import java.time.Clock
 import java.util.*
 
 interface NodeSSLConfiguration {
@@ -25,6 +24,7 @@ interface NodeSSLConfiguration {
 interface NodeConfiguration : NodeSSLConfiguration {
     val basedir: Path
     override val certificatesPath: Path get() = basedir / "certificates"
+    val rpcUsersFile: Path get() = basedir / "rpc-users.properties"
     val myLegalName: String
     val nearestCity: String
     val emailAddress: String
@@ -33,7 +33,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val devMode: Boolean
 }
 
-class FullNodeConfiguration(config: Config) : NodeConfiguration {
+class FullNodeConfiguration(val config: Config) : NodeConfiguration {
     override val basedir: Path by config
     override val myLegalName: String by config
     override val nearestCity: String by config

@@ -1,7 +1,6 @@
 package com.r3corda.node.internal
 
 import com.r3corda.contracts.asset.Cash
-import com.r3corda.core.contracts.InsufficientBalanceException
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -13,10 +12,7 @@ import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.TransactionBuilder
-import com.r3corda.node.services.messaging.CordaRPCOps
-import com.r3corda.node.services.messaging.StateMachineInfo
-import com.r3corda.node.services.messaging.StateMachineUpdate
-import com.r3corda.node.services.messaging.TransactionBuildResult
+import com.r3corda.node.services.messaging.*
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.protocols.BroadcastTransactionProtocol
@@ -29,12 +25,16 @@ import java.security.KeyPair
  * Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
  * thread (i.e. serially). Arguments are serialised and deserialised automatically.
  */
-class ServerRPCOps(
+class CordaRPCOpsImpl(
         val services: ServiceHub,
         val smm: StateMachineManager,
         val database: Database
 ) : CordaRPCOps {
-    override val protocolVersion: Int = 0
+    companion object {
+        const val CASH_PERMISSION = "CASH"
+    }
+
+    override val protocolVersion: Int get() = 0
 
     override fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>> {
         return services.networkMapCache.track()
@@ -59,6 +59,7 @@ class ServerRPCOps(
                 changes.map { StateMachineUpdate.fromStateMachineChange(it) }
         )
     }
+
     override fun stateMachineRecordedTransactionMapping(): Pair<List<StateMachineTransactionMapping>, Observable<StateMachineTransactionMapping>> {
         return databaseTransaction(database) {
             services.storageService.stateMachineRecordedTransactionMapping.track()
@@ -66,6 +67,7 @@ class ServerRPCOps(
     }
 
     override fun executeCommand(command: ClientToServiceCommand): TransactionBuildResult {
+        requirePermission(CASH_PERMISSION)
         return databaseTransaction(database) {
             when (command) {
                 is ClientToServiceCommand.IssueCash -> issueCash(command)

@@ -5,8 +5,10 @@ import com.r3corda.client.impl.CordaRPCClientImpl
 import com.r3corda.core.ThreadBox
 import com.r3corda.node.services.config.NodeSSLConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingComponent
+import com.r3corda.node.services.messaging.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
 import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.messaging.RPCException
+import com.r3corda.node.services.messaging.rpcLog
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientSession
@@ -25,10 +27,6 @@ import kotlin.concurrent.thread
  */
 @ThreadSafe
 class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfiguration) : Closeable, ArtemisMessagingComponent() {
-    companion object {
-        private val rpcLog = LoggerFactory.getLogger("com.r3corda.rpc")
-    }
-
     // TODO: Certificate handling for clients needs more work.
     private inner class State {
         var running = false
@@ -37,16 +35,6 @@ class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfigur
         lateinit var clientImpl: CordaRPCClientImpl
     }
     private val state = ThreadBox(State())
-
-    /**
-     * An ID that we used to identify this connection on the server side: kind of like a local port number but
-     * it persists for the lifetime of this process and survives short TCP connection interruptions. Is -1
-     * until [start] is called.
-     */
-    var myID: Int = -1
-        private set
-
-    private val myAddressPrefix: String get() = "${ArtemisMessagingComponent.CLIENTS_PREFIX}$myID"
 
     /** Opens the connection to the server and registers a JVM shutdown hook to cleanly disconnect. */
     @Throws(ActiveMQNotConnectedException::class)
@@ -57,16 +45,14 @@ class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfigur
             val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport(ConnectionDirection.OUTBOUND, host.hostText, host.port))
             serverLocator.threadPoolMaxSize = 1
             sessionFactory = serverLocator.createSessionFactory()
-            // We use our initial connection ID as the queue namespace.
-            myID = sessionFactory.connection.id as Int and 0x000000FFFFFF
             session = sessionFactory.createSession(username, password, false, true, true, serverLocator.isPreAcknowledge, serverLocator.ackBatchSize)
             session.start()
-            clientImpl = CordaRPCClientImpl(session, state.lock, myAddressPrefix)
+            clientImpl = CordaRPCClientImpl(session, state.lock, username)
             running = true
             // We will use the ID in strings so strip the sign bit.
         }
 
-        Runtime.getRuntime().addShutdownHook(thread(start = false) {
+        Runtime.getRuntime().addShutdownHook(Thread {
             close()
         })
     }

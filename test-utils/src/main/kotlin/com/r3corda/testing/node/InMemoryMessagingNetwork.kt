@@ -288,10 +288,8 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
                 override val topicSession: TopicSession get() = topicSession
                 override val data: ByteArray get() = data
                 override val debugTimestamp: Instant = Instant.now()
-                override fun serialise(): ByteArray = this.serialise()
                 override val uniqueMessageId: UUID = uuid
-
-                override fun toString() = topicSession.toString() + "#" + String(data)
+                override fun toString() = "$topicSession#${String(data)}"
             }
         }
 

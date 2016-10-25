@@ -1,13 +1,20 @@
 package com.r3corda.client
 
 import com.r3corda.client.impl.CordaRPCClientImpl
+import com.r3corda.core.millis
+import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.utilities.LogHelper
+import com.r3corda.node.services.RPCUserService
+import com.r3corda.node.services.User
 import com.r3corda.node.services.messaging.*
+import com.r3corda.node.services.messaging.ArtemisMessagingComponent.Companion.RPC_REQUESTS_QUEUE
 import com.r3corda.node.utilities.AffinityExecutor
+import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
+import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientProducer
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
@@ -15,12 +22,14 @@ import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnectorFactory
 import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.Closeable
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
@@ -28,6 +37,7 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class ClientRPCInfrastructureTests {
     // TODO: Test that timeouts work
@@ -37,7 +47,9 @@ class ClientRPCInfrastructureTests {
     lateinit var clientSession: ClientSession
     lateinit var producer: ClientProducer
     lateinit var serverThread: AffinityExecutor.ServiceAffinityExecutor
-    lateinit var proxy: ITestOps
+    var proxy: TestOps? = null
+
+    private val authenticatedUser = User("test", "password", permissions = setOf())
 
     @Before
     fun setup() {
@@ -54,20 +66,25 @@ class ClientRPCInfrastructureTests {
 
         serverSession = sessionFactory.createSession()
         serverSession.start()
-        serverSession.createTemporaryQueue(ArtemisMessagingComponent.RPC_REQUESTS_QUEUE, ArtemisMessagingComponent.RPC_REQUESTS_QUEUE)
+        serverSession.createTemporaryQueue(RPC_REQUESTS_QUEUE, RPC_REQUESTS_QUEUE)
         producer = serverSession.createProducer()
-        val dispatcher = object : RPCDispatcher(TestOps()) {
+        val userService = object : RPCUserService {
+            override fun getUser(usename: String): User? = throw UnsupportedOperationException()
+            override val users: List<User> get() = throw UnsupportedOperationException()
+        }
+        val dispatcher = object : RPCDispatcher(TestOpsImpl(), userService) {
             override fun send(bits: SerializedBytes<*>, toAddress: String) {
                 val msg = serverSession.createMessage(false).apply {
                     writeBodyBufferBytes(bits.bits)
                     // Use the magic deduplication property built into Artemis as our message identity too
-                    putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+                    putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
                 }
                 producer.send(toAddress, msg)
             }
+            override fun getUser(message: ClientMessage): User = authenticatedUser
         }
         serverThread = AffinityExecutor.ServiceAffinityExecutor("unit-tests-rpc-dispatch-thread", 1)
-        val serverConsumer = serverSession.createConsumer(ArtemisMessagingComponent.RPC_REQUESTS_QUEUE)
+        val serverConsumer = serverSession.createConsumer(RPC_REQUESTS_QUEUE)
         serverSession.createTemporaryQueue("activemq.notifications", "rpc.qremovals", "_AMQ_NotifType = 'BINDING_REMOVED'")
         val serverNotifConsumer = serverSession.createConsumer("rpc.qremovals")
         dispatcher.start(serverConsumer, serverNotifConsumer, serverThread)
@@ -75,21 +92,27 @@ class ClientRPCInfrastructureTests {
         clientSession = sessionFactory.createSession()
         clientSession.start()
 
-        LogHelper.setLevel("+com.r3corda.rpc"/*, "+org.apache.activemq"*/)
-
-        proxy = CordaRPCClientImpl(clientSession, ReentrantLock(), "tests").proxyFor(ITestOps::class.java)
+        LogHelper.setLevel("+com.r3corda.rpc")
     }
+
+    private fun createProxyUsingReplyTo(username: String, timeout: Duration? = null): TestOps {
+        val proxy = CordaRPCClientImpl(clientSession, ReentrantLock(), username).proxyFor(TestOps::class.java, timeout = timeout)
+        this.proxy = proxy
+        return proxy
+    }
+
+    private fun createProxyUsingAuthenticatedReplyTo() = createProxyUsingReplyTo(authenticatedUser.username)
 
     @After
     fun shutdown() {
-        (proxy as Closeable).close()
+        (proxy as Closeable?)?.close()
         clientSession.stop()
         serverSession.stop()
         artemis.stop()
         serverThread.shutdownNow()
     }
 
-    interface ITestOps : RPCOps {
+    interface TestOps : RPCOps {
         @Throws(IllegalArgumentException::class)
         fun barf()
 
@@ -105,34 +128,33 @@ class ClientRPCInfrastructureTests {
 
         @RPCSinceVersion(2)
         fun addedLater()
+
+        fun captureUser(): String
     }
 
     lateinit var complicatedObservable: Observable<Pair<String, Observable<String>>>
 
-    inner class TestOps : ITestOps {
+    inner class TestOpsImpl : TestOps {
         override val protocolVersion = 1
 
-        override fun barf() {
-            throw IllegalArgumentException("Barf!")
-        }
+        override fun barf(): Unit = throw IllegalArgumentException("Barf!")
 
         override fun void() { }
 
         override fun someCalculation(str: String, num: Int) = "$str $num"
 
-        override fun makeObservable(): Observable<Int> {
-            return Observable.just(1, 2, 3, 4)
-        }
+        override fun makeObservable(): Observable<Int> = Observable.just(1, 2, 3, 4)
 
         override fun makeComplicatedObservable() = complicatedObservable
 
-        override fun addedLater() {
-            throw UnsupportedOperationException("not implemented")
-        }
+        override fun addedLater(): Unit = throw UnsupportedOperationException("not implemented")
+
+        override fun captureUser(): String = CURRENT_RPC_USER.get().username
     }
 
     @Test
-    fun simpleRPCs() {
+    fun `simple RPCs`() {
+        val proxy = createProxyUsingAuthenticatedReplyTo()
         // Does nothing, doesn't throw.
         proxy.void()
 
@@ -144,14 +166,16 @@ class ClientRPCInfrastructureTests {
     }
 
     @Test
-    fun simpleObservable() {
+    fun `simple observable`() {
+        val proxy = createProxyUsingAuthenticatedReplyTo()
         // This tests that the observations are transmitted correctly, also completion is transmitted.
         val observations = proxy.makeObservable().toBlocking().toIterable().toList()
         assertEquals(listOf(1, 2, 3, 4), observations)
     }
 
     @Test
-    fun complexObservables() {
+    fun `complex observables`() {
+        val proxy = createProxyUsingAuthenticatedReplyTo()
         // This checks that we can return an object graph with complex usage of observables, like an observable
         // that emits objects that contain more observables.
         val serverQuotes = PublishSubject.create<Pair<String, Observable<String>>>()
@@ -177,7 +201,8 @@ class ClientRPCInfrastructureTests {
             }
         }
 
-        assertEquals(1, clientSession.addressQuery(SimpleString("tests.rpc.observations.#")).queueNames.size)
+        val rpcQueuesQuery = SimpleString("clients.${authenticatedUser.username}.rpc.*")
+        assertEquals(2, clientSession.addressQuery(rpcQueuesQuery).queueNames.size)
 
         assertThat(clientQuotes).isEmpty()
 
@@ -192,11 +217,36 @@ class ClientRPCInfrastructureTests {
         assertTrue(serverQuotes.hasObservers())
         subscription.unsubscribe()
         unsubscribeLatch.await()
-        assertEquals(0, clientSession.addressQuery(SimpleString("tests.rpc.observations.#")).queueNames.size)
+        assertEquals(1, clientSession.addressQuery(rpcQueuesQuery).queueNames.size)
     }
 
     @Test
     fun versioning() {
+        val proxy = createProxyUsingAuthenticatedReplyTo()
         assertFailsWith<UnsupportedOperationException> { proxy.addedLater() }
+    }
+
+    @Test
+    fun `authenticated user is available to RPC`() {
+        val proxy = createProxyUsingAuthenticatedReplyTo()
+        assertThat(proxy.captureUser()).isEqualTo(authenticatedUser.username)
+    }
+
+    @Test
+    fun `using another username for the reply-to`() {
+        assertThatExceptionOfType(RPCException.DeadlineExceeded::class.java).isThrownBy {
+            val proxy = createProxyUsingReplyTo(random63BitValue().toString(), timeout = 300.millis)
+            proxy.void()
+            fail("RPC successfully returned using someone else's username for the reply-to")
+        }
+    }
+
+    @Test
+    fun `using another username for the reply-to, which contains our username as a prefix`() {
+        assertThatExceptionOfType(RPCException.DeadlineExceeded::class.java).isThrownBy {
+            val proxy = createProxyUsingReplyTo("${authenticatedUser.username}extra", timeout = 300.millis)
+            proxy.void()
+            fail("RPC successfully returned using someone else's username for the reply-to")
+        }
     }
 }

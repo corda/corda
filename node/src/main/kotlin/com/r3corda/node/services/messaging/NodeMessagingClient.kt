@@ -7,6 +7,7 @@ import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.opaque
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
+import com.r3corda.node.services.RPCUserService
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.utilities.*
@@ -44,11 +45,6 @@ import javax.annotation.concurrent.ThreadSafe
  * @param myIdentity Either the public key to be used as the ArtemisMQ address and queue name for the node globally, or null to indicate
  * that this is a NetworkMapService node which will be bound globally to the name "networkmap"
  * @param executor An executor to run received message tasks upon.
- * @param persistentInbox If true the inbox will be created persistent if not already created.
- * If false the inbox queue will be transient, which is appropriate for UI clients for example.
- * @param persistenceTx A lambda to wrap message processing in any transaction required by the persistence layer (e.g.
- * a database transaction) without introducing a dependency on the actual solution and any parameters it requires
- * in this class.
  */
 @ThreadSafe
 class NodeMessagingClient(override val config: NodeConfiguration,
@@ -115,7 +111,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             }
         })
 
-    fun start(rpcOps: CordaRPCOps) {
+    fun start(rpcOps: RPCOps, userService: RPCUserService) {
         state.locked {
             check(!started) { "start can't be called twice" }
             started = true
@@ -151,7 +147,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             session.createTemporaryQueue("activemq.notifications", "rpc.qremovals", "_AMQ_NotifType = 1")
             rpcConsumer = session.createConsumer(RPC_REQUESTS_QUEUE)
             rpcNotificationConsumer = session.createConsumer("rpc.qremovals")
-            dispatcher = createRPCDispatcher(state, rpcOps)
+            dispatcher = createRPCDispatcher(rpcOps, userService)
         }
     }
 
@@ -229,7 +225,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                 override val data: ByteArray = body
                 override val debugTimestamp: Instant = Instant.ofEpochMilli(message.timestamp)
                 override val uniqueMessageId: UUID = uuid
-                override fun serialise(): ByteArray = body
                 override fun toString() = topic + "#" + data.opaque()
             }
 
@@ -389,15 +384,14 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             override val topicSession: TopicSession = topicSession
             override val data: ByteArray = data
             override val debugTimestamp: Instant = Instant.now()
-            override fun serialise(): ByteArray = this.serialise()
             override val uniqueMessageId: UUID = uuid
-            override fun toString() = topicSession.toString() + "#" + String(data)
+            override fun toString() = "$topicSession#${String(data)}"
         }
     }
 
     var dispatcher: RPCDispatcher? = null
 
-    private fun createRPCDispatcher(state: ThreadBox<InnerState>, ops: CordaRPCOps) = object : RPCDispatcher(ops) {
+    private fun createRPCDispatcher(ops: RPCOps, userService: RPCUserService) = object : RPCDispatcher(ops, userService) {
         override fun send(bits: SerializedBytes<*>, toAddress: String) {
             state.locked {
                 val msg = session!!.createMessage(false).apply {

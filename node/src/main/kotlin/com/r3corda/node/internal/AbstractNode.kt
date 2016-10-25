@@ -26,7 +26,7 @@ import com.r3corda.node.services.events.NodeSchedulerService
 import com.r3corda.node.services.events.ScheduledActivityObserver
 import com.r3corda.node.services.identity.InMemoryIdentityService
 import com.r3corda.node.services.keys.PersistentKeyManagementService
-import com.r3corda.node.services.messaging.CordaRPCOps
+import com.r3corda.node.services.messaging.RPCOps
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.NetworkMapService.Companion.REGISTER_PROTOCOL_TOPIC
@@ -252,7 +252,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
                 isPreviousCheckpointsPresent = true
                 false
             }
-            startMessagingService(ServerRPCOps(services, smm, database))
+            startMessagingService(CordaRPCOpsImpl(services, smm, database))
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
             smm.start()
@@ -434,7 +434,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
 
     protected abstract fun makeMessagingService(): MessagingServiceInternal
 
-    protected abstract fun startMessagingService(cordaRPCOps: CordaRPCOps)
+    protected abstract fun startMessagingService(rpcOps: RPCOps)
 
     protected open fun initialiseStorageService(dir: Path): Pair<TxWritableStorageService, CheckpointStorage> {
         val attachments = makeAttachmentStorage(dir)

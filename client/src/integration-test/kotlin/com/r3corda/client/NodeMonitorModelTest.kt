@@ -13,6 +13,8 @@ import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.driver.driver
+import com.r3corda.node.internal.CordaRPCOpsImpl
+import com.r3corda.node.services.User
 import com.r3corda.node.services.config.configureTestSSL
 import com.r3corda.node.services.messaging.StateMachineUpdate
 import com.r3corda.node.services.transactions.SimpleNotaryService
@@ -48,7 +50,8 @@ class NodeMonitorModelTest {
         val driverStarted = CountDownLatch(1)
         driverThread = thread {
             driver {
-                val aliceNodeFuture = startNode("Alice")
+                val cashUser = User("user1", "test", permissions = setOf(CordaRPCOpsImpl.CASH_PERMISSION))
+                val aliceNodeFuture = startNode("Alice", rpcUsers = listOf(cashUser))
                 val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
 
                 aliceNode = aliceNodeFuture.get().nodeInfo
@@ -64,7 +67,7 @@ class NodeMonitorModelTest {
                 networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
                 clientToService = monitor.clientToService
 
-                monitor.register(aliceNode, configureTestSSL(), "user1", "test")
+                monitor.register(aliceNode, configureTestSSL(), cashUser.username, cashUser.password)
                 driverStarted.countDown()
                 stopDriver.await()
             }
@@ -79,7 +82,7 @@ class NodeMonitorModelTest {
     }
 
     @Test
-    fun testNetworkMapUpdate() {
+    fun `network map update`() {
         newNode("Bob")
         newNode("Charlie")
         networkMapUpdates.expectEvents(isStrict = false) {
@@ -99,7 +102,7 @@ class NodeMonitorModelTest {
     }
 
     @Test
-    fun cashIssueWorksEndToEnd() {
+    fun `cash issue works end to end`() {
         clientToService.onNext(ClientToServiceCommand.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
@@ -124,8 +127,7 @@ class NodeMonitorModelTest {
     }
 
     @Test
-    fun issueAndMoveWorks() {
-
+    fun `cash issue and move`() {
         clientToService.onNext(ClientToServiceCommand.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),

@@ -2,6 +2,7 @@ package com.r3corda.client
 
 import com.r3corda.core.random63BitValue
 import com.r3corda.node.driver.driver
+import com.r3corda.node.services.User
 import com.r3corda.node.services.config.configureTestSSL
 import com.r3corda.node.services.messaging.ArtemisMessagingComponent.Companion.toHostAndPort
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
@@ -14,8 +15,7 @@ import kotlin.concurrent.thread
 
 class CordaRPCClientTest {
 
-    private val validUsername = "user1"
-    private val validPassword = "test"
+    private val rpcUser = User("user1", "test", permissions = emptySet())
     private val stopDriver = CountDownLatch(1)
     private var driverThread: Thread? = null
     private lateinit var client: CordaRPCClient
@@ -25,7 +25,7 @@ class CordaRPCClientTest {
         val driverStarted = CountDownLatch(1)
         driverThread = thread {
             driver {
-                val driverInfo = startNode().get()
+                val driverInfo = startNode(rpcUsers = listOf(rpcUser)).get()
                 client = CordaRPCClient(toHostAndPort(driverInfo.nodeInfo.address), configureTestSSL())
                 driverStarted.countDown()
                 stopDriver.await()
@@ -42,20 +42,20 @@ class CordaRPCClientTest {
 
     @Test
     fun `log in with valid username and password`() {
-        client.start(validUsername, validPassword)
+        client.start(rpcUser.username, rpcUser.password)
     }
 
     @Test
     fun `log in with unknown user`() {
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
-            client.start(random63BitValue().toString(), validPassword)
+            client.start(random63BitValue().toString(), rpcUser.password)
         }
     }
 
     @Test
     fun `log in with incorrect password`() {
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
-            client.start(validUsername, random63BitValue().toString())
+            client.start(rpcUser.username, random63BitValue().toString())
         }
     }
 

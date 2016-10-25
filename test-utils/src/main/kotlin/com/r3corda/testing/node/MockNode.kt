@@ -13,10 +13,12 @@ import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
+import com.r3corda.node.internal.CordaRPCOpsImpl
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
 import com.r3corda.node.services.messaging.CordaRPCOps
+import com.r3corda.node.services.messaging.RPCOps
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
@@ -129,7 +131,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeKeyManagementService(): KeyManagementService = E2ETestKeyManagementService(partyKeys)
 
-        override fun startMessagingService(cordaRPCOps: CordaRPCOps) {
+        override fun startMessagingService(rpcOps: RPCOps) {
             // Nothing to do
         }
 

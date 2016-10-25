@@ -7,11 +7,13 @@ import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.then
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.serialization.NodeClock
+import com.r3corda.node.services.PropertiesFileRPCUserService
+import com.r3corda.node.services.RPCUserService
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
-import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.messaging.NodeMessagingClient
+import com.r3corda.node.services.messaging.RPCOps
 import com.r3corda.node.services.transactions.PersistentUniquenessProvider
 import com.r3corda.node.servlets.AttachmentDownloadServlet
 import com.r3corda.node.servlets.Config
@@ -112,10 +114,13 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
 
     private var shutdownThread: Thread? = null
 
+    private lateinit var userService: RPCUserService
+
     override fun makeMessagingService(): MessagingServiceInternal {
+        userService = PropertiesFileRPCUserService(configuration.rpcUsersFile)
         val serverAddr = with(configuration) {
             messagingServerAddress ?: {
-                messageBroker = ArtemisMessagingServer(this, artemisAddress, services.networkMapCache)
+                messageBroker = ArtemisMessagingServer(this, artemisAddress, services.networkMapCache, userService)
                 artemisAddress
             }()
         }
@@ -124,7 +129,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
         return NodeMessagingClient(configuration, serverAddr, myIdentityOrNullIfNetworkMapService, serverThread, database)
     }
 
-    override fun startMessagingService(cordaRPCOps: CordaRPCOps) {
+    override fun startMessagingService(rpcOps: RPCOps) {
         // Start up the embedded MQ server
         messageBroker?.apply {
             runOnStop += Runnable { messageBroker?.stop() }
@@ -135,7 +140,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
         // Start up the MQ client.
         val net = net as NodeMessagingClient
         net.configureWithDevSSLCertificate() // TODO: Client might need a separate certificate
-        net.start(cordaRPCOps)
+        net.start(rpcOps, userService)
     }
 
     private fun initWebServer(): Server {

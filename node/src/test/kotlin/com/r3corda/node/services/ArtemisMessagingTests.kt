@@ -1,22 +1,15 @@
 package com.r3corda.node.services
 
 import com.google.common.net.HostAndPort
-import com.r3corda.core.contracts.ClientToServiceCommand
-import com.r3corda.core.contracts.ContractState
-import com.r3corda.core.contracts.StateAndRef
-import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.createMessage
-import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
-import com.r3corda.core.node.services.NetworkMapCache
-import com.r3corda.core.node.services.StateMachineTransactionMapping
-import com.r3corda.core.node.services.Vault
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.*
+import com.r3corda.node.services.messaging.ArtemisMessagingServer
+import com.r3corda.node.services.messaging.NodeMessagingClient
+import com.r3corda.node.services.messaging.RPCOps
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.transactions.PersistentUniquenessProvider
 import com.r3corda.node.utilities.AffinityExecutor
@@ -31,7 +24,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import rx.Observable
 import java.io.Closeable
 import java.net.ServerSocket
 import java.nio.file.Path
@@ -51,51 +43,22 @@ class ArtemisMessagingTests {
     lateinit var config: NodeConfiguration
     lateinit var dataSource: Closeable
     lateinit var database: Database
+    lateinit var userService: RPCUserService
+
 
     var messagingClient: NodeMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
 
+
     val networkMapCache = InMemoryNetworkMapCache()
 
-    val rpcOps = object : CordaRPCOps {
-        override val protocolVersion: Int
-            get() = throw UnsupportedOperationException()
-
-        override fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>> {
-            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-        }
-
-        override fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>> {
-            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-        }
-
-        override fun verifiedTransactions(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
-            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-        }
-
-        override fun stateMachineRecordedTransactionMapping(): Pair<List<StateMachineTransactionMapping>, Observable<StateMachineTransactionMapping>> {
-            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-        }
-
-        override fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>> {
-            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-        }
-
-        override fun executeCommand(command: ClientToServiceCommand): TransactionBuildResult {
-            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-        }
-
-        override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
-            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-        }
-
-        override fun getVaultTransactionNotes(txnId: SecureHash): Iterable<String> {
-            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-        }
+    val rpcOps = object : RPCOps {
+        override val protocolVersion: Int get() = throw UnsupportedOperationException()
     }
 
     @Before
     fun setUp() {
+        userService = PropertiesFileRPCUserService(temporaryFolder.newFile().toPath())
         // TODO: create a base class that provides a default implementation
         config = object : NodeConfiguration {
             override val basedir: Path = temporaryFolder.newFolder().toPath()
@@ -134,7 +97,7 @@ class ArtemisMessagingTests {
         val remoteServerAddress = freeLocalHostAndPort()
 
         createMessagingServer(remoteServerAddress).start()
-        createMessagingClient(server = remoteServerAddress).start(rpcOps)
+        createMessagingClient(server = remoteServerAddress).start(rpcOps, userService)
     }
 
     @Test
@@ -145,14 +108,14 @@ class ArtemisMessagingTests {
         createMessagingServer(serverAddress).start()
 
         messagingClient = createMessagingClient(server = invalidServerAddress)
-        assertThatThrownBy { messagingClient!!.start(rpcOps) }
+        assertThatThrownBy { messagingClient!!.start(rpcOps, userService) }
         messagingClient = null
     }
 
     @Test
     fun `client should connect to local server`() {
         createMessagingServer().start()
-        createMessagingClient().start(rpcOps)
+        createMessagingClient().start(rpcOps, userService)
     }
 
     @Test
@@ -162,7 +125,7 @@ class ArtemisMessagingTests {
         createMessagingServer().start()
 
         val messagingClient = createMessagingClient()
-        messagingClient.start(rpcOps)
+        messagingClient.start(rpcOps, userService)
         thread { messagingClient.run() }
 
         messagingClient.addMessageHandler(topic) { message, r ->
@@ -187,7 +150,7 @@ class ArtemisMessagingTests {
     }
 
     private fun createMessagingServer(local: HostAndPort = hostAndPort): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local, networkMapCache).apply {
+        return ArtemisMessagingServer(config, local, networkMapCache, userService).apply {
             configureWithDevSSLCertificate()
             messagingServer = this
         }
