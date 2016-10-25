@@ -38,9 +38,7 @@ import net.corda.node.services.persistence.*
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.transactions.NotaryService
-import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.node.services.transactions.*
 import net.corda.node.services.vault.CashBalanceAsMetricsObserver
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.*
@@ -214,7 +212,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             // TODO: uniquenessProvider creation should be inside makeNotaryService(), but notary service initialisation
             //       depends on smm, while smm depends on tokenizableServices, which uniquenessProvider is part of
             advertisedServices.singleOrNull { it.type.isNotary() }?.let {
-                uniquenessProvider = makeUniquenessProvider()
+                uniquenessProvider = makeUniquenessProvider(it.type)
                 tokenizableServices.add(uniquenessProvider!!)
             }
 
@@ -422,13 +420,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         return when (type) {
             SimpleNotaryService.type -> SimpleNotaryService(services, timestampChecker, uniquenessProvider!!)
             ValidatingNotaryService.type -> ValidatingNotaryService(services, timestampChecker, uniquenessProvider!!)
+            RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services, timestampChecker, uniquenessProvider!! as RaftUniquenessProvider)
             else -> {
                 throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")
             }
         }
     }
 
-    protected abstract fun makeUniquenessProvider(): UniquenessProvider
+    protected abstract fun makeUniquenessProvider(type: ServiceType): UniquenessProvider
 
     protected open fun makeIdentityService(): IdentityService {
         val service = InMemoryIdentityService()
