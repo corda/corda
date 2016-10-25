@@ -433,15 +433,15 @@ bool CLoader::is_enclave_buffer(uint64_t offset, uint64_t size)
 // is_relocation_page returns true if the specified RVA is a writable relocation page based on the bitmap.
 bool CLoader::is_relocation_page(const uint64_t rva, vector<uint8_t> *bitmap)
 {
-    if(bitmap && bitmap->size())
+    uint64_t page_frame = rva >> SE_PAGE_SHIFT;
+    //NOTE:
+    //  Current enclave size is not beyond 128G, so the type-casting from (uint64>>15) to (size_t) is OK.
+    //  In the future, if the max enclave size is extended to beyond (1<<49), this type-casting will not work.
+    //  It only impacts the enclave signing process. (32bit signing tool to sign 64 bit enclaves)
+    size_t index = (size_t)(page_frame / 8);
+    if(bitmap && (index < bitmap->size()))
     {
-        uint64_t page_frame = rva >> SE_PAGE_SHIFT;
-
-        //NOTE:
-        //  Current enclave size is not beyond 64G, so the type-casting from (uint64>>15) to (size_t) is OK.
-        //  In the future, if the max enclave size is extended to beyond (1<<49), this type-casting will not work.
-        //  It only impacts the enclave signing process. (32bit signing tool to sign 64 bit enclaves)
-        return ((*bitmap)[(size_t)(page_frame / 8)] & (1 << (page_frame % 8)));
+        return ((*bitmap)[index] & (1 << (page_frame % 8)));
     }
     return false;
 }
