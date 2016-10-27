@@ -15,16 +15,15 @@ import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
+import java.nio.file.FileSystems
+import java.nio.file.Path
 import java.security.KeyStore
 import java.security.PublicKey
 
 /**
  * The base class for Artemis services that defines shared data structures and transport configuration
- *
- * @param certificatePath A place where Artemis can stash its message journal and other files.
- * @param config The config object is used to pass in the passwords for the certificate KeyStore and TrustStore
  */
-abstract class ArtemisMessagingComponent(val config: NodeSSLConfiguration) : SingletonSerializeAsToken() {
+abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
 
     companion object {
         init {
@@ -36,7 +35,7 @@ abstract class ArtemisMessagingComponent(val config: NodeSSLConfiguration) : Sin
         const val RPC_REQUESTS_QUEUE = "rpc.requests"
 
         @JvmStatic
-        protected val NETWORK_MAP_ADDRESS = SimpleString(PEERS_PREFIX +"networkmap")
+        protected val NETWORK_MAP_ADDRESS = SimpleString("${PEERS_PREFIX}networkmap")
 
         /**
          * Assuming the passed in target address is actually an ArtemisAddress will extract the host and port of the node. This should
@@ -70,7 +69,7 @@ abstract class ArtemisMessagingComponent(val config: NodeSSLConfiguration) : Sin
     }
 
     protected data class NetworkMapAddress(override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
-        override val queueName: SimpleString = NETWORK_MAP_ADDRESS
+        override val queueName: SimpleString get() = NETWORK_MAP_ADDRESS
     }
 
     /**
@@ -80,11 +79,11 @@ abstract class ArtemisMessagingComponent(val config: NodeSSLConfiguration) : Sin
      */
     data class NodeAddress(val identity: PublicKey, override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
         override val queueName: SimpleString by lazy { SimpleString(PEERS_PREFIX+identity.toBase58String()) }
-
-        override fun toString(): String {
-            return "NodeAddress(identity = $queueName, $hostAndPort"
-        }
+        override fun toString(): String = "${javaClass.simpleName}(identity = $queueName, $hostAndPort)"
     }
+
+    /** The config object is used to pass in the passwords for the certificate KeyStore and TrustStore */
+    abstract val config: NodeSSLConfiguration
 
     protected fun parseKeyFromQueueName(name: String): PublicKey {
         require(name.startsWith(PEERS_PREFIX))
@@ -119,39 +118,46 @@ abstract class ArtemisMessagingComponent(val config: NodeSSLConfiguration) : Sin
         }
     }
 
-    protected fun tcpTransport(direction: ConnectionDirection, host: String, port: Int) =
-            TransportConfiguration(
-                    when (direction) {
-                        ConnectionDirection.INBOUND -> NettyAcceptorFactory::class.java.name
-                        ConnectionDirection.OUTBOUND -> NettyConnectorFactory::class.java.name
-                    },
-                    mapOf(
-                            // Basic TCP target details
-                            TransportConstants.HOST_PROP_NAME to host,
-                            TransportConstants.PORT_PROP_NAME to port.toInt(),
+    protected fun tcpTransport(direction: ConnectionDirection, host: String, port: Int): TransportConfiguration {
+        config.keyStorePath.expectedOnDefaultFileSystem()
+        config.trustStorePath.expectedOnDefaultFileSystem()
+        return TransportConfiguration(
+                when (direction) {
+                    ConnectionDirection.INBOUND -> NettyAcceptorFactory::class.java.name
+                    ConnectionDirection.OUTBOUND -> NettyConnectorFactory::class.java.name
+                },
+                mapOf(
+                        // Basic TCP target details
+                        TransportConstants.HOST_PROP_NAME to host,
+                        TransportConstants.PORT_PROP_NAME to port.toInt(),
 
-                            // Turn on AMQP support, which needs the protocol jar on the classpath.
-                            // Unfortunately we cannot disable core protocol as artemis only uses AMQP for interop
-                            // It does not use AMQP messages for its own messages e.g. topology and heartbeats
-                            // TODO further investigate how to ensure we use a well defined wire level protocol for Node to Node communications
-                            TransportConstants.PROTOCOLS_PROP_NAME to "CORE,AMQP",
+                        // Turn on AMQP support, which needs the protocol jar on the classpath.
+                        // Unfortunately we cannot disable core protocol as artemis only uses AMQP for interop
+                        // It does not use AMQP messages for its own messages e.g. topology and heartbeats
+                        // TODO further investigate how to ensure we use a well defined wire level protocol for Node to Node communications
+                        TransportConstants.PROTOCOLS_PROP_NAME to "CORE,AMQP",
 
-                            // Enable TLS transport layer with client certs and restrict to at least SHA256 in handshake
-                            // and AES encryption
-                            TransportConstants.SSL_ENABLED_PROP_NAME to true,
-                            TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
-                            TransportConstants.KEYSTORE_PATH_PROP_NAME to config.keyStorePath,
-                            TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to config.keyStorePassword, // TODO proper management of keystores and password
-                            TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
-                            TransportConstants.TRUSTSTORE_PATH_PROP_NAME to config.trustStorePath,
-                            TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to config.trustStorePassword,
-                            TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
-                            TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
-                            TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true
-                    )
-            )
+                        // Enable TLS transport layer with client certs and restrict to at least SHA256 in handshake
+                        // and AES encryption
+                        TransportConstants.SSL_ENABLED_PROP_NAME to true,
+                        TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
+                        TransportConstants.KEYSTORE_PATH_PROP_NAME to config.keyStorePath,
+                        TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to config.keyStorePassword, // TODO proper management of keystores and password
+                        TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
+                        TransportConstants.TRUSTSTORE_PATH_PROP_NAME to config.trustStorePath,
+                        TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to config.trustStorePassword,
+                        TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
+                        TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
+                        TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true
+                )
+        )
+    }
 
     fun configureWithDevSSLCertificate() {
         config.configureWithDevSSLCertificate()
+    }
+
+    protected fun Path.expectedOnDefaultFileSystem() {
+        require(fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
     }
 }

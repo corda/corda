@@ -12,7 +12,7 @@ import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.node.services.events.NodeSchedulerService
-import com.r3corda.node.services.persistence.PerFileCheckpointStorage
+import com.r3corda.node.services.persistence.DBCheckpointStorage
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
@@ -52,8 +52,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     val factory = ProtocolLogicRefFactory(mapOf(Pair(TestProtocolLogic::class.java.name, setOf(NodeSchedulerServiceTest::class.java.name, Integer::class.java.name))))
 
-    val services: MockServiceHubInternal
-
+    lateinit var  services: MockServiceHubInternal
     lateinit var scheduler: NodeSchedulerService
     lateinit var smmExecutor: AffinityExecutor.ServiceAffinityExecutor
     lateinit var dataSource: Closeable
@@ -72,13 +71,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val testReference: NodeSchedulerServiceTest
     }
 
-    init {
-        val kms = MockKeyManagementService(ALICE_KEY)
-        val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), persistenceTx = { it() })
-        services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
-            override val testReference = this@NodeSchedulerServiceTest
-        }
-    }
 
     @Before
     fun setup() {
@@ -89,9 +81,14 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
         databaseTransaction(database) {
+            val kms = MockKeyManagementService(ALICE_KEY)
+            val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), database)
+            services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
+                override val testReference = this@NodeSchedulerServiceTest
+            }
             scheduler = NodeSchedulerService(database, services, factory, schedulerGatedExecutor)
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
-            val mockSMM = StateMachineManager(services, listOf(services, scheduler), PerFileCheckpointStorage(fs.getPath("checkpoints")), smmExecutor, database)
+            val mockSMM = StateMachineManager(services, listOf(services, scheduler), DBCheckpointStorage(), smmExecutor, database)
             mockSMM.changes.subscribe { change ->
                 if (change.addOrRemove == AddOrRemove.REMOVE && mockSMM.allStateMachines.isEmpty()) {
                     smmHasRemovedAllProtocols.countDown()

@@ -11,11 +11,13 @@ import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.utilities.*
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
+import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
+import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
+import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
-import java.nio.file.FileSystems
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -49,12 +51,11 @@ import javax.annotation.concurrent.ThreadSafe
  * in this class.
  */
 @ThreadSafe
-class NodeMessagingClient(config: NodeConfiguration,
+class NodeMessagingClient(override val config: NodeConfiguration,
                           val serverHostPort: HostAndPort,
                           val myIdentity: PublicKey?,
                           val executor: AffinityExecutor,
-                          val persistentInbox: Boolean = true,
-                          val persistenceTx: (() -> Unit) -> Unit = { it() }) : ArtemisMessagingComponent(config), MessagingServiceInternal {
+                          val database: Database) : ArtemisMessagingComponent(), MessagingServiceInternal {
     companion object {
         val log = loggerFor<NodeMessagingClient>()
 
@@ -86,8 +87,7 @@ class NodeMessagingClient(config: NodeConfiguration,
         var rpcConsumer: ClientConsumer? = null
         var rpcNotificationConsumer: ClientConsumer? = null
 
-        // TODO: This is not robust and needs to be replaced by more intelligently using the message queue server.
-        var undeliveredMessages = listOf<Message>()
+        var pendingRedelivery = JDBCHashSet<Message>("pending_messages",loadOnInit = true)
     }
 
     /** A registration to handle messages of different types */
@@ -106,23 +106,16 @@ class NodeMessagingClient(config: NodeConfiguration,
         val uuid = uuidString("message_id")
     }
 
-    private val processedMessages: MutableSet<UUID> = Collections.synchronizedSet(if (persistentInbox) {
+    private val processedMessages: MutableSet<UUID> = Collections.synchronizedSet(
         object : AbstractJDBCHashSet<UUID, Table>(Table, loadOnInit = true) {
             override fun elementFromRow(row: ResultRow): UUID = row[table.uuid]
 
             override fun addElementToInsert(insert: InsertStatement, entry: UUID, finalizables: MutableList<() -> Unit>) {
                 insert[table.uuid] = entry
             }
-        }
-    } else {
-        HashSet<UUID>()
-    })
+        })
 
-    init {
-        require(config.basedir.fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
-    }
-
-    fun start(rpcOps: CordaRPCOps? = null) {
+    fun start(rpcOps: CordaRPCOps) {
         state.locked {
             check(!started) { "start can't be called twice" }
             started = true
@@ -135,7 +128,7 @@ class NodeMessagingClient(config: NodeConfiguration,
 
             // Create a session. Note that the acknowledgement of messages is not flushed to
             // the Artermis journal until the default buffer size of 1MB is acknowledged.
-            val session = clientFactory!!.createSession(true, true, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
+            val session = clientFactory!!.createSession("Node", "Node", false, true, true, locator.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
             this.session = session
             session.start()
 
@@ -146,7 +139,7 @@ class NodeMessagingClient(config: NodeConfiguration,
             val queueName = toQueueName(myAddress)
             val query = session.queueQuery(queueName)
             if (!query.isExists) {
-                session.createQueue(queueName, queueName, persistentInbox)
+                session.createQueue(queueName, queueName, true)
             }
             knownQueues.add(queueName)
             p2pConsumer = session.createConsumer(queueName)
@@ -154,13 +147,11 @@ class NodeMessagingClient(config: NodeConfiguration,
             // Create an RPC queue and consumer: this will service locally connected clients only (not via a
             // bridge) and those clients must have authenticated. We could use a single consumer for everything
             // and perhaps we should, but these queues are not worth persisting.
-            if (rpcOps != null) {
-                session.createTemporaryQueue(RPC_REQUESTS_QUEUE, RPC_REQUESTS_QUEUE)
-                session.createTemporaryQueue("activemq.notifications", "rpc.qremovals", "_AMQ_NotifType = 1")
-                rpcConsumer = session.createConsumer(RPC_REQUESTS_QUEUE)
-                rpcNotificationConsumer = session.createConsumer("rpc.qremovals")
-                dispatcher = createRPCDispatcher(state, rpcOps)
-            }
+            session.createTemporaryQueue(RPC_REQUESTS_QUEUE, RPC_REQUESTS_QUEUE)
+            session.createTemporaryQueue("activemq.notifications", "rpc.qremovals", "_AMQ_NotifType = 1")
+            rpcConsumer = session.createConsumer(RPC_REQUESTS_QUEUE)
+            rpcNotificationConsumer = session.createConsumer("rpc.qremovals")
+            dispatcher = createRPCDispatcher(state, rpcOps)
         }
     }
 
@@ -227,8 +218,9 @@ class NodeMessagingClient(config: NodeConfiguration,
             val topic = message.getStringProperty(TOPIC_PROPERTY)
             val sessionID = message.getLongProperty(SESSION_ID_PROPERTY)
             // Use the magic deduplication property built into Artemis as our message identity too
-            val uuid = UUID.fromString(message.getStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID))
-            log.info("received message from: ${message.address} topic: $topic sessionID: $sessionID uuid: $uuid")
+            val uuid = UUID.fromString(message.getStringProperty(HDR_DUPLICATE_DETECTION_ID))
+            val user = message.getStringProperty(HDR_VALIDATED_USER)
+            log.info("Received message from: ${message.address} user: $user topic: $topic sessionID: $sessionID uuid: $uuid")
 
             val body = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
 
@@ -259,10 +251,10 @@ class NodeMessagingClient(config: NodeConfiguration,
             // without causing log spam.
             log.warn("Received message for ${msg.topicSession} that doesn't have any registered handlers yet")
 
-            // This is a hack; transient messages held in memory isn't crash resistant.
-            // TODO: Use Artemis API more effectively so we don't pop messages off a queue that we aren't ready to use.
             state.locked {
-                undeliveredMessages += msg
+                databaseTransaction(database) {
+                    pendingRedelivery.add(msg)
+                }
             }
             return false
         }
@@ -277,7 +269,7 @@ class NodeMessagingClient(config: NodeConfiguration,
             // Note that handlers may re-enter this class. We aren't holding any locks and methods like
             // start/run/stop have re-entrancy assertions at the top, so it is OK.
             executor.fetchFrom {
-                persistenceTx {
+                databaseTransaction(database) {
                     callHandlers(msg, deliverTo)
                 }
             }
@@ -346,7 +338,7 @@ class NodeMessagingClient(config: NodeConfiguration,
                 putLongProperty(SESSION_ID_PROPERTY, sessionID)
                 writeBodyBufferBytes(message.data)
                 // Use the magic deduplication property built into Artemis as our message identity too
-                putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+                putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
             }
 
             if (knownQueues.add(queueName)) {
@@ -376,9 +368,12 @@ class NodeMessagingClient(config: NodeConfiguration,
         val handler = Handler(topicSession, callback)
         handlers.add(handler)
         val messagesToRedeliver = state.locked {
-            val messagesToRedeliver = undeliveredMessages
-            undeliveredMessages = listOf()
-            messagesToRedeliver
+            val pending = ArrayList<Message>()
+            databaseTransaction(database) {
+                pending.addAll(pendingRedelivery)
+                pendingRedelivery.clear()
+            }
+            pending
         }
         messagesToRedeliver.forEach { deliver(it) }
         return handler
@@ -391,8 +386,8 @@ class NodeMessagingClient(config: NodeConfiguration,
     override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
         // TODO: We could write an object that proxies directly to an underlying MQ message here and avoid copying.
         return object : Message {
-            override val topicSession: TopicSession get() = topicSession
-            override val data: ByteArray get() = data
+            override val topicSession: TopicSession = topicSession
+            override val data: ByteArray = data
             override val debugTimestamp: Instant = Instant.now()
             override fun serialise(): ByteArray = this.serialise()
             override val uniqueMessageId: UUID = uuid
@@ -408,7 +403,7 @@ class NodeMessagingClient(config: NodeConfiguration,
                 val msg = session!!.createMessage(false).apply {
                     writeBodyBufferBytes(bits.bits)
                     // Use the magic deduplication property built into Artemis as our message identity too
-                    putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+                    putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
                 }
                 producer!!.send(toAddress, msg)
             }

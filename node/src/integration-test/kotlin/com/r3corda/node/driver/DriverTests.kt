@@ -11,14 +11,8 @@ import org.junit.Test
 
 class DriverTests {
     companion object {
-        fun nodeMustBeUp(networkMapCache: NetworkMapCache, nodeInfo: NodeInfo, nodeName: String) {
+        fun nodeMustBeUp(nodeInfo: NodeInfo, nodeName: String) {
             val hostAndPort = ArtemisMessagingComponent.toHostAndPort(nodeInfo.address)
-            // Check that the node is registered in the network map
-            poll("network map cache for $nodeName") {
-                networkMapCache.get().firstOrNull {
-                    it.legalIdentity.name == nodeName
-                }
-            }
             // Check that the port is bound
             addressMustBeBound(hostAndPort)
         }
@@ -36,31 +30,31 @@ class DriverTests {
             val notary = startNode("TestNotary", setOf(ServiceInfo(SimpleNotaryService.type)))
             val regulator = startNode("Regulator", setOf(ServiceInfo(RegulatorService.type)))
 
-            nodeMustBeUp(networkMapCache, notary.get(), "TestNotary")
-            nodeMustBeUp(networkMapCache, regulator.get(), "Regulator")
+            nodeMustBeUp(notary.get().nodeInfo, "TestNotary")
+            nodeMustBeUp(regulator.get().nodeInfo, "Regulator")
             Pair(notary.get(), regulator.get())
         }
-        nodeMustBeDown(notary)
-        nodeMustBeDown(regulator)
+        nodeMustBeDown(notary.nodeInfo)
+        nodeMustBeDown(regulator.nodeInfo)
     }
 
     @Test
     fun startingNodeWithNoServicesWorks() {
         val noService = driver {
             val noService = startNode("NoService")
-            nodeMustBeUp(networkMapCache, noService.get(), "NoService")
+            nodeMustBeUp(noService.get().nodeInfo, "NoService")
             noService.get()
         }
-        nodeMustBeDown(noService)
+        nodeMustBeDown(noService.nodeInfo)
     }
 
     @Test
     fun randomFreePortAllocationWorks() {
         val nodeInfo = driver(portAllocation = PortAllocation.RandomFree()) {
             val nodeInfo = startNode("NoService")
-            nodeMustBeUp(networkMapCache, nodeInfo.get(), "NoService")
+            nodeMustBeUp(nodeInfo.get().nodeInfo, "NoService")
             nodeInfo.get()
         }
-        nodeMustBeDown(nodeInfo)
+        nodeMustBeDown(nodeInfo.nodeInfo)
     }
 }

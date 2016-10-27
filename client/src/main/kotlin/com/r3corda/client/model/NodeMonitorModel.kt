@@ -8,14 +8,14 @@ import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.transactions.SignedTransaction
-import com.r3corda.node.services.messaging.ArtemisMessagingComponent
+import com.r3corda.node.services.config.NodeSSLConfiguration
+import com.r3corda.node.services.messaging.ArtemisMessagingComponent.Companion.toHostAndPort
 import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.messaging.StateMachineInfo
 import com.r3corda.node.services.messaging.StateMachineUpdate
 import javafx.beans.property.SimpleObjectProperty
 import rx.Observable
 import rx.subjects.PublishSubject
-import java.nio.file.Path
 
 data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val message: String) {
     companion object {
@@ -54,14 +54,11 @@ class NodeMonitorModel {
 
     /**
      * Register for updates to/from a given vault.
-     * @param messagingService The messaging to use for communication.
-     * @param monitorNodeInfo the [Node] to connect to.
      * TODO provide an unsubscribe mechanism
      */
-    fun register(vaultMonitorNodeInfo: NodeInfo, certificatesPath: Path) {
-
-        val client = CordaRPCClient(ArtemisMessagingComponent.toHostAndPort(vaultMonitorNodeInfo.address), certificatesPath)
-        client.start()
+    fun register(vaultMonitorNodeInfo: NodeInfo, sslConfig: NodeSSLConfiguration, username: String, password: String) {
+        val client = CordaRPCClient(toHostAndPort(vaultMonitorNodeInfo.address), sslConfig)
+        client.start(username, password)
         val proxy = client.proxy()
 
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesAndUpdates()

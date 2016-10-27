@@ -3,6 +3,7 @@ package com.r3corda.docs
 import com.google.common.net.HostAndPort
 import com.r3corda.client.CordaRPCClient
 import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.node.services.config.NodeSSLConfiguration
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
 import org.graphstream.graph.implementations.SingleGraph
@@ -26,12 +27,18 @@ fun main(args: Array<String>) {
     }
     val nodeAddress = HostAndPort.fromString(args[0])
     val printOrVisualise = PrintOrVisualise.valueOf(args[1])
-    val certificatesPath = Paths.get("build/trader-demo/buyer/certificates")
+    val sslConfig = object : NodeSSLConfiguration {
+        override val certificatesPath = Paths.get("build/trader-demo/buyer/certificates")
+        override val keyStorePassword = "cordacadevpass"
+        override val trustStorePassword = "trustpass"
+    }
     // END 1
 
     // START 2
-    val client = CordaRPCClient(nodeAddress, certificatesPath)
-    client.start()
+    val username = System.console().readLine("Enter username: ")
+    val password = String(System.console().readPassword("Enter password: "))
+    val client = CordaRPCClient(nodeAddress, sslConfig)
+    client.start(username, password)
     val proxy = client.proxy()
     // END 2
 
@@ -65,7 +72,7 @@ fun main(args: Array<String>) {
             futureTransactions.subscribe { transaction ->
                 graph.addNode<Node>("${transaction.id}")
                 transaction.tx.inputs.forEach { ref ->
-                    graph.addEdge<Edge>("${ref}", "${ref.txhash}", "${transaction.id}")
+                    graph.addEdge<Edge>("$ref", "${ref.txhash}", "${transaction.id}")
                 }
             }
             graph.display()

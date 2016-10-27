@@ -3,11 +3,15 @@ package com.r3corda.node.services.messaging
 import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.AddressFormatException
-import com.r3corda.core.crypto.newSecureRandom
+import com.r3corda.core.div
+import com.r3corda.core.exists
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.services.NetworkMapCache
+import com.r3corda.core.use
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.config.NodeConfiguration
+import com.r3corda.node.services.messaging.ArtemisMessagingServer.NodeLoginModule.Companion.NODE_ROLE_NAME
+import com.r3corda.node.services.messaging.ArtemisMessagingServer.NodeLoginModule.Companion.RPC_ROLE_NAME
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.core.config.BridgeConfiguration
 import org.apache.activemq.artemis.core.config.Configuration
@@ -17,11 +21,25 @@ import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
-import org.apache.activemq.artemis.spi.core.security.jaas.InVMLoginModule
+import org.apache.activemq.artemis.spi.core.security.jaas.RolePrincipal
+import org.apache.activemq.artemis.spi.core.security.jaas.UserPrincipal
 import rx.Subscription
-import java.math.BigInteger
+import java.io.IOException
+import java.nio.file.Files
 import java.nio.file.Path
+import java.security.Principal
+import java.util.*
 import javax.annotation.concurrent.ThreadSafe
+import javax.security.auth.Subject
+import javax.security.auth.callback.CallbackHandler
+import javax.security.auth.callback.NameCallback
+import javax.security.auth.callback.PasswordCallback
+import javax.security.auth.callback.UnsupportedCallbackException
+import javax.security.auth.login.AppConfigurationEntry
+import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.REQUIRED
+import javax.security.auth.login.FailedLoginException
+import javax.security.auth.login.LoginException
+import javax.security.auth.spi.LoginModule
 
 // TODO: Verify that nobody can connect to us and fiddle with our config over the socket due to the secman.
 // TODO: Implement a discovery engine that can trigger builds of new connections when another node registers? (later)
@@ -37,9 +55,9 @@ import javax.annotation.concurrent.ThreadSafe
  * a fully connected network, trusted network or on localhost.
  */
 @ThreadSafe
-class ArtemisMessagingServer(config: NodeConfiguration,
+class ArtemisMessagingServer(override val config: NodeConfiguration,
                              val myHostPort: HostAndPort,
-                             val networkMapCache: NetworkMapCache) : ArtemisMessagingComponent(config) {
+                             val networkMapCache: NetworkMapCache) : ArtemisMessagingComponent() {
     companion object {
         val log = loggerFor<ArtemisMessagingServer>()
     }
@@ -51,6 +69,10 @@ class ArtemisMessagingServer(config: NodeConfiguration,
     private val mutex = ThreadBox(InnerState())
     private lateinit var activeMQServer: ActiveMQServer
     private var networkChangeHandle: Subscription? = null
+
+    init {
+        config.basedir.expectedOnDefaultFileSystem()
+    }
 
     fun start() = mutex.locked {
         if (!running) {
@@ -116,12 +138,7 @@ class ArtemisMessagingServer(config: NodeConfiguration,
     }
 
     private fun configureAndStartServer() {
-        val config = createArtemisConfig(config.certificatesPath, myHostPort).apply {
-            securityRoles = mapOf(
-                    "#" to setOf(Role("internal", true, true, true, true, true, true, true))
-            )
-        }
-
+        val config = createArtemisConfig()
         val securityManager = createArtemisSecurityManager()
 
         activeMQServer = ActiveMQServerImpl(config, securityManager).apply {
@@ -157,28 +174,61 @@ class ArtemisMessagingServer(config: NodeConfiguration,
         activeMQServer.start()
     }
 
-    private fun createArtemisConfig(directory: Path, hp: HostAndPort): Configuration {
-        val config = ConfigurationImpl()
-        setConfigDirectories(config, directory)
-        config.acceptorConfigurations = setOf(
-                tcpTransport(ConnectionDirection.INBOUND, "0.0.0.0", hp.port)
+    private fun createArtemisConfig(): Configuration = ConfigurationImpl().apply {
+        val artemisDir = config.basedir / "artemis"
+        bindingsDirectory = (artemisDir / "bindings").toString()
+        journalDirectory = (artemisDir / "journal").toString()
+        largeMessagesDirectory = (artemisDir / "largemessages").toString()
+        acceptorConfigurations = setOf(
+                tcpTransport(ConnectionDirection.INBOUND, "0.0.0.0", myHostPort.port)
         )
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
         // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
-        config.idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
-        config.isPersistIDCache = true
-        return config
+        idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
+        isPersistIDCache = true
+        isPopulateValidatedUser = true
+        setupUserRoles()
+    }
+
+    // This gives nodes full access and RPC clients only enough to do RPC
+    private fun ConfigurationImpl.setupUserRoles() {
+        // TODO COR-307
+        val nodeRole = Role(NODE_ROLE_NAME, true, true, true, true, true, true, true, true)
+        val clientRpcRole = restrictedRole(RPC_ROLE_NAME, consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true)
+        securityRoles = mapOf(
+                "#" to setOf(nodeRole),
+                "clients.*.rpc.responses.*" to setOf(nodeRole, clientRpcRole),
+                "clients.*.rpc.observations.*" to setOf(nodeRole, clientRpcRole),
+                RPC_REQUESTS_QUEUE to setOf(nodeRole, restrictedRole(RPC_ROLE_NAME, send = true))
+        )
+    }
+
+    private fun restrictedRole(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false,
+                               deleteDurableQueue: Boolean = false, createNonDurableQueue: Boolean = false,
+                               deleteNonDurableQueue: Boolean = false, manage: Boolean = false, browse: Boolean = false): Role {
+        return Role(name, send, consume, createDurableQueue, deleteDurableQueue, createNonDurableQueue,
+                deleteNonDurableQueue, manage, browse)
     }
 
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
-        // TODO: set up proper security configuration https://r3-cev.atlassian.net/browse/COR-307
-        val securityConfig = SecurityConfiguration().apply {
-            addUser("internal", BigInteger(128, newSecureRandom()).toString(16))
-            addRole("internal", "internal")
-            defaultUser = "internal"
+        val rpcUsersFile = config.basedir / "rpc-users.properties"
+        if (!rpcUsersFile.exists()) {
+            val users = Properties()
+            users["user1"] = "test"
+            Files.newOutputStream(rpcUsersFile).use {
+                users.store(it, null)
+            }
         }
 
-        return ActiveMQJAASSecurityManager(InVMLoginModule::class.java.name, securityConfig)
+        val securityConfig = object : SecurityConfiguration() {
+            // Override to make it work with our login module
+            override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
+                val options = mapOf(NodeLoginModule.FILE_KEY to rpcUsersFile)
+                return arrayOf(AppConfigurationEntry(name, REQUIRED, options))
+            }
+        }
+
+        return ActiveMQJAASSecurityManager(NodeLoginModule::class.java.name, securityConfig)
     }
 
     private fun connectorExists(hostAndPort: HostAndPort) = hostAndPort.toString() in activeMQServer.configuration.connectorConfigurations
@@ -194,12 +244,11 @@ class ArtemisMessagingServer(config: NodeConfiguration,
 
     private fun bridgeExists(name: SimpleString) = activeMQServer.clusterManager.bridges.containsKey(name.toString())
 
-    private fun deployBridge(hostAndPort: HostAndPort, name: SimpleString) {
+    private fun deployBridge(hostAndPort: HostAndPort, name: String) {
         activeMQServer.deployBridge(BridgeConfiguration().apply {
-            val nameStr = name.toString()
-            setName(nameStr)
-            queueName = nameStr
-            forwardingAddress = nameStr
+            setName(name)
+            queueName = name
+            forwardingAddress = name
             staticConnectors = listOf(hostAndPort.toString())
             confirmationWindowSize = 100000 // a guess
             isUseDuplicateDetection = true // Enable the bridges automatic deduplication logic
@@ -218,7 +267,7 @@ class ArtemisMessagingServer(config: NodeConfiguration,
         if (!connectorExists(hostAndPort))
             addConnector(hostAndPort)
         if (!bridgeExists(name))
-            deployBridge(hostAndPort, name)
+            deployBridge(hostAndPort, name.toString())
     }
 
     private fun maybeDestroyBridge(name: SimpleString) {
@@ -227,11 +276,81 @@ class ArtemisMessagingServer(config: NodeConfiguration,
         }
     }
 
-    private fun setConfigDirectories(config: Configuration, dir: Path) {
-        config.apply {
-            bindingsDirectory = dir.resolve("bindings").toString()
-            journalDirectory = dir.resolve("journal").toString()
-            largeMessagesDirectory = dir.resolve("largemessages").toString()
+
+    class NodeLoginModule : LoginModule {
+
+        companion object {
+            const val FILE_KEY = "rpc-users-file"
+            const val NODE_ROLE_NAME = "NodeRole"
+            const val RPC_ROLE_NAME = "RpcRole"
+        }
+
+        private val users = Properties()
+        private var loginSucceeded: Boolean = false
+        private lateinit var subject: Subject
+        private lateinit var callbackHandler: CallbackHandler
+        private lateinit var principals: List<Principal>
+
+        override fun initialize(subject: Subject, callbackHandler: CallbackHandler, sharedState: Map<String, *>, options: Map<String, *>) {
+            this.subject = subject
+            this.callbackHandler = callbackHandler
+            val rpcUsersFile = options[FILE_KEY] as Path
+            if (rpcUsersFile.exists()) {
+                rpcUsersFile.use {
+                    users.load(it)
+                }
+            }
+        }
+
+        override fun login(): Boolean {
+            val nameCallback = NameCallback("Username: ")
+            val passwordCallback = PasswordCallback("Password: ", false)
+
+            try {
+                callbackHandler.handle(arrayOf(nameCallback, passwordCallback))
+            } catch (e: IOException) {
+                throw LoginException(e.message)
+            } catch (e: UnsupportedCallbackException) {
+                throw LoginException("${e.message} not available to obtain information from user")
+            }
+
+            val username = nameCallback.name ?: throw FailedLoginException("User name is null")
+            val receivedPassword = passwordCallback.password ?: throw FailedLoginException("Password is null")
+            val password = if (username == "Node") "Node" else users[username] ?: throw FailedLoginException("User does not exist")
+            if (password != String(receivedPassword)) {
+                throw FailedLoginException("Password does not match")
+            }
+
+            principals = listOf(
+                    UserPrincipal(username),
+                    RolePrincipal(if (username == "Node") NODE_ROLE_NAME else RPC_ROLE_NAME))
+
+            loginSucceeded = true
+            return loginSucceeded
+        }
+
+        override fun commit(): Boolean {
+            val result = loginSucceeded
+            if (result) {
+                subject.principals.addAll(principals)
+            }
+            clear()
+            return result
+        }
+
+        override fun abort(): Boolean {
+            clear()
+            return true
+        }
+
+        override fun logout(): Boolean {
+            subject.principals.removeAll(principals)
+            return true
+        }
+
+        private fun clear() {
+            loginSucceeded = false
         }
     }
+
 }

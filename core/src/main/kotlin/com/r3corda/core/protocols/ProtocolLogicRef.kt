@@ -27,7 +27,7 @@ import kotlin.reflect.primaryConstructor
  */
 class ProtocolLogicRefFactory(private val protocolWhitelist: Map<String, Set<String>>) : SingletonSerializeAsToken() {
 
-    constructor() : this(mapOf(Pair(TwoPartyDealProtocol.FixingRoleDecider::class.java.name, setOf(StateRef::class.java.name, Duration::class.java.name))))
+    constructor() : this(mapOf())
 
     // Pending real dependence on AppContext for class loading etc
     @Suppress("UNUSED_PARAMETER")

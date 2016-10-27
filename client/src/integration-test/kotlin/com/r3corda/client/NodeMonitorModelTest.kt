@@ -1,6 +1,5 @@
 package com.r3corda.client
 
-import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.client.model.NodeMonitorModel
 import com.r3corda.client.model.ProgressTrackingEvent
 import com.r3corda.core.bufferUntilSubscribed
@@ -14,8 +13,7 @@ import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.driver.driver
-import com.r3corda.node.driver.startClient
-import com.r3corda.node.services.messaging.NodeMessagingClient
+import com.r3corda.node.services.config.configureTestSSL
 import com.r3corda.node.services.messaging.StateMachineUpdate
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.testing.expect
@@ -26,16 +24,15 @@ import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import rx.Observer
+import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.thread
 
 class NodeMonitorModelTest {
 
     lateinit var aliceNode: NodeInfo
     lateinit var notaryNode: NodeInfo
-    lateinit var aliceClient: NodeMessagingClient
-    val driverStarted = SettableFuture.create<Unit>()
-    val stopDriver = SettableFuture.create<Unit>()
-    val driverStopped = SettableFuture.create<Unit>()
+    val stopDriver = CountDownLatch(1)
+    var driverThread: Thread? = null
 
     lateinit var stateMachineTransactionMapping: Observable<StateMachineTransactionMapping>
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
@@ -48,15 +45,15 @@ class NodeMonitorModelTest {
 
     @Before
     fun start() {
-        thread {
+        val driverStarted = CountDownLatch(1)
+        driverThread = thread {
             driver {
                 val aliceNodeFuture = startNode("Alice")
                 val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
 
-                aliceNode = aliceNodeFuture.get()
-                notaryNode = notaryNodeFuture.get()
-                aliceClient = startClient(aliceNode).get()
-                newNode = { nodeName -> startNode(nodeName).get() }
+                aliceNode = aliceNodeFuture.get().nodeInfo
+                notaryNode = notaryNodeFuture.get().nodeInfo
+                newNode = { nodeName -> startNode(nodeName).get().nodeInfo }
                 val monitor = NodeMonitorModel()
 
                 stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
@@ -67,20 +64,18 @@ class NodeMonitorModelTest {
                 networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
                 clientToService = monitor.clientToService
 
-                monitor.register(aliceNode, aliceClient.config.certificatesPath)
-                driverStarted.set(Unit)
-                stopDriver.get()
-
+                monitor.register(aliceNode, configureTestSSL(), "user1", "test")
+                driverStarted.countDown()
+                stopDriver.await()
             }
-            driverStopped.set(Unit)
         }
-        driverStarted.get()
+        driverStarted.await()
     }
 
     @After
     fun stop() {
-        stopDriver.set(Unit)
-        driverStopped.get()
+        stopDriver.countDown()
+        driverThread?.join()
     }
 
     @Test

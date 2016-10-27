@@ -6,7 +6,7 @@ import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.explorer.model.IdentityModel
 import com.r3corda.node.driver.PortAllocation
 import com.r3corda.node.driver.driver
-import com.r3corda.node.driver.startClient
+import com.r3corda.node.services.config.configureTestSSL
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import javafx.stage.Stage
 import tornadofx.App
@@ -32,14 +32,12 @@ class Main : App() {
                 val aliceNodeFuture = startNode("Alice")
                 val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
 
-                val aliceNode = aliceNodeFuture.get()
-                val notaryNode = notaryNodeFuture.get()
-
-                val aliceClient = startClient(aliceNode).get()
+                val aliceNode = aliceNodeFuture.get().nodeInfo
+                val notaryNode = notaryNodeFuture.get().nodeInfo
 
                 Models.get<IdentityModel>(Main::class).notary.set(notaryNode.notaryIdentity)
                 Models.get<IdentityModel>(Main::class).myIdentity.set(aliceNode.legalIdentity)
-                Models.get<NodeMonitorModel>(Main::class).register(aliceNode, aliceClient.config.certificatesPath)
+                Models.get<NodeMonitorModel>(Main::class).register(aliceNode, configureTestSSL(), "user1", "test")
 
                 startNode("Bob").get()
 
