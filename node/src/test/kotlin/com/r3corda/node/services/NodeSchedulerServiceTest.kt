@@ -72,13 +72,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val testReference: NodeSchedulerServiceTest
     }
 
-    init {
-        val kms = MockKeyManagementService(ALICE_KEY)
-        val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), persistenceTx = { it() })
-        services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
-            override val testReference = this@NodeSchedulerServiceTest
-        }
-    }
 
     @Before
     fun setup() {
@@ -103,22 +96,22 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
             }
             val kms = MockKeyManagementService(ALICE_KEY)
-            val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), persistenceTx = { it() })
-            services = object : MockServiceHubInternal(customVault = services1.vaultService, overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
+            val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), database)
+            services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
                 override val testReference = this@NodeSchedulerServiceTest
             }
-        }
-
-        scheduler = NodeSchedulerService(database, services, factory, schedulerGatedExecutor)
-        smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
-        val mockSMM = StateMachineManager(services, listOf(services), PerFileCheckpointStorage(fs.getPath("checkpoints")), smmExecutor, database)
-        mockSMM.changes.subscribe { change ->
-            if (change.addOrRemove == AddOrRemove.REMOVE && mockSMM.allStateMachines.isEmpty()) {
-                smmHasRemovedAllProtocols.countDown()
+            scheduler = NodeSchedulerService(database, services, factory, schedulerGatedExecutor)
+            smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
+            val mockSMM = StateMachineManager(services, listOf(services, scheduler), DBCheckpointStorage(), smmExecutor, database)
+            mockSMM.changes.subscribe { change ->
+                if (change.addOrRemove == AddOrRemove.REMOVE && mockSMM.allStateMachines.isEmpty()) {
+                    smmHasRemovedAllProtocols.countDown()
+                }
             }
+            mockSMM.start()
+            services.smm = mockSMM
+            scheduler.start()
         }
-        mockSMM.start()
-        services.smm = mockSMM
     }
 
     @After
@@ -285,9 +278,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     }
 
     private fun scheduleTX(instant: Instant, increment: Int = 1): ScheduledStateRef? {
-
         var scheduledRef: ScheduledStateRef? = null
-
         databaseTransaction(database) {
             apply {
                 val freshKey = services.keyManagementService.freshKey()
@@ -299,9 +290,10 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 }.toSignedTransaction()
                 val txHash = usefulTX.id
 
-            services.recordTransactions(usefulTX)
-            scheduledRef = ScheduledStateRef(StateRef(txHash, 0), state.instant)
-            scheduler.scheduleStateActivity(scheduledRef!!)
+                services.recordTransactions(usefulTX)
+                scheduledRef = ScheduledStateRef(StateRef(txHash, 0), state.instant)
+                scheduler.scheduleStateActivity(scheduledRef!!)
+            }
         }
         return scheduledRef
     }
