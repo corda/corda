@@ -37,6 +37,18 @@ sourceSets {
     }
 }
 
+publishing {
+    publications {
+        client(MavenPublication) {
+            from components.java
+            artifactId 'client'
+
+            artifact sourceJar
+            artifact javadocJar
+        }
+    }
+}
+
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
