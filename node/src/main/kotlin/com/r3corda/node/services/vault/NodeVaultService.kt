@@ -13,6 +13,7 @@ import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.utilities.*
+import kotlinx.support.jdk8.collections.putIfAbsent
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import rx.Observable
@@ -134,9 +135,16 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
 
     override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
         mutex.locked {
-            transactionNotes.getOrPut(key = txnId, defaultValue = {
+            val notes = transactionNotes.getOrPut(key = txnId, defaultValue = {
                 setOf(noteText)
-            }).plus(noteText)
+            })
+            transactionNotes.put(txnId, notes.plus(noteText))
+        }
+    }
+
+    override fun getTransactionNotes(txnId: SecureHash): Iterable<String> {
+        mutex.locked {
+            return transactionNotes.get(txnId)!!.asIterable()
         }
     }
 

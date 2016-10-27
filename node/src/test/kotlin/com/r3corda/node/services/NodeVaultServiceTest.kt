@@ -3,6 +3,7 @@ package com.r3corda.node.services
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.DOLLARS
+import com.r3corda.core.contracts.POUNDS
 import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.contracts.`issued by`
 import com.r3corda.core.node.services.TxWritableStorageService
@@ -109,9 +110,23 @@ class NodeVaultServiceTest {
 
             services.recordTransactions(listOf(usefulTX))
 
-            services.vaultService.addNoteToTransaction(usefulTX.id, "Sample Note 1")
+            services.vaultService.addNoteToTransaction(usefulTX.id, "USD Sample Note 1")
+            services.vaultService.addNoteToTransaction(usefulTX.id, "USD Sample Note 2")
+            services.vaultService.addNoteToTransaction(usefulTX.id, "USD Sample Note 3")
             assertEquals(1, services.vaultService.currentVault.transactionNotes.toList().size)
+            assertEquals(3, services.vaultService.getTransactionNotes(usefulTX.id).count())
 
+            // Issue more Money (GBP)
+            val anotherTX = TransactionType.General.Builder(null).apply {
+                Cash().generateIssue(this, 200.POUNDS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
+                signWith(MEGA_CORP_KEY)
+            }.toSignedTransaction()
+
+            services.recordTransactions(listOf(anotherTX))
+
+            services.vaultService.addNoteToTransaction(anotherTX.id, "GPB Sample Note 1")
+            assertEquals(2, services.vaultService.currentVault.transactionNotes.toList().size)
+            assertEquals(1, services.vaultService.getTransactionNotes(anotherTX.id).count())
         }
     }
 }

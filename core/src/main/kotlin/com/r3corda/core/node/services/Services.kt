@@ -154,6 +154,8 @@ interface VaultService {
      *  Add a note to an existing [LedgerTransaction] given by its unique [SecureHash] id
      */
     fun addNoteToTransaction(txnId: SecureHash, noteText: String)
+
+    fun getTransactionNotes(txnId: SecureHash): Iterable<String>
 }
 
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)

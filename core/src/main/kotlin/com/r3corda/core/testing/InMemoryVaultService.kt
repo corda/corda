@@ -99,6 +99,10 @@ open class InMemoryVaultService(protected val services: ServiceHub) : SingletonS
         throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
+    override fun getTransactionNotes(txnId: SecureHash): Iterable<String> {
+        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
     private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>): Boolean {
         return if (state is OwnableState) {
             state.owner in ourKeys
