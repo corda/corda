@@ -10,6 +10,7 @@ import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.node.services.persistence.checkpoints
 import com.r3corda.node.services.statemachine.StateMachineManager.*
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.initiateSingleShotProtocol
 import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
@@ -73,6 +74,7 @@ class StateMachineManagerTests {
 
         // We push through just enough messages to get only the payload sent
         node2.pumpReceive()
+        node2.disableDBCloseOnStop()
         node2.stop()
         net.runNetwork()
         val restoredProtocol = node2.restartAndGetRestoredProtocol<ReceiveThenSuspendProtocol>(node1)
@@ -95,6 +97,7 @@ class StateMachineManagerTests {
         val protocol = NoOpProtocol()
         node3.smm.add(protocol)
         assertEquals(false, protocol.protocolStarted) // Not started yet as no network activity has been allowed yet
+        node3.disableDBCloseOnStop()
         node3.stop()
 
         node3 = net.createNode(node1.info.address, forcedID = node3.id)
@@ -103,6 +106,7 @@ class StateMachineManagerTests {
         net.runNetwork() // Allow network map messages to flow
         node3.smm.executor.flush()
         assertEquals(true, restoredProtocol.protocolStarted) // Now we should have run the protocol and hopefully cleared the init checkpoint
+        node3.disableDBCloseOnStop()
         node3.stop()
 
         // Now it is completed the protocol should leave no Checkpoint.
@@ -119,6 +123,7 @@ class StateMachineManagerTests {
         node2.smm.add(ReceiveThenSuspendProtocol(node1.info.legalIdentity)) // Prepare checkpointed receive protocol
         // Make sure the add() has finished initial processing.
         node2.smm.executor.flush()
+        node2.disableDBCloseOnStop()
         node2.stop() // kill receiver
         val restoredProtocol = node2.restartAndGetRestoredProtocol<ReceiveThenSuspendProtocol>(node1)
         assertThat(restoredProtocol.receivedPayloads[0]).isEqualTo(payload)
@@ -138,16 +143,22 @@ class StateMachineManagerTests {
 
         // Kick off first send and receive
         node2.smm.add(PingPongProtocol(node3.info.legalIdentity, payload))
-        assertEquals(1, node2.checkpointStorage.checkpoints().size)
+        databaseTransaction(node2.database) {
+            assertEquals(1, node2.checkpointStorage.checkpoints().size)
+        }
         // Make sure the add() has finished initial processing.
         node2.smm.executor.flush()
+        node2.disableDBCloseOnStop()
         // Restart node and thus reload the checkpoint and resend the message with same UUID
         node2.stop()
+        databaseTransaction(node2.database) {
+            assertEquals(1, node2.checkpointStorage.checkpoints().size) // confirm checkpoint
+        }
         val node2b = net.createNode(node1.info.address, node2.id, advertisedServices = *node2.advertisedServices.toTypedArray())
+        node2.manuallyCloseDB()
         val (firstAgain, fut1) = node2b.getSingleProtocol<PingPongProtocol>()
         // Run the network which will also fire up the second protocol. First message should get deduped. So message data stays in sync.
         net.runNetwork()
-        assertEquals(1, node2.checkpointStorage.checkpoints().size)
         node2b.smm.executor.flush()
         fut1.get()
 
@@ -156,8 +167,12 @@ class StateMachineManagerTests {
         assertEquals(4, receivedCount, "Protocol should have exchanged 4 unique messages")// Two messages each way
         // can't give a precise value as every addMessageHandler re-runs the undelivered messages
         assertTrue(sentCount > receivedCount, "Node restart should have retransmitted messages")
-        assertEquals(0, node2b.checkpointStorage.checkpoints().size, "Checkpoints left after restored protocol should have ended")
-        assertEquals(0, node3.checkpointStorage.checkpoints().size, "Checkpoints left after restored protocol should have ended")
+        databaseTransaction(node2b.database) {
+            assertEquals(0, node2b.checkpointStorage.checkpoints().size, "Checkpoints left after restored protocol should have ended")
+        }
+        databaseTransaction(node3.database) {
+            assertEquals(0, node3.checkpointStorage.checkpoints().size, "Checkpoints left after restored protocol should have ended")
+        }
         assertEquals(payload2, firstAgain.receivedPayload, "Received payload does not match the first value on Node 3")
         assertEquals(payload2 + 1, firstAgain.receivedPayload2, "Received payload does not match the expected second value on Node 3")
         assertEquals(payload, secondProtocol.get().receivedPayload, "Received payload does not match the (restarted) first value on Node 2")
@@ -253,8 +268,10 @@ class StateMachineManagerTests {
 
     private inline fun <reified P : ProtocolLogic<*>> MockNode.restartAndGetRestoredProtocol(
             networkMapNode: MockNode? = null): P {
+        disableDBCloseOnStop() //Handover DB to new node copy
         stop()
         val newNode = mockNet.createNode(networkMapNode?.info?.address, id, advertisedServices = *advertisedServices.toTypedArray())
+        manuallyCloseDB()
         mockNet.runNetwork() // allow NetworkMapService messages to stabilise and thus start the state machine
         return newNode.getSingleProtocol<P>().first
     }

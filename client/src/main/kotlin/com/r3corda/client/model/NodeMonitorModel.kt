@@ -3,16 +3,19 @@ package com.r3corda.client.model
 import com.r3corda.client.CordaRPCClient
 import com.r3corda.core.contracts.ClientToServiceCommand
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.transactions.SignedTransaction
-import com.r3corda.node.services.messaging.ArtemisMessagingComponent
+import com.r3corda.node.services.config.NodeSSLConfiguration
+import com.r3corda.node.services.messaging.ArtemisMessagingComponent.Companion.toHostAndPort
+import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.messaging.StateMachineInfo
 import com.r3corda.node.services.messaging.StateMachineUpdate
+import javafx.beans.property.SimpleObjectProperty
 import rx.Observable
 import rx.subjects.PublishSubject
-import java.nio.file.Path
 
 data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val message: String) {
     companion object {
@@ -35,26 +38,27 @@ class NodeMonitorModel {
     private val transactionsSubject = PublishSubject.create<SignedTransaction>()
     private val stateMachineTransactionMappingSubject = PublishSubject.create<StateMachineTransactionMapping>()
     private val progressTrackingSubject = PublishSubject.create<ProgressTrackingEvent>()
+    private val networkMapSubject = PublishSubject.create<NetworkMapCache.MapChange>()
 
     val stateMachineUpdates: Observable<StateMachineUpdate> = stateMachineUpdatesSubject
     val vaultUpdates: Observable<Vault.Update> = vaultUpdatesSubject
     val transactions: Observable<SignedTransaction> = transactionsSubject
     val stateMachineTransactionMapping: Observable<StateMachineTransactionMapping> = stateMachineTransactionMappingSubject
     val progressTracking: Observable<ProgressTrackingEvent> = progressTrackingSubject
+    val networkMap: Observable<NetworkMapCache.MapChange> = networkMapSubject
 
     private val clientToServiceSource = PublishSubject.create<ClientToServiceCommand>()
     val clientToService: PublishSubject<ClientToServiceCommand> = clientToServiceSource
 
+    val proxyObservable = SimpleObjectProperty<CordaRPCOps?>()
+
     /**
      * Register for updates to/from a given vault.
-     * @param messagingService The messaging to use for communication.
-     * @param monitorNodeInfo the [Node] to connect to.
      * TODO provide an unsubscribe mechanism
      */
-    fun register(vaultMonitorNodeInfo: NodeInfo, certificatesPath: Path) {
-
-        val client = CordaRPCClient(ArtemisMessagingComponent.toHostAndPort(vaultMonitorNodeInfo.address), certificatesPath)
-        client.start()
+    fun register(vaultMonitorNodeInfo: NodeInfo, sslConfig: NodeSSLConfiguration, username: String, password: String) {
+        val client = CordaRPCClient(toHostAndPort(vaultMonitorNodeInfo.address), sslConfig)
+        client.start(username, password)
         val proxy = client.proxy()
 
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesAndUpdates()
@@ -89,9 +93,15 @@ class NodeMonitorModel {
         val (smTxMappings, futureSmTxMappings) = proxy.stateMachineRecordedTransactionMapping()
         futureSmTxMappings.startWith(smTxMappings).subscribe(stateMachineTransactionMappingSubject)
 
+        // Parties on network
+        val (parties, futurePartyUpdate) = proxy.networkMapUpdates()
+        futurePartyUpdate.startWith(parties.map { NetworkMapCache.MapChange(it, null, NetworkMapCache.MapChangeType.Added) }).subscribe(networkMapSubject)
+
         // Client -> Service
         clientToServiceSource.subscribe {
             proxy.executeCommand(it)
         }
+
+        proxyObservable.set(proxy)
     }
 }

@@ -20,17 +20,20 @@ class TopLevel : View() {
     private val home: Home by inject()
     private val cash: CashViewer by inject()
     private val transaction: TransactionViewer by inject()
+    private val newTransaction: NewTransaction by inject()
 
     // Note: this is weirdly very important, as it forces the initialisation of Views. Therefore this is the entry
     // point to the top level observable/stream wiring! Any events sent before this init may be lost!
     private val homeRoot = home.root
     private val cashRoot = cash.root
     private val transactionRoot = transaction.root
+    private val newTransactionRoot = newTransaction.root
 
     private fun getView(selection: SelectedView) = when (selection) {
         SelectedView.Home -> homeRoot
         SelectedView.Cash -> cashRoot
         SelectedView.Transaction -> transactionRoot
+        SelectedView.NewTransaction -> newTransactionRoot
     }
     val selectedView: ObjectProperty<SelectedView> by objectProperty(TopLevelModel::selectedView)
 

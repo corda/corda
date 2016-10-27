@@ -4,7 +4,6 @@ import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.KeyManagementService
@@ -14,22 +13,18 @@ import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
-import com.r3corda.node.services.api.CheckpointStorage
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
 import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
-import com.r3corda.node.services.persistence.DBCheckpointStorage
-import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.services.transactions.ValidatingNotaryService
 import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import com.r3corda.node.utilities.databaseTransaction
 import org.slf4j.Logger
 import java.nio.file.FileSystem
 import java.nio.file.Files
@@ -125,16 +120,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // through the java.nio API which we are already mocking via Jimfs.
         override fun makeMessagingService(): MessagingServiceInternal {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
-            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, serverThread, configuration.myLegalName,
-                    persistenceTx = { body: () -> Unit -> databaseTransaction(database) { body() } }).start().get()
-        }
-
-        override fun initialiseCheckpointService(dir: Path): CheckpointStorage {
-            return if (mockNet.threadPerNode) {
-                DBCheckpointStorage()
-            } else {
-                PerFileCheckpointStorage(dir / "checkpoints")
-            }
+            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, serverThread, configuration.myLegalName, database).start().get()
         }
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
@@ -143,7 +129,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeKeyManagementService(): KeyManagementService = E2ETestKeyManagementService(partyKeys)
 
-        override fun startMessagingService(cordaRPCOps: CordaRPCOps?) {
+        override fun startMessagingService(cordaRPCOps: CordaRPCOps) {
             // Nothing to do
         }
 

@@ -79,7 +79,7 @@ class TransactionViewer: View() {
             by observableListReadOnly(GatheredTransactionDataModel::gatheredTransactionDataList)
     private val reportingExchange: ObservableValue<Pair<Currency, (Amount<Currency>) -> Amount<Currency>>>
             by observableValue(ReportingCurrencyModel::reportingExchange)
-    private val myIdentity: ObservableValue<Party> by observableValue(IdentityModel::myIdentity)
+    private val myIdentity: ObservableValue<Party?> by observableValue(IdentityModel::myIdentity)
 
     /**
      * This is what holds data for a single transaction node. Note how a lot of these are nullable as we often simply don't
@@ -363,7 +363,7 @@ class TransactionViewer: View() {
  * We calculate the total value by subtracting relevant input states and adding relevant output states, as long as they're cash
  */
 private fun calculateTotalEquiv(
-        identity: Party,
+        identity: Party?,
         reportingCurrencyExchange: Pair<Currency, (Amount<Currency>) -> Amount<Currency>>,
         inputs: List<StateAndRef<ContractState>>?,
         outputs: List<TransactionState<ContractState>>): AmountDiff<Currency>? {
@@ -372,7 +372,7 @@ private fun calculateTotalEquiv(
     }
     var sum = 0L
     val (reportingCurrency, exchange) = reportingCurrencyExchange
-    val publicKey = identity.owningKey
+    val publicKey = identity?.owningKey
     inputs.forEach {
         val contractState = it.state.data
         if (contractState is Cash.State && publicKey == contractState.owner) {

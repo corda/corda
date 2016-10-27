@@ -1,11 +1,11 @@
 package com.r3corda.client
 
-import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.client.model.NodeMonitorModel
 import com.r3corda.client.model.ProgressTrackingEvent
 import com.r3corda.core.bufferUntilSubscribed
 import com.r3corda.core.contracts.*
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
@@ -13,43 +13,47 @@ import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.driver.driver
-import com.r3corda.node.driver.startClient
-import com.r3corda.node.services.messaging.NodeMessagingClient
+import com.r3corda.node.services.config.configureTestSSL
 import com.r3corda.node.services.messaging.StateMachineUpdate
 import com.r3corda.node.services.transactions.SimpleNotaryService
-import com.r3corda.testing.*
-import org.junit.*
+import com.r3corda.testing.expect
+import com.r3corda.testing.expectEvents
+import com.r3corda.testing.sequence
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
 import rx.Observable
 import rx.Observer
+import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.thread
 
 class NodeMonitorModelTest {
 
     lateinit var aliceNode: NodeInfo
     lateinit var notaryNode: NodeInfo
-    lateinit var aliceClient: NodeMessagingClient
-    val driverStarted = SettableFuture.create<Unit>()
-    val stopDriver = SettableFuture.create<Unit>()
-    val driverStopped = SettableFuture.create<Unit>()
+    val stopDriver = CountDownLatch(1)
+    var driverThread: Thread? = null
 
     lateinit var stateMachineTransactionMapping: Observable<StateMachineTransactionMapping>
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
     lateinit var progressTracking: Observable<ProgressTrackingEvent>
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update>
+    lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
     lateinit var clientToService: Observer<ClientToServiceCommand>
+    lateinit var newNode: (String) -> NodeInfo
 
     @Before
     fun start() {
-        thread {
+        val driverStarted = CountDownLatch(1)
+        driverThread = thread {
             driver {
                 val aliceNodeFuture = startNode("Alice")
                 val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
 
-                aliceNode = aliceNodeFuture.get()
-                notaryNode = notaryNodeFuture.get()
-                aliceClient = startClient(aliceNode).get()
-
+                aliceNode = aliceNodeFuture.get().nodeInfo
+                notaryNode = notaryNodeFuture.get().nodeInfo
+                newNode = { nodeName -> startNode(nodeName).get().nodeInfo }
                 val monitor = NodeMonitorModel()
 
                 stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
@@ -57,21 +61,41 @@ class NodeMonitorModelTest {
                 progressTracking = monitor.progressTracking.bufferUntilSubscribed()
                 transactions = monitor.transactions.bufferUntilSubscribed()
                 vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
+                networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
                 clientToService = monitor.clientToService
 
-                monitor.register(aliceNode, aliceClient.config.certificatesPath)
-                driverStarted.set(Unit)
-                stopDriver.get()
+                monitor.register(aliceNode, configureTestSSL(), "user1", "test")
+                driverStarted.countDown()
+                stopDriver.await()
             }
-            driverStopped.set(Unit)
         }
-        driverStarted.get()
+        driverStarted.await()
     }
 
     @After
     fun stop() {
-        stopDriver.set(Unit)
-        driverStopped.get()
+        stopDriver.countDown()
+        driverThread?.join()
+    }
+
+    @Test
+    fun testNetworkMapUpdate() {
+        newNode("Bob")
+        newNode("Charlie")
+        networkMapUpdates.expectEvents(isStrict = false) {
+            sequence(
+                    // TODO : Add test for remove when driver DSL support individual node shutdown.
+                    expect { output: NetworkMapCache.MapChange ->
+                        require(output.node.legalIdentity.name == "Alice") { output.node.legalIdentity.name }
+                    },
+                    expect { output: NetworkMapCache.MapChange ->
+                        require(output.node.legalIdentity.name == "Bob") { output.node.legalIdentity.name }
+                    },
+                    expect { output: NetworkMapCache.MapChange ->
+                        require(output.node.legalIdentity.name == "Charlie") { output.node.legalIdentity.name }
+                    }
+            )
+        }
     }
 
     @Test

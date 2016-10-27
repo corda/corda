@@ -1,21 +1,26 @@
 package com.r3corda.node.services.events
 
+import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.contracts.SchedulableState
+import com.r3corda.core.contracts.ScheduledActivity
 import com.r3corda.core.contracts.ScheduledStateRef
 import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.node.services.SchedulerService
+import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.serialization.SingletonSerializeAsToken
+import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.ServiceHubInternal
-import com.r3corda.node.utilities.awaitWithDeadline
-import com.r3corda.node.utilities.databaseTransaction
+import com.r3corda.node.utilities.*
+import kotlinx.support.jdk8.collections.compute
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.time.Instant
-import java.util.*
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import javax.annotation.concurrent.ThreadSafe
@@ -26,8 +31,6 @@ import javax.annotation.concurrent.ThreadSafe
  *
  * This will observe transactions as they are stored and schedule and unschedule activities based on the States consumed
  * or produced.
- *
- * TODO: Needs extensive support from persistence and protocol frameworks to be truly reliable and atomic.
  *
  * Currently does not provide any system state other than the ContractState so the expectation is that a transaction
  * is the outcome of the activity in order to schedule another activity.  Once we have implemented more persistence
@@ -42,29 +45,55 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class NodeSchedulerService(private val database: Database,
                            private val services: ServiceHubInternal,
-                           private val protocolLogicRefFactory: ProtocolLogicRefFactory = ProtocolLogicRefFactory(),
+                           private val protocolLogicRefFactory: ProtocolLogicRefFactory,
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor())
 : SchedulerService, SingletonSerializeAsToken() {
 
     private val log = loggerFor<NodeSchedulerService>()
 
+    private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}scheduled_states") {
+        val output = stateRef("transaction_id", "output_index")
+        val scheduledAt = instant("scheduled_at")
+    }
+
     // Variables inside InnerState are protected with a lock by the ThreadBox and aren't in scope unless you're
     // inside mutex.locked {} code block. So we can't forget to take the lock unless we accidentally leak a reference
     // to somewhere.
     private class InnerState {
-        // TODO: This has no persistence, and we don't consider initialising from non-empty map if we add persistence.
-        //       If we were to rebuild the vault at start up by replaying transactions and re-calculating, then
-        //       persistence here would be unnecessary.
-        var scheduledStates = HashMap<StateRef, ScheduledStateRef>()
+        var scheduledStates = object : AbstractJDBCHashMap<StateRef, ScheduledStateRef, Table>(Table, loadOnInit = true) {
+            override fun keyFromRow(row: ResultRow): StateRef = StateRef(row[table.output.txId], row[table.output.index])
+
+            override fun valueFromRow(row: ResultRow): ScheduledStateRef {
+                return ScheduledStateRef(StateRef(row[table.output.txId], row[table.output.index]), row[table.scheduledAt])
+            }
+
+            override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<StateRef, ScheduledStateRef>, finalizables: MutableList<() -> Unit>) {
+                insert[table.output.txId] = entry.key.txhash
+                insert[table.output.index] = entry.key.index
+            }
+
+            override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<StateRef, ScheduledStateRef>, finalizables: MutableList<() -> Unit>) {
+                insert[table.scheduledAt] = entry.value.scheduledAt
+            }
+
+        }
         var earliestState: ScheduledStateRef? = null
         var rescheduled: SettableFuture<Boolean>? = null
 
         internal fun recomputeEarliest() {
-            earliestState = scheduledStates.map { it.value }.sortedBy { it.scheduledAt }.firstOrNull()
+            earliestState = scheduledStates.values.sortedBy { it.scheduledAt }.firstOrNull()
         }
     }
 
     private val mutex = ThreadBox(InnerState())
+
+    // We need the [StateMachineManager] to be constructed before this is called in case it schedules a protocol.
+    fun start() {
+        mutex.locked {
+            recomputeEarliest()
+            rescheduleWakeUp()
+        }
+    }
 
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
@@ -100,7 +129,7 @@ class NodeSchedulerService(private val database: Database,
      * without the [Future] being cancelled then we run the scheduled action.  Finally we remove that action from the
      * scheduled actions and recompute the next scheduled action.
      */
-    private fun rescheduleWakeUp() {
+    internal fun rescheduleWakeUp() {
         // Note, we already have the mutex but we need the scope again here
         val (scheduledState, ourRescheduledFuture) = mutex.alreadyLocked {
             rescheduled?.cancel(false)
@@ -123,60 +152,72 @@ class NodeSchedulerService(private val database: Database,
     }
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
-        try {
-            databaseTransaction(database) {
-                runScheduledActionForState(scheduledState)
+        services.startProtocol(RunScheduled(scheduledState, this@NodeSchedulerService))
+    }
+
+    class RunScheduled(val scheduledState: ScheduledStateRef, val scheduler: NodeSchedulerService) : ProtocolLogic<Unit>() {
+        companion object {
+            object RUNNING : ProgressTracker.Step("Running scheduled...")
+
+            fun tracker() = ProgressTracker(RUNNING)
+        }
+
+        override val progressTracker = tracker()
+
+        @Suspendable
+        override fun call(): Unit {
+            progressTracker.currentStep = RUNNING
+
+            // Ensure we are still scheduled.
+            val scheduledLogic: ProtocolLogic<*>? = getScheduledLogic()
+            if(scheduledLogic != null) {
+                subProtocol(scheduledLogic)
             }
-        } finally {
-            // Unschedule once complete (or checkpointed)
-            mutex.locked {
+        }
+
+        private fun getScheduledaActivity(): ScheduledActivity? {
+            val txState = serviceHub.loadState(scheduledState.ref)
+            val state = txState.data as SchedulableState
+            return try {
+                // This can throw as running contract code.
+                state.nextScheduledActivity(scheduledState.ref, scheduler.protocolLogicRefFactory)
+            } catch(e: Exception) {
+                logger.error("Attempt to run scheduled state $scheduledState resulted in error.", e)
+                null
+            }
+        }
+
+        private fun getScheduledLogic(): ProtocolLogic<*>? {
+            val scheduledActivity = getScheduledaActivity()
+            var scheduledLogic: ProtocolLogic<*>? = null
+            scheduler.mutex.locked {
                 // need to remove us from those scheduled, but only if we are still next
                 scheduledStates.compute(scheduledState.ref) { ref, value ->
-                    if (value === scheduledState) null else value
+                    if (value === scheduledState) {
+                        if (scheduledActivity == null) {
+                            logger.info("Scheduled state $scheduledState has rescheduled to never.")
+                            null
+                        } else if (scheduledActivity.scheduledAt.isAfter(serviceHub.clock.instant())) {
+                            logger.info("Scheduled state $scheduledState has rescheduled to ${scheduledActivity.scheduledAt}.")
+                            ScheduledStateRef(scheduledState.ref, scheduledActivity.scheduledAt)
+                        } else {
+                            // TODO: ProtocolLogicRefFactory needs to sort out the class loader etc
+                            val logic = scheduler.protocolLogicRefFactory.toProtocolLogic(scheduledActivity.logicRef)
+                            logger.trace { "Scheduler starting ProtocolLogic $logic" }
+                            // ProtocolLogic will be checkpointed by the time this returns.
+                            //scheduler.services.startProtocolAndForget(logic)
+                            scheduledLogic = logic
+                            null
+                        }
+                    } else {
+                        value
+                    }
                 }
                 // and schedule the next one
                 recomputeEarliest()
-                rescheduleWakeUp()
+                scheduler.rescheduleWakeUp()
             }
+            return scheduledLogic
         }
-    }
-
-    private fun runScheduledActionForState(scheduledState: ScheduledStateRef) {
-        val txState = services.loadState(scheduledState.ref)
-        // It's OK to return if it's null as there's nothing scheduled
-        // TODO: implement sandboxing as necessary
-        val scheduledActivity = sandbox {
-            val state = txState.data as SchedulableState
-            state.nextScheduledActivity(scheduledState.ref, protocolLogicRefFactory)
-        } ?: return
-
-        if (scheduledActivity.scheduledAt.isAfter(services.clock.instant())) {
-            // I suppose it might turn out that the action is no longer due (a bug, maybe), so we need to defend against that and re-schedule
-            // TODO: warn etc
-            mutex.locked {
-                // Replace with updated instant
-                scheduledStates.compute(scheduledState.ref) { ref, value ->
-                    if (value === scheduledState) ScheduledStateRef(scheduledState.ref, scheduledActivity.scheduledAt) else value
-                }
-            }
-        } else {
-            /**
-             * TODO: align with protocol invocation via API... make it the same code
-             * TODO: Persistence and durability issues:
-             *       a) Need to consider potential to run activity twice if restart between here and removing from map if we add persistence
-             *       b) But if remove from map first, there's potential to run zero times if restart
-             *       c) Address by switch to 3rd party scheduler?  Only benefit of this impl. is support for DemoClock or other MutableClocks (e.g. for testing)
-             * TODO: ProtocolLogicRefFactory needs to sort out the class loader etc
-             */
-            val logic = protocolLogicRefFactory.toProtocolLogic(scheduledActivity.logicRef)
-            log.trace { "Firing ProtocolLogic $logic" }
-            // TODO: ProtocolLogic should be checkpointed by the time this returns
-            services.startProtocol(logic)
-        }
-    }
-
-    // TODO: Does nothing right now, but beware we are calling dynamically loaded code in the contract inside here.
-    private inline fun <T : Any> sandbox(code: () -> T?): T? {
-        return code()
     }
 }

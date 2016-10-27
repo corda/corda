@@ -33,6 +33,7 @@ class Header : View() {
                 SelectedView.Home -> "Home"
                 SelectedView.Cash -> "Cash"
                 SelectedView.Transaction -> "Transactions"
+                SelectedView.NewTransaction -> "New Transaction"
                 null -> "Home"
             }
         })
@@ -42,6 +43,7 @@ class Header : View() {
                 SelectedView.Home -> homeImage
                 SelectedView.Cash -> cashImage
                 SelectedView.Transaction -> transactionImage
+                SelectedView.NewTransaction -> cashImage
                 null -> homeImage
             }
         })

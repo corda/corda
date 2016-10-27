@@ -24,6 +24,8 @@ class APIServerImpl(val node: AbstractNode) : APIServer {
         }
     }
 
+    override fun info() = node.services.myInfo
+
     override fun queryStates(query: StatesQuery): List<StateRef> {
         // We're going to hard code two options here for now and assume that all LinearStates are deals
         // Would like to maybe move to a model where we take something like a JEXL string, although don't want to develop

@@ -5,10 +5,13 @@ import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.node.internal.Node
+import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
+import com.r3corda.node.utilities.TestClock
 import com.typesafe.config.Config
 import java.nio.file.Path
+import java.time.Clock
 import java.util.*
 
 interface NodeSSLConfiguration {
@@ -46,8 +49,12 @@ class FullNodeConfiguration(config: Config) : NodeConfiguration {
     val webAddress: HostAndPort by config
     val messagingServerAddress: HostAndPort? by config.getOrElse { null }
     val extraAdvertisedServiceIds: String by config
+    val useTestClock: Boolean by config.getOrElse { false }
 
     fun createNode(): Node {
+        // This is a sanity feature do not remove.
+        require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
+
         val advertisedServices = mutableSetOf<ServiceInfo>()
         if (!extraAdvertisedServiceIds.isNullOrEmpty()) {
             for (serviceId in extraAdvertisedServiceIds.split(",")) {
@@ -56,7 +63,7 @@ class FullNodeConfiguration(config: Config) : NodeConfiguration {
         }
         if (networkMapAddress == null) advertisedServices.add(ServiceInfo(NetworkMapService.type))
         val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else NodeMessagingClient.makeNetworkMapAddress(networkMapAddress!!)
-        return Node(this, networkMapMessageAddress, advertisedServices)
+        return Node(this, networkMapMessageAddress, advertisedServices, if(useTestClock == true) TestClock() else NodeClock())
     }
 }
 

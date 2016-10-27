@@ -12,6 +12,7 @@ data class StateMachineRunId private constructor(val uuid: UUID) {
 
     companion object {
         fun createRandom(): StateMachineRunId = StateMachineRunId(UUID.randomUUID())
+        fun wrap(uuid: UUID): StateMachineRunId = StateMachineRunId(uuid)
     }
 
     override fun toString(): String = "[$uuid]"

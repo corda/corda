@@ -14,7 +14,7 @@ import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.node.services.events.NodeSchedulerService
-import com.r3corda.node.services.persistence.PerFileCheckpointStorage
+import com.r3corda.node.services.persistence.DBCheckpointStorage
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.AddOrRemove
@@ -70,6 +70,14 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
      */
     interface TestReference {
         val testReference: NodeSchedulerServiceTest
+    }
+
+    init {
+        val kms = MockKeyManagementService(ALICE_KEY)
+        val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), persistenceTx = { it() })
+        services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
+            override val testReference = this@NodeSchedulerServiceTest
+        }
     }
 
     @Before
@@ -249,7 +257,9 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         scheduleTX(time, 3)
 
         backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }
-        scheduler.unscheduleStateActivity(scheduledRef1!!.ref)
+        databaseTransaction(database) {
+            scheduler.unscheduleStateActivity(scheduledRef1!!.ref)
+        }
         testClock.advanceBy(1.days)
         countDown.await()
         assertThat(calls).isEqualTo(3)
@@ -265,7 +275,9 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }
         assertThat(calls).isEqualTo(0)
 
-        scheduler.unscheduleStateActivity(scheduledRef1!!.ref)
+        databaseTransaction(database) {
+            scheduler.unscheduleStateActivity(scheduledRef1!!.ref)
+        }
         testClock.advanceBy(1.days)
         assertThat(calls).isEqualTo(0)
         backgroundExecutor.shutdown()
@@ -287,10 +299,9 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 }.toSignedTransaction()
                 val txHash = usefulTX.id
 
-                services.recordTransactions(usefulTX)
-                scheduledRef = ScheduledStateRef(StateRef(txHash, 0), state.instant)
-                scheduler.scheduleStateActivity(scheduledRef!!)
-            }
+            services.recordTransactions(usefulTX)
+            scheduledRef = ScheduledStateRef(StateRef(txHash, 0), state.instant)
+            scheduler.scheduleStateActivity(scheduledRef!!)
         }
         return scheduledRef
     }

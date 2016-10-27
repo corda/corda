@@ -153,7 +153,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
     lateinit var net: MessagingServiceInternal
     lateinit var netMapCache: NetworkMapCache
     lateinit var api: APIServer
-    lateinit var scheduler: SchedulerService
+    lateinit var scheduler: NodeSchedulerService
     lateinit var protocolLogicFactory: ProtocolLogicRefFactory
     lateinit var schemas: SchemaService
     val customServices: ArrayList<Any> = ArrayList()
@@ -209,9 +209,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             // the identity key. But the infrastructure to make that easy isn't here yet.
             keyManagement = makeKeyManagementService()
             api = APIServerImpl(this@AbstractNode)
-            scheduler = NodeSchedulerService(database, services)
-
             protocolLogicFactory = initialiseProtocolLogicFactory()
+            scheduler = NodeSchedulerService(database, services, protocolLogicFactory)
 
             val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
 
@@ -257,6 +256,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
             smm.start()
+            scheduler.start()
         }
         started = true
         return this
@@ -434,15 +434,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
 
     protected abstract fun makeMessagingService(): MessagingServiceInternal
 
-    protected abstract fun startMessagingService(cordaRPCOps: CordaRPCOps?)
-
-    protected open fun initialiseCheckpointService(dir: Path): CheckpointStorage {
-        return DBCheckpointStorage()
-    }
+    protected abstract fun startMessagingService(cordaRPCOps: CordaRPCOps)
 
     protected open fun initialiseStorageService(dir: Path): Pair<TxWritableStorageService, CheckpointStorage> {
         val attachments = makeAttachmentStorage(dir)
-        val checkpointStorage = initialiseCheckpointService(dir)
+        val checkpointStorage = DBCheckpointStorage()
         val transactionStorage = DBTransactionStorage()
         _servicesThatAcceptUploads += attachments
         // Populate the partyKeys set.
@@ -451,7 +447,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             // Ensure all required keys exist.
             obtainKeyPair(configuration.basedir, service.type.id + "-private-key", service.type.id + "-public", service.type.id)
         }
-        val stateMachineTransactionMappingStorage = InMemoryStateMachineRecordedTransactionMappingStorage()
+        val stateMachineTransactionMappingStorage = DBTransactionMappingStorage()
         return Pair(
                 constructStorageService(attachments, transactionStorage, stateMachineTransactionMappingStorage),
                 checkpointStorage

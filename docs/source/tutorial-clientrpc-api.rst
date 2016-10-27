@@ -16,7 +16,7 @@ we also need to access the certificates of the node, we will access the node's `
     :start-after: START 1
     :end-before: END 1
 
-Now we can connect to the node itself:
+Now we can connect to the node itself using a valid RPC login. By default the user `user1` is available with password `test`.
 
 .. literalinclude:: example-code/src/main/kotlin/com/r3corda/docs/ClientRpcTutorial.kt
     :language: kotlin

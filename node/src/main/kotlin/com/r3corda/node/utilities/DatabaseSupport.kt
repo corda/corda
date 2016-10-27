@@ -14,6 +14,7 @@ import java.security.PublicKey
 import java.sql.Connection
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.*
 
@@ -147,6 +148,8 @@ fun Table.secureHash(name: String) = this.registerColumn<SecureHash>(name, Secur
 fun Table.party(nameColumnName: String, keyColumnName: String) = PartyColumns(this.varchar(nameColumnName, length = 255), this.publicKey(keyColumnName))
 fun Table.uuidString(name: String) = this.registerColumn<UUID>(name, UUIDStringColumnType)
 fun Table.localDate(name: String) = this.registerColumn<LocalDate>(name, LocalDateColumnType)
+fun Table.localDateTime(name: String) = this.registerColumn<LocalDateTime>(name, LocalDateTimeColumnType)
+fun Table.instant(name: String) = this.registerColumn<Instant>(name, InstantColumnType)
 fun Table.stateRef(txIdColumnName: String, indexColumnName: String) = StateRefColumns(this.secureHash(txIdColumnName), this.integer(indexColumnName))
 
 /**
@@ -209,5 +212,69 @@ object LocalDateColumnType : ColumnType() {
 
     override fun notNullValueToDB(value: Any): Any = if (value is LocalDate) {
         java.sql.Date(value.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli())
+    } else value
+}
+
+
+/**
+ * [ColumnType] for marshalling to/from database on behalf of [java.time.LocalDateTime].
+ */
+object LocalDateTimeColumnType : ColumnType() {
+    private val sqlType = DateColumnType(time = true).sqlType()
+    override fun sqlType(): String = sqlType
+
+    override fun nonNullValueToString(value: Any): String {
+        if (value is String) return value
+
+        val localDateTime = when (value) {
+            is LocalDateTime -> value
+            is java.sql.Date -> value.toLocalDate().atStartOfDay()
+            is java.sql.Timestamp -> value.toLocalDateTime()
+            else -> error("Unexpected value: $value")
+        }
+        return "'$localDateTime'"
+    }
+
+    override fun valueFromDB(value: Any): Any = when (value) {
+        is java.sql.Date -> value.toLocalDate().atStartOfDay()
+        is java.sql.Timestamp -> value.toLocalDateTime()
+        is Long -> LocalDateTime.from(Instant.ofEpochMilli(value))
+        else -> value
+    }
+
+    override fun notNullValueToDB(value: Any): Any = if (value is LocalDateTime) {
+        java.sql.Timestamp(value.toInstant(ZoneOffset.UTC).toEpochMilli())
+    } else value
+}
+
+
+/**
+ * [ColumnType] for marshalling to/from database on behalf of [java.time.Instant].
+ */
+object InstantColumnType : ColumnType() {
+    private val sqlType = DateColumnType(time = true).sqlType()
+    override fun sqlType(): String = sqlType
+
+    override fun nonNullValueToString(value: Any): String {
+        if (value is String) return value
+
+        val localDateTime = when (value) {
+            is Instant -> value
+            is java.sql.Date -> value.toLocalDate().atStartOfDay().toInstant(ZoneOffset.UTC)
+            is java.sql.Timestamp -> value.toLocalDateTime().toInstant(ZoneOffset.UTC)
+            else -> error("Unexpected value: $value")
+        }
+        return "'$localDateTime'"
+    }
+
+    override fun valueFromDB(value: Any): Any = when (value) {
+        is java.sql.Date -> value.toLocalDate().atStartOfDay().toInstant(ZoneOffset.UTC)
+        is java.sql.Timestamp -> value.toLocalDateTime().toInstant(ZoneOffset.UTC)
+        is Long -> LocalDateTime.from(Instant.ofEpochMilli(value)).toInstant(ZoneOffset.UTC)
+        else -> value
+    }
+
+    override fun notNullValueToDB(value: Any): Any = if (value is Instant) {
+        java.sql.Timestamp(value.toEpochMilli())
     } else value
 }

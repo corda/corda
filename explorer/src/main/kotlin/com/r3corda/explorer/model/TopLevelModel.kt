@@ -5,7 +5,8 @@ import javafx.beans.property.SimpleObjectProperty
 enum class SelectedView {
     Home,
     Cash,
-    Transaction
+    Transaction,
+    NewTransaction
 }
 
 class TopLevelModel {
