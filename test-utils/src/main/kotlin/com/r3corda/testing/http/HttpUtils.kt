@@ -30,7 +30,7 @@ object HttpUtils {
         val response = client.newCall(request).execute()
 
         if (!response.isSuccessful) {
-            logger.error("Could not fulfill HTTP request. Status Code: ${response.code()}. Message: ${response.body().string()}")
+            logger.error("Could not fulfill HTTP request of type ${request.method()} to ${request.url()}. Status Code: ${response.code()}. Message: ${response.body().string()}")
         }
         return response.isSuccessful
     }

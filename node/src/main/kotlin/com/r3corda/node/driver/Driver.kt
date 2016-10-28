@@ -276,7 +276,7 @@ open class DriverDSL(
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
             if (conn.responseCode != 200) {
-                log.error("Received response code ${conn.responseCode} from api/info during startup.")
+                log.error("Received response code ${conn.responseCode} from $url during startup.")
                 return null
             }
             // For now the NodeInfo is tunneled in its Kryo format over the Node's Web interface.
@@ -286,7 +286,7 @@ open class DriverDSL(
             om.registerModule(module)
             return om.readValue(conn.inputStream, NodeInfo::class.java)
         } catch(e: Exception) {
-            log.error("Could not query node info", e)
+            log.error("Could not query node info at $url due to an exception.", e)
             return null
         }
     }
