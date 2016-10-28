@@ -6,6 +6,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.transactions.TransactionBuilder
+import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.transactions.WireTransaction
 import rx.Observable
 import java.security.KeyPair
