@@ -40,7 +40,7 @@ sourceSets {
 
 publishing {
     publications {
-        clients(MavenPublication) {
+        client(MavenPublication) {
             from components.java
             artifactId 'client'
 
