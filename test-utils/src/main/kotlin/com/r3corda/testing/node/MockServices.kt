@@ -164,7 +164,7 @@ class MockStorageService(override val attachments: AttachmentStorage = MockAttac
 fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
     val props = Properties()
     props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-    props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;MVCC=TRUE;DB_CLOSE_ON_EXIT=FALSE")
+    props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;DB_CLOSE_ON_EXIT=FALSE")
     props.setProperty("dataSource.user", "sa")
     props.setProperty("dataSource.password", "")
     return props
