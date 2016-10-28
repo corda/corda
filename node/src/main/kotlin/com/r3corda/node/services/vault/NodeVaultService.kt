@@ -5,7 +5,6 @@ import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.bufferUntilSubscribed
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.ServiceHub
@@ -17,7 +16,6 @@ import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.utilities.*
-import kotlinx.support.jdk8.collections.putIfAbsent
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import rx.Observable
