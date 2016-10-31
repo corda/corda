@@ -11,7 +11,6 @@ import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.LogHelper
-import com.r3corda.node.services.schema.NodeSchemaService
 import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.configureDatabase
 import com.r3corda.node.utilities.databaseTransaction

@@ -46,10 +46,10 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
 
     private object TransactionNotesTable : JDBCHashedTable("${NODE_DATABASE_PREFIX}vault_txn_notes") {
         val txnId = secureHash("txnId")
-        val notes = blob("notes")
+        val notes = text("notes")
     }
 
-    private val mutex = ThreadBox(object {
+    private val mutex = ThreadBox(content = object {
         val unconsumedStates = object : AbstractJDBCHashSet<StateRef, StatesSetTable>(StatesSetTable) {
             override fun elementFromRow(row: ResultRow): StateRef = StateRef(row[table.stateRef.txId], row[table.stateRef.index])
 
@@ -65,7 +65,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             }
 
             override fun valueFromRow(row: ResultRow): Set<String> {
-                return deserializeFromBlob(row[table.notes])
+                return row[table.notes].split(delimiters = ";").toSet()
             }
 
             override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, Set<String>>, finalizables: MutableList<() -> Unit>) {
@@ -73,7 +73,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             }
 
             override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, Set<String>>, finalizables: MutableList<() -> Unit>) {
-                insert[table.notes] = serializeToBlob(entry.value, finalizables)
+                insert[table.notes] = entry.value.joinToString(separator = ";")
             }
         }
 
