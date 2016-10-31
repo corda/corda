@@ -174,9 +174,9 @@ class Node {
      */
     private void installDependencies() {
         def cordaJar = verifyAndGetCordaJar()
-        def cordappList = getCordappList()
+        def cordappDeps = getCordappList()
         def depsDir = new File(nodeDir, "dependencies")
-        def appDeps = project.configurations.runtime.filter { it != cordaJar && !cordappList.contains(it) }
+        def appDeps = project.configurations.runtime.filter { it != cordaJar && !cordappDeps.contains(it) }
         project.copy {
             from appDeps
             into depsDir
@@ -224,11 +224,9 @@ class Node {
      *
      * @return List of this node's cordapps.
      */
-    private AbstractFileCollection getCordappList() {
-        def cordaJar = verifyAndGetCordaJar()
-        return project.configurations.runtime.filter {
-            def jarName = it.name.split('-').first()
-            return (it != cordaJar) && cordapps.contains(jarName)
+    private Collection<File> getCordappList() {
+        return project.configurations.cordapp.files {
+            cordapps.contains(it.getName())
         }
     }
 }
