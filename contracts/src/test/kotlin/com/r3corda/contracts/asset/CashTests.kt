@@ -32,7 +32,7 @@ import java.util.*
 import kotlin.test.*
 
 class CashTests {
-    val defaultRef = OpaqueBytes(ByteArray(1, {1}))
+    val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
     val defaultIssuer = MEGA_CORP.ref(defaultRef)
     val inState = Cash.State(
             amount = 1000.DOLLARS `issued by` defaultIssuer,
@@ -264,7 +264,7 @@ class CashTests {
         // Include the previously issued cash in a new issuance command
         ptx = TransactionType.General.Builder(DUMMY_NOTARY)
         ptx.addInputState(tx.tx.outRef<Cash.State>(0))
-        Cash().generateIssue(ptx, 100.DOLLARS `issued by`  MINI_CORP.ref(12, 34), owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
+        Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
     }
 
     @Test
@@ -569,7 +569,7 @@ class CashTests {
         databaseTransaction(database) {
 
             val tx = TransactionType.General.Builder(DUMMY_NOTARY)
-            vault.generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, setOf(MINI_CORP))
+            vault.generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, setOf(MINI_CORP.ref(1)))
 
             assertEquals(vaultService.states.elementAt(2).ref, tx.inputStates()[0])
         }

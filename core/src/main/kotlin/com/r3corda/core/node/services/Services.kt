@@ -171,7 +171,7 @@ interface VaultService {
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,
                       to: PublicKey,
-                      onlyFromParties: Set<Party>? = null): Pair<TransactionBuilder, List<PublicKey>>
+                      onlyFromIssuers: Set<PartyAndReference>? = null): Pair<TransactionBuilder, List<PublicKey>>
 }
 
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)
