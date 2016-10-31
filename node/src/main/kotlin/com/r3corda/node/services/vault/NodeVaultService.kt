@@ -120,7 +120,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
     override fun generateSpend(tx: TransactionBuilder,
                                amount: Amount<Currency>,
                                to: PublicKey,
-                               onlyFromParties: Set<Party>?): Pair<TransactionBuilder, List<PublicKey>> {
+                               onlyFromIssuers: Set<PartyAndReference>?): Pair<TransactionBuilder, List<PublicKey>> {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -146,8 +146,8 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         val currency = amount.token
         var acceptableCoins = run {
             val ofCurrency = assetsStates.filter { it.state.data.amount.token.product == currency }
-            if (onlyFromParties != null)
-                ofCurrency.filter { it.state.data.amount.token.issuer.party in onlyFromParties }
+            if (onlyFromIssuers != null)
+                ofCurrency.filter { it.state.data.amount.token.issuer.party in onlyFromIssuers }
             else
                 ofCurrency
         }
