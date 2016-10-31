@@ -78,7 +78,7 @@ You can clone the repository with the following command:
 
 One you've cloned the respository, check-out the M4 version as a new local branch:
 
-``git checkout -b corcapp-m4 origin/M4``
+``git checkout -b cordapp-m4 origin/M4``
 
 As with the r3prototyping repository, you can also run from master if you wish to have access to new features but
 potentially sacrifice stability.
@@ -86,33 +86,32 @@ potentially sacrifice stability.
 .. warning:: Make sure that you check-out the correct version of the CorDapp template. E.g. if you are working with
   Corda core M4 then use the M4 version of the CorDapp template.
 
-We recommend you develop your CorDapp with IntelliJ. Boot up IntelliJ and point it to `open...`
+We recommend you develop your CorDapp with IntelliJ. Boot up IntelliJ. Navigate to ``File > Open ...``. Select the
+folder which you cloned the cordapp-template repository to. When IntelliJ advises you that your Gradle project is
+unlinked (via a little bubble which pops up), click on ``import Gradle project``.
+
+IntelliJ will resolve all the Corda dependencies along with sources and JavaDocs. You are now good to start building
+your first CorDapp!
 
 CorDapp-template Project Structure
 ----------------------------------
 
 The CorDapp template contains comprises of the following directory structure:
 
-.. sourcecode:: shell
+.. sourcecode:: bash
 
     . cordapp-template
     ├── README.md
     ├── build.gradle
     ├── config
-    │   ├── dev
-    │   │   └── log4j2.xml
-    │   └── test
-    │       └── log4j2.xml
+    │   ├── ...
     ├── gradle
-    │   └── wrapper
-    │       ├── gradle-wrapper.jar
-    │       └── gradle-wrapper.properties
+    │   └── ...
     ├── gradle.properties
     ├── gradlew
     ├── gradlew.bat
     ├── lib
-    │   ├── README.txt
-    │   └── quasar.jar
+    │   ├── ...
     ├── settings.gradle
     └── src
         ├── main
@@ -154,13 +153,120 @@ The CorDapp template contains comprises of the following directory structure:
             │           └── ExampleTest.kt
             └── resources
 
-* The **root directory** contains some gradle files and a README.
-* **config** contains necessary gradle plugins to build Corda.
-* **buildSrc** contains necessary gradle plugins to build Corda.
-* **buildSrc** contains necessary gradle plugins to build Corda.
-* **buildSrc** contains necessary gradle plugins to build Corda.
+In the file structure above, there are a number of auxillary files and folders you don't need to pay too much attention
+to:
 
-The cordapp-template SDK includes the framework for a basic CorDapp setup.
+* The **root directory** contains some gradle files and a README.
+* **config** contains log4j configs.
+* **gradle** contains the gradle wrapper, which allows the use of Gradle without installing it yourself and worrying
+  about which version is required.
+* **lib** contains the Quasar.jar which is required for runtime instrumentation of classes by Quasar.
+
+The other parts are of greater importance and covered below.
+
+The build.gradle File
+---------------------
+
+It is usually necessary to make a couple of changes to the **build.gradle** file.
+
+**The buildscript**
+
+The buildscript is always located at the top of the file. It specifies version numbers for dependencies, among other
+things. Ensure that ``corda_version`` is the same as the Corda core modules you published to Maven local. If not then
+``git checkout`` the correct version of the cordapp-template.
+
+.. sourcecode:: groovy
+
+  buildscript {
+      ext.kotlin_version = '1.0.4'
+      ext.corda_version = '0.5-SNAPSHOT' // Ensure this version is the same as the corda core modules you are using.
+      ext.quasar_version = '0.7.6'
+      ext.jersey_version = '2.23.1'
+
+      repositories {
+        ...
+      }
+
+      dependencies {
+        ...
+      }
+  }
+
+**Project dependencies**
+
+If you have any additional external dependencies for your CorDapp then add them below the comment at the end of this
+code snippet.package. Use the format:
+
+``compile "{groupId}:{artifactId}:{versionNumber}"``
+
+.. sourcecode:: groovy
+
+  dependencies {
+      compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+      testCompile group: 'junit', name: 'junit', version: '4.11'
+
+      // Corda integration dependencies
+      compile "com.r3corda:client:$corda_version"
+      compile "com.r3corda:core:$corda_version"
+      compile "com.r3corda:contracts:$corda_version"
+      compile "com.r3corda:node:$corda_version"
+      compile "com.r3corda:corda:$corda_version"
+      compile "com.r3corda:test-utils:$corda_version"
+
+      ...
+
+      // Cordapp dependencies
+      // Specify your cordapp's dependencies below, including dependent cordapps
+  }
+
+For further information about managing depdencies with Gradle look `here <https://docs.gradle.org/current/userguide/dependency_management.html>`_.
+
+**CordFormation**
+
+This is the local node deployment system for CorDapps, the nodes generated are intended to be used for experimenting,
+debugging, and testing node configurations and setups but not intended for production or testnet deployment.
+
+In the CorDapp build.gradle file you'll find a ``deployNodes`` task, this is where you configure the nodes you would
+like to deploy for testing. See further details below:
+
+.. sourcecode:: groovy
+
+  task deployNodes(type: com.r3corda.plugins.Cordform, dependsOn: ['build']) {
+      directory "./build/nodes" // The output directory.
+      networkMap "Controller" // The artemis address of the node to be used as the network map.
+      node {
+          name "Controller" // Artemis name of node to be deployed.
+          dirName "controller" // Directory to which the node will
+          nearestCity "London" // For use with the network visualiser.
+          advertisedServices = ["corda.notary.validating"] // A list of services you wish the node to offer.
+          artemisPort 12345
+          webPort 12346 // Usually 1 higher than the Artemis port.
+          cordapps = [] // Add package names of CordaApps.
+      }
+      node {
+          name "NodeA"
+          dirName "nodea"
+          nearestCity "London"
+          advertisedServices = []
+          artemisPort 31337
+          webPort 31339
+          cordapps = []
+      }
+      ...
+  }
+
+You can add any number of nodes, with any number of services / CorDapps by editing the templates in ``deployNodes``. The
+only requirement is that you must specify a node to run as the network map service and one as the notary service.
+
+.. note:: CorDapps in the current cordapp-template project are automatically registered with all nodes defined in
+  ``deployNodes``, although we expect this to change in the near future.
+
+.. warning:: Make sure that there are no port clashes!
+
+Service Provider Configuration File
+-----------------------------------
+
+some chat about resources/META-INF/com.r3corda.core.node.CordaPluginRegistry.
 
 All CorDapps must sub-class the CordaPlugin Registry class.
 
@@ -203,10 +309,113 @@ All CorDapps must sub-class the CordaPlugin Registry class.
       open val servicePlugins: List<Class<*>> = emptyList()
   }
 
-# Edit the deployNodes gradle task as required.
-# Can add or remove nodes.
+You sub-class it like this:
 
-./gradlew deployNodes
+.. sourcecode:: kotlin
+
+  class Plugin() : CordaPluginRegistry() {
+    ... to be completed ...
+  }
+
+**Static Served Content**
+
+Some chat about serving static content. E.g. from resources/exampleWeb.
+
+**Protocols**
+
+To be completed.
+
+**Services**
+
+Take an instance of ``ServicehubInternal``, which gives you access to a whole bunch of stuff. To be completed.
+
+The CorDapp Skeleton
+--------------------
+
+* MainKt
+* api
+* client
+* contract
+* model
+* plugin
+* protocol
+
+**API**
+
+.. sourcecode:: kotlin
+
+  // API is accessible from /api/example. All paths specified below are relative to it.
+  @Path("example")
+  class ExampleApi(val services: ServiceHub) {
+
+      ...
+
+      /**
+       * Displays all current example deals in the ledger
+       */
+      @GET
+      @Path("deals")
+      @Produces(MediaType.APPLICATION_JSON)
+      fun getDeals(): Any {
+          val states = services.vaultService.linearHeadsOfType<ExampleState>()
+          return states
+      }
+
+      /**
+       * This initiates a protocol to agree a deal with the other party. Once the protocol finishes it will
+       * have written this deal to the ledger.
+       */
+      @PUT
+      @Path("{party}/create-deal")
+      fun createDeal(swap: ExampleModel, @PathParam("party") partyName: String): Response {
+          val otherParty = services.identityService.partyFromName(partyName)
+          if(otherParty != null) {
+              // The line below blocks and waits for the future to resolve.
+              services.invokeProtocolAsync<ExampleState>(ExampleProtocol.Requester::class.java, swap, otherParty).get()
+              return Response.status(Response.Status.CREATED).build()
+          } else {
+              return Response.status(Response.Status.BAD_REQUEST).build()
+          }
+      }
+  }
+
+**Client**
+
+Some chat about the client RPC framework.
+
+**Contract**
+
+Stuff to go here.
+
+**Model**
+
+.. sourcecode:: kotlin
+
+  /**
+   * A simple class with arbitrary data to be written to the ledger. In reality this could be a representation
+   * of some kind of trade such as an IRS swap for example.
+   */
+  data class ExampleModel(val swapRef: String, val data: String)
+
+**Protocols**
+
+Stuff to go here.
+
+Deploying Your Nodes Locally
+----------------------------
+
+Some chat about ``./gradlew deployNodes``.
+
+Talk about what is deployed and in what directories.
+
+Node.conf.
+
+/plugins folder.
+
+Starting your nodes
+-------------------
+
+**Via the command line**
 
 cd build/nodes
 sh runnodes
@@ -215,21 +424,19 @@ sh runnodes
 # Check the deployNodes gradle task to see what port numbers to use.
 # You can see that all the nodes offer a web server and api server.
 
-Build.gradle
-------------
+** Via IntelliJ**
 
-* corda version. Needs to match that of the corda core version you are using.
-* understanding the build gradle file. deploy nodes specifically. How to deploy different classes of node. Deploy nodes is
-  used to run small test networks of nodes on your local machine. you need a network map service and a notary at a minimum.
-* node.conf
-* running the nodes.
+Running from intelliJ (via the driver DSL).
+
+Using the cordapp-template project
+----------------------------------
+
 * Accessing the static served content.
 * Accessing the http API.
+* Accessing via the client RPC framework.
+* Persistence, etc.
 * Defining new node services.
 * Defining new protocols.
 * defining new contracts.
 * definining new states.
 * defining new data structures.
-* running from intelliJ (the driver DSL).
-
-
