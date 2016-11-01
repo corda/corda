@@ -1,35 +1,32 @@
 package com.r3corda.node.services
 
-import com.google.common.jimfs.Configuration
-import com.google.common.jimfs.Jimfs
 import com.r3corda.core.contracts.*
 import com.r3corda.core.days
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.recordTransactions
-import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRef
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.serialization.SingletonSerializeAsToken
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.node.services.events.NodeSchedulerService
 import com.r3corda.node.services.persistence.DBCheckpointStorage
 import com.r3corda.node.services.statemachine.StateMachineManager
-import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.node.utilities.configureDatabase
 import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.ALICE_KEY
-import com.r3corda.testing.node.*
+import com.r3corda.testing.node.InMemoryMessagingNetwork
+import com.r3corda.testing.node.MockKeyManagementService
+import com.r3corda.testing.node.TestClock
+import com.r3corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.Closeable
-import java.nio.file.FileSystem
 import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
@@ -39,8 +36,6 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertTrue
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
-    // Use an in memory file system for testing attachment storage.
-    val fs: FileSystem = Jimfs.newFileSystem(Configuration.unix())
 
     val realClock: Clock = Clock.systemUTC()
     val stoppedClock = Clock.fixed(realClock.instant(), realClock.zone)
@@ -82,19 +77,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
 
-        // Switched from InMemoryVault usage to NodeVault
         databaseTransaction(database) {
-            val services1 = object : MockServices() {
-                override val vaultService: VaultService = NodeVaultService(this)
-
-                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-                    for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
-                        vaultService.notify(stx.tx)
-                    }
-                }
-
-            }
             val kms = MockKeyManagementService(ALICE_KEY)
             val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), database)
             services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {

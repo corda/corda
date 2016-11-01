@@ -165,7 +165,9 @@ interface VaultService {
     }
 
     /**
-     * Fungible Asset operations
+     *  [InsufficientBalanceException] is thrown when a Cash Spending transaction fails because
+     *  there is insufficient quantity for a given currency (and optionally set of Issuers).
+     *  Note: an [Amount] of [Currency] is only fungible for a given Issuer within a [FungibleAsset]
      **/
     @Throws(InsufficientBalanceException::class)
     fun generateSpend(tx: TransactionBuilder,
