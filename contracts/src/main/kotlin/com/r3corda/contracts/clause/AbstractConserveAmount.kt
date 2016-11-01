@@ -1,12 +1,7 @@
 package com.r3corda.contracts.clause
 
-import com.r3corda.core.contracts.FungibleAsset
-import com.r3corda.core.contracts.InsufficientBalanceException
-import com.r3corda.core.contracts.sumFungibleOrNull
-import com.r3corda.core.contracts.sumFungibleOrZero
 import com.r3corda.core.contracts.*
 import com.r3corda.core.contracts.clauses.Clause
-import com.r3corda.core.crypto.Party
 import com.r3corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 import java.util.*
@@ -68,7 +63,7 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
         val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, Amount(amount.quantity, currency))
         val takeChangeFrom = gathered.lastOrNull()
         val change = if (takeChangeFrom != null && gatheredAmount > amount) {
-            Amount(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
+            Amount(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.amount.token)
         } else {
             null
         }

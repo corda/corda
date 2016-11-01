@@ -60,7 +60,7 @@ class Obligation<P> : Contract {
                 )
         ) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<Obligation.State<P>, Issued<Terms<P>>>>
-                    = tx.groupStates<Obligation.State<P>, Issued<Terms<P>>> { it.issuanceDef }
+                    = tx.groupStates<Obligation.State<P>, Issued<Terms<P>>> { it.amount.token }
         }
 
         /**
@@ -152,7 +152,7 @@ class Obligation<P> : Contract {
                         .filter { it.contract.legalContractReference in template.acceptableContracts }
                         // Restrict the states to those of the correct issuance definition (this normally
                         // covers issued product and obligor, but is opaque to us)
-                        .filter { it.issuanceDef in template.acceptableIssuedProducts }
+                        .filter { it.amount.token in template.acceptableIssuedProducts }
                 // Catch that there's nothing useful here, so we can dump out a useful error
                 requireThat {
                     "there are fungible asset state outputs" by (assetStates.size > 0)
@@ -164,7 +164,7 @@ class Obligation<P> : Contract {
                 // this one.
                 val moveCommands = tx.commands.select<MoveCommand>()
                 var totalPenniesSettled = 0L
-                val requiredSigners = inputs.map { it.deposit.party.owningKey }.toSet()
+                val requiredSigners = inputs.map { it.amount.token.issuer.party.owningKey }.toSet()
 
                 for ((beneficiary, obligations) in inputs.groupBy { it.owner }) {
                     val settled = amountReceivedByOwner[beneficiary]?.sumFungibleOrNull<P>()
@@ -268,21 +268,12 @@ class Obligation<P> : Contract {
             /** The public key of the entity the contract pays to */
             val beneficiary: PublicKey
     ) : FungibleAsset<Obligation.Terms<P>>, NettableState<State<P>, MultilateralNetState<P>> {
-        override val amount: Amount<Issued<Terms<P>>>
-            get() = Amount(quantity, issuanceDef)
+        override val amount: Amount<Issued<Terms<P>>> = Amount(quantity, Issued(obligor.ref(0), template))
         override val contract = OBLIGATION_PROGRAM_ID
-        override val deposit: PartyAndReference
-            get() = amount.token.issuer
-        override val exitKeys: Collection<PublicKey>
-            get() = setOf(owner)
-        val dueBefore: Instant
-            get() = template.dueBefore
-        override val issuanceDef: Issued<Terms<P>>
-            get() = Issued(obligor.ref(0), template)
-        override val participants: List<PublicKey>
-            get() = listOf(obligor.owningKey, beneficiary)
-        override val owner: PublicKey
-            get() = beneficiary
+        override val exitKeys: Collection<PublicKey> = setOf(beneficiary)
+        val dueBefore: Instant = template.dueBefore
+        override val participants: List<PublicKey> = listOf(obligor.owningKey, beneficiary)
+        override val owner: PublicKey = beneficiary
 
         override fun move(newAmount: Amount<Issued<Terms<P>>>, newOwner: PublicKey): State<P>
                 = copy(quantity = newAmount.quantity, beneficiary = newOwner)
@@ -522,7 +513,7 @@ class Obligation<P> : Contract {
         require(states.all { it.lifecycle == existingLifecycle }) { "initial lifecycle must be $existingLifecycle for all input states" }
 
         // Produce a new set of states
-        val groups = statesAndRefs.groupBy { it.state.data.issuanceDef }
+        val groups = statesAndRefs.groupBy { it.state.data.amount.token }
         for ((aggregateState, stateAndRefs) in groups) {
             val partiesUsed = ArrayList<PublicKey>()
             stateAndRefs.forEach { stateAndRef ->
@@ -608,7 +599,7 @@ class Obligation<P> : Contract {
 
     /** Get the common issuance definition for one or more states, or throw an IllegalArgumentException. */
     private fun getIssuanceDefinitionOrThrow(states: Iterable<State<P>>): Issued<Terms<P>> =
-            states.map { it.issuanceDef }.distinct().single()
+            states.map { it.amount.token }.distinct().single()
 
     /** Get the common issuance definition for one or more states, or throw an IllegalArgumentException. */
     private fun getTermsOrThrow(states: Iterable<State<P>>) =

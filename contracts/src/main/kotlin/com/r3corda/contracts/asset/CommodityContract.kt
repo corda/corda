@@ -72,7 +72,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
              * Group commodity states by issuance definition (issuer and underlying commodity).
              */
             override fun groupStates(tx: TransactionForContract)
-                    = tx.groupStates<State, Issued<Commodity>> { it.issuanceDef }
+                    = tx.groupStates<State, Issued<Commodity>> { it.amount.token }
         }
 
         /**
@@ -101,16 +101,14 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
         constructor(deposit: PartyAndReference, amount: Amount<Commodity>, owner: PublicKey)
             : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
-        override val deposit = amount.token.issuer
         override val contract = COMMODITY_PROGRAM_ID
         override val exitKeys = Collections.singleton(owner)
-        override val issuanceDef = amount.token
         override val participants = listOf(owner)
 
         override fun move(newAmount: Amount<Issued<Commodity>>, newOwner: PublicKey): FungibleAsset<Commodity>
             = copy(amount = amount.copy(newAmount.quantity, amount.token), owner = newOwner)
 
-        override fun toString() = "Commodity($amount at $deposit owned by ${owner.toStringShort()})"
+        override fun toString() = "Commodity($amount at ${amount.token.issuer} owned by ${owner.toStringShort()})"
 
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
     }
