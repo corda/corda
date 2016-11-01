@@ -32,9 +32,6 @@ object DataVending {
      * Additionally, because nodes do not store invalid transactions, requesting such a transaction will always yield null.
      */
     @ThreadSafe
-    // TODO:  I don't like that this needs ServiceHubInternal, but passing in a state machine breaks MockServices because
-//        the state machine isn't set when this is constructed. [NodeSchedulerService] has the same problem, and both
-//        should be fixed at the same time.
     class Service(services: PluginServiceHub) : SingletonSerializeAsToken() {
 
         companion object {

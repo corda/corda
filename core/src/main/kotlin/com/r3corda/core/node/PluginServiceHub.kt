@@ -19,6 +19,8 @@ interface PluginServiceHub : ServiceHub {
      * form: registerProtocolInitiator(InitiatorProtocol::class, ::InitiatedProtocol)
      * @param protocolFactory The protocol factory generating the initiated protocol.
      */
+
+    // TODO: remove dependency on Kotlin relfection (Kotlin KClass -> Java Class).
     fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>)
 
     /**
