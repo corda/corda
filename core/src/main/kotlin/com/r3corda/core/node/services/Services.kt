@@ -168,6 +168,9 @@ interface VaultService {
 
     /**
      *  Add a note to an existing [LedgerTransaction] given by its unique [SecureHash] id
+     *  Multiple notes may be attached to the same [LedgerTransaction].
+     *  These are additively and immutably persisted within the node local vault database in a single textual field
+     *  using a semi-colon separator
      */
     fun addNoteToTransaction(txnId: SecureHash, noteText: String)
 

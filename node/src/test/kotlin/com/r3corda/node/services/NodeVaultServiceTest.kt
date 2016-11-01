@@ -85,7 +85,6 @@ class NodeVaultServiceTest {
 
     @Test
     fun addNoteToTransaction() {
-
         databaseTransaction(database) {
             val services = object : MockServices() {
                 override val vaultService: VaultService = NodeVaultService(this)

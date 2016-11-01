@@ -77,10 +77,6 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             }
         }
 
-        fun allTransactionNotes(): Map<SecureHash,Set<String>> {
-            return transactionNotes
-        }
-
         val _updatesPublisher = PublishSubject.create<Vault.Update>()
 
         fun allUnconsumedStates(): Iterable<StateAndRef<ContractState>> {
@@ -104,14 +100,14 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         }
     })
 
-    override val currentVault: Vault get() = mutex.locked { Vault(allUnconsumedStates(), allTransactionNotes()) }
+    override val currentVault: Vault get() = mutex.locked { Vault(allUnconsumedStates(), transactionNotes) }
 
     override val updates: Observable<Vault.Update>
         get() = mutex.locked { _updatesPublisher }
 
     override fun track(): Pair<Vault, Observable<Vault.Update>> {
         return mutex.locked {
-            Pair(Vault(allUnconsumedStates(), allTransactionNotes()), _updatesPublisher.bufferUntilSubscribed())
+            Pair(Vault(allUnconsumedStates(), transactionNotes), _updatesPublisher.bufferUntilSubscribed())
         }
     }
 
@@ -134,7 +130,6 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         }
         return currentVault
     }
-
 
     override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
         mutex.locked {
@@ -300,5 +295,4 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             false
         }
     }
-
 }
