@@ -5,8 +5,8 @@ import com.google.common.net.HostAndPort
 import java.net.URL
 
 class HttpApi(val root: URL) {
-    fun putJson(path: String, data: Any) = HttpUtils.putJson(URL(root, path), toJson(data))
-    fun postJson(path: String, data: Any) = HttpUtils.postJson(URL(root, path), toJson(data))
+    fun putJson(path: String, data: Any = Unit) = HttpUtils.putJson(URL(root, path), toJson(data))
+    fun postJson(path: String, data: Any = Unit) = HttpUtils.postJson(URL(root, path), toJson(data))
 
     private fun toJson(any: Any) = ObjectMapper().writeValueAsString(any)
 
