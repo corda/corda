@@ -35,7 +35,7 @@ class Node {
     private Config config = ConfigFactory.empty()
     //private Map<String, Object> config = new HashMap<String, Object>()
     private File nodeDir
-    private def project
+    private Project project
 
     /**
      * Set the name of the node.
@@ -150,7 +150,7 @@ class Node {
      * Installs this project's cordapp to this directory.
      */
     private void installBuiltPlugin() {
-        def pluginsDir = getAndCreateDirectory(nodeDir, "plugins")
+        def pluginsDir = new File(nodeDir, "plugins")
         project.copy {
             from project.jar
             into pluginsDir
@@ -161,7 +161,7 @@ class Node {
      * Installs other cordapps to this node's plugins directory.
      */
     private void installCordapps() {
-        def pluginsDir = getAndCreateDirectory(nodeDir, "plugins")
+        def pluginsDir = new File(nodeDir, "plugins")
         def cordapps = getCordappList()
         project.copy {
             from cordapps
@@ -175,7 +175,7 @@ class Node {
     private void installDependencies() {
         def cordaJar = verifyAndGetCordaJar()
         def cordappList = getCordappList()
-        def depsDir = getAndCreateDirectory(nodeDir, "dependencies")
+        def depsDir = new File(nodeDir, "dependencies")
         def appDeps = project.configurations.runtime.filter { it != cordaJar && !cordappList.contains(it) }
         project.copy {
             from appDeps
@@ -190,9 +190,17 @@ class Node {
         // Adding required default values
         config = config.withValue('extraAdvertisedServiceIds',
                 ConfigValueFactory.fromAnyRef(advertisedServices.join(',')))
-
         def configFileText = config.root().render(new ConfigRenderOptions(false, false, true, false)).split("\n").toList()
-        Files.write(new File(nodeDir, 'node.conf').toPath(), configFileText, StandardCharsets.UTF_8)
+
+        // Need to write a temporary file first to use the project.copy, which resolves directories correctly.
+        def tmpDir = new File(project.buildDir, "tmp")
+        def tmpConfFile = new File(tmpDir, 'node.conf')
+        Files.write(tmpConfFile.toPath(), configFileText, StandardCharsets.UTF_8)
+
+        project.copy {
+            from tmpConfFile
+            into nodeDir
+        }
     }
 
     /**
@@ -222,19 +230,5 @@ class Node {
             def jarName = it.name.split('-').first()
             return (it != cordaJar) && cordapps.contains(jarName)
         }
-    }
-
-    /**
-     * Create a directory if it doesn't exist and return the file representation of it.
-     *
-     * @param baseDir The base directory to create the directory at.
-     * @param subDirName A valid name of the subdirectory to get and create if not exists.
-     * @return A file representing the subdirectory.
-     */
-    private static File getAndCreateDirectory(File baseDir, String subDirName) {
-        File dir = new File(baseDir, subDirName)
-        assert(!dir.exists() || dir.isDirectory())
-        dir.mkdirs()
-        return dir
     }
 }
