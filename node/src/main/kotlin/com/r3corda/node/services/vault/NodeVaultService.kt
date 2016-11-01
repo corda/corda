@@ -147,7 +147,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         var acceptableCoins = run {
             val ofCurrency = assetsStates.filter { it.state.data.amount.token.product == currency }
             if (onlyFromIssuers != null)
-                ofCurrency.filter { it.state.data.amount.token.issuer.party in onlyFromIssuers }
+                ofCurrency.filter { it.state.data.amount.token.issuer in onlyFromIssuers }
             else
                 ofCurrency
         }

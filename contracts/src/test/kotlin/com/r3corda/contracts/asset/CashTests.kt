@@ -85,57 +85,6 @@ class CashTests {
         }
     }
 
-    @After
-    fun tearDown() {
-        LogHelper.reset(NodeVaultService::class)
-        dataSource.close()
-    }
-
-    lateinit var services: MockServices
-    val vault: VaultService get() = services.vaultService
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
-    lateinit var vaultService: Vault
-
-    @Before
-    fun setUp() {
-        LogHelper.setLevel(NodeVaultService::class)
-        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
-        databaseTransaction(database) {
-            services = object : MockServices() {
-                override val keyManagementService: MockKeyManagementService = MockKeyManagementService(MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY)
-                override val vaultService: VaultService = NodeVaultService(this)
-
-                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-                    for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
-                    }
-                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    vaultService.notifyAll(txs.map { it.tx })
-                }
-            }
-
-            services.fillWithSomeTestCash(howMuch = 100.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    issuedBy = MEGA_CORP.ref(1), issuerKey = MEGA_CORP_KEY, ownedBy = OUR_PUBKEY_1)
-            services.fillWithSomeTestCash(howMuch = 400.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    issuedBy = MEGA_CORP.ref(1), issuerKey = MEGA_CORP_KEY, ownedBy = OUR_PUBKEY_1)
-            services.fillWithSomeTestCash(howMuch = 80.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    issuedBy = MINI_CORP.ref(1), issuerKey = MINI_CORP_KEY, ownedBy = OUR_PUBKEY_1)
-            services.fillWithSomeTestCash(howMuch = 80.SWISS_FRANCS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    issuedBy = MINI_CORP.ref(1), issuerKey = MINI_CORP_KEY, ownedBy = OUR_PUBKEY_1)
-
-            vaultService = services.vaultService.currentVault
-        }
-    }
-
-    @After
-    fun tearDown() {
-        LogHelper.reset(NodeVaultService::class)
-        dataSource.close()
-    }
-
     @Test
     fun trivial() {
         transaction {
@@ -614,7 +563,7 @@ class CashTests {
         databaseTransaction(database) {
 
             val tx = TransactionType.General.Builder(DUMMY_NOTARY)
-            vault.generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, setOf(MINI_CORP))
+            vault.generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, setOf(MINI_CORP.ref(1)))
 
             assertEquals(vaultService.states.elementAt(2).ref, tx.inputStates()[0])
         }
