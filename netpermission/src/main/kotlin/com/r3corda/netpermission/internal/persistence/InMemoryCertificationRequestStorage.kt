@@ -5,14 +5,24 @@ import java.security.cert.Certificate
 import java.util.*
 
 class InMemoryCertificationRequestStorage : CertificationRequestStorage {
-    val requestStore = HashMap<String, CertificationData>()
-    val certificateStore = HashMap<String, Certificate>()
+    private val requestStore = HashMap<String, CertificationData>()
+    private val certificateStore = HashMap<String, Certificate>()
 
-    override fun getOrElseCreateCertificate(requestId: String, certificateGenerator: () -> Certificate): Certificate {
-        return certificateStore.getOrPut(requestId, certificateGenerator)
+    override fun pendingRequestIds(): List<String> {
+        return requestStore.keys.filter { !certificateStore.keys.contains(it) }
     }
 
-    override fun getApprovedRequest(requestId: String): CertificationData? {
+    override fun getCertificate(requestId: String): Certificate? {
+        return certificateStore[requestId]
+    }
+
+    override fun saveCertificate(requestId: String, certificateGenerator: (CertificationData) -> Certificate) {
+        requestStore[requestId]?.let {
+            certificateStore.putIfAbsent(requestId, certificateGenerator(it))
+        }
+    }
+
+    override fun getRequest(requestId: String): CertificationData? {
         return requestStore[requestId]
     }
 

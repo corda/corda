@@ -2,11 +2,16 @@ package com.r3corda.netpermission
 
 import com.google.common.net.HostAndPort
 import com.r3corda.core.crypto.X509Utilities
-import com.r3corda.core.utilities.LogHelper
+import com.r3corda.core.utilities.debug
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.netpermission.internal.CertificateSigningService
-import com.r3corda.netpermission.internal.persistence.InMemoryCertificationRequestStorage
+import com.r3corda.netpermission.internal.persistence.DBCertificateRequestStorage
+import com.r3corda.node.services.config.ConfigHelper
+import com.r3corda.node.services.config.getProperties
+import com.r3corda.node.utilities.configureDatabase
+import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -17,6 +22,7 @@ import org.glassfish.jersey.servlet.ServletContainer
 import java.io.Closeable
 import java.net.InetSocketAddress
 import java.nio.file.Paths
+import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
 /**
@@ -25,6 +31,7 @@ import kotlin.system.exitProcess
  *  The Intermediate CA certificate,Intermediate CA private key and Root CA Certificate should use alias name specified in [X509Utilities]
  */
 class CertificateSigningServer(val webServerAddr: HostAndPort, val certSigningService: CertificateSigningService) : Closeable {
+
     companion object {
         val log = loggerFor<CertificateSigningServer>()
         fun Server.hostAndPort(): HostAndPort {
@@ -68,20 +75,11 @@ class CertificateSigningServer(val webServerAddr: HostAndPort, val certSigningSe
 
 object ParamsSpec {
     val parser = OptionParser()
-    val host = parser.accepts("host", "The hostname permissioning server will be running on.")
-            .withRequiredArg().defaultsTo("localhost")
-    val port = parser.accepts("port", "The port number permissioning server will be running on.")
-            .withRequiredArg().ofType(Int::class.java).defaultsTo(0)
-    val keystorePath = parser.accepts("keystore", "The path to the keyStore containing and root certificate, intermediate CA certificate and private key.")
-            .withRequiredArg().required()
-    val storePassword = parser.accepts("storePassword", "Keystore's password.")
-            .withRequiredArg().required()
-    val caKeyPassword = parser.accepts("caKeyPassword", "Intermediate CA private key password.")
-            .withRequiredArg().required()
+    val basedir: ArgumentAcceptingOptionSpec<String>? = parser.accepts("basedir", "Overriding configuration file path.")
+            .withRequiredArg()
 }
 
 fun main(args: Array<String>) {
-    LogHelper.setLevel(CertificateSigningServer::class)
     val log = CertificateSigningServer.log
     log.info("Starting certificate signing server.")
     try {
@@ -91,17 +89,48 @@ fun main(args: Array<String>) {
         ParamsSpec.parser.printHelpOn(System.out)
         exitProcess(1)
     }.run {
-        // Load keystore from input path, default to Dev keystore from jar resource if path not defined.
-        val storePassword = valueOf(ParamsSpec.storePassword)
-        val keyPassword = valueOf(ParamsSpec.caKeyPassword)
-        val keystore = X509Utilities.loadKeyStore(Paths.get(valueOf(ParamsSpec.keystorePath)).normalize(), storePassword)
-        val intermediateCACertAndKey = X509Utilities.loadCertificateAndKey(keystore, keyPassword, X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY)
+        val basedir = Paths.get(valueOf(ParamsSpec.basedir) ?: ".")
+        val config = ConfigHelper.loadConfig(basedir)
+
+        val keystore = X509Utilities.loadKeyStore(Paths.get(config.getString("keystorePath")).normalize(), config.getString("keyStorePassword"))
+        val intermediateCACertAndKey = X509Utilities.loadCertificateAndKey(keystore, config.getString("caKeyPassword"), X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY)
         val rootCA = keystore.getCertificateChain(X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY).last()
 
-        // TODO: Create a proper request storage using database or other storage technology.
-        val service = CertificateSigningService(intermediateCACertAndKey, rootCA, InMemoryCertificationRequestStorage())
+        // Create DB connection.
+        val (datasource, database) = configureDatabase(config.getProperties("dataSourceProperties"))
 
-        CertificateSigningServer(HostAndPort.fromParts(valueOf(ParamsSpec.host), valueOf(ParamsSpec.port)), service).use {
+        val storage = DBCertificateRequestStorage(database)
+        val service = CertificateSigningService(intermediateCACertAndKey, rootCA, storage)
+
+        // Background thread approving all request periodically.
+        var stopSigner = false
+        val certSinger = if (config.getBoolean("approveAll")) {
+            thread {
+                while (!stopSigner) {
+                    Thread.sleep(1000)
+                    for (id in storage.pendingRequestIds()) {
+                        storage.saveCertificate(id, {
+                            JcaPKCS10CertificationRequest(it.request).run {
+                                X509Utilities.createServerCert(subject, publicKey, intermediateCACertAndKey,
+                                        if (it.ipAddr == it.hostName) listOf() else listOf(it.hostName), listOf(it.ipAddr))
+                            }
+                        })
+                        log.debug { "Approved $id" }
+                    }
+                }
+                log.debug { "Certificate Signer thread stopped." }
+            }
+        } else {
+            null
+        }
+
+        CertificateSigningServer(HostAndPort.fromParts(config.getString("host"), config.getInt("port")), service).use {
+            Runtime.getRuntime().addShutdownHook(thread(false) {
+                stopSigner = true
+                certSinger?.join()
+                it.close()
+                datasource.close()
+            })
             it.server.join()
         }
     }
