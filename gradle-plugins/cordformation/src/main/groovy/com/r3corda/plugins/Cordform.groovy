@@ -1,5 +1,6 @@
 package com.r3corda.plugins
 
+import org.apache.tools.ant.filters.FixCrLfFilter
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 import java.nio.file.Path
@@ -53,7 +54,7 @@ class Cordform extends DefaultTask {
      */
     protected Node getNodeByName(String name) {
         for(Node node : nodes) {
-            if(node.name.equals(networkMapNodeName)) {
+            if(node.name == networkMapNodeName) {
                 return node
             }
         }
@@ -69,7 +70,7 @@ class Cordform extends DefaultTask {
             from Cordformation.getPluginFile(project, "com/r3corda/plugins/runnodes")
             filter { String line -> line.replace("JAR_NAME", Node.JAR_NAME) }
             // Replaces end of line with lf to avoid issues with the bash interpreter and Windows style line endings.
-            filter(org.apache.tools.ant.filters.FixCrLfFilter.class, eol: org.apache.tools.ant.filters.FixCrLfFilter.CrLf.newInstance("lf"))
+            filter(FixCrLfFilter.class, eol: FixCrLfFilter.CrLf.newInstance("lf"))
             into "${directory}/"
         }
     }
