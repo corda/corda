@@ -3,6 +3,7 @@ package com.r3corda.node.services.messaging
 import com.r3corda.core.contracts.ClientToServiceCommand
 import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.StateAndRef
+import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.StateMachineTransactionMapping
@@ -116,4 +117,14 @@ interface CordaRPCOps : RPCOps {
      * TODO: The signature of this is weird because it's the remains of an old service call, we should have a call for each command instead.
      */
     fun executeCommand(command: ClientToServiceCommand): TransactionBuildResult
+
+    /*
+     * Add note(s) to an existing Vault transaction
+     */
+    fun addVaultTransactionNote(txnId: SecureHash, txnNote: String)
+
+    /*
+     * Retrieve existing note(s) for a given Vault transaction
+     */
+    fun getVaultTransactionNotes(txnId: SecureHash): Iterable<String>
 }

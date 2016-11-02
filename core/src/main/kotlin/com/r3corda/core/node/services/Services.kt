@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.transactions.WireTransaction
 import rx.Observable
@@ -35,7 +36,8 @@ val DEFAULT_SESSION_ID = 0L
  *   Active means they haven't been consumed yet (or we don't know about it).
  *   Relevant means they contain at least one of our pubkeys.
  */
-class Vault(val states: Iterable<StateAndRef<ContractState>>) {
+class Vault(val states: Iterable<StateAndRef<ContractState>>,
+            val transactionNotes: Map<SecureHash, Set<String>> = emptyMap()) {
     @Suppress("UNCHECKED_CAST")
     inline fun <reified T : ContractState> statesOfType() = states.filter { it.state.data is T } as List<StateAndRef<T>>
 
@@ -163,6 +165,16 @@ interface VaultService {
         }
         return future
     }
+
+    /**
+     *  Add a note to an existing [LedgerTransaction] given by its unique [SecureHash] id
+     *  Multiple notes may be attached to the same [LedgerTransaction].
+     *  These are additively and immutably persisted within the node local vault database in a single textual field
+     *  using a semi-colon separator
+     */
+    fun addNoteToTransaction(txnId: SecureHash, noteText: String)
+
+    fun getTransactionNotes(txnId: SecureHash): Iterable<String>
 
     /**
      *  [InsufficientBalanceException] is thrown when a Cash Spending transaction fails because

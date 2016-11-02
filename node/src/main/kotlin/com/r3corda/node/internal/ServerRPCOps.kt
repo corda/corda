@@ -4,6 +4,7 @@ import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.InsufficientBalanceException
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
@@ -71,6 +72,18 @@ class ServerRPCOps(
                 is ClientToServiceCommand.PayCash -> initiatePayment(command)
                 is ClientToServiceCommand.ExitCash -> exitCash(command)
             }
+        }
+    }
+
+    override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
+        return databaseTransaction(database) {
+           services.vaultService.addNoteToTransaction(txnId, txnNote)
+        }
+    }
+
+    override fun getVaultTransactionNotes(txnId: SecureHash): Iterable<String> {
+        return databaseTransaction(database) {
+            services.vaultService.getTransactionNotes(txnId)
         }
     }
 

@@ -4,6 +4,7 @@ import com.google.common.net.HostAndPort
 import com.r3corda.core.contracts.ClientToServiceCommand
 import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.StateAndRef
+import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.createMessage
@@ -84,6 +85,13 @@ class ArtemisMessagingTests {
             throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
 
+        override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
+            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
+        override fun getVaultTransactionNotes(txnId: SecureHash): Iterable<String> {
+            throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
     }
 
     @Before
