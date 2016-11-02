@@ -24,6 +24,10 @@ class JDBCHashMapTestSuite {
         lateinit var dataSource: Closeable
         lateinit var transaction: Transaction
         lateinit var database: Database
+        lateinit var loadOnInitFalseMap: JDBCHashMap<String, String>
+        lateinit var loadOnInitTrueMap: JDBCHashMap<String, String>
+        lateinit var loadOnInitFalseSet: JDBCHashSet<String>
+        lateinit var loadOnInitTrueSet: JDBCHashSet<String>
 
         @JvmStatic
         @BeforeClass
@@ -32,6 +36,10 @@ class JDBCHashMapTestSuite {
             dataSource = dataSourceAndDatabase.first
             database = dataSourceAndDatabase.second
             setUpDatabaseTx()
+            loadOnInitFalseMap = JDBCHashMap<String, String>("test_map_false", loadOnInit = false)
+            loadOnInitTrueMap = JDBCHashMap<String, String>("test_map_true", loadOnInit = true)
+            loadOnInitFalseSet = JDBCHashSet<String>("test_set_false", loadOnInit = false)
+            loadOnInitTrueSet = JDBCHashSet<String>("test_set_true", loadOnInit = true)
         }
 
         @JvmStatic
@@ -112,7 +120,8 @@ class JDBCHashMapTestSuite {
      */
     class JDBCHashMapTestGenerator(val loadOnInit: Boolean) : com.google.common.collect.testing.TestStringMapGenerator() {
         override fun create(elements: Array<Map.Entry<String, String>>): Map<String, String> {
-            val map = JDBCHashMap<String, String>("test_map_${System.nanoTime()}", loadOnInit = loadOnInit)
+            val map = if (loadOnInit) loadOnInitTrueMap else loadOnInitFalseMap
+            map.clear()
             map.putAll(elements.associate { Pair(it.key, it.value) })
             return map
         }
@@ -143,7 +152,8 @@ class JDBCHashMapTestSuite {
      */
     class JDBCHashSetTestGenerator(val loadOnInit: Boolean) : com.google.common.collect.testing.TestStringSetGenerator() {
         override fun create(elements: Array<String>): Set<String> {
-            val set = JDBCHashSet<String>("test_set_${System.nanoTime()}", loadOnInit = loadOnInit)
+            val set = if (loadOnInit) loadOnInitTrueSet else loadOnInitFalseSet
+            set.clear()
             set.addAll(elements)
             return set
         }
