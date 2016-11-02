@@ -25,7 +25,8 @@ class Node {
      */
     protected List<String> advertisedServices = []
     /**
-     * Set thThe list of cordapps to install to the plugins directory.
+     * Set the list of CorDapps to install to the plugins directory. Each cordapp is a fully qualified Maven
+     * dependency name, eg: com.example:product-name:0.1
      *
      * @note Your app will be installed by default and does not need to be included here.
      */
@@ -174,9 +175,9 @@ class Node {
      */
     private void installDependencies() {
         def cordaJar = verifyAndGetCordaJar()
-        def cordappList = getCordappList()
+        def cordappDeps = getCordappList()
         def depsDir = new File(nodeDir, "dependencies")
-        def appDeps = project.configurations.runtime.filter { it != cordaJar && !cordappList.contains(it) }
+        def appDeps = project.configurations.runtime.filter { it != cordaJar && !cordappDeps.contains(it) }
         project.copy {
             from appDeps
             into depsDir
@@ -224,11 +225,9 @@ class Node {
      *
      * @return List of this node's cordapps.
      */
-    private AbstractFileCollection getCordappList() {
-        def cordaJar = verifyAndGetCordaJar()
-        return project.configurations.runtime.filter {
-            def jarName = it.name.split('-').first()
-            return (it != cordaJar) && cordapps.contains(jarName)
+    private Collection<File> getCordappList() {
+        return project.configurations.cordapp.files {
+            cordapps.contains("${it.group}:${it.name}:${it.version}")
         }
     }
 }
