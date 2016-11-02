@@ -34,7 +34,7 @@
 
 %\renewcommand{\abstractname}{An introduction}
 \begin{center}
-Version 0.1
+Version 0.2
 
 \emph{Confidential: Pre-Publication Draft For R3 DLG}
 \end{center}
@@ -351,7 +351,7 @@ related payments off-ledger may use transactions that never go outside the invol
 on-ledger vs off-ledger cash can be found in a later section.
 
 \paragraph{Transaction privacy techniques.}Corda supports a variety of transaction data hiding techniques. For
-example, public keys can be randomised to make it difficult to link transactions to an identity. ``Tear-offs''
+example, public keys can be randomised to make it difficult to link transactions to an identity. ``Tear-offs'' (\cref{sec:tear-offs})
 allow some parts of a transaction to be presented without the others. In future versions of the system secure hardware
 and/or zero knowledge proofs could be used to convince a party of the validity of a transaction without revealing the
 underlying data.
@@ -385,11 +385,14 @@ service). Each command has an associated list of public keys. Like states, comma
 different.
 \item [Timestamp] When present, a timestamp defines a time range in which the transaction is considered to
 have occurrred. This is discussed in more detail below.
+\item [Summaries] Textual summaries of what the transaction does, checked by the involved smart contracts. This field
+is useful for secure signing devices (see \cref{sec:secure-signing-devices}).
 \end{labeling}
 
 % TODO: Update this one transaction types are separated.
 % TODO: This description ignores the participants field in states, because it probably needs a rethink.
 % TODO: Specify the curve used here once we decide how much we care about BIP32 public derivation.
+% TODO: Messages aren't implemented.
 
 Signatures are appended to the end of a transaction and transactions are identified by the hash used for signing, so
 signature malleability is not a problem. There is never a need to identify a transaction including its accompanying
@@ -590,7 +593,7 @@ efficiency hit of always linking transient public keys to longer term keys with 
 
 % TODO: Discuss the crypto suites used in Corda.
 
-\subsection{Oracles and tearoffs}
+\subsection{Oracles and tear-offs}\label{sec:tear-offs}
 
 It is sometimes convenient to reveal a small part of a transaction to a counterparty in a way that allows them
 to check the signatures and sign it themselves. A typical use case for this is an \emph{oracle}, defined as a
@@ -809,7 +812,127 @@ reach. In particular this means that the `shadow JDK' is also instrumented and s
 \section{Notaries}
 \section{The vault}\label{sec:vault}
 \section{Clauses}
-\section{Secure signing devices}
+
+\section{Secure signing devices}\label{sec:secure-signing-devices}
+
+\subsection{Background}
+
+A common feature of digital financial systems and blockchain-type systems in particular is the use of secure client-side
+hardware to hold private keys and perform signing operations with them. Combined with a zero tolerance approach to
+transaction rollbacks, this is one of the ways they reduce overheads: by attempting to ensure that transaction
+authorisation is robust and secure, and thus that signatures are reliable.
+
+Many banks have rolled out CAP (chip authentication program) readers which allow logins to online banking using a
+challenge/response protocol to a smartcard. The user is expected to type in the right codes and copy the responses back
+to the computer by hand. These devices are cheap, but tend to have small, unreliable, low resolution screens and can be
+subject to confusion attacks if there is malware on the PC, e.g. if the malware convinces the user they are performing
+a login challenge whereas in fact they are authorising a payment to a new account. The primary advantage is that the
+signing key is held in a robust and cheap smart card, so the device can be replaced without replacing the key.
+
+The state-of-the-art in this space are devices like the TREZOR\cite{TREZOR} by Satoshi Labs or the Ledger Blue. These
+were developed by and for the Bitcoin community. They are more expensive than CAP readers and feature better
+screens and USB connections to eliminate typing. Advanced devices like the Ledger Blue support NFC and
+Bluetooth as well. These devices differ from CAP readers in another key respect: instead of signing arbitrary, small
+challenge numbers, they actually understand the native transaction format of the Bitcoin network and parse the
+transaction to figure out the message to present to the user, who then confirms that they wish to perform the action
+printed on the screen by simply pressing a button. The transaction is then signed internally before being passed back to
+the PC via the USB/NFC/Bluetooth connection.
+
+This setup means that rather than having a small device that authorises to a powerful server (which controls all your
+assets), the device itself controls the assets. As there is no smartcard equivalent the private key can be exported off
+the device by writing it down in the form of ``wallet words'': 12 random words derived from the contents of the key.
+Because elliptic curve private keys are small (256 bits), this is not as tedious as it would be with the much larger RSA
+keys the financial industry is typically using.
+
+There are clear benefits to having signing keys be kept on personal, employee-controlled devices only, with the organisation's
+node not having any ability to sign for transactions itself:
+
+\begin{itemize}
+\item If the node is hacked by a malicious intruder or bad insider they cannot steal assets, modify agreements,
+or do anything else that requires human approval, because they don't have access to the signing keys. There is no single
+point of failure from a key management perspective.
+\item It's more clear who signed off on a particular action - the signatures prove which devices were used to sign off
+on an action. There can't be any back doors or administrator tools which can create transactions on behalf of someone else.
+\item Devices that integrate fingerprint readers and other biometric authentication could further increase trust by
+making it harder for employees to share/swap devices. In theory, an iPhone or Android device could be used as a
+transaction authenticator, although this would be expensive.
+\end{itemize}
+
+\subsection{Confusion attacks}
+
+The biggest problem facing anyone wanting to integrate smart signing devices into a distributed ledger system is how the
+device processes transactions. For Bitcoin it's straightforward for devices to process transactions directly because
+their format is very small and simple (in theory - in practice a fixable quirk of the Bitcoin protocol actually
+significantly complicates how these devices must work). Thus turning a Bitcoin transaction into a human meaningful
+confirmation screen is quite easy:
+
+\indent\texttt{Confirm payment of 1.23 BTC to 1AbCd0123456.......}
+
+This confirmation message is susceptible to confusion attacks because the opaque payment address is unpredictable. A
+sufficiently smart virus/attacker could have swapped out a legitimate address of a legitimate counterparty you are
+expecting to pay with one of their own, thus you'd pay the right amount to the wrong place. The same problem can affect
+financial authenticators that verify IBANs and other account numbers: the user's source of the IBAN may be an email or
+website they are viewing through the compromised machine. The BIP 70\cite{BIP70} protocol was designed to address this
+attack by allowing a certificate chain to be presented that linked a target key with a stable, human meaningful and
+verified identity.
+
+For a generic ledger we are faced with the additional problem that transactions may be of many different types,
+including new types created after the device was manufactured. Thus creating a succinct confirmation message inside the
+device would become an ever-changing problem requiring frequent firmware updates. As firmware upgrades are a potential
+weak point in any secure hardware scheme, it would be ideal to minimise their number.
+
+\subsection{Transaction summaries}
+
+To solve this problem we add a top level summaries field to the transaction format (joining inputs, outputs, commands,
+attachments etc). This new top level field is a list of strings. Smart contracts get a new responsibility. They are
+expected to generate an English message describing what the transaction is doing, and then check that it is present in
+the transaction. The field is a list of strings rather than a single string because a transaction may do multiple things
+simultaneously in advanced use cases.
+
+Because the calculation of the confirmation message has now been moved to the smart contract itself, and is a part of
+the transaction, the transaction can be sent to the signing device: all it needs to do is extract the messages and
+print them to the screen with YES/NO buttons available to decide whether to sign or not. Because the device's signature
+covers the messages, and the messages are checked by the contract based on the machine readable data in the states, we
+can know that the message was correct and legitimate.
+
+The design above is simple but has the issue that large amounts of data are sent to the device which it doesn't need.
+As it's common for signing devices to have constrained memory, it would be unfortunate if the complexity of a transaction
+ended up being limited by the RAM available in the users signing devices. To solve this we can use the tear-offs
+mechanism (see \cref{sec:tear-offs}) to present only the summaries and the Merkle branch connecting them to the root.
+The device can then sign the entire transaction contents having seen only the textual summaries, knowing that the states
+will trigger the contracts which will trigger the summary checks, thus the signature covers the machine-understandable
+version of the transaction as well.
+
+Note, we assume here that contracts are not themselves malicious. Whilst a malicious user could construct a contract that
+generated misleading messages, for a user to see states in their vault and work with them requires the accompanying
+CorDapp to be loaded into the node as a plugin and thus whitelisted. There is never a case where the user may be asked
+to sign a transaction involving contracts they have not previously approved, even though the node may execute such
+contracts as part of verifying transaction dependencies.
+
+\subsection{Identity substitution}
+
+Contract code only works with opaque representations of public keys. Because transactions in a chain of custody may need
+to be anonymised, it isn't possible for a contract to access identity information from inside the sandbox. Therefore it
+cannot generate a complete message that includes human meaningful identity names even if the node itself does have this
+information.
+
+To solve this the messages placed inside a transaction may contain numeric indexes of the public keys required by the
+commands using backtick syntax. The transaction is provided to the device along with the X.509 certificate chains
+linking the pseudonymous public keys to the long term identity certificates, which for transactions involving the user
+should always be available (as they by definition know who their trading counterparties are). The device can verify
+those certificate chains to build up a mapping of index to human readable name, and then perform the message
+substitution before rendering. Care must be taken to ensure that the X.500 names issued to network participants do not
+contain text chosen to deliberately confuse users, e.g. names that contain quote marks, partial instructions, special
+symbols and so on. This can be enforced at the network permissioning level.
+
+\subsection{Multi-lingual support}
+
+The contract is expected to generate a human readable version of the transaction. This should be in English, by
+convention. In theory, we could define the transaction format to support messages in different languages, and if
+the contract supported that the right language could then be picked by the signing device. However, care must be taken
+to ensure that the message the user sees in alternative languages is correctly translated and not subject to ambiguity
+or confusion, as otherwise exploitable confusion attacks may arise.
+
 \section{Client RPC and reactive collections}
 \section{Event scheduling}
 \section{Future work}
