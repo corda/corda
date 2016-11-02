@@ -32,7 +32,7 @@ import java.util.*
 import kotlin.test.*
 
 class CashTests {
-    val defaultRef = OpaqueBytes(ByteArray(1, {1}))
+    val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
     val defaultIssuer = MEGA_CORP.ref(defaultRef)
     val inState = Cash.State(
             amount = 1000.DOLLARS `issued by` defaultIssuer,
@@ -83,12 +83,6 @@ class CashTests {
 
             vaultService = services.vaultService.currentVault
         }
-    }
-
-    @After
-    fun tearDown() {
-        LogHelper.reset(NodeVaultService::class)
-        dataSource.close()
     }
 
     @Test
@@ -264,7 +258,7 @@ class CashTests {
         // Include the previously issued cash in a new issuance command
         ptx = TransactionType.General.Builder(DUMMY_NOTARY)
         ptx.addInputState(tx.tx.outRef<Cash.State>(0))
-        Cash().generateIssue(ptx, 100.DOLLARS `issued by`  MINI_CORP.ref(12, 34), owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
+        Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
     }
 
     @Test
@@ -492,7 +486,7 @@ class CashTests {
     }
 
     fun makeSpend(amount: Amount<Currency>, dest: PublicKey): WireTransaction {
-        var tx = TransactionType.General.Builder(DUMMY_NOTARY)
+        val tx = TransactionType.General.Builder(DUMMY_NOTARY)
         databaseTransaction(database) {
             vault.generateSpend(tx, amount, dest)
         }
@@ -618,8 +612,8 @@ class CashTests {
             assertEquals(vaultState0.ref, wtx.inputs[0])
             assertEquals(vaultState1.ref, wtx.inputs[1])
             assertEquals(vaultState2.ref, wtx.inputs[2])
-            assertEquals(vaultState0.state.data.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
-            assertEquals(vaultState2.state.data.copy(owner = THEIR_PUBKEY_1), wtx.outputs[1].data)
+            assertEquals(vaultState0.state.data.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[1].data)
+            assertEquals(vaultState2.state.data.copy(owner = THEIR_PUBKEY_1), wtx.outputs[0].data)
             assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
