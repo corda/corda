@@ -61,14 +61,16 @@ Running the app
 
 The demonstration can be run in two ways - via IntelliJ (which will allow you to add breakpoints, debug, etc), or via gradle and the command line.
 
+Run with IntelliJ::
 
-Via IntelliJ
-    - locate ``Main.kt`` in TODO
-    - run TODO
-    - browse to TODO
+    1. Open the `cordapp-samples` project with IntelliJ
+    2. Run the shared run configuration "SIMM Valuation Demo"
+    3. Browse to http://localhost:10005/web/simmvaluationdemo
 
-Via Command Line
-    - gradle TODO
-    - cd TODO
-    - java corda.jar TOOD
-    - (repeat for nodes x,y,z) TODO
+Run via CLI::
+
+    1. Navigate to the `cordapp-samples` directory in your shell
+    2. Run the gradle target `deployNodes` (ie; ./gradlew deployNodes for Unix or gradlew.bat on Windows)
+        1. Unix: `cd simm-valuation-demo/build/nodes && ./runnodes`.
+        2. Windows: Open a command line window in each subdirectory of `simm-valuation-demo/build/nodes` and run `java -jar corda.jar`
+    4. Browse to http://localhost:10005/web/simmvaluationdemo

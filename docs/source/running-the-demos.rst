@@ -175,7 +175,7 @@ In the second terminal, run:
 
 You should see some log lines scroll past, and within a few seconds the message "File received - we're happy!" should be printed.
 
-Simm and Portfolio Demo
+SIMM and Portfolio Demo
 -----------------------
 
 To run the demo run:
