@@ -30,8 +30,8 @@ abstract class CordaPluginRegistry {
 
     /**
      * List of additional long lived services to be hosted within the node.
-     * They are expected to have a single parameter constructor that takes a ServiceHubInternal as input.
-     * The ServiceHubInternal will be fully constructed before the plugin service is created and will
+     * They are expected to have a single parameter constructor that takes a [PluginServiceHub] as input.
+     * The [PluginServiceHub] will be fully constructed before the plugin service is created and will
      * allow access to the protocol factory and protocol initiation entry points there.
      */
     open val servicePlugins: List<Class<*>> = emptyList()

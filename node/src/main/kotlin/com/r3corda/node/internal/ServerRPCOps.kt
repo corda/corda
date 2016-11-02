@@ -92,7 +92,8 @@ class ServerRPCOps(
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
         // TODO: Have some way of restricting this to states the caller controls
         try {
-            val (spendTX, keysForSigning) = services.vaultService.generateSpend(builder, req.amount.withoutIssuer(), req.recipient.owningKey)
+            val (spendTX, keysForSigning) = services.vaultService.generateSpend(builder,
+                    req.amount.withoutIssuer(), req.recipient.owningKey, setOf(req.amount.token.issuer.party))
 
             keysForSigning.forEach {
                 val key = services.keyManagementService.keys[it] ?: throw IllegalStateException("Could not find signing key for ${it.toStringShort()}")

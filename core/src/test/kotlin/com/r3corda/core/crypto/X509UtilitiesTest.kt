@@ -230,6 +230,10 @@ class X509UtilitiesTest {
         clientParams.endpointIdentificationAlgorithm = "HTTPS" // enable hostname checking
         clientSocket.sslParameters = clientParams
         clientSocket.useClientMode = true
+        // We need to specify this explicitly because by default the client binds to 'localhost' and we want it to bind
+        // to whatever <hostname> resolves to(as that's what the server binds to). In particular on Debian <hostname>
+        // resolves to 127.0.1.1 instead of the external address of the interface, so the ssl handshake fails.
+        clientSocket.bind(InetSocketAddress(InetAddress.getLocalHost(), 0))
 
         val lock = Object()
         var done = false

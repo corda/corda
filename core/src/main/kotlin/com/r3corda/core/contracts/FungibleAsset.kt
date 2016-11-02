@@ -21,12 +21,6 @@ class InsufficientBalanceException(val amountMissing: Amount<*>) : Exception() {
  * (GBP, USD, oil, shares in company <X>, etc.) and any additional metadata (issuer, grade, class, etc.).
  */
 interface FungibleAsset<T> : OwnableState {
-    /**
-     * Where the underlying asset backing this ledger entry can be found. The reference
-     * is only intended for use by the issuer, and is not intended to be meaningful to others.
-     */
-    val deposit: PartyAndReference
-    val issuanceDef: Issued<T>
     val amount: Amount<Issued<T>>
     /**
      * There must be an ExitCommand signed by these keys to destroy the amount. While all states require their
@@ -54,7 +48,6 @@ interface FungibleAsset<T> : OwnableState {
         interface Exit<T> : Commands { val amount: Amount<Issued<T>> }
     }
 }
-
 
 // Small DSL extensions.
 

@@ -44,6 +44,9 @@ dependencies {
 
     // Guava: Google test library (collections test suite)
     compile "com.google.guava:guava-testlib:19.0"
+
+    // OkHTTP: Simple HTTP library.
+    compile 'com.squareup.okhttp3:okhttp:3.3.1'
 }
 
 quasarScan.dependsOn('classes', ':core:classes', ':contracts:classes')

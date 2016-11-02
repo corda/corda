@@ -2,6 +2,7 @@ package com.r3corda.plugins
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 
 /**
  * The Cordformation plugin deploys nodes to a directory in a state ready to be used by a developer for experimentation,
@@ -9,7 +10,9 @@ import org.gradle.api.Project
  */
 class Cordformation implements Plugin<Project> {
     void apply(Project project) {
-        
+        Configuration cordappConf = project.configurations.create("cordapp")
+        cordappConf.transitive = false
+        project.configurations.compile.extendsFrom cordappConf
     }
 
     /**

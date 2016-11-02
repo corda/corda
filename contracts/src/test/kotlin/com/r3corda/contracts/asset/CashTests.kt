@@ -32,7 +32,7 @@ import java.util.*
 import kotlin.test.*
 
 class CashTests {
-    val defaultRef = OpaqueBytes(ByteArray(1, {1}))
+    val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
     val defaultIssuer = MEGA_CORP.ref(defaultRef)
     val inState = Cash.State(
             amount = 1000.DOLLARS `issued by` defaultIssuer,
@@ -43,7 +43,7 @@ class CashTests {
     val outState = issuerInState.copy(owner = DUMMY_PUBKEY_2)
 
     fun Cash.State.editDepositRef(ref: Byte) = copy(
-            amount = Amount(amount.quantity, token = amount.token.copy(deposit.copy(reference = OpaqueBytes.of(ref))))
+            amount = Amount(amount.quantity, token = amount.token.copy(amount.token.issuer.copy(reference = OpaqueBytes.of(ref))))
     )
 
     lateinit var services: MockServices
@@ -83,12 +83,6 @@ class CashTests {
 
             vaultService = services.vaultService.currentVault
         }
-    }
-
-    @After
-    fun tearDown() {
-        LogHelper.reset(NodeVaultService::class)
-        dataSource.close()
     }
 
     @Test
@@ -173,7 +167,7 @@ class CashTests {
         assertTrue(tx.inputs.isEmpty())
         val s = tx.outputs[0].data as Cash.State
         assertEquals(100.DOLLARS `issued by` MINI_CORP.ref(12, 34), s.amount)
-        assertEquals(MINI_CORP, s.deposit.party)
+        assertEquals(MINI_CORP, s.amount.token.issuer.party)
         assertEquals(DUMMY_PUBKEY_1, s.owner)
         assertTrue(tx.commands[0].value is Cash.Commands.Issue)
         assertEquals(MINI_CORP_PUBKEY, tx.commands[0].signers[0])
@@ -264,7 +258,7 @@ class CashTests {
         // Include the previously issued cash in a new issuance command
         ptx = TransactionType.General.Builder(DUMMY_NOTARY)
         ptx.addInputState(tx.tx.outRef<Cash.State>(0))
-        Cash().generateIssue(ptx, 100.DOLLARS `issued by`  MINI_CORP.ref(12, 34), owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
+        Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
     }
 
     @Test
@@ -492,7 +486,7 @@ class CashTests {
     }
 
     fun makeSpend(amount: Amount<Currency>, dest: PublicKey): WireTransaction {
-        var tx = TransactionType.General.Builder(DUMMY_NOTARY)
+        val tx = TransactionType.General.Builder(DUMMY_NOTARY)
         databaseTransaction(database) {
             vault.generateSpend(tx, amount, dest)
         }
@@ -618,8 +612,8 @@ class CashTests {
             assertEquals(vaultState0.ref, wtx.inputs[0])
             assertEquals(vaultState1.ref, wtx.inputs[1])
             assertEquals(vaultState2.ref, wtx.inputs[2])
-            assertEquals(vaultState0.state.data.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
-            assertEquals(vaultState2.state.data.copy(owner = THEIR_PUBKEY_1), wtx.outputs[1].data)
+            assertEquals(vaultState0.state.data.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[1].data)
+            assertEquals(vaultState2.state.data.copy(owner = THEIR_PUBKEY_1), wtx.outputs[0].data)
             assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
@@ -650,22 +644,22 @@ class CashTests {
         val oneThousandDollarsFromMini = Cash.State(1000.DOLLARS `issued by` MINI_CORP.ref(3), MEGA_CORP_PUBKEY)
 
         // Obviously it must be possible to aggregate states with themselves
-        assertEquals(fiveThousandDollarsFromMega.issuanceDef, fiveThousandDollarsFromMega.issuanceDef)
+        assertEquals(fiveThousandDollarsFromMega.amount.token, fiveThousandDollarsFromMega.amount.token)
 
         // Owner is not considered when calculating whether it is possible to aggregate states
-        assertEquals(fiveThousandDollarsFromMega.issuanceDef, twoThousandDollarsFromMega.issuanceDef)
+        assertEquals(fiveThousandDollarsFromMega.amount.token, twoThousandDollarsFromMega.amount.token)
 
         // States cannot be aggregated if the deposit differs
-        assertNotEquals(fiveThousandDollarsFromMega.issuanceDef, oneThousandDollarsFromMini.issuanceDef)
-        assertNotEquals(twoThousandDollarsFromMega.issuanceDef, oneThousandDollarsFromMini.issuanceDef)
+        assertNotEquals(fiveThousandDollarsFromMega.amount.token, oneThousandDollarsFromMini.amount.token)
+        assertNotEquals(twoThousandDollarsFromMega.amount.token, oneThousandDollarsFromMini.amount.token)
 
         // States cannot be aggregated if the currency differs
-        assertNotEquals(oneThousandDollarsFromMini.issuanceDef,
-                Cash.State(1000.POUNDS `issued by` MINI_CORP.ref(3), MEGA_CORP_PUBKEY).issuanceDef)
+        assertNotEquals(oneThousandDollarsFromMini.amount.token,
+                Cash.State(1000.POUNDS `issued by` MINI_CORP.ref(3), MEGA_CORP_PUBKEY).amount.token)
 
         // States cannot be aggregated if the reference differs
-        assertNotEquals(fiveThousandDollarsFromMega.issuanceDef, (fiveThousandDollarsFromMega `with deposit` defaultIssuer).issuanceDef)
-        assertNotEquals((fiveThousandDollarsFromMega `with deposit` defaultIssuer).issuanceDef, fiveThousandDollarsFromMega.issuanceDef)
+        assertNotEquals(fiveThousandDollarsFromMega.amount.token, (fiveThousandDollarsFromMega `with deposit` defaultIssuer).amount.token)
+        assertNotEquals((fiveThousandDollarsFromMega `with deposit` defaultIssuer).amount.token, fiveThousandDollarsFromMega.amount.token)
     }
 
     @Test

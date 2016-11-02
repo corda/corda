@@ -183,7 +183,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         var acceptableCoins = run {
             val ofCurrency = assetsStates.filter { it.state.data.amount.token.product == currency }
             if (onlyFromParties != null)
-                ofCurrency.filter { it.state.data.deposit.party in onlyFromParties }
+                ofCurrency.filter { it.state.data.amount.token.issuer.party in onlyFromParties }
             else
                 ofCurrency
         }
@@ -196,27 +196,32 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, amount)
         val takeChangeFrom = gathered.firstOrNull()
         val change = if (takeChangeFrom != null && gatheredAmount > amount) {
-            Amount(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
+            Amount(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.amount.token)
         } else {
             null
         }
         val keysUsed = gathered.map { it.state.data.owner }.toSet()
 
-        val states = gathered.groupBy { it.state.data.deposit }.map {
+        val states = gathered.groupBy { it.state.data.amount.token.issuer }.map {
             val coins = it.value
             val totalAmount = coins.map { it.state.data.amount }.sumOrThrow()
             deriveState(coins.first().state, totalAmount, to)
-        }
+        }.sortedBy { it.data.amount.quantity }
 
         val outputs = if (change != null) {
             // Just copy a key across as the change key. In real life of course, this works but leaks private data.
             // In bitcoinj we derive a fresh key here and then shuffle the outputs to ensure it's hard to follow
             // value flows through the transaction graph.
-            val changeKey = gathered.first().state.data.owner
+            val existingOwner = gathered.first().state.data.owner
             // Add a change output and adjust the last output downwards.
             states.subList(0, states.lastIndex) +
-                    states.last().let { deriveState(it, it.data.amount - change, it.data.owner) } +
-                    deriveState(gathered.last().state, change, changeKey)
+                    states.last().let {
+                        val spent = it.data.amount.withoutIssuer() - change.withoutIssuer()
+                        deriveState(it, Amount(spent.quantity, it.data.amount.token), it.data.owner)
+                    } +
+                    states.last().let {
+                        deriveState(it, Amount(change.quantity, it.data.amount.token), existingOwner)
+                    }
         } else states
 
         for (state in gathered) tx.addInputState(state)

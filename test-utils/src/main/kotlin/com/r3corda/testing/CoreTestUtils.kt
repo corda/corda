@@ -21,6 +21,7 @@ import com.r3corda.node.services.statemachine.StateMachineManager.Change
 import com.r3corda.node.utilities.AddOrRemove.ADD
 import com.r3corda.testing.node.MockIdentityService
 import com.r3corda.testing.node.MockServices
+import com.typesafe.config.Config
 import rx.Subscriber
 import java.net.ServerSocket
 import java.security.KeyPair
@@ -164,3 +165,5 @@ inline fun <reified P : ProtocolLogic<*>> AbstractNode.initiateSingleShotProtoco
 
     return future
 }
+
+fun Config.getHostAndPort(name: String) = HostAndPort.fromString(getString(name))

@@ -177,7 +177,9 @@ interface VaultService {
     fun getTransactionNotes(txnId: SecureHash): Iterable<String>
 
     /**
-     * Fungible Asset operations
+     *  [InsufficientBalanceException] is thrown when a Cash Spending transaction fails because
+     *  there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
+     *  Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
      **/
     @Throws(InsufficientBalanceException::class)
     fun generateSpend(tx: TransactionBuilder,

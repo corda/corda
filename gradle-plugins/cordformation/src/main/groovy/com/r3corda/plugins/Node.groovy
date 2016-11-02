@@ -25,7 +25,8 @@ class Node {
      */
     protected List<String> advertisedServices = []
     /**
-     * Set thThe list of cordapps to install to the plugins directory.
+     * Set the list of CorDapps to install to the plugins directory. Each cordapp is a fully qualified Maven
+     * dependency name, eg: com.example:product-name:0.1
      *
      * @note Your app will be installed by default and does not need to be included here.
      */
@@ -35,7 +36,7 @@ class Node {
     private Config config = ConfigFactory.empty()
     //private Map<String, Object> config = new HashMap<String, Object>()
     private File nodeDir
-    private def project
+    private Project project
 
     /**
      * Set the name of the node.
@@ -150,7 +151,7 @@ class Node {
      * Installs this project's cordapp to this directory.
      */
     private void installBuiltPlugin() {
-        def pluginsDir = getAndCreateDirectory(nodeDir, "plugins")
+        def pluginsDir = new File(nodeDir, "plugins")
         project.copy {
             from project.jar
             into pluginsDir
@@ -161,7 +162,7 @@ class Node {
      * Installs other cordapps to this node's plugins directory.
      */
     private void installCordapps() {
-        def pluginsDir = getAndCreateDirectory(nodeDir, "plugins")
+        def pluginsDir = new File(nodeDir, "plugins")
         def cordapps = getCordappList()
         project.copy {
             from cordapps
@@ -174,9 +175,9 @@ class Node {
      */
     private void installDependencies() {
         def cordaJar = verifyAndGetCordaJar()
-        def cordappList = getCordappList()
-        def depsDir = getAndCreateDirectory(nodeDir, "dependencies")
-        def appDeps = project.configurations.runtime.filter { it != cordaJar && !cordappList.contains(it) }
+        def cordappDeps = getCordappList()
+        def depsDir = new File(nodeDir, "dependencies")
+        def appDeps = project.configurations.runtime.filter { it != cordaJar && !cordappDeps.contains(it) }
         project.copy {
             from appDeps
             into depsDir
@@ -190,9 +191,17 @@ class Node {
         // Adding required default values
         config = config.withValue('extraAdvertisedServiceIds',
                 ConfigValueFactory.fromAnyRef(advertisedServices.join(',')))
-
         def configFileText = config.root().render(new ConfigRenderOptions(false, false, true, false)).split("\n").toList()
-        Files.write(new File(nodeDir, 'node.conf').toPath(), configFileText, StandardCharsets.UTF_8)
+
+        // Need to write a temporary file first to use the project.copy, which resolves directories correctly.
+        def tmpDir = new File(project.buildDir, "tmp")
+        def tmpConfFile = new File(tmpDir, 'node.conf')
+        Files.write(tmpConfFile.toPath(), configFileText, StandardCharsets.UTF_8)
+
+        project.copy {
+            from tmpConfFile
+            into nodeDir
+        }
     }
 
     /**
@@ -216,25 +225,9 @@ class Node {
      *
      * @return List of this node's cordapps.
      */
-    private AbstractFileCollection getCordappList() {
-        def cordaJar = verifyAndGetCordaJar()
-        return project.configurations.runtime.filter {
-            def jarName = it.name.split('-').first()
-            return (it != cordaJar) && cordapps.contains(jarName)
+    private Collection<File> getCordappList() {
+        return project.configurations.cordapp.files {
+            cordapps.contains("${it.group}:${it.name}:${it.version}")
         }
-    }
-
-    /**
-     * Create a directory if it doesn't exist and return the file representation of it.
-     *
-     * @param baseDir The base directory to create the directory at.
-     * @param subDirName A valid name of the subdirectory to get and create if not exists.
-     * @return A file representing the subdirectory.
-     */
-    private static File getAndCreateDirectory(File baseDir, String subDirName) {
-        File dir = new File(baseDir, subDirName)
-        assert(!dir.exists() || dir.isDirectory())
-        dir.mkdirs()
-        return dir
     }
 }
