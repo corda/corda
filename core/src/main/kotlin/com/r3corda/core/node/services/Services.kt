@@ -166,14 +166,14 @@ interface VaultService {
 
     /**
      *  [InsufficientBalanceException] is thrown when a Cash Spending transaction fails because
-     *  there is insufficient quantity for a given currency (and optionally set of Issuers).
-     *  Note: an [Amount] of [Currency] is only fungible for a given Issuer within a [FungibleAsset]
+     *  there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
+     *  Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
      **/
     @Throws(InsufficientBalanceException::class)
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,
                       to: PublicKey,
-                      onlyFromIssuers: Set<PartyAndReference>? = null): Pair<TransactionBuilder, List<PublicKey>>
+                      onlyFromParties: Set<Party>? = null): Pair<TransactionBuilder, List<PublicKey>>
 }
 
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)

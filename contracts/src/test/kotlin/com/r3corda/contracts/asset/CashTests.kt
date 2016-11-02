@@ -486,7 +486,7 @@ class CashTests {
     }
 
     fun makeSpend(amount: Amount<Currency>, dest: PublicKey): WireTransaction {
-        var tx = TransactionType.General.Builder(DUMMY_NOTARY)
+        val tx = TransactionType.General.Builder(DUMMY_NOTARY)
         databaseTransaction(database) {
             vault.generateSpend(tx, amount, dest)
         }
@@ -563,7 +563,7 @@ class CashTests {
         databaseTransaction(database) {
 
             val tx = TransactionType.General.Builder(DUMMY_NOTARY)
-            vault.generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, setOf(MINI_CORP.ref(1)))
+            vault.generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, setOf(MINI_CORP))
 
             assertEquals(vaultService.states.elementAt(2).ref, tx.inputStates()[0])
         }
@@ -612,8 +612,8 @@ class CashTests {
             assertEquals(vaultState0.ref, wtx.inputs[0])
             assertEquals(vaultState1.ref, wtx.inputs[1])
             assertEquals(vaultState2.ref, wtx.inputs[2])
-            assertEquals(vaultState0.state.data.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
-            assertEquals(vaultState2.state.data.copy(owner = THEIR_PUBKEY_1), wtx.outputs[1].data)
+            assertEquals(vaultState0.state.data.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[1].data)
+            assertEquals(vaultState2.state.data.copy(owner = THEIR_PUBKEY_1), wtx.outputs[0].data)
             assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
