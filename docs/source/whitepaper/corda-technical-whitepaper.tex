@@ -91,7 +91,7 @@ each other's work. Such databases trade off performance and usability in order t
 \item Nodes are arranged in an authenticated peer to peer network. All communication is direct.
 \item There is no block chain\cite{Bitcoin}. Transaction races are deconflicted using pluggable \emph{notaries}. A single
 Corda network may contain multiple notaries that provide their guarantees using a variety of different algorithms. Thus
-Corda is not tied to any particular consensus algorithm.
+Corda is not tied to any particular consensus algorithm. (\cref{sec:notaries})
 \item Data is shared on a need-to-know basis. Nodes provide the dependency graph of a transaction they are sending to
 another node on demand, but there is no global broadcast of \emph{all} transactions.
 \item Bytecode-to-bytecode transpilation is used to allow complex, multi-step transaction building protocols called
@@ -100,12 +100,13 @@ checkpoints written to the node's backing database when messages are sent and re
 millions of flows active at once and they may last days, across node restarts and even upgrades. Flows expose progress
 information to node administrators and users and may interact with people as well as other nodes.
 \item The data model allows for arbitrary object graphs to be stored in the ledger. These graphs are called \emph{states} and are the atomic unit of data.
+\item Nodes are backed by a relational database and data placed in the ledger can be queried using SQL as well as joined
+with private tables, thanks to slots in the state definitions that are reserved for join keys.
 \item The platform provides a rich type system for the representation of things like dates, currencies, legal entities and so on.
 \item States can declare a relational mapping and can be queried using SQL.
 \item Integration with existing systems is considered from the start. The network can support rapid bulk data imports
-from other database systems without placing load on the network. Global ledger data can be joined with existing,
-internal RDBMS tables thanks to slots in the state definitions that are reserved for join keys. Events on the ledger
-are exposed via an embedded JMS compatible message broker.
+from other database systems without placing load on the network. Events on the ledger are exposed via an embedded JMS
+compatible message broker.
 \item States can declare scheduled events. For example a bond state may declare an automatic transition to a ``in default'' state if it is not repaid in time.
 \end{itemize}
 
@@ -140,16 +141,8 @@ In contrast to both Bitcoin and Ethereum, Corda does not order transactions usin
 not use miners or proof-of-work. Instead each state points to a \emph{notary}, which is a service that guarantees it
 will sign a transaction only if all the input states are un-consumed. A transaction is not allowed to consume states
 controlled by multiple notaries and thus there is never any need for two-phase commit between notaries. If a combination of
-states would cross notaries then a special transaction type is used to move them onto a single notary first.
-
-Notaries are expected to be composed of multiple mutually distrusting parties who use a byzantine fault
-tolerant algorithm like HoneyBadgerBFT\cite{HBBFT} to reach consensus. Notaries are identified by and sign with compound
-public keys that conceptually follow the Interledger Crypto-Conditions specification\cite{ILPCC}. Note that whilst it
-would be conventional to use a BFT algorithm for a notary service, there is no requirement to do so and in cases where
-the legal system is sufficient to ensure protocol compliance a higher performance algorithm like RAFT may be used.
-Because multiple notaries can co-exist a single network may provide a single global BFT notary for
-general use and region-specific RAFT notaries for low latency trading within a unified regulatory area, for example
-London or New York.
+states would cross notaries then a special transaction type is used to move them onto a single notary first. See \cref{sec:notaries}
+for more information.
 
 The Corda transaction format has various other features which are described in later sections.
 
@@ -703,7 +696,7 @@ We define the notion of an \texttt{OwnableState}, implemented as an interface wh
 states are required to have an \texttt{owner} field which is a compound key (see \cref{sec:compound-keys}). This is
 utilised by generic code in the vault (see \cref{sec:vault}) to manipulate ownable states.
 
-% TODO: Currently OwnableState.owner is just a regular PublicKey.
+% TODO: Currently OwnableState.owner is just a regular PublicKeyTree.
 
 From \texttt{OwnableState} we derive a \texttt{FungibleAsset} concept to represent assets of measurable quantity, in
 which units are sufficiently similar to represented together in a single ledger state. Making that concrete, pound notes
@@ -809,8 +802,208 @@ generator to be reseeded before execution begins. The seed is derived from the h
 Finally, it is important to note that not just smart contract code is instrumented, but all code that it can transitively
 reach. In particular this means that the `shadow JDK' is also instrumented and stored on disk ahead of time.
 
-\section{Notaries}
+\section{Notaries and consensus}\label{sec:notaries}
+
+Corda does not organise time into blocks. This is sometimes considered strange, given that it can be described as a
+blockchain system or `blockchain inspired'. Instead a Corda network has one or more notary services which provide
+transaction ordering and timestamping services, thus abstracting the role miners play in other systems into a pluggable
+component.
+
+Notaries are expected to be composed of multiple mutually distrusting parties who use a standard consensus algorithm.
+Notaries are identified by and sign with compound public keys (\cref{sec:compound-keys})that conceptually follow the
+Interledger Crypto-Conditions specification\cite{ILPCC}. Note that whilst it would be conventional to use a BFT
+algorithm for a notary service, there is no requirement to do so and in cases where the legal system is sufficient to
+ensure protocol compliance a higher performance algorithm like RAFT may be used. Because multiple notaries can co-exist
+a single network may provide a single global BFT notary for general use and region-specific RAFT notaries for low
+latency trading within a unified regulatory area, for example London or New York.
+
+\subsection{Comparison to Nakamoto block chains}
+
+Bitcoin organises the timeline into a chain of blocks, with each block pointing to a previous block the miner has chosen
+to build upon. Blocks also contain a rough timestamp. Miners can choose to try and extend the block chain from any
+previous block, but are incentivised to build on the most recently announced block by the fact that other nodes in the
+system only recognise a block if it's a part of the chain with the most accumulated proof-of-work. As each block contains
+a reward of newly issued bitcoins, an unrecognised block represents a loss and a recognised block typically represents
+a profit.
+
+Bitcoin uses proof-of-work because it has a design goal of allowing an unlimited number of identityless parties to join
+and leave the network at will, whilst simultaneously making it hard to execute sybil attacks (attacks in which one party
+creates multiple identities to gain undue influence over the network). This is an appropriate design to use for a peer to
+peer network formed of volunteers who can't/won't commit to any long term relationships up front, and in which identity
+verification is not done. Using proof-of-work then leads naturally to a requirement to quantise the timeline into chunks,
+due to the probabilistic nature of searching for a proof. The chunks must then be ordered relative to each other and
+the block chain algorithm follows as a result.
+
+A Corda network is email-like in the sense that nodes have long term stable identities, which they can prove ownership
+of to others. Sybil attacks are blocked by the network entry process. This allows us to discard proof-of-work along with
+its multiple unfortunate downsides:
+
+\begin{itemize}
+\item Energy consumption is excessively high for such a simple task, being comparable at the time of writing to the
+consumption of an entire town. At a time when humanity needs to use less energy rather than more this is ecologically
+undesirable.
+\item High energy consumption forces concentration of mining power in regions with cheap or free electricity. This results
+in unpredictable geopolitical complexities that many users would rather do without.
+\item Identityless participants mean all transactions must be broadcast to all network nodes, as there's no reliable
+way to know who the miners are. This worsens privacy.
+\item The algorithm does not provide finality, only a probabilistic approximation, which is a poor fit for existing
+business and legal assumptions.
+\item It is theoretically possible for large numbers of miners or even all miners to drop out simultaneously without
+any protocol commitments being violated.
+\end{itemize}
+
+Once proof-of-work is disposed of there is no longer any need to quantise the timeline into blocks because conflicts can
+be resolved at the level of the individual transaction instead, and because the parties asserting the correctness of the
+ordering are known ahead of time regular signatures are sufficient.
+
+\subsection{Algorithmic agility}
+
+Consensus algorithms are a hot area of research and new algorithms are frequently developed that improve upon the state
+of the art. Unlike most distributed ledger systems Corda does not tightly integrate one specific approach. This is not
+only to support upgrades as new algorithms are developed, but also to reflect the fact that different tradeoffs may make
+sense for different situations and networks.
+
+As a simple example, a notary that uses RAFT between nodes that are all within the same city will provide extremely good
+performance and latency, at the cost of being more exposed to malicious attacks or errors by whichever node has been elected
+leader. In situations where the members making up a distributed notary service are all large, regulated institutions that
+are not expected to try and corrupt the ledger in their own favour trading off security to gain performance may make sense.
+In other situations where existing legal or trust relationships are less robust, slower but byzantine fault tolerant
+algorithms like BFT-SMaRT\cite{Bessani:2014:SMR:2671853.2672428} may be preferable. Alternatively hardware security features
+like Intel SGX\textregistered may be used to convert non-BFT algorithms into a more trusted form using remote attestation and
+hardware protection.
+
+Being able to support multiple notaries in the same network has other advantages:
+
+\begin{itemize}
+\item It is possible to phase out notaries (i.e. sets of participants) that no longer wish to provide that service by
+migrating states.
+\item The scalability of the system can be increased by bringing online new notaries that run in parallel. As long as access
+to the ledger has some locality (i.e. states aren't constantly being migrated between notaries) this allows for the scalability
+limits of common consensus algorithms or node hardware to be worked around.
+\item In some but not all cases, regulatory constraints on data propagation can be respected by having jurisdictionally
+specific notaries. This would not work well when two jurisdictions have mutually incompatible constraints or for assets that
+may frequently travel around the world, but it can work when using the ledger to track the state of deals or other facts that
+are inherently region specific.
+\item Notaries can compete on their availability and performance.
+\item Users can pick between \emph{validating} and \emph{non-validating} notaries. See below.
+\item Separate networks can start independent and be merged together later.
+\end{itemize}
+
+\subsection{Validating and non-validating notaries}
+
+Validating notaries resolve and fully check transactions they are asked to deconflict. Thus in the degenerate case of a
+network with just a single notary and without the use of any privacy features, they gain full visibility into every
+transaction. Non-validating notaries assume transaction validity and do not request transaction data or their
+dependencies beyond the list of states consumed. With such a notary it is possible for the ledger to become wedged, as
+anyone who knows the hash and index of a state may consume it without checks. If the cause of the problem is accidental,
+the incorrect data can be presented to a non-validating notary to convince it to roll back the commit, but if the error
+is malicious then states controlled by such a notary may become permanently corrupted.
+
+It is therefore possible for users to select their preferred point on a privacy/security spectrum for each state individually
+depending on how they expect the data to be used. When the states are unlikely to live long or propagate far and the only
+entities who will learn their transaction hashes are somewhat trustworthy, the user may select to keep the data from the
+notary. For liquid assets a validating notary should always be used to prevent value destruction and theft if the transaction
+IDs leak.
+
+\subsection{Merging networks}
+
+Because there is no single block chain it becomes possible to merge two independent networks together by simply establishing
+two-way connectivity between their nodes then configuring each side to trust each others notaries and certificate authorities.
+
+This ability may seem pointless: isn't the goal of a decentralised ledger to have a single global database for everyone?
+It is, but a practical route to reaching this end state is still required. It is often the case that organisations
+perceived by consumers as being a single company are in fact many different entities cross-licensing branding, striking
+deals with each other and doing internal trades with each other. This sort of setup can occur for regulatory reasons,
+tax reasons, due to a history of mergers or just through a sheer masochistic love of paperwork. Very large companies can
+therefore experience all the same synchronisation problems a decentralised ledger is intended to fix but purely within
+the bounds of the same organisation. In this situation the main problem to tackle is not malicious actors but rather
+heterogenous IT departments, varying software development practices, unlinked user directories and so on.
+Such organisations can benefit from gaining experience with the technology internally and cleaning up their own
+internal views of the world before tackling the larger problem of synchronising with the wider world as well.
+
+When merging networks, both sides must trust that each other's notaries have never signed double spends. When merging an
+organisation-private network into the global ledger it should be possible to simply rely on incentives to provide
+this guarantee: there is no point in a company double spending against itself. However, if more evidence is desired, a
+standalone notary could be run against a hardware security module with audit logging enabled. The notary itself would simply
+use a private database and run on a single machine, with the logs exported to the people running a global network for
+asynchronous post-hoc verification.
+
 \section{The vault}\label{sec:vault}
+
+In any blockchain based system most nodes have a wallet, or as we call it, a vault.
+
+The vault contains data extracted from the ledger that is considered \emph{relevant} to the node's owner, stored in a form
+that can be easily queried and worked with. It also contains private key material that is needed to sign transactions
+consuming states in the vault. Like with a cryptocurrency wallet, the Corda vault understands how to create transactions
+that send value to someone else by combining asset states and possibly adding a change output that makes the values
+balance. This process is usually referred to as `coin selection'. Coin selection can be a complex process. In Corda
+there are no per transaction network fees which is a significant source of complexity in other sysetms, however
+transactions must respect the fungibility rules in order to ensure that the issuer and reference data is preserved
+as the assets pass from hand to hand.
+
+Advanced vault implementations may also perform splitting and merging of states in the background. The purpose of this
+is to increase the amount of transaction creation parallelism supported. Because signing a transaction may involve
+human intervention (see \cref{sec:secure-signing-devices}) and thus may take a significant amount of time, it can
+become important to be able to create multiple transactions in parallel. The vault must manage state `soft locks' to
+prevent multiple transactions trying to use the same output simultaneously. Violation of a soft lock would result in
+a double spend being created and rejected by the notary. If a vault were to contain the entire cash balance
+of a user in just one state, there could only be a single transaction being constructed at once and this could
+impose unacceptable operational overheads on an organisation. By automatically creating send-to-self transactions that
+split the big state into multiple smaller states, the number of transactions that can be created in parallel is
+increased. Alternatively many tiny states may need to be consolidated into a smaller number of more valuable states
+in order to avoid hitting transaction size limits.
+
+The vault is also responsible for managing scheduled events requested by node-relevant states when the implementing app
+has been installed (see \cref{sec:event-scheduling}).
+
+\subsection{Direct SQL access}
+
+A distributed ledger is ultimately just a shared database, albeit one with some fancy features. The following features
+are therefore highly desirable for improving the productivity of app developers:
+
+\begin{itemize}
+\item Ability to store private data linked to the semi-public data in the ledger.
+\item Ability to query the ledger data using widely understood tools like SQL.
+\item Ability to perform joins between entirely app-private data (like customer notes) and ledger data.
+\item Ability to define relational constraints and triggers on the underlying tables.
+\item Ability to do queries at particular points in time e.g. midnight last night.
+\item Re-use of industry standard and highly optimised database engines.
+\item Independence from any particular database engine, without walling off too many useful features.
+\end{itemize}
+
+Corda states are defined using a subset of the JVM bytecode language which includes annotations. The vault recognises
+annotations from the \emph{Java Persistence Architecture} (JPA) specification defined in JSR 338\cite{JPA}.
+These annotations define how a class maps to a relational table schema including which member is the primary key, what
+SQL types to map the fields to and so on. When a transaction is submitted to the vault by a flow, the vault finds
+states it considers relevant (i.e. which contains a key owned by the node) and the relevant CorDapp has been installed
+into the node as a plugin, the states are fed through an object relational mapper which generates SQL \texttt{UPDATE}
+and \texttt{INSERT} statements. Note that data is not deleted when states are consumed, however a join can be performed
+with a dedicated metadata table to eliminate consumed states from the dataset. This allows data to be queried at a point
+in time, with rows being evicted to historical tables using external tools.
+
+Nodes come with an embedded database engine out of the box, but may also be configured to point to a separate RDBMS.
+The node stores not only state data but also all node working data in the database, including flow checkpoints. Thus
+the state of a node and all communications it is engaged in can be backed up by simply backing up the database itself.
+The JPA annotations are independent of any particular database engine or SQL dialect and thus states cannot use any
+proprietary column types or other features, however, because the the ORM is only used on the write paths users are free
+to connect to the backing database directly and issue SQL queries that utilise any features of their chosen database
+engine that they like. They can also create their own tables and create merged views of the underlying data for end
+user applications, as long as they don't impose any constraints that would prevent the node from syncing the database
+with the actual contents of the ledger.
+
+% TODO: Artemis stores message queues separately right now, although it does have a JDBC backend we don't use it.
+
+States are arbitrary object graphs. Whilst nothing stops a state from containing multiple classes intended for different
+tables, it is typical that the relational representation will not be a direct translation of the object-graph
+representation. States are queried by the vault for the ORM mapped class to use, which will often skip ledger-specific
+data that's irrelevant to the user like opaque public keys and may expand single fields like an \texttt{Amount<Issued<Currency>>}
+type into multiple database columns.
+
+It's worth noting here that although the vault only responds to JPA annotations it is often useful for states to be
+annotated in other ways, for instance to customise its mapping to XML/JSON, or to impose validation constraints
+\cite{BeanValidation}. These annotations won't affect the behaviour of the node directly but may be useful when working
+with states in surrounding software.
+
 \section{Clauses}
 
 \section{Secure signing devices}\label{sec:secure-signing-devices}
@@ -934,7 +1127,10 @@ to ensure that the message the user sees in alternative languages is correctly t
 or confusion, as otherwise exploitable confusion attacks may arise.
 
 \section{Client RPC and reactive collections}
-\section{Event scheduling}
+
+
+
+\section{Event scheduling}\label{sec:event-scheduling}
 \section{Future work}
 
 \paragraph{Secure hardware}
