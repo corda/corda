@@ -30,7 +30,6 @@ plugins {
 }
 
 apply plugin: 'kotlin'
-apply plugin: 'application'
 apply plugin: 'project-report'
 apply plugin: QuasarPlugin
 apply plugin: 'com.github.ben-manes.versions'
@@ -93,14 +92,8 @@ configurations {
     integrationTestRuntime.extendsFrom testRuntime
 }
 
-// This is required for quasar. I think.
-applicationDefaultJvmArgs = ["-javaagent:${configurations.quasar.singleFile}"]
-// Needed by the :startScripts task
-mainClassName = 'com.r3corda.demos.TraderDemoKt'
-
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
-
 dependencies {
     compile project(':node')
     // TODO: Demos should not depend on test code, but only use production APIs
@@ -121,40 +114,10 @@ dependencies {
     integrationTestCompile project(':test-utils')
 }
 
-// Package up the demo programs.
-
-task getAttachmentDemo(type: CreateStartScripts) {
-    mainClassName = "com.r3corda.demos.attachment.AttachmentDemoKt"
-    applicationName = "attachment-demo"
-    defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
-    outputDir = new File(project.buildDir, 'scripts')
-    classpath = jar.outputs.files + project.configurations.runtime
-}
-
-task getTraderDemo(type: CreateStartScripts) {
-    mainClassName = "com.r3corda.demos.TraderDemoKt"
-    applicationName = "trader-demo"
-    defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
-    outputDir = new File(project.buildDir, 'scripts')
-    classpath = jar.outputs.files + project.configurations.runtime
-}
-
-// Force windows script classpath to wildcard path to avoid the 'Command Line Is Too Long' issues
-// with generated scripts. Include Jolokia .war explicitly as this isn't picked up by wildcard
-tasks.withType(CreateStartScripts) {
-    doLast {
-        windowsScript.text = windowsScript
-                .readLines()
-                .collect { line -> line.replaceAll(~/^set CLASSPATH=.*$/, 'set CLASSPATH=%APP_HOME%/lib/*;%APP_HOME%/lib/jolokia-agent-war-'+project.ext.jolokia_version+'.war') }
-                .join('\r\n')
-    }
-}
-
 task integrationTest(type: Test, dependsOn: [':node:integrationTest',':client:integrationTest']) {
     testClassesDir = sourceSets.integrationTest.output.classesDir
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
-
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
     dependsOn = subprojects.test
@@ -182,12 +145,6 @@ tasks.withType(Test) {
 }
 
 quasarScan.dependsOn('classes', 'core:classes', 'contracts:classes', 'node:classes')
-
-applicationDistribution.into("bin") {
-    from(getAttachmentDemo)
-    from(getTraderDemo)
-    fileMode = 0755
-}
 
 task buildCordaJAR(type: FatCapsule, dependsOn: ['quasarScan', 'buildCertSigningRequestUtilityJAR']) {
     applicationClass 'com.r3corda.node.MainKt'

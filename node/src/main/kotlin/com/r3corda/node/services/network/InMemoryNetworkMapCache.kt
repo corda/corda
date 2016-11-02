@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.bufferUntilSubscribed
 import com.r3corda.core.contracts.Contract
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.map
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.SingleMessageRecipient
@@ -72,9 +73,16 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override fun get(serviceType: ServiceType) = registeredNodes.filterValues { it.advertisedServices.any { it.info.type.isSubTypeOf(serviceType) } }.map { it.value }
     override fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo? = get(type).firstOrNull()
     override fun getNodeByLegalName(name: String) = get().singleOrNull { it.legalIdentity.name == name }
-    override fun getNodeByPublicKey(publicKey: PublicKey) = get().singleOrNull {
-        (it.legalIdentity.owningKey == publicKey)
-            || it.advertisedServices.any { it.identity.owningKey == publicKey }
+    override fun getNodeByPublicKey(publicKey: PublicKey): NodeInfo? {
+        // Although we should never have more than one match, it is theoretically possible. Report an error if it happens.
+        val candidates = get().filter {
+            (it.legalIdentity.owningKey == publicKey)
+                    || it.advertisedServices.any { it.identity.owningKey == publicKey }
+        }
+        if (candidates.size > 1) {
+            throw IllegalStateException("Found more than one match for key ${publicKey.toStringShort()}")
+        }
+        return candidates.singleOrNull()
     }
 
     override fun addMapService(net: MessagingService, networkMapAddress: SingleMessageRecipient, subscribe: Boolean,

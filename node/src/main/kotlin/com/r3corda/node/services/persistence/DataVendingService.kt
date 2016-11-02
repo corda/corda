@@ -3,6 +3,7 @@ package com.r3corda.node.services.persistence
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.CordaPluginRegistry
+import com.r3corda.core.node.PluginServiceHub
 import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.SingletonSerializeAsToken
@@ -31,10 +32,7 @@ object DataVending {
      * Additionally, because nodes do not store invalid transactions, requesting such a transaction will always yield null.
      */
     @ThreadSafe
-    // TODO:  I don't like that this needs ServiceHubInternal, but passing in a state machine breaks MockServices because
-//        the state machine isn't set when this is constructed. [NodeSchedulerService] has the same problem, and both
-//        should be fixed at the same time.
-    class Service(services: ServiceHubInternal) : SingletonSerializeAsToken() {
+    class Service(services: PluginServiceHub) : SingletonSerializeAsToken() {
 
         companion object {
             val logger = loggerFor<DataVending.Service>()
