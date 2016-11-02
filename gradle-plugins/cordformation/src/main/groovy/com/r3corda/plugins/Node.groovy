@@ -25,7 +25,8 @@ class Node {
      */
     protected List<String> advertisedServices = []
     /**
-     * Set thThe list of cordapps to install to the plugins directory.
+     * Set the list of cordapps to install to the plugins directory. Each cordapp is a fully qualified Maven
+     * dependency name, eg: com.example:product-name:0.1
      *
      * @note Your app will be installed by default and does not need to be included here.
      */
@@ -226,7 +227,7 @@ class Node {
      */
     private Collection<File> getCordappList() {
         return project.configurations.cordapp.files {
-            cordapps.contains(it.getName())
+            cordapps.contains("${it.group}:${it.name}:${it.version}")
         }
     }
 }
