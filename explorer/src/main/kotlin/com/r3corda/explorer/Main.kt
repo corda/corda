@@ -43,9 +43,7 @@ class Main : App() {
 fun main(args: Array<String>) {
     val portAllocation = PortAllocation.Incremental(20000)
     driver(portAllocation = portAllocation) {
-
         val user = User("user1", "test", permissions = setOf(CordaRPCOpsImpl.CASH_PERMISSION))
-
         val notary = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         val alice = startNode("Alice", rpcUsers = arrayListOf(user))
         val bob = startNode("Bob", rpcUsers = arrayListOf(user))
