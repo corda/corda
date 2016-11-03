@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -xeo pipefail
+
 if [ ! -e ./gradlew ]; then
     echo "Run from the root directory please"
     exit 1
@@ -11,10 +13,15 @@ if [ ! -e lib/dokka.jar ]; then
     wget -O lib/dokka.jar https://github.com/Kotlin/dokka/releases/download/0.9.8/dokka-fatjar.jar
 fi
 
+echo "Installing pip dependencies ... "
+echo
+cd docs
+pip install -r requirements.txt;
+
 echo "Generating docsite ..."
 echo
 
-( cd docs; make clean html )
+make clean html
 
 echo
 echo "Generating API docs ..."
