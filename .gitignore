@@ -26,6 +26,7 @@ tags
 **/build/nodes/**
 **/build/scripts/**
 **/build/publications/**
+**/build/distributions/**
 
 # gradle's buildSrc build/
 /buildSrc/build/
