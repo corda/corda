@@ -7,6 +7,8 @@ import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.explorer.views.runInFxApplicationThread
 import com.r3corda.node.driver.PortAllocation
 import com.r3corda.node.driver.driver
+import com.r3corda.node.internal.CordaRPCOpsImpl
+import com.r3corda.node.services.User
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.transactions.SimpleNotaryService
@@ -41,9 +43,12 @@ class Main : App() {
 fun main(args: Array<String>) {
     val portAllocation = PortAllocation.Incremental(20000)
     driver(portAllocation = portAllocation) {
+
+        val user = User("user1", "test", permissions = setOf(CordaRPCOpsImpl.CASH_PERMISSION))
+
         val notary = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-        val alice = startNode("Alice")
-        val bob = startNode("Bob")
+        val alice = startNode("Alice", rpcUsers = arrayListOf(user))
+        val bob = startNode("Bob", rpcUsers = arrayListOf(user))
 
         val notaryNode = notary.get()
         val aliceNode = alice.get()
@@ -54,7 +59,7 @@ fun main(args: Array<String>) {
         }
 
         // Register with alice to use alice's RPC proxy to create random events.
-        Models.get<NodeMonitorModel>(Main::class).register(ArtemisMessagingComponent.toHostAndPort(aliceNode.nodeInfo.address), FullNodeConfiguration(aliceNode.config), "user1", "test")
+        Models.get<NodeMonitorModel>(Main::class).register(ArtemisMessagingComponent.toHostAndPort(aliceNode.nodeInfo.address), FullNodeConfiguration(aliceNode.config), user.username, user.password)
         val rpcProxy = Models.get<NodeMonitorModel>(Main::class).proxyObservable.get()
 
         for (i in 0..10000) {
