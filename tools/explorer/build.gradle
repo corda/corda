@@ -30,12 +30,12 @@ mainClassName = 'com.r3corda.explorer.Main'
 sourceSets {
     main {
         resources {
-            srcDir "../config/dev"
+            srcDir "../../config/dev"
         }
     }
     test {
         resources {
-            srcDir "../config/test"
+            srcDir "../../config/test"
         }
     }
 }

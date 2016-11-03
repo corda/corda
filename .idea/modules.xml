@@ -24,9 +24,6 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/experimental/experimental.iml" filepath="$PROJECT_DIR$/.idea/modules/experimental/experimental.iml" group="experimental" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/experimental/experimental_main.iml" filepath="$PROJECT_DIR$/.idea/modules/experimental/experimental_main.iml" group="experimental" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/experimental/experimental_test.iml" filepath="$PROJECT_DIR$/.idea/modules/experimental/experimental_test.iml" group="experimental" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/explorer/explorer.iml" filepath="$PROJECT_DIR$/.idea/modules/explorer/explorer.iml" group="explorer" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/explorer/explorer_main.iml" filepath="$PROJECT_DIR$/.idea/modules/explorer/explorer_main.iml" group="explorer" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/explorer/explorer_test.iml" filepath="$PROJECT_DIR$/.idea/modules/explorer/explorer_test.iml" group="explorer" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/gradle-plugins.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/gradle-plugins.iml" group="gradle-plugins" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/gradle-plugins_main.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/gradle-plugins_main.iml" group="gradle-plugins" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/gradle-plugins/gradle-plugins_test.iml" filepath="$PROJECT_DIR$/.idea/modules/gradle-plugins/gradle-plugins_test.iml" group="gradle-plugins" />
@@ -50,6 +47,9 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-utils/test-utils.iml" filepath="$PROJECT_DIR$/.idea/modules/test-utils/test-utils.iml" group="test-utils" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-utils/test-utils_main.iml" filepath="$PROJECT_DIR$/.idea/modules/test-utils/test-utils_main.iml" group="test-utils" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-utils/test-utils_test.iml" filepath="$PROJECT_DIR$/.idea/modules/test-utils/test-utils_test.iml" group="test-utils" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/tools/explorer/tools_explorer.iml" filepath="$PROJECT_DIR$/.idea/modules/tools/explorer/tools_explorer.iml" group="tools/explorer" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/tools/explorer/tools_explorer_main.iml" filepath="$PROJECT_DIR$/.idea/modules/tools/explorer/tools_explorer_main.iml" group="tools/explorer" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/tools/explorer/tools_explorer_test.iml" filepath="$PROJECT_DIR$/.idea/modules/tools/explorer/tools_explorer_test.iml" group="tools/explorer" />
     </modules>
   </component>
 </project>

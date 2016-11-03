@@ -4,7 +4,6 @@ import com.r3corda.explorer.formatters.Formatter
 import javafx.beans.binding.Bindings
 import javafx.beans.value.ObservableValue
 import javafx.scene.Node
-import javafx.scene.control.ListCell
 import javafx.scene.control.TableCell
 import javafx.scene.control.TableColumn
 import javafx.scene.control.TableView

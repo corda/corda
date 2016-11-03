@@ -1,7 +1,7 @@
 package com.r3corda.explorer.formatters
 
 import com.r3corda.core.contracts.Amount
-import java.util.Currency
+import java.util.*
 
 /**
  * A note on formatting: Currently we don't have any fancy locale/use-case-specific formatting of amounts. This is a
