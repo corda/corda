@@ -289,3 +289,8 @@ fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
     val subscription = subscribe(subject)
     return subject.doOnUnsubscribe { subscription.unsubscribe() }
 }
+
+/** Allows summing big decimals that are in iterable collections */
+fun Iterable<BigDecimal>.sum(): BigDecimal {
+    return this.fold(BigDecimal.valueOf(0)) { a: BigDecimal, b: BigDecimal -> a + b }
+}
