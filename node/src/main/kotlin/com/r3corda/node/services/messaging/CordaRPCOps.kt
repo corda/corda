@@ -118,6 +118,10 @@ interface CordaRPCOps : RPCOps {
      */
     fun executeCommand(command: ClientToServiceCommand): TransactionBuildResult
 
+    /**
+     * Returns Node's identity, assuming this will not change while the node is running.
+     */
+    fun nodeIdentity(): NodeInfo
     /*
      * Add note(s) to an existing Vault transaction
      */

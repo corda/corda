@@ -10,9 +10,7 @@ import javafx.collections.ObservableList
 import javafx.collections.ObservableMap
 import javafx.collections.transformation.FilteredList
 import org.fxmisc.easybind.EasyBind
-import org.slf4j.LoggerFactory
 import java.util.function.Predicate
-import kotlin.concurrent.thread
 
 /**
  * Here follows utility extension functions that help reduce the visual load when developing RX code. Each function should

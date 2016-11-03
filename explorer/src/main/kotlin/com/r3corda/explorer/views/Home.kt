@@ -1,73 +1,55 @@
 package com.r3corda.explorer.views
 
-import com.r3corda.client.fxutils.AmountBindings
 import com.r3corda.client.fxutils.map
-import com.r3corda.client.model.*
-import com.r3corda.contracts.asset.Cash
-import com.r3corda.core.contracts.StateAndRef
-import com.r3corda.core.contracts.withoutIssuer
-import com.r3corda.explorer.formatters.AmountFormatter
+import com.r3corda.client.model.GatheredTransactionData
+import com.r3corda.client.model.GatheredTransactionDataModel
+import com.r3corda.client.model.observableListReadOnly
+import com.r3corda.client.model.writableValue
 import com.r3corda.explorer.model.SelectedView
-import com.r3corda.explorer.model.SettingsModel
 import com.r3corda.explorer.model.TopLevelModel
 import javafx.beans.binding.Bindings
-import javafx.beans.value.ObservableValue
 import javafx.beans.value.WritableValue
 import javafx.collections.ObservableList
+import javafx.scene.Node
+import javafx.scene.Parent
 import javafx.scene.control.Label
 import javafx.scene.control.TitledPane
 import javafx.scene.input.MouseButton
+import javafx.scene.input.MouseEvent
 import javafx.scene.layout.TilePane
 import tornadofx.View
-import java.util.*
+import tornadofx.find
 
 class Home : View() {
-    override val root: TilePane by fxml()
-
+    override val root: Parent by fxml()
+    private val tilePane: TilePane by fxid()
     private val ourCashPane: TitledPane by fxid()
-    private val ourCashLabel: Label by fxid()
-
-    private val ourTransactionsPane: TitledPane by fxid()
     private val ourTransactionsLabel: Label by fxid()
 
-    private val newTransaction: TitledPane by fxid()
-
     private val selectedView: WritableValue<SelectedView> by writableValue(TopLevelModel::selectedView)
-    private val cashStates: ObservableList<StateAndRef<Cash.State>> by observableList(ContractStateModel::cashStates)
     private val gatheredTransactionDataList: ObservableList<out GatheredTransactionData>
             by observableListReadOnly(GatheredTransactionDataModel::gatheredTransactionDataList)
-    private val reportingCurrency: ObservableValue<Currency> by observableValue(SettingsModel::reportingCurrency)
-    private val exchangeRate: ObservableValue<ExchangeRate> by observableValue(ExchangeRateModel::exchangeRate)
-
-    private val sumAmount = AmountBindings.sumAmountExchange(
-            cashStates.map { it.state.data.amount.withoutIssuer() },
-            reportingCurrency,
-            exchangeRate
-    )
 
     init {
-        val formatter = AmountFormatter.boring
-
-        ourCashLabel.textProperty().bind(sumAmount.map { formatter.format(it) })
-        ourCashPane.setOnMouseClicked { clickEvent ->
-            if (clickEvent.button == MouseButton.PRIMARY) {
-                selectedView.value = SelectedView.Cash
-            }
-        }
-
+        // TODO: register views in view model and populate the dashboard dynamically.
         ourTransactionsLabel.textProperty().bind(
                 Bindings.size(gatheredTransactionDataList).map { it.toString() }
         )
-        ourTransactionsPane.setOnMouseClicked { clickEvent ->
-            if (clickEvent.button == MouseButton.PRIMARY) {
-                selectedView.value = SelectedView.Transaction
-            }
-        }
-        newTransaction.setOnMouseClicked { clickEvent ->
-            if (clickEvent.button == MouseButton.PRIMARY) {
-                selectedView.value = SelectedView.NewTransaction
-            }
+
+        ourCashPane.apply {
+            content = find(CashViewer::class).widget
         }
 
+        tilePane.widthProperty().addListener { e ->
+            val prefWidth = 350
+            val columns: Int = ((tilePane.width - 10) / prefWidth).toInt()
+            tilePane.children.forEach { (it as? TitledPane)?.prefWidth = (tilePane.width - 10) / columns }
+        }
+    }
+
+    fun changeView(event: MouseEvent) {
+        if (event.button == MouseButton.PRIMARY) {
+            selectedView.value = SelectedView.valueOf((event.source as Node).id)
+        }
     }
 }

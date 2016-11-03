@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.StackPane?>
+<StackPane alignment="CENTER_RIGHT" stylesheets="@../css/wallet.css" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
+    <TextField fx:id="textField" promptText="Filter transactions by originator, contract type..." styleClass="search">
+        <padding>
+            <Insets bottom="5.0" left="30.0" right="5.0"/>
+        </padding>
+        <StackPane.margin>
+            <Insets bottom="5.0" top="5.0"/>
+        </StackPane.margin>
+    </TextField>
+    <ImageView fx:id="clearButton" fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true" styleClass="search-clear">
+        <StackPane.margin>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+        </StackPane.margin>
+        <Image url="@../images/clear_inactive.png"/>
+    </ImageView>
+</StackPane>

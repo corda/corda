@@ -16,10 +16,8 @@ import com.r3corda.core.crypto.*
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.ServiceEntry
-import com.r3corda.core.node.services.NetworkMapCache
-import com.r3corda.core.node.services.ServiceInfo
-import com.r3corda.core.node.services.StateMachineTransactionMapping
-import com.r3corda.core.node.services.Vault
+import com.r3corda.core.node.WorldCoordinate
+import com.r3corda.core.node.services.*
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.serialization.*
 import com.r3corda.core.transactions.SignedTransaction
@@ -101,6 +99,7 @@ fun requirePermission(permission: String) {
  */
 open class RPCException(msg: String, cause: Throwable?) : RuntimeException(msg, cause) {
     constructor(msg: String) : this(msg, null)
+
     class DeadlineExceeded(rpcName: String) : RPCException("Deadline exceeded on call to $rpcName")
 }
 
@@ -187,8 +186,12 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
                     kryo.writeObject(output, nodeAddress.hostAndPort)
                 }
         )
+        register(NodeMessagingClient.makeNetworkMapAddress(HostAndPort.fromString("localhost:0")).javaClass)
+        register(ServiceInfo::class.java)
+        register(ServiceType.getServiceType("ab", "ab").javaClass)
+        register(ServiceType.parse("ab").javaClass)
+        register(WorldCoordinate::class.java)
         register(HostAndPort::class.java)
-        register(ServiceInfo::class.java, read = { kryo, input -> ServiceInfo.parse(input.readString()) }, write = Kryo::writeObject)
         // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
         register(IllegalArgumentException::class.java)
         // Kryo couldn't serialize Collections.unmodifiableCollection in Throwable correctly, causing null pointer exception when try to access the deserialize object.

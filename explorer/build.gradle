@@ -25,8 +25,6 @@ apply plugin: 'kotlin'
 apply plugin: 'application'
 
 sourceCompatibility = 1.8
-
-applicationDefaultJvmArgs = ["-javaagent:${rootProject.configurations.quasar.singleFile}"]
 mainClassName = 'com.r3corda.explorer.Main'
 
 sourceSets {
@@ -53,7 +51,7 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
-    compile 'no.tornado:tornadofx:1.5.1'
+    compile 'no.tornado:tornadofx:1.5.6'
 
     // Corda Core: Data structures and basic types needed to work with Corda.
     compile project(':core')
@@ -74,4 +72,12 @@ dependencies {
 
     // Humanize: formatting
     compile 'com.github.mfornos:humanize-icu:1.2.2'
+
+    // Controls FX: more java FX components http://fxexperience.com/controlsfx/
+    compile 'org.controlsfx:controlsfx:8.40.12'
+}
+
+task(runDemoNodes, dependsOn: 'classes', type: JavaExec) {
+    main = 'com.r3corda.explorer.MainKt'
+    classpath = sourceSets.main.runtimeClasspath
 }

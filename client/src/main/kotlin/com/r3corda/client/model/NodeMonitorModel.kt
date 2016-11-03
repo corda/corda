@@ -1,15 +1,14 @@
 package com.r3corda.client.model
 
+import com.google.common.net.HostAndPort
 import com.r3corda.client.CordaRPCClient
 import com.r3corda.core.contracts.ClientToServiceCommand
-import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.services.config.NodeSSLConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingComponent.Companion.toHostAndPort
 import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.messaging.StateMachineInfo
 import com.r3corda.node.services.messaging.StateMachineUpdate
@@ -56,8 +55,8 @@ class NodeMonitorModel {
      * Register for updates to/from a given vault.
      * TODO provide an unsubscribe mechanism
      */
-    fun register(vaultMonitorNodeInfo: NodeInfo, sslConfig: NodeSSLConfiguration, username: String, password: String) {
-        val client = CordaRPCClient(toHostAndPort(vaultMonitorNodeInfo.address), sslConfig)
+    fun register(nodeHostAndPort: HostAndPort, sslConfig: NodeSSLConfiguration, username: String, password: String) {
+        val client = CordaRPCClient(nodeHostAndPort, sslConfig)
         client.start(username, password)
         val proxy = client.proxy()
 
@@ -101,7 +100,6 @@ class NodeMonitorModel {
         clientToServiceSource.subscribe {
             proxy.executeCommand(it)
         }
-
         proxyObservable.set(proxy)
     }
 }

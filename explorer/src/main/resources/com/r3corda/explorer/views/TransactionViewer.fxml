@@ -1,137 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.String?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ListView?>
-<?import javafx.scene.control.SplitPane?>
-<?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.control.TitledPane?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.VBox?>
-
-<VBox styleClass="view" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
-   <children>
-      <StackPane alignment="CENTER_RIGHT">
-         <children>
-            <TextField promptText="Filter transactions by originator, contract type..." styleClass="search">
-               <opaqueInsets>
-                  <Insets />
-               </opaqueInsets>
-               <padding>
-                  <Insets bottom="5.0" left="30.0" right="5.0" top="5.0" />
-               </padding>
-               <StackPane.margin>
-                  <Insets bottom="5.0" top="5.0" />
-               </StackPane.margin>
-            </TextField>
-            <ImageView fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true" styleClass="search-clear">
-               <image>
-                  <Image url="@../../../../../../../../../internal/explorer/src/main/resources/images/clear_inactive.png" />
-               </image>
-               <StackPane.margin>
-                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-               </StackPane.margin>
-            </ImageView>
-         </children>
-      </StackPane>
-      <SplitPane fx:id="topSplitPane" dividerPositions="0.3, 0.6" orientation="VERTICAL" prefHeight="562.0" prefWidth="1087.0" VBox.vgrow="ALWAYS">
-         <items>
-            <TableView fx:id="transactionViewTable" prefHeight="200.0" prefWidth="200.0">
-              <columns>
-                  <TableColumn fx:id="transactionViewTransactionId" prefWidth="75.0" text="Transaction ID" />
-                <TableColumn fx:id="transactionViewStateMachineId" prefWidth="187.0" text="StateMachine ID" />
-                  <TableColumn fx:id="transactionViewClientUuid" prefWidth="75.0" text="Client UUID" />
-                  <TableColumn fx:id="transactionViewTransactionStatus" prefWidth="75.0" text="Transaction status" />
-                  <TableColumn fx:id="transactionViewProtocolStatus" prefWidth="75.0" text="Protocol status" />
-                  <TableColumn fx:id="transactionViewStateMachineStatus" prefWidth="75.0" text="SM Status" />
-                  <TableColumn fx:id="transactionViewCommandTypes" prefWidth="75.0" text="Command type(s)" />
-                  <TableColumn fx:id="transactionViewTotalValueEquiv" prefWidth="75.0" styleClass="monetary-value" text="Total value (USD equiv)" />
-              </columns>
-               <columnResizePolicy>
-                  <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-               </columnResizePolicy>
-            </TableView>
-          <TitledPane fx:id="contractStatesTitledPane" animated="false" text="Contract states">
-               <content>
-                  <SplitPane dividerPositions="0.5" prefHeight="160.0" prefWidth="200.0">
-                     <items>
-                        <VBox prefHeight="200.0" prefWidth="100.0">
-                           <children>
-                              <HBox spacing="5.0">
-                                 <children>
-                                    <Label text="Inputs:" />
-                                    <Label fx:id="contractStatesInputsCountLabel" text="Label" />
-                                 </children>
-                              </HBox>
-                              <TableView fx:id="contractStatesInputStatesTable" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
-                                <columns>
-                                  <TableColumn fx:id="contractStatesInputStatesId" prefWidth="75.0" text="ID" />
-                                  <TableColumn fx:id="contractStatesInputStatesType" prefWidth="75.0" text="Type" />
-                                    <TableColumn fx:id="contractStatesInputStatesOwner" prefWidth="75.0" text="Owner" />
-                                    <TableColumn fx:id="contractStatesInputStatesLocalCurrency" prefWidth="75.0" styleClass="first-column" text="Local Ccy" />
-                                    <TableColumn fx:id="contractStatesInputStatesAmount" prefWidth="75.0" text="Amount">
-                                       <styleClass>
-                                          <String fx:value="second-column" />
-                                          <String fx:value="monetary-value" />
-                                       </styleClass>
-                                    </TableColumn>
-                                    <TableColumn fx:id="contractStatesInputStatesEquiv" prefWidth="75.0" text="USD Equiv" />
-                                </columns>
-                                 <columnResizePolicy>
-                                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                 </columnResizePolicy>
-                              </TableView>
-                           </children>
-                        </VBox>
-                        <VBox prefHeight="200.0" prefWidth="100.0">
-                           <children>
-                              <HBox spacing="5.0">
-                                 <children>
-                                    <Label text="Outputs:" />
-                                    <Label fx:id="contractStatesOutputsCountLabel" text="Label" />
-                                 </children>
-                              </HBox>
-                              <TableView fx:id="contractStatesOutputStatesTable" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
-                                 <columns>
-                                    <TableColumn fx:id="contractStatesOutputStatesId" prefWidth="75.0" text="ID" />
-                                    <TableColumn fx:id="contractStatesOutputStatesType" prefWidth="75.0" text="Type" />
-                                    <TableColumn fx:id="contractStatesOutputStatesOwner" prefWidth="75.0" text="Owner" />
-                                    <TableColumn fx:id="contractStatesOutputStatesLocalCurrency" prefWidth="75.0" styleClass="first-column" text="Local Ccy" />
-                                    <TableColumn fx:id="contractStatesOutputStatesAmount" prefWidth="75.0" text="Amount">
-                                       <styleClass>
-                                          <String fx:value="second-column" />
-                                          <String fx:value="monetary-value" />
-                                       </styleClass>
-                                    </TableColumn>
-                                    <TableColumn fx:id="contractStatesOutputStatesEquiv" prefWidth="75.0" text="USD Equiv" />
-                                 </columns>
-                                 <columnResizePolicy>
-                                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                 </columnResizePolicy>
-                              </TableView>
-                           </children>
-                        </VBox>
-                     </items>
-                  </SplitPane>
-               </content>
-            </TitledPane>
-            <TitledPane fx:id="signaturesTitledPane" animated="false" text="Signatures">
-               <content>
-                  <ListView fx:id="signaturesList" />
-               </content>
-            </TitledPane>
-         </items>
-      </SplitPane>
-      <HBox>
-         <children>
-            <Label fx:id="matchingTransactionsLabel" text="matching transaction(s)" />
-         </children>
-      </HBox>
-   </children>
-</VBox>
+<BorderPane stylesheets="@../css/wallet.css" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
+    <padding>
+        <Insets top="5" left="5" right="10" bottom="5"/>
+    </padding>
+    <center>
+        <TableView fx:id="transactionViewTable" VBox.vgrow="ALWAYS">
+            <columnResizePolicy>
+                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+            </columnResizePolicy>
+        </TableView>
+    </center>
+    <bottom>
+        <Label fx:id="matchingTransactionsLabel" text="matching transaction(s)"/>
+    </bottom>
+</BorderPane>

@@ -4,7 +4,6 @@ import com.r3corda.client.fxutils.*
 import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.StateAndRef
 import com.r3corda.core.contracts.StateRef
-import com.r3corda.client.fxutils.recordInSequence
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.protocols.StateMachineRunId
@@ -15,8 +14,6 @@ import javafx.beans.value.ObservableValue
 import javafx.collections.ObservableList
 import javafx.collections.ObservableMap
 import org.fxmisc.easybind.EasyBind
-import org.slf4j.LoggerFactory
-import rx.Observable
 
 data class GatheredTransactionData(
         val transaction: PartiallyResolvedTransaction,
@@ -30,8 +27,7 @@ data class GatheredTransactionData(
  */
 data class PartiallyResolvedTransaction(
         val transaction: SignedTransaction,
-        val inputs: List<ObservableValue<InputResolution>>
-) {
+        val inputs: List<ObservableValue<InputResolution>>) {
     val id = transaction.id
     sealed class InputResolution(val stateRef: StateRef) {
         class Unresolved(stateRef: StateRef) : InputResolution(stateRef)
@@ -84,16 +80,15 @@ data class StateMachineData(
  */
 class GatheredTransactionDataModel {
 
-    private val transactions: Observable<SignedTransaction> by observable(NodeMonitorModel::transactions)
-    private val stateMachineUpdates: Observable<StateMachineUpdate> by observable(NodeMonitorModel::stateMachineUpdates)
-    private val progressTracking: Observable<ProgressTrackingEvent> by observable(NodeMonitorModel::progressTracking)
-    private val stateMachineTransactionMapping: Observable<StateMachineTransactionMapping> by observable(NodeMonitorModel::stateMachineTransactionMapping)
+    private val transactions by observable(NodeMonitorModel::transactions)
+    private val stateMachineUpdates by observable(NodeMonitorModel::stateMachineUpdates)
+    private val progressTracking by observable(NodeMonitorModel::progressTracking)
+    private val stateMachineTransactionMapping by observable(NodeMonitorModel::stateMachineTransactionMapping)
 
-    val collectedTransactions = transactions.recordInSequence()
-    val transactionMap = collectedTransactions.associateBy(SignedTransaction::id)
-    val progressEvents = progressTracking.recordAsAssociation(ProgressTrackingEvent::stateMachineId)
-    val stateMachineStatus: ObservableMap<StateMachineRunId, out ObservableValue<StateMachineStatus>> =
-            stateMachineUpdates.foldToObservableMap(Unit) { update, _unit, map: ObservableMap<StateMachineRunId, SimpleObjectProperty<StateMachineStatus>> ->
+    private val collectedTransactions = transactions.recordInSequence()
+    private val transactionMap = collectedTransactions.associateBy(SignedTransaction::id)
+    private val progressEvents = progressTracking.recordAsAssociation(ProgressTrackingEvent::stateMachineId)
+    private val stateMachineStatus = stateMachineUpdates.foldToObservableMap(Unit) { update, _unit, map: ObservableMap<StateMachineRunId, SimpleObjectProperty<StateMachineStatus>> ->
                 when (update) {
                     is StateMachineUpdate.Added -> {
                         val added: SimpleObjectProperty<StateMachineStatus> =
@@ -107,21 +102,19 @@ class GatheredTransactionDataModel {
                     }
                 }
             }
-    val stateMachineDataList: ObservableList<StateMachineData> =
-            LeftOuterJoinedMap(stateMachineStatus, progressEvents) { id, status, progress ->
+    private val stateMachineDataList = LeftOuterJoinedMap(stateMachineStatus, progressEvents) { id, status, progress ->
                 StateMachineData(id, progress.map { it?.let { ProtocolStatus(it.message) } }, status)
             }.getObservableValues()
-    val stateMachineDataMap = stateMachineDataList.associateBy(StateMachineData::id)
-    val smTxMappingList = stateMachineTransactionMapping.recordInSequence()
-    val partiallyResolvedTransactions = collectedTransactions.map {
+    private val stateMachineDataMap = stateMachineDataList.associateBy(StateMachineData::id)
+    private val smTxMappingList = stateMachineTransactionMapping.recordInSequence()
+    private val partiallyResolvedTransactions = collectedTransactions.map {
         PartiallyResolvedTransaction.fromSignedTransaction(it, transactionMap)
     }
 
     /**
      * We JOIN the transaction list with state machines
      */
-    val gatheredTransactionDataList: ObservableList<out GatheredTransactionData> =
-            partiallyResolvedTransactions.leftOuterJoin(
+    val gatheredTransactionDataList = partiallyResolvedTransactions.leftOuterJoin(
                     smTxMappingList,
                     PartiallyResolvedTransaction::id,
                     StateMachineTransactionMapping::transactionId
