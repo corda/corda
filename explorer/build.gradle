@@ -23,6 +23,7 @@ repositories {
 apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'application'
+apply plugin: QuasarPlugin
 
 sourceCompatibility = 1.8
 mainClassName = 'com.r3corda.explorer.Main'
