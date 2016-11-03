@@ -75,5 +75,6 @@ Read on to learn:
    release-process
    release-notes
    network-simulator
+   node-explorer
    codestyle
    building-the-docs
