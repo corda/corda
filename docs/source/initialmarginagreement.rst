@@ -7,12 +7,9 @@ agreement; featuring the integration of complex and industry proven third party 
 SIMM Introduction
 -----------------
 
-SIMM is an acronym for "Standard Initial Margin Model".
-
-Now this is a quite detailed and complicated subject, and I appeal to those of you who are know about this in depth to
-be somewhat patient as I attempt to reduce it to the principal parts suitable for the demonstration. It is effectively
-the calculation of what is known as a "margin" that is paid by one party to another when they agree a trade on certain
-types of transaction. This margin is paid such that, in the event of one of the counterparties suffering a credit event
+SIMM is an acronym for "Standard Initial Margin Model". It is effectively the calculation of a "margin" that is paid
+by one party to another when they agree a trade on certain types of transaction. This margin is
+paid such that, in the event of one of the counterparties suffering a credit event
 (a financial term and a polite way to say defaulting, not paying the debts that are due, or potentially even bankruptcy),
 then the party that is owed any sum already has some of the amount that it should have been paid. This payment to the
 receiving party is a preventative measure in order to reduce the risk of a potentially catastrophic default domino
@@ -53,7 +50,7 @@ Initial Margin Agreement Process
     - Agree on the results of these steps
     - Calculate the initial margin
     - Agree on the calculation of the above with the other party
-    - In practise, pay (or receive) this margin (omitted for the sake of complexity for this example)
+    - In practice, pay (or receive) this margin (omitted for the sake of complexity for this example)
 
 
 Running the app

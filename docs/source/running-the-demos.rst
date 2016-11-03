@@ -178,6 +178,8 @@ You should see some log lines scroll past, and within a few seconds the message 
 SIMM and Portfolio Demo
 -----------------------
 
+.. note:: Read more about this demo at :doc:`initialmarginagreement`.
+
 To run the demo run:
 
 **Windows**
