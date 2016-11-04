@@ -29,6 +29,7 @@ import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.node.utilities.isolatedTransaction
 import kotlinx.support.jdk8.collections.removeIf
+import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -95,6 +96,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     })
 
+    // True if we're shutting down, so don't resume anything.
+    @Volatile private var stopping = false
+    // How many Fibers are running and not suspended.  If zero and stopping is true, then we are halted.
+    private val liveFibers = ReusableLatch()
+
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
 
@@ -142,6 +148,31 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     fun start() {
         restoreFibersFromCheckpoints()
         serviceHub.networkMapCache.mapServiceRegistered.then(executor) { resumeRestoredFibers() }
+    }
+
+    private fun decrementLiveFibers() {
+        liveFibers.countDown()
+    }
+
+    private fun incrementLiveFibers() {
+        liveFibers.countUp()
+    }
+
+    /**
+     * Start the shutdown process, bringing the [StateMachineManager] to a controlled stop.  When this method returns,
+     * all Fibers have been suspended and checkpointed, or have completed.
+     *
+     * @param allowedUnsuspendedFiberCount Optional parameter is used in some tests.
+     */
+    fun stop(allowedUnsuspendedFiberCount: Int = 0) {
+        check(allowedUnsuspendedFiberCount >= 0)
+        mutex.locked {
+            if (stopping) throw IllegalStateException("Already stopping!")
+            stopping = true
+        }
+        // Account for any expected Fibers in a test scenario.
+        liveFibers.countDown(allowedUnsuspendedFiberCount)
+        liveFibers.await()
     }
 
     /**
@@ -203,6 +234,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             }
             session.receivedMessages += message
             if (session.waitingForResponse) {
+                // We only want to resume once, so immediately reset the flag.
+                session.waitingForResponse = false
                 updateCheckpoint(session.psm)
                 resumeFiber(session.psm)
             }
@@ -285,15 +318,20 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             // This will free up the ThreadLocal so on return the caller can carry on with other transactions
             psm.commitTransaction()
             processIORequest(ioRequest)
+            decrementLiveFibers()
         }
         psm.actionOnEnd = {
-            psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
-            mutex.locked {
-                stateMachines.remove(psm)?.let { checkpointStorage.removeCheckpoint(it) }
-                totalFinishedProtocols.inc()
-                notifyChangeObservers(psm, AddOrRemove.REMOVE)
+            try {
+                psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
+                mutex.locked {
+                    stateMachines.remove(psm)?.let { checkpointStorage.removeCheckpoint(it) }
+                    totalFinishedProtocols.inc()
+                    notifyChangeObservers(psm, AddOrRemove.REMOVE)
+                }
+                endAllFiberSessions(psm)
+            } finally {
+                decrementLiveFibers()
             }
-            endAllFiberSessions(psm)
         }
         mutex.locked {
             totalStartedProtocols.inc()
@@ -370,8 +408,13 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun resumeFiber(psm: ProtocolStateMachineImpl<*>) {
-        executor.executeASAP {
+        // Avoid race condition when setting stopping to true and then checking liveFibers
+        incrementLiveFibers()
+        if (!stopping) executor.executeASAP {
             psm.resume(scheduler)
+        } else {
+            psm.logger.debug("Not resuming as SMM is stopping.")
+            decrementLiveFibers()
         }
     }
 

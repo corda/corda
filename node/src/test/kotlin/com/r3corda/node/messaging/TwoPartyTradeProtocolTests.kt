@@ -21,7 +21,10 @@ import com.r3corda.core.utilities.LogHelper
 import com.r3corda.core.utilities.TEST_TX_TIME
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.persistence.*
+import com.r3corda.node.services.persistence.DBTransactionStorage
+import com.r3corda.node.services.persistence.NodeAttachmentService
+import com.r3corda.node.services.persistence.StorageServiceImpl
+import com.r3corda.node.services.persistence.checkpoints
 import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.protocols.TwoPartyTradeProtocol.Buyer
 import com.r3corda.protocols.TwoPartyTradeProtocol.Seller
@@ -114,7 +117,7 @@ class TwoPartyTradeProtocolTests {
             databaseTransaction(bobNode.database) {
                 assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
             }
-            aliceNode.manuallyCloseDB()
+            bobNode.manuallyCloseDB()
         }
     }
 

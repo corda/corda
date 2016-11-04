@@ -51,6 +51,7 @@ class StateMachineManagerTests {
     @Test
     fun `newly added protocol is preserved on restart`() {
         node1.smm.add(NoOpProtocol(nonTerminating = true))
+        node1.acceptableLiveFiberCountOnStop = 1
         val restoredProtocol = node1.restartAndGetRestoredProtocol<NoOpProtocol>()
         assertThat(restoredProtocol.protocolStarted).isTrue()
     }
@@ -75,6 +76,7 @@ class StateMachineManagerTests {
         // We push through just enough messages to get only the payload sent
         node2.pumpReceive()
         node2.disableDBCloseOnStop()
+        node2.acceptableLiveFiberCountOnStop = 1
         node2.stop()
         net.runNetwork()
         val restoredProtocol = node2.restartAndGetRestoredProtocol<ReceiveThenSuspendProtocol>(node1)
@@ -206,6 +208,9 @@ class StateMachineManagerTests {
                 node1 sent sessionEnd() to node3
                 //There's no session end from the other protocols as they're manually suspended
         )
+
+        node2.acceptableLiveFiberCountOnStop = 1
+        node3.acceptableLiveFiberCountOnStop = 1
     }
 
     @Test
@@ -218,6 +223,7 @@ class StateMachineManagerTests {
         node3.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { SendProtocol(node3Payload, it) }
         val multiReceiveProtocol = ReceiveThenSuspendProtocol(node2.info.legalIdentity, node3.info.legalIdentity)
         node1.smm.add(multiReceiveProtocol)
+        node1.acceptableLiveFiberCountOnStop = 1
         net.runNetwork()
         assertThat(multiReceiveProtocol.receivedPayloads[0]).isEqualTo(node2Payload)
         assertThat(multiReceiveProtocol.receivedPayloads[1]).isEqualTo(node3Payload)
@@ -271,6 +277,7 @@ class StateMachineManagerTests {
         disableDBCloseOnStop() //Handover DB to new node copy
         stop()
         val newNode = mockNet.createNode(networkMapNode?.info?.address, id, advertisedServices = *advertisedServices.toTypedArray())
+        newNode.acceptableLiveFiberCountOnStop = 1
         manuallyCloseDB()
         mockNet.runNetwork() // allow NetworkMapService messages to stabilise and thus start the state machine
         return newNode.getSingleProtocol<P>().first

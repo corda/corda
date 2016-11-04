@@ -1,6 +1,7 @@
 package com.r3corda.node.internal
 
 import com.codahale.metrics.MetricRegistry
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
@@ -255,11 +256,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
             smm.start()
+            // Shut down the SMM so no Fibers are scheduled.
+            runOnStop += Runnable { smm.stop(acceptableLiveFiberCountOnStop()) }
             scheduler.start()
         }
         started = true
         return this
     }
+
+    @VisibleForTesting
+    protected open fun acceptableLiveFiberCountOnStop(): Int = 0
 
     private fun hasSSLCertificates(): Boolean {
         val keyStore = try {
