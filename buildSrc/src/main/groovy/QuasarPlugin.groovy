@@ -45,7 +45,7 @@ class QuasarPlugin implements Plugin<Project> {
                     classpath: "${project.sourceSets.main.output.classesDir}:${project.sourceSets.main.output.resourcesDir}:${project.configurations.runtime.asPath}")
             project.delete "$project.sourceSets.main.output.resourcesDir/META-INF/suspendables", "$project.sourceSets.main.output.resourcesDir/META-INF/suspendable-supers"
 
-            if(Files.isRegularFile(project.sourceSets.main.output.classesDir)) {
+            if(project.sourceSets.main.output.classesDir.exists()) {
                 ant.scanSuspendables(
                         auto: false,
                         suspendablesFile: "$project.sourceSets.main.output.resourcesDir/META-INF/suspendables",

@@ -54,10 +54,14 @@ allprojects {
 repositories {
     mavenCentral()
     jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
 }
 
+// Required for building out the fat JAR.
 dependencies {
-    // Required for Quasar. TODO: Remove this dependency.
+    compile project(':node')
     compile "com.google.guava:guava:19.0"
 }
 
@@ -145,6 +149,8 @@ task installTemplateNodes(dependsOn: 'buildCordaJAR') << {
 // Aliasing the publishToMavenLocal for simplicity.
 // TODO: Verify this works for gradle plugins.
 task(install, dependsOn: 'publishToMavenLocal')
+
+quasarScan.dependsOn('classes', ':node:classes', ':core:classes', ':finance:classes')
 
 publishing {
     publications {
