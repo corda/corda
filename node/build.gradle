@@ -43,7 +43,7 @@ sourceSets {
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
 dependencies {
-    compile project(':contracts')
+    compile project(':finance')
     testCompile project(':test-utils')
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
@@ -143,7 +143,7 @@ dependencies {
     testCompile "com.nhaarman:mockito-kotlin:0.6.1"
 }
 
-quasarScan.dependsOn('classes', ':core:classes', ':contracts:classes')
+quasarScan.dependsOn('classes', ':core:classes', ':finance:classes')
 
 task integrationTest(type: Test) {
     testClassesDir = sourceSets.integrationTest.output.classesDir

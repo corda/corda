@@ -103,7 +103,7 @@ root directory of Corda
 
     ./gradlew install
 
-This will publish corda-$version.jar, contracts-$version.jar, core-$version.jar and node-$version.jar to the
+This will publish corda-$version.jar, finance-$version.jar, core-$version.jar and node-$version.jar to the
 group com.r3corda. You can now depend on these as you normally would a Maven dependency.
 
 Gradle Plugins for Cordapps
@@ -165,7 +165,7 @@ To build against Corda and the plugins that cordapps use, update your build.grad
 
     dependencies {
         compile "com.r3corda:core:$corda_version"
-        compile "com.r3corda:contracts:$corda_version"
+        compile "com.r3corda:finance:$corda_version"
         compile "com.r3corda:node:$corda_version"
         compile "com.r3corda:corda:$corda_version"
         ... other dependencies here ...

@@ -85,5 +85,5 @@ to initialise the ORM layer.
 Several examples of entities and mappings are provided in the codebase, including ``Cash.State`` and
 ``CommercialPaper.State``.  For example, here's the first version of the cash schema.
 
-.. literalinclude:: ../../contracts/src/main/kotlin/com/r3corda/schemas/CashSchemaV1.kt
+.. literalinclude:: ../../finance/src/main/kotlin/com/r3corda/schemas/CashSchemaV1.kt
     :language: kotlin
