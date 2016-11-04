@@ -99,7 +99,7 @@ open class TransactionBuilder(
 
     fun signWith(key: KeyPair): TransactionBuilder {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
-        val data = toWireTransaction().serialize()
+        val data = toWireTransaction().id
         addSignatureUnchecked(key.signWithECDSA(data.bits))
         return this
     }
@@ -124,7 +124,7 @@ open class TransactionBuilder(
      */
     fun checkSignature(sig: DigitalSignature.WithKey) {
         require(commands.any { it.signers.contains(sig.by) }) { "Signature key doesn't match any command" }
-        sig.verifyWithECDSA(toWireTransaction().serialized)
+        sig.verifyWithECDSA(toWireTransaction().id)
     }
 
     /** Adds the signature directly to the transaction, without checking it for validity. */
@@ -143,7 +143,8 @@ open class TransactionBuilder(
             if (missing.isNotEmpty())
                 throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.toStringsShort()}")
         }
-        return SignedTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
+        val wtx = toWireTransaction()
+        return SignedTransaction(wtx.serialize(), ArrayList(currentSigs), wtx.id)
     }
 
     open fun addInputState(stateAndRef: StateAndRef<*>) {

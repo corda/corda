@@ -45,7 +45,7 @@ class TransactionGraphSearch(val transactions: ReadOnlyTransactionStorage,
             val unvisitedInputTxs: Map<SecureHash, SignedTransaction> = inputsLeadingToUnvisitedTx.map { it.txhash }.toHashSet().map { transactions.getTransaction(it) }.filterNotNull().associateBy { it.id }
             val unvisitedInputTxsWithInputIndex: Iterable<Pair<SignedTransaction, Int>> = inputsLeadingToUnvisitedTx.filter { it.txhash in unvisitedInputTxs.keys }.map { Pair(unvisitedInputTxs[it.txhash]!!, it.index) }
             next += (unvisitedInputTxsWithInputIndex.filter { q.followInputsOfType == null || it.first.tx.outputs[it.second].data.javaClass == q.followInputsOfType }
-                    .map { it.first }.filter { alreadyVisited.add(it.txBits.hash) }.map { it.tx })
+                    .map { it.first }.filter { alreadyVisited.add(it.id) }.map { it.tx })
         }
 
         return results

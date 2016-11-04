@@ -19,9 +19,12 @@ import java.util.*
  * of a WireTransaction, therefore if you are storing data keyed by WT hash be aware that multiple different STs may
  * map to the same key (and they could be different in important ways, like validity!). The signatures on a
  * SignedTransaction might be invalid or missing: the type does not imply validity.
+ * A transaction ID should be the hash of the [WireTransaction] Merkle tree root. Thus adding or removing a signature does not change it.
  */
 data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
-                             val sigs: List<DigitalSignature.WithKey>) : NamedByHash {
+                             val sigs: List<DigitalSignature.WithKey>,
+                             override val id: SecureHash
+) : NamedByHash {
     init {
         require(sigs.isNotEmpty())
     }
@@ -30,9 +33,6 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
 
     /** Lazily calculated access to the deserialised/hashed transaction data. */
     val tx: WireTransaction by lazy { WireTransaction.deserialize(txBits) }
-
-    /** A transaction ID is the hash of the [WireTransaction]. Thus adding or removing a signature does not change it. */
-    override val id: SecureHash get() = tx.id
 
     class SignaturesMissingException(val missing: Set<PublicKey>, val descriptions: List<String>, override val id: SecureHash) : NamedByHash, SignatureException() {
         override fun toString(): String {
@@ -64,6 +64,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
             if (needed.isNotEmpty())
                 throw SignaturesMissingException(needed, getMissingKeyDescriptions(needed), id)
         }
+        check(tx.id == id)
         return tx
     }
 
@@ -77,8 +78,9 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      */
     @Throws(SignatureException::class)
     fun checkSignaturesAreValid() {
-        for (sig in sigs)
-            sig.verifyWithECDSA(txBits.bits)
+        for (sig in sigs) {
+            sig.verifyWithECDSA(id.bits)
+        }
     }
 
     private fun getMissingSignatures(): Set<PublicKey> {

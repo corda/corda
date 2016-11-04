@@ -96,7 +96,7 @@ abstract class AbstractStateReplacementProtocol<T> {
                 if (it.sig == null) throw StateReplacementException(it.error!!)
                 else {
                     check(it.sig.by == party.owningKey) { "Not signed by the required participant" }
-                    it.sig.verifyWithECDSA(stx.txBits)
+                    it.sig.verifyWithECDSA(stx.id)
                     it.sig
                 }
             }
@@ -154,7 +154,7 @@ abstract class AbstractStateReplacementProtocol<T> {
 
             // TODO: This step should not be necessary, as signatures are re-checked in verifySignatures.
             val allSignatures = swapSignatures.unwrap { signatures ->
-                signatures.forEach { it.verifyWithECDSA(stx.txBits) }
+                signatures.forEach { it.verifyWithECDSA(stx.id) }
                 signatures
             }
 
@@ -199,7 +199,7 @@ abstract class AbstractStateReplacementProtocol<T> {
 
         private fun sign(stx: SignedTransaction): DigitalSignature.WithKey {
             val myKey = serviceHub.legalIdentityKey
-            return myKey.signWithECDSA(stx.txBits)
+            return myKey.signWithECDSA(stx.id)
         }
     }
 

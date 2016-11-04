@@ -170,7 +170,7 @@ object TwoPartyDealProtocol {
 
         open fun computeOurSignature(partialTX: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = SIGNING
-            return myKeyPair.signWithECDSA(partialTX.txBits)
+            return myKeyPair.signWithECDSA(partialTX.id)
         }
 
         @Suspendable

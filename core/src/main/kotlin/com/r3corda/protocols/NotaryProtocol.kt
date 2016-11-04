@@ -66,7 +66,7 @@ object NotaryProtocol {
                 progressTracker.currentStep = VALIDATING
                 when (notaryResult) {
                     is Result.Success -> {
-                        validateSignature(notaryResult.sig, stx.txBits)
+                        validateSignature(notaryResult.sig, stx.id.bits)
                         notaryResult.sig
                     }
                     is Result.Error -> {
@@ -79,7 +79,7 @@ object NotaryProtocol {
             }
         }
 
-        private fun validateSignature(sig: DigitalSignature.LegallyIdentifiable, data: SerializedBytes<WireTransaction>) {
+        private fun validateSignature(sig: DigitalSignature.LegallyIdentifiable, data: ByteArray) {
             check(sig.signer == notaryParty) { "Notary result not signed by the correct service" }
             sig.verifyWithECDSA(data)
         }
@@ -108,7 +108,7 @@ object NotaryProtocol {
                 beforeCommit(stx, reqIdentity)
                 commitInputStates(wtx, reqIdentity)
 
-                val sig = sign(stx.txBits)
+                val sig = sign(stx.id.bits)
                 Result.Success(sig)
             } catch(e: NotaryException) {
                 Result.Error(e.error)
@@ -140,12 +140,12 @@ object NotaryProtocol {
                 uniquenessProvider.commit(tx.inputs, tx.id, reqIdentity)
             } catch (e: UniquenessException) {
                 val conflictData = e.error.serialize()
-                val signedConflict = SignedData(conflictData, sign(conflictData))
+                val signedConflict = SignedData(conflictData, sign(conflictData.bits))
                 throw NotaryException(NotaryError.Conflict(tx, signedConflict))
             }
         }
 
-        private fun <T : Any> sign(bits: SerializedBytes<T>): DigitalSignature.LegallyIdentifiable {
+        private fun sign(bits: ByteArray): DigitalSignature.LegallyIdentifiable {
             val myNodeInfo = serviceHub.myInfo
             val myIdentity = myNodeInfo.notaryIdentity
             val mySigningKey = serviceHub.notaryIdentityKey
