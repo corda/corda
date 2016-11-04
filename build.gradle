@@ -31,6 +31,7 @@ plugins {
 
 apply plugin: 'kotlin'
 apply plugin: 'project-report'
+apply plugin: QuasarPlugin
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'maven-publish'
 
