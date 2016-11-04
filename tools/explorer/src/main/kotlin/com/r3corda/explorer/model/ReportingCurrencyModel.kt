@@ -1,10 +1,10 @@
 package com.r3corda.explorer.model
 
-import com.r3corda.core.contracts.Amount
 import com.r3corda.client.fxutils.AmountBindings
 import com.r3corda.client.model.ExchangeRate
 import com.r3corda.client.model.ExchangeRateModel
 import com.r3corda.client.model.observableValue
+import com.r3corda.core.contracts.Amount
 import javafx.beans.value.ObservableValue
 import org.fxmisc.easybind.EasyBind
 import java.util.*
