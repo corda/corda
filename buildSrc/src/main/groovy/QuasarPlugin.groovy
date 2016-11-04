@@ -1,6 +1,7 @@
 import org.gradle.api.*
 import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.JavaExec
+import java.nio.file.Files
 
 /**
  * QuasarPlugin creates a "quasar" configuration, adds quasar as a dependency and creates a "quasarScan" task that scans
@@ -43,13 +44,15 @@ class QuasarPlugin implements Plugin<Project> {
             ant.taskdef(name:'scanSuspendables', classname:'co.paralleluniverse.fibers.instrument.SuspendablesScanner',
                     classpath: "${project.sourceSets.main.output.classesDir}:${project.sourceSets.main.output.resourcesDir}:${project.configurations.runtime.asPath}")
             project.delete "$project.sourceSets.main.output.resourcesDir/META-INF/suspendables", "$project.sourceSets.main.output.resourcesDir/META-INF/suspendable-supers"
-            ant.scanSuspendables(
-                    auto:false,
-                    suspendablesFile: "$project.sourceSets.main.output.resourcesDir/META-INF/suspendables",
-                    supersFile: "$project.sourceSets.main.output.resourcesDir/META-INF/suspendable-supers") {
-                fileset(dir: project.sourceSets.main.output.classesDir)
-            }
 
+            if(Files.isRegularFile(project.sourceSets.main.output.classesDir)) {
+                ant.scanSuspendables(
+                        auto: false,
+                        suspendablesFile: "$project.sourceSets.main.output.resourcesDir/META-INF/suspendables",
+                        supersFile: "$project.sourceSets.main.output.resourcesDir/META-INF/suspendable-supers") {
+                    fileset(dir: project.sourceSets.main.output.classesDir)
+                }
+            }
         }
 
         project.jar.dependsOn project.quasarScan
