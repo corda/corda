@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.google.common.annotations.VisibleForTesting
 import java.math.BigDecimal
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -447,39 +448,36 @@ data class Commodity(val commodityCode: String,
 }
 
 /**
- * This class provides a truly unique identifier of a trade, state, or other business object.
+ * This class provides a truly unique identifier of a trade, state, or other business object, bound to any existing
+ * external ID. Equality and comparison are based on the unique ID only; if two states somehow have the same UUID but
+ * different external IDs, it would indicate a problem with handling of IDs.
  *
- * @param externalId If there is an existing weak identifier e.g. trade reference id.
- * This should be set here the first time a UniqueIdentifier identifier is created as part of an issue,
- * or ledger on-boarding activity. This ensure that the human readable identity is paired with the strong id.
+ * @param externalId Any existing weak identifier such as trade reference ID.
+ * This should be set here the first time a [UniqueIdentifier] is created as part of state issuance,
+ * or ledger on-boarding activity. This ensure that the human readable identity is paired with the strong ID.
  * @param id Should never be set by user code and left as default initialised.
  * So that the first time a state is issued this should be given a new UUID.
- * Subsequent copies and evolutions of a state should just copy the externalId and Id fields unmodified.
+ * Subsequent copies and evolutions of a state should just copy the [externalId] and [id] fields unmodified.
  */
 data class UniqueIdentifier(val externalId: String? = null, val id: UUID = UUID.randomUUID()) : Comparable<UniqueIdentifier> {
     override fun toString(): String = if (externalId != null) "${externalId}_$id" else id.toString()
     companion object {
+        /**
+         * Helper function for unit tests where the UUID needs to be manually initialised for consistency.
+         */
+        @VisibleForTesting
         fun fromString(name: String) : UniqueIdentifier
             = UniqueIdentifier(null, UUID.fromString(name))
     }
 
-    override fun compareTo(other: UniqueIdentifier): Int {
-        val idCompare = id.compareTo(other.id)
-        return if (idCompare == 0)
-            compareExternalIds(other)
+    override fun compareTo(other: UniqueIdentifier): Int = id.compareTo(other.id)
+
+    override fun equals(other: Any?): Boolean {
+        return if (other is UniqueIdentifier)
+            id == other.id
         else
-            idCompare
+            false
     }
 
-    private fun compareExternalIds(other: UniqueIdentifier): Int
-        = if (other.externalId == null)
-            if (externalId == null)
-                0
-            else
-                1
-        else
-            if (externalId == null)
-                -1
-            else
-                externalId.compareTo(externalId)
+    override fun hashCode(): Int = id.hashCode()
 }
