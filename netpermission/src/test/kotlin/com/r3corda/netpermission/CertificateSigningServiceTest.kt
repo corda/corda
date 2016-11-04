@@ -110,9 +110,7 @@ class CertificateSigningServiceTest {
             })
 
             val certificates = assertNotNull(poll())
-
             verify(storage, times(3)).getCertificate(any())
-
             assertEquals(3, certificates.size)
 
             (certificates.first() as X509Certificate).run {

@@ -11,7 +11,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DBCertificateRequestStorageTest {
-
     val intermediateCA = X509Utilities.createSelfSignedCACert("Corda Node Intermediate CA")
 
     @Test

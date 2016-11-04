@@ -29,7 +29,7 @@ interface CertificationRequestStorage {
 
     /**
      * Retrieve list of request IDs waiting for approval.
-     * TODO : This is use for the background thread to approve request automatically without KYC checks, should be removed after testnet.
+     * TODO : This is used for the background thread to approve request automatically without KYC checks, should be removed after testnet.
      */
     fun pendingRequestIds(): List<String>
 }

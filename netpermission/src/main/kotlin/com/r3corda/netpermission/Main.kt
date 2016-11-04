@@ -31,7 +31,6 @@ import kotlin.system.exitProcess
  *  The Intermediate CA certificate,Intermediate CA private key and Root CA Certificate should use alias name specified in [X509Utilities]
  */
 class CertificateSigningServer(val webServerAddr: HostAndPort, val certSigningService: CertificateSigningService) : Closeable {
-
     companion object {
         val log = loggerFor<CertificateSigningServer>()
         fun Server.hostAndPort(): HostAndPort {

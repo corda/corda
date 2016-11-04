@@ -1,16 +1,12 @@
 package com.r3corda.netpermission.internal.persistence
 
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.node.utilities.databaseTransaction
-import com.r3corda.node.utilities.deserializeFromBlob
-import com.r3corda.node.utilities.localDateTime
-import com.r3corda.node.utilities.serializeToBlob
+import com.r3corda.node.utilities.*
 import org.jetbrains.exposed.sql.*
 import java.security.cert.Certificate
 import java.time.LocalDateTime
 
 class DBCertificateRequestStorage(private val database: Database) : CertificationRequestStorage {
-
     private object DataTable : Table("certificate_signing_request") {
         val requestId = varchar("request_id", 64).index().primaryKey()
         val hostName = varchar("hostName", 100)
@@ -35,8 +31,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
 
     override fun saveCertificate(requestId: String, certificateGenerator: (CertificationData) -> Certificate) {
         databaseTransaction(database) {
-            val finalizables = mutableListOf<() -> Unit>()
-            try {
+            withFinalizables { finalizables ->
                 getRequest(requestId)?.let {
                     val clientCert = certificateGenerator(it)
                     DataTable.update({ DataTable.requestId eq requestId }) {
@@ -44,8 +39,6 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
                         it[certificate] = serializeToBlob(clientCert, finalizables)
                     }
                 }
-            } finally {
-                finalizables.forEach { it() }
             }
         }
     }
@@ -56,8 +49,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
 
     override fun saveRequest(certificationData: CertificationData): String {
         return databaseTransaction(database) {
-            val finalizables = mutableListOf<() -> Unit>()
-            try {
+            withFinalizables { finalizables ->
                 val requestId = SecureHash.randomSHA256().toString()
                 DataTable.insert {
                     it[DataTable.requestId] = requestId
@@ -67,8 +59,6 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
                     it[requestTimestamp] = LocalDateTime.now()
                 }
                 requestId
-            } finally {
-                finalizables.forEach { it() }
             }
         }
     }

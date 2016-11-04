@@ -30,6 +30,15 @@ fun <T> databaseTransaction(db: Database, statement: Transaction.() -> T): T {
     return org.jetbrains.exposed.sql.transactions.transaction(Connection.TRANSACTION_REPEATABLE_READ, 1, statement)
 }
 
+fun <T> withFinalizables(statement: (MutableList<() -> Unit>) -> T): T {
+    val finalizables = mutableListOf<() -> Unit>()
+    return try {
+        statement(finalizables)
+    } finally {
+        finalizables.forEach { it() }
+    }
+}
+
 fun createDatabaseTransaction(db: Database): Transaction {
     // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
     StrandLocalTransactionManager.database = db
@@ -138,12 +147,14 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
 
 // Composite columns for use with below Exposed helpers.
 data class PartyColumns(val name: Column<String>, val owningKey: Column<PublicKey>)
+
 data class StateRefColumns(val txId: Column<SecureHash>, val index: Column<Int>)
 
 /**
  * [Table] column helpers for use with Exposed, as per [varchar] etc.
  */
 fun Table.publicKey(name: String) = this.registerColumn<PublicKey>(name, PublicKeyColumnType)
+
 fun Table.secureHash(name: String) = this.registerColumn<SecureHash>(name, SecureHashColumnType)
 fun Table.party(nameColumnName: String, keyColumnName: String) = PartyColumns(this.varchar(nameColumnName, length = 255), this.publicKey(keyColumnName))
 fun Table.uuidString(name: String) = this.registerColumn<UUID>(name, UUIDStringColumnType)
