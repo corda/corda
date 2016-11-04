@@ -13,34 +13,10 @@ tags
 /docs/build/doctrees
 
 # General build files
-**/build/classes/**
-**/build/install/**
-**/build/kotlin-classes/**
-**/build/libs/**
-**/build/resources/**
-**/build/tmp/**
-**/build/reports/**
-**/build/jacoco/***
-**/build/test-results/**
-**/build/[0-9]*/**
-**/build/nodes/**
-**/build/scripts/**
-**/build/publications/**
-**/build/distributions/**
-
-# gradle's buildSrc build/
-/buildSrc/build/
-
-# This exists only in the internal repo
-/network-explorer/build
+**/build/*
+!docs/build/*
 
 lib/dokka.jar
-
-buyer
-seller
-rate-fix-demo-data
-nodeA
-nodeB
 
 ### JetBrains template
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio
