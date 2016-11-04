@@ -1,5 +1,5 @@
-apply plugin: 'maven-publish'
 apply plugin: 'groovy'
+apply plugin: DefaultPublishTasks
 
 dependencies {
     compile gradleApi()
@@ -12,10 +12,13 @@ repositories {
 
 publishing {
     publications {
-        plugin(MavenPublication) {
+        publishUtils(MavenPublication) {
             from components.java
             groupId  'com.r3corda.plugins'
             artifactId 'publish-utils'
+
+            artifact sourceJar
+            artifact javadocJar
         }
     }
 }

@@ -101,7 +101,7 @@ root directory of Corda
 
 .. code-block:: shell
 
-    ./gradlew publishToMavenLocal
+    ./gradlew install
 
 This will publish corda-$version.jar, contracts-$version.jar, core-$version.jar and node-$version.jar to the
 group com.r3corda. You can now depend on these as you normally would a Maven dependency.
@@ -120,7 +120,7 @@ root of the Corda project:
 
 .. code-block:: text
 
-    ./gradlew publishToMavenLocal
+    ./gradlew install
 
 The plugins will now be installed to your local Maven repository in ~/.m2 on Unix and %HOMEPATH%\.m2 on Windows.
 
