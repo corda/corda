@@ -5,7 +5,7 @@ import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.contracts.TransactionState
 import com.r3corda.core.crypto.*
-import com.r3corda.core.serialization.serialize
+import com.r3corda.core.serialization.*
 import java.util.*
 
 /**
@@ -26,7 +26,11 @@ fun WireTransaction.calculateLeavesHashes(): List<SecureHash> {
 }
 
 fun SecureHash.hashConcat(other: SecureHash) = (this.bits + other.bits).sha256()
-fun <T: Any> serializedHash(x: T) = x.serialize().hash
+
+fun <T: Any> serializedHash(x: T): SecureHash {
+    val kryo = extendKryoHash(createKryo()) //Dealing with HashMaps inside states.
+    return x.serialize(kryo).hash
+}
 
 /**
  * Creation and verification of a Merkle Tree for a Wire Transaction.

@@ -45,7 +45,7 @@ class WireTransaction(
 
     @Volatile @Transient var cachedTree: MerkleTree? = null
     val merkleTree: MerkleTree get() = cachedTree ?: MerkleTree.getMerkleTree(allLeavesHashes).apply { cachedTree = this }
-    //TODO There is a problem with that, it's failing 4 tests.
+
     override val id: SecureHash get() = merkleTree.hash
 
     companion object {

@@ -2,10 +2,15 @@ package com.r3corda.node.services.persistence
 
 import com.google.common.primitives.Ints
 import com.google.common.util.concurrent.SettableFuture
+import com.r3corda.core.contracts.StateRef
+import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.NullPublicKey
+import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
+import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.services.transactions.PersistentUniquenessProvider
 import com.r3corda.node.utilities.configureDatabase
@@ -128,8 +133,17 @@ class DBTransactionStorageTests {
         }
     }
 
-    private var txCount = 0
-    private fun newTransaction() = SignedTransaction(
-            SerializedBytes(Ints.toByteArray(++txCount)),
-            listOf(DigitalSignature.WithKey(NullPublicKey, ByteArray(1))))
+    private fun newTransaction(): SignedTransaction {
+        val wtx = WireTransaction(
+                inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
+                attachments = emptyList(),
+                outputs = emptyList(),
+                commands = emptyList(),
+                notary = DUMMY_NOTARY,
+                signers = emptyList(),
+                type = TransactionType.General(),
+                timestamp = null
+        )
+        return SignedTransaction(wtx.serialized, listOf(DigitalSignature.WithKey(NullPublicKey, ByteArray(1))))
+    }
 }

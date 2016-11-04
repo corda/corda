@@ -1,18 +1,21 @@
 package com.r3corda.core.crypto
 
+import com.esotericsoftware.kryo.serializers.MapSerializer
 import com.r3corda.contracts.asset.*
 import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.`issued by`
-import com.r3corda.core.serialization.serialize
+import com.r3corda.core.serialization.*
 import com.r3corda.core.transactions.*
 import com.r3corda.core.utilities.DUMMY_PUBKEY_1
 import com.r3corda.testing.*
 
 
 import org.junit.Test
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class PartialMerkleTreeTest {
     val nodes = "abcdef"
@@ -75,6 +78,8 @@ class PartialMerkleTreeTest {
                 filterOutputs = { true },
                 filterInputs = { true })
         val mt = testTx.buildFilteredTransaction(filterFuns)
+        val d = WireTransaction.deserialize(testTx.serialized)
+        assertEquals(testTx.id, d.id)
         assert(mt.verify(testTx.id))
     }
 
@@ -150,5 +155,16 @@ class PartialMerkleTreeTest {
         val pmt = PartialMerkleTree.build(merkleTree, inclHashes)
         val wrongRoot = hashed[3].hashConcat(hashed[5])
         assertFalse(pmt.verify(wrongRoot, inclHashes))
+    }
+
+    @Test
+    fun `hash map serialization`(){
+        val hm1 = hashMapOf("a" to 1, "b" to 2, "c" to 3, "e" to 4)
+        assert(serializedHash(hm1) == serializedHash(hm1.serialize().deserialize())) //It internally uses the ordered HashMap extension.
+        val kryo = extendKryoHash(createKryo())
+        assertTrue(kryo.getSerializer(HashMap::class.java) is OrderedSerializer)
+        assertTrue(kryo.getSerializer(LinkedHashMap::class.java) is MapSerializer)
+        val hm2 = hm1.serialize(kryo).deserialize(kryo)
+        assert(hm1.hashCode() == hm2.hashCode())
     }
 }

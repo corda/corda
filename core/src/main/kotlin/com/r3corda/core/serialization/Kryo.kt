@@ -9,6 +9,7 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
+import com.esotericsoftware.kryo.serializers.MapSerializer
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.AttachmentsClassLoader
@@ -437,3 +438,33 @@ var Kryo.attachmentStorage: AttachmentStorage?
     set(value) {
         this.context.put(ATTACHMENT_STORAGE, value)
     }
+
+
+//TODO: It's a little workaround for serialization of HashMaps inside contract states.
+//Used in Merkle tree calculation. It doesn't cover all the cases of unstable serialization format.
+fun extendKryoHash(kryo: Kryo): Kryo {
+    return kryo.apply {
+        noReferencesWithin<TransactionState<ContractState>>()
+        register(LinkedHashMap::class.java, MapSerializer())
+        register(HashMap::class.java, OrderedSerializer)
+    }
+}
+
+object OrderedSerializer : Serializer<HashMap<Any, Any>>() {
+    override fun write(kryo: Kryo, output: Output, obj: HashMap<Any, Any>) {
+        //Change a HashMap to LinkedHashMap.
+        val linkedMap = LinkedHashMap<Any, Any>()
+        val sorted = obj.toList().sortedBy { it.first.hashCode() }
+        for ((k, v) in sorted) {
+            linkedMap.put(k,v)
+        }
+        kryo.writeClassAndObject(output, linkedMap)
+    }
+
+    //It will be deserialized as a LinkedHashMap.
+    @Suppress("UNCHECKED_CAST")
+    override fun read(kryo: Kryo, input: Input, type: Class<HashMap<Any, Any>>): HashMap<Any, Any> {
+        val hm = kryo.readClassAndObject(input) as HashMap<Any, Any>
+        return hm
+    }
+}
