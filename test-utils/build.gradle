@@ -22,7 +22,7 @@ configurations {
 }
 
 dependencies {
-    compile project(':contracts')
+    compile project(':finance')
     compile project(':core')
     compile project(':node')
 

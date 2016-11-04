@@ -58,7 +58,7 @@ dependencies {
     compile project(':core')
     compile project(':client')
     compile project(':node')
-    compile project(':contracts')
+    compile project(':finance')
 
     // FontAwesomeFX: The "FontAwesome" icon library.
     compile 'de.jensd:fontawesomefx-fontawesome:4.6.1-2'
