@@ -3,7 +3,10 @@ package com.r3corda.testing.node
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
+import com.r3corda.core.createDirectories
+import com.r3corda.core.createDirectory
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.KeyManagementService
@@ -13,11 +16,9 @@ import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
-import com.r3corda.node.internal.CordaRPCOpsImpl
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
-import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.messaging.RPCOps
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
@@ -29,7 +30,6 @@ import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import org.slf4j.Logger
 import java.nio.file.FileSystem
-import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.util.*
@@ -66,7 +66,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     val nodes: List<MockNode> = _nodes
 
     init {
-        Files.createDirectory(filesystem.getPath("/nodes"))
+        filesystem.getPath("/nodes").createDirectory()
     }
 
     /** Allows customisation of how nodes are created. */
@@ -182,7 +182,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         val path = filesystem.getPath("/nodes/$id")
         if (newNode)
-            Files.createDirectories(path.resolve("attachments"))
+            (path / "attachments").createDirectories()
 
         // TODO: create a base class that provides a default implementation
         val config = object : NodeConfiguration {

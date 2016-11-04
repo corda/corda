@@ -1,13 +1,12 @@
 package com.r3corda.node.utilities.certsigning
 
+import com.r3corda.core.*
 import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
 import com.r3corda.core.crypto.X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY
 import com.r3corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import com.r3corda.core.crypto.X509Utilities.addOrReplaceCertificate
 import com.r3corda.core.crypto.X509Utilities.addOrReplaceKey
-import com.r3corda.core.div
-import com.r3corda.core.minutes
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.config.ConfigHelper
 import com.r3corda.node.services.config.FullNodeConfiguration
@@ -15,7 +14,6 @@ import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.getValue
 import joptsimple.OptionParser
 import java.net.URL
-import java.nio.file.Files
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.cert.Certificate
@@ -34,7 +32,7 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
     }
 
     fun buildKeyStore() {
-        Files.createDirectories(config.certificatesPath)
+        config.certificatesPath.createDirectories()
 
         val caKeyStore = X509Utilities.loadOrCreateKeyStore(config.keyStorePath, config.keyStorePassword)
 
@@ -101,15 +99,15 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
     private fun submitCertificateSigningRequest(keyPair: KeyPair): String {
         val requestIdStore = config.certificatesPath / "certificate-request-id.txt"
         // Retrieve request id from file if exists, else post a request to server.
-        return if (!Files.exists(requestIdStore)) {
+        return if (!requestIdStore.exists()) {
             val request = X509Utilities.createCertificateSigningRequest(config.myLegalName, config.nearestCity, config.emailAddress, keyPair)
             // Post request to signing server via http.
             val requestId = certService.submitRequest(request)
             // Persists request ID to file in case of node shutdown.
-            Files.write(requestIdStore, listOf(requestId), Charsets.UTF_8)
+            requestIdStore.writeLines(listOf(requestId))
             requestId
         } else {
-            Files.readAllLines(requestIdStore).first()
+            requestIdStore.readLines { it.findFirst().get()  }
         }
     }
 }

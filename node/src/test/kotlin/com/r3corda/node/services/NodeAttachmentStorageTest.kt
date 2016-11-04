@@ -4,12 +4,19 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.use
+import com.r3corda.core.crypto.sha256
+import com.r3corda.core.div
+import com.r3corda.core.read
+import com.r3corda.core.readAll
+import com.r3corda.core.write
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import org.junit.Before
 import org.junit.Test
 import java.nio.charset.Charset
-import java.nio.file.*
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileSystem
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption.WRITE
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 import kotlin.test.assertEquals
@@ -28,10 +35,10 @@ class NodeAttachmentStorageTest {
     @Test
     fun `insert and retrieve`() {
         val testJar = makeTestJar()
-        val expectedHash = SecureHash.sha256(Files.readAllBytes(testJar))
+        val expectedHash = testJar.readAll().sha256()
 
         val storage = NodeAttachmentService(fs.getPath("/"), MetricRegistry())
-        val id = testJar.use { storage.importAttachment(it) }
+        val id = testJar.read { storage.importAttachment(it) }
         assertEquals(expectedHash, id)
 
         assertNull(storage.openAttachment(SecureHash.randomSHA256()))
@@ -48,9 +55,9 @@ class NodeAttachmentStorageTest {
     fun `duplicates not allowed`() {
         val testJar = makeTestJar()
         val storage = NodeAttachmentService(fs.getPath("/"), MetricRegistry())
-        testJar.use { storage.importAttachment(it) }
+        testJar.read { storage.importAttachment(it) }
         assertFailsWith<FileAlreadyExistsException> {
-            testJar.use { storage.importAttachment(it) }
+            testJar.read { storage.importAttachment(it) }
         }
     }
 
@@ -58,15 +65,15 @@ class NodeAttachmentStorageTest {
     fun `corrupt entry throws exception`() {
         val testJar = makeTestJar()
         val storage = NodeAttachmentService(fs.getPath("/"), MetricRegistry())
-        val id = testJar.use { storage.importAttachment(it) }
+        val id = testJar.read { storage.importAttachment(it) }
 
         // Corrupt the file in the store.
-        Files.write(fs.getPath("/", id.toString()), "arggghhhh".toByteArray(), StandardOpenOption.WRITE)
+        fs.getPath("/", id.toString()).write(options = WRITE) { it.write("arggghhhh".toByteArray()) }
 
         val e = assertFailsWith<NodeAttachmentService.OnDiskHashMismatch> {
             storage.openAttachment(id)!!.open().use { it.readBytes() }
         }
-        assertEquals(e.file, storage.storePath.resolve(id.toString()))
+        assertEquals(e.file, storage.storePath / id.toString())
 
         // But if we skip around and read a single entry, no exception is thrown.
         storage.openAttachment(id)!!.openAsJAR().use {
@@ -78,15 +85,16 @@ class NodeAttachmentStorageTest {
     private var counter = 0
     private fun makeTestJar(): Path {
         counter++
-        val f = fs.getPath("$counter.jar")
-        JarOutputStream(Files.newOutputStream(f)).use {
-            it.putNextEntry(JarEntry("test1.txt"))
-            it.write("This is some useful content".toByteArray())
-            it.closeEntry()
-            it.putNextEntry(JarEntry("test2.txt"))
-            it.write("Some more useful content".toByteArray())
-            it.closeEntry()
+        val file = fs.getPath("$counter.jar")
+        file.write {
+            val jar = JarOutputStream(it)
+            jar.putNextEntry(JarEntry("test1.txt"))
+            jar.write("This is some useful content".toByteArray())
+            jar.closeEntry()
+            jar.putNextEntry(JarEntry("test2.txt"))
+            jar.write("Some more useful content".toByteArray())
+            jar.closeEntry()
         }
-        return f
+        return file
     }
 }

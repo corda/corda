@@ -1,7 +1,10 @@
 package com.r3corda.node.services.config
 
 import com.google.common.net.HostAndPort
+import com.r3corda.core.copyTo
+import com.r3corda.core.createDirectories
 import com.r3corda.core.crypto.X509Utilities
+import com.r3corda.core.div
 import com.r3corda.core.exists
 import com.r3corda.core.utilities.loggerFor
 import com.typesafe.config.Config
@@ -29,7 +32,7 @@ object ConfigHelper {
         val defaultConfig = ConfigFactory.parseResources("reference.conf", ConfigParseOptions.defaults().setAllowMissing(false))
 
         val normalisedBaseDir = baseDirectoryPath.normalize()
-        val configFile = (configFileOverride?.normalize() ?: normalisedBaseDir.resolve("node.conf")).toFile()
+        val configFile = (configFileOverride?.normalize() ?: normalisedBaseDir / "node.conf").toFile()
         val appConfig = ConfigFactory.parseFile(configFile, ConfigParseOptions.defaults().setAllowMissing(allowMissingConfig))
 
         val overridesMap = HashMap<String, Any?>() // If we do require a few other command line overrides eg for a nicer development experience they would go inside this map.
@@ -89,10 +92,9 @@ fun Config.getProperties(path: String): Properties {
  * the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.
  */
 fun NodeSSLConfiguration.configureWithDevSSLCertificate() {
-    Files.createDirectories(certificatesPath)
+    certificatesPath.createDirectories()
     if (!trustStorePath.exists()) {
-        Files.copy(javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordatruststore.jks"),
-                trustStorePath)
+        javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordatruststore.jks").copyTo(trustStorePath)
     }
     if (!keyStorePath.exists()) {
         val caKeyStore = X509Utilities.loadKeyStore(

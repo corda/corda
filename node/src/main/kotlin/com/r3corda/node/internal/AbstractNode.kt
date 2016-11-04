@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
+import com.r3corda.core.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.messaging.SingleMessageRecipient
@@ -12,7 +13,6 @@ import com.r3corda.core.node.services.*
 import com.r3corda.core.node.services.NetworkMapCache.MapChangeType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
-import com.r3corda.core.seconds
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
@@ -47,7 +47,6 @@ import com.r3corda.protocols.sendRequest
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
-import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.time.Clock
@@ -468,11 +467,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
         // the public key. Obviously in a real system this would need to be a certificate chain of some kind to ensure
         // the legal name is actually validated in some way.
-        val privKeyFile = dir.resolve(privateKeyFileName)
-        val pubIdentityFile = dir.resolve(publicKeyFileName)
+        val privKeyFile = dir / privateKeyFileName
+        val pubIdentityFile = dir / publicKeyFileName
         val identityName = if (serviceName == null) configuration.myLegalName else configuration.myLegalName + "|" + serviceName
 
-        val identityAndKey = if (!Files.exists(privKeyFile)) {
+        val identityAndKey = if (!privKeyFile.exists()) {
             log.info("Identity key not found, generating fresh key!")
             val keyPair: KeyPair = generateKeyPair()
             keyPair.serialize().writeToFile(privKeyFile)
@@ -485,12 +484,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             // Check that the identity in the config file matches the identity file we have stored to disk.
             // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
             // things up for us.
-            val myIdentity = Files.readAllBytes(pubIdentityFile).deserialize<Party>()
+            val myIdentity = pubIdentityFile.readAll().deserialize<Party>()
             if (myIdentity.name != identityName)
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:" +
-                        "${identityName} vs ${myIdentity.name}")
+                        "$identityName vs ${myIdentity.name}")
             // Load the private key.
-            val keyPair = Files.readAllBytes(privKeyFile).deserialize<KeyPair>()
+            val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
             Pair(myIdentity, keyPair)
         }
         partyKeys += identityAndKey.second
@@ -500,17 +499,15 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
     protected open fun generateKeyPair() = com.r3corda.core.crypto.generateKeyPair()
 
     protected fun makeAttachmentStorage(dir: Path): NodeAttachmentService {
-        val attachmentsDir = dir.resolve("attachments")
+        val attachmentsDir = dir / "attachments"
         try {
-            Files.createDirectory(attachmentsDir)
+            attachmentsDir.createDirectory()
         } catch (e: FileAlreadyExistsException) {
         }
         return NodeAttachmentService(attachmentsDir, services.monitoringService.metrics)
     }
 
     protected fun createNodeDir() {
-        if (!Files.exists(configuration.basedir)) {
-            Files.createDirectories(configuration.basedir)
-        }
+        configuration.basedir.createDirectories()
     }
 }

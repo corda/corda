@@ -1,7 +1,9 @@
 package com.r3corda.core.crypto
 
+import com.r3corda.core.exists
 import com.r3corda.core.random63BitValue
-import com.r3corda.core.use
+import com.r3corda.core.read
+import com.r3corda.core.write
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.DERSequence
@@ -27,7 +29,6 @@ import java.io.FileWriter
 import java.io.InputStream
 import java.math.BigInteger
 import java.net.InetAddress
-import java.nio.file.Files
 import java.nio.file.Path
 import java.security.*
 import java.security.cert.Certificate
@@ -135,14 +136,11 @@ object X509Utilities {
     fun loadOrCreateKeyStore(keyStoreFilePath: Path, storePassword: String): KeyStore {
         val pass = storePassword.toCharArray()
         val keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
-        if (Files.exists(keyStoreFilePath)) {
-            keyStoreFilePath.use { keyStore.load(it, pass) }
+        if (keyStoreFilePath.exists()) {
+            keyStoreFilePath.read { keyStore.load(it, pass) }
         } else {
             keyStore.load(null, pass)
-            val output = Files.newOutputStream(keyStoreFilePath)
-            output.use {
-                keyStore.store(output, pass)
-            }
+            keyStoreFilePath.write { keyStore.store(it, pass) }
         }
         return keyStore
     }
@@ -157,7 +155,7 @@ object X509Utilities {
     fun loadKeyStore(keyStoreFilePath: Path, storePassword: String): KeyStore {
         val pass = storePassword.toCharArray()
         val keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
-        keyStoreFilePath.use { keyStore.load(it, pass) }
+        keyStoreFilePath.read { keyStore.load(it, pass) }
         return keyStore
     }
 
@@ -186,10 +184,7 @@ object X509Utilities {
      */
     fun saveKeyStore(keyStore: KeyStore, keyStoreFilePath: Path, storePassword: String) {
         val pass = storePassword.toCharArray()
-        val output = Files.newOutputStream(keyStoreFilePath)
-        output.use {
-            keyStore.store(output, pass)
-        }
+        keyStoreFilePath.write { keyStore.store(it, pass) }
     }
 
     /**

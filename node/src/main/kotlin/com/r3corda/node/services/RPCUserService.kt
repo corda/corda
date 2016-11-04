@@ -1,7 +1,7 @@
 package com.r3corda.node.services
 
 import com.r3corda.core.exists
-import com.r3corda.core.use
+import com.r3corda.core.read
 import java.nio.file.Path
 import java.util.*
 
@@ -25,7 +25,7 @@ class PropertiesFileRPCUserService(file: Path) : RPCUserService {
     init {
         _users = if (file.exists()) {
             val properties = Properties()
-            file.use {
+            file.read {
                 properties.load(it)
             }
             properties.map {

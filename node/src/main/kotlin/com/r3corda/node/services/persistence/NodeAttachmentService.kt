@@ -5,9 +5,9 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
+import com.r3corda.core.*
 import com.r3corda.core.contracts.Attachment
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.extractZipFile
 import com.r3corda.core.node.services.AttachmentStorage
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.api.AcceptsFileUpload
@@ -35,7 +35,7 @@ class NodeAttachmentService(val storePath: Path, metrics: MetricRegistry) : Atta
     }
 
     // Just count all non-directories in the attachment store, and assume the admin hasn't dumped any junk there.
-    private fun countAttachments() = Files.list(storePath).filter { Files.isRegularFile(it) }.count()
+    private fun countAttachments() = storePath.list { it.filter { it.isRegularFile() }.count() }
 
     /**
      * If true, newly inserted attachments will be unzipped to a subdirectory of the [storePath]. This is intended for
@@ -45,7 +45,7 @@ class NodeAttachmentService(val storePath: Path, metrics: MetricRegistry) : Atta
     @Volatile var automaticallyExtractAttachments = false
 
     init {
-        require(Files.isDirectory(storePath)) { "$storePath must be a directory" }
+        require(storePath.isDirectory()) { "$storePath must be a directory" }
     }
 
     class OnDiskHashMismatch(val file: Path, val actual: SecureHash) : Exception() {
@@ -66,7 +66,7 @@ class NodeAttachmentService(val storePath: Path, metrics: MetricRegistry) : Atta
                                      private val counter: CountingInputStream = CountingInputStream(input),
                                      private val stream: HashingInputStream = HashingInputStream(Hashing.sha256(), counter)) : FilterInputStream(stream) {
 
-        private val expectedSize = Files.size(filePath)
+        private val expectedSize = filePath.size
 
         override fun close() {
             super.close()
@@ -94,8 +94,8 @@ class NodeAttachmentService(val storePath: Path, metrics: MetricRegistry) : Atta
     }
 
     override fun openAttachment(id: SecureHash): Attachment? {
-        val path = storePath.resolve(id.toString())
-        if (!Files.exists(path)) return null
+        val path = storePath / id.toString()
+        if (!path.exists()) return null
         return AttachmentImpl(id, path, checkAttachmentsOnLoad)
     }
 
@@ -103,28 +103,28 @@ class NodeAttachmentService(val storePath: Path, metrics: MetricRegistry) : Atta
     override fun importAttachment(jar: InputStream): SecureHash {
         require(jar !is JarInputStream)
         val hs = HashingInputStream(Hashing.sha256(), jar)
-        val tmp = storePath.resolve("tmp.${UUID.randomUUID()}")
-        Files.copy(hs, tmp)
+        val tmp = storePath / "tmp.${UUID.randomUUID()}"
+        hs.copyTo(tmp)
         checkIsAValidJAR(tmp)
         val id = SecureHash.SHA256(hs.hash().asBytes())
-        val finalPath = storePath.resolve(id.toString())
+        val finalPath = storePath / id.toString()
         try {
             // Move into place atomically or fail if that isn't possible. We don't want a half moved attachment to
             // be exposed to parallel threads. This gives us thread safety.
-            if (!Files.exists(finalPath)) {
+            if (!finalPath.exists()) {
                 log.info("Stored new attachment $id")
                 attachmentCount.inc()
             } else {
                 log.info("Replacing attachment $id - only bother doing this if you're trying to repair file corruption")
             }
-            Files.move(tmp, finalPath, StandardCopyOption.ATOMIC_MOVE)
+            tmp.moveTo(finalPath, StandardCopyOption.ATOMIC_MOVE)
         } finally {
-            Files.deleteIfExists(tmp)
+            tmp.deleteIfExists()
         }
         if (automaticallyExtractAttachments) {
-            val extractTo = storePath.resolve("$id.jar")
+            val extractTo = storePath / "$id.jar"
             try {
-                Files.createDirectory(extractTo)
+                extractTo.createDirectory()
                 extractZipFile(finalPath, extractTo)
             } catch(e: FileAlreadyExistsException) {
                 log.trace("Did not extract attachment jar to directory because it already exists")
@@ -138,9 +138,10 @@ class NodeAttachmentService(val storePath: Path, metrics: MetricRegistry) : Atta
 
     private fun checkIsAValidJAR(path: Path) {
         // Just iterate over the entries with verification enabled: should be good enough to catch mistakes.
-        JarInputStream(Files.newInputStream(path), true).use { stream ->
+        path.read {
+            val jar = JarInputStream(it)
             while (true) {
-                val cursor = stream.nextJarEntry ?: break
+                val cursor = jar.nextJarEntry ?: break
                 val entryPath = Paths.get(cursor.name)
                 // Security check to stop zips trying to escape their rightful place.
                 if (entryPath.isAbsolute || entryPath.normalize() != entryPath || '\\' in cursor.name)

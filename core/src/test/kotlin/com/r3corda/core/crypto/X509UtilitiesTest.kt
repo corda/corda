@@ -1,5 +1,6 @@
 package com.r3corda.core.crypto
 
+import com.r3corda.core.div
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.asn1.x509.GeneralName
@@ -11,6 +12,7 @@ import java.io.DataOutputStream
 import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.nio.file.Path
 import java.security.PrivateKey
 import java.security.SecureRandom
 import java.security.Signature
@@ -38,17 +40,14 @@ class X509UtilitiesTest {
         assertTrue { caCertAndKey.certificate.basicConstraints > 0 } // This returns the signing path length Would be -1 for non-CA certificate
     }
 
-
     @Test
     fun `load and save a PEM file certificate`() {
-        val tmpCertificateFile = tempFolder.root.toPath().resolve("cacert.pem")
-
+        val tmpCertificateFile = tempFile("cacert.pem")
         val caCertAndKey = X509Utilities.createSelfSignedCACert("Test Cert")
         X509Utilities.saveCertificateAsPEMFile(caCertAndKey.certificate, tmpCertificateFile)
         val readCertificate = X509Utilities.loadCertificateFromPEMFile(tmpCertificateFile)
         assertEquals(caCertAndKey.certificate, readCertificate)
     }
-
 
     @Test
     fun `create valid server certificate chain`() {
@@ -84,15 +83,11 @@ class X509UtilitiesTest {
 
     @Test
     fun `create full CA keystore`() {
-        val tmpKeyStore = tempFolder.root.toPath().resolve("keystore.jks")
-        val tmpTrustStore = tempFolder.root.toPath().resolve("truststore.jks")
+        val tmpKeyStore = tempFile("keystore.jks")
+        val tmpTrustStore = tempFile("truststore.jks")
 
         // Generate Root and Intermediate CA cert and put both into key store and root ca cert into trust store
-        X509Utilities.createCAKeyStoreAndTrustStore(tmpKeyStore,
-        "keystorepass",
-        "keypass",
-        tmpTrustStore,
-        "trustpass")
+        X509Utilities.createCAKeyStoreAndTrustStore(tmpKeyStore, "keystorepass", "keypass", tmpTrustStore, "trustpass")
 
         // Load back generated root CA Cert and private key from keystore and check against copy in truststore
         val keyStore = X509Utilities.loadKeyStore(tmpKeyStore, "keystorepass")
@@ -132,12 +127,11 @@ class X509UtilitiesTest {
         assertTrue { intermediateVerifier.verify(intermediateSignature) }
     }
 
-
     @Test
     fun `create server certificate in keystore for SSL`() {
-        val tmpCAKeyStore = tempFolder.root.toPath().resolve("keystore.jks")
-        val tmpTrustStore = tempFolder.root.toPath().resolve("truststore.jks")
-        val tmpServerKeyStore = tempFolder.root.toPath().resolve("serverkeystore.jks")
+        val tmpCAKeyStore = tempFile("keystore.jks")
+        val tmpTrustStore = tempFile("truststore.jks")
+        val tmpServerKeyStore = tempFile("serverkeystore.jks")
 
         // Generate Root and Intermediate CA cert and put both into key store and root ca cert into trust store
         X509Utilities.createCAKeyStoreAndTrustStore(tmpCAKeyStore,
@@ -177,9 +171,9 @@ class X509UtilitiesTest {
 
     @Test
     fun `create server cert and use in SSL socket`() {
-        val tmpCAKeyStore = tempFolder.root.toPath().resolve("keystore.jks")
-        val tmpTrustStore = tempFolder.root.toPath().resolve("truststore.jks")
-        val tmpServerKeyStore = tempFolder.root.toPath().resolve("serverkeystore.jks")
+        val tmpCAKeyStore = tempFile("keystore.jks")
+        val tmpTrustStore = tempFile("truststore.jks")
+        val tmpServerKeyStore = tempFile("serverkeystore.jks")
 
         // Generate Root and Intermediate CA cert and put both into key store and root ca cert into trust store
         val caKeyStore = X509Utilities.createCAKeyStoreAndTrustStore(tmpCAKeyStore,
@@ -217,7 +211,6 @@ class X509UtilitiesTest {
         serverParams.endpointIdentificationAlgorithm = "HTTPS" // enable hostname checking
         serverSocket.sslParameters = serverParams
         serverSocket.useClientMode = false
-
 
         val clientSocket = clientSocketFactory.createSocket() as SSLSocket
         val clientParams = SSLParameters(arrayOf("TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
@@ -285,4 +278,6 @@ class X509UtilitiesTest {
         serverSocket.close()
         assertTrue(done)
     }
+
+    private fun tempFile(name: String): Path = tempFolder.root.toPath() / name
 }

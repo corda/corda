@@ -5,7 +5,7 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.sha256
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.services.ServiceInfo
-import com.r3corda.core.serialization.OpaqueBytes
+import com.r3corda.core.write
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
@@ -18,9 +18,6 @@ import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
-import java.nio.file.Files
-import java.nio.file.StandardOpenOption
 import java.security.KeyPair
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
@@ -103,9 +100,7 @@ class AttachmentTests {
         val id = n0.storage.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
 
         // Corrupt its store.
-        val writer = Files.newByteChannel(network.filesystem.getPath("/nodes/0/attachments/$id"), StandardOpenOption.WRITE)
-        writer.write(ByteBuffer.wrap(OpaqueBytes.of(99, 99, 99, 99).bits))
-        writer.close()
+        network.filesystem.getPath("/nodes/0/attachments/$id").write { it.write(byteArrayOf(99, 99, 99, 99)) }
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
         network.runNetwork()

@@ -2,11 +2,11 @@ package com.r3corda.node.services
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
+import com.r3corda.core.writeLines
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Test
-import java.nio.file.Files
 
 class PropertiesFileRPCUserServiceTest {
 
@@ -75,7 +75,7 @@ class PropertiesFileRPCUserServiceTest {
     }
 
     private fun loadWithContents(vararg lines: String): PropertiesFileRPCUserService {
-        Files.write(file, lines.asList())
+        file.writeLines(lines.asList())
         return PropertiesFileRPCUserService(file)
     }
 }

@@ -7,7 +7,7 @@ import com.r3corda.core.crypto.toBase58String
 import com.r3corda.core.messaging.MessageRecipients
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.serialization.SingletonSerializeAsToken
-import com.r3corda.core.use
+import com.r3corda.core.read
 import com.r3corda.node.services.config.NodeSSLConfiguration
 import com.r3corda.node.services.config.configureWithDevSSLCertificate
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -110,10 +110,10 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      * unfortunately Artemis tends to bury the exception when the password is wrong.
      */
     fun checkStorePasswords() {
-        config.keyStorePath.use {
+        config.keyStorePath.read {
            KeyStore.getInstance("JKS").load(it, config.keyStorePassword.toCharArray())
         }
-        config.trustStorePath.use {
+        config.trustStorePath.read {
            KeyStore.getInstance("JKS").load(it, config.trustStorePassword.toCharArray())
         }
     }

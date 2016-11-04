@@ -8,6 +8,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.crypto.newSecureRandom
+import kotlinx.support.jdk7.use
 import org.slf4j.Logger
 import rx.Observable
 import rx.subjects.UnicastSubject
@@ -15,16 +16,16 @@ import java.io.BufferedInputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.math.BigDecimal
-import java.nio.file.Files
-import java.nio.file.LinkOption
-import java.nio.file.OpenOption
-import java.nio.file.Path
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executor
 import java.util.concurrent.locks.ReentrantLock
+import java.util.stream.Stream
 import java.util.zip.ZipInputStream
 import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
@@ -95,15 +96,27 @@ inline fun <T> SettableFuture<T>.catch(block: () -> T) {
 
 /** Allows you to write code like: Paths.get("someDir") / "subdir" / "filename" but using the Paths API to avoid platform separator problems. */
 operator fun Path.div(other: String): Path = resolve(other)
+fun Path.createDirectory(vararg attrs: FileAttribute<*>): Path = Files.createDirectory(this, *attrs)
 fun Path.createDirectories(vararg attrs: FileAttribute<*>): Path = Files.createDirectories(this, *attrs)
 fun Path.exists(vararg options: LinkOption): Boolean = Files.exists(this, *options)
-inline fun <R> Path.use(block: (InputStream) -> R): R = Files.newInputStream(this).use(block)
-inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption, block: (OutputStream) -> Unit) {
+fun Path.moveTo(target: Path, vararg options: CopyOption): Path = Files.move(this, target, *options)
+fun Path.isRegularFile(vararg options: LinkOption): Boolean = Files.isRegularFile(this, *options)
+fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(this, *options)
+val Path.size: Long get() = Files.size(this)
+inline fun <R> Path.list(block: (Stream<Path>) -> R): R = Files.list(this).use(block)
+fun Path.deleteIfExists(): Boolean = Files.deleteIfExists(this)
+fun Path.readAll(): ByteArray = Files.readAllBytes(this)
+inline fun <R> Path.read(vararg options: OpenOption, block: (InputStream) -> R): R = Files.newInputStream(this, *options).use(block)
+inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = emptyArray(), block: (OutputStream) -> Unit) {
     if (createDirs) {
         normalize().parent?.createDirectories()
     }
     Files.newOutputStream(this, *options).use(block)
 }
+inline fun <R> Path.readLines(charset: Charset = UTF_8, block: (Stream<String>) -> R): R = Files.lines(this, charset).use(block)
+fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, vararg options: OpenOption): Path = Files.write(this, lines, charset, *options)
+
+fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
 // Simple infix function to add back null safety that the JDK lacks:  timeA until timeB
 infix fun Temporal.until(endExclusive: Temporal) = Duration.between(this, endExclusive)
@@ -213,23 +226,23 @@ class TransientProperty<out T>(private val initializer: () -> T) {
  */
 fun extractZipFile(zipPath: Path, toPath: Path) {
     val normalisedToPath = toPath.normalize()
-    if (!Files.exists(normalisedToPath))
-        Files.createDirectories(normalisedToPath)
+    normalisedToPath.createDirectories()
 
-    ZipInputStream(BufferedInputStream(Files.newInputStream(zipPath))).use { zip ->
+    zipPath.read {
+        val zip = ZipInputStream(BufferedInputStream(it))
         while (true) {
             val e = zip.nextEntry ?: break
-            val outPath = normalisedToPath.resolve(e.name)
+            val outPath = normalisedToPath / e.name
 
             // Security checks: we should reject a zip that contains tricksy paths that try to escape toPath.
             if (!outPath.normalize().startsWith(normalisedToPath))
                 throw IllegalStateException("ZIP contained a path that resolved incorrectly: ${e.name}")
 
             if (e.isDirectory) {
-                Files.createDirectories(outPath)
+                outPath.createDirectories()
                 continue
             }
-            Files.newOutputStream(outPath).use { out ->
+            outPath.write { out ->
                 ByteStreams.copy(zip, out)
             }
             zip.closeEntry()

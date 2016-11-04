@@ -1,6 +1,7 @@
 package com.r3corda.node.internal
 
 import com.codahale.metrics.JmxReporter
+import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceInfo
@@ -366,7 +367,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
         // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
         // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
         // twice with the same directory: that's a user error and we should bail out.
-        val pidPath = configuration.basedir.resolve("process-id")
+        val pidPath = configuration.basedir / "process-id"
         val file = pidPath.toFile()
         if (!file.exists()) {
             file.createNewFile()

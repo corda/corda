@@ -6,11 +6,12 @@ import com.nhaarman.mockito_kotlin.mock
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.div
+import com.r3corda.core.exists
+import com.r3corda.core.readLines
 import com.r3corda.node.services.config.NodeConfiguration
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -47,13 +48,13 @@ class CertificateSignerTest {
             override val trustStorePassword: String = "trustpass"
         }
 
-        assertFalse(Files.exists(config.keyStorePath))
-        assertFalse(Files.exists(config.trustStorePath))
+        assertFalse(config.keyStorePath.exists())
+        assertFalse(config.trustStorePath.exists())
 
         CertificateSigner(config, certService).buildKeyStore()
 
-        assertTrue(Files.exists(config.keyStorePath))
-        assertTrue(Files.exists(config.trustStorePath))
+        assertTrue(config.keyStorePath.exists())
+        assertTrue(config.trustStorePath.exists())
 
         X509Utilities.loadKeyStore(config.keyStorePath, config.keyStorePassword).run {
             assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY))
@@ -73,7 +74,7 @@ class CertificateSignerTest {
             assertFalse(containsAlias(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY))
         }
 
-        assertEquals(id, Files.readAllLines(config.certificatesPath / "certificate-request-id.txt").first())
+        assertEquals(id, (config.certificatesPath / "certificate-request-id.txt").readLines { it.findFirst().get() })
     }
 
 }
