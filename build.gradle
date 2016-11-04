@@ -31,7 +31,6 @@ plugins {
 
 apply plugin: 'kotlin'
 apply plugin: 'project-report'
-apply plugin: QuasarPlugin
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'maven-publish'
 
@@ -52,71 +51,7 @@ allprojects {
 }
 
 repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
     jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
-sourceSets {
-    integrationTest {
-        kotlin {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/kotlin')
-        }
-    }
-    main {
-        resources {
-            srcDir "config/dev"
-        }
-    }
-    test {
-        resources {
-            srcDir "config/test"
-        }
-    }
-}
-
-//noinspection GroovyAssignabilityCheck
-configurations {
-    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
-    runtime.exclude module: 'isolated'
-
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
-}
-
-// To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
-// build/reports/project/dependencies/index.html for green highlighted parts of the tree.
-dependencies {
-    compile project(':node')
-    // TODO: Demos should not depend on test code, but only use production APIs
-    compile project(':test-utils')
-
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.2"
-
-    // Unit testing helpers.
-    testCompile 'junit:junit:4.12'
-    testCompile 'org.assertj:assertj-core:3.4.1'
-
-    // Integration test helpers
-    integrationTestCompile 'junit:junit:4.12'
-    integrationTestCompile 'org.assertj:assertj-core:${assertj_version}'
-    integrationTestCompile project(':test-utils')
-}
-
-task integrationTest(type: Test, dependsOn: [':node:integrationTest',':client:integrationTest']) {
-    testClassesDir = sourceSets.integrationTest.output.classesDir
-    classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
@@ -144,8 +79,6 @@ tasks.withType(Test) {
     reports.html.destination = file("${reporting.baseDir}/${name}")
 }
 
-quasarScan.dependsOn('classes', 'core:classes', 'contracts:classes', 'node:classes')
-
 task buildCordaJAR(type: FatCapsule, dependsOn: ['quasarScan', 'buildCertSigningRequestUtilityJAR']) {
     applicationClass 'com.r3corda.node.MainKt'
     archiveName 'corda.jar'
@@ -169,6 +102,7 @@ task buildCertSigningRequestUtilityJAR(type: FatCapsule, dependsOn: project.jar)
     }
 }
 
+// TODO: Use the Cordformation plugin.
 task installTemplateNodes(dependsOn: 'buildCordaJAR') << {
     copy {
         from buildCordaJAR.outputs.getFiles()
@@ -202,6 +136,7 @@ task installTemplateNodes(dependsOn: 'buildCordaJAR') << {
 }
 
 // Aliasing the publishToMavenLocal for simplicity.
+// TODO: Verify this works for gradle plugins.
 task(install, dependsOn: 'publishToMavenLocal')
 
 publishing {
