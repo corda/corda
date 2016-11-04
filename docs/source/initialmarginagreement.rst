@@ -1,5 +1,5 @@
-Initial Margin Agreement Demo
-=============================
+Initial Margin Agreements
+=========================
 
 This app is a demonstration of how Corda can be used for the real world requirement of initial margin calculation and
 agreement; featuring the integration of complex and industry proven third party libraries into Corda nodes.

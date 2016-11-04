@@ -3,6 +3,44 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
+Milestone 5
+-----------
+
+* A simple RPC access control mechanism. Users, passwords and permissions can be defined in a configuration file.
+  This mechanism will be extended in future to support standard authentication systems like LDAP.
+
+* New features in the explorer app and RPC API for working with cash:
+
+    * Cash can now be sent, issued and exited via RPC.
+    * Notes can now be associated with transactions.
+    * Hashes are visually represented using identicons.
+    * Lots of functional work on the explorer UI. You can try it out by running ``gradle tools:explorer:runDemoNodes`` to run
+      a local network of nodes that swap cash with each other, and then run ``gradle tools:explorer:run`` to start
+      the app.
+
+* A new demo showing shared valuation of derivatives portfolios using the ISDA SIMM has been added. Note that this app
+  relies on a proprietary implementation of the ISDA SIMM business logic from OpenGamma. A stub library is provided
+  to ensure it compiles but if you want to use the app for real please contact us.
+
+* Developer experience (we plan to do lots more here in milestone 6):
+
+    * Demos and samples have been split out of the main repository, and the initial developer experience continues to be
+      refined. All necessary JARs can now be installed to Maven Local by simply running ``gradle install``.
+    * It's now easier to define a set of nodes to run locally using the new "CordFormation" gradle plugin, which
+      defines a simple DSL for creating networks of nodes.
+    * The template CorDapp has been upgraded with more documentation and showing more features.
+
+* Privacy: transactions are now structured as Merkle trees, and can have sections "torn off" - presented for
+  verification and signing without revealing the rest of the transaction.
+
+* Lots of bug fixes, tweaks and polish starting the run up to the open source release.
+
+API changes:
+
+* Plugin service classes now take a ``PluginServiceHub`` rather than a ``ServiceHubInternal``.
+* ``UniqueIdentifier`` equality has changed to only take into account the underlying UUID.
+* The contracts module has been renamed to finance, to better reflect what it is for.
+
 Milestone 4
 -----------
 
