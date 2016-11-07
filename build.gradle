@@ -33,6 +33,7 @@ apply plugin: 'kotlin'
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'maven-publish'
+apply plugin: QuasarPlugin
 
 allprojects {
     apply plugin: 'java'
@@ -51,7 +52,17 @@ allprojects {
 }
 
 repositories {
+    mavenCentral()
     jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
+}
+
+// Required for building out the fat JAR.
+dependencies {
+    compile project(':node')
+    compile "com.google.guava:guava:19.0"
 }
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
@@ -79,7 +90,8 @@ tasks.withType(Test) {
     reports.html.destination = file("${reporting.baseDir}/${name}")
 }
 
-task buildCordaJAR(type: FatCapsule, dependsOn: ['build', 'buildCertSigningRequestUtilityJAR']) {
+// TODO: Move fat JAR building into node subproject.
+task buildCordaJAR(type: FatCapsule, dependsOn: ['quasarScan', 'buildCertSigningRequestUtilityJAR']) {
     applicationClass 'com.r3corda.node.MainKt'
     archiveName 'corda.jar'
     applicationSource = files(project.tasks.findByName('jar'), 'node/build/classes/main/CordaCaplet.class')
@@ -138,6 +150,8 @@ task installTemplateNodes(dependsOn: 'buildCordaJAR') << {
 // Aliasing the publishToMavenLocal for simplicity.
 // TODO: Verify this works for gradle plugins.
 task(install, dependsOn: 'publishToMavenLocal')
+
+quasarScan.dependsOn('classes', ':node:classes', ':core:classes', ':finance:classes')
 
 publishing {
     publications {
