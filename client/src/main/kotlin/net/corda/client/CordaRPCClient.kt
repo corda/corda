@@ -9,6 +9,7 @@ import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.CLI
 import net.corda.node.services.messaging.CordaRPCOps
 import net.corda.node.services.messaging.RPCException
 import net.corda.node.services.messaging.rpcLog
+import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientSession
@@ -38,11 +39,11 @@ class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfigur
     private val state = ThreadBox(State())
 
     /** Opens the connection to the server and registers a JVM shutdown hook to cleanly disconnect. */
-    @Throws(ActiveMQNotConnectedException::class)
+    @Throws(ActiveMQException::class)
     fun start(username: String, password: String) {
         state.locked {
             check(!running)
-            checkStorePasswords()  // Check the password.
+            checkStorePasswords()
             val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport(ConnectionDirection.OUTBOUND, host.hostText, host.port))
             serverLocator.threadPoolMaxSize = 1
             // TODO: Configure session reconnection, confirmation window sizes and other Artemis features.
@@ -53,7 +54,6 @@ class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfigur
             session.start()
             clientImpl = CordaRPCClientImpl(session, state.lock, username)
             running = true
-            // We will use the ID in strings so strip the sign bit.
         }
 
         Runtime.getRuntime().addShutdownHook(Thread {

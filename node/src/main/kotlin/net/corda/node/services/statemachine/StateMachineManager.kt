@@ -211,7 +211,18 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             val sessionMessage = message.data.deserialize<SessionMessage>()
             when (sessionMessage) {
                 is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage)
-                is SessionInit -> onSessionInit(sessionMessage)
+                is SessionInit -> {
+                    // TODO SECURITY Look up the party with the full X.500 name instead of just the legal name which
+                    // isn't required to be unique
+                    // TODO For now have the doorman block signups with identical names, and names with characters that
+                    // are used in X.500 name textual serialisation
+                    val otherParty = serviceHub.networkMapCache.getNodeByLegalName(message.peerLegalName)?.legalIdentity
+                    if (otherParty != null) {
+                        onSessionInit(sessionMessage, otherParty)
+                    } else {
+                        logger.error("Unknown peer ${message.peer} in $sessionMessage")
+                    }
+                }
             }
         }
     }
@@ -254,10 +265,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun onSessionInit(sessionInit: SessionInit) {
-        logger.trace { "Received $sessionInit" }
-        //TODO Verify the other party are who they say they are from the TLS subsystem
-        val otherParty = sessionInit.initiatorParty
+    private fun onSessionInit(sessionInit: SessionInit, otherParty: Party) {
+        logger.trace { "Received $sessionInit $otherParty" }
         val otherPartySessionId = sessionInit.initiatorSessionId
         try {
             val markerClass = Class.forName(sessionInit.flowName)
@@ -446,10 +455,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val recipientSessionId: Long
     }
 
-    data class SessionInit(val initiatorSessionId: Long,
-                           val initiatorParty: Party,
-                           val flowName: String,
-                           val firstPayload: Any?) : SessionMessage
+    data class SessionInit(val initiatorSessionId: Long, val flowName: String, val firstPayload: Any?) : SessionMessage
 
     interface SessionInitResponse : ExistingSessionMessage
 

@@ -1,5 +1,3 @@
-@file:Suppress("UNUSED_VARIABLE")
-
 package net.corda.node.messaging
 
 import net.corda.core.messaging.Message
@@ -9,7 +7,6 @@ import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.node.MockNetwork
-import org.junit.Before
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
@@ -17,12 +14,7 @@ import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
 class InMemoryMessagingTests {
-    lateinit var network: MockNetwork
-
-    @Before
-    fun setUp() {
-        network = MockNetwork()
-    }
+    val network = MockNetwork()
 
     @Test
     fun topicStringValidation() {
@@ -115,6 +107,5 @@ class InMemoryMessagingTests {
         node2.net.send(validMessage2, node1.net.myAddress)
         network.runNetwork()
         assertEquals(2, received)
-
     }
 }

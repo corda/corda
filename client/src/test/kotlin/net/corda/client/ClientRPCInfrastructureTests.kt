@@ -1,8 +1,6 @@
 package net.corda.client
 
 import net.corda.client.impl.CordaRPCClientImpl
-import net.corda.core.millis
-import net.corda.core.random63BitValue
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.LogHelper
 import net.corda.node.services.RPCUserService
@@ -22,14 +20,12 @@ import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnectorFactory
 import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.Closeable
-import java.time.Duration
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
@@ -37,7 +33,6 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
-import kotlin.test.fail
 
 class ClientRPCInfrastructureTests {
     // TODO: Test that timeouts work
@@ -47,7 +42,7 @@ class ClientRPCInfrastructureTests {
     lateinit var clientSession: ClientSession
     lateinit var producer: ClientProducer
     lateinit var serverThread: AffinityExecutor.ServiceAffinityExecutor
-    var proxy: TestOps? = null
+    lateinit var proxy: TestOps
 
     private val authenticatedUser = User("test", "password", permissions = setOf())
 
@@ -94,15 +89,9 @@ class ClientRPCInfrastructureTests {
         clientSession.start()
 
         LogHelper.setLevel("+net.corda.rpc")
-    }
 
-    private fun createProxyUsingReplyTo(username: String, timeout: Duration? = null): TestOps {
-        val proxy = CordaRPCClientImpl(clientSession, ReentrantLock(), username).proxyFor(TestOps::class.java, timeout = timeout)
-        this.proxy = proxy
-        return proxy
+        proxy = CordaRPCClientImpl(clientSession, ReentrantLock(), authenticatedUser.username).proxyFor(TestOps::class.java)
     }
-
-    private fun createProxyUsingAuthenticatedReplyTo() = createProxyUsingReplyTo(authenticatedUser.username)
 
     @After
     fun shutdown() {
@@ -156,7 +145,6 @@ class ClientRPCInfrastructureTests {
 
     @Test
     fun `simple RPCs`() {
-        val proxy = createProxyUsingAuthenticatedReplyTo()
         // Does nothing, doesn't throw.
         proxy.void()
 
@@ -169,7 +157,6 @@ class ClientRPCInfrastructureTests {
 
     @Test
     fun `simple observable`() {
-        val proxy = createProxyUsingAuthenticatedReplyTo()
         // This tests that the observations are transmitted correctly, also completion is transmitted.
         val observations = proxy.makeObservable().toBlocking().toIterable().toList()
         assertEquals(listOf(1, 2, 3, 4), observations)
@@ -177,7 +164,6 @@ class ClientRPCInfrastructureTests {
 
     @Test
     fun `complex observables`() {
-        val proxy = createProxyUsingAuthenticatedReplyTo()
         // This checks that we can return an object graph with complex usage of observables, like an observable
         // that emits objects that contain more observables.
         val serverQuotes = PublishSubject.create<Pair<String, Observable<String>>>()
@@ -224,31 +210,12 @@ class ClientRPCInfrastructureTests {
 
     @Test
     fun versioning() {
-        val proxy = createProxyUsingAuthenticatedReplyTo()
         assertFailsWith<UnsupportedOperationException> { proxy.addedLater() }
     }
 
     @Test
     fun `authenticated user is available to RPC`() {
-        val proxy = createProxyUsingAuthenticatedReplyTo()
         assertThat(proxy.captureUser()).isEqualTo(authenticatedUser.username)
     }
 
-    @Test
-    fun `using another username for the reply-to`() {
-        assertThatExceptionOfType(RPCException.DeadlineExceeded::class.java).isThrownBy {
-            val proxy = createProxyUsingReplyTo(random63BitValue().toString(), timeout = 300.millis)
-            proxy.void()
-            fail("RPC successfully returned using someone else's username for the reply-to")
-        }
-    }
-
-    @Test
-    fun `using another username for the reply-to, which contains our username as a prefix`() {
-        assertThatExceptionOfType(RPCException.DeadlineExceeded::class.java).isThrownBy {
-            val proxy = createProxyUsingReplyTo("${authenticatedUser.username}extra", timeout = 300.millis)
-            proxy.void()
-            fail("RPC successfully returned using someone else's username for the reply-to")
-        }
-    }
 }

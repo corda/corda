@@ -197,14 +197,14 @@ class StateMachineManagerTests {
         assertThat(node3Flow.receivedPayloads[0]).isEqualTo(payload)
 
         assertSessionTransfers(node2,
-                node1 sent sessionInit(node1, SendFlow::class, payload) to node2,
+                node1 sent sessionInit(SendFlow::class, payload) to node2,
                 node2 sent sessionConfirm() to node1,
                 node1 sent sessionEnd() to node2
                 //There's no session end from the other flows as they're manually suspended
         )
 
         assertSessionTransfers(node3,
-                node1 sent sessionInit(node1, SendFlow::class, payload) to node3,
+                node1 sent sessionInit(SendFlow::class, payload) to node3,
                 node3 sent sessionConfirm() to node1,
                 node1 sent sessionEnd() to node3
                 //There's no session end from the other flows as they're manually suspended
@@ -230,14 +230,14 @@ class StateMachineManagerTests {
         assertThat(multiReceiveFlow.receivedPayloads[1]).isEqualTo(node3Payload)
 
         assertSessionTransfers(node2,
-                node1 sent sessionInit(node1, ReceiveThenSuspendFlow::class) to node2,
+                node1 sent sessionInit(ReceiveThenSuspendFlow::class) to node2,
                 node2 sent sessionConfirm() to node1,
                 node2 sent sessionData(node2Payload) to node1,
                 node2 sent sessionEnd() to node1
         )
 
         assertSessionTransfers(node3,
-                node1 sent sessionInit(node1, ReceiveThenSuspendFlow::class) to node3,
+                node1 sent sessionInit(ReceiveThenSuspendFlow::class) to node3,
                 node3 sent sessionConfirm() to node1,
                 node3 sent sessionData(node3Payload) to node1,
                 node3 sent sessionEnd() to node1
@@ -251,7 +251,7 @@ class StateMachineManagerTests {
         net.runNetwork()
 
         assertSessionTransfers(
-                node1 sent sessionInit(node1, PingPongFlow::class, 10L) to node2,
+                node1 sent sessionInit(PingPongFlow::class, 10L) to node2,
                 node2 sent sessionConfirm() to node1,
                 node2 sent sessionData(20L) to node1,
                 node1 sent sessionData(11L) to node2,
@@ -267,7 +267,7 @@ class StateMachineManagerTests {
         net.runNetwork()
         assertThatThrownBy { future.getOrThrow() }.isInstanceOf(FlowSessionException::class.java)
         assertSessionTransfers(
-                node1 sent sessionInit(node1, ReceiveThenSuspendFlow::class) to node2,
+                node1 sent sessionInit(ReceiveThenSuspendFlow::class) to node2,
                 node2 sent sessionConfirm() to node1,
                 node2 sent sessionEnd() to node1
         )
@@ -288,9 +288,7 @@ class StateMachineManagerTests {
         return smm.findStateMachines(P::class.java).single()
     }
 
-    private fun sessionInit(initiatorNode: MockNode, flowMarker: KClass<*>, payload: Any? = null): SessionInit {
-        return SessionInit(0, initiatorNode.info.legalIdentity, flowMarker.java.name, payload)
-    }
+    private fun sessionInit(flowMarker: KClass<*>, payload: Any? = null) = SessionInit(0, flowMarker.java.name, payload)
 
     private fun sessionConfirm() = SessionConfirm(0, 0)
 
@@ -314,7 +312,7 @@ class StateMachineManagerTests {
 
     private fun Observable<MessageTransfer>.toSessionTransfers(): Observable<SessionTransfer> {
         return filter { it.message.topicSession == StateMachineManager.sessionTopic }.map {
-            val from = it.sender.myAddress.id
+            val from = it.sender.id
             val message = it.message.data.deserialize<SessionMessage>()
             val to = (it.recipients as InMemoryMessagingNetwork.Handle).id
             SessionTransfer(from, sanitise(message), to)
@@ -371,7 +369,6 @@ class StateMachineManagerTests {
         @Suspendable
         override fun call() {
             receivedPayloads = otherParties.map { receive<Any>(it).unwrap { it } }
-            println(receivedPayloads)
             Fiber.park()
         }
     }
@@ -384,9 +381,7 @@ class StateMachineManagerTests {
         @Suspendable
         override fun call() {
             receivedPayload = sendAndReceive<Long>(otherParty, payload).unwrap { it }
-            println("${fsm.id} Received $receivedPayload")
             receivedPayload2 = sendAndReceive<Long>(otherParty, payload + 1).unwrap { it }
-            println("${fsm.id} Received $receivedPayload2")
         }
     }
 

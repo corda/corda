@@ -21,11 +21,11 @@ class ValidatingNotaryFlow(otherSide: Party,
         NotaryFlow.Service(otherSide, timestampChecker, uniquenessProvider) {
 
     @Suspendable
-    override fun beforeCommit(stx: SignedTransaction, reqIdentity: Party) {
+    override fun beforeCommit(stx: SignedTransaction) {
         try {
             checkSignatures(stx)
             val wtx = stx.tx
-            resolveTransaction(reqIdentity, wtx)
+            resolveTransaction(wtx)
             wtx.toLedgerTransaction(serviceHub).verify()
         } catch (e: Exception) {
             when (e) {
@@ -45,7 +45,7 @@ class ValidatingNotaryFlow(otherSide: Party,
     }
 
     @Suspendable
-    private fun resolveTransaction(reqIdentity: Party, wtx: WireTransaction) {
-        subFlow(ResolveTransactionsFlow(wtx, reqIdentity))
+    private fun resolveTransaction(wtx: WireTransaction) {
+        subFlow(ResolveTransactionsFlow(wtx, otherSide))
     }
 }

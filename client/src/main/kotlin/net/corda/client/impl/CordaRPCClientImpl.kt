@@ -41,7 +41,7 @@ import kotlin.reflect.jvm.javaMethod
  * # Design notes
  *
  * The way RPCs are handled is fairly standard except for the handling of observables. When an RPC might return
- * an [rx.Observable] it is specially tagged. This causes the client to create a new transient queue for the
+ * an [Observable] it is specially tagged. This causes the client to create a new transient queue for the
  * receiving of observables and their observations with a random ID in the name. This ID is sent to the server in
  * a message header. All observations are sent via this single queue.
  *
@@ -141,19 +141,20 @@ class CordaRPCClientImpl(private val session: ClientSession,
      */
     @ThreadSafe
     private inner class RPCProxyHandler(private val timeout: Duration?) : InvocationHandler, Closeable {
-        private val proxyAddress = constructAddress()
+        private val proxyId = random63BitValue()
         private val consumer: ClientConsumer
 
         var serverProtocolVersion = 0
 
         init {
+            val proxyAddress = constructAddress(proxyId)
             consumer = sessionLock.withLock {
                 session.createTemporaryQueue(proxyAddress, proxyAddress)
                 session.createConsumer(proxyAddress)
             }
         }
 
-        private fun constructAddress() = "${ArtemisMessagingComponent.CLIENTS_PREFIX}$username.rpc.${random63BitValue()}"
+        private fun constructAddress(addressId: Long) = "${ArtemisMessagingComponent.CLIENTS_PREFIX}$username.rpc.$addressId"
 
         @Synchronized
         override fun invoke(proxy: Any, method: Method, args: Array<out Any>?): Any? {
@@ -230,9 +231,10 @@ class CordaRPCClientImpl(private val session: ClientSession,
 
         private fun maybePrepareForObservables(location: Throwable, method: Method, msg: ClientMessage): Kryo {
             // Create a temporary queue just for the emissions on any observables that are returned.
-            val observationsQueueName = constructAddress()
+            val observationsId = random63BitValue()
+            val observationsQueueName = constructAddress(observationsId)
             session.createTemporaryQueue(observationsQueueName, observationsQueueName)
-            msg.putStringProperty(ClientRPCRequestMessage.OBSERVATIONS_TO, observationsQueueName)
+            msg.putLongProperty(ClientRPCRequestMessage.OBSERVATIONS_TO, observationsId)
             // And make sure that we deserialise observable handles so that they're linked to the right
             // queue. Also record a bit of metadata for debugging purposes.
             return createRPCKryo(observableSerializer = ObservableDeserializer(observationsQueueName, method.name, location))
@@ -241,7 +243,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
         private fun createMessage(method: Method): ClientMessage {
             return session.createMessage(false).apply {
                 putStringProperty(ClientRPCRequestMessage.METHOD_NAME, method.name)
-                putStringProperty(ClientRPCRequestMessage.REPLY_TO, proxyAddress)
+                putLongProperty(ClientRPCRequestMessage.REPLY_TO, proxyId)
                 // Use the magic deduplication property built into Artemis as our message identity too
                 putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
             }
@@ -257,10 +259,10 @@ class CordaRPCClientImpl(private val session: ClientSession,
 
         override fun close() {
             consumer.close()
-            sessionLock.withLock { session.deleteQueue(proxyAddress) }
+            sessionLock.withLock { session.deleteQueue(constructAddress(proxyId)) }
         }
 
-        override fun toString() = "Corda RPC Proxy listening on queue $proxyAddress"
+        override fun toString() = "Corda RPC Proxy listening on queue ${constructAddress(proxyId)}"
     }
 
     /**

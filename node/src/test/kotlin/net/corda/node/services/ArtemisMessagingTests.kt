@@ -13,17 +13,19 @@ import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.utilities.LogHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.messaging.RPCOps
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.makeTestDataSourceProperties
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
@@ -39,7 +41,6 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class ArtemisMessagingTests {
     @Rule @JvmField val temporaryFolder = TemporaryFolder()
@@ -56,7 +57,6 @@ class ArtemisMessagingTests {
 
     var messagingClient: NodeMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
-
 
     val networkMapCache = InMemoryNetworkMapCache()
 
@@ -196,7 +196,7 @@ class ArtemisMessagingTests {
         createAndStartClientAndServer(receivedMessages)
         for (iter in 1..iterations) {
             val firstActual: Message = receivedMessages.take()
-            assertTrue(String(firstActual.data).equals("first msg $iter"))
+            assertThat(String(firstActual.data)).isEqualTo("first msg $iter")
         }
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
@@ -223,16 +223,22 @@ class ArtemisMessagingTests {
 
     private fun createMessagingClient(server: HostAndPort = hostAndPort): NodeMessagingClient {
         return databaseTransaction(database) {
-            NodeMessagingClient(config, server, identity.public.composite, AffinityExecutor.ServiceAffinityExecutor("ArtemisMessagingTests", 1), database, networkMapRegistrationFuture).apply {
-                configureWithDevSSLCertificate()
+            NodeMessagingClient(
+                    config,
+                    server,
+                    identity.public.composite,
+                    ServiceAffinityExecutor("ArtemisMessagingTests", 1),
+                    database,
+                    networkMapRegistrationFuture).apply {
+                config.configureWithDevSSLCertificate()
                 messagingClient = this
             }
         }
     }
 
     private fun createMessagingServer(local: HostAndPort = hostAndPort): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local, identity.public.composite, networkMapCache, userService).apply {
-            configureWithDevSSLCertificate()
+        return ArtemisMessagingServer(config, local, networkMapCache, userService).apply {
+            config.configureWithDevSSLCertificate()
             messagingServer = this
         }
     }

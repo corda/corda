@@ -100,7 +100,9 @@ inline fun <reified T : Any> Config.getListOrElse(path: String, default: Config.
  * Strictly for dev only automatically construct a server certificate/private key signed from
  * the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.
  */
-fun NodeSSLConfiguration.configureWithDevSSLCertificate() {
+fun NodeConfiguration.configureWithDevSSLCertificate() = configureDevKeyAndTrustStores(myLegalName)
+
+private fun NodeSSLConfiguration.configureDevKeyAndTrustStores(myLegalName: String) {
     certificatesPath.createDirectories()
     if (!trustStorePath.exists()) {
         javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordatruststore.jks").copyTo(trustStorePath)
@@ -109,7 +111,7 @@ fun NodeSSLConfiguration.configureWithDevSSLCertificate() {
         val caKeyStore = X509Utilities.loadKeyStore(
                 javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"),
                 "cordacadevpass")
-        X509Utilities.createKeystoreForSSL(keyStorePath, keyStorePassword, keyStorePassword, caKeyStore, "cordacadevkeypass")
+        X509Utilities.createKeystoreForSSL(keyStorePath, keyStorePassword, keyStorePassword, caKeyStore, "cordacadevkeypass", myLegalName)
     }
 }
 
@@ -120,6 +122,6 @@ fun configureTestSSL(): NodeSSLConfiguration = object : NodeSSLConfiguration {
     override val trustStorePassword: String get() = "trustpass"
 
     init {
-        configureWithDevSSLCertificate()
+        configureDevKeyAndTrustStores("Mega Corp.")
     }
 }
