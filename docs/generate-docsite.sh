@@ -26,8 +26,8 @@ make clean html
 echo
 echo "Generating API docs ..."
 echo
-
-java -jar lib/dokka.jar -output docs/build/html/api core/src/main/kotlin contracts/src/main/kotlin node/src/main/kotlin src/main/kotlin client/src/main/kotlin  | grep -v "No documentation for"
+cd ..
+java -jar lib/dokka.jar -output docs/build/html/api core/src/main/kotlin finance/src/main/kotlin node/src/main/kotlin src/main/kotlin client/src/main/kotlin  | grep -v "No documentation for"
 
 echo
 echo "Writing robots.txt"
