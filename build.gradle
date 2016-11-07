@@ -90,6 +90,7 @@ tasks.withType(Test) {
     reports.html.destination = file("${reporting.baseDir}/${name}")
 }
 
+// TODO: Move fat JAR building into node subproject.
 task buildCordaJAR(type: FatCapsule, dependsOn: ['quasarScan', 'buildCertSigningRequestUtilityJAR']) {
     applicationClass 'com.r3corda.node.MainKt'
     archiveName 'corda.jar'
