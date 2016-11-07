@@ -96,6 +96,8 @@ fun Clock.awaitWithDeadline(deadline: Instant, future: Future<*> = GuavaSettable
                 // No need to take action as will fall out of the loop due to future.isDone
             } catch(e: CancellationException) {
                 // No need to take action as will fall out of the loop due to future.isDone
+            } catch(e: TimeoutException) {
+                // No need to take action as will fall out of the loop due to future.isDone
             }
         }
         subscription?.unsubscribe()
