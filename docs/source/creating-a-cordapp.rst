@@ -213,8 +213,8 @@ is a three node example;
             nearestCity "London"
             notary true // Sets this node to be a notary
             advertisedServices []
-            artemisPort 12345
-            webPort 12346
+            artemisPort 10002
+            webPort 10003
             cordapps []
         }
         node {
@@ -222,8 +222,8 @@ is a three node example;
             dirName "nodea"
             nearestCity "London"
             advertisedServices []
-            artemisPort 31337
-            webPort 31339
+            artemisPort 10004
+            webPort 10005
             cordapps []
         }
         node {
@@ -231,8 +231,8 @@ is a three node example;
             dirName "nodeb"
             nearestCity "New York"
             advertisedServices []
-            artemisPort 31338
-            webPort 31340
+            artemisPort 10006
+            webPort 10007
             cordapps []
         }
     }
