@@ -31,8 +31,8 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Release process" href="release-process.html"/>
-        <link rel="prev" title="Interest Rate Swaps" href="contract-irs.html"/> 
+        <link rel="next" title="Secure coding guidelines" href="secure-coding-guidelines.html"/>
+        <link rel="prev" title="Initial Margin Agreements" href="initialmarginagreement.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -96,11 +96,10 @@
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#template-build-gradle">Template build.gradle</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#cordformation">Cordformation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -113,16 +112,17 @@
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Contracts</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Node API</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Client RPC</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#security">Security</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#observables">Observables</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#versioning">Versioning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#thread-safety">Thread safety</a></li>
@@ -133,10 +133,12 @@
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
@@ -200,6 +202,13 @@ resources. When you&#8217;re done with it, cast it to <code class="docutils lite
 one for every call you make - create a proxy and reuse it.</p>
 </div>
 <p>For a brief tutorial on how one can use the RPC API see <a class="reference internal" href="tutorial-clientrpc-api.html"><span class="doc">Client RPC API</span></a>.</p>
+<div class="section" id="security">
+<h2>Security<a class="headerlink" href="#security" title="Permalink to this headline">¶</a></h2>
+<p>Users wanting to use the RPC library are first required to authenticate themselves with the node using a valid username
+and password. These are kept in <code class="docutils literal"><span class="pre">rpc-users.properties</span></code> in the node base directory. This file also specifies
+permissions for each user, which the RPC implementation can use to control access. The file format is described in
+<a class="reference internal" href="corda-configuration-files.html"><span class="doc">The Corda Configuration File</span></a>.</p>
+</div>
 <div class="section" id="observables">
 <h2>Observables<a class="headerlink" href="#observables" title="Permalink to this headline">¶</a></h2>
 <p>The RPC system handles observables in a special way. When a method returns an observable, whether directly or
@@ -259,10 +268,10 @@ This is likely to change in a future release.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="release-process.html" class="btn btn-neutral float-right" title="Release process" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="secure-coding-guidelines.html" class="btn btn-neutral float-right" title="Secure coding guidelines" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="contract-irs.html" class="btn btn-neutral" title="Interest Rate Swaps" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="initialmarginagreement.html" class="btn btn-neutral" title="Initial Margin Agreements" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

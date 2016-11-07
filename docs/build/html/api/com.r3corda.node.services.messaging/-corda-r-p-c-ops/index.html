@@ -29,10 +29,36 @@ client apps and are implemented by the node in the <a href="#">ServerRPCOps</a> 
 <tbody>
 <tr>
 <td>
+<a href="add-vault-transaction-note.html">addVaultTransactionNote</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addVaultTransactionNote</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.CordaRPCOps$addVaultTransactionNote(com.r3corda.core.crypto.SecureHash, kotlin.String)/txnId">txnId</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.CordaRPCOps$addVaultTransactionNote(com.r3corda.core.crypto.SecureHash, kotlin.String)/txnNote">txnNote</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="execute-command.html">executeCommand</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">executeCommand</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.CordaRPCOps$executeCommand(com.r3corda.core.contracts.ClientToServiceCommand)/command">command</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-client-to-service-command/index.html"><span class="identifier">ClientToServiceCommand</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-transaction-build-result/index.html"><span class="identifier">TransactionBuildResult</span></a></code><p>Executes the given command, possibly triggering cash creation etc.
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">executeCommand</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.CordaRPCOps$executeCommand(com.r3corda.core.contracts.ClientToServiceCommand)/command">command</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-client-to-service-command/index.html"><span class="identifier">ClientToServiceCommand</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-transaction-build-result/index.html"><span class="identifier">TransactionBuildResult</span></a></code><p>Executes the given command if the user is permissioned to do so, possibly triggering cash creation etc.
 TODO: The signature of this is weird because its the remains of an old service call, we should have a call for each command instead.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="get-vault-transaction-notes.html">getVaultTransactionNotes</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getVaultTransactionNotes</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.CordaRPCOps$getVaultTransactionNotes(com.r3corda.core.crypto.SecureHash)/txnId">txnId</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="network-map-updates.html">networkMapUpdates</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">networkMapUpdates</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-network-map-cache/-map-change/index.html"><span class="identifier">MapChange</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="node-identity.html">nodeIdentity</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">nodeIdentity</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a></code><p>Returns Nodes identity, assuming this will not change while the node is running.</p>
 </td>
 </tr>
 <tr>
@@ -71,9 +97,9 @@ such mappings as well.</p>
 <tbody>
 <tr>
 <td>
-<a href="../../com.r3corda.node.internal/-server-r-p-c-ops/index.html">ServerRPCOps</a></td>
+<a href="../../com.r3corda.node.internal/-corda-r-p-c-ops-impl/index.html">CordaRPCOpsImpl</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ServerRPCOps</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">CordaRPCOps</span></code><p>Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
+<code><span class="keyword">class </span><span class="identifier">CordaRPCOpsImpl</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">CordaRPCOps</span></code><p>Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
 thread (i.e. serially). Arguments are serialised and deserialised automatically.</p>
 </td>
 </tr>

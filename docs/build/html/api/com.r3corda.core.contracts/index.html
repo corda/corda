@@ -213,6 +213,18 @@ that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).</p>
 </tr>
 <tr>
 <td>
+<a href="-fungible-asset/index.html">FungibleAsset</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">FungibleAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-ownable-state/index.html"><span class="identifier">OwnableState</span></a></code><p>Interface for contract states representing assets which are fungible, countable and issued by a
+specific party. States contain assets which are equivalent (such as cash of the same currency),
+so records of their existence can be merged or split as needed where the issuer is the same. For
+instance, dollars issued by the Fed are fungible and countable (in cents), barrels of West Texas
+crude are fungible and countable (oil from two small containers can be poured into one large
+container), shares of the same class in a specific company are fungible and countable, and so on.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-issuance-definition.html">IssuanceDefinition</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">IssuanceDefinition</span></code><p>Marker interface for data classes that represent the issuance state for a contract. These are intended as templates
@@ -412,7 +424,9 @@ This is the definitive state that is stored on the ledger and used in transactio
 <td>
 <a href="-unique-identifier/index.html">UniqueIdentifier</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">UniqueIdentifier</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Comparable</span><span class="symbol">&lt;</span><a href="-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a><span class="symbol">&gt;</span></code><p>This class provides a truly unique identifier of a trade, state, or other business object.</p>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">UniqueIdentifier</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Comparable</span><span class="symbol">&lt;</span><a href="-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a><span class="symbol">&gt;</span></code><p>This class provides a truly unique identifier of a trade, state, or other business object, bound to any existing
+external ID. Equality and comparison are based on the unique ID only; if two states somehow have the same UUID but
+different external IDs, it would indicate a problem with handling of IDs.</p>
 </td>
 </tr>
 </tbody>
@@ -420,6 +434,12 @@ This is the definitive state that is stored on the ledger and used in transactio
 <h3>Exceptions</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="-insufficient-balance-exception/index.html">InsufficientBalanceException</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InsufficientBalanceException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
 <tr>
 <td>
 <a href="-transaction-conflict-exception/index.html">TransactionConflictException</a></td>

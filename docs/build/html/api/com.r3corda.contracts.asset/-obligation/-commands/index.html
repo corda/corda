@@ -7,7 +7,7 @@
 <a href="../../index.html">com.r3corda.contracts.asset</a>&nbsp;/&nbsp;<a href="../index.html">Obligation</a>&nbsp;/&nbsp;<a href=".">Commands</a><br/>
 <br/>
 <h1>Commands</h1>
-<code><span class="keyword">interface </span><span class="identifier">Commands</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../-fungible-asset/-commands/index.html"><span class="identifier">Commands</span></a></code><br/>
+<code><span class="keyword">interface </span><span class="identifier">Commands</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-fungible-asset/-commands/index.html"><span class="identifier">Commands</span></a></code><br/>
 <br/>
 <br/>
 <h3>Types</h3>
@@ -17,7 +17,7 @@
 <td>
 <a href="-exit/index.html">Exit</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Exit</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Commands</span><span class="symbol">, </span><a href="../../-fungible-asset/-commands/-exit/index.html"><span class="identifier">Exit</span></a><span class="symbol">&lt;</span><a href="../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>A command stating that the debt is being released by the beneficiary. Normally would indicate
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Exit</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Commands</span><span class="symbol">, </span><a href="../../../com.r3corda.core.contracts/-fungible-asset/-commands/-exit/index.html"><span class="identifier">Exit</span></a><span class="symbol">&lt;</span><a href="../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>A command stating that the debt is being released by the beneficiary. Normally would indicate
 either settlement outside of the ledger, or that the obligor is unable to pay.</p>
 </td>
 </tr>
@@ -25,7 +25,7 @@ either settlement outside of the ledger, or that the obligor is unable to pay.</
 <td>
 <a href="-issue/index.html">Issue</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Issue</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../-fungible-asset/-commands/-issue.html"><span class="identifier">Issue</span></a><span class="symbol">, </span><span class="identifier">Commands</span></code><p>Allows new obligation states to be issued into existence: the nonce ("number used once") ensures the
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Issue</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-fungible-asset/-commands/-issue.html"><span class="identifier">Issue</span></a><span class="symbol">, </span><span class="identifier">Commands</span></code><p>Allows new obligation states to be issued into existence: the nonce ("number used once") ensures the
 transaction has a unique ID even when there are no inputs.</p>
 </td>
 </tr>
@@ -33,7 +33,7 @@ transaction has a unique ID even when there are no inputs.</p>
 <td>
 <a href="-move/index.html">Move</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Move</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Commands</span><span class="symbol">, </span><a href="../../-fungible-asset/-commands/-move.html"><span class="identifier">Move</span></a></code><p>A command stating that a debt has been moved, optionally to fulfil another contract.</p>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Move</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Commands</span><span class="symbol">, </span><a href="../../../com.r3corda.core.contracts/-fungible-asset/-commands/-move.html"><span class="identifier">Move</span></a></code><p>A command stating that a debt has been moved, optionally to fulfil another contract.</p>
 </td>
 </tr>
 <tr>
@@ -69,7 +69,7 @@ state object to the beneficiary. If this reduces the balance to zero, the state 
 <td>
 <a href="-exit/index.html">Exit</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Exit</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Commands</span><span class="symbol">, </span><a href="../../-fungible-asset/-commands/-exit/index.html"><span class="identifier">Exit</span></a><span class="symbol">&lt;</span><a href="../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>A command stating that the debt is being released by the beneficiary. Normally would indicate
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Exit</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Commands</span><span class="symbol">, </span><a href="../../../com.r3corda.core.contracts/-fungible-asset/-commands/-exit/index.html"><span class="identifier">Exit</span></a><span class="symbol">&lt;</span><a href="../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>A command stating that the debt is being released by the beneficiary. Normally would indicate
 either settlement outside of the ledger, or that the obligor is unable to pay.</p>
 </td>
 </tr>
@@ -77,7 +77,7 @@ either settlement outside of the ledger, or that the obligor is unable to pay.</
 <td>
 <a href="-issue/index.html">Issue</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Issue</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../-fungible-asset/-commands/-issue.html"><span class="identifier">Issue</span></a><span class="symbol">, </span><span class="identifier">Commands</span></code><p>Allows new obligation states to be issued into existence: the nonce ("number used once") ensures the
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Issue</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-fungible-asset/-commands/-issue.html"><span class="identifier">Issue</span></a><span class="symbol">, </span><span class="identifier">Commands</span></code><p>Allows new obligation states to be issued into existence: the nonce ("number used once") ensures the
 transaction has a unique ID even when there are no inputs.</p>
 </td>
 </tr>
@@ -85,7 +85,7 @@ transaction has a unique ID even when there are no inputs.</p>
 <td>
 <a href="-move/index.html">Move</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Move</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Commands</span><span class="symbol">, </span><a href="../../-fungible-asset/-commands/-move.html"><span class="identifier">Move</span></a></code><p>A command stating that a debt has been moved, optionally to fulfil another contract.</p>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Move</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Commands</span><span class="symbol">, </span><a href="../../../com.r3corda.core.contracts/-fungible-asset/-commands/-move.html"><span class="identifier">Move</span></a></code><p>A command stating that a debt has been moved, optionally to fulfil another contract.</p>
 </td>
 </tr>
 <tr>

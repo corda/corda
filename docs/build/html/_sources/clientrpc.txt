@@ -17,6 +17,14 @@ detail on how to use this is provided in the docs for the proxy method.
 
 For a brief tutorial on how one can use the RPC API see :doc:`tutorial-clientrpc-api`.
 
+Security
+--------
+
+Users wanting to use the RPC library are first required to authenticate themselves with the node using a valid username
+and password. These are kept in ``rpc-users.properties`` in the node base directory. This file also specifies
+permissions for each user, which the RPC implementation can use to control access. The file format is described in
+:doc:`corda-configuration-files`.
+
 Observables
 -----------
 

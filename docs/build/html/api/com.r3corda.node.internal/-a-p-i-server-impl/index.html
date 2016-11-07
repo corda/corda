@@ -81,6 +81,15 @@ successful, otherwise exception is thrown.</p>
 </tr>
 <tr>
 <td>
+<a href="info.html">info</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">info</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a></code><p>Report this nodes configuration and identities.
+Currently tunnels the NodeInfo as an encoding of the Kryo serialised form.
+TODO this functionality should be available via the RPC</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="invoke-protocol-sync.html">invokeProtocolSync</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">invokeProtocolSync</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.APIServerImpl$invokeProtocolSync(com.r3corda.node.api.ProtocolRef, kotlin.collections.Map((kotlin.String, kotlin.Any)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.api/-protocol-ref.html"><span class="identifier">ProtocolRef</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.APIServerImpl$invokeProtocolSync(com.r3corda.node.api.ProtocolRef, kotlin.collections.Map((kotlin.String, kotlin.Any)))/args">args</span><span class="symbol">:</span>&nbsp;<span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Any</span><span class="symbol">?</span></code><p>This method would not return until the protocol is finished (hence the "Sync").</p>

@@ -91,7 +91,7 @@ Our protocol has two parties (B and S for buyer and seller) and will proceed as 
    it lacks a signature from S authorising movement of the asset.
 3. S signs it and hands the now finalised ``SignedTransaction`` back to B.
 
-You can find the implementation of this protocol in the file ``contracts/src/main/kotlin/com/r3corda/protocols/TwoPartyTradeProtocol.kt``.
+You can find the implementation of this protocol in the file ``finance/src/main/kotlin/com/r3corda/protocols/TwoPartyTradeProtocol.kt``.
 
 Assuming no malicious termination, they both end the protocol being in posession of a valid, signed transaction that
 represents an atomic asset swap.

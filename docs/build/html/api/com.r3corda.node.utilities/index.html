@@ -68,6 +68,13 @@ for ensuring code runs on the right thread, and also for unit testing.</p>
 </tr>
 <tr>
 <td>
+<a href="-instant-column-type/index.html">InstantColumnType</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">InstantColumnType</span></code><p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="#">java.time.Instant</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-j-d-b-c-hash-map/index.html">JDBCHashMap</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">JDBCHashMap</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">V</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-j-d-b-c-hash-map/index.html"><span class="identifier">AbstractJDBCHashMap</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">,</span>&nbsp;<a href="-j-d-b-c-hash-map/-blob-map-table/index.html"><span class="identifier">BlobMapTable</span></a><span class="symbol">&gt;</span></code><p>A convenient JDBC table backed hash map with iteration order based on insertion order.
@@ -101,6 +108,13 @@ the java.time API, some core types, and Kotlin data classes.</p>
 <a href="-local-date-column-type/index.html">LocalDateColumnType</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">LocalDateColumnType</span></code><p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="#">java.time.LocalDate</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-local-date-time-column-type/index.html">LocalDateTimeColumnType</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">LocalDateTimeColumnType</span></code><p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="#">java.time.LocalDateTime</a>.</p>
 </td>
 </tr>
 <tr>
@@ -143,6 +157,13 @@ adjusted externally.</p>
 <td>
 <code><span class="keyword">class </span><span class="identifier">StrandLocalTransactionManager</span></code><p>A relatively close copy of the <a href="#">ThreadLocalTransactionManager</a> in Exposed but with the following adjustments to suit
 our environment:</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-test-clock/index.html">TestClock</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TestClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-mutable-clock/index.html"><span class="identifier">MutableClock</span></a><span class="symbol">, </span><a href="../com.r3corda.core.serialization/-serialize-as-token/index.html"><span class="identifier">SerializeAsToken</span></a></code><p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the date advanced for use in demos.</p>
 </td>
 </tr>
 <tr>
@@ -218,6 +239,12 @@ our environment:</p>
 </tr>
 <tr>
 <td>
+<a href="instant.html">instant</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">instant</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.utilities$instant(, kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="isolated-transaction.html">isolatedTransaction</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">isolatedTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.utilities$isolatedTransaction(, kotlin.Function1((, com.r3corda.node.utilities.isolatedTransaction.T)))/database">database</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.utilities$isolatedTransaction(, kotlin.Function1((, com.r3corda.node.utilities.isolatedTransaction.T)))/block">block</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
@@ -227,6 +254,12 @@ our environment:</p>
 <a href="local-date.html">localDate</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">localDate</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.utilities$localDate(, kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="local-date-time.html">localDateTime</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">localDateTime</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.utilities$localDateTime(, kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
 <tr>
 <td>

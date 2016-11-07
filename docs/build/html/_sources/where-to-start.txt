@@ -36,7 +36,7 @@ The process of implementing a scenario looks like this:
 
 1. First of all, design your states and transaction types. Read about the :doc:`data-model` if you aren't sure what that
    involves.
-2. Now, create a new file in the contracts/src/main directory. You can either any JVM language but we only provide examples
+2. Now, create a new file in the finance/src/main directory. You can either any JVM language but we only provide examples
    in Java and Kotlin. The file should define your state classes and your contract class, which will define the
    allowable state transitions. You can learn how these are constructed by reading the ":doc:`tutorial-contract`" tutorial.
 3. It isn't enough to just define static data and logic that controls what's allowed. You must also orchestrate the

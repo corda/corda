@@ -11,39 +11,14 @@
 <p>This is the interface thats exposed to DSL users.</p>
 <br/>
 <br/>
-<h3>Properties</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="network-map-cache.html">networkMapCache</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkMapCache</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a></code></td>
-</tr>
-</tbody>
-</table>
 <h3>Functions</h3>
 <table>
 <tbody>
 <tr>
 <td>
-<a href="start-client.html">startClient</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">startClient</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.driver.DriverDSLExposedInterface$startClient(kotlin.String, )/providedName">providedName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.driver.DriverDSLExposedInterface$startClient(kotlin.String, )/serverAddress">serverAddress</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.node.services.messaging/-node-messaging-client/index.html"><span class="identifier">NodeMessagingClient</span></a><span class="symbol">&gt;</span></code><p>Starts an <a href="../../com.r3corda.node.services.messaging/-node-messaging-client/index.html">NodeMessagingClient</a>.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="start-local-server.html">startLocalServer</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">startLocalServer</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.node.services.messaging/-artemis-messaging-server/index.html"><span class="identifier">ArtemisMessagingServer</span></a><span class="symbol">&gt;</span></code><p>Starts a local <a href="../../com.r3corda.node.services.messaging/-artemis-messaging-server/index.html">ArtemisMessagingServer</a> of which there may only be one.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="start-node.html">startNode</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">startNode</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.driver.DriverDSLExposedInterface$startNode(kotlin.String, kotlin.collections.Set((com.r3corda.core.node.services.ServiceInfo)))/providedName">providedName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.node.driver.DriverDSLExposedInterface$startNode(kotlin.String, kotlin.collections.Set((com.r3corda.core.node.services.ServiceInfo)))/advertisedServices">advertisedServices</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-service-info/index.html"><span class="identifier">ServiceInfo</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;setOf()<span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span></code><p>Starts a <a href="#">Node</a> in a separate process.</p>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">startNode</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.driver.DriverDSLExposedInterface$startNode(kotlin.String, kotlin.collections.Set((com.r3corda.core.node.services.ServiceInfo)), kotlin.collections.List((com.r3corda.node.services.User)))/providedName">providedName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.node.driver.DriverDSLExposedInterface$startNode(kotlin.String, kotlin.collections.Set((com.r3corda.core.node.services.ServiceInfo)), kotlin.collections.List((com.r3corda.node.services.User)))/advertisedServices">advertisedServices</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-service-info/index.html"><span class="identifier">ServiceInfo</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;emptySet()<span class="symbol">, </span><span class="identifier" id="com.r3corda.node.driver.DriverDSLExposedInterface$startNode(kotlin.String, kotlin.collections.Set((com.r3corda.core.node.services.ServiceInfo)), kotlin.collections.List((com.r3corda.node.services.User)))/rpcUsers">rpcUsers</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.node.services/-user/index.html"><span class="identifier">User</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;emptyList()<span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><a href="../-node-info-and-config/index.html"><span class="identifier">NodeInfoAndConfig</span></a><span class="symbol">&gt;</span></code><p>Starts a <a href="#">Node</a> in a separate process.</p>
 </td>
 </tr>
 <tr>
@@ -51,18 +26,6 @@
 <a href="wait-for-all-nodes-to-finish.html">waitForAllNodesToFinish</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">waitForAllNodesToFinish</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
-</tr>
-</tbody>
-</table>
-<h3>Extension Functions</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="../start-client.html">startClient</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">DriverDSLExposedInterface</span><span class="symbol">.</span><span class="identifier">startClient</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.driver$startClient(com.r3corda.node.driver.DriverDSLExposedInterface, com.r3corda.node.services.messaging.ArtemisMessagingServer)/localServer">localServer</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.messaging/-artemis-messaging-server/index.html"><span class="identifier">ArtemisMessagingServer</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.node.services.messaging/-node-messaging-client/index.html"><span class="identifier">NodeMessagingClient</span></a><span class="symbol">&gt;</span></code><br/>
-<code><span class="keyword">fun </span><span class="identifier">DriverDSLExposedInterface</span><span class="symbol">.</span><span class="identifier">startClient</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.driver$startClient(com.r3corda.node.driver.DriverDSLExposedInterface, com.r3corda.core.node.NodeInfo, kotlin.String)/remoteNodeInfo">remoteNodeInfo</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.driver$startClient(com.r3corda.node.driver.DriverDSLExposedInterface, com.r3corda.core.node.NodeInfo, kotlin.String)/providedName">providedName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.node.services.messaging/-node-messaging-client/index.html"><span class="identifier">NodeMessagingClient</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

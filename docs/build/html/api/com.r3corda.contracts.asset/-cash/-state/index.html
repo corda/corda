@@ -7,7 +7,7 @@
 <a href="../../index.html">com.r3corda.contracts.asset</a>&nbsp;/&nbsp;<a href="../index.html">Cash</a>&nbsp;/&nbsp;<a href=".">State</a><br/>
 <br/>
 <h1>State</h1>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><a href="../../../com.r3corda.core.schemas/-queryable-state/index.html"><span class="identifier">QueryableState</span></a></code><br/>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><a href="../../../com.r3corda.core.schemas/-queryable-state/index.html"><span class="identifier">QueryableState</span></a></code><br/>
 <p>A state representing a cash claim against some party.</p>
 <br/>
 <br/>
@@ -41,14 +41,6 @@
 </tr>
 <tr>
 <td>
-<a href="deposit.html">deposit</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">deposit</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a></code><p>Where the underlying asset backing this ledger entry can be found. The reference
-is only intended for use by the issuer, and is not intended to be meaningful to others.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="encumbrance.html">encumbrance</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">encumbrance</span><span class="symbol">: </span><span class="identifier">Int</span><span class="symbol">?</span></code><p>All contract states may be <emph>encumbered</emph> by up to one other state.</p>
@@ -61,12 +53,6 @@ is only intended for use by the issuer, and is not intended to be meaningful to 
 <code><span class="keyword">val </span><span class="identifier">exitKeys</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>There must be an ExitCommand signed by these keys to destroy the amount. While all states require their
 owner to sign, some (i.e. cash) also require the issuer.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="issuance-def.html">issuanceDef</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">issuanceDef</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -98,7 +84,7 @@ owner to sign, some (i.e. cash) also require the issuer.</p>
 <td>
 <a href="move.html">move</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">move</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.Cash.State$move(com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.security.PublicKey)/newAmount">newAmount</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash.State$move(com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.security.PublicKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">move</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.Cash.State$move(com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.security.PublicKey)/newAmount">newAmount</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash.State$move(com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.security.PublicKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>

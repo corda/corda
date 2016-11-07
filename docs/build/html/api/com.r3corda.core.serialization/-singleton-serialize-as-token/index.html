@@ -84,15 +84,6 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.core.testing/-in-memory-vault-service/index.html">InMemoryVaultService</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">InMemoryVaultService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../com.r3corda.core.node.services/-vault-service/index.html"><span class="identifier">VaultService</span></a></code><p>This class implements a simple, in memory vault that tracks states that are owned by us, and also has a convenience
-method to auto-generate some self-issued cash states that can be used for test trading. A real vault would persist
-states relevant to us into a database and once such a vault is implemented, this scaffolding can be removed.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../../com.r3corda.node.services.api/-monitoring-service/index.html">MonitoringService</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">MonitoringService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>Provides access to various metrics and ways to notify monitoring services of things, for sysadmin purposes.
@@ -103,7 +94,7 @@ This is not an interface because it is too lightweight to bother mocking out.</p
 <td>
 <a href="../../com.r3corda.node.services.events/-node-scheduler-service/index.html">NodeSchedulerService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">NodeSchedulerService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-scheduler-service/index.html"><span class="identifier">SchedulerService</span></a><span class="symbol">, </span><span class="identifier">SingletonSerializeAsToken</span></code><p>A first pass of a simple <a href="../../com.r3corda.core.node.services/-scheduler-service/index.html">SchedulerService</a> that works with <a href="#">MutableClock</a>s for testing, demonstrations and simulations
+<code><span class="keyword">class </span><span class="identifier">NodeSchedulerService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-scheduler-service/index.html"><span class="identifier">SchedulerService</span></a><span class="symbol">, </span><span class="identifier">SingletonSerializeAsToken</span></code><p>A first pass of a simple <a href="../../com.r3corda.core.node.services/-scheduler-service/index.html">SchedulerService</a> that works with <a href="../../com.r3corda.node.utilities/-mutable-clock/index.html">MutableClock</a>s for testing, demonstrations and simulations
 that also encompasses the <a href="#">Vault</a> observer for processing transactions.</p>
 </td>
 </tr>
@@ -152,12 +143,6 @@ we add further functionality as the design for the vault and vault service matur
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.node.services.clientapi/-fixing-session-initiation/-service/index.html">Service</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="../../com.r3corda.node.services/-notary-change/-service/index.html">Service</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>A service that monitors the network for requests for changing the notary of a state,
@@ -171,19 +156,6 @@ and immediately runs the <a href="../../com.r3corda.protocols/-notary-change-pro
 <code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>This class sets up network message handlers for requests from peers for data keyed by hash. It is a piece of simple
 glue that sits between the network layer and the database layer.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.demos.api/-node-interest-rates/-service/index.html">Service</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.api/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">, </span><span class="identifier">SingletonSerializeAsToken</span></code><p>The Service that wraps <a href="../../com.r3corda.demos.api/-node-interest-rates/-oracle/index.html">Oracle</a> and handles messages/network interaction/request scrubbing.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.demos.protocols/-auto-offer-protocol/-service/index.html">Service</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code></td>
 </tr>
 <tr>
 <td>

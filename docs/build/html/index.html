@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Welcome to the Corda repository! &mdash; R3 Corda latest documentation</title>
+  <title>Welcome to the Corda! &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -95,11 +95,10 @@
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#template-build-gradle">Template build.gradle</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#cordformation">Cordformation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -112,12 +111,12 @@
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Contracts</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Node API</span></p>
 <ul>
@@ -125,10 +124,12 @@
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
@@ -161,7 +162,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="#">Docs</a> &raquo;</li>
       
-    <li>Welcome to the Corda repository!</li>
+    <li>Welcome to the Corda!</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -175,26 +176,23 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="welcome-to-the-corda-repository">
-<h1>Welcome to the Corda repository!<a class="headerlink" href="#welcome-to-the-corda-repository" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="welcome-to-the-corda">
+<h1>Welcome to the Corda!<a class="headerlink" href="#welcome-to-the-corda" title="Permalink to this headline">¶</a></h1>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">This build of the docs is from the <em>master branch</em>, not a milestone release. It may not reflect the
 current state of the code.</p>
 </div>
-<p>This documentation describes Corda, a proposed architecture for distributed ledgers, the vision for which is outlined in the <a class="reference external" href="_static/corda-introductory-whitepaper.pdf">Corda Introductory Whitepaper</a>.</p>
-<p>The goal of this prototype is to explore fundamentally better designs for distributed ledgers than what presently exists
-on the market, tailor made for the needs of the financial industry. We are attempting to prove or disprove the
-following hypothesis:</p>
-<p>The combination of</p>
-<ul class="simple">
-<li>An upgraded state transition model</li>
-<li>Industry standard, production quality virtual machines and languages</li>
-<li>An advanced orchestration framework</li>
-<li>Limited data propagation</li>
-<li>Conflict resolution without proof of work or blocks</li>
-</ul>
-<p>is sufficiently powerful to justify the creation of a new platform implementation.</p>
+<p>This is the developer guide for Corda, a proposed architecture for distributed ledgers. Here are the sources
+of documentation you may find useful, from highest level to lowest:</p>
+<ol class="arabic simple">
+<li>The <a class="reference external" href="_static/corda-introductory-whitepaper.pdf">Introductory white paper</a> describes the motivating vision and background of the project. It is the kind
+of document your boss should read. It describes why the project exists and briefly compares it to alternative
+systems on the market.</li>
+<li>This user guide. It describes <em>how</em> to use the system to write apps. It assumes you already have read the
+relevant sections of the technology white paper and now wish to learn how to use it.</li>
+<li>The <a class="reference external" href="api/index.html">API docs</a>.</li>
+</ol>
 <p>Read on to learn:</p>
 <div class="toctree-wrapper compound" id="overview">
 <p class="caption"><span class="caption-text">Overview</span><a class="headerlink" href="#overview" title="Permalink to this toctree">¶</a></p>
@@ -262,15 +260,16 @@ following hypothesis:</p>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#building-gradle-plugins">Building Gradle Plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#using-gradle-plugins">Using Gradle Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#template-build-gradle">Template build.gradle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#cordformation">Cordformation</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#template-build-gradle">Template build.gradle</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#cordformation">Cordformation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#trader-demo">Trader demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#irs-demo">IRS demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#irs-web-demo">IRS web demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#attachment-demo">Attachment demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#simm-and-portfolio-demo">SIMM and Portfolio Demo</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a><ul>
@@ -287,6 +286,7 @@ following hypothesis:</p>
 <li class="toctree-l2"><a class="reference internal" href="corda-configuration-files.html#configuration-file-fields">Configuration File Fields</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
 </ul>
 </div>
 <div class="toctree-wrapper compound" id="tutorials">
@@ -359,11 +359,6 @@ following hypothesis:</p>
 <li class="toctree-l2"><a class="reference internal" href="event-scheduling.html#an-example">An example</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="secure-coding-guidelines.html#protocols">Protocols</a></li>
-<li class="toctree-l2"><a class="reference internal" href="secure-coding-guidelines.html#contracts">Contracts</a></li>
-</ul>
-</li>
 </ul>
 </div>
 <div class="toctree-wrapper compound" id="contracts">
@@ -382,12 +377,19 @@ following hypothesis:</p>
 <li class="toctree-l2"><a class="reference internal" href="contract-irs.html#technical-details">Technical Details</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="initialmarginagreement.html#simm-introduction">SIMM Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialmarginagreement.html#process-steps">Process steps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialmarginagreement.html#running-the-app">Running the app</a></li>
+</ul>
+</li>
 </ul>
 </div>
 <div class="toctree-wrapper compound" id="node-api">
 <p class="caption"><span class="caption-text">Node API</span><a class="headerlink" href="#node-api" title="Permalink to this toctree">¶</a></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="clientrpc.html#security">Security</a></li>
 <li class="toctree-l2"><a class="reference internal" href="clientrpc.html#observables">Observables</a></li>
 <li class="toctree-l2"><a class="reference internal" href="clientrpc.html#versioning">Versioning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="clientrpc.html#thread-safety">Thread safety</a></li>
@@ -400,9 +402,15 @@ following hypothesis:</p>
 <div class="toctree-wrapper compound" id="appendix">
 <p class="caption"><span class="caption-text">Appendix</span><a class="headerlink" href="#appendix" title="Permalink to this toctree">¶</a></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="secure-coding-guidelines.html#protocols">Protocols</a></li>
+<li class="toctree-l2"><a class="reference internal" href="secure-coding-guidelines.html#contracts">Contracts</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-5">Milestone 5</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-4">Milestone 4</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-3">Milestone 3</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-2">Milestone 2</a></li>
@@ -412,6 +420,12 @@ following hypothesis:</p>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="network-simulator.html#interface">Interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="node-explorer.html#running-the-ui">Running the UI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="node-explorer.html#running-demo-nodes">Running Demo Nodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="node-explorer.html#interface">Interface</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a><ul>

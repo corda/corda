@@ -96,11 +96,10 @@
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#template-build-gradle">Template build.gradle</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#cordformation">Cordformation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
@@ -113,12 +112,12 @@
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Contracts</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Node API</span></p>
 <ul>
@@ -126,10 +125,12 @@
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
@@ -184,23 +185,29 @@ the standard output. We will then put some simple visualisation on top. For an e
 <p>We start off by connecting to the node itself. For the purposes of the tutorial we will run the Trader demo on some
 local port and connect to the Buyer side. We will pass in the address as a command line argument. To connect to the node
 we also need to access the certificates of the node, we will access the node&#8217;s <code class="docutils literal"><span class="pre">certificates</span></code> directory directly.</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">enum</span> <span class="k">class</span> <span class="nc">PrintOrVisualise</span> <span class="p">{</span>
-    <span class="n">Print</span><span class="p">,</span>
-    <span class="n">Visualise</span>
-<span class="p">}</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>enum class PrintOrVisualise {
+    Print,
+    Visualise
+}
 
-<span class="k">fun</span> <span class="nf">main</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="n">Array</span><span class="p">&lt;</span><span class="n">String</span><span class="p">&gt;)</span> <span class="p">{</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="n">size</span> <span class="p">&lt;</span> <span class="m">2</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;Usage: &lt;binary&gt; &lt;node address&gt; [Print|Visualise]&quot;</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">val</span> <span class="py">nodeAddress</span> <span class="p">=</span> <span class="n">HostAndPort</span><span class="p">.</span><span class="n">fromString</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="m">0</span><span class="p">])</span>
-    <span class="k">val</span> <span class="py">printOrVisualise</span> <span class="p">=</span> <span class="n">PrintOrVisualise</span><span class="p">.</span><span class="n">valueOf</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="m">1</span><span class="p">])</span>
-    <span class="k">val</span> <span class="py">certificatesPath</span> <span class="p">=</span> <span class="n">Paths</span><span class="p">.</span><span class="k">get</span><span class="p">(</span><span class="s">&quot;build/trader-demo/buyer/certificates&quot;</span><span class="p">)</span>
+fun main(args: Array&lt;String&gt;) {
+    if (args.size &lt; 2) {
+        throw IllegalArgumentException(&quot;Usage: &lt;binary&gt; &lt;node address&gt; [Print|Visualise]&quot;)
+    }
+    val nodeAddress = HostAndPort.fromString(args[0])
+    val printOrVisualise = PrintOrVisualise.valueOf(args[1])
+    val sslConfig = object : NodeSSLConfiguration {
+        override val certificatesPath = Paths.get(&quot;build/trader-demo/buyer/certificates&quot;)
+        override val keyStorePassword = &quot;cordacadevpass&quot;
+        override val trustStorePassword = &quot;trustpass&quot;
+    }
 </pre></div>
 </div>
-<p>Now we can connect to the node itself:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>    <span class="k">val</span> <span class="py">client</span> <span class="p">=</span> <span class="n">CordaRPCClient</span><span class="p">(</span><span class="n">nodeAddress</span><span class="p">,</span> <span class="n">certificatesPath</span><span class="p">)</span>
-    <span class="n">client</span><span class="p">.</span><span class="n">start</span><span class="p">()</span>
+<p>Now we can connect to the node itself using a valid RPC login. By default the user <cite>user1</cite> is available with password <cite>test</cite>.</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>    <span class="k">val</span> <span class="py">username</span> <span class="p">=</span> <span class="n">System</span><span class="p">.</span><span class="n">console</span><span class="p">().</span><span class="n">readLine</span><span class="p">(</span><span class="s">&quot;Enter username: &quot;</span><span class="p">)</span>
+    <span class="k">val</span> <span class="py">password</span> <span class="p">=</span> <span class="n">String</span><span class="p">(</span><span class="n">System</span><span class="p">.</span><span class="n">console</span><span class="p">().</span><span class="n">readPassword</span><span class="p">(</span><span class="s">&quot;Enter password: &quot;</span><span class="p">))</span>
+    <span class="k">val</span> <span class="py">client</span> <span class="p">=</span> <span class="n">CordaRPCClient</span><span class="p">(</span><span class="n">nodeAddress</span><span class="p">,</span> <span class="n">sslConfig</span><span class="p">)</span>
+    <span class="n">client</span><span class="p">.</span><span class="n">start</span><span class="p">(</span><span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">)</span>
     <span class="k">val</span> <span class="py">proxy</span> <span class="p">=</span> <span class="n">client</span><span class="p">.</span><span class="n">proxy</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -231,10 +238,30 @@ we also need to access the certificates of the node, we will access the node&#82
     <span class="k">fun</span> <span class="nf">stateMachineRecordedTransactionMapping</span><span class="p">():</span> <span class="n">Pair</span><span class="p">&lt;</span><span class="n">List</span><span class="p">&lt;</span><span class="n">StateMachineTransactionMapping</span><span class="p">&gt;,</span> <span class="n">Observable</span><span class="p">&lt;</span><span class="n">StateMachineTransactionMapping</span><span class="p">&gt;&gt;</span>
 
     <span class="cm">/**</span>
-<span class="cm">     * Executes the given command, possibly triggering cash creation etc.</span>
+<span class="cm">     * Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.</span>
+<span class="cm">     */</span>
+    <span class="n">@RPCReturnsObservables</span>
+    <span class="k">fun</span> <span class="nf">networkMapUpdates</span><span class="p">():</span> <span class="n">Pair</span><span class="p">&lt;</span><span class="n">List</span><span class="p">&lt;</span><span class="n">NodeInfo</span><span class="p">&gt;,</span> <span class="n">Observable</span><span class="p">&lt;</span><span class="n">NetworkMapCache</span><span class="p">.</span><span class="n">MapChange</span><span class="p">&gt;&gt;</span>
+
+    <span class="cm">/**</span>
+<span class="cm">     * Executes the given command if the user is permissioned to do so, possibly triggering cash creation etc.</span>
 <span class="cm">     * TODO: The signature of this is weird because it&#39;s the remains of an old service call, we should have a call for each command instead.</span>
 <span class="cm">     */</span>
     <span class="k">fun</span> <span class="nf">executeCommand</span><span class="p">(</span><span class="n">command</span><span class="p">:</span> <span class="n">ClientToServiceCommand</span><span class="p">):</span> <span class="n">TransactionBuildResult</span>
+
+    <span class="cm">/**</span>
+<span class="cm">     * Returns Node&#39;s identity, assuming this will not change while the node is running.</span>
+<span class="cm">     */</span>
+    <span class="k">fun</span> <span class="nf">nodeIdentity</span><span class="p">():</span> <span class="n">NodeInfo</span>
+    <span class="cm">/*</span>
+<span class="cm">     * Add note(s) to an existing Vault transaction</span>
+<span class="cm">     */</span>
+    <span class="k">fun</span> <span class="nf">addVaultTransactionNote</span><span class="p">(</span><span class="n">txnId</span><span class="p">:</span> <span class="n">SecureHash</span><span class="p">,</span> <span class="n">txnNote</span><span class="p">:</span> <span class="n">String</span><span class="p">)</span>
+
+    <span class="cm">/*</span>
+<span class="cm">     * Retrieve existing note(s) for a given Vault transaction</span>
+<span class="cm">     */</span>
+    <span class="k">fun</span> <span class="nf">getVaultTransactionNotes</span><span class="p">(</span><span class="n">txnId</span><span class="p">:</span> <span class="n">SecureHash</span><span class="p">):</span> <span class="n">Iterable</span><span class="p">&lt;</span><span class="n">String</span><span class="p">&gt;</span>
 </pre></div>
 </div>
 <p>The one we need in order to dump the transaction graph is <code class="docutils literal"><span class="pre">verifiedTransactions</span></code>. The type signature tells us that the
@@ -292,7 +319,7 @@ for i in {0..9} ; do ./build/install/r3prototyping/bin/trader-demo --role=SELLER
             <span class="n">futureTransactions</span><span class="p">.</span><span class="n">subscribe</span> <span class="p">{</span> <span class="n">transaction</span> <span class="p">-&gt;</span>
                 <span class="n">graph</span><span class="p">.</span><span class="n">addNode</span><span class="p">&lt;</span><span class="n">Node</span><span class="p">&gt;(</span><span class="s">&quot;${transaction.id}&quot;</span><span class="p">)</span>
                 <span class="n">transaction</span><span class="p">.</span><span class="n">tx</span><span class="p">.</span><span class="n">inputs</span><span class="p">.</span><span class="n">forEach</span> <span class="p">{</span> <span class="n">ref</span> <span class="p">-&gt;</span>
-                    <span class="n">graph</span><span class="p">.</span><span class="n">addEdge</span><span class="p">&lt;</span><span class="n">Edge</span><span class="p">&gt;(</span><span class="s">&quot;${ref}&quot;</span><span class="p">,</span> <span class="s">&quot;${ref.txhash}&quot;</span><span class="p">,</span> <span class="s">&quot;${transaction.id}&quot;</span><span class="p">)</span>
+                    <span class="n">graph</span><span class="p">.</span><span class="n">addEdge</span><span class="p">&lt;</span><span class="n">Edge</span><span class="p">&gt;(</span><span class="s">&quot;$ref&quot;</span><span class="p">,</span> <span class="s">&quot;${ref.txhash}&quot;</span><span class="p">,</span> <span class="s">&quot;${transaction.id}&quot;</span><span class="p">)</span>
                 <span class="p">}</span>
             <span class="p">}</span>
             <span class="n">graph</span><span class="p">.</span><span class="n">display</span><span class="p">()</span>

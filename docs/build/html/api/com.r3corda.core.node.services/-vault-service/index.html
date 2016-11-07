@@ -22,6 +22,14 @@ consumed by someone else first</p>
 <tbody>
 <tr>
 <td>
+<a href="cash-balances.html">cashBalances</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+which we have no cash evaluate to null (not present in map), not 0.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="current-vault.html">currentVault</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">currentVault</span><span class="symbol">: </span><a href="../-vault/index.html"><span class="identifier">Vault</span></a></code><p>Returns a read-only snapshot of the vault at the time the call is made. Note that if you consume states or
@@ -48,6 +56,31 @@ the update.</p>
 <h3>Functions</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="add-note-to-transaction.html">addNoteToTransaction</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addNoteToTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.VaultService$addNoteToTransaction(com.r3corda.core.crypto.SecureHash, kotlin.String)/txnId">txnId</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.node.services.VaultService$addNoteToTransaction(com.r3corda.core.crypto.SecureHash, kotlin.String)/noteText">noteText</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Add a note to an existing <a href="#">LedgerTransaction</a> given by its unique <a href="../../com.r3corda.core.crypto/-secure-hash/index.html">SecureHash</a> id
+Multiple notes may be attached to the same <a href="#">LedgerTransaction</a>.
+These are additively and immutably persisted within the node local vault database in a single textual field
+using a semi-colon separator</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="generate-spend.html">generateSpend</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">generateSpend</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.VaultService$generateSpend(com.r3corda.core.transactions.TransactionBuilder, com.r3corda.core.contracts.Amount((java.util.Currency)), java.security.PublicKey, kotlin.collections.Set((com.r3corda.core.crypto.Party)))/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.node.services.VaultService$generateSpend(com.r3corda.core.transactions.TransactionBuilder, com.r3corda.core.contracts.Amount((java.util.Currency)), java.security.PublicKey, kotlin.collections.Set((com.r3corda.core.crypto.Party)))/amount">amount</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.node.services.VaultService$generateSpend(com.r3corda.core.transactions.TransactionBuilder, com.r3corda.core.contracts.Amount((java.util.Currency)), java.security.PublicKey, kotlin.collections.Set((com.r3corda.core.crypto.Party)))/to">to</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.node.services.VaultService$generateSpend(com.r3corda.core.transactions.TransactionBuilder, com.r3corda.core.contracts.Amount((java.util.Currency)), java.security.PublicKey, kotlin.collections.Set((com.r3corda.core.crypto.Party)))/onlyFromParties">onlyFromParties</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p><a href="../../com.r3corda.core.contracts/-insufficient-balance-exception/index.html">InsufficientBalanceException</a> is thrown when a Cash Spending transaction fails because
+there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
+Note: an <a href="../../com.r3corda.core.contracts/-amount/index.html">Amount</a> of <a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html">Currency</a> is only fungible for a given Issuer Party within a <a href="../../com.r3corda.core.contracts/-fungible-asset/index.html">FungibleAsset</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="get-transaction-notes.html">getTransactionNotes</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getTransactionNotes</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.VaultService$getTransactionNotes(com.r3corda.core.crypto.SecureHash)/txnId">txnId</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span></code></td>
+</tr>
 <tr>
 <td>
 <a href="linear-heads-of-type_.html">linearHeadsOfType_</a></td>
@@ -113,15 +146,6 @@ first subscriber is registered so as to avoid racing with early updates.</p>
 <h3>Inheritors</h3>
 <table>
 <tbody>
-<tr>
-<td>
-<a href="../../com.r3corda.core.testing/-in-memory-vault-service/index.html">InMemoryVaultService</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">InMemoryVaultService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><span class="identifier">VaultService</span></code><p>This class implements a simple, in memory vault that tracks states that are owned by us, and also has a convenience
-method to auto-generate some self-issued cash states that can be used for test trading. A real vault would persist
-states relevant to us into a database and once such a vault is implemented, this scaffolding can be removed.</p>
-</td>
-</tr>
 <tr>
 <td>
 <a href="../../com.r3corda.node.services.vault/-node-vault-service/index.html">NodeVaultService</a></td>

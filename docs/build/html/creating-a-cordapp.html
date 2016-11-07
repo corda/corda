@@ -108,13 +108,14 @@
 <li class="toctree-l1"><a class="reference internal" href="#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#building-gradle-plugins">Building Gradle Plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#using-gradle-plugins">Using Gradle Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#template-build-gradle">Template build.gradle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cordformation">Cordformation</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="#template-build-gradle">Template build.gradle</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#cordformation">Cordformation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -127,12 +128,12 @@
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Contracts</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Node API</span></p>
 <ul>
@@ -140,10 +141,12 @@
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
@@ -278,10 +281,10 @@ at the present time, and should certainly be treated as read-only.</p>
 </div>
 <p>Corda now supports publishing to Maven local to build against it. To publish to Maven local run the following in the
 root directory of Corda</p>
-<div class="highlight-shell"><div class="highlight"><pre><span></span>./gradlew publishToMavenLocal
+<div class="highlight-shell"><div class="highlight"><pre><span></span>./gradlew install
 </pre></div>
 </div>
-<p>This will publish corda-$version.jar, contracts-$version.jar, core-$version.jar and node-$version.jar to the
+<p>This will publish corda-$version.jar, finance-$version.jar, core-$version.jar and node-$version.jar to the
 group com.r3corda. You can now depend on these as you normally would a Maven dependency.</p>
 </div>
 </div>
@@ -293,7 +296,7 @@ The available plugins are in the gradle-plugins directory of the Corda repositor
 <h2>Building Gradle Plugins<a class="headerlink" href="#building-gradle-plugins" title="Permalink to this headline">¶</a></h2>
 <p>To install to your local Maven repository the plugins that Cordapp gradle files require, run the following from the
 root of the Corda project:</p>
-<div class="highlight-text"><div class="highlight"><pre><span></span>./gradlew publishToMavenLocal
+<div class="highlight-text"><div class="highlight"><pre><span></span>./gradlew install
 </pre></div>
 </div>
 <p>The plugins will now be installed to your local Maven repository in ~/.m2 on Unix and %HOMEPATH%.m2 on Windows.</p>
@@ -303,9 +306,8 @@ root of the Corda project:</p>
 <p>To use the plugins, if you are not already using the Cordapp template project, you must modify your build.gradle. Add
 the following segments to the relevant part of your build.gradle.</p>
 </div>
-</div>
 <div class="section" id="template-build-gradle">
-<h1>Template build.gradle<a class="headerlink" href="#template-build-gradle" title="Permalink to this headline">¶</a></h1>
+<h2>Template build.gradle<a class="headerlink" href="#template-build-gradle" title="Permalink to this headline">¶</a></h2>
 <p>To build against Corda and the plugins that cordapps use, update your build.gradle to contain the following:</p>
 <div class="highlight-groovy"><div class="highlight"><pre><span></span><span class="n">buildscript</span> <span class="o">{</span>
     <span class="n">ext</span><span class="o">.</span><span class="na">corda_version</span> <span class="o">=</span> <span class="s1">&#39;&lt;enter the corda version you build against here&gt;&#39;</span>
@@ -335,7 +337,7 @@ the following segments to the relevant part of your build.gradle.</p>
 
 <span class="n">dependencies</span> <span class="o">{</span>
     <span class="n">compile</span> <span class="s2">&quot;com.r3corda:core:$corda_version&quot;</span>
-    <span class="n">compile</span> <span class="s2">&quot;com.r3corda:contracts:$corda_version&quot;</span>
+    <span class="n">compile</span> <span class="s2">&quot;com.r3corda:finance:$corda_version&quot;</span>
     <span class="n">compile</span> <span class="s2">&quot;com.r3corda:node:$corda_version&quot;</span>
     <span class="n">compile</span> <span class="s2">&quot;com.r3corda:corda:$corda_version&quot;</span>
     <span class="o">...</span> <span class="n">other</span> <span class="n">dependencies</span> <span class="n">here</span> <span class="o">...</span>
@@ -361,7 +363,7 @@ the following segments to the relevant part of your build.gradle.</p>
 </div>
 </div>
 <div class="section" id="cordformation">
-<h1>Cordformation<a class="headerlink" href="#cordformation" title="Permalink to this headline">¶</a></h1>
+<h2>Cordformation<a class="headerlink" href="#cordformation" title="Permalink to this headline">¶</a></h2>
 <p>Cordformation is the local node deployment system for Cordapps, the nodes generated are intended to be used for
 experimenting, debugging, and testing node configurations and setups but not intended for production or testnet
 deployment.</p>
@@ -409,6 +411,7 @@ run this task it will install the nodes to the directory specified and a script 
 at present) to run the nodes with one command.</p>
 <p>Other cordapps can also be specified if they are already specified as classpath or compile dependencies in your
 build.gradle.</p>
+</div>
 </div>
 
 

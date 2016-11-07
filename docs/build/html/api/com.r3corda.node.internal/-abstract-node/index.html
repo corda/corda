@@ -199,7 +199,7 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="scheduler.html">scheduler</a></td>
 <td>
-<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">scheduler</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-scheduler-service/index.html"><span class="identifier">SchedulerService</span></a></code></td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">scheduler</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.events/-node-scheduler-service/index.html"><span class="identifier">NodeSchedulerService</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -291,12 +291,6 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <a href="generate-key-pair.html">generateKeyPair</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">generateKeyPair</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="initialise-checkpoint-service.html">initialiseCheckpointService</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">initialiseCheckpointService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$initialiseCheckpointService(java.nio.file.Path)/dir">dir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.api/-checkpoint-storage/index.html"><span class="identifier">CheckpointStorage</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -400,7 +394,7 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="start-messaging-service.html">startMessagingService</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">startMessagingService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$startMessagingService(com.r3corda.node.services.messaging.CordaRPCOps)/cordaRPCOps">cordaRPCOps</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.messaging/-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">startMessagingService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$startMessagingService(com.r3corda.node.services.messaging.RPCOps)/rpcOps">rpcOps</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.messaging/-r-p-c-ops/index.html"><span class="identifier">RPCOps</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>

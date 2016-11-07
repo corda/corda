@@ -26,18 +26,18 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
-<a href="-node/index.html">Node</a></td>
+<a href="-corda-r-p-c-ops-impl/index.html">CordaRPCOpsImpl</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Node</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-node/index.html"><span class="identifier">AbstractNode</span></a></code><p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="../com.r3corda.core.node/-service-hub/index.html">ServiceHub</a>,
-loads important data off disk and starts listening for connections.</p>
+<code><span class="keyword">class </span><span class="identifier">CordaRPCOpsImpl</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.node.services.messaging/-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a></code><p>Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
+thread (i.e. serially). Arguments are serialised and deserialised automatically.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="-server-r-p-c-ops/index.html">ServerRPCOps</a></td>
+<a href="-node/index.html">Node</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ServerRPCOps</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.node.services.messaging/-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a></code><p>Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
-thread (i.e. serially). Arguments are serialised and deserialised automatically.</p>
+<code><span class="keyword">class </span><span class="identifier">Node</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-node/index.html"><span class="identifier">AbstractNode</span></a></code><p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="../com.r3corda.core.node/-service-hub/index.html">ServiceHub</a>,
+loads important data off disk and starts listening for connections.</p>
 </td>
 </tr>
 </tbody>

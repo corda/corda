@@ -9,12 +9,6 @@
 <h1>ArtemisMessagingComponent</h1>
 <code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ArtemisMessagingComponent</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code><br/>
 <p>The base class for Artemis services that defines shared data structures and transport configuration</p>
-<h3>Parameters</h3>
-<a name="certificatePath"></a>
-<code>certificatePath</code> - A place where Artemis can stash its message journal and other files.<br/>
-<br/>
-<a name="config"></a>
-<code>config</code> - The config object is used to pass in the passwords for the certificate KeyStore and TrustStore<br/>
 <br/>
 <br/>
 <h3>Types</h3>
@@ -56,7 +50,7 @@ For instance it may contain onion routing data.</p>
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">ArtemisMessagingComponent</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$<init>(com.r3corda.node.services.config.NodeSSLConfiguration)/config">config</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.config/-node-s-s-l-configuration/index.html"><span class="identifier">NodeSSLConfiguration</span></a><span class="symbol">)</span></code><p>The base class for Artemis services that defines shared data structures and transport configuration</p>
+<code><span class="identifier">ArtemisMessagingComponent</span><span class="symbol">(</span><span class="symbol">)</span></code><p>The base class for Artemis services that defines shared data structures and transport configuration</p>
 </td>
 </tr>
 </tbody>
@@ -68,7 +62,8 @@ For instance it may contain onion routing data.</p>
 <td>
 <a href="config.html">config</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">config</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.config/-node-s-s-l-configuration/index.html"><span class="identifier">NodeSSLConfiguration</span></a></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">config</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.config/-node-s-s-l-configuration/index.html"><span class="identifier">NodeSSLConfiguration</span></a></code><p>The config object is used to pass in the passwords for the certificate KeyStore and TrustStore</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -88,6 +83,12 @@ unfortunately Artemis tends to bury the exception when the password is wrong.</p
 <a href="configure-with-dev-s-s-l-certificate.html">configureWithDevSSLCertificate</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">configureWithDevSSLCertificate</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="expected-on-default-file-system.html">expectedOnDefaultFileSystem</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">.</span><span class="identifier">expectedOnDefaultFileSystem</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>

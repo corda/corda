@@ -150,6 +150,14 @@ or the appropriate oracle for a contract.</p>
 <code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">runWithoutMapService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>For testing where the network map cache is manipulated marks the service as immediately ready.</p>
 </td>
 </tr>
+<tr>
+<td>
+<a href="track.html">track</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">track</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="-map-change/index.html"><span class="identifier">MapChange</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Atomically get the current party nodes and a stream of updates. Note that the Observable buffers updates until the
+first subscriber is registered so as to avoid racing with early updates.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3>Companion Object Properties</h3>

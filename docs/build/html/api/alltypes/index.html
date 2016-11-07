@@ -192,6 +192,13 @@ amount used in whatever underlying thing the amount represents.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.utilities/-api-utils/index.html">com.r3corda.core.utilities.ApiUtils</a></td>
+<td>
+<p>Utility functions to reduce boilerplate when developing HTTP APIs</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.protocols/-app-context/index.html">com.r3corda.core.protocols.AppContext</a></td>
 <td>
 <p>This is just some way to track what attachments need to be in the class loader, but may later include some app
@@ -258,14 +265,6 @@ file paths.</p>
 <a href="../com.r3corda.core.contracts/-authenticated-object/index.html">com.r3corda.core.contracts.AuthenticatedObject</a></td>
 <td>
 <p>Wraps an object that was signed by a public key, which may be a well known/recognised institutional key.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.demos.protocols/-auto-offer-protocol/index.html">com.r3corda.demos.protocols.AutoOfferProtocol</a></td>
-<td>
-<p>This whole class is really part of a demo just to initiate the agreement of a deal with a simple
-API call from a single party without bi-directional access to the database of offers etc.</p>
 </td>
 </tr>
 <tr>
@@ -402,19 +401,6 @@ the certificate chain will be downloaded and stored in <a href="#">KeyStore</a> 
 <td>
 <p>A clause of a contract, containing a chunk of verification logic. That logic may be delegated to other clauses, or
 provided directly by this clause.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.demos/-cli-params/index.html">com.r3corda.demos.CliParams</a></td>
-<td>
-<p>Parsed command line parameters.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.demos/-cli-params-spec/index.html">com.r3corda.demos.CliParamsSpec</a></td>
-<td>
 </td>
 </tr>
 <tr>
@@ -638,6 +624,14 @@ client apps and are implemented by the node in the <a href="#">ServerRPCOps</a> 
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.internal/-corda-r-p-c-ops-impl/index.html">com.r3corda.node.internal.CordaRPCOpsImpl</a></td>
+<td>
+<p>Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
+thread (i.e. serially). Arguments are serialised and deserialised automatically.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.math/-cubic-spline-interpolator/index.html">com.r3corda.core.math.CubicSplineInterpolator</a></td>
 <td>
 <p>Interpolates values between the given data points using a <a href="../com.r3corda.core.math/-spline-function/index.html">SplineFunction</a>.</p>
@@ -660,6 +654,13 @@ client apps and are implemented by the node in the <a href="#">ServerRPCOps</a> 
 <a href="../com.r3corda.node.services.persistence/-d-b-checkpoint-storage/index.html">com.r3corda.node.services.persistence.DBCheckpointStorage</a></td>
 <td>
 <p>Simple checkpoint key value storage in DB using the underlying JDBCHashMap and transactional context of the call sites.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.persistence/-d-b-transaction-mapping-storage/index.html">com.r3corda.node.services.persistence.DBTransactionMappingStorage</a></td>
+<td>
+<p>Database storage of a txhash -&gt; state machine id mapping.</p>
 </td>
 </tr>
 <tr>
@@ -720,13 +721,6 @@ in the toString lest some people get confused.</p>
 <td>
 <p>Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
 implementation of general protocols that manipulate many agreement types.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.demos/-demo-clock/index.html">com.r3corda.demos.DemoClock</a></td>
-<td>
-<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the date advanced for use in demos.</p>
 </td>
 </tr>
 <tr>
@@ -844,13 +838,6 @@ building partially signed transactions.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.contracts/-event/index.html">com.r3corda.contracts.Event</a></td>
-<td>
-<p>Event superclass - everything happens on a date.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.client.mock/-event-generator/index.html">com.r3corda.client.mock.EventGenerator</a></td>
 <td>
 <p><a href="../com.r3corda.client.mock/-generator/index.html">Generator</a>s for incoming/outgoing events to/from the <a href="#">WalletMonitorService</a>. Internally it keeps track of owned
@@ -874,12 +861,6 @@ TODO hook up an actual oracle</p>
 <tr>
 <td>
 <a href="../com.r3corda.contracts.testing/-exit-generator/index.html">com.r3corda.contracts.testing.ExitGenerator</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.demos.protocols/-exit-server-protocol/index.html">com.r3corda.demos.protocols.ExitServerProtocol</a></td>
 <td>
 </td>
 </tr>
@@ -933,9 +914,31 @@ attachments are saved to local storage automatically.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.transactions/-filter-funs/index.html">com.r3corda.core.transactions.FilterFuns</a></td>
+<td>
+<p>Holds filter functions on transactions fields.
+Functions are used to build a partial tree only out of some subset of original transaction fields.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts.clauses/-filter-on/index.html">com.r3corda.core.contracts.clauses.FilterOn</a></td>
 <td>
 <p>Filter the states that are passed through to the wrapped clause, to restrict them to a specific type.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.transactions/-filtered-leaves/index.html">com.r3corda.core.transactions.FilteredLeaves</a></td>
+<td>
+<p>Class that holds filtered leaves for a partial Merkle transaction. We assume mixed leaves types.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.transactions/-filtered-transaction/index.html">com.r3corda.core.transactions.FilteredTransaction</a></td>
+<td>
+<p>Class representing merkleized filtered transaction.</p>
 </td>
 </tr>
 <tr>
@@ -975,48 +978,10 @@ attachments are saved to local storage automatically.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.contracts/-fixed-rate/index.html">com.r3corda.contracts.FixedRate</a></td>
-<td>
-<p>A very basic subclass to represent a fixed rate.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.contracts/-fixed-rate-payment-event/index.html">com.r3corda.contracts.FixedRatePaymentEvent</a></td>
-<td>
-<p>Basic class for the Fixed Rate Payments on the fixed leg - see <a href="../com.r3corda.contracts/-rate-payment-event/index.html">RatePaymentEvent</a>.
-Assumes that the rate is valid.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.node.services.clientapi/-fixing-session-initiation/index.html">com.r3corda.node.services.clientapi.FixingSessionInitiation</a></td>
-<td>
-<p>This is a temporary handler required for establishing random sessionIDs for the <a href="../com.r3corda.protocols/-two-party-deal-protocol/-fixer/index.html">Fixer</a> and <a href="../com.r3corda.protocols/-two-party-deal-protocol/-floater/index.html">Floater</a> as part of
-running scheduled fixings for the <a href="#">InterestRateSwap</a> contract.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.client.fxutils/-flattened-list/index.html">com.r3corda.client.fxutils.FlattenedList</a></td>
 <td>
 <p><a href="../com.r3corda.client.fxutils/-flattened-list/index.html">FlattenedList</a> flattens the passed in list of <a href="#">ObservableValue</a>s so that changes in individual updates to the values
 are reflected in the exposed list as expected.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.contracts/-floating-rate/index.html">com.r3corda.contracts.FloatingRate</a></td>
-<td>
-<p>The parent class of the Floating rate classes.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.contracts/-floating-rate-payment-event/index.html">com.r3corda.contracts.FloatingRatePaymentEvent</a></td>
-<td>
-<p>Basic class for the Floating Rate Payments on the floating leg - see <a href="../com.r3corda.contracts/-rate-payment-event/index.html">RatePaymentEvent</a>.
-If the rate is null returns a zero payment. // TODO: Is this the desired behaviour?</p>
 </td>
 </tr>
 <tr>
@@ -1059,7 +1024,7 @@ that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.contracts.asset/-fungible-asset/index.html">com.r3corda.contracts.asset.FungibleAsset</a></td>
+<a href="../com.r3corda.core.contracts/-fungible-asset/index.html">com.r3corda.core.contracts.FungibleAsset</a></td>
 <td>
 <p>Interface for contract states representing assets which are fungible, countable and issued by a
 specific party. States contain assets which are equivalent (such as cash of the same currency),
@@ -1106,32 +1071,6 @@ container), shares of the same class in a specific company are fungible and coun
 <a href="../com.r3corda.node.services.schema/-hibernate-observer/index.html">com.r3corda.node.services.schema.HibernateObserver</a></td>
 <td>
 <p>A vault observer that extracts Object Relational Mappings for contract states that support it, and persists them with Hibernate.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.demos/-i-r-s-demo-node/index.html">com.r3corda.demos.IRSDemoNode</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.demos/-i-r-s-demo-plugin-registry/index.html">com.r3corda.demos.IRSDemoPluginRegistry</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.demos/-i-r-s-demo-role/index.html">com.r3corda.demos.IRSDemoRole</a></td>
-<td>
-<p>Roles. There are 4 modes this demo can be run:</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.simulation/-i-r-s-simulation/index.html">com.r3corda.simulation.IRSSimulation</a></td>
-<td>
-<p>A simulation in which banks execute interest rate swaps with each other, including the fixing events.</p>
 </td>
 </tr>
 <tr>
@@ -1193,11 +1132,15 @@ set via the constructor and the class is immutable.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.testing/-in-memory-vault-service/index.html">com.r3corda.core.testing.InMemoryVaultService</a></td>
+<a href="../com.r3corda.core/java.io.-input-stream/index.html">java.io.InputStream</a> (extensions in package com.r3corda.core)</td>
 <td>
-<p>This class implements a simple, in memory vault that tracks states that are owned by us, and also has a convenience
-method to auto-generate some self-issued cash states that can be used for test trading. A real vault would persist
-states relevant to us into a database and once such a vault is implemented, this scaffolding can be removed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.utilities/-instant-column-type/index.html">com.r3corda.node.utilities.InstantColumnType</a></td>
+<td>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="#">java.time.Instant</a>.</p>
 </td>
 </tr>
 <tr>
@@ -1208,7 +1151,7 @@ states relevant to us into a database and once such a vault is implemented, this
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.contracts.asset/-insufficient-balance-exception/index.html">com.r3corda.contracts.asset.InsufficientBalanceException</a></td>
+<a href="../com.r3corda.core.contracts/-insufficient-balance-exception/index.html">com.r3corda.core.contracts.InsufficientBalanceException</a></td>
 <td>
 </td>
 </tr>
@@ -1222,30 +1165,6 @@ states relevant to us into a database and once such a vault is implemented, this
 <td>
 <a href="../com.r3corda.core/kotlin.-int/index.html">kotlin.Int</a> (extensions in package com.r3corda.core)</td>
 <td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.contracts/kotlin.-int/index.html">kotlin.Int</a> (extensions in package com.r3corda.contracts)</td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.contracts/-interest-rate-swap/index.html">com.r3corda.contracts.InterestRateSwap</a></td>
-<td>
-<p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement).
-This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg".
-It also has 4 commands, "Agree", "Fix", "Pay" and "Mature".
-Currently, we are not interested (excuse pun) in valuing the swap, calculating the PVs, DFs and all that good stuff (soon though).
-This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.demos.api/-interest-rate-swap-a-p-i/index.html">com.r3corda.demos.api.InterestRateSwapAPI</a></td>
-<td>
-<p>This provides a simplified API, currently for demonstration use only.</p>
 </td>
 </tr>
 <tr>
@@ -1432,6 +1351,13 @@ tables.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.utilities/-local-date-time-column-type/index.html">com.r3corda.node.utilities.LocalDateTimeColumnType</a></td>
+<td>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="#">java.time.LocalDateTime</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.utilities/-log-helper/index.html">com.r3corda.core.utilities.LogHelper</a></td>
 <td>
 <p>A configuration helper that allows modifying the log level for specific loggers</p>
@@ -1473,6 +1399,19 @@ also list the classes that may be used in the generated object graph in order to
 <a href="../com.r3corda.node.services.messaging/-marshalled-observation/index.html">com.r3corda.node.services.messaging.MarshalledObservation</a></td>
 <td>
 <p>Used in the RPC wire protocol to wrap an observation with the handle of the observable its intended for.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.transactions/-merkle-tree/index.html">com.r3corda.core.transactions.MerkleTree</a></td>
+<td>
+<p>Creation and verification of a Merkle Tree for a Wire Transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.crypto/-merkle-tree-exception/index.html">com.r3corda.core.crypto.MerkleTreeException</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -1639,6 +1578,12 @@ for each type of netting is left to the contract to determine.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.client.model/-network-identity-model/index.html">com.r3corda.client.model.NetworkIdentityModel</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.node.services/-network-map-cache/index.html">com.r3corda.core.node.services.NetworkMapCache</a></td>
 <td>
 <p>A network map contains lists of nodes on the network along with information about their identity keys, services
@@ -1708,10 +1653,8 @@ loads important data off disk and starts listening for connections.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.demos.api/-node-interest-rates/index.html">com.r3corda.demos.api.NodeInterestRates</a></td>
+<a href="../com.r3corda.node.driver/-node-info-and-config/index.html">com.r3corda.node.driver.NodeInfoAndConfig</a></td>
 <td>
-<p>An interest rates service is an oracle that signs transactions which contain embedded assertions about an interest
-rate fix (e.g. LIBOR, EURIBOR ...).</p>
 </td>
 </tr>
 <tr>
@@ -1759,7 +1702,7 @@ Artemis is a message queue broker and here we run a client connecting to the spe
 <td>
 <a href="../com.r3corda.node.services.events/-node-scheduler-service/index.html">com.r3corda.node.services.events.NodeSchedulerService</a></td>
 <td>
-<p>A first pass of a simple <a href="../com.r3corda.core.node.services/-scheduler-service/index.html">SchedulerService</a> that works with <a href="#">MutableClock</a>s for testing, demonstrations and simulations
+<p>A first pass of a simple <a href="../com.r3corda.core.node.services/-scheduler-service/index.html">SchedulerService</a> that works with <a href="../com.r3corda.node.utilities/-mutable-clock/index.html">MutableClock</a>s for testing, demonstrations and simulations
 that also encompasses the <a href="#">Vault</a> observer for processing transactions.</p>
 </td>
 </tr>
@@ -1903,6 +1846,12 @@ functionality to Java, but it wont arrive for a few years yet</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.serialization/-ordered-serializer/index.html">com.r3corda.core.serialization.OrderedSerializer</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts/-ownable-state/index.html">com.r3corda.core.contracts.OwnableState</a></td>
 <td>
 <p>A contract state that can have a single owner.</p>
@@ -1918,6 +1867,14 @@ functionality to Java, but it wont arrive for a few years yet</p>
 <td>
 <a href="../com.r3corda.node.utilities.certsigning/-params-spec/index.html">com.r3corda.node.utilities.certsigning.ParamsSpec</a></td>
 <td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.crypto/-partial-merkle-tree/index.html">com.r3corda.core.crypto.PartialMerkleTree</a></td>
+<td>
+<p>Building and verification of Partial Merkle Tree.
+Partial Merkle Tree is a minimal tree needed to check that a given set of leaves belongs to a full Merkle Tree.</p>
 </td>
 </tr>
 <tr>
@@ -1970,13 +1927,6 @@ ledger. The reference is intended to be encrypted so its meaningless to anyone o
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.contracts/-payment-event/index.html">com.r3corda.contracts.PaymentEvent</a></td>
-<td>
-<p>Top level PaymentEvent class - represents an obligation to pay an amount on a given date, which may be either in the past or the future.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.core.contracts/-payment-rule/index.html">com.r3corda.core.contracts.PaymentRule</a></td>
 <td>
 <p>Whether the payment should be made before the due date, or after it.</p>
@@ -1984,23 +1934,8 @@ ledger. The reference is intended to be encrypted so its meaningless to anyone o
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.node.services.persistence/-per-file-checkpoint-storage/index.html">com.r3corda.node.services.persistence.PerFileCheckpointStorage</a></td>
+<a href="../com.r3corda.node.services.messaging/-permission-exception/index.html">com.r3corda.node.services.messaging.PermissionException</a></td>
 <td>
-<p>File-based checkpoint storage, storing checkpoints per file.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.node.services.persistence/-per-file-transaction-storage/index.html">com.r3corda.node.services.persistence.PerFileTransactionStorage</a></td>
-<td>
-<p>File-based transaction storage, storing transactions per file.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.contracts/-percentage-ratio-unit/index.html">com.r3corda.contracts.PercentageRatioUnit</a></td>
-<td>
-<p>A class to reprecent a percentage in an unambiguous way.</p>
 </td>
 </tr>
 <tr>
@@ -2049,6 +1984,13 @@ Labels should not refer to non-landmarks, for example, they should not contain t
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.node/-plugin-service-hub/index.html">com.r3corda.core.node.PluginServiceHub</a></td>
+<td>
+<p>A service hub to be used by the <a href="../com.r3corda.core.node/-corda-plugin-registry/index.html">CordaPluginRegistry</a></p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.math/-polynomial/index.html">com.r3corda.core.math.Polynomial</a></td>
 <td>
 <p>Represents a polynomial function of arbitrary degree.</p>
@@ -2084,6 +2026,12 @@ a singleton).</p>
 <tr>
 <td>
 <a href="../com.r3corda.client.model/-progress-tracking-event/index.html">com.r3corda.client.model.ProgressTrackingEvent</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services/-properties-file-r-p-c-user-service/index.html">com.r3corda.node.services.PropertiesFileRPCUserService</a></td>
 <td>
 </td>
 </tr>
@@ -2246,37 +2194,11 @@ will buffer up on the server until theyre consumed by the client.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.contracts/-rate/index.html">com.r3corda.contracts.Rate</a></td>
+<a href="../com.r3corda.node.services/-r-p-c-user-service/index.html">com.r3corda.node.services.RPCUserService</a></td>
 <td>
-<p>Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.contracts/-rate-payment-event/index.html">com.r3corda.contracts.RatePaymentEvent</a></td>
-<td>
-<p>A <a href="../com.r3corda.contracts/-rate-payment-event/index.html">RatePaymentEvent</a> represents a dated obligation of payment.
-It is a specialisation / modification of a basic cash flow event (to be written) that has some additional assistance
-functions for interest rate swap legs of the fixed and floating nature.
-For the fixed leg, the rate is already known at creation and therefore the flows can be pre-determined.
-For the floating leg, the rate refers to a reference rate which is to be "fixed" at a point in the future.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.protocols/-rates-fix-protocol/index.html">com.r3corda.protocols.RatesFixProtocol</a></td>
-<td>
-<p>This protocol queries the given oracle for an interest rate fix, and if it is within the given tolerance embeds the
-fix in the transaction and then proceeds to get the oracle to sign it. Although the <a href="../com.r3corda.protocols/-rates-fix-protocol/call.html">call</a> method combines the query
-and signing step, you can run the steps individually by constructing this object and then using the public methods
-for each step.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.contracts/-ratio-unit/index.html">com.r3corda.contracts.RatioUnit</a></td>
-<td>
-<p>A utility class to prevent the various mixups between percentages, decimals, bips etc.</p>
+<p>Service for retrieving <a href="../com.r3corda.node.services/-user/index.html">User</a> objects representing RPC users who are authorised to use the RPC system. A <a href="../com.r3corda.node.services/-user/index.html">User</a>
+contains their login username and password along with a set of permissions for RPC services they are allowed access
+to. These permissions are represented as <a href="#">String</a>s to allow RPC implementations to add their own permissioning.</p>
 </td>
 </tr>
 <tr>
@@ -2304,14 +2226,6 @@ using a backing HashMap that subclasses should modify.</p>
 <td>
 <a href="../com.r3corda.node.services.statemachine/-receive-request/index.html">com.r3corda.node.services.statemachine.ReceiveRequest</a></td>
 <td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.contracts/-reference-rate/index.html">com.r3corda.contracts.ReferenceRate</a></td>
-<td>
-<p>So a reference rate is a rate that takes its value from a source at a given date
-e.g. LIBOR 6M as of 17 March 2016. Hence it requires a source (name) and a value date in the getAsOf(..) method.</p>
 </td>
 </tr>
 <tr>
@@ -2364,18 +2278,6 @@ checked again.</p>
 <td>
 <p>This represents a transient exception or condition that might no longer be thrown if the operation is re-run or called
 again.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.demos.attachment/-role/index.html">com.r3corda.demos.attachment.Role</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.demos/-role/index.html">com.r3corda.demos.Role</a></td>
-<td>
 </td>
 </tr>
 <tr>
@@ -2516,14 +2418,6 @@ type safety hack.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.node.internal/-server-r-p-c-ops/index.html">com.r3corda.node.internal.ServerRPCOps</a></td>
-<td>
-<p>Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
-thread (i.e. serially). Arguments are serialised and deserialised automatically.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.core.node/-service-entry/index.html">com.r3corda.core.node.ServiceEntry</a></td>
 <td>
 <p>Information for an advertised service including the service specific identity information.
@@ -2599,13 +2493,6 @@ SignedTransaction might be invalid or missing: the type does not imply validity.
 <a href="../com.r3corda.node.services.transactions/-simple-notary-service/index.html">com.r3corda.node.services.transactions.SimpleNotaryService</a></td>
 <td>
 <p>A simple Notary service that does not perform transaction validation</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.simulation/-simulation/index.html">com.r3corda.simulation.Simulation</a></td>
-<td>
-<p>Base class for network simulations that are based on the unit test / mock environment.</p>
 </td>
 </tr>
 <tr>
@@ -2781,12 +2668,6 @@ our environment:</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.contracts/kotlin.-string/index.html">kotlin.String</a> (extensions in package com.r3corda.contracts)</td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.core/java.time.temporal.-temporal/index.html">java.time.temporal.Temporal</a> (extensions in package com.r3corda.core)</td>
 <td>
 </td>
@@ -2796,6 +2677,13 @@ our environment:</p>
 <a href="../com.r3corda.core.contracts/-tenor/index.html">com.r3corda.core.contracts.Tenor</a></td>
 <td>
 <p>Placeholder class for the Tenor datatype - which is a standardised duration of time until maturity</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.utilities/-test-clock/index.html">com.r3corda.node.utilities.TestClock</a></td>
+<td>
+<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the date advanced for use in demos.</p>
 </td>
 </tr>
 <tr>
@@ -2860,14 +2748,6 @@ between (after, before).</p>
 <td>
 <a href="../com.r3corda.client.model/-tracked-delegate/index.html">com.r3corda.client.model.TrackedDelegate</a></td>
 <td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.simulation/-trade-simulation/index.html">com.r3corda.simulation.TradeSimulation</a></td>
-<td>
-<p>Simulates a never ending series of trades that go pair-wise through the banks (e.g. A and B trade with each other,
-then B and C trade with each other, then C and A etc).</p>
 </td>
 </tr>
 <tr>
@@ -3009,7 +2889,9 @@ and seller) and the following steps:</p>
 <td>
 <a href="../com.r3corda.core.contracts/-unique-identifier/index.html">com.r3corda.core.contracts.UniqueIdentifier</a></td>
 <td>
-<p>This class provides a truly unique identifier of a trade, state, or other business object.</p>
+<p>This class provides a truly unique identifier of a trade, state, or other business object, bound to any existing
+external ID. Equality and comparison are based on the unique ID only; if two states somehow have the same UUID but
+different external IDs, it would indicate a problem with handling of IDs.</p>
 </td>
 </tr>
 <tr>
@@ -3028,12 +2910,6 @@ if any of the inputs have already been used in another transaction.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.contracts/-unknown-type/index.html">com.r3corda.contracts.UnknownType</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.core.utilities/-untrustworthy-data/index.html">com.r3corda.core.utilities.UntrustworthyData</a></td>
 <td>
 <p>A small utility to approximate taint tracking: if a method gives you back one of these, it means the data came from
@@ -3043,9 +2919,8 @@ first. The wrapper helps you to avoid forgetting this vital step. Things you mig
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.demos.protocols/-update-business-day-protocol/index.html">com.r3corda.demos.protocols.UpdateBusinessDayProtocol</a></td>
+<a href="../com.r3corda.node.services/-user/index.html">com.r3corda.node.services.User</a></td>
 <td>
-<p>This is a less temporary, demo-oriented way of initiating processing of temporal events.</p>
 </td>
 </tr>
 <tr>

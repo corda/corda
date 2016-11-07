@@ -142,20 +142,6 @@ will do as long as the other side registers with it.</p>
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.demos.protocols/-exit-server-protocol/-broadcast/index.html">Broadcast</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">Broadcast</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Boolean</span><span class="symbol">&gt;</span></code><p>This takes a Java Integer rather than Kotlin Int as that is what we end up with in the calling map and currently
-we do not support coercing numeric types in the reflective search for matching constructors.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.demos.protocols/-update-business-day-protocol/-broadcast/index.html">Broadcast</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">Broadcast</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="../../com.r3corda.protocols/-broadcast-transaction-protocol/index.html">BroadcastTransactionProtocol</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">BroadcastTransactionProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Notify all involved parties about a transaction, including storing a copy. Normally this would be called via
@@ -192,25 +178,6 @@ timestamp is correct and none of its inputs have been used in another completed 
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.protocols/-rates-fix-protocol/-fix-query-protocol/index.html">FixQueryProtocol</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">FixQueryProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.protocols/-rates-fix-protocol/-fix-sign-protocol/index.html">FixSignProtocol</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">FixSignProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.protocols/-two-party-deal-protocol/-fixing-role-decider/index.html">FixingRoleDecider</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">FixingRoleDecider</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>This protocol looks at the deal and decides whether to be the Fixer or Floater role in agreeing a fixing.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../../com.r3corda.protocols/-abstract-state-replacement-protocol/-instigator/index.html">Instigator</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Instigator</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
@@ -230,28 +197,18 @@ timestamp is correct and none of its inputs have been used in another completed 
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.protocols/-rates-fix-protocol/index.html">RatesFixProtocol</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">RatesFixProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>This protocol queries the given oracle for an interest rate fix, and if it is within the given tolerance embeds the
-fix in the transaction and then proceeds to get the oracle to sign it. Although the <a href="../../com.r3corda.protocols/-rates-fix-protocol/call.html">call</a> method combines the query
-and signing step, you can run the steps individually by constructing this object and then using the public methods
-for each step.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.demos.protocols/-auto-offer-protocol/-requester/index.html">Requester</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">Requester</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="../../com.r3corda.protocols/-resolve-transactions-protocol/index.html">ResolveTransactionsProtocol</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">ResolveTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.transactions/-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>This protocol is used to verify the validity of a transaction by recursively checking the validity of all the
 dependencies. Once a transaction is checked its inserted into local storage so it can be relayed and wont be
 checked again.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.events/-node-scheduler-service/-run-scheduled/index.html">RunScheduled</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">RunScheduled</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>

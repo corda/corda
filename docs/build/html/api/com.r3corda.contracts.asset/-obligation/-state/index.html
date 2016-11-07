@@ -7,7 +7,7 @@
 <a href="../../index.html">com.r3corda.contracts.asset</a>&nbsp;/&nbsp;<a href="../index.html">Obligation</a>&nbsp;/&nbsp;<a href=".">State</a><br/>
 <br/>
 <h1>State</h1>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><a href="../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><a href="../../../com.r3corda.core.contracts/-nettable-state.html"><span class="identifier">NettableState</span></a><span class="symbol">&lt;</span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../../../com.r3corda.contracts.clause/-multilateral-net-state/index.html"><span class="identifier">MultilateralNetState</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><a href="../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><a href="../../../com.r3corda.core.contracts/-nettable-state.html"><span class="identifier">NettableState</span></a><span class="symbol">&lt;</span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../../../com.r3corda.contracts.clause/-multilateral-net-state/index.html"><span class="identifier">MultilateralNetState</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><br/>
 <p>A state representing the obligation of one party (obligor) to deliver a specified number of
 units of an underlying asset (described as token.acceptableIssuedProducts) to the beneficiary
 no later than the specified time.</p>
@@ -63,14 +63,6 @@ equal objects, they can be close out netted together.</p>
 </tr>
 <tr>
 <td>
-<a href="deposit.html">deposit</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">deposit</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a></code><p>Where the underlying asset backing this ledger entry can be found. The reference
-is only intended for use by the issuer, and is not intended to be meaningful to others.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="due-before.html">dueBefore</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">dueBefore</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a></code></td>
@@ -82,12 +74,6 @@ is only intended for use by the issuer, and is not intended to be meaningful to 
 <code><span class="keyword">val </span><span class="identifier">exitKeys</span><span class="symbol">: </span><span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>There must be an ExitCommand signed by these keys to destroy the amount. While all states require their
 owner to sign, some (i.e. cash) also require the issuer.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="issuance-def.html">issuanceDef</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">issuanceDef</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>

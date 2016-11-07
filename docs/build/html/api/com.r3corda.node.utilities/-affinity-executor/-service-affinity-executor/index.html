@@ -7,7 +7,7 @@
 <a href="../../index.html">com.r3corda.node.utilities</a>&nbsp;/&nbsp;<a href="../index.html">AffinityExecutor</a>&nbsp;/&nbsp;<a href=".">ServiceAffinityExecutor</a><br/>
 <br/>
 <h1>ServiceAffinityExecutor</h1>
-<code><span class="keyword">class </span><span class="identifier">ServiceAffinityExecutor</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../index.html"><span class="identifier">AffinityExecutor</span></a><span class="symbol">, </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/ThreadPoolExecutor.html"><span class="identifier">ThreadPoolExecutor</span></a></code><br/>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">ServiceAffinityExecutor</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../index.html"><span class="identifier">AffinityExecutor</span></a><span class="symbol">, </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/ThreadPoolExecutor.html"><span class="identifier">ThreadPoolExecutor</span></a></code><br/>
 <p>An executor backed by thread pool (which may often have a single thread) which makes it easy to schedule
 tasks in the future and verify code is running on the executor.</p>
 <br/>
@@ -32,7 +32,7 @@ tasks in the future and verify code is running on the executor.</p>
 <td>
 <a href="is-on-thread.html">isOnThread</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">isOnThread</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>Returns true if the current thread is equal to the thread this executor is backed by.</p>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">isOnThread</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>Returns true if the current thread is equal to the thread this executor is backed by.</p>
 </td>
 </tr>
 </tbody>
@@ -44,7 +44,14 @@ tasks in the future and verify code is running on the executor.</p>
 <td>
 <a href="after-execute.html">afterExecute</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">afterExecute</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor$afterExecute(java.lang.Runnable, kotlin.Throwable)/r">r</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Runnable.html"><span class="identifier">Runnable</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor$afterExecute(java.lang.Runnable, kotlin.Throwable)/t">t</span><span class="symbol">:</span>&nbsp;<span class="identifier">Throwable</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">afterExecute</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor$afterExecute(java.lang.Runnable, kotlin.Throwable)/r">r</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Runnable.html"><span class="identifier">Runnable</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor$afterExecute(java.lang.Runnable, kotlin.Throwable)/t">t</span><span class="symbol">:</span>&nbsp;<span class="identifier">Throwable</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="flush.html">flush</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">flush</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Run the executor until there are no tasks pending and none executing.</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -71,14 +78,6 @@ tasks in the future and verify code is running on the executor.</p>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">fetchFrom</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.utilities.AffinityExecutor$fetchFrom(kotlin.Function0((com.r3corda.node.utilities.AffinityExecutor.fetchFrom.T)))/fetcher">fetcher</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code><p>Runs the given function on the executor, blocking until the result is available. Be careful not to deadlock this
 way Make sure the executor cant possibly be waiting for the calling thread.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../flush.html">flush</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">flush</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Posts a no-op task to the executor and blocks this thread waiting for it to complete. This can be useful in
-tests when you want to be sure that a previous task submitted via <a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html#execute(java.lang.Runnable)">execute</a> has completed.</p>
 </td>
 </tr>
 </tbody>

@@ -122,7 +122,7 @@ updates.</p>
 <td>
 <a href="get-node-by-public-key.html">getNodeByPublicKey</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">getNodeByPublicKey</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryNetworkMapCache$getNodeByPublicKey(java.security.PublicKey)/publicKey">publicKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Look up the node info for a public key.</p>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">getNodeByPublicKey</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryNetworkMapCache$getNodeByPublicKey(java.security.PublicKey)/publicKey">publicKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span></code><p>Look up the node info for a public key.</p>
 </td>
 </tr>
 <tr>
@@ -152,6 +152,14 @@ or the appropriate oracle for a contract.</p>
 <a href="run-without-map-service.html">runWithoutMapService</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">runWithoutMapService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>For testing where the network map cache is manipulated marks the service as immediately ready.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="track.html">track</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">track</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-network-map-cache/-map-change/index.html"><span class="identifier">MapChange</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Atomically get the current party nodes and a stream of updates. Note that the Observable buffers updates until the
+first subscriber is registered so as to avoid racing with early updates.</p>
 </td>
 </tr>
 </tbody>

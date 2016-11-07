@@ -96,11 +96,10 @@
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#template-build-gradle">Template build.gradle</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#cordformation">Cordformation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -113,12 +112,12 @@
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Contracts</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Node API</span></p>
 <ul>
@@ -126,9 +125,11 @@
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Release notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-5">Milestone 5</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-4">Milestone 4</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-3">Milestone 3</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-2">Milestone 2</a></li>
@@ -137,6 +138,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
@@ -186,6 +188,52 @@
   <div class="section" id="release-notes">
 <h1>Release notes<a class="headerlink" href="#release-notes" title="Permalink to this headline">¶</a></h1>
 <p>Here are brief summaries of what&#8217;s changed between each snapshot release.</p>
+<div class="section" id="milestone-5">
+<h2>Milestone 5<a class="headerlink" href="#milestone-5" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">A simple RPC access control mechanism. Users, passwords and permissions can be defined in a configuration file.
+This mechanism will be extended in future to support standard authentication systems like LDAP.</p>
+</li>
+<li><p class="first">New features in the explorer app and RPC API for working with cash:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Cash can now be sent, issued and exited via RPC.</li>
+<li>Notes can now be associated with transactions.</li>
+<li>Hashes are visually represented using identicons.</li>
+<li>Lots of functional work on the explorer UI. You can try it out by running <code class="docutils literal"><span class="pre">gradle</span> <span class="pre">tools:explorer:runDemoNodes</span></code> to run
+a local network of nodes that swap cash with each other, and then run <code class="docutils literal"><span class="pre">gradle</span> <span class="pre">tools:explorer:run</span></code> to start
+the app.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">A new demo showing shared valuation of derivatives portfolios using the ISDA SIMM has been added. Note that this app
+relies on a proprietary implementation of the ISDA SIMM business logic from OpenGamma. A stub library is provided
+to ensure it compiles but if you want to use the app for real please contact us.</p>
+</li>
+<li><p class="first">Developer experience (we plan to do lots more here in milestone 6):</p>
+<blockquote>
+<div><ul class="simple">
+<li>Demos and samples have been split out of the main repository, and the initial developer experience continues to be
+refined. All necessary JARs can now be installed to Maven Local by simply running <code class="docutils literal"><span class="pre">gradle</span> <span class="pre">install</span></code>.</li>
+<li>It&#8217;s now easier to define a set of nodes to run locally using the new &#8220;CordFormation&#8221; gradle plugin, which
+defines a simple DSL for creating networks of nodes.</li>
+<li>The template CorDapp has been upgraded with more documentation and showing more features.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Privacy: transactions are now structured as Merkle trees, and can have sections &#8220;torn off&#8221; - presented for
+verification and signing without revealing the rest of the transaction.</p>
+</li>
+<li><p class="first">Lots of bug fixes, tweaks and polish starting the run up to the open source release.</p>
+</li>
+</ul>
+<p>API changes:</p>
+<ul class="simple">
+<li>Plugin service classes now take a <code class="docutils literal"><span class="pre">PluginServiceHub</span></code> rather than a <code class="docutils literal"><span class="pre">ServiceHubInternal</span></code>.</li>
+<li><code class="docutils literal"><span class="pre">UniqueIdentifier</span></code> equality has changed to only take into account the underlying UUID.</li>
+<li>The contracts module has been renamed to finance, to better reflect what it is for.</li>
+</ul>
+</div>
 <div class="section" id="milestone-4">
 <h2>Milestone 4<a class="headerlink" href="#milestone-4" title="Permalink to this headline">¶</a></h2>
 <p>New features in this release:</p>
