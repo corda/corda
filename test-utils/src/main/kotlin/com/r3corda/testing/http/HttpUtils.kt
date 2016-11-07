@@ -18,12 +18,12 @@ object HttpUtils {
 
     fun putJson(url: URL, data: String) : Boolean {
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
-        return makeRequest(Request.Builder().url(url).put(body).build())
+        return makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").put(body).build())
     }
 
     fun postJson(url: URL, data: String) : Boolean {
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
-        return makeRequest(Request.Builder().url(url).post(body).build())
+        return makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").post(body).build())
     }
 
     private fun makeRequest(request: Request): Boolean {
