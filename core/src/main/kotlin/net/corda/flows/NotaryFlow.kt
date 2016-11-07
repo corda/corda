@@ -49,8 +49,7 @@ object NotaryFlow {
                 throw NotaryException(NotaryError.SignaturesMissing(ex.missing))
             }
 
-            val request = SignRequest(stx, serviceHub.myInfo.legalIdentity)
-            val response = sendAndReceive<Result>(notaryParty, request)
+            val response = sendAndReceive<Result>(notaryParty, SignRequest(stx))
 
             return validateResponse(response)
         }
@@ -95,14 +94,13 @@ object NotaryFlow {
 
         @Suspendable
         override fun call() {
-            val (stx, reqIdentity) = receive<SignRequest>(otherSide).unwrap { it }
+            val stx = receive<SignRequest>(otherSide).unwrap { it.tx }
             val wtx = stx.tx
 
             val result = try {
                 validateTimestamp(wtx)
-                beforeCommit(stx, reqIdentity)
-                commitInputStates(wtx, reqIdentity)
-
+                beforeCommit(stx)
+                commitInputStates(wtx)
                 val sig = sign(stx.id.bytes)
                 Result.Success(sig)
             } catch(e: NotaryException) {
@@ -127,12 +125,12 @@ object NotaryFlow {
          * undo the commit of the input states (the exact mechanism still needs to be worked out).
          */
         @Suspendable
-        open fun beforeCommit(stx: SignedTransaction, reqIdentity: Party) {
+        open fun beforeCommit(stx: SignedTransaction) {
         }
 
-        private fun commitInputStates(tx: WireTransaction, reqIdentity: Party) {
+        private fun commitInputStates(tx: WireTransaction) {
             try {
-                uniquenessProvider.commit(tx.inputs, tx.id, reqIdentity)
+                uniquenessProvider.commit(tx.inputs, tx.id, otherSide)
             } catch (e: UniquenessException) {
                 val conflictData = e.error.serialize()
                 val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
@@ -146,8 +144,7 @@ object NotaryFlow {
         }
     }
 
-    /** TODO: The caller must authenticate instead of just specifying its identity */
-    data class SignRequest(val tx: SignedTransaction, val callerIdentity: Party)
+    data class SignRequest(val tx: SignedTransaction)
 
     sealed class Result {
         class Error(val error: NotaryError) : Result()

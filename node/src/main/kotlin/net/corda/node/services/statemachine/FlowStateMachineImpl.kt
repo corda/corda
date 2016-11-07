@@ -196,7 +196,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val session = FlowSession(sessionFlow, nodeIdentity, random63BitValue(), null)
         openSessions[Pair(sessionFlow, nodeIdentity)] = session
         val counterpartyFlow = sessionFlow.getCounterpartyMarker(nodeIdentity).name
-        val sessionInit = SessionInit(session.ourSessionId, serviceHub.myInfo.legalIdentity, counterpartyFlow, firstPayload)
+        val sessionInit = SessionInit(session.ourSessionId, counterpartyFlow, firstPayload)
         val sessionInitResponse = sendAndReceiveInternal<SessionInitResponse>(session, sessionInit)
         if (sessionInitResponse is SessionConfirm) {
             session.otherPartySessionId = sessionInitResponse.initiatedSessionId

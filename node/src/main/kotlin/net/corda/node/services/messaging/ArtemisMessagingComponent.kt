@@ -8,7 +8,6 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.read
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.config.NodeSSLConfiguration
-import net.corda.node.services.config.configureWithDevSSLCertificate
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
@@ -28,12 +27,20 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
             System.setProperty("org.jboss.logging.provider", "slf4j")
         }
 
-        const val PEERS_PREFIX = "peers."
+        // System users must contain an invalid RPC username character to prevent any chance of name clash which in this
+        // case is a forward slash
+        const val NODE_USER = "SystemUsers/Node"
+        const val PEER_USER = "SystemUsers/Peer"
+
+        const val INTERNAL_PREFIX = "internal."
+        const val PEERS_PREFIX = "${INTERNAL_PREFIX}peers."
         const val CLIENTS_PREFIX = "clients."
+        const val P2P_QUEUE = "p2p.inbound"
         const val RPC_REQUESTS_QUEUE = "rpc.requests"
+        const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
 
         @JvmStatic
-        protected val NETWORK_MAP_ADDRESS = SimpleString("${PEERS_PREFIX}networkmap")
+        val NETWORK_MAP_ADDRESS = SimpleString("${INTERNAL_PREFIX}networkmap")
 
         /**
          * Assuming the passed in target address is actually an ArtemisAddress will extract the host and port of the node. This should
@@ -46,27 +53,6 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
             val addr = target as? ArtemisMessagingComponent.ArtemisAddress ?: throw IllegalArgumentException("Not an Artemis address")
             return addr.hostAndPort
         }
-
-        /**
-         * Assuming the passed in target address is actually an ArtemisAddress will extract the queue name used.
-         * For now the queue name is the Base58 version of the node's identity.
-         * This should only be used in the internals of the messaging services to keep addressing opaque for the future.
-         * N.B. Marked as JvmStatic to allow use in the inherited classes.
-         */
-        @JvmStatic
-        protected fun toQueueName(target: MessageRecipients): SimpleString {
-            val addr = target as? ArtemisMessagingComponent.ArtemisAddress ?: throw IllegalArgumentException("Not an Artemis address")
-            return addr.queueName
-
-        }
-
-        /**
-         * Convert the identity, host and port of this node into the appropriate [SingleMessageRecipient].
-         *
-         * N.B. Marked as JvmStatic to allow use in the inherited classes.
-         */
-        @JvmStatic
-        protected fun toMyAddress(myIdentity: CompositeKey?, myHostPort: HostAndPort): SingleMessageRecipient = if (myIdentity != null) NodeAddress(myIdentity, myHostPort) else NetworkMapAddress(myHostPort)
     }
 
     protected interface ArtemisAddress {
@@ -74,7 +60,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
         val hostAndPort: HostAndPort
     }
 
-    protected data class NetworkMapAddress(override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
+    data class NetworkMapAddress(override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
         override val queueName: SimpleString get() = NETWORK_MAP_ADDRESS
     }
 
@@ -84,17 +70,12 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      * For instance it may contain onion routing data.
      */
     data class NodeAddress(val identity: CompositeKey, override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
-        override val queueName: SimpleString by lazy { SimpleString(PEERS_PREFIX + identity.toBase58String()) }
+        override val queueName: SimpleString = SimpleString("$PEERS_PREFIX${identity.toBase58String()}")
         override fun toString(): String = "${javaClass.simpleName}(identity = $queueName, $hostAndPort)"
     }
 
     /** The config object is used to pass in the passwords for the certificate KeyStore and TrustStore */
     abstract val config: NodeSSLConfiguration
-
-    protected fun parseKeyFromQueueName(name: String): CompositeKey {
-        require(name.startsWith(PEERS_PREFIX))
-        return CompositeKey.parseFromBase58(name.substring(PEERS_PREFIX.length))
-    }
 
     protected enum class ConnectionDirection { INBOUND, OUTBOUND }
 
@@ -135,7 +116,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
                 mapOf(
                         // Basic TCP target details
                         TransportConstants.HOST_PROP_NAME to host,
-                        TransportConstants.PORT_PROP_NAME to port.toInt(),
+                        TransportConstants.PORT_PROP_NAME to port,
 
                         // Turn on AMQP support, which needs the protocol jar on the classpath.
                         // Unfortunately we cannot disable core protocol as artemis only uses AMQP for interop
@@ -157,10 +138,6 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
                         TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true
                 )
         )
-    }
-
-    fun configureWithDevSSLCertificate() {
-        config.configureWithDevSSLCertificate()
     }
 
     protected fun Path.expectedOnDefaultFileSystem() {

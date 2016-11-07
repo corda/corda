@@ -109,7 +109,7 @@ class NetworkMapVisualiser : Application() {
         }
         // Fire the message bullets between nodes.
         simulation.network.messagingNetwork.sentMessages.observeOn(uiThread).subscribe { msg: InMemoryMessagingNetwork.MessageTransfer ->
-            val senderNode: MockNetwork.MockNode = simulation.network.addressToNode(msg.sender.myAddress)
+            val senderNode: MockNetwork.MockNode = simulation.network.addressToNode(msg.sender)
             val destNode: MockNetwork.MockNode = simulation.network.addressToNode(msg.recipients as SingleMessageRecipient)
 
             if (transferIsInteresting(msg)) {
@@ -345,7 +345,7 @@ class NetworkMapVisualiser : Application() {
 
     private fun transferIsInteresting(transfer: InMemoryMessagingNetwork.MessageTransfer): Boolean {
         // Loopback messages are boring.
-        if (transfer.sender.myAddress == transfer.recipients) return false
+        if (transfer.sender == transfer.recipients) return false
         // Network map push acknowledgements are boring.
         if (NetworkMapService.PUSH_ACK_FLOW_TOPIC in transfer.message.topicSession.topic) return false
         val message = transfer.message.data.deserialize<Any>()

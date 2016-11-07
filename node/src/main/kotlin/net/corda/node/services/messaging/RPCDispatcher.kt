@@ -143,8 +143,8 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService) {
     /** Convert an Artemis [ClientMessage] to a MQ-neutral [ClientRPCRequestMessage]. */
     private fun ClientMessage.toRPCRequestMessage(): ClientRPCRequestMessage {
         val user = getUser(this)
-        val replyTo = getAuthenticatedAddress(user, ClientRPCRequestMessage.REPLY_TO, true)!!
-        val observationsTo = getAuthenticatedAddress(user, ClientRPCRequestMessage.OBSERVATIONS_TO, false)
+        val replyTo = getReturnAddress(user, ClientRPCRequestMessage.REPLY_TO, true)!!
+        val observationsTo = getReturnAddress(user, ClientRPCRequestMessage.OBSERVATIONS_TO, false)
         val argBytes = ByteArray(bodySize).apply { bodyBuffer.readBytes(this) }
         if (argBytes.isEmpty()) {
             throw RPCException("empty serialized args")
@@ -158,12 +158,11 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService) {
         return userService.getUser(message.requiredString(Message.HDR_VALIDATED_USER.toString()))!!
     }
 
-    private fun ClientMessage.getAuthenticatedAddress(user: User, property: String, required: Boolean): String? {
-        val address: String? = if (required) requiredString(property) else getStringProperty(property)
-        val expectedAddressPrefix = "${ArtemisMessagingComponent.CLIENTS_PREFIX}${user.username}."
-        if (address != null && !address.startsWith(expectedAddressPrefix)) {
-            throw RPCException("$property address does not match up with the user")
+    private fun ClientMessage.getReturnAddress(user: User, property: String, required: Boolean): String? {
+        return if (containsProperty(property)) {
+            "${ArtemisMessagingComponent.CLIENTS_PREFIX}${user.username}.rpc.${getLongProperty(property)}"
+        } else {
+            if (required) throw RPCException("missing $property property") else null
         }
-        return address
     }
 }

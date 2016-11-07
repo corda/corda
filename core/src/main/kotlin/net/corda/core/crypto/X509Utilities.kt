@@ -107,11 +107,11 @@ object X509Utilities {
     }
 
     /**
-     * Helper method to create Subject field contents
+     * Return a bogus X509 for dev purposes. Use [getX509Name] for something more real.
      */
-    fun getDevX509Name(domain: String): X500Name {
+    fun getDevX509Name(commonName: String): X500Name {
         val nameBuilder = X500NameBuilder(BCStyle.INSTANCE)
-        nameBuilder.addRDN(BCStyle.CN, domain)
+        nameBuilder.addRDN(BCStyle.CN, commonName)
         nameBuilder.addRDN(BCStyle.O, "R3")
         nameBuilder.addRDN(BCStyle.OU, "corda")
         nameBuilder.addRDN(BCStyle.L, "London")
@@ -574,18 +574,21 @@ object X509Utilities {
                              storePassword: String,
                              keyPassword: String,
                              caKeyStore: KeyStore,
-                             caKeyPassword: String): KeyStore {
-        val rootCA = loadCertificateAndKey(caKeyStore,
+                             caKeyPassword: String,
+                             commonName: String): KeyStore {
+        val rootCA = X509Utilities.loadCertificateAndKey(
+                caKeyStore,
                 caKeyPassword,
                 CORDA_ROOT_CA_PRIVATE_KEY)
-        val intermediateCA = loadCertificateAndKey(caKeyStore,
+        val intermediateCA = X509Utilities.loadCertificateAndKey(
+                caKeyStore,
                 caKeyPassword,
                 CORDA_INTERMEDIATE_CA_PRIVATE_KEY)
 
         val serverKey = generateECDSAKeyPairForSSL()
         val host = InetAddress.getLocalHost()
-        val subject = getDevX509Name(host.canonicalHostName)
-        val serverCert = createServerCert(subject,
+        val serverCert = createServerCert(
+                getDevX509Name(commonName),
                 serverKey.public,
                 intermediateCA,
                 if (host.canonicalHostName == host.hostName) listOf() else listOf(host.hostName),
@@ -594,7 +597,8 @@ object X509Utilities {
         val keyPass = keyPassword.toCharArray()
         val keyStore = loadOrCreateKeyStore(keyStoreFilePath, storePassword)
 
-        keyStore.addOrReplaceKey(CORDA_CLIENT_CA_PRIVATE_KEY,
+        keyStore.addOrReplaceKey(
+                CORDA_CLIENT_CA_PRIVATE_KEY,
                 serverKey.private,
                 keyPass,
                 arrayOf(serverCert, intermediateCA.certificate, rootCA.certificate))

@@ -15,6 +15,7 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.messaging.ArtemisMessagingComponent.NetworkMapAddress
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.messaging.RPCOps
@@ -118,15 +119,15 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
     private lateinit var userService: RPCUserService
 
     override fun makeMessagingService(): MessagingServiceInternal {
-        val legalIdentity = obtainLegalIdentity()
-        val myIdentityOrNullIfNetworkMapService = if (networkMapService != null) legalIdentity.owningKey else null
         userService = RPCUserServiceImpl(configuration)
         val serverAddr = with(configuration) {
             messagingServerAddress ?: {
-                messageBroker = ArtemisMessagingServer(this, artemisAddress, myIdentityOrNullIfNetworkMapService, services.networkMapCache, userService)
+                messageBroker = ArtemisMessagingServer(this, artemisAddress, services.networkMapCache, userService)
                 artemisAddress
             }()
         }
+        val legalIdentity = obtainLegalIdentity()
+        val myIdentityOrNullIfNetworkMapService = if (networkMapService != null) legalIdentity.owningKey else null
         return NodeMessagingClient(configuration, serverAddr, myIdentityOrNullIfNetworkMapService, serverThread, database, networkMapRegistrationFuture)
     }
 
@@ -135,12 +136,13 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
         messageBroker?.apply {
             runOnStop += Runnable { messageBroker?.stop() }
             start()
-            bridgeToNetworkMapService(networkMapService)
+            if (networkMapService is NetworkMapAddress) {
+                bridgeToNetworkMapService(networkMapService)
+            }
         }
 
         // Start up the MQ client.
         val net = net as NodeMessagingClient
-        net.configureWithDevSSLCertificate() // TODO: Client might need a separate certificate
         net.start(rpcOps, userService)
     }
 
@@ -151,7 +153,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
         // Export JMX monitoring statistics and data over REST/JSON.
         if (configuration.exportJMXto.split(',').contains("http")) {
             val classpath = System.getProperty("java.class.path").split(System.getProperty("path.separator"))
-            val warpath = classpath.firstOrNull() { it.contains("jolokia-agent-war-2") && it.endsWith(".war") }
+            val warpath = classpath.firstOrNull { it.contains("jolokia-agent-war-2") && it.endsWith(".war") }
             if (warpath != null) {
                 handlerCollection.addHandler(WebAppContext().apply {
                     // Find the jolokia WAR file on the classpath.
@@ -174,7 +176,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
             httpsConfiguration.outputBufferSize = 32768
             httpsConfiguration.addCustomizer(SecureRequestCustomizer())
             val sslContextFactory = SslContextFactory()
-            sslContextFactory.setKeyStorePath(configuration.keyStorePath.toString())
+            sslContextFactory.keyStorePath = configuration.keyStorePath.toString()
             sslContextFactory.setKeyStorePassword(configuration.keyStorePassword)
             sslContextFactory.setKeyManagerPassword(configuration.keyStorePassword)
             sslContextFactory.setTrustStorePath(configuration.trustStorePath.toString())

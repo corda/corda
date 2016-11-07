@@ -20,13 +20,8 @@ Setting up your own network
 Certificates
 ------------
 
-If two nodes are to communicate successfully then both need to have
-each other's root certificate in their truststores. The simplest way
-to achieve this is to have all nodes sign off of a single root.
-
-Later R3 will provide this root for production use, but for testing you
-can use ``certSigningRequestUtility.jar`` to generate a node
-certificate with a fixed test root:
+All nodes belonging to the same Corda network must have the same root CA. For testing purposes you can
+use ``certSigningRequestUtility.jar`` to generate a node certificate with a fixed test root:
 
 .. sourcecode:: bash
 
