@@ -355,8 +355,7 @@ open class DriverDSL(
         val name = arrayOf(
                 "Alice",
                 "Bob",
-                "EvilBank",
-                "NotSoEvilBank"
+                "Bank"
         )
         fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]
 
