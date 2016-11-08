@@ -17,7 +17,6 @@ import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.transactions.SignedTransaction
-import com.r3corda.core.utilities.debug
 import com.r3corda.node.api.APIServer
 import com.r3corda.node.services.api.*
 import com.r3corda.node.services.config.NodeConfiguration
@@ -113,7 +112,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
 
         override fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>) {
             require(markerClass !in protocolFactories) { "${markerClass.java.name} has already been used to register a protocol" }
-            log.debug { "Registering ${markerClass.java.name}" }
+            log.info("Registering protocol ${markerClass.java.name}")
             protocolFactories[markerClass.java] = protocolFactory
         }
 
@@ -192,7 +191,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         log.info("Node starting up ...")
 
         // Do all of this in a database transaction so anything that might need a connection has one.
-        initialiseDatabasePersistence() {
+        initialiseDatabasePersistence {
             val storageServices = initialiseStorageService(configuration.basedir)
             storage = storageServices.first
             checkpointStorage = storageServices.second
