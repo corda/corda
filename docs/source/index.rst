@@ -1,10 +1,7 @@
 Welcome to the Corda!
 =====================
 
-.. warning:: This build of the docs is from the *master branch*, not a milestone release. It may not reflect the
-   current state of the code.
-
-This is the developer guide for Corda, a proposed architecture for distributed ledgers. Here are the sources
+This is the developer guide for Corda M5, a proposed architecture for distributed ledgers. Here are the sources
 of documentation you may find useful, from highest level to lowest:
 
 1. The `Introductory white paper`_ describes the motivating vision and background of the project. It is the kind

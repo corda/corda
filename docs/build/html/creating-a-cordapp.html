@@ -91,6 +91,7 @@
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -367,7 +368,7 @@ the following segments to the relevant part of your build.gradle.</p>
 <p>Cordformation is the local node deployment system for Cordapps, the nodes generated are intended to be used for
 experimenting, debugging, and testing node configurations and setups but not intended for production or testnet
 deployment.</p>
-<p>To use this gradle plugin you must add a new task that is of the type <cite>com.r3corda.plugins.Cordform</cite> to your
+<p>To use this gradle plugin you must add a new task that is of the type <code class="docutils literal"><span class="pre">com.r3corda.plugins.Cordform</span></code> to your
 build.gradle and then configure the nodes you wish to deploy with the Node and nodes configuration DSL.
 This DSL is specified in the <a class="reference external" href="api/index.html">JavaDoc</a>. An example of this is in the template-cordapp and below
 is a three node example;</p>
@@ -378,8 +379,7 @@ is a three node example;</p>
         name &quot;Controller&quot;
         dirName &quot;controller&quot;
         nearestCity &quot;London&quot;
-        notary true // Sets this node to be a notary
-        advertisedServices []
+        advertisedServices = [ &quot;corda.notary.validating&quot; ]
         artemisPort 12345
         webPort 12346
         cordapps []
@@ -388,7 +388,7 @@ is a three node example;</p>
         name &quot;NodeA&quot;
         dirName &quot;nodea&quot;
         nearestCity &quot;London&quot;
-        advertisedServices []
+        advertisedServices = []
         artemisPort 31337
         webPort 31339
         cordapps []
@@ -397,7 +397,7 @@ is a three node example;</p>
         name &quot;NodeB&quot;
         dirName &quot;nodeb&quot;
         nearestCity &quot;New York&quot;
-        advertisedServices []
+        advertisedServices = []
         artemisPort 31338
         webPort 31340
         cordapps []
@@ -410,7 +410,7 @@ is a three node example;</p>
 run this task it will install the nodes to the directory specified and a script will be generated (for UNIX users only
 at present) to run the nodes with one command.</p>
 <p>Other cordapps can also be specified if they are already specified as classpath or compile dependencies in your
-build.gradle.</p>
+<code class="docutils literal"><span class="pre">build.gradle</span></code>.</p>
 </div>
 </div>
 

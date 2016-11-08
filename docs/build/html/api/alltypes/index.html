@@ -2479,7 +2479,8 @@ a public key that is mentioned inside a transaction command. SignedTransaction i
 and the type most frequently passed around the network and stored. The identity of a transaction is the hash
 of a WireTransaction, therefore if you are storing data keyed by WT hash be aware that multiple different STs may
 map to the same key (and they could be different in important ways, like validity). The signatures on a
-SignedTransaction might be invalid or missing: the type does not imply validity.</p>
+SignedTransaction might be invalid or missing: the type does not imply validity.
+A transaction ID should be the hash of the <a href="../com.r3corda.core.transactions/-wire-transaction/index.html">WireTransaction</a> Merkle tree root. Thus adding or removing a signature does not change it.</p>
 </td>
 </tr>
 <tr>
