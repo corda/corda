@@ -53,30 +53,13 @@ blotter to view it.
 Attachment demo
 ---------------
 
-Open two terminals, and in the first run:
+1. Open the Corda project in IntelliJ and run the "Install" configuration
+2. Open the Corda samples project in IntelliJ and run the "Attachment Demo: Run Nodes" configuration
+3. Run "Attachment Demo: Run Recipient" - this waits for a trade to start
+4. Run "Attachment Demo: Run Sender" - sends the attachment
 
-**Windows**::
-
-    gradlew.bat & .\build\install\r3prototyping\bin\attachment-demo --role=RECIPIENT
-
-**Other**::
-
-    ./gradlew installDist && ./build/install/r3prototyping/bin/attachment-demo --role=RECIPIENT
-
-It will compile things, if necessary, then create a directory named attachment-demo/buyer with a bunch of files inside and
-start the node. You should see it waiting for a trade to begin.
-
-In the second terminal, run:
-
-**Windows**::
-
-    .\build\install\r3prototyping\bin\attachment-demo --role=SENDER
-
-**Other**::
-
-    ./build/install/r3prototyping/bin/attachment-demo --role=SENDER
-
-You should see some log lines scroll past, and within a few seconds the message "File received - we're happy!" should be printed.
+In the "Attachment Demo: Run Nodes" window you should see some log lines scroll past, and within a few seconds the
+message "File received - we're happy!" should be printed.
 
 SIMM and Portfolio Demo
 -----------------------
@@ -85,40 +68,9 @@ SIMM and Portfolio Demo
 
 To run the demo run:
 
-**Windows**
+1. Open the Corda project in IntelliJ and run the "Install" configuration
+2. Open the Corda samples project in IntelliJ and run the "Simm Valuation Demo" configuration
 
-Open a terminal window and navigate to the root directory of Corda and run:
-
-.. sourcecode:: shell
-
-    gradlew apps:vega:installTemplateNodes
-    cd build\nodes\nameserver
-    java -jar corda.jar
-
-Now open another terminal in the root directory of Corda and run:
-
-.. sourcecode:: shell
-
-    cd build\nodes\nodea
-    java -jar corda.jar
-
-Now open a third terminal in the root directory of Corda and run:
-
-.. sourcecode:: shell
-
-    cd build\nodes\nodeb
-    java -jar corda.jar
-
-**Other**
-
-Open one terminal window and run the following commands from the root directory of Corda:
-
-.. sourcecode:: shell
-
-     ./gradlew apps:vega:installTemplateNodes
-     cd build/nodes
-     ./runnodes
-
-Now open http://localhost:31339/web/vega and http://localhost:31340/web/vega to view the two nodes that this
-will have started respectively.
+Now open http://localhost:10005/web/simmvaluationdemo and http://localhost:10005/web/simmvaluationdemo to view the two nodes that this
+will have started respectively. You can now use the demo by creating trades and agreeing the valuations.
 
