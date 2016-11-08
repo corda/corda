@@ -9,146 +9,49 @@ so far. We have:
 2. The IRS demo, which shows two nodes establishing an interest rate swap between them and performing fixings with a
    rates oracle, all driven via the HTTP API.
 3. The IRS demo web interface - a web interface to the IRS demo.
+4. The attachment demo, which demonstrates uploading attachments to nodes.
+5. The SIMM valuation demo, a large demo which shows two nodes agreeing on a portfolio and valuing the initial margin
+   using the Standard Initial Margin Model.
 
-The demos create node data directories in the root of the project. If something goes wrong with them, blow away the
-directories and try again.
+.. note:: The demos currently must be run from IntelliJ, this will change before M6.
+
+.. note:: If any demos don't work please jump on our mailing list and let us know.
 
 Trader demo
 -----------
 
-Open two terminals, and in the first run:
+1. Open the Corda project in IntelliJ and run the "Install" configuration
+2. Open the Corda samples project in IntelliJ and run the "Trader Demo: Run Nodes" configuration
+3. Run "Trader Demo: Run Buyer"
+4. Run "Trader Demo: Run Seller"
 
-.. note:: If you are planning to use non-default configuration you will need to run with --role=SetupA and --role=SetupB
-   beforehand with the same parameters you plan to supply to the respective nodes.
-
-**Windows**::
-
-    gradlew.bat & .\build\install\r3prototyping\bin\trader-demo --role=BUYER
-
-**Other**::
-
-    ./gradlew installDist && ./build/install/r3prototyping/bin/trader-demo --role=BUYER
-
-It will compile things, if necessary, then create a directory named trader-demo/buyer with a bunch of files inside and
-start the node. You should see it waiting for a trade to begin.
-
-In the second terminal, run:
-
-**Windows**::
-
-    .\build\install\r3prototyping\bin\trader-demo --role=SELLER
-
-**Other**::
-
-    ./build/install/r3prototyping/bin/trader-demo --role=SELLER
-
-You should see some log lines scroll past, and within a few seconds the messages "Purchase complete - we are a
-happy customer!" and "Sale completed - we have a happy customer!" should be printed.
-
-If it doesn't work, jump on the mailing list and let us know.
-
+In the "Trader Demo: Run Nodes" windows you should see some log lines scroll past, and within a few seconds the messages
+"Purchase complete - we are a happy customer!" and "Sale completed - we have a happy customer!" should be printed.
 
 IRS demo
 --------
 
-Open three terminals. In the first run:
+1. Open the Corda project in IntelliJ and run the "Install" configuration
+2. Open the Corda samples project in IntelliJ and run the "IRS Demo: Run Nodes" configuration
+3. Run "IRS Demo: Run Upload Rates" to upload rates to the oracle.
+4. Run "IRS Demo: Run Trade" to have nodes agree on a trade.
+5. Run "IRS Demo: Run Date Change" to run the fixings.
 
-**Windows**::
-
-    gradlew.bat installDist & .\build\install\r3prototyping\bin\irsdemo.bat --role=NodeA
-
-**Other**::
-
-    ./gradlew installDist && ./build/install/r3prototyping/bin/irsdemo --role=NodeA
-
-And in the second run:
-
-**Windows**::
-
-    .\build\install\r3prototyping\bin\irsdemo.bat --role=NodeB
-
-**Other**::
-
-    ./build/install/r3prototyping/bin/irsdemo --role=NodeB
-
-NodeB also doubles up as the interest rates oracle and you should see some rates data get loaded.
-
-Now in the third terminal run:
-
-**Windows**::
-
-    .\build\install\r3prototyping\bin\irsdemo.bat --role=Trade trade1
-
-**Other**::
-
-    ./build/install/r3prototyping/bin/irsdemo --role=Trade trade1
-
-You should see some activity in the other two terminals as they set up the deal. You can now run this command in
-a separate window to roll the fake clock forward and trigger lots of fixing events. Things go fast so make sure you
-can see the other terminals whilst you run this command!:
-
-**Windows**::
-
-    .\build\install\r3prototyping\bin\irsdemo.bat --role=Date 2017-01-30
-
-**Other**::
-
-    ./build/install/r3prototyping/bin/irsdemo --role=Date 2017-01-30
-
+In the "IRS Demo: Run Nodes" window you'll see a lot of activity when you run the trade and when you run the date change.
+The date change rolls the clock forwards and causes the nodes to agree on the fixings over a period.
 
 IRS web demo
 ------------
 
-To install the web demo please follow these steps;
-
-1. Install Node: https://nodejs.org/en/download/ and ensure the npm executable is on your classpath
-2. Open a terminal
-3. Run `npm install -g bower` or `sudo npm install -g bower` if on a Unix system.
-4. In the terminal navigate to `<corda>/src/main/resources/com/r3corda/demos/irswebdemo`
-5. Run `bower install`
-
-To run the web demo, run the first two steps from the IRS Demo:
-
-Open two terminals and in the first:
-
-**Windows**::
-
-    gradlew.bat installDist & .\build\install\r3prototyping\bin\irsdemo.bat --role=NodeA
-
-**Other**::
-
-    ./gradlew installDist && ./build/install/r3prototyping/bin/irsdemo --role=NodeA
-
-And in the second run:
-
-**Windows**::
-
-    .\build\install\r3prototyping\bin\irsdemo.bat --role=NodeB
-
-**Other**::
-
-    ./build/install/r3prototyping/bin/irsdemo --role=NodeB
-
-Now open your web browser to this URL:
-
-.. note:: If using a custom node port address or port those must be used instead.
-
-**Node A**:
-
-    http://localhost:31338/web/irsdemo
-
-**Node B**:
-
-    http://localhost:31340/web/irsdemo
+There is also an IRS web demo installed. To use this follow steps 1-3 in the IRS demo and then navigate to
+http://localhost:10005/web/irsdemo and http://localhost:10005/web/irsdemo to see both node's view of the trades.
 
 To use the demos click the "Create Deal" button, fill in the form, then click the "Submit" button. Now you will be
 able to use the time controls at the top left of the home page to run the fixings. Click any individual trade in the
 blotter to view it.
 
-
-
 Attachment demo
-----------------
+---------------
 
 Open two terminals, and in the first run:
 
