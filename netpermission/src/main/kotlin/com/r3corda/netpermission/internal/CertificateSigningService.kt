@@ -53,14 +53,8 @@ class CertificateSigningService(val intermediateCACertAndKey: X509Utilities.CACe
     @Path("certificate/{var}")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     fun retrieveCert(@PathParam("var") requestId: String): Response {
-        val data = storage.getApprovedRequest(requestId)
-        return if (data != null) {
-            val clientCert = storage.getOrElseCreateCertificate(requestId) {
-                JcaPKCS10CertificationRequest(data.request).run {
-                    X509Utilities.createServerCert(subject, publicKey, intermediateCACertAndKey,
-                            if (data.ipAddr == data.hostName) listOf() else listOf(data.hostName), listOf(data.ipAddr))
-                }
-            }
+        val clientCert = storage.getCertificate(requestId)
+        return if (clientCert != null) {
             // Write certificate chain to a zip stream and extract the bit array output.
             ByteArrayOutputStream().use {
                 ZipOutputStream(it).use {

@@ -4,11 +4,11 @@ import com.google.common.net.HostAndPort
 import com.nhaarman.mockito_kotlin.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.X509Utilities
-import com.r3corda.core.seconds
 import com.r3corda.netpermission.CertificateSigningServer.Companion.hostAndPort
 import com.r3corda.netpermission.internal.CertificateSigningService
 import com.r3corda.netpermission.internal.persistence.CertificationData
 import com.r3corda.netpermission.internal.persistence.CertificationRequestStorage
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.Test
 import sun.security.x509.X500Name
 import java.io.IOException
@@ -20,16 +20,19 @@ import java.security.cert.X509Certificate
 import java.util.*
 import java.util.zip.ZipInputStream
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class CertificateSigningServiceTest {
+    val rootCA = X509Utilities.createSelfSignedCACert("Corda Node Root CA")
+    val intermediateCA = X509Utilities.createSelfSignedCACert("Corda Node Intermediate CA")
+
     private fun getSigningServer(storage: CertificationRequestStorage): CertificateSigningServer {
-        val rootCA = X509Utilities.createSelfSignedCACert("Corda Node Root CA")
-        val intermediateCA = X509Utilities.createSelfSignedCACert("Corda Node Intermediate CA")
         return CertificateSigningServer(HostAndPort.fromParts("localhost", 0), CertificateSigningService(intermediateCA, rootCA.certificate, storage))
     }
 
     @Test
-    fun testSubmitRequest() {
+    fun `test submit request`() {
         val id = SecureHash.randomSHA256().toString()
 
         val storage: CertificationRequestStorage = mock {
@@ -57,16 +60,21 @@ class CertificateSigningServiceTest {
     }
 
     @Test
-    fun testRetrieveCertificate() {
+    fun `test retrieve certificate`() {
         val keyPair = X509Utilities.generateECDSAKeyPairForSSL()
         val id = SecureHash.randomSHA256().toString()
-        var count = 0
+
+        // Mock Storage behaviour.
+        val certificateStore = mutableMapOf<String, Certificate>()
         val storage: CertificationRequestStorage = mock {
-            on { getApprovedRequest(eq(id)) }.then {
-                if (count < 5) null else CertificationData("", "", X509Utilities.createCertificateSigningRequest("LegalName",
-                        "London", "admin@test.com", keyPair))
+            on { getCertificate(eq(id)) }.then { certificateStore[id] }
+            on { saveCertificate(eq(id), any()) }.then {
+                val certGen = it.arguments[1] as (CertificationData) -> Certificate
+                val request = CertificationData("", "", X509Utilities.createCertificateSigningRequest("LegalName", "London", "admin@test.com", keyPair))
+                certificateStore[id] = certGen(request)
+                Unit
             }
-            on { getOrElseCreateCertificate(eq(id), any()) }.thenAnswer { (it.arguments[1] as () -> Certificate)() }
+            on { pendingRequestIds() }.then { listOf(id) }
         }
 
         getSigningServer(storage).use {
@@ -91,15 +99,18 @@ class CertificateSigningServiceTest {
                 }
             }
 
-            var certificates = poll()
+            assertNull(poll())
+            assertNull(poll())
 
-            while (certificates == null) {
-                Thread.sleep(1.seconds.toMillis())
-                count++
-                certificates = poll()
-            }
+            storage.saveCertificate(id, {
+                JcaPKCS10CertificationRequest(it.request).run {
+                    X509Utilities.createServerCert(subject, publicKey, intermediateCA,
+                            if (it.ipAddr == it.hostName) listOf() else listOf(it.hostName), listOf(it.ipAddr))
+                }
+            })
 
-            verify(storage, times(6)).getApprovedRequest(any())
+            val certificates = assertNotNull(poll())
+            verify(storage, times(3)).getCertificate(any())
             assertEquals(3, certificates.size)
 
             (certificates.first() as X509Certificate).run {
