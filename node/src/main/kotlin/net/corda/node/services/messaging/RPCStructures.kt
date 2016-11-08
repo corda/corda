@@ -28,6 +28,7 @@ import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.User
+import net.corda.protocols.TransactionBuildResult
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.objenesis.strategy.StdInstantiatorStrategy
@@ -204,6 +205,8 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(RPCException::class.java)
         register(Array<StackTraceElement>::class.java, read = { kryo, input -> emptyArray() }, write = { kryo, output, o -> })
         register(Collections.unmodifiableList(emptyList<String>()).javaClass)
+        register(PermissionException::class.java)
+        register(ProtocolHandle::class.java)
     }
 
     // Helper method, attempt to reduce boiler plate code

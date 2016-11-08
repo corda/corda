@@ -6,6 +6,7 @@ import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.TxWritableStorageService
 import net.corda.core.protocols.ProtocolLogic
 import net.corda.core.protocols.ProtocolLogicRefFactory
+import net.corda.core.protocols.ProtocolStateMachine
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.statemachine.ProtocolStateMachineImpl
 import org.slf4j.LoggerFactory
@@ -67,9 +68,9 @@ abstract class ServiceHubInternal : PluginServiceHub {
      *       between SMM and the scheduler.  That particular problem should also be resolved by the service manager work
      *       itself, at which point this method would not be needed (by the scheduler).
      */
-    abstract fun <T> startProtocol(logic: ProtocolLogic<T>): ListenableFuture<T>
+    abstract fun <T> startProtocol(logic: ProtocolLogic<T>): ProtocolStateMachine<T>
 
-    override fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ListenableFuture<T> {
+    override fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ProtocolStateMachine<T> {
         val logicRef = protocolLogicRefFactory.create(logicType, *args)
         @Suppress("UNCHECKED_CAST")
         val logic = protocolLogicRefFactory.toProtocolLogic(logicRef) as ProtocolLogic<T>

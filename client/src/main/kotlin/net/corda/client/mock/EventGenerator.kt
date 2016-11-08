@@ -5,7 +5,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
-import java.time.Instant
+import net.corda.protocols.CashCommand
 
 /**
  * [Generator]s for incoming/outgoing events to/from the [WalletMonitorService]. Internally it keeps track of owned
@@ -65,7 +65,7 @@ class EventGenerator(
 
     val issueCashGenerator =
             amountGenerator.combine(partyGenerator, issueRefGenerator) { amount, to, issueRef ->
-                ClientToServiceCommand.IssueCash(
+                CashCommand.IssueCash(
                         amount,
                         issueRef,
                         to,
@@ -77,7 +77,7 @@ class EventGenerator(
             amountIssuedGenerator.combine(
                     partyGenerator
             ) { amountIssued, recipient ->
-                ClientToServiceCommand.PayCash(
+                CashCommand.PayCash(
                         amount = amountIssued,
                         recipient = recipient
                 )
@@ -85,7 +85,7 @@ class EventGenerator(
 
     val exitCashGenerator =
             amountIssuedGenerator.map {
-                ClientToServiceCommand.ExitCash(
+                CashCommand.ExitCash(
                         it.withoutIssuer(),
                         it.token.issuer.reference
                 )

@@ -1,12 +1,12 @@
 package net.corda.node.services
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.crypto.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.*
 import net.corda.core.protocols.ProtocolLogic
 import net.corda.core.protocols.ProtocolLogicRefFactory
+import net.corda.core.protocols.ProtocolStateMachine
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.api.MessagingServiceInternal
@@ -79,7 +79,7 @@ open class MockServiceHubInternal(
 
     override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(txStorageService, txs)
 
-    override fun <T> startProtocol(logic: ProtocolLogic<T>): ListenableFuture<T> = smm.add(logic).resultFuture
+    override fun <T> startProtocol(logic: ProtocolLogic<T>): ProtocolStateMachine<T> = smm.add(logic)
 
     override fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>) {
         protocolFactories[markerClass.java] = protocolFactory

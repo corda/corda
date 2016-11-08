@@ -1,6 +1,7 @@
 package net.corda.node.services
 
 import com.typesafe.config.Config
+import net.corda.core.protocols.ProtocolLogic
 import net.corda.node.services.config.getListOrElse
 
 /**
@@ -9,7 +10,7 @@ import net.corda.node.services.config.getListOrElse
  * to. These permissions are represented as [String]s to allow RPC implementations to add their own permissioning.
  */
 interface RPCUserService {
-    fun getUser(usename: String): User?
+    fun getUser(username: String): User?
     val users: List<User>
 }
 
@@ -25,13 +26,13 @@ class RPCUserServiceImpl(config: Config) : RPCUserService {
                     val username = it.getString("user")
                     require(username.matches("\\w+".toRegex())) { "Username $username contains invalid characters" }
                     val password = it.getString("password")
-                    val permissions = it.getListOrElse<String>("permissions") { emptyList() }.map(String::toUpperCase).toSet()
+                    val permissions = it.getListOrElse<String>("permissions") { emptyList() }.toSet()
                     User(username, password, permissions)
                 }
                 .associateBy(User::username)
     }
 
-    override fun getUser(usename: String): User? = _users[usename]
+    override fun getUser(username: String): User? = _users[username]
 
     override val users: List<User> get() = _users.values.toList()
 }
@@ -39,3 +40,5 @@ class RPCUserServiceImpl(config: Config) : RPCUserService {
 data class User(val username: String, val password: String, val permissions: Set<String>) {
     override fun toString(): String = "${javaClass.simpleName}($username, permissions=$permissions)"
 }
+
+inline fun <reified P : ProtocolLogic<*>> startProtocolPermission(): String = P::class.java.name

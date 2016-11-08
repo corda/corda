@@ -1,7 +1,6 @@
 package net.corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.ClientToServiceCommand
 import net.corda.core.crypto.Party
 import net.corda.core.protocols.ProtocolLogic
 import net.corda.core.transactions.SignedTransaction
@@ -21,7 +20,6 @@ import net.corda.core.utilities.ProgressTracker
 //       splitting ClientToServiceCommand into public and private parts, with only the public parts
 //       relayed here.
 class FinalityProtocol(val transaction: SignedTransaction,
-                       val events: Set<ClientToServiceCommand>,
                        val participants: Set<Party>,
                        override val progressTracker: ProgressTracker = tracker()): ProtocolLogic<Unit>() {
     companion object {
@@ -46,7 +44,7 @@ class FinalityProtocol(val transaction: SignedTransaction,
 
         // Let everyone else know about the transaction
         progressTracker.currentStep = BROADCASTING
-        subProtocol(BroadcastTransactionProtocol(notarisedTransaction, events, participants))
+        subProtocol(BroadcastTransactionProtocol(notarisedTransaction, participants))
     }
 
     private fun needsNotarySignature(stx: SignedTransaction) = stx.tx.notary != null && hasNoNotarySignature(stx)

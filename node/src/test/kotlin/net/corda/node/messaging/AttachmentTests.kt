@@ -53,7 +53,7 @@ class AttachmentTests {
         network.runNetwork()
         val f1 = n1.services.startProtocol(FetchAttachmentsProtocol(setOf(id), n0.info.legalIdentity))
         network.runNetwork()
-        assertEquals(0, f1.get().fromDisk.size)
+        assertEquals(0, f1.resultFuture.get().fromDisk.size)
 
         // Verify it was inserted into node one's store.
         val attachment = n1.storage.attachments.openAttachment(id)!!
@@ -62,7 +62,7 @@ class AttachmentTests {
         // Shut down node zero and ensure node one can still resolve the attachment.
         n0.stop()
 
-        val response: FetchDataProtocol.Result<Attachment> = n1.services.startProtocol(FetchAttachmentsProtocol(setOf(id), n0.info.legalIdentity)).get()
+        val response: FetchDataProtocol.Result<Attachment> = n1.services.startProtocol(FetchAttachmentsProtocol(setOf(id), n0.info.legalIdentity)).resultFuture.get()
         assertEquals(attachment, response.fromDisk[0])
     }
 
@@ -75,7 +75,7 @@ class AttachmentTests {
         network.runNetwork()
         val f1 = n1.services.startProtocol(FetchAttachmentsProtocol(setOf(hash), n0.info.legalIdentity))
         network.runNetwork()
-        val e = assertFailsWith<FetchDataProtocol.HashNotFound> { rootCauseExceptions { f1.get() } }
+        val e = assertFailsWith<FetchDataProtocol.HashNotFound> { rootCauseExceptions { f1.resultFuture.get() } }
         assertEquals(hash, e.requested)
     }
 
@@ -107,7 +107,7 @@ class AttachmentTests {
         val f1 = n1.services.startProtocol(FetchAttachmentsProtocol(setOf(id), n0.info.legalIdentity))
         network.runNetwork()
         assertFailsWith<FetchDataProtocol.DownloadedVsRequestedDataMismatch> {
-            rootCauseExceptions { f1.get() }
+            rootCauseExceptions { f1.resultFuture.get() }
         }
     }
 }

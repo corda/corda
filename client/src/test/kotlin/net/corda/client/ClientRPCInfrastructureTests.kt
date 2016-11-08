@@ -69,7 +69,7 @@ class ClientRPCInfrastructureTests {
         serverSession.createTemporaryQueue(RPC_REQUESTS_QUEUE, RPC_REQUESTS_QUEUE)
         producer = serverSession.createProducer()
         val userService = object : RPCUserService {
-            override fun getUser(usename: String): User? = throw UnsupportedOperationException()
+            override fun getUser(username: String): User? = throw UnsupportedOperationException()
             override val users: List<User> get() = throw UnsupportedOperationException()
         }
         val dispatcher = object : RPCDispatcher(TestOpsImpl(), userService) {

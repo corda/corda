@@ -1,6 +1,5 @@
 package net.corda.node.services.messaging
 
-import net.corda.core.contracts.ClientToServiceCommand
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
@@ -8,8 +7,10 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
+import net.corda.core.protocols.ProtocolLogic
 import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.statemachine.ProtocolStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.AddOrRemove
@@ -54,31 +55,9 @@ sealed class StateMachineUpdate(val id: StateMachineRunId) {
     }
 }
 
-sealed class TransactionBuildResult {
-    /**
-     * State indicating that a protocol is managing this request, and that the client should track protocol state machine
-     * updates for further information. The monitor will separately receive notification of the state machine having been
-     * added, as it would any other state machine. This response is used solely to enable the monitor to identify
-     * the state machine (and its progress) as associated with the request.
-     *
-     * @param transaction the transaction created as a result, in the case where the protocol has completed.
-     */
-    class ProtocolStarted(val id: StateMachineRunId, val transaction: SignedTransaction?, val message: String?) : TransactionBuildResult() {
-        override fun toString() = "Started($message)"
-    }
-
-    /**
-     * State indicating the action undertaken failed, either directly (it is not something which requires a
-     * state machine), or before a state machine was started.
-     */
-    class Failed(val message: String?) : TransactionBuildResult() {
-        override fun toString() = "Failed($message)"
-    }
-}
-
 /**
  * RPC operations that the node exposes to clients using the Java client library. These can be called from
- * client apps and are implemented by the node in the [ServerRPCOps] class.
+ * client apps and are implemented by the node in the [CordaRPCOpsImpl] class.
  */
 interface CordaRPCOps : RPCOps {
     /**
@@ -113,15 +92,17 @@ interface CordaRPCOps : RPCOps {
     fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>>
 
     /**
-     * Executes the given command if the user is permissioned to do so, possibly triggering cash creation etc.
-     * TODO: The signature of this is weird because it's the remains of an old service call, we should have a call for each command instead.
+     * Start the given protocol with the given arguments, returning an [Observable] with a single observation of the
+     * result of running the protocol.
      */
-    fun executeCommand(command: ClientToServiceCommand): TransactionBuildResult
+    @RPCReturnsObservables
+    fun <T: Any> startProtocolGeneric(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ProtocolHandle<T>
 
     /**
      * Returns Node's identity, assuming this will not change while the node is running.
      */
     fun nodeIdentity(): NodeInfo
+
     /*
      * Add note(s) to an existing Vault transaction
      */
@@ -132,3 +113,50 @@ interface CordaRPCOps : RPCOps {
      */
     fun getVaultTransactionNotes(txnId: SecureHash): Iterable<String>
 }
+
+/**
+ * These allow type safe invocations of protocols, e.g.:
+ *
+ * val rpc: CordaRPCOps = (..)
+ * rpc.startProtocol(::ResolveTransactionsProtocol, setOf<SecureHash>(), aliceIdentity)
+ *
+ * Note that the passed in constructor function is only used for unification of other type parameters and reification of
+ * the Class instance of the protocol. This could be changed to use the constructor function directly.
+ */
+inline fun <T : Any, reified R : ProtocolLogic<T>> CordaRPCOps.startProtocol(
+        @Suppress("UNUSED_PARAMETER")
+        protocolConstructor: () -> R
+) = startProtocolGeneric(R::class.java)
+inline fun <T : Any, A, reified R : ProtocolLogic<T>> CordaRPCOps.startProtocol(
+        @Suppress("UNUSED_PARAMETER")
+        protocolConstructor: (A) -> R,
+        arg0: A
+) = startProtocolGeneric(R::class.java, arg0)
+inline fun <T : Any, A, B, reified R : ProtocolLogic<T>> CordaRPCOps.startProtocol(
+        @Suppress("UNUSED_PARAMETER")
+        protocolConstructor: (A, B) -> R,
+        arg0: A,
+        arg1: B
+) = startProtocolGeneric(R::class.java, arg0, arg1)
+inline fun <T : Any, A, B, C, reified R: ProtocolLogic<T>> CordaRPCOps.startProtocol(
+        @Suppress("UNUSED_PARAMETER")
+        protocolConstructor: (A, B, C) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C
+) = startProtocolGeneric(R::class.java, arg0, arg1, arg2)
+inline fun <T : Any, A, B, C, D, reified R : ProtocolLogic<T>> CordaRPCOps.startProtocol(
+        @Suppress("UNUSED_PARAMETER")
+        protocolConstructor: (A, B, C, D) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D
+) = startProtocolGeneric(R::class.java, arg0, arg1, arg2, arg3)
+
+data class ProtocolHandle<A>(
+        val id: StateMachineRunId,
+        val progress: Observable<ProgressTracker.Change>,
+        val returnValue: Observable<A>
+)
+
