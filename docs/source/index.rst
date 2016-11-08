@@ -28,6 +28,7 @@ Read on to learn:
    getting-set-up
    data-model
    transaction-data-types
+   merkle-trees
    consensus
    messaging
    persistence
