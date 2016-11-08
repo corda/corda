@@ -112,7 +112,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
-                    ServiceAffinityExecutor("Mock node thread", 1)
+                    ServiceAffinityExecutor("Mock node $id thread", 1)
                 else {
                     mockNet.sharedUserCount.incrementAndGet()
                     mockNet.sharedServerThread
@@ -171,6 +171,11 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             dbCloser?.run()
             dbCloser = null
         }
+
+        // You can change this from zero if you have custom [ProtocolLogic] that park themselves.  e.g. [StateMachineManagerTests]
+        var acceptableLiveFiberCountOnStop: Int = 0
+
+        override fun acceptableLiveFiberCountOnStop(): Int = acceptableLiveFiberCountOnStop
     }
 
     /** Returns a node, optionally created by the passed factory method. */

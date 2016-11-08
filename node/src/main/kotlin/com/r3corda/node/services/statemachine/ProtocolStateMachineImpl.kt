@@ -18,6 +18,7 @@ import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.statemachine.StateMachineManager.*
 import com.r3corda.node.utilities.StrandLocalTransactionManager
 import com.r3corda.node.utilities.createDatabaseTransaction
+import com.r3corda.node.utilities.databaseTransaction
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -230,7 +231,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
         // we have to pass the Thread local Transaction across via a transient field as the Fiber Park swaps them out.
         txTrampoline = TransactionManager.currentOrNull()
         StrandLocalTransactionManager.setThreadLocalTx(null)
-        ioRequest.session.waitingForResponse = true
+        ioRequest.session.waitingForResponse = (ioRequest is ReceiveRequest<*>)
         parkAndSerialize { fiber, serializer ->
             logger.trace { "Suspended on $ioRequest" }
             // restore the Tx onto the ThreadLocal so that we can commit the ensuing checkpoint to the DB
@@ -246,13 +247,16 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
                 processException(t)
             }
         }
-        ioRequest.session.waitingForResponse = false
+        logger.trace { "Resumed from $ioRequest" }
         createTransaction()
     }
 
     private fun processException(t: Throwable) {
-        actionOnEnd()
-        _resultFuture?.setException(t)
+        // This can get called in actionOnSuspend *after* we commit the database transaction, so optionally open a new one here.
+        databaseTransaction(database) {
+            actionOnEnd()
+            _resultFuture?.setException(t)
+        }
     }
 
     internal fun resume(scheduler: FiberScheduler) {

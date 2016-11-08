@@ -1,17 +1,14 @@
 package com.r3corda.node.services.api
 
 import com.google.common.util.concurrent.ListenableFuture
-import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.PluginServiceHub
-import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.TxWritableStorageService
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.services.statemachine.ProtocolStateMachineImpl
 import org.slf4j.LoggerFactory
-import kotlin.reflect.KClass
 
 interface MessagingServiceInternal : MessagingService {
     /**
