@@ -13,20 +13,29 @@ if [ ! -e lib/dokka.jar ]; then
     wget -O lib/dokka.jar https://github.com/Kotlin/dokka/releases/download/0.9.8/dokka-fatjar.jar
 fi
 
-echo "Installing pip dependencies ... "
-echo
-cd docs
-pip install -r requirements.txt;
+(
+    cd docs
 
-echo "Generating docsite ..."
-echo
+    if [ ! -d "virtualenv" ]
+    then
+        virtualenv -p python2.7 virtualenv
+    fi
+    . virtualenv/bin/activate
+    if [ ! -d "docs/virtualenv/lib/python2.7/site-packages/sphinx" ]
+    then
+        echo "Installing pip dependencies ... "
+        pip install -r requirements.txt
+    fi
 
-make clean html
+    echo "Generating docsite ..."
+    echo
+
+    make html
+)
 
 echo
 echo "Generating API docs ..."
 echo
-cd ..
 java -jar lib/dokka.jar -output docs/build/html/api core/src/main/kotlin finance/src/main/kotlin node/src/main/kotlin src/main/kotlin client/src/main/kotlin  | grep -v "No documentation for"
 
 echo
