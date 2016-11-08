@@ -30,6 +30,9 @@ fun <T> databaseTransaction(db: Database, statement: Transaction.() -> T): T {
     return org.jetbrains.exposed.sql.transactions.transaction(Connection.TRANSACTION_REPEATABLE_READ, 1, statement)
 }
 
+/**
+ *  Helper method wrapping code in try finally block. A mutable list is used to keep track of functions that need to be executed in finally block.
+ */
 fun <T> withFinalizables(statement: (MutableList<() -> Unit>) -> T): T {
     val finalizables = mutableListOf<() -> Unit>()
     return try {

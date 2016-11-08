@@ -32,7 +32,7 @@ class CertificateSigningServiceTest {
     }
 
     @Test
-    fun testSubmitRequest() {
+    fun `test submit request`() {
         val id = SecureHash.randomSHA256().toString()
 
         val storage: CertificationRequestStorage = mock {
@@ -60,7 +60,7 @@ class CertificateSigningServiceTest {
     }
 
     @Test
-    fun testRetrieveCertificate() {
+    fun `test retrieve certificate`() {
         val keyPair = X509Utilities.generateECDSAKeyPairForSSL()
         val id = SecureHash.randomSHA256().toString()
 

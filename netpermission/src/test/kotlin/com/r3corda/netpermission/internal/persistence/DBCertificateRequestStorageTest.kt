@@ -14,7 +14,7 @@ class DBCertificateRequestStorageTest {
     val intermediateCA = X509Utilities.createSelfSignedCACert("Corda Node Intermediate CA")
 
     @Test
-    fun testSaveRequest() {
+    fun `test save request`() {
         val keyPair = X509Utilities.generateECDSAKeyPairForSSL()
         val request = CertificationData("", "", X509Utilities.createCertificateSigningRequest("LegalName", "London", "admin@test.com", keyPair))
 
@@ -32,7 +32,7 @@ class DBCertificateRequestStorageTest {
     }
 
     @Test
-    fun testPendingRequest() {
+    fun `test pending request`() {
         val keyPair = X509Utilities.generateECDSAKeyPairForSSL()
         val request = CertificationData("", "", X509Utilities.createCertificateSigningRequest("LegalName", "London", "admin@test.com", keyPair))
 
@@ -49,7 +49,7 @@ class DBCertificateRequestStorageTest {
     }
 
     @Test
-    fun testSaveCertificate() {
+    fun `test save certificate`() {
         val keyPair = X509Utilities.generateECDSAKeyPairForSSL()
         val request = CertificationData("", "", X509Utilities.createCertificateSigningRequest("LegalName", "London", "admin@test.com", keyPair))
 
