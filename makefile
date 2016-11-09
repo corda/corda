@@ -1588,6 +1588,7 @@ endif
 
 ifeq (7,$(java-version))
 	test-sources := $(subst $(test)/InvokeDynamic.java,,$(test-sources))
+	test-sources := $(subst $(test)/Interfaces.java,,$(test-sources))
 endif
 
 test-cpp-sources = $(wildcard $(test)/*.cpp)
@@ -2330,7 +2331,7 @@ ifeq ($(platform),windows)
 	echo 'static int getAddrsFromAdapter(IP_ADAPTER_ADDRESSES *ptr, netaddr **netaddrPP);' >> $(build)/openjdk/NetworkInterface.h
 endif
 
-ifeq ($(kernel),darwin)	
+ifeq ($(kernel),darwin)
 	mkdir -p $(build)/openjdk/netinet
 	for file in \
 		$(header-sysroot)/usr/include/netinet/ip.h \

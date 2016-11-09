@@ -3134,6 +3134,18 @@ extern "C" AVIAN_EXPORT void JNICALL
   release(t, reinterpret_cast<object>(arguments[1]));
 }
 
+extern "C" AVIAN_EXPORT jboolean JNICALL
+    Avian_sun_misc_Unsafe_isBigEndian0(Thread*, object, uintptr_t*)
+{
+  return false;
+}
+
+extern "C" AVIAN_EXPORT jboolean JNICALL
+    Avian_sun_misc_Unsafe_unalignedAccess0(Thread*, object, uintptr_t*)
+{
+  return false;
+}
+
 namespace {
 
 namespace local {
