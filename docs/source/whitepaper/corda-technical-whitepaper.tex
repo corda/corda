@@ -1145,7 +1145,42 @@ or confusion, as otherwise exploitable confusion attacks may arise.
 
 \section{Client RPC and reactive collections}
 
-TODO
+Corda nodes expose a simple RPC mechanism that has a couple of unusual features. The underlying transport is
+message queues (AMQP) and methods can return object graphs that contain Rx observables\cite{Rx} which may in
+turn emit more observables.
+
+It is a common pattern for RPCs to return a snapshot of some data structure, along with an observable that emits
+objects representing a delta on that data structure. The client library has functionality to reconstruct the
+snapshot + diffs into a observable collections of the type that can be bound directly to a JavaFX user interface.
+In this way, rendering data structures in the global ledger in a rich client app that stays fresh becomes a
+straightforward operation that requires minimal work from the developer: simply wiring the pieces together in
+a functional way is sufficient. Reactive transforms over these observable collections such as mappings,
+filterings, sortings and so on make it easy to build user interfaces in a functional programming style.
+
+Because RPC transport takes place via the node's message queue broker, the framework automatically recovers
+from restarts of the node/node components, IP addresses changes on the client and similar interruptions to
+communication. Likewise, programs that need to live for a long time and survive restarts, upgrades and moves
+can request that observations be sent to a persistent queue. Backpressure and queue management is supplied by
+the broker. Additional capacity for processing RPCs can be added by attaching more RPC processors to the broker
+which load balances between them automatically.
+
+It can be asked why Corda does not use the typical REST+JSON approach to communicating with the node. The reasons
+are:
+
+\begin{itemize}
+\item A preference for binary protocols over textual protocols, as text based protocols tend to be more
+susceptible to escaping and other buffer management problems that can lead to security issues.
+\item Message queue brokers provide significant amounts of infrastructure for building reliable message based apps
+which plain HTTP does not.
+\item REST based protocols have multiple conventions for streaming of results back to the client, none of which
+are ideal for the task.
+\end{itemize}
+
+% TODO: current RPC framework doesn't configure persistence or backpressure management.
+% TODO: currently you can't bring online rpc processors independently of the rest of the node.
+
+Being able to connect live data structures directly to UI toolkits also contributes to the avoidance
+of XSS exploits, XSRF exploits and similar security problems based on losing track of buffer boundaries.
 
 \section{Event scheduling}\label{sec:event-scheduling}
 
