@@ -521,7 +521,7 @@ take precedence over the software implementations in case of disagreement.
 
 It is technically possible to write a contract that cannot be upgraded. If such a contract governed an asset that
 existed only on the ledger, like a cryptocurrency, then that would provide an approximation of ``code as law''. We
-leave discussion of this wisdom of this concept to political scientists and reddit.
+leave discussion of the wisdom of this concept to political scientists and reddit.
 
 \paragraph{Platform logging}There is no direct equivalent in Corda of a block chain ``hard fork'', so the only solution
 to discarding buggy or fraudulent transaction chains would be to mutually agree out of band to discard an entire
@@ -831,10 +831,14 @@ and leave the network at will, whilst simultaneously making it hard to execute s
 creates multiple identities to gain undue influence over the network). This is an appropriate design to use for a peer to
 peer network formed of volunteers who can't/won't commit to any long term relationships up front, and in which identity
 verification is not done. Using proof-of-work then leads naturally to a requirement to quantise the timeline into chunks,
-due to the probabilistic nature of searching for a proof. The chunks must then be ordered relative to each other and
-the block chain algorithm follows as a result.
+due to the probabilistic nature of searching for a proof. The chunks must then be ordered relative to each other.
+The incentive to build on the most recently announced proof of work is in tension with the reality that it takes
+time for a proof to circulate around the network. This means it is desirable that proofs are produced at a rate
+that is slow enough that very few are circulating at the same time. Given that transactions are likely to be
+produced at a higher rate than this, it implies a need for the proofs to consolidate multiple transactions.
+Hence the need for blocks.
 
-A Corda network is email-like in the sense that nodes have long term stable identities, which they can prove ownership
+A Corda network is email-like in the sense that nodes have long term stable identities, of which they can prove ownership
 of to others. Sybil attacks are blocked by the network entry process. This allows us to discard proof-of-work along with
 its multiple unfortunate downsides:
 
@@ -852,9 +856,9 @@ business and legal assumptions.
 any protocol commitments being violated.
 \end{itemize}
 
-Once proof-of-work is disposed of there is no longer any need to quantise the timeline into blocks because conflicts can
-be resolved at the level of the individual transaction instead, and because the parties asserting the correctness of the
-ordering are known ahead of time regular signatures are sufficient.
+Once proof-of-work is disposed of there is no longer any need to quantise the timeline into blocks because there is
+no longer any need to slow the publication of conflict resolution proposals, and because the parties asserting the
+correctness of the ordering are known ahead of time regular signatures are sufficient.
 
 \subsection{Algorithmic agility}
 
@@ -868,7 +872,7 @@ performance and latency, at the cost of being more exposed to malicious attacks 
 leader. In situations where the members making up a distributed notary service are all large, regulated institutions that
 are not expected to try and corrupt the ledger in their own favour trading off security to gain performance may make sense.
 In other situations where existing legal or trust relationships are less robust, slower but byzantine fault tolerant
-algorithms like BFT-SMaRT\cite{Bessani:2014:SMR:2671853.2672428} may be preferable. Alternatively hardware security features
+algorithms like BFT-SMaRT\cite{Bessani:2014:SMR:2671853.2672428} may be preferable. Alternatively, hardware security features
 like Intel SGX\textregistered may be used to convert non-BFT algorithms into a more trusted form using remote attestation and
 hardware protection.
 
@@ -886,7 +890,11 @@ may frequently travel around the world, but it can work when using the ledger to
 are inherently region specific.
 \item Notaries can compete on their availability and performance.
 \item Users can pick between \emph{validating} and \emph{non-validating} notaries. See below.
-\item Separate networks can start independent and be merged together later.
+\item In some models for how these technologies will be adopted, it is possible that issuers of assets will find it
+convenient to 'self-notarise' transactions that pertain to assets they have issued and this necessarily requires
+support for multiple notaries in the same network. Such a model is likely to be a transitional state, not least
+because such a model is inherently limited in the range of operations that can be supported.
+\item Separate networks can start independent and be merged together later (see below).
 \end{itemize}
 
 \subsection{Validating and non-validating notaries}
@@ -894,7 +902,7 @@ are inherently region specific.
 Validating notaries resolve and fully check transactions they are asked to deconflict. Thus in the degenerate case of a
 network with just a single notary and without the use of any privacy features, they gain full visibility into every
 transaction. Non-validating notaries assume transaction validity and do not request transaction data or their
-dependencies beyond the list of states consumed. With such a notary it is possible for the ledger to become wedged, as
+dependencies beyond the list of states consumed. With such a notary it is possible for the ledger to become `wedged', as
 anyone who knows the hash and index of a state may consume it without checks. If the cause of the problem is accidental,
 the incorrect data can be presented to a non-validating notary to convince it to roll back the commit, but if the error
 is malicious then states controlled by such a notary may become permanently corrupted.
@@ -903,12 +911,12 @@ It is therefore possible for users to select their preferred point on a privacy/
 depending on how they expect the data to be used. When the states are unlikely to live long or propagate far and the only
 entities who will learn their transaction hashes are somewhat trustworthy, the user may select to keep the data from the
 notary. For liquid assets a validating notary should always be used to prevent value destruction and theft if the transaction
-IDs leak.
+identifiers leak.
 
 \subsection{Merging networks}
 
 Because there is no single block chain it becomes possible to merge two independent networks together by simply establishing
-two-way connectivity between their nodes then configuring each side to trust each others notaries and certificate authorities.
+two-way connectivity between their nodes then configuring each side to trust each other's notaries and certificate authorities.
 
 This ability may seem pointless: isn't the goal of a decentralised ledger to have a single global database for everyone?
 It is, but a practical route to reaching this end state is still required. It is often the case that organisations
@@ -916,7 +924,7 @@ perceived by consumers as being a single company are in fact many different enti
 deals with each other and doing internal trades with each other. This sort of setup can occur for regulatory reasons,
 tax reasons, due to a history of mergers or just through a sheer masochistic love of paperwork. Very large companies can
 therefore experience all the same synchronisation problems a decentralised ledger is intended to fix but purely within
-the bounds of the same organisation. In this situation the main problem to tackle is not malicious actors but rather
+the bounds of that organisation. In this situation the main problem to tackle is not malicious actors but rather
 heterogenous IT departments, varying software development practices, unlinked user directories and so on.
 Such organisations can benefit from gaining experience with the technology internally and cleaning up their own
 internal views of the world before tackling the larger problem of synchronising with the wider world as well.
@@ -937,7 +945,7 @@ that can be easily queried and worked with. It also contains private key materia
 consuming states in the vault. Like with a cryptocurrency wallet, the Corda vault understands how to create transactions
 that send value to someone else by combining asset states and possibly adding a change output that makes the values
 balance. This process is usually referred to as `coin selection'. Coin selection can be a complex process. In Corda
-there are no per transaction network fees which is a significant source of complexity in other sysetms, however
+there are no per transaction network fees, which is a significant source of complexity in other sysetms. However
 transactions must respect the fungibility rules in order to ensure that the issuer and reference data is preserved
 as the assets pass from hand to hand.
 
@@ -951,14 +959,15 @@ of a user in just one state, there could only be a single transaction being cons
 impose unacceptable operational overheads on an organisation. By automatically creating send-to-self transactions that
 split the big state into multiple smaller states, the number of transactions that can be created in parallel is
 increased. Alternatively many tiny states may need to be consolidated into a smaller number of more valuable states
-in order to avoid hitting transaction size limits.
+in order to avoid hitting transaction size limits. Finally, in some cases the vault may send asset states back
+to the issuer for re-issuance, thus pruning long transaction chains and improving privacy.
 
 The vault is also responsible for managing scheduled events requested by node-relevant states when the implementing app
 has been installed (see \cref{sec:event-scheduling}).
 
 \subsection{Direct SQL access}
 
-A distributed ledger is ultimately just a shared database, albeit one with some fancy features. The following features
+A distributed ledger is ultimately just a shared database, albeit one with some unique features. The following features
 are therefore highly desirable for improving the productivity of app developers:
 
 \begin{itemize}
@@ -1015,7 +1024,7 @@ hardware to hold private keys and perform signing operations with them. Combined
 transaction rollbacks, this is one of the ways they reduce overheads: by attempting to ensure that transaction
 authorisation is robust and secure, and thus that signatures are reliable.
 
-Many banks have rolled out CAP (chip authentication program) readers which allow logins to online banking using a
+Many banks have rolled out CAP (chip authentication program) readers to consumers which allow logins to online banking using a
 challenge/response protocol to a smartcard. The user is expected to type in the right codes and copy the responses back
 to the computer by hand. These devices are cheap, but tend to have small, unreliable, low resolution screens and can be
 subject to confusion attacks if there is malware on the PC, e.g. if the malware convinces the user they are performing
@@ -1026,7 +1035,7 @@ The state-of-the-art in this space are devices like the TREZOR\cite{TREZOR} by S
 were developed by and for the Bitcoin community. They are more expensive than CAP readers and feature better
 screens and USB connections to eliminate typing. Advanced devices like the Ledger Blue support NFC and
 Bluetooth as well. These devices differ from CAP readers in another key respect: instead of signing arbitrary, small
-challenge numbers, they actually understand the native transaction format of the Bitcoin network and parse the
+challenge numbers, they actually understand the native transaction format of the network to which they're specialised and parse the
 transaction to figure out the message to present to the user, who then confirms that they wish to perform the action
 printed on the screen by simply pressing a button. The transaction is then signed internally before being passed back to
 the PC via the USB/NFC/Bluetooth connection.
@@ -1047,8 +1056,7 @@ point of failure from a key management perspective.
 \item It's more clear who signed off on a particular action - the signatures prove which devices were used to sign off
 on an action. There can't be any back doors or administrator tools which can create transactions on behalf of someone else.
 \item Devices that integrate fingerprint readers and other biometric authentication could further increase trust by
-making it harder for employees to share/swap devices. In theory, an iPhone or Android device could be used as a
-transaction authenticator, although this would be expensive.
+making it harder for employees to share/swap devices. A smartphone or tablet could be also used as a transaction authenticator.
 \end{itemize}
 
 \subsection{Confusion attacks}
@@ -1079,8 +1087,8 @@ weak point in any secure hardware scheme, it would be ideal to minimise their nu
 To solve this problem we add a top level summaries field to the transaction format (joining inputs, outputs, commands,
 attachments etc). This new top level field is a list of strings. Smart contracts get a new responsibility. They are
 expected to generate an English message describing what the transaction is doing, and then check that it is present in
-the transaction. The field is a list of strings rather than a single string because a transaction may do multiple things
-simultaneously in advanced use cases.
+the transaction. The platform ensures no unexpected messages are present. The field is a list of strings rather than
+a single string because a transaction may do multiple things simultaneously in advanced use cases.
 
 Because the calculation of the confirmation message has now been moved to the smart contract itself, and is a part of
 the transaction, the transaction can be sent to the signing device: all it needs to do is extract the messages and
@@ -1090,7 +1098,7 @@ can know that the message was correct and legitimate.
 
 The design above is simple but has the issue that large amounts of data are sent to the device which it doesn't need.
 As it's common for signing devices to have constrained memory, it would be unfortunate if the complexity of a transaction
-ended up being limited by the RAM available in the users signing devices. To solve this we can use the tear-offs
+ended up being limited by the RAM available in the users' signing devices. To solve this we can use the tear-offs
 mechanism (see \cref{sec:tear-offs}) to present only the summaries and the Merkle branch connecting them to the root.
 The device can then sign the entire transaction contents having seen only the textual summaries, knowing that the states
 will trigger the contracts which will trigger the summary checks, thus the signature covers the machine-understandable
@@ -1109,14 +1117,14 @@ to be anonymised, it isn't possible for a contract to access identity informatio
 cannot generate a complete message that includes human meaningful identity names even if the node itself does have this
 information.
 
-To solve this the messages placed inside a transaction may contain numeric indexes of the public keys required by the
-commands using backtick syntax. The transaction is provided to the device along with the X.509 certificate chains
+To solve this the transaction is provided to the device along with the X.509 certificate chains
 linking the pseudonymous public keys to the long term identity certificates, which for transactions involving the user
 should always be available (as they by definition know who their trading counterparties are). The device can verify
-those certificate chains to build up a mapping of index to human readable name, and then perform the message
-substitution before rendering. Care must be taken to ensure that the X.500 names issued to network participants do not
-contain text chosen to deliberately confuse users, e.g. names that contain quote marks, partial instructions, special
-symbols and so on. This can be enforced at the network permissioning level.
+those certificate chains to build up a mapping of index to human readable name. The messages placed inside a transaction may contain numeric indexes of the public keys required by the
+commands using backslash syntax, and the device must perform the message substitution before rendering.
+Care must be taken to ensure that the X.500 names issued to network participants do not contain text chosen to
+deliberately confuse users, e.g. names that contain quote marks, partial instructions, special symbols and so on.
+This can be enforced at the network permissioning level.
 
 \subsection{Multi-lingual support}
 
