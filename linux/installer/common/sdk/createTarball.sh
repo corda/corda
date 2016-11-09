@@ -47,8 +47,8 @@ rm -fr ${INSTALL_PATH}
 # Get the architecture of the build from generated binary
 get_arch()
 {
-    local a=$(readelf -h $BUILD_DIR/sgx_sign | awk '/Class:/{print $2}')
-    test $a = ELF64 && echo 'x64' || echo 'x86'
+    local a=$(readelf -h $BUILD_DIR/sgx_sign | sed -n '2p' | awk '/:/{print $6}')
+    test $a = 02 && echo 'x86_64' || echo 'x86'
 }
 
 ARCH=$(get_arch)
