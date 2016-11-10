@@ -34,7 +34,7 @@ public class CordaCaplet extends Capsule {
     // TODO: Make directory configurable via the capsule manifest.
     // TODO: Add working directory variable to capsules string replacement variables.
     private List<Path> augmentClasspath(List<Path> classpath, String dirName) {
-        File dir = new File("plugins");
+        File dir = new File(dirName);
         if(!dir.exists()) {
             dir.mkdir();
         }
