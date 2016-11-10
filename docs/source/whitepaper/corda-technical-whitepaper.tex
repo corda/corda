@@ -687,6 +687,18 @@ as for code signing we place initial focus on being able to re-use the infrastru
 
 % TODO: Contract constraints aren't implemented yet so this design may change based on feedback.
 
+\subsection{Event scheduling}\label{sec:event-scheduling}
+
+State classes may request flows to be started at given times. When a state is considered relevant by the vault
+and the implementing CorDapp is installed and whitelisted, the node may react to the passage of time by starting
+new interactions with other nodes, people, or internal systems. As financial contracts often have a notion of
+time in them this feature can be useful for many kinds of state transitions, for example, expiry of an option
+contract, management of a default event, re-fixing of an interest rate swap and so on.
+
+To request scheduled events, a state may implement the \texttt{SchedulableState} interface and then return a
+request from the \texttt{nextScheduledActivity} function. The state will be queried when it is committed to the
+vault and the scheduler will ensure the relevant flow is started at the right time.
+
 \section{Assets and obligations}
 
 A ledger that cannot record the ownership of assets is not very useful. We define a set of classes that model
@@ -730,7 +742,7 @@ TODO: Complete this section
 
 TODO
 
-\section{Integration with existing infrastructure}
+\section{Scalability}
 
 TODO
 
@@ -1181,10 +1193,6 @@ are ideal for the task.
 
 Being able to connect live data structures directly to UI toolkits also contributes to the avoidance
 of XSS exploits, XSRF exploits and similar security problems based on losing track of buffer boundaries.
-
-\section{Event scheduling}\label{sec:event-scheduling}
-
-TODO
 
 \section{Future work}
 
