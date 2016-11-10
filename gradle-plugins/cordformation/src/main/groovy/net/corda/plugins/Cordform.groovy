@@ -3,10 +3,9 @@ package net.corda.plugins
 import org.apache.tools.ant.filters.FixCrLfFilter
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
+
 import java.nio.file.Path
 import java.nio.file.Paths
-import org.gradle.api.Project
-
 /**
  * Creates nodes based on the configuration of this task in the gradle configuration DSL.
  *
@@ -67,7 +66,7 @@ class Cordform extends DefaultTask {
      */
     protected void installRunScript() {
         project.copy {
-            from Cordformation.getPluginFile(project, "net.corda.plugins/runnodes")
+            from Cordformation.getPluginFile(project, "net/corda/plugins/runnodes")
             filter { String line -> line.replace("JAR_NAME", Node.JAR_NAME) }
             // Replaces end of line with lf to avoid issues with the bash interpreter and Windows style line endings.
             filter(FixCrLfFilter.class, eol: FixCrLfFilter.CrLf.newInstance("lf"))
