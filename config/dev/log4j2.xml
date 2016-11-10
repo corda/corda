@@ -50,7 +50,7 @@
             <AppenderRef ref="Console-Appender"/>
             <AppenderRef ref="RollingFile-Appender"/>
         </Root>
-        <Logger name="com.r3corda" level="info" additivity="false">
+        <Logger name="net.corda" level="info" additivity="false">
             <AppenderRef ref="Console-Appender"/>
             <AppenderRef ref="RollingFile-Appender"/>
         </Logger>

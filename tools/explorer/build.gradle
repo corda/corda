@@ -22,7 +22,7 @@ apply plugin: 'kotlin'
 apply plugin: 'application'
 
 sourceCompatibility = 1.8
-mainClassName = 'com.r3corda.explorer.Main'
+mainClassName = 'net.corda.explorer.Main'
 
 sourceSets {
     main {
@@ -75,6 +75,6 @@ dependencies {
 }
 
 task(runDemoNodes, dependsOn: 'classes', type: JavaExec) {
-    main = 'com.r3corda.explorer.MainKt'
+    main = 'net.corda.explorer.MainKt'
     classpath = sourceSets.main.runtimeClasspath
 }

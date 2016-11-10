@@ -1,11 +1,11 @@
-package com.r3corda.contracts
+package net.corda.contracts
 
-import com.r3corda.core.contracts.DOLLARS
-import com.r3corda.core.contracts.`issued by`
-import com.r3corda.core.serialization.OpaqueBytes
-import com.r3corda.core.utilities.DUMMY_PUBKEY_1
-import com.r3corda.core.utilities.TEST_TX_TIME
-import com.r3corda.testing.*
+import net.corda.core.contracts.DOLLARS
+import net.corda.core.contracts.`issued by`
+import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.DUMMY_PUBKEY_1
+import net.corda.core.utilities.TEST_TX_TIME
+import net.corda.testing.*
 import org.junit.Test
 import java.time.LocalDate
 import java.util.*

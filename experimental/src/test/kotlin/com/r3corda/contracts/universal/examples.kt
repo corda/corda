@@ -1,9 +1,9 @@
-package com.r3corda.contracts.universal
+package net.corda.contracts.universal
 
-import com.r3corda.core.contracts.Amount
-import com.r3corda.core.contracts.USD
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.generateKeyPair
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.USD
+import net.corda.core.crypto.Party
+import net.corda.core.crypto.generateKeyPair
 import java.math.BigDecimal
 import java.util.*
 

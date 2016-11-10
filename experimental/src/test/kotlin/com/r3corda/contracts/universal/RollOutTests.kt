@@ -1,9 +1,9 @@
-package com.r3corda.contracts.universal
+package net.corda.contracts.universal
 
-import com.r3corda.core.contracts.BusinessCalendar
-import com.r3corda.core.contracts.Frequency
-import com.r3corda.core.utilities.DUMMY_NOTARY
-import com.r3corda.testing.transaction
+import net.corda.core.contracts.BusinessCalendar
+import net.corda.core.contracts.Frequency
+import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.transaction
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals

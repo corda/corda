@@ -133,7 +133,7 @@ New features in this release:
 
 API changes:
 
-* The transaction types (Signed, Wire, LedgerTransaction) have moved to ``com.r3corda.core.transactions``. You can
+* The transaction types (Signed, Wire, LedgerTransaction) have moved to ``net.corda.core.transactions``. You can
   update your code by just deleting the broken import lines and letting your IDE re-import them from the right
   location.
 * ``AbstractStateReplacementProtocol.verifyProposal`` has changed its prototype in a minor way.
@@ -277,7 +277,7 @@ Summary of API changes (not exhaustive):
       inputs and outputs).
       ``TransactionBuilder()`` is now abstract, you should use ``TransactionType.General.Builder()`` for building transactions.
 
-* The cash contract has moved from ``com.r3corda.contracts`` to ``com.r3corda.contracts.cash``
+* The cash contract has moved from ``net.corda.contracts`` to ``net.corda.contracts.cash``
 * ``Amount`` class is now generic, to support non-currency types such as physical assets. Where you previously had just
   ``Amount``, you should now use ``Amount<Currency>``.
 * Refactored the Cash contract to have a new FungibleAsset superclass, to model all countable assets that can be merged

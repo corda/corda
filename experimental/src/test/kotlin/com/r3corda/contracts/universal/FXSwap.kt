@@ -1,7 +1,7 @@
-package com.r3corda.contracts.universal
+package net.corda.contracts.universal
 
-import com.r3corda.testing.*
-import com.r3corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.*
+import net.corda.core.utilities.DUMMY_NOTARY
 import org.junit.Test
 import java.time.Instant
 

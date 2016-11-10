@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="net.corda.node.visualiser.StateViewer">
+  <grid id="27dc6" binding="root" layout-manager="BorderLayout" hgap="15" vgap="15">
+    <constraints>
+      <xy x="20" y="20" width="500" height="400"/>
+    </constraints>
+    <properties>
+      <background color="-1"/>
+    </properties>
+    <border type="empty">
+      <size top="15" left="15" bottom="15" right="15"/>
+    </border>
+    <children>
+      <component id="c1614" class="javax.swing.JLabel">
+        <constraints border-constraint="North"/>
+        <properties>
+          <font style="1"/>
+          <text value="State viewer"/>
+        </properties>
+      </component>
+      <scrollpane id="2974d">
+        <constraints border-constraint="Center"/>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="8f1af" class="javax.swing.JTable" binding="propsTable">
+            <constraints/>
+            <properties>
+              <autoResizeMode value="3"/>
+              <showHorizontalLines value="false"/>
+            </properties>
+          </component>
+        </children>
+      </scrollpane>
+    </children>
+  </grid>
+</form>

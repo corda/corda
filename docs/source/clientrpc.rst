@@ -81,5 +81,5 @@ Wire protocol
 The client RPC wire protocol is not currently documented. To use it you must use the client library provided.
 This is likely to change in a future release.
 
-.. _CordaRPCClient: api/com.r3corda.client/-corda-r-p-c-client/index.html
-.. _CordaRPCOps: api/com.r3corda.node.services.messaging/-corda-r-p-c-ops/index.html
+.. _CordaRPCClient: api/net.corda.client/-corda-r-p-c-client/index.html
+.. _CordaRPCOps: api/net.corda.node.services.messaging/-corda-r-p-c-ops/index.html

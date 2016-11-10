@@ -31,7 +31,7 @@ There is a worked example of attachments, which relays a simple document from on
 trade protocol" also includes an attachment, however it is a significantly more complex demo, and less well suited
 for a tutorial.
 
-The demo code is in the file "src/main/kotlin/com/r3corda/demos/attachment/AttachmentDemo.kt", with the core logic
+The demo code is in the file "src/main/kotlin/net.corda.demos/attachment/AttachmentDemo.kt", with the core logic
 contained within the two functions ``runRecipient()`` and ``runSender()``. We'll look at the recipient function first;
 this subscribes to notifications of new validated transactions, and if it receives a transaction containing attachments,
 loads the first attachment from storage, and checks it matches the expected attachment ID. ``ResolveTransactionsProtocol``
@@ -72,7 +72,7 @@ transaction and send it to the recipient node:
         val serviceHub = node.services
         // Make sure we have the file in storage
         if (serviceHub.storageService.attachments.openAttachment(PROSPECTUS_HASH) == null) {
-            com.r3corda.demos.Role::class.java.getResourceAsStream("bank-of-london-cp.jar").use {
+            net.corda.demos.Role::class.java.getResourceAsStream("bank-of-london-cp.jar").use {
                 val id = node.storage.attachments.importAttachment(it)
                 assertEquals(PROSPECTUS_HASH, id)
             }

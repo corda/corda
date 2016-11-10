@@ -1,7 +1,7 @@
-package com.r3corda.contracts.universal
+package net.corda.contracts.universal
 
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.Party
+import net.corda.core.crypto.generateKeyPair
 import org.junit.Test
 import java.util.*
 

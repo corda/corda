@@ -1,11 +1,11 @@
-package com.r3corda.contracts.universal
+package net.corda.contracts.universal
 
-import com.r3corda.core.contracts.BusinessCalendar
-import com.r3corda.core.contracts.FixOf
-import com.r3corda.core.contracts.Frequency
-import com.r3corda.core.contracts.Tenor
-import com.r3corda.core.utilities.DUMMY_NOTARY
-import com.r3corda.testing.transaction
+import net.corda.core.contracts.BusinessCalendar
+import net.corda.core.contracts.FixOf
+import net.corda.core.contracts.Frequency
+import net.corda.core.contracts.Tenor
+import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.transaction
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
@@ -199,32 +199,32 @@ class Cap {
 
             tweak {
                 // wrong source
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBORx", tradeDate, Tenor("3M")), 1.0.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.core.contracts.Fix(FixOf("LIBORx", tradeDate, Tenor("3M")), 1.0.bd))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong date
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate.plusYears(1), Tenor("3M")), 1.0.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.core.contracts.Fix(FixOf("LIBOR", tradeDate.plusYears(1), Tenor("3M")), 1.0.bd))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong tenor
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("9M")), 1.0.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("9M")), 1.0.bd))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("3M")), 1.5.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("3M")), 1.5.bd))) }
 
                 this `fails with` "output state does not reflect fix command"
             }
 
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("3M")), 1.0.bd))) }
+            command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("3M")), 1.0.bd))) }
 
             this.verifies()
         }
@@ -283,32 +283,32 @@ class Cap {
 
             tweak {
                 // wrong source
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBORx", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("3M")), 1.0.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.core.contracts.Fix(FixOf("LIBORx", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("3M")), 1.0.bd))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong date
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01").plusYears(1), Tenor("3M")), 1.0.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.core.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01").plusYears(1), Tenor("3M")), 1.0.bd))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong tenor
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("9M")), 1.0.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.core.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("9M")), 1.0.bd))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("3M")), 1.5.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.core.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("3M")), 1.5.bd))) }
 
                 this `fails with` "output state does not reflect fix command"
             }
 
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("3M")), 1.0.bd))) }
+            command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.core.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("3M")), 1.0.bd))) }
 
             this.verifies()
         }

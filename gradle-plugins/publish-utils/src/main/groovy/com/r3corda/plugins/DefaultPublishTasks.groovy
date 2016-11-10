@@ -1,4 +1,4 @@
-package com.r3corda.plugins
+package net.corda.plugins
 
 import org.gradle.api.*
 import org.gradle.api.tasks.bundling.Jar

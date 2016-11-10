@@ -1,13 +1,13 @@
-package com.r3corda.contracts
+package net.corda.contracts
 
-import com.r3corda.contracts.asset.Cash
-import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.serialization.OpaqueBytes
-import com.r3corda.core.utilities.DUMMY_NOTARY
-import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
-import com.r3corda.testing.node.MockServices
-import com.r3corda.testing.*
+import net.corda.contracts.asset.Cash
+import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.testing.node.MockServices
+import net.corda.testing.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant

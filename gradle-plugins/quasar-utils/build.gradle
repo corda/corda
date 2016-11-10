@@ -14,7 +14,7 @@ publishing {
     publications {
         quasarUtils(MavenPublication) {
             from components.java
-            groupId  'com.r3corda.plugins'
+            groupId  'net.corda.plugins'
             artifactId 'quasar-utils'
 
             artifact sourceJar

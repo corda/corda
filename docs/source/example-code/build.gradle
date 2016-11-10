@@ -29,11 +29,11 @@ dependencies {
     }
 }
 
-mainClassName = "com.r3corda.docs.ClientRpcTutorialKt"
+mainClassName = "net.corda.docs.ClientRpcTutorialKt"
 
 task getClientRpcTutorial(type: CreateStartScripts) {
     dependsOn(classes)
-    mainClassName = "com.r3corda.docs.ClientRpcTutorialKt"
+    mainClassName = "net.corda.docs.ClientRpcTutorialKt"
     applicationName = "client-rpc-tutorial"
     defaultJvmOpts = []
     outputDir = new File(project.buildDir, 'scripts')

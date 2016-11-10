@@ -47,7 +47,7 @@ allprojects {
     }
 
     // Our version: bump this on release.
-    group 'com.r3corda'
+    group 'net.corda'
     version '0.6-SNAPSHOT'
 }
 
@@ -92,7 +92,7 @@ tasks.withType(Test) {
 
 // TODO: Move fat JAR building into node subproject.
 task buildCordaJAR(type: FatCapsule, dependsOn: ['quasarScan', 'buildCertSigningRequestUtilityJAR']) {
-    applicationClass 'com.r3corda.node.MainKt'
+    applicationClass 'net.corda.node.MainKt'
     archiveName 'corda.jar'
     applicationSource = files(project.tasks.findByName('jar'), 'node/build/classes/main/CordaCaplet.class')
 
@@ -106,7 +106,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: ['quasarScan', 'buildCertSigning
 }
 
 task buildCertSigningRequestUtilityJAR(type: FatCapsule, dependsOn: project.jar) {
-    applicationClass 'com.r3corda.node.utilities.certsigning.CertificateSignerKt'
+    applicationClass 'net.corda.node.utilities.certsigning.CertificateSignerKt'
     archiveName 'certSigningRequestUtility.jar'
     capsuleManifest {
         systemProperties['log4j.configuration'] = 'log4j2.xml'

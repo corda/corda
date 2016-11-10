@@ -1,6 +1,6 @@
-package com.r3corda.contracts.universal
+package net.corda.contracts.universal
 
-import com.r3corda.core.contracts.Frequency
+import net.corda.core.contracts.Frequency
 import java.math.BigDecimal
 
 /**

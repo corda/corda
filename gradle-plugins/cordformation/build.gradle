@@ -16,7 +16,7 @@ publishing {
     publications {
         cordformation(MavenPublication) {
             from components.java
-            groupId  'com.r3corda.plugins'
+            groupId  'net.corda.plugins'
             artifactId 'cordformation'
 
             artifact sourceJar

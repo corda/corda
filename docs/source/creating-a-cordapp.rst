@@ -87,9 +87,9 @@ The user name and password for the login are as per the node data source configu
 The name and column layout of the internal node tables is in a state of flux and should not be relied upon to remain static
 at the present time, and should certainly be treated as read-only.
 
-.. _CordaPluginRegistry: api/com.r3corda.core.node/-corda-plugin-registry/index.html
-.. _ServiceHubInternal: api/com.r3corda.node.services.api/-service-hub-internal/index.html
-.. _ServiceHub: api/com.r3corda.node.services.api/-service-hub/index.html
+.. _CordaPluginRegistry: api/net.corda.core.node/-corda-plugin-registry/index.html
+.. _ServiceHubInternal: api/net.corda.node.services.api/-service-hub-internal/index.html
+.. _ServiceHub: api/net.corda.node.services.api/-service-hub/index.html
 
 Building Against Corda
 ----------------------
@@ -104,7 +104,7 @@ root directory of Corda
     ./gradlew install
 
 This will publish corda-$version.jar, finance-$version.jar, core-$version.jar and node-$version.jar to the
-group com.r3corda. You can now depend on these as you normally would a Maven dependency.
+group net.corda. You can now depend on these as you normally would a Maven dependency.
 
 Gradle Plugins for Cordapps
 ===========================
@@ -148,15 +148,15 @@ To build against Corda and the plugins that cordapps use, update your build.grad
 
         dependencies {
             ... your dependencies ...
-            classpath "com.r3corda.plugins:cordformation:$corda_version"
-            classpath "com.r3corda.plugins:quasar-utils:$corda_version"
-            classpath "com.r3corda.plugins:publish-utils:$corda_version"
+            classpath "net.corda.plugins:cordformation:$corda_version"
+            classpath "net.corda.plugins:quasar-utils:$corda_version"
+            classpath "net.corda.plugins:publish-utils:$corda_version"
         }
     }
 
-    apply plugin: 'com.r3corda.plugins.cordformation'
-    apply plugin: 'com.r3corda.plugins.quasar-utils'
-    apply plugin: 'com.r3corda.plugins.publish-utils'
+    apply plugin: 'net.corda.plugins.cordformation'
+    apply plugin: 'net.corda.plugins.quasar-utils'
+    apply plugin: 'net.corda.plugins.publish-utils'
 
     repositories {
         mavenLocal()
@@ -164,10 +164,10 @@ To build against Corda and the plugins that cordapps use, update your build.grad
     }
 
     dependencies {
-        compile "com.r3corda:core:$corda_version"
-        compile "com.r3corda:finance:$corda_version"
-        compile "com.r3corda:node:$corda_version"
-        compile "com.r3corda:corda:$corda_version"
+        compile "net.corda.core:$corda_version"
+        compile "net.corda.finance:$corda_version"
+        compile "net.corda.node:$corda_version"
+        compile "net.corda.corda:$corda_version"
         ... other dependencies here ...
     }
 
@@ -197,14 +197,14 @@ Cordformation is the local node deployment system for Cordapps, the nodes genera
 experimenting, debugging, and testing node configurations and setups but not intended for production or testnet
 deployment.
 
-To use this gradle plugin you must add a new task that is of the type ``com.r3corda.plugins.Cordform`` to your
+To use this gradle plugin you must add a new task that is of the type ``net.corda.plugins.Cordform`` to your
 build.gradle and then configure the nodes you wish to deploy with the Node and nodes configuration DSL.
 This DSL is specified in the `JavaDoc <api/index.html>`_. An example of this is in the template-cordapp and below
 is a three node example;
 
 .. code-block:: text
 
-    task deployNodes(type: com.r3corda.plugins.Cordform, dependsOn: ['build']) {
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         directory "./build/nodes" // The output directory
         networkMap "Controller" // The artemis address of the node named here will be used as the networkMapAddress on all other nodes.
         node {
