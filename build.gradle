@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.0.3'
+    ext.kotlin_version = '1.0.5'
     ext.quasar_version = '0.7.6'
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.4.0'
