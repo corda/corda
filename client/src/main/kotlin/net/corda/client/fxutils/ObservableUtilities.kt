@@ -1,6 +1,7 @@
 package net.corda.client.fxutils
 
 import javafx.beans.binding.Bindings
+import javafx.beans.binding.BooleanBinding
 import javafx.beans.property.ReadOnlyObjectWrapper
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
@@ -277,5 +278,25 @@ fun <A> ObservableList<A>.last(): ObservableValue<A?> {
 }
 
 fun <T : Any> ObservableList<T>.unique(): ObservableList<T> {
-    return associateByAggregation { it }.getObservableValues().map { Bindings.valueAt(it, 0) }.flatten()
+    return AggregatedList(this, { it }, { key, _list -> key })
+}
+
+fun ObservableValue<*>.isNotNull(): BooleanBinding {
+    return Bindings.createBooleanBinding({ this.value != null }, arrayOf(this))
+}
+
+/**
+ * Return first element of the observable list as observable value.
+ * Return provided default value if the list is empty.
+ */
+fun <A> ObservableList<A>.firstOrDefault(default: ObservableValue<A?>, predicate: (A) -> Boolean): ObservableValue<A?> {
+    return Bindings.createObjectBinding({ this.firstOrNull(predicate) ?: default.value }, arrayOf(this, default))
+}
+
+/**
+ * Return first element of the observable list as observable value.
+ * Return ObservableValue(null) if the list is empty.
+ */
+fun <A> ObservableList<A>.firstOrNullObservable(predicate: (A) -> Boolean): ObservableValue<A?> {
+    return Bindings.createObjectBinding({ this.firstOrNull(predicate) }, arrayOf(this))
 }

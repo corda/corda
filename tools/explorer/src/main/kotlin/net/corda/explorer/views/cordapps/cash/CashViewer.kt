@@ -1,4 +1,4 @@
-package net.corda.explorer.views.cordapps
+package net.corda.explorer.views.cordapps.cash
 
 import com.sun.javafx.collections.ObservableListWrapper
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
@@ -8,11 +8,9 @@ import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.geometry.Insets
-import javafx.scene.Node
 import javafx.scene.Parent
 import javafx.scene.chart.NumberAxis
 import javafx.scene.control.*
-import javafx.scene.image.ImageView
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.HBox
@@ -29,10 +27,14 @@ import net.corda.explorer.formatters.AmountFormatter
 import net.corda.explorer.identicon.identicon
 import net.corda.explorer.identicon.identiconToolTip
 import net.corda.explorer.model.CordaView
+import net.corda.explorer.model.CordaWidget
 import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.ui.*
-import net.corda.explorer.views.*
+import net.corda.explorer.views.SearchField
+import net.corda.explorer.views.runInFxApplicationThread
+import net.corda.explorer.views.stringConverter
+import net.corda.explorer.views.toStringWithSuffix
 import org.fxmisc.easybind.EasyBind
 import tornadofx.*
 import java.time.Instant
@@ -44,7 +46,7 @@ class CashViewer : CordaView("Cash") {
     override val root: BorderPane by fxml()
     override val icon: FontAwesomeIcon = FontAwesomeIcon.MONEY
     // View's widget.
-    override val widget: Node = CashWidget()
+    override val widgets = listOf(CordaWidget("Treasury", CashWidget())).observable()
     // Left pane
     private val leftPane: VBox by fxid()
     private val splitPane: SplitPane by fxid()
@@ -60,7 +62,7 @@ class CashViewer : CordaView("Cash") {
     private val toggleButton by fxid<Button>()
     // Inject observables
     private val cashStates by observableList(ContractStateModel::cashStates)
-    private val reportingCurrency by observableValue(SettingsModel::reportingCurrency)
+    private val reportingCurrency by observableValue(SettingsModel::reportingCurrencyProperty)
     private val reportingExchange by observableValue(ReportingCurrencyModel::reportingExchange)
 
     private val selectedNode = cashViewerTable.singleRowSelection().map {
@@ -120,7 +122,7 @@ class CashViewer : CordaView("Cash") {
 
             stateIdValueLabel.apply {
                 text = stateRow.stateAndRef.ref.toString().substring(0, 16) + "...[${stateRow.stateAndRef.ref.index}]"
-                graphic = ImageView(identicon(stateRow.stateAndRef.ref.txhash, 10.0))
+                graphic = identicon(stateRow.stateAndRef.ref.txhash, 30.0)
                 tooltip = identiconToolTip(stateRow.stateAndRef.ref.txhash)
             }
             equivLabel.textProperty().bind(equivAmount.map { it.token.currencyCode.toString() })
@@ -140,14 +142,14 @@ class CashViewer : CordaView("Cash") {
          * issuer strings.
          */
         val searchField = SearchField(cashStates,
-                { state, text -> state.state.data.amount.token.product.toString().contains(text, true) },
-                { state, text -> state.state.data.amount.token.issuer.party.toString().contains(text, true) }
+                "Currency" to { state, text -> state.state.data.amount.token.product.toString().contains(text, true) },
+                "Issuer" to { state, text -> state.state.data.amount.token.issuer.party.toString().contains(text, true) }
         )
         root.top = hbox(5.0) {
             button("New Transaction", FontAwesomeIconView(FontAwesomeIcon.PLUS)) {
                 setOnMouseClicked {
                     if (it.button == MouseButton.PRIMARY) {
-                        NewTransaction().show(this@CashViewer.root.scene.window)
+                        find<NewTransaction>().show(this@CashViewer.root.scene.window)
                     }
                 }
             }
@@ -279,7 +281,7 @@ class CashViewer : CordaView("Cash") {
 
     private class CashWidget() : VBox() {
         // Inject data.
-        private val reportingCurrency by observableValue(SettingsModel::reportingCurrency)
+        private val reportingCurrency by observableValue(SettingsModel::reportingCurrencyProperty)
         private val cashStates by observableList(ContractStateModel::cashStates)
         private val exchangeRate: ObservableValue<ExchangeRate> by observableValue(ExchangeRateModel::exchangeRate)
         private val sumAmount = AmountBindings.sumAmountExchange(

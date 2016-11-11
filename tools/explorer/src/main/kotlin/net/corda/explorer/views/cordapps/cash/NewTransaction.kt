@@ -1,12 +1,12 @@
-package net.corda.explorer.views
+package net.corda.explorer.views.cordapps.cash
 
 import javafx.beans.binding.Bindings
 import javafx.beans.binding.BooleanBinding
 import javafx.beans.property.SimpleObjectProperty
-import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import javafx.scene.control.*
 import javafx.stage.Window
+import net.corda.client.fxutils.isNotNull
 import net.corda.client.fxutils.map
 import net.corda.client.fxutils.unique
 import net.corda.client.model.*
@@ -15,19 +15,22 @@ import net.corda.core.crypto.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.explorer.model.CashTransaction
+import net.corda.explorer.views.bigDecimalFormatter
+import net.corda.explorer.views.byteFormatter
+import net.corda.explorer.views.stringConverter
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.flows.CashFlowResult
 import net.corda.node.services.messaging.startFlow
 import org.controlsfx.dialog.ExceptionDialog
-import tornadofx.View
+import tornadofx.Fragment
+import tornadofx.booleanBinding
 import tornadofx.observable
 import java.math.BigDecimal
 import java.util.*
 
-class NewTransaction : View() {
+class NewTransaction : Fragment() {
     override val root by fxml<DialogPane>()
-
     // Components
     private val transactionTypeCB by fxid<ChoiceBox<CashTransaction>>()
     private val partyATextField by fxid<TextField>()
@@ -44,22 +47,15 @@ class NewTransaction : View() {
     private val availableAmount by fxid<Label>()
     private val amountLabel by fxid<Label>()
     private val amountTextField by fxid<TextField>()
-
     private val amount = SimpleObjectProperty<BigDecimal>()
     private val issueRef = SimpleObjectProperty<Byte>()
-
     // Inject data
     private val parties by observableList(NetworkIdentityModel::parties)
     private val rpcProxy by observableValue(NodeMonitorModel::proxyObservable)
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
     private val notaries by observableList(NetworkIdentityModel::notaries)
     private val cash by observableList(ContractStateModel::cash)
-
     private val executeButton = ButtonType("Execute", ButtonBar.ButtonData.APPLY)
-
-    private fun ObservableValue<*>.isNotNull(): BooleanBinding {
-        return Bindings.createBooleanBinding({ this.value != null }, arrayOf(this))
-    }
 
     fun show(window: Window): Unit {
         dialog(window).showAndWait().ifPresent {
@@ -139,11 +135,11 @@ class NewTransaction : View() {
         issuerChoiceBox.apply {
             items = cash.map { it.token.issuer.party }.unique().sorted()
             converter = stringConverter { it.name }
-            visibleProperty().bind(transactionTypeCB.valueProperty().map { it == CashTransaction.Pay || it == CashTransaction.Exit })
+            visibleProperty().bind(transactionTypeCB.valueProperty().map { it == CashTransaction.Pay })
         }
         issuerTextField.apply {
             textProperty().bind(myIdentity.map { it?.legalIdentity?.name })
-            visibleProperty().bind(transactionTypeCB.valueProperty().map { it == CashTransaction.Issue })
+            visibleProperty().bind(transactionTypeCB.valueProperty().map { it == CashTransaction.Issue || it == CashTransaction.Exit })
             isEditable = false
         }
         // Issue Reference
@@ -158,21 +154,16 @@ class NewTransaction : View() {
         // TODO : Create a currency model to store these values
         currencyChoiceBox.items = FXCollections.observableList(setOf(USD, GBP, CHF).toList())
         currencyChoiceBox.visibleProperty().bind(transactionTypeCB.valueProperty().isNotNull)
-
+        val issuer = Bindings.createObjectBinding({ if (issuerChoiceBox.isVisible) issuerChoiceBox.value else myIdentity.value?.legalIdentity }, arrayOf(myIdentity, issuerChoiceBox.visibleProperty(), issuerChoiceBox.valueProperty()))
         availableAmount.visibleProperty().bind(
-                arrayListOf(issuerChoiceBox, currencyChoiceBox)
-                        .map { it.valueProperty().isNotNull.and(it.visibleProperty()) }
-                        .reduce(BooleanBinding::and)
+                issuer.isNotNull.and(currencyChoiceBox.valueProperty().isNotNull).and(transactionTypeCB.valueProperty().booleanBinding(transactionTypeCB.valueProperty()) { it != CashTransaction.Issue })
         )
         availableAmount.textProperty()
                 .bind(Bindings.createStringBinding({
-                    val filteredCash = cash.filtered {
-                        it.token.issuer.party == issuerChoiceBox.value &&
-                                it.token.product == currencyChoiceBox.value
-                    }.map { it.withoutIssuer().quantity }
+                    val filteredCash = cash.filtered { it.token.issuer.party == issuer.value && it.token.product == currencyChoiceBox.value }
+                            .map { it.withoutIssuer().quantity }
                     "${filteredCash.sum()} ${currencyChoiceBox.value?.currencyCode} Available"
                 }, arrayOf(currencyChoiceBox.valueProperty(), issuerChoiceBox.valueProperty())))
-
         // Amount
         amountLabel.visibleProperty().bind(transactionTypeCB.valueProperty().isNotNull)
         amountTextField.textFormatter = bigDecimalFormatter().apply { amount.bind(this.valueProperty()) }
@@ -183,7 +174,7 @@ class NewTransaction : View() {
                 myIdentity.isNotNull(),
                 transactionTypeCB.valueProperty().isNotNull,
                 partyBChoiceBox.visibleProperty().not().or(partyBChoiceBox.valueProperty().isNotNull),
-                issuerChoiceBox.visibleProperty().not().or(partyBChoiceBox.valueProperty().isNotNull),
+                issuerChoiceBox.visibleProperty().not().or(issuerChoiceBox.valueProperty().isNotNull),
                 amountTextField.textProperty().isNotEmpty,
                 currencyChoiceBox.valueProperty().isNotNull
         ).reduce(BooleanBinding::and)

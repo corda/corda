@@ -3,7 +3,7 @@
 <?import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<GridPane hgap="10" stylesheets="@../css/corda.css" vgap="10" xmlns="http://javafx.com/javafx/8.0.112-ea" xmlns:fx="http://javafx.com/fxml/1">
+<GridPane styleClass="contractStateView" hgap="10" stylesheets="@../css/corda.css" vgap="10" xmlns="http://javafx.com/javafx/8.0.112-ea" xmlns:fx="http://javafx.com/fxml/1">
     <TitledPane fx:id="inputPane" collapsible="false" text="Input" GridPane.fillWidth="true">
         <ListView fx:id="inputs"/>
     </TitledPane>
@@ -15,7 +15,7 @@
     </TitledPane>
 
     <TitledPane fx:id="signaturesPane" collapsible="false" text="Signatures" GridPane.columnSpan="3" GridPane.rowIndex="1">
-        <ListView fx:id="signatures"/>
+        <VBox fx:id="signatures" spacing="5"/>
     </TitledPane>
 
     <columnConstraints>
@@ -25,6 +25,6 @@
     </columnConstraints>
     <rowConstraints>
         <RowConstraints vgrow="ALWAYS"/>
-        <RowConstraints/>
+        <RowConstraints vgrow="NEVER"/>
     </rowConstraints>
 </GridPane>

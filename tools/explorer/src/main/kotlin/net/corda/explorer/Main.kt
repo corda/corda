@@ -8,19 +8,21 @@ import javafx.scene.control.ButtonType
 import javafx.scene.image.Image
 import javafx.stage.Stage
 import jfxtras.resources.JFXtrasFontRoboto
+import net.corda.client.CordaRPCClient
 import net.corda.client.mock.EventGenerator
 import net.corda.client.model.Models
-import net.corda.client.model.NodeMonitorModel
+import net.corda.client.model.observableValue
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.ServiceType
 import net.corda.explorer.model.CordaViewModel
+import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.views.*
-import net.corda.explorer.views.cordapps.CashViewer
+import net.corda.explorer.views.cordapps.cash.CashViewer
 import net.corda.flows.CashFlow
 import net.corda.node.driver.PortAllocation
 import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.messaging.startFlow
 import net.corda.node.services.startFlowPermission
@@ -35,24 +37,25 @@ import java.util.*
 /**
  * Main class for Explorer, you will need Tornado FX to run the explorer.
  */
-class Main : App() {
-    override val primaryView = MainView::class
+class Main : App(MainView::class) {
     private val loginView by inject<LoginView>()
+    private val fullscreen by observableValue(SettingsModel::fullscreenProperty)
 
     override fun start(stage: Stage) {
         // Login to Corda node
-        loginView.login { hostAndPort, username, password ->
-            Models.get<NodeMonitorModel>(MainView::class).register(hostAndPort, configureTestSSL(), username, password)
-        }
         super.start(stage)
         stage.minHeight = 600.0
         stage.minWidth = 800.0
+        stage.isFullScreen = fullscreen.value
         stage.setOnCloseRequest {
             val button = Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to exit Corda explorer?").apply {
                 initOwner(stage.scene.window)
             }.showAndWait().get()
             if (button != ButtonType.OK) it.consume()
         }
+        stage.hide()
+        loginView.login()
+        stage.show()
     }
 
     init {
@@ -103,32 +106,55 @@ fun main(args: Array<String>) {
     val portAllocation = PortAllocation.Incremental(20000)
     driver(portAllocation = portAllocation) {
         val user = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>()))
+        // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
         val notary = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-        val alice = startNode("Alice", rpcUsers = arrayListOf(user))
-        val bob = startNode("Bob", rpcUsers = arrayListOf(user))
+        val alice = startNode("Alice", rpcUsers = arrayListOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))))
+        val bob = startNode("Bob", rpcUsers = arrayListOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))))
+        val issuer = startNode("Royal Mint", rpcUsers = arrayListOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))))
 
         val notaryNode = notary.get()
         val aliceNode = alice.get()
         val bobNode = bob.get()
+        val issuerNode = issuer.get()
 
-        arrayOf(notaryNode, aliceNode, bobNode).forEach {
+        arrayOf(notaryNode, aliceNode, bobNode, issuerNode).forEach {
             println("${it.nodeInfo.legalIdentity} started on ${ArtemisMessagingComponent.toHostAndPort(it.nodeInfo.address)}")
         }
         // Register with alice to use alice's RPC proxy to create random events.
-        Models.get<NodeMonitorModel>(Main::class).register(ArtemisMessagingComponent.toHostAndPort(aliceNode.nodeInfo.address), FullNodeConfiguration(aliceNode.config), user.username, user.password)
-        val rpcProxy = Models.get<NodeMonitorModel>(Main::class).proxyObservable.get()
+        val aliceClient = CordaRPCClient(ArtemisMessagingComponent.toHostAndPort(aliceNode.nodeInfo.address), FullNodeConfiguration(aliceNode.config))
+        aliceClient.start(user.username, user.password)
+        val aliceRPC = aliceClient.proxy()
 
-        for (i in 0..10) {
+        val bobClient = CordaRPCClient(ArtemisMessagingComponent.toHostAndPort(bobNode.nodeInfo.address), FullNodeConfiguration(bobNode.config))
+        bobClient.start(user.username, user.password)
+        val bobRPC = bobClient.proxy()
+
+        val issuerClient = CordaRPCClient(ArtemisMessagingComponent.toHostAndPort(issuerNode.nodeInfo.address), FullNodeConfiguration(issuerNode.config))
+        issuerClient.start(user.username, user.password)
+        val bocRPC = issuerClient.proxy()
+
+        val eventGenerator = EventGenerator(
+                parties = listOf(aliceNode.nodeInfo.legalIdentity, bobNode.nodeInfo.legalIdentity, issuerNode.nodeInfo.legalIdentity),
+                notary = notaryNode.nodeInfo.notaryIdentity
+        )
+
+        for (i in 0..1000) {
             Thread.sleep(500)
-            val eventGenerator = EventGenerator(
-                    parties = listOf(aliceNode.nodeInfo.legalIdentity, bobNode.nodeInfo.legalIdentity),
-                    notary = notaryNode.nodeInfo.notaryIdentity
-            )
-            eventGenerator.clientToServiceCommandGenerator.map { command ->
-                rpcProxy?.startFlow(::CashFlow, command)
+            listOf(aliceRPC, bobRPC).forEach {
+                eventGenerator.clientCommandGenerator.map { command ->
+                    it.startFlow(::CashFlow, command)
+                    Unit
+                }.generate(SplittableRandom())
+            }
+            eventGenerator.bankOfCordaCommandGenerator.map { command ->
+                bocRPC.startFlow(::CashFlow, command)
                 Unit
             }.generate(SplittableRandom())
         }
+
+        aliceClient.close()
+        bobClient.close()
+        issuerClient.close()
         waitForAllNodesToFinish()
     }
 }

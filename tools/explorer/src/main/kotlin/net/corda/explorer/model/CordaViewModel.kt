@@ -2,6 +2,7 @@ package net.corda.explorer.model
 
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
 import javafx.beans.property.SimpleObjectProperty
+import javafx.collections.ObservableList
 import javafx.scene.Node
 import tornadofx.View
 import tornadofx.find
@@ -24,10 +25,12 @@ class CordaViewModel {
  * TODO : "goto" functionality?
  */
 abstract class CordaView(title: String? = null) : View(title) {
-    abstract val widget: Node?
+    open val widgets: ObservableList<CordaWidget> = emptyList<CordaWidget>().observable()
     abstract val icon: FontAwesomeIcon
 
     init {
         if (title == null) super.title = javaClass.simpleName
     }
 }
+
+data class CordaWidget(val name: String, val node: Node)

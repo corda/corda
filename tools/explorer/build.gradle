@@ -48,7 +48,7 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
-    compile 'no.tornado:tornadofx:1.5.6'
+    compile 'no.tornado:tornadofx:1.5.7'
 
     // Corda Core: Data structures and basic types needed to work with Corda.
     compile project(':core')

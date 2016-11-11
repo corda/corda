@@ -3,7 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<DialogPane stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
+<DialogPane stylesheets="@../../../css/corda.css" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
     <content>
         <GridPane hgap="10" vgap="10">
             <!-- Row 0 -->
@@ -24,7 +24,7 @@
                 <ChoiceBox fx:id="issuerChoiceBox" maxWidth="Infinity"/>
                 <TextField fx:id="issuerTextField" maxWidth="Infinity" prefWidth="100" visible="false"/>
             </StackPane>
-            <Label fx:id="issueRefLabel" text="Issuer Reference : " GridPane.halignment="RIGHT" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+            <Label fx:id="issueRefLabel" text="Issue Reference : " GridPane.halignment="RIGHT" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
 
             <TextField fx:id="issueRefTextField" prefWidth="50" GridPane.columnIndex="4" GridPane.rowIndex="3"/>
 

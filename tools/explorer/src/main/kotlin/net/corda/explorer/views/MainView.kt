@@ -8,12 +8,15 @@ import javafx.geometry.Pos
 import javafx.scene.Parent
 import javafx.scene.control.ContentDisplay
 import javafx.scene.control.MenuButton
+import javafx.scene.control.MenuItem
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
 import javafx.scene.text.Font
 import javafx.scene.text.TextAlignment
+import javafx.stage.Stage
+import javafx.stage.WindowEvent
 import net.corda.client.fxutils.ChosenList
 import net.corda.client.fxutils.map
 import net.corda.client.model.NetworkIdentityModel
@@ -31,6 +34,7 @@ class MainView : View() {
 
     // Inject components.
     private val userButton by fxid<MenuButton>()
+    private val exit by fxid<MenuItem>()
     private val sidebar by fxid<VBox>()
     private val selectionBorderPane by fxid<BorderPane>()
 
@@ -46,11 +50,14 @@ class MainView : View() {
     init {
         // Header
         userButton.textProperty().bind(myIdentity.map { it?.legalIdentity?.name })
+        exit.setOnAction {
+            (root.scene.window as Stage).fireEvent(WindowEvent(root.scene.window, WindowEvent.WINDOW_CLOSE_REQUEST))
+        }
         // Sidebar
         val menuItems = registeredViews.map {
             // This needed to be declared val or else it will get GCed and listener unregistered.
-            val buttonStyle = ChosenList(selectedView.map { selected->
-                if(selected == it) listOf(menuItemCSS, menuItemSelectedCSS).observable() else listOf(menuItemCSS).observable()
+            val buttonStyle = ChosenList(selectedView.map { selected ->
+                if (selected == it) listOf(menuItemCSS, menuItemSelectedCSS).observable() else listOf(menuItemCSS).observable()
             })
             stackpane {
                 button(it.title) {
