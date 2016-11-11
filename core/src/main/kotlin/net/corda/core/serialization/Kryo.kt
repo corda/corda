@@ -445,7 +445,7 @@ var Kryo.attachmentStorage: AttachmentStorage?
 //Used in Merkle tree calculation. It doesn't cover all the cases of unstable serialization format.
 fun extendKryoHash(kryo: Kryo): Kryo {
     return kryo.apply {
-        noReferencesWithin<TransactionState<ContractState>>()
+        setReferences(false)
         register(LinkedHashMap::class.java, MapSerializer())
         register(HashMap::class.java, OrderedSerializer)
     }
