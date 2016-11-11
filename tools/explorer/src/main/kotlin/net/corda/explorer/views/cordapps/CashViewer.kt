@@ -1,20 +1,8 @@
-package net.corda.explorer.views
+package net.corda.explorer.views.cordapps
 
-import net.corda.client.fxutils.*
-import net.corda.client.model.*
-import net.corda.contracts.asset.Cash
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.withoutIssuer
-import net.corda.core.crypto.Party
-import net.corda.explorer.formatters.AmountFormatter
-import net.corda.explorer.identicon.identicon
-import net.corda.explorer.identicon.identiconToolTip
-import net.corda.explorer.model.ReportingCurrencyModel
-import net.corda.explorer.model.SettingsModel
-import net.corda.explorer.ui.*
 import com.sun.javafx.collections.ObservableListWrapper
-import javafx.application.Platform
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView
 import javafx.beans.binding.Bindings
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
@@ -25,54 +13,38 @@ import javafx.scene.Parent
 import javafx.scene.chart.NumberAxis
 import javafx.scene.control.*
 import javafx.scene.image.ImageView
+import javafx.scene.input.MouseButton
 import javafx.scene.layout.BorderPane
+import javafx.scene.layout.HBox
+import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
+import net.corda.client.fxutils.*
+import net.corda.client.model.*
+import net.corda.contracts.asset.Cash
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.withoutIssuer
+import net.corda.core.crypto.Party
+import net.corda.explorer.formatters.AmountFormatter
+import net.corda.explorer.identicon.identicon
+import net.corda.explorer.identicon.identiconToolTip
+import net.corda.explorer.model.CordaView
+import net.corda.explorer.model.ReportingCurrencyModel
+import net.corda.explorer.model.SettingsModel
+import net.corda.explorer.ui.*
+import net.corda.explorer.views.*
 import org.fxmisc.easybind.EasyBind
 import tornadofx.*
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.*
 
-class CashViewer : View(), CordaView {
+class CashViewer : CordaView("Cash") {
     // Inject UI elements.
     override val root: BorderPane by fxml()
-
+    override val icon: FontAwesomeIcon = FontAwesomeIcon.MONEY
     // View's widget.
-    override val viewName = "Cash"
-    override val widget: Node = vbox {
-        padding = Insets(0.0, 10.0, 0.0, 0.0)
-        val xAxis = NumberAxis().apply {
-            //isAutoRanging = true
-            isMinorTickVisible = false
-            isForceZeroInRange = false
-            tickLabelFormatter = stringConverter {
-                Instant.ofEpochMilli(it.toLong()).atZone(TimeZone.getDefault().toZoneId()).toLocalTime().toString()
-            }
-        }
-        val yAxis = NumberAxis().apply {
-            isAutoRanging = true
-            isMinorTickVisible = false
-            isForceZeroInRange = false
-            tickLabelFormatter = stringConverter { it.toStringWithSuffix(0) }
-        }
-        linechart(null, xAxis, yAxis) {
-            series("USD") {
-                runAsync {
-                    while (true) {
-                        Thread.sleep(1000)
-                        Platform.runLater {
-                            // Modify data in UI thread.
-                            if (data.size > 300) data.remove(0, 1)
-                            data(System.currentTimeMillis(), sumAmount.value.quantity)
-                        }
-                    }
-                }
-            }
-            createSymbols = false
-            animated = false
-        }
-    }
-
+    override val widget: Node = CashWidget()
     // Left pane
     private val leftPane: VBox by fxid()
     private val splitPane: SplitPane by fxid()
@@ -81,23 +53,15 @@ class CashViewer : View(), CordaView {
     private val cashViewerTableIssuerCurrency: TreeTableColumn<ViewerNode, String> by fxid()
     private val cashViewerTableLocalCurrency: TreeTableColumn<ViewerNode, Amount<Currency>?> by fxid()
     private val cashViewerTableEquiv: TreeTableColumn<ViewerNode, Amount<Currency>?> by fxid()
-
     // Right pane
     private val rightPane: VBox by fxid()
     private val totalPositionsLabel: Label by fxid()
     private val cashStatesList: ListView<StateRow> by fxid()
     private val toggleButton by fxid<Button>()
-
     // Inject observables
     private val cashStates by observableList(ContractStateModel::cashStates)
     private val reportingCurrency by observableValue(SettingsModel::reportingCurrency)
     private val reportingExchange by observableValue(ReportingCurrencyModel::reportingExchange)
-    private val exchangeRate: ObservableValue<ExchangeRate> by observableValue(ExchangeRateModel::exchangeRate)
-    private val sumAmount = AmountBindings.sumAmountExchange(
-            cashStates.map { it.state.data.amount.withoutIssuer() },
-            reportingCurrency,
-            exchangeRate
-    )
 
     private val selectedNode = cashViewerTable.singleRowSelection().map {
         when (it) {
@@ -175,11 +139,21 @@ class CashViewer : View(), CordaView {
          * one which produces more results, which seems to work, as the set of currency strings don't really overlap with
          * issuer strings.
          */
-        val searchField = SearchField(cashStates, arrayOf(
+        val searchField = SearchField(cashStates,
                 { state, text -> state.state.data.amount.token.product.toString().contains(text, true) },
                 { state, text -> state.state.data.amount.token.issuer.party.toString().contains(text, true) }
-        ))
-        root.top = searchField.root
+        )
+        root.top = hbox(5.0) {
+            button("New Transaction", FontAwesomeIconView(FontAwesomeIcon.PLUS)) {
+                setOnMouseClicked {
+                    if (it.button == MouseButton.PRIMARY) {
+                        NewTransaction().show(this@CashViewer.root.scene.window)
+                    }
+                }
+            }
+            HBox.setHgrow(searchField.root, Priority.ALWAYS)
+            add(searchField.root)
+        }
 
         /**
          * This is where we aggregate the list of cash states into the TreeTable structure.
@@ -280,7 +254,6 @@ class CashViewer : View(), CordaView {
             textProperty().bind(reportingCurrency.map { "$it Equiv" })
         }
 
-
         // Right Pane.
         totalPositionsLabel.textProperty().bind(cashStatesList.itemsProperty().map {
             val plural = if (it.size == 1) "" else "s"
@@ -301,6 +274,51 @@ class CashViewer : View(), CordaView {
 
         toggleButton.setOnAction {
             cashViewerTable.selectionModel.clearSelection()
+        }
+    }
+
+    private class CashWidget() : VBox() {
+        // Inject data.
+        private val reportingCurrency by observableValue(SettingsModel::reportingCurrency)
+        private val cashStates by observableList(ContractStateModel::cashStates)
+        private val exchangeRate: ObservableValue<ExchangeRate> by observableValue(ExchangeRateModel::exchangeRate)
+        private val sumAmount = AmountBindings.sumAmountExchange(
+                cashStates.map { it.state.data.amount.withoutIssuer() },
+                reportingCurrency,
+                exchangeRate)
+
+        init {
+            padding = Insets(0.0, 10.0, 0.0, 0.0)
+            val xAxis = NumberAxis().apply {
+                //isAutoRanging = true
+                isMinorTickVisible = false
+                isForceZeroInRange = false
+                tickLabelFormatter = stringConverter {
+                    Instant.ofEpochMilli(it.toLong()).atZone(TimeZone.getDefault().toZoneId()).toLocalTime().toString()
+                }
+            }
+            val yAxis = NumberAxis().apply {
+                isAutoRanging = true
+                isMinorTickVisible = false
+                isForceZeroInRange = false
+                tickLabelFormatter = stringConverter { it.toStringWithSuffix() }
+            }
+            linechart(null, xAxis, yAxis) {
+                series("USD") {
+                    sumAmount.addListener { observableValue, old, new ->
+                        val lastTimeStamp = data.last().value?.xValue
+                        if (lastTimeStamp == null || System.currentTimeMillis() - lastTimeStamp.toLong() > 1.seconds.toMillis()) {
+                            data(System.currentTimeMillis(), sumAmount.value.quantity)
+                            runInFxApplicationThread {
+                                // Modify data in UI thread.
+                                if (data.size > 300) data.remove(0, 1)
+                            }
+                        }
+                    }
+                }
+                createSymbols = false
+                animated = false
+            }
         }
     }
 }

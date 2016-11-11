@@ -3,10 +3,13 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<BorderPane stylesheets="@../css/wallet.css" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
+<BorderPane stylesheets="@../../css/corda.css" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
     <padding>
-        <Insets right="10" left="5" bottom="5" top="5"/>
+        <Insets right="5" left="5" bottom="5" top="5"/>
     </padding>
+    <top>
+        <fx:include source="../SearchField.fxml"/>
+    </top>
     <center>
         <SplitPane fx:id="splitPane" dividerPositions="0.5">
             <VBox fx:id="leftPane" spacing="5.0">

@@ -275,3 +275,7 @@ fun <A> ObservableList<A>.last(): ObservableValue<A?> {
         }
     }, arrayOf(this))
 }
+
+fun <T : Any> ObservableList<T>.unique(): ObservableList<T> {
+    return associateByAggregation { it }.getObservableValues().map { Bindings.valueAt(it, 0) }.flatten()
+}

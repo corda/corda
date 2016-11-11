@@ -1,7 +1,15 @@
 package net.corda.explorer.views
 
 import javafx.application.Platform
+import javafx.event.EventTarget
+import javafx.geometry.Pos
+import javafx.scene.Parent
+import javafx.scene.layout.GridPane
+import javafx.scene.layout.Priority
+import javafx.scene.text.TextAlignment
 import javafx.util.StringConverter
+import tornadofx.gridpane
+import tornadofx.label
 
 /**
  *  Helper method to reduce boiler plate code
@@ -24,8 +32,9 @@ fun <T> stringConverter(fromStringFunction: ((String?) -> T)? = null, toStringFu
  */
 fun Number.toStringWithSuffix(precision: Int = 1): String {
     if (this.toDouble() < 1000) return "$this"
-    val exp = (Math.log(this.toDouble()) / Math.log(1000.0)).toInt()
-    return "${(this.toDouble() / Math.pow(1000.0, exp.toDouble())).format(precision)} ${"kMGTPE"[exp - 1]}"
+    val scales = "kMBT"
+    val exp = Math.min(scales.length, (Math.log(this.toDouble()) / Math.log(1000.0)).toInt())
+    return "${(this.toDouble() / Math.pow(1000.0, exp.toDouble())).format(precision)}${scales[exp - 1]}"
 }
 
 fun Double.format(precision: Int) = String.format("%.${precision}f", this)
@@ -38,5 +47,17 @@ fun runInFxApplicationThread(block: () -> Unit) {
         block()
     } else {
         Platform.runLater(block)
+    }
+}
+
+fun EventTarget.underConstruction(): Parent {
+    return gridpane {
+        label("Under Construction...") {
+            maxWidth = Double.MAX_VALUE
+            textAlignment = TextAlignment.CENTER
+            alignment = Pos.CENTER
+            GridPane.setVgrow(this, Priority.ALWAYS)
+            GridPane.setHgrow(this, Priority.ALWAYS)
+        }
     }
 }

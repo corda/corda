@@ -6,7 +6,7 @@
     <option name="LIVE_STYLESHEETS" value="false" />
     <option name="DUMP_STYLESHEETS" value="false" />
     <option name="LIVE_VIEWS" value="false" />
-    <option name="MAIN_CLASS_NAME" value="com.r3corda.explorer.Main" />
+    <option name="MAIN_CLASS_NAME" value="net.corda.explorer.Main" />
     <option name="VM_PARAMETERS" value="" />
     <option name="PROGRAM_PARAMETERS" value="" />
     <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />

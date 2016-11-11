@@ -1,9 +1,12 @@
 package net.corda.explorer.views
 
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
 import javafx.beans.binding.Bindings
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import javafx.geometry.Insets
+import javafx.geometry.Pos
+import javafx.scene.Node
 import javafx.scene.Parent
 import javafx.scene.control.Label
 import javafx.scene.control.ListView
@@ -19,7 +22,6 @@ import net.corda.client.model.*
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.PublicKeyTree
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.tree
 import net.corda.core.node.NodeInfo
 import net.corda.core.protocols.StateMachineRunId
@@ -27,14 +29,17 @@ import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
 import net.corda.explorer.identicon.identicon
 import net.corda.explorer.identicon.identiconToolTip
+import net.corda.explorer.model.CordaView
 import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.sign
 import net.corda.explorer.ui.setCustomCellFactory
 import tornadofx.*
 import java.util.*
 
-class TransactionViewer : View() {
+class TransactionViewer : CordaView("Transactions") {
     override val root by fxml<BorderPane>()
+    override val icon = FontAwesomeIcon.EXCHANGE
+
     private val transactionViewTable by fxid<TableView<ViewerNode>>()
     private val matchingTransactionsLabel by fxid<Label>()
     // Inject data
@@ -42,13 +47,16 @@ class TransactionViewer : View() {
     private val reportingExchange by observableValue(ReportingCurrencyModel::reportingExchange)
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
 
+    override val widget: Node = TransactionWidget()
+
     /**
      * This is what holds data for a single transaction node. Note how a lot of these are nullable as we often simply don't
      * have the data.
      */
     data class ViewerNode(
             val transaction: PartiallyResolvedTransaction,
-            val transactionId: SecureHash,
+            val inputContracts: List<Contract>,
+            val outputContracts: List<Contract>,
             val stateMachineRunId: ObservableValue<StateMachineRunId?>,
             val stateMachineStatus: ObservableValue<out StateMachineStatus?>,
             val protocolStatus: ObservableValue<out ProtocolStatus?>,
@@ -76,7 +84,8 @@ class TransactionViewer : View() {
         }
         ViewerNode(
                 transaction = it.transaction,
-                transactionId = it.transaction.id,
+                inputContracts = it.transaction.inputs.map { it.value as? PartiallyResolvedTransaction.InputResolution.Resolved }.filterNotNull().map { it.stateAndRef.state.data.contract },
+                outputContracts = it.transaction.transaction.tx.outputs.map { it.data.contract },
                 stateMachineRunId = stateMachine.map { it?.id },
                 protocolStatus = stateMachineProperty { it.protocolStatus },
                 stateMachineStatus = stateMachineProperty { it.stateMachineStatus },
@@ -97,19 +106,21 @@ class TransactionViewer : View() {
     }
 
     init {
-        val searchField = SearchField(viewerNodes, arrayOf({ viewerNode, s -> viewerNode.commandTypes.any { it.simpleName.contains(s, true) } }))
+        val searchField = SearchField(viewerNodes, { viewerNode, s -> viewerNode.commandTypes.any { it.simpleName.contains(s, true) } })
         root.top = searchField.root
         // Transaction table
         transactionViewTable.apply {
             items = searchField.filteredData
-            column("Transaction ID", ViewerNode::transactionId).setCustomCellFactory {
-                label("$it".substring(0, 16) + "...") {
+            column("Transaction ID", ViewerNode::transaction).setCustomCellFactory {
+                label("${it.id}") {
                     graphic = imageview {
-                        image = identicon(it, 5.0)
+                        image = identicon(it.id, 5.0)
                     }
-                    tooltip = identiconToolTip(it)
+                    tooltip = identiconToolTip(it.id)
                 }
             }
+            column("Input Contract Type(s)", ViewerNode::inputContracts).cellFormat { text = (it.map { it.javaClass.simpleName }.toSet().joinToString(", ")) }
+            column("Output Contract Type(s)", ViewerNode::outputContracts).cellFormat { text = it.map { it.javaClass.simpleName }.toSet().joinToString(", ") }
             column("State Machine ID", ViewerNode::stateMachineRunId).cellFormat { text = "${it?.uuid ?: ""}" }
             column("Protocol status", ViewerNode::protocolStatus).cellFormat { text = "${it.value ?: ""}" }
             column("SM Status", ViewerNode::stateMachineStatus).cellFormat { text = "${it.value ?: ""}" }
@@ -207,6 +218,21 @@ class TransactionViewer : View() {
             }
         }
     }
+
+    private class TransactionWidget() : BorderPane() {
+        private val gatheredTransactionDataList  by observableListReadOnly(GatheredTransactionDataModel::gatheredTransactionDataList)
+
+        // TODO : Add a scrolling table to show latest transaction.
+        // TODO : Add a chart to show types of transactions.
+        init {
+            right {
+                label {
+                    textProperty().bind(Bindings.size(gatheredTransactionDataList).map { it.toString() })
+                    BorderPane.setAlignment(this, Pos.BOTTOM_RIGHT)
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -218,12 +244,10 @@ private fun calculateTotalEquiv(identity: NodeInfo?,
                                 outputs: List<TransactionState<ContractState>>): AmountDiff<Currency> {
     val (reportingCurrency, exchange) = reportingCurrencyExchange
     val publicKey = identity?.legalIdentity?.owningKey
-    fun List<TransactionState<ContractState>>.sum(): Long {
-        return this.map { it.data as? Cash.State }
-                .filterNotNull()
-                .filter { publicKey == it.owner }
-                .map { exchange(it.amount.withoutIssuer()).quantity }
-                .sum()
-    }
+    fun List<TransactionState<ContractState>>.sum() = this.map { it.data as? Cash.State }
+            .filterNotNull()
+            .filter { publicKey == it.owner }
+            .map { exchange(it.amount.withoutIssuer()).quantity }
+            .sum()
     return AmountDiff.fromLong(outputs.sum() - inputs.sum(), reportingCurrency)
 }
