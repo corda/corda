@@ -1,0 +1,765 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Writing a contract test &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
+        <link rel="next" title="Client RPC API" href="tutorial-clientrpc-api.html"/>
+        <link rel="prev" title="Writing a contract using clauses" href="tutorial-contract-clauses.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+<a href="api/index.html">API reference</a>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Writing a contract test</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#testing-single-transactions">Testing single transactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#chaining-transactions">Chaining transactions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Node API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Writing a contract test</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/tutorial-test-dsl.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <script type="text/javascript" src="_static/jquery.js"></script>
+<script type="text/javascript" src="_static/codesets.js"></script><div class="section" id="writing-a-contract-test">
+<h1>Writing a contract test<a class="headerlink" href="#writing-a-contract-test" title="Permalink to this headline">¶</a></h1>
+<p>This tutorial will take you through the steps required to write a contract test using Kotlin and/or Java.</p>
+<p>The testing DSL allows one to define a piece of the ledger with transactions referring to each other, and ways of
+verifying their correctness.</p>
+<div class="section" id="testing-single-transactions">
+<h2>Testing single transactions<a class="headerlink" href="#testing-single-transactions" title="Permalink to this headline">¶</a></h2>
+<p>We start with the empty ledger:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Test</span>
+<span class="k">fun</span> <span class="nf">emptyLedger</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">ledger</span> <span class="p">{</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">static</span> <span class="n">net</span><span class="o">.</span><span class="na">corda</span><span class="o">.</span><span class="na">core</span><span class="o">.</span><span class="na">testing</span><span class="o">.</span><span class="na">JavaTestHelpers</span><span class="o">.*;</span>
+<span class="kn">import</span> <span class="nn">static</span> <span class="n">net</span><span class="o">.</span><span class="na">corda</span><span class="o">.</span><span class="na">core</span><span class="o">.</span><span class="na">contracts</span><span class="o">.</span><span class="na">JavaTestHelpers</span><span class="o">.*;</span>
+
+<span class="nd">@Test</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">emptyLedger</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">ledger</span><span class="o">(</span><span class="n">l</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span> <span class="c1">// We need to return this explicitly</span>
+    <span class="o">});</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p>The DSL keyword <code class="docutils literal"><span class="pre">ledger</span></code> takes a closure that can build up several transactions and may verify their overall
+correctness. A ledger is effectively a fresh world with no pre-existing transactions or services within it.</p>
+<p>Let&#8217;s add a Cash transaction:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>@Test
+fun simpleCashDoesntCompile() {
+    val inState = Cash.State(
+            amount = 1000.DOLLARS `issued by` DUMMY_CASH_ISSUER,
+            owner = DUMMY_PUBKEY_1
+    )
+    ledger {
+        transaction {
+            input(inState)
+        }
+    }
+}
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Test</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">simpleCashDoesntCompile</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">Cash</span><span class="o">.</span><span class="na">State</span> <span class="n">inState</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">(</span>
+            <span class="n">issuedBy</span><span class="o">(</span><span class="n">DOLLARS</span><span class="o">(</span><span class="mi">1000</span><span class="o">),</span> <span class="n">getDUMMY_CASH_ISSUER</span><span class="o">()),</span>
+            <span class="n">getDUMMY_PUBKEY_1</span><span class="o">()</span>
+    <span class="o">);</span>
+    <span class="n">ledger</span><span class="o">(</span><span class="n">l</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="n">l</span><span class="o">.</span><span class="na">transaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">input</span><span class="o">(</span><span class="n">inState</span><span class="o">);</span>
+        <span class="o">});</span>
+        <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+    <span class="o">});</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p>We can add a transaction to the ledger using the <code class="docutils literal"><span class="pre">transaction</span></code> primitive. The transaction in turn may be defined by
+specifying <code class="docutils literal"><span class="pre">input</span></code>-s, <code class="docutils literal"><span class="pre">output</span></code>-s, <code class="docutils literal"><span class="pre">command</span></code>-s and <code class="docutils literal"><span class="pre">attachment</span></code>-s.</p>
+<p>The above <code class="docutils literal"><span class="pre">input</span></code> call is a bit special: Transactions don&#8217;t actually contain input states, just references
+to output states of other transactions. Under the hood the above <code class="docutils literal"><span class="pre">input</span></code> call creates a dummy transaction in the
+ledger (that won&#8217;t be verified) which outputs the specified state, and references that from this transaction.</p>
+<p>The above code however doesn&#8217;t compile:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">Error</span><span class="p">:(</span><span class="m">26</span><span class="p">,</span> <span class="m">21</span><span class="p">)</span> <span class="n">Kotlin</span><span class="p">:</span> <span class="n">Type</span> <span class="n">mismatch</span><span class="p">:</span> <span class="n">inferred</span> <span class="n">type</span> <span class="k">is</span> <span class="n">Unit</span> <span class="n">but</span> <span class="n">EnforceVerifyOrFail</span> <span class="n">was</span> <span class="n">expected</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="nl">Error:</span><span class="o">(</span><span class="mi">26</span><span class="o">,</span> <span class="mi">31</span><span class="o">)</span> <span class="n">java</span><span class="o">:</span> <span class="n">incompatible</span> <span class="n">types</span><span class="o">:</span> <span class="n">bad</span> <span class="k">return</span> <span class="n">type</span> <span class="n">in</span> <span class="n">lambda</span> <span class="n">expression</span> <span class="n">missing</span> <span class="k">return</span> <span class="n">value</span>
+</pre></div>
+</div>
+</div>
+<p>This is deliberate: The DSL forces us to specify either <code class="docutils literal"><span class="pre">this.verifies()</span></code> or <code class="docutils literal"><span class="pre">this</span> <span class="pre">`fails</span> <span class="pre">with`</span> <span class="pre">&quot;some</span> <span class="pre">text&quot;</span></code> on the
+last line of <code class="docutils literal"><span class="pre">transaction</span></code>:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>@Test
+fun simpleCash() {
+    val inState = Cash.State(
+            amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+            owner = DUMMY_PUBKEY_1
+    )
+    ledger {
+        transaction {
+            input(inState)
+            this.verifies()
+        }
+    }
+}
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Test</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">simpleCash</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">Cash</span><span class="o">.</span><span class="na">State</span> <span class="n">inState</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">(</span>
+            <span class="n">issuedBy</span><span class="o">(</span><span class="n">DOLLARS</span><span class="o">(</span><span class="mi">1000</span><span class="o">),</span> <span class="n">getMEGA_CORP</span><span class="o">().</span><span class="na">ref</span><span class="o">((</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">,</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">)),</span>
+            <span class="n">getDUMMY_PUBKEY_1</span><span class="o">()</span>
+    <span class="o">);</span>
+    <span class="n">ledger</span><span class="o">(</span><span class="n">l</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="n">l</span><span class="o">.</span><span class="na">transaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">input</span><span class="o">(</span><span class="n">inState</span><span class="o">);</span>
+            <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">verifies</span><span class="o">();</span>
+        <span class="o">});</span>
+        <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+    <span class="o">});</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p>The code finally compiles. When run, it produces the following error:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>net.corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalArgumentException: Failed requirement: for deposit [01] at issuer Snake Oil Issuer the amounts balance
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The reference here to the &#8216;Snake Oil Issuer&#8217; is because we are using the pre-canned <code class="docutils literal"><span class="pre">DUMMY_CASH_ISSUER</span></code>
+identity as the issuer of our cash.</p>
+</div>
+<p>The transaction verification failed, because the sum of inputs does not equal the sum of outputs. We can specify that
+this is intended behaviour by changing <code class="docutils literal"><span class="pre">this.verifies()</span></code> to <code class="docutils literal"><span class="pre">this</span> <span class="pre">`fails</span> <span class="pre">with`</span> <span class="pre">&quot;the</span> <span class="pre">amounts</span> <span class="pre">balance&quot;</span></code>:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>@Test
+fun simpleCashFailsWith() {
+    val inState = Cash.State(
+            amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+            owner = DUMMY_PUBKEY_1
+    )
+    ledger {
+        transaction {
+            input(inState)
+            this `fails with` &quot;the amounts balance&quot;
+        }
+    }
+}
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Test</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">simpleCashFailsWith</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">Cash</span><span class="o">.</span><span class="na">State</span> <span class="n">inState</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">(</span>
+            <span class="n">issuedBy</span><span class="o">(</span><span class="n">DOLLARS</span><span class="o">(</span><span class="mi">1000</span><span class="o">),</span> <span class="n">getMEGA_CORP</span><span class="o">().</span><span class="na">ref</span><span class="o">((</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">,</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">)),</span>
+            <span class="n">getDUMMY_PUBKEY_1</span><span class="o">()</span>
+    <span class="o">);</span>
+    <span class="n">ledger</span><span class="o">(</span><span class="n">l</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="n">l</span><span class="o">.</span><span class="na">transaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">input</span><span class="o">(</span><span class="n">inState</span><span class="o">);</span>
+            <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">failsWith</span><span class="o">(</span><span class="s">&quot;the amounts balance&quot;</span><span class="o">);</span>
+        <span class="o">});</span>
+        <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+    <span class="o">});</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p>We can continue to build the transaction until it <code class="docutils literal"><span class="pre">verifies</span></code>:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>@Test
+fun simpleCashSuccess() {
+    val inState = Cash.State(
+            amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+            owner = DUMMY_PUBKEY_1
+    )
+    ledger {
+        transaction {
+            input(inState)
+            this `fails with` &quot;the amounts balance&quot;
+            output(inState.copy(owner = DUMMY_PUBKEY_2))
+            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            this.verifies()
+        }
+    }
+}
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Test</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">simpleCashSuccess</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">Cash</span><span class="o">.</span><span class="na">State</span> <span class="n">inState</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">(</span>
+            <span class="n">issuedBy</span><span class="o">(</span><span class="n">DOLLARS</span><span class="o">(</span><span class="mi">1000</span><span class="o">),</span> <span class="n">getMEGA_CORP</span><span class="o">().</span><span class="na">ref</span><span class="o">((</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">,</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">)),</span>
+            <span class="n">getDUMMY_PUBKEY_1</span><span class="o">()</span>
+    <span class="o">);</span>
+    <span class="n">ledger</span><span class="o">(</span><span class="n">l</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="n">l</span><span class="o">.</span><span class="na">transaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">input</span><span class="o">(</span><span class="n">inState</span><span class="o">);</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">failsWith</span><span class="o">(</span><span class="s">&quot;the amounts balance&quot;</span><span class="o">);</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">output</span><span class="o">(</span><span class="n">inState</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">inState</span><span class="o">.</span><span class="na">getAmount</span><span class="o">(),</span> <span class="n">getDUMMY_PUBKEY_2</span><span class="o">()));</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">command</span><span class="o">(</span><span class="n">getDUMMY_PUBKEY_1</span><span class="o">(),</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">());</span>
+            <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">verifies</span><span class="o">();</span>
+        <span class="o">});</span>
+        <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+    <span class="o">});</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p><code class="docutils literal"><span class="pre">output</span></code> specifies that we want the input state to be transferred to <code class="docutils literal"><span class="pre">DUMMY_PUBKEY_2</span></code> and <code class="docutils literal"><span class="pre">command</span></code> adds the
+<code class="docutils literal"><span class="pre">Move</span></code> command itself, signed by the current owner of the input state, <code class="docutils literal"><span class="pre">DUMMY_PUBKEY_1</span></code>.</p>
+<p>We constructed a complete signed cash transaction from <code class="docutils literal"><span class="pre">DUMMY_PUBKEY_1</span></code> to <code class="docutils literal"><span class="pre">DUMMY_PUBKEY_2</span></code> and verified it. Note
+how we left in the <code class="docutils literal"><span class="pre">fails</span> <span class="pre">with</span></code> line - this is fine, the failure will be tested on the partially constructed
+transaction.</p>
+<p>What should we do if we wanted to test what happens when the wrong party signs the transaction? If we simply add a
+<code class="docutils literal"><span class="pre">command</span></code> it will ruin the transaction for good... Enter <code class="docutils literal"><span class="pre">tweak</span></code>:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>@Test
+fun simpleCashTweakSuccess() {
+    val inState = Cash.State(
+            amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+            owner = DUMMY_PUBKEY_1
+    )
+    ledger {
+        transaction {
+            input(inState)
+            this `fails with` &quot;the amounts balance&quot;
+            output(inState.copy(owner = DUMMY_PUBKEY_2))
+
+            tweak {
+                command(DUMMY_PUBKEY_2) { Cash.Commands.Move() }
+                this `fails with` &quot;the owning keys are the same as the signing keys&quot;
+            }
+
+            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            this.verifies()
+        }
+    }
+}
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Test</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">simpleCashTweakSuccess</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">Cash</span><span class="o">.</span><span class="na">State</span> <span class="n">inState</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">(</span>
+            <span class="n">issuedBy</span><span class="o">(</span><span class="n">DOLLARS</span><span class="o">(</span><span class="mi">1000</span><span class="o">),</span> <span class="n">getMEGA_CORP</span><span class="o">().</span><span class="na">ref</span><span class="o">((</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">,</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">)),</span>
+            <span class="n">getDUMMY_PUBKEY_1</span><span class="o">()</span>
+    <span class="o">);</span>
+    <span class="n">ledger</span><span class="o">(</span><span class="n">l</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="n">l</span><span class="o">.</span><span class="na">transaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">input</span><span class="o">(</span><span class="n">inState</span><span class="o">);</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">failsWith</span><span class="o">(</span><span class="s">&quot;the amounts balance&quot;</span><span class="o">);</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">output</span><span class="o">(</span><span class="n">inState</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">inState</span><span class="o">.</span><span class="na">getAmount</span><span class="o">(),</span> <span class="n">getDUMMY_PUBKEY_2</span><span class="o">()));</span>
+
+            <span class="n">tx</span><span class="o">.</span><span class="na">tweak</span><span class="o">(</span><span class="n">tw</span> <span class="o">-&gt;</span> <span class="o">{</span>
+                <span class="n">tw</span><span class="o">.</span><span class="na">command</span><span class="o">(</span><span class="n">getDUMMY_PUBKEY_2</span><span class="o">(),</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">());</span>
+                <span class="k">return</span> <span class="n">tw</span><span class="o">.</span><span class="na">failsWith</span><span class="o">(</span><span class="s">&quot;the owning keys are the same as the signing keys&quot;</span><span class="o">);</span>
+            <span class="o">});</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">command</span><span class="o">(</span><span class="n">getDUMMY_PUBKEY_1</span><span class="o">(),</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">());</span>
+            <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">verifies</span><span class="o">();</span>
+        <span class="o">});</span>
+        <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+    <span class="o">});</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p><code class="docutils literal"><span class="pre">tweak</span></code> creates a local copy of the transaction. This allows the local &#8220;ruining&#8221; of the transaction allowing testing
+of different error conditions.</p>
+<p>We now have a neat little test that tests a single transaction. This is already useful, and in fact testing of a single
+transaction in this way is very common. There is even a shorthand toplevel <code class="docutils literal"><span class="pre">transaction</span></code> primitive that creates a
+ledger with a single transaction:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>@Test
+fun simpleCashTweakSuccessTopLevelTransaction() {
+    val inState = Cash.State(
+            amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+            owner = DUMMY_PUBKEY_1
+    )
+    transaction {
+        input(inState)
+        this `fails with` &quot;the amounts balance&quot;
+        output(inState.copy(owner = DUMMY_PUBKEY_2))
+
+        tweak {
+            command(DUMMY_PUBKEY_2) { Cash.Commands.Move() }
+            this `fails with` &quot;the owning keys are the same as the signing keys&quot;
+        }
+
+        command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+        this.verifies()
+    }
+}
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Test</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">simpleCashTweakSuccessTopLevelTransaction</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">Cash</span><span class="o">.</span><span class="na">State</span> <span class="n">inState</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">(</span>
+            <span class="n">issuedBy</span><span class="o">(</span><span class="n">DOLLARS</span><span class="o">(</span><span class="mi">1000</span><span class="o">),</span> <span class="n">getMEGA_CORP</span><span class="o">().</span><span class="na">ref</span><span class="o">((</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">,</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">)),</span>
+            <span class="n">getDUMMY_PUBKEY_1</span><span class="o">()</span>
+    <span class="o">);</span>
+    <span class="n">transaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="n">tx</span><span class="o">.</span><span class="na">input</span><span class="o">(</span><span class="n">inState</span><span class="o">);</span>
+        <span class="n">tx</span><span class="o">.</span><span class="na">failsWith</span><span class="o">(</span><span class="s">&quot;the amounts balance&quot;</span><span class="o">);</span>
+        <span class="n">tx</span><span class="o">.</span><span class="na">output</span><span class="o">(</span><span class="n">inState</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">inState</span><span class="o">.</span><span class="na">getAmount</span><span class="o">(),</span> <span class="n">getDUMMY_PUBKEY_2</span><span class="o">()));</span>
+
+        <span class="n">tx</span><span class="o">.</span><span class="na">tweak</span><span class="o">(</span><span class="n">tw</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">tw</span><span class="o">.</span><span class="na">command</span><span class="o">(</span><span class="n">getDUMMY_PUBKEY_2</span><span class="o">(),</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">());</span>
+            <span class="k">return</span> <span class="n">tw</span><span class="o">.</span><span class="na">failsWith</span><span class="o">(</span><span class="s">&quot;the owning keys are the same as the signing keys&quot;</span><span class="o">);</span>
+        <span class="o">});</span>
+        <span class="n">tx</span><span class="o">.</span><span class="na">command</span><span class="o">(</span><span class="n">getDUMMY_PUBKEY_1</span><span class="o">(),</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">());</span>
+        <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">verifies</span><span class="o">();</span>
+    <span class="o">});</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="chaining-transactions">
+<h2>Chaining transactions<a class="headerlink" href="#chaining-transactions" title="Permalink to this headline">¶</a></h2>
+<p>Now that we know how to define a single transaction, let&#8217;s look at how to define a chain of them:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>@Test
+fun chainCash() {
+    ledger {
+        unverifiedTransaction {
+            output(&quot;MEGA_CORP cash&quot;) {
+                Cash.State(
+                        amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+                        owner = MEGA_CORP_PUBKEY
+                )
+            }
+        }
+
+        transaction {
+            input(&quot;MEGA_CORP cash&quot;)
+            output(&quot;MEGA_CORP cash&quot;.output&lt;Cash.State&gt;().copy(owner = DUMMY_PUBKEY_1))
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+            this.verifies()
+        }
+    }
+}
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Test</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">chainCash</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">ledger</span><span class="o">(</span><span class="n">l</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="n">l</span><span class="o">.</span><span class="na">unverifiedTransaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">output</span><span class="o">(</span><span class="s">&quot;MEGA_CORP cash&quot;</span><span class="o">,</span>
+                    <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">(</span>
+                            <span class="n">issuedBy</span><span class="o">(</span><span class="n">DOLLARS</span><span class="o">(</span><span class="mi">1000</span><span class="o">),</span> <span class="n">getMEGA_CORP</span><span class="o">().</span><span class="na">ref</span><span class="o">((</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">,</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">)),</span>
+                            <span class="n">getMEGA_CORP_PUBKEY</span><span class="o">()</span>
+                    <span class="o">)</span>
+            <span class="o">);</span>
+            <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+        <span class="o">});</span>
+
+        <span class="n">l</span><span class="o">.</span><span class="na">transaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">input</span><span class="o">(</span><span class="s">&quot;MEGA_CORP cash&quot;</span><span class="o">);</span>
+            <span class="n">Cash</span><span class="o">.</span><span class="na">State</span> <span class="n">inputCash</span> <span class="o">=</span> <span class="n">l</span><span class="o">.</span><span class="na">retrieveOutput</span><span class="o">(</span><span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">&quot;MEGA_CORP cash&quot;</span><span class="o">);</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">output</span><span class="o">(</span><span class="n">inputCash</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">inputCash</span><span class="o">.</span><span class="na">getAmount</span><span class="o">(),</span> <span class="n">getDUMMY_PUBKEY_1</span><span class="o">()));</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">command</span><span class="o">(</span><span class="n">getMEGA_CORP_PUBKEY</span><span class="o">(),</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">());</span>
+            <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">verifies</span><span class="o">();</span>
+        <span class="o">});</span>
+
+        <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+    <span class="o">});</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p>In this example we declare that <code class="docutils literal"><span class="pre">MEGA_CORP</span></code> has a thousand dollars but we don&#8217;t care where from, for this we can use
+<code class="docutils literal"><span class="pre">unverifiedTransaction</span></code>. Note how we don&#8217;t need to specify <code class="docutils literal"><span class="pre">this.verifies()</span></code>.</p>
+<p>The <code class="docutils literal"><span class="pre">output</span></code> cash was labelled with <code class="docutils literal"><span class="pre">&quot;MEGA_CORP</span> <span class="pre">cash&quot;</span></code>, we can subsequently referred to this other transactions, e.g.
+by <code class="docutils literal"><span class="pre">input(&quot;MEGA_CORP</span> <span class="pre">cash&quot;)</span></code> or <code class="docutils literal"><span class="pre">&quot;MEGA_CORP</span> <span class="pre">cash&quot;.output&lt;Cash.State&gt;()</span></code>.</p>
+<p>What happens if we reuse the output cash twice?</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>@Test
+fun chainCashDoubleSpend() {
+    ledger {
+        unverifiedTransaction {
+            output(&quot;MEGA_CORP cash&quot;) {
+                Cash.State(
+                        amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+                        owner = MEGA_CORP_PUBKEY
+                )
+            }
+        }
+
+        transaction {
+            input(&quot;MEGA_CORP cash&quot;)
+            output(&quot;MEGA_CORP cash&quot;.output&lt;Cash.State&gt;().copy(owner = DUMMY_PUBKEY_1))
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+            this.verifies()
+        }
+
+        transaction {
+            input(&quot;MEGA_CORP cash&quot;)
+            // We send it to another pubkey so that the transaction is not identical to the previous one
+            output(&quot;MEGA_CORP cash&quot;.output&lt;Cash.State&gt;().copy(owner = DUMMY_PUBKEY_2))
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+            this.verifies()
+        }
+    }
+}
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Test</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">chainCashDoubleSpend</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">ledger</span><span class="o">(</span><span class="n">l</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="n">l</span><span class="o">.</span><span class="na">unverifiedTransaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">output</span><span class="o">(</span><span class="s">&quot;MEGA_CORP cash&quot;</span><span class="o">,</span>
+                    <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">(</span>
+                            <span class="n">issuedBy</span><span class="o">(</span><span class="n">DOLLARS</span><span class="o">(</span><span class="mi">1000</span><span class="o">),</span> <span class="n">getMEGA_CORP</span><span class="o">().</span><span class="na">ref</span><span class="o">((</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">,</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">)),</span>
+                            <span class="n">getMEGA_CORP_PUBKEY</span><span class="o">()</span>
+                    <span class="o">)</span>
+            <span class="o">);</span>
+            <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+        <span class="o">});</span>
+
+        <span class="n">l</span><span class="o">.</span><span class="na">transaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">input</span><span class="o">(</span><span class="s">&quot;MEGA_CORP cash&quot;</span><span class="o">);</span>
+            <span class="n">Cash</span><span class="o">.</span><span class="na">State</span> <span class="n">inputCash</span> <span class="o">=</span> <span class="n">l</span><span class="o">.</span><span class="na">retrieveOutput</span><span class="o">(</span><span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">&quot;MEGA_CORP cash&quot;</span><span class="o">);</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">output</span><span class="o">(</span><span class="n">inputCash</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">inputCash</span><span class="o">.</span><span class="na">getAmount</span><span class="o">(),</span> <span class="n">getDUMMY_PUBKEY_1</span><span class="o">()));</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">command</span><span class="o">(</span><span class="n">getMEGA_CORP_PUBKEY</span><span class="o">(),</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">());</span>
+            <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">verifies</span><span class="o">();</span>
+        <span class="o">});</span>
+
+        <span class="n">l</span><span class="o">.</span><span class="na">transaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">input</span><span class="o">(</span><span class="s">&quot;MEGA_CORP cash&quot;</span><span class="o">);</span>
+            <span class="n">Cash</span><span class="o">.</span><span class="na">State</span> <span class="n">inputCash</span> <span class="o">=</span> <span class="n">l</span><span class="o">.</span><span class="na">retrieveOutput</span><span class="o">(</span><span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">&quot;MEGA_CORP cash&quot;</span><span class="o">);</span>
+            <span class="c1">// We send it to another pubkey so that the transaction is not identical to the previous one</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">output</span><span class="o">(</span><span class="n">inputCash</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">inputCash</span><span class="o">.</span><span class="na">getAmount</span><span class="o">(),</span> <span class="n">getDUMMY_PUBKEY_2</span><span class="o">()));</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">command</span><span class="o">(</span><span class="n">getMEGA_CORP_PUBKEY</span><span class="o">(),</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">());</span>
+            <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">verifies</span><span class="o">();</span>
+        <span class="o">});</span>
+
+        <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+    <span class="o">});</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p>The transactions <code class="docutils literal"><span class="pre">verifies()</span></code> individually, however the state was spent twice!</p>
+<p>We can also verify the complete ledger by calling <code class="docutils literal"><span class="pre">verifies</span></code>/<code class="docutils literal"><span class="pre">fails</span></code> on the ledger level. We can also use
+<code class="docutils literal"><span class="pre">tweak</span></code> to create a local copy of the whole ledger:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>@Test
+fun chainCashDoubleSpendFailsWith() {
+    ledger {
+        unverifiedTransaction {
+            output(&quot;MEGA_CORP cash&quot;) {
+                Cash.State(
+                        amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+                        owner = MEGA_CORP_PUBKEY
+                )
+            }
+        }
+
+        transaction {
+            input(&quot;MEGA_CORP cash&quot;)
+            output(&quot;MEGA_CORP cash&quot;.output&lt;Cash.State&gt;().copy(owner = DUMMY_PUBKEY_1))
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+            this.verifies()
+        }
+
+        tweak {
+            transaction {
+                input(&quot;MEGA_CORP cash&quot;)
+                // We send it to another pubkey so that the transaction is not identical to the previous one
+                output(&quot;MEGA_CORP cash&quot;.output&lt;Cash.State&gt;().copy(owner = DUMMY_PUBKEY_1))
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+                this.verifies()
+            }
+            this.fails()
+        }
+
+        this.verifies()
+    }
+}
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Test</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">chainCashDoubleSpendFailsWith</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">ledger</span><span class="o">(</span><span class="n">l</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="n">l</span><span class="o">.</span><span class="na">unverifiedTransaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">output</span><span class="o">(</span><span class="s">&quot;MEGA_CORP cash&quot;</span><span class="o">,</span>
+                    <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">(</span>
+                            <span class="n">issuedBy</span><span class="o">(</span><span class="n">DOLLARS</span><span class="o">(</span><span class="mi">1000</span><span class="o">),</span> <span class="n">getMEGA_CORP</span><span class="o">().</span><span class="na">ref</span><span class="o">((</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">,</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">)),</span>
+                            <span class="n">getMEGA_CORP_PUBKEY</span><span class="o">()</span>
+                    <span class="o">)</span>
+            <span class="o">);</span>
+            <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+        <span class="o">});</span>
+
+        <span class="n">l</span><span class="o">.</span><span class="na">transaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">input</span><span class="o">(</span><span class="s">&quot;MEGA_CORP cash&quot;</span><span class="o">);</span>
+            <span class="n">Cash</span><span class="o">.</span><span class="na">State</span> <span class="n">inputCash</span> <span class="o">=</span> <span class="n">l</span><span class="o">.</span><span class="na">retrieveOutput</span><span class="o">(</span><span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">&quot;MEGA_CORP cash&quot;</span><span class="o">);</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">output</span><span class="o">(</span><span class="n">inputCash</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">inputCash</span><span class="o">.</span><span class="na">getAmount</span><span class="o">(),</span> <span class="n">getDUMMY_PUBKEY_1</span><span class="o">()));</span>
+            <span class="n">tx</span><span class="o">.</span><span class="na">command</span><span class="o">(</span><span class="n">getMEGA_CORP_PUBKEY</span><span class="o">(),</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">());</span>
+            <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">verifies</span><span class="o">();</span>
+        <span class="o">});</span>
+
+        <span class="n">l</span><span class="o">.</span><span class="na">tweak</span><span class="o">(</span><span class="n">lw</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">lw</span><span class="o">.</span><span class="na">transaction</span><span class="o">(</span><span class="n">tx</span> <span class="o">-&gt;</span> <span class="o">{</span>
+                <span class="n">tx</span><span class="o">.</span><span class="na">input</span><span class="o">(</span><span class="s">&quot;MEGA_CORP cash&quot;</span><span class="o">);</span>
+                <span class="n">Cash</span><span class="o">.</span><span class="na">State</span> <span class="n">inputCash</span> <span class="o">=</span> <span class="n">l</span><span class="o">.</span><span class="na">retrieveOutput</span><span class="o">(</span><span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">&quot;MEGA_CORP cash&quot;</span><span class="o">);</span>
+                <span class="c1">// We send it to another pubkey so that the transaction is not identical to the previous one</span>
+                <span class="n">tx</span><span class="o">.</span><span class="na">output</span><span class="o">(</span><span class="n">inputCash</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">inputCash</span><span class="o">.</span><span class="na">getAmount</span><span class="o">(),</span> <span class="n">getDUMMY_PUBKEY_2</span><span class="o">()));</span>
+                <span class="n">tx</span><span class="o">.</span><span class="na">command</span><span class="o">(</span><span class="n">getMEGA_CORP_PUBKEY</span><span class="o">(),</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">());</span>
+                <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">verifies</span><span class="o">();</span>
+            <span class="o">});</span>
+            <span class="n">lw</span><span class="o">.</span><span class="na">fails</span><span class="o">();</span>
+            <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+        <span class="o">});</span>
+
+        <span class="n">l</span><span class="o">.</span><span class="na">verifies</span><span class="o">();</span>
+        <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+    <span class="o">});</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="tutorial-clientrpc-api.html" class="btn btn-neutral float-right" title="Client RPC API" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="tutorial-contract-clauses.html" class="btn btn-neutral" title="Writing a contract using clauses" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

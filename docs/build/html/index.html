@@ -1,0 +1,522 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Welcome to the Corda! &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="#"/>
+        <link rel="next" title="What’s included?" href="inthebox.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="#" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+<a href="api/index.html">API reference</a>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Node API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="#">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="#">Docs</a> &raquo;</li>
+      
+    <li>Welcome to the Corda!</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/index.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="welcome-to-the-corda">
+<h1>Welcome to the Corda!<a class="headerlink" href="#welcome-to-the-corda" title="Permalink to this headline">¶</a></h1>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">This build of the docs is from the <em>master branch</em>, not a milestone release. It may not reflect the
+current state of the code.</p>
+</div>
+<p>This is the developer guide for Corda, a proposed architecture for distributed ledgers. Here are the sources
+of documentation you may find useful, from highest level to lowest:</p>
+<ol class="arabic simple">
+<li>The <a class="reference external" href="_static/corda-introductory-whitepaper.pdf">Introductory white paper</a> describes the motivating vision and background of the project. It is the kind
+of document your boss should read. It describes why the project exists and briefly compares it to alternative
+systems on the market.</li>
+<li>This user guide. It describes <em>how</em> to use the system to write apps. It assumes you already have read the
+relevant sections of the technology white paper and now wish to learn how to use it.</li>
+<li>The <a class="reference external" href="api/index.html">API docs</a>.</li>
+</ol>
+<p>Read on to learn:</p>
+<div class="toctree-wrapper compound" id="overview">
+<p class="caption"><span class="caption-text">Overview</span><a class="headerlink" href="#overview" title="Permalink to this toctree">¶</a></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="inthebox.html#kotlin">Kotlin</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting-set-up.html#if-intellij-complains-about-lack-of-an-sdk">If IntelliJ complains about lack of an SDK</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-set-up.html#doing-it-without-intellij">Doing it without IntelliJ</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="data-model.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data-model.html#comparison-with-bitcoin">Comparison with Bitcoin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data-model.html#comparison-with-ethereum">Comparison with Ethereum</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data-model.html#rationale-for-and-tradeoffs-in-adopting-a-utxo-style-model">Rationale for and tradeoffs in adopting a UTXO-style model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data-model.html#rationale">Rationale</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data-model.html#pros">Pros</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data-model.html#cons">Cons</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#amount">Amount</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#state">State</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#namedbyhash-and-uniqueidentifier">NamedByHash and UniqueIdentifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#fungibleassets-and-cash">FungibleAssets and Cash</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#transaction-lifecycle-types">Transaction lifecycle types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#party-and-publickey">Party and PublicKey</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#multi-signature-support">Multi-signature support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#date-support">Date support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#cryptography-maths-support">Cryptography &amp; maths support</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="merkle-trees.html#merkle-trees-in-corda">Merkle trees in Corda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="merkle-trees.html#hiding-data">Hiding data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="merkle-trees.html#example-of-usage">Example of usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#notary">Notary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#validation">Validation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#timestamping">Timestamping</a></li>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#running-a-notary-service">Running a notary service</a></li>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#obtaining-a-signature">Obtaining a signature</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="messaging.html#messaging-types">Messaging types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="messaging.html#network-map-service">Network Map Service</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="persistence.html#schemas">Schemas</a></li>
+<li class="toctree-l2"><a class="reference internal" href="persistence.html#object-relational-mapping">Object Relational Mapping</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#app-plugins">App Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#services">Services</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#starting-nodes">Starting Nodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#installing-apps">Installing Apps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#starting-your-node">Starting your Node</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#debugging-your-node">Debugging your Node</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#viewing-persisted-state-of-your-node">Viewing persisted state of your Node</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#building-against-corda">Building Against Corda</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#building-gradle-plugins">Building Gradle Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#using-gradle-plugins">Using Gradle Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#template-build-gradle">Template build.gradle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#cordformation">Cordformation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#trader-demo">Trader demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#irs-demo">IRS demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#irs-web-demo">IRS web demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#attachment-demo">Attachment demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#simm-and-portfolio-demo">SIMM and Portfolio Demo</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="node-administration.html#database-access">Database access</a></li>
+<li class="toctree-l2"><a class="reference internal" href="node-administration.html#monitoring-your-node">Monitoring your node</a></li>
+<li class="toctree-l2"><a class="reference internal" href="node-administration.html#uploading-and-downloading-attachments">Uploading and downloading attachments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="node-administration.html#uploading-interest-rate-fixes">Uploading interest rate fixes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="corda-configuration-files.html#configuration-file-location">Configuration File Location</a></li>
+<li class="toctree-l2"><a class="reference internal" href="corda-configuration-files.html#configuration-file-format">Configuration File Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="corda-configuration-files.html#configuration-file-examples">Configuration File Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="corda-configuration-files.html#configuration-file-fields">Configuration File Fields</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound" id="tutorials">
+<p class="caption"><span class="caption-text">Tutorials</span><a class="headerlink" href="#tutorials" title="Permalink to this toctree">¶</a></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="where-to-start.html#the-trader-demo">The trader demo</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#where-to-put-your-code">Where to put your code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#starting-the-commercial-paper-class">Starting the commercial paper class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#states">States</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#commands">Commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#the-verify-function">The verify function</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#using-state-groups">Using state groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#checking-the-requirements">Checking the requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#how-to-test-your-contract">How to test your contract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#adding-a-generation-api-to-your-contract">Adding a generation API to your contract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#how-multi-party-transactions-are-constructed-and-transmitted">How multi-party transactions are constructed and transmitted</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#non-asset-oriented-smart-contracts">Non-asset-oriented smart contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#making-things-happen-at-a-particular-time">Making things happen at a particular time</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#encumbrances">Encumbrances</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#clauses">Clauses</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#commercial-paper-class">Commercial paper class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#clauses">Clauses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#group-clause">Group Clause</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#summary">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#debugging">Debugging</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-test-dsl.html#testing-single-transactions">Testing single transactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-test-dsl.html#chaining-transactions">Chaining transactions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#theory">Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#a-two-party-trading-protocol">A two party trading protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#suspendable-functions">Suspendable functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#starting-your-protocol">Starting your protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#implementing-the-seller">Implementing the seller</a></li>
+<li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#subprotocols">Subprotocols</a></li>
+<li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#implementing-the-buyer">Implementing the buyer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#progress-tracking">Progress tracking</a></li>
+<li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#unit-testing">Unit testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#versioning">Versioning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#future-features">Future features</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="oracles.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="oracles.html#the-two-basic-approaches">The two basic approaches</a></li>
+<li class="toctree-l2"><a class="reference internal" href="oracles.html#asserting-continuously-varying-data">Asserting continuously varying data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="oracles.html#pay-per-play-oracles">Pay-per-play oracles</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-attachments.html#attachments-demo">Attachments demo</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="event-scheduling.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="event-scheduling.html#how-to-implement-scheduled-events">How to implement scheduled events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="event-scheduling.html#an-example">An example</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound" id="contracts">
+<p class="caption"><span class="caption-text">Contracts</span><a class="headerlink" href="#contracts" title="Permalink to this toctree">¶</a></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contract-catalogue.html#cash">Cash</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contract-catalogue.html#commodity">Commodity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contract-catalogue.html#commercial-paper">Commercial Paper</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contract-catalogue.html#interest-rate-swap">Interest Rate Swap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contract-catalogue.html#obligation">Obligation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contract-irs.html#creating-an-instance-and-lifecycle">Creating an instance and lifecycle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contract-irs.html#technical-details">Technical Details</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="initialmarginagreement.html#simm-introduction">SIMM Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialmarginagreement.html#process-steps">Process steps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialmarginagreement.html#running-the-app">Running the app</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound" id="node-api">
+<p class="caption"><span class="caption-text">Node API</span><a class="headerlink" href="#node-api" title="Permalink to this toctree">¶</a></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="clientrpc.html#security">Security</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clientrpc.html#observables">Observables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clientrpc.html#versioning">Versioning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clientrpc.html#thread-safety">Thread safety</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clientrpc.html#error-handling">Error handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clientrpc.html#wire-protocol">Wire protocol</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound" id="appendix">
+<p class="caption"><span class="caption-text">Appendix</span><a class="headerlink" href="#appendix" title="Permalink to this toctree">¶</a></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="secure-coding-guidelines.html#protocols">Protocols</a></li>
+<li class="toctree-l2"><a class="reference internal" href="secure-coding-guidelines.html#contracts">Contracts</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-5">Milestone 5</a></li>
+<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-4">Milestone 4</a></li>
+<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-3">Milestone 3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-2">Milestone 2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-1">Milestone 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-0">Milestone 0</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="network-simulator.html#interface">Interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="node-explorer.html#running-the-ui">Running the UI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="node-explorer.html#running-demo-nodes">Running Demo Nodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="node-explorer.html#interface">Interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="codestyle.html#general-style">1. General style</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codestyle.html#comments">2. Comments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codestyle.html#threading">3. Threading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codestyle.html#assertions-and-errors">4. Assertions and errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codestyle.html#properties">5. Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codestyle.html#compiler-warnings">6. Compiler warnings</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="building-the-docs.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-the-docs.html#build">Build</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="inthebox.html" class="btn btn-neutral float-right" title="What’s included?" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

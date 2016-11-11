@@ -1,0 +1,149 @@
+<HTML>
+<HEAD>
+<title>CordaRPCOpsImpl - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">net.corda.node.internal</a>&nbsp;/&nbsp;<a href=".">CordaRPCOpsImpl</a><br/>
+<br/>
+<h1>CordaRPCOpsImpl</h1>
+<code><span class="keyword">class </span><span class="identifier">CordaRPCOpsImpl</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.messaging/-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a></code><br/>
+<p>Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
+thread (i.e. serially). Arguments are serialised and deserialised automatically.</p>
+<br/>
+<br/>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-input-state-ref-resolve-failed/index.html">InputStateRefResolveFailed</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InputStateRefResolveFailed</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">CordaRPCOpsImpl</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.internal.CordaRPCOpsImpl$<init>(net.corda.core.node.ServiceHub, net.corda.node.services.statemachine.StateMachineManager, )/services">services</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.internal.CordaRPCOpsImpl$<init>(net.corda.core.node.ServiceHub, net.corda.node.services.statemachine.StateMachineManager, )/smm">smm</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.statemachine/-state-machine-manager/index.html"><span class="identifier">StateMachineManager</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.internal.CordaRPCOpsImpl$<init>(net.corda.core.node.ServiceHub, net.corda.node.services.statemachine.StateMachineManager, )/database">database</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span></code><p>Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
+thread (i.e. serially). Arguments are serialised and deserialised automatically.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="database.html">database</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">database</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="protocol-version.html">protocolVersion</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">protocolVersion</span><span class="symbol">: </span><span class="identifier">Int</span></code><p>Returns the RPC protocol version. Exists since version 0 so guaranteed to be present.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="services.html">services</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">services</span><span class="symbol">: </span><a href="../../net.corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="smm.html">smm</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">smm</span><span class="symbol">: </span><a href="../../net.corda.node.services.statemachine/-state-machine-manager/index.html"><span class="identifier">StateMachineManager</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="add-vault-transaction-note.html">addVaultTransactionNote</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">addVaultTransactionNote</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.internal.CordaRPCOpsImpl$addVaultTransactionNote(net.corda.core.crypto.SecureHash, kotlin.String)/txnId">txnId</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.internal.CordaRPCOpsImpl$addVaultTransactionNote(net.corda.core.crypto.SecureHash, kotlin.String)/txnNote">txnNote</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="execute-command.html">executeCommand</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">executeCommand</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.internal.CordaRPCOpsImpl$executeCommand(net.corda.core.contracts.ClientToServiceCommand)/command">command</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-client-to-service-command/index.html"><span class="identifier">ClientToServiceCommand</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.node.services.messaging/-transaction-build-result/index.html"><span class="identifier">TransactionBuildResult</span></a></code><p>Executes the given command if the user is permissioned to do so, possibly triggering cash creation etc.
+TODO: The signature of this is weird because its the remains of an old service call, we should have a call for each command instead.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="get-vault-transaction-notes.html">getVaultTransactionNotes</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getVaultTransactionNotes</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.internal.CordaRPCOpsImpl$getVaultTransactionNotes(net.corda.core.crypto.SecureHash)/txnId">txnId</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="network-map-updates.html">networkMapUpdates</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">networkMapUpdates</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-network-map-cache/-map-change/index.html"><span class="identifier">MapChange</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="node-identity.html">nodeIdentity</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">nodeIdentity</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a></code><p>Returns Nodes identity, assuming this will not change while the node is running.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="state-machine-recorded-transaction-mapping.html">stateMachineRecordedTransactionMapping</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">stateMachineRecordedTransactionMapping</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-state-machine-transaction-mapping/index.html"><span class="identifier">StateMachineTransactionMapping</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-state-machine-transaction-mapping/index.html"><span class="identifier">StateMachineTransactionMapping</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a snapshot list of existing state machine id - recorded transaction hash mappings, and a stream of future
+such mappings as well.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="state-machines-and-updates.html">stateMachinesAndUpdates</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">stateMachinesAndUpdates</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.node.services.messaging/-state-machine-info/index.html"><span class="identifier">StateMachineInfo</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../net.corda.node.services.messaging/-state-machine-update/index.html"><span class="identifier">StateMachineUpdate</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a pair of currently in-progress state machine infos and an observable of future state machine adds/removes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="vault-and-updates.html">vaultAndUpdates</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">vaultAndUpdates</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a pair of head states in the vault and an observable of future updates to the vault.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="verified-transactions.html">verifiedTransactions</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">verifiedTransactions</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a pair of all recorded transactions and an observable of future recorded ones.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-c-a-s-h_-p-e-r-m-i-s-s-i-o-n.html">CASH_PERMISSION</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">CASH_PERMISSION</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

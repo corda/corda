@@ -1,0 +1,51 @@
+<HTML>
+<HEAD>
+<title>net.corda.node.services.transactions - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href=".">net.corda.node.services.transactions</a><br/>
+<br/>
+<h2>Package net.corda.node.services.transactions</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-in-memory-uniqueness-provider/index.html">InMemoryUniquenessProvider</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InMemoryUniquenessProvider</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a></code><p>A dummy Uniqueness provider that stores the whole history of consumed states in memory</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-notary-service/index.html">NotaryService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">NotaryService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code><p>A Notary service acts as the final signer of a transaction ensuring two things:</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-persistent-uniqueness-provider/index.html">PersistentUniquenessProvider</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">PersistentUniquenessProvider</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a><span class="symbol">, </span><a href="../net.corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code><p>A RDBMS backed Uniqueness provider</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-simple-notary-service/index.html">SimpleNotaryService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">SimpleNotaryService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-notary-service/index.html"><span class="identifier">NotaryService</span></a></code><p>A simple Notary service that does not perform transaction validation</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-validating-notary-service/index.html">ValidatingNotaryService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ValidatingNotaryService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-notary-service/index.html"><span class="identifier">NotaryService</span></a></code><p>A Notary service that validates the transaction chain of he submitted transaction before committing it</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

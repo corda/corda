@@ -1,0 +1,301 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Getting set up &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
+        <link rel="next" title="Data model" href="data-model.html"/>
+        <link rel="prev" title="What’s included?" href="inthebox.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+<a href="api/index.html">API reference</a>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Overview</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting set up</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#if-intellij-complains-about-lack-of-an-sdk">If IntelliJ complains about lack of an SDK</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#doing-it-without-intellij">Doing it without IntelliJ</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Node API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Getting set up</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/getting-set-up.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="getting-set-up">
+<h1>Getting set up<a class="headerlink" href="#getting-set-up" title="Permalink to this headline">¶</a></h1>
+<p>Ensure that you have access to R3 git repository.</p>
+<blockquote>
+<div><a class="reference external" href="https://bitbucket.org/R3-CEV/r3prototyping.git">https://bitbucket.org/R3-CEV/r3prototyping.git</a></div></blockquote>
+<p>If you cannot access the page please contact the R3 admin team.</p>
+<p>Install the Oracle JDK 8u45 or higher. OpenJDK will probably also work, but it hasn&#8217;t been tested.</p>
+<p>Then install IntelliJ. The Community Edition is good enough:</p>
+<blockquote>
+<div><a class="reference external" href="https://www.jetbrains.com/idea/download/">https://www.jetbrains.com/idea/download/</a></div></blockquote>
+<p>Upgrade the Kotlin plugin to the latest version by clicking &#8220;Configure &gt; Plugins&#8221; in the opening screen,
+then clicking &#8220;Install JetBrains plugin&#8221;, then searching for Kotlin, then hitting &#8220;Upgrade&#8221; and then &#8220;Restart&#8221;.
+You can confirm what is the latest version of Kotlin plugin on this page:</p>
+<blockquote>
+<div><a class="reference external" href="https://plugins.jetbrains.com/plugin/6954">https://plugins.jetbrains.com/plugin/6954</a></div></blockquote>
+<p>Choose &#8220;Check out from version control&#8221; and use this git URL. Please remember to replace your_username with your
+actual bitbucket user name.</p>
+<blockquote>
+<div><a class="reference external" href="https://your_username&#64;bitbucket.org/R3-CEV/r3prototyping.git">https://your_username&#64;bitbucket.org/R3-CEV/r3prototyping.git</a></div></blockquote>
+<p>After code is cloned open the project. Please ensure that Gradle project is imported.
+You should have the &#8220;Unliked Gradle project?&#8221; pop-up window in the IntelliJ top right corner. Please click on &#8220;Import Gradle Project&#8221;. Wait for it to think and download the dependencies. After that you might have another popup titled &#8220;Unindexed remote maven repositories found.&#8221; This is general IntelliJ question and doesn&#8217;t affect Corda, therefore you can decided to index them or not.</p>
+<p>Next click on &#8220;green arrow&#8221; next to &#8220;All tests&#8221; pop-up on the top toolbar.</p>
+<p>The code should build, the unit tests should show as all green.</p>
+<p>You can catch up with the latest code by selecting &#8220;VCS -&gt; Update Project&#8221; in the menu.</p>
+<div class="section" id="if-intellij-complains-about-lack-of-an-sdk">
+<h2>If IntelliJ complains about lack of an SDK<a class="headerlink" href="#if-intellij-complains-about-lack-of-an-sdk" title="Permalink to this headline">¶</a></h2>
+<p>If on attempting to open the project (including importing Gradle project), IntelliJ refuses because SDK was not selected, do the following:</p>
+<blockquote>
+<div>Configure -&gt; Project Defaults -&gt; Project Structure</div></blockquote>
+<p>on that tab:</p>
+<blockquote>
+<div>Project Settings / Project</div></blockquote>
+<p>click on New… next to the red &lt;No SDK&gt; symbol, and select JDK.  It should then pop up and show the latest JDK it has
+found at something like</p>
+<blockquote>
+<div>jdk1.8.0_xx…/Contents/Home</div></blockquote>
+<p>Also select Project language level: as 8.  Click OK.  Open should now work.</p>
+</div>
+<div class="section" id="doing-it-without-intellij">
+<h2>Doing it without IntelliJ<a class="headerlink" href="#doing-it-without-intellij" title="Permalink to this headline">¶</a></h2>
+<p>If you don&#8217;t want to explore or modify the code in a local IDE, you can also just use the command line and a text editor:
+* First run <code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://your_username&#64;bitbucket.org/R3-CEV/r3prototyping.git</span></code> to download Corda source code. Please remember to replace your_username with your actual bitbucket user name.
+* Next ensure that you are in r3repository <code class="docutils literal"><span class="pre">cd</span> <span class="pre">r3repository</span></code>
+* Then you can run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">test</span></code> to run the unit tests.
+* Finally remeber to run <code class="docutils literal"><span class="pre">git</span> <span class="pre">pull</span></code> to upgrade the source code.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="data-model.html" class="btn btn-neutral float-right" title="Data model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="inthebox.html" class="btn btn-neutral" title="What’s included?" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
