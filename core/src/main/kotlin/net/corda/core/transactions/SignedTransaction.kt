@@ -31,7 +31,11 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     // TODO: This needs to be reworked to ensure that the inner WireTransaction is only ever deserialised sandboxed.
 
     /** Lazily calculated access to the deserialised/hashed transaction data. */
-    val tx: WireTransaction by lazy { WireTransaction.deserialize(txBits) }
+    val tx: WireTransaction by lazy {
+        val temp = WireTransaction.deserialize(txBits)
+        check(temp.id == id) { "Supplied transaction ID does not match deserialized transaction's ID - this is probably a problem in serialization/deserialization" }
+        temp
+    }
 
     class SignaturesMissingException(val missing: Set<PublicKeyTree>, val descriptions: List<String>, override val id: SecureHash) : NamedByHash, SignatureException() {
         override fun toString(): String {
