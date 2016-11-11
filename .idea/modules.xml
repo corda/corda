@@ -15,12 +15,9 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/core/core.iml" filepath="$PROJECT_DIR$/.idea/modules/core/core.iml" group="core" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/core/core_main.iml" filepath="$PROJECT_DIR$/.idea/modules/core/core_main.iml" group="core" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/core/core_test.iml" filepath="$PROJECT_DIR$/.idea/modules/core/core_test.iml" group="core" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/docs/docs.iml" filepath="$PROJECT_DIR$/.idea/modules/docs/docs.iml" group="docs" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/docs/docs_main.iml" filepath="$PROJECT_DIR$/.idea/modules/docs/docs_main.iml" group="docs" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/docs/docs_test.iml" filepath="$PROJECT_DIR$/.idea/modules/docs/docs_test.iml" group="docs" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/docs/source/example-code/example-code.iml" filepath="$PROJECT_DIR$/.idea/modules/docs/source/example-code/example-code.iml" group="docs/source/example-code" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/docs/source/example-code/example-code_main.iml" filepath="$PROJECT_DIR$/.idea/modules/docs/source/example-code/example-code_main.iml" group="docs/source/example-code" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/docs/source/example-code/example-code_test.iml" filepath="$PROJECT_DIR$/.idea/modules/docs/source/example-code/example-code_test.iml" group="docs/source/example-code" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/docs/source/example-code/docs_source_example-code.iml" filepath="$PROJECT_DIR$/.idea/modules/docs/source/example-code/docs_source_example-code.iml" group="docs/source/example-code" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/docs/source/example-code/docs_source_example-code_main.iml" filepath="$PROJECT_DIR$/.idea/modules/docs/source/example-code/docs_source_example-code_main.iml" group="docs/source/example-code" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/docs/source/example-code/docs_source_example-code_test.iml" filepath="$PROJECT_DIR$/.idea/modules/docs/source/example-code/docs_source_example-code_test.iml" group="docs/source/example-code" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/experimental/experimental.iml" filepath="$PROJECT_DIR$/.idea/modules/experimental/experimental.iml" group="experimental" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/experimental/experimental_main.iml" filepath="$PROJECT_DIR$/.idea/modules/experimental/experimental_main.iml" group="experimental" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/experimental/experimental_test.iml" filepath="$PROJECT_DIR$/.idea/modules/experimental/experimental_test.iml" group="experimental" />
@@ -49,9 +46,6 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/r3prototyping.iml" filepath="$PROJECT_DIR$/.idea/modules/r3prototyping.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/r3prototyping_main.iml" filepath="$PROJECT_DIR$/.idea/modules/r3prototyping_main.iml" group="r3prototyping" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/r3prototyping_test.iml" filepath="$PROJECT_DIR$/.idea/modules/r3prototyping_test.iml" group="r3prototyping" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/docs/source/source.iml" filepath="$PROJECT_DIR$/.idea/modules/docs/source/source.iml" group="docs/source" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/docs/source/source_main.iml" filepath="$PROJECT_DIR$/.idea/modules/docs/source/source_main.iml" group="docs/source" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/docs/source/source_test.iml" filepath="$PROJECT_DIR$/.idea/modules/docs/source/source_test.iml" group="docs/source" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-utils/test-utils.iml" filepath="$PROJECT_DIR$/.idea/modules/test-utils/test-utils.iml" group="test-utils" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-utils/test-utils_main.iml" filepath="$PROJECT_DIR$/.idea/modules/test-utils/test-utils_main.iml" group="test-utils" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-utils/test-utils_test.iml" filepath="$PROJECT_DIR$/.idea/modules/test-utils/test-utils_test.iml" group="test-utils" />

@@ -1,9 +1,7 @@
 package net.corda.node.services
 
-import net.corda.core.exists
-import net.corda.core.read
-import java.nio.file.Path
-import java.util.*
+import com.typesafe.config.Config
+import net.corda.node.services.config.getListOrElse
 
 /**
  * Service for retrieving [User] objects representing RPC users who are authorised to use the RPC system. A [User]
@@ -15,30 +13,22 @@ interface RPCUserService {
     val users: List<User>
 }
 
-// TODO If this sticks around then change it to use HOCON ...
-// TODO  ... and also store passwords as salted hashes.
-// TODO Otherwise consider something like Apache Shiro
-class PropertiesFileRPCUserService(file: Path) : RPCUserService {
+// TODO Store passwords as salted hashes
+// TODO Or ditch this and consider something like Apache Shiro
+class RPCUserServiceImpl(config: Config) : RPCUserService {
 
     private val _users: Map<String, User>
 
     init {
-        _users = if (file.exists()) {
-            val properties = Properties()
-            file.read {
-                properties.load(it)
-            }
-            properties.map {
-                val parts = it.value.toString().split(delimiters = ",")
-                val username = it.key.toString()
-                require(!username.contains("""\.|\*|#""".toRegex())) { """Usernames cannot have the following characters: * . # """ }
-                val password = parts[0]
-                val permissions = parts.drop(1).map(String::toUpperCase).toSet()
-                User(username, password, permissions)
-            }.associateBy(User::username)
-        } else {
-            emptyMap()
-        }
+        _users = config.getListOrElse<Config>("rpcUsers") { emptyList() }
+                .map {
+                    val username = it.getString("user")
+                    require(username.matches("\\w+".toRegex())) { "Username $username contains invalid characters" }
+                    val password = it.getString("password")
+                    val permissions = it.getListOrElse<String>("permissions") { emptyList() }.map(String::toUpperCase).toSet()
+                    User(username, password, permissions)
+                }
+                .associateBy(User::username)
     }
 
     override fun getUser(usename: String): User? = _users[usename]

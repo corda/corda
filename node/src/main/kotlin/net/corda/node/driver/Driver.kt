@@ -8,10 +8,10 @@ import com.typesafe.config.ConfigRenderOptions
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.Party
 import net.corda.core.div
+import net.corda.core.future
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.loggerFor
-import net.corda.core.write
 import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
@@ -28,7 +28,9 @@ import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.TimeoutException
 
 /**
  * This file defines a small "Driver" DSL for starting up nodes that is only intended for development, demos and tests.
@@ -246,11 +248,11 @@ open class DriverDSL(
             registeredProcesses.forEach(Process::destroy)
         }
         /** Wait 5 seconds, then [Process.destroyForcibly] */
-        val finishedFuture = Executors.newSingleThreadExecutor().submit {
+        val finishedFuture = future {
             waitForAllNodesToFinish()
         }
         try {
-            finishedFuture.get(5, TimeUnit.SECONDS)
+            finishedFuture.get(5, SECONDS)
         } catch (exception: TimeoutException) {
             finishedFuture.cancel(true)
             state.locked {
@@ -306,22 +308,19 @@ open class DriverDSL(
                         "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
                         "networkMapAddress" to networkMapAddress.toString(),
-                        "useTestClock" to useTestClock
+                        "useTestClock" to useTestClock,
+                        "rpcUsers" to rpcUsers.map { mapOf(
+                                "user" to it.username,
+                                "password" to it.password,
+                                "permissions" to it.permissions)
+                        }
                 )
         )
 
-        val nodeConfig = FullNodeConfiguration(config)
-
-        nodeConfig.rpcUsersFile.write(createDirs = true) {
-            rpcUsers.map { it.username to "${it.password},${it.permissions.joinToString(",")}" }
-                    .toMap(Properties())
-                    .store(it, null)
-        }
-
-        return Executors.newSingleThreadExecutor().submit(Callable<NodeInfoAndConfig> {
-            registerProcess(DriverDSL.startNode(nodeConfig, quasarJarPath, debugPort))
+        return future {
+            registerProcess(DriverDSL.startNode(FullNodeConfiguration(config), quasarJarPath, debugPort))
             NodeInfoAndConfig(queryNodeInfo(apiAddress)!!, config)
-        })
+        }
     }
 
     override fun start() {

@@ -24,7 +24,6 @@ interface NodeSSLConfiguration {
 interface NodeConfiguration : NodeSSLConfiguration {
     val basedir: Path
     override val certificatesPath: Path get() = basedir / "certificates"
-    val rpcUsersFile: Path get() = basedir / "rpc-users.properties"
     val myLegalName: String
     val nearestCity: String
     val emailAddress: String

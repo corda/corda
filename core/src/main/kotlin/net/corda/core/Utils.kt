@@ -22,8 +22,10 @@ import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
 import java.time.Duration
 import java.time.temporal.Temporal
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executor
+import java.util.concurrent.Future
 import java.util.concurrent.locks.ReentrantLock
 import java.util.stream.Stream
 import java.util.zip.ZipInputStream
@@ -57,6 +59,9 @@ infix fun Long.checkedAdd(b: Long) = Math.addExact(this, b)
  * avoid potential bugs where the value is used in a context where negative numbers are not expected.
  */
 fun random63BitValue(): Long = Math.abs(newSecureRandom().nextLong())
+
+// TODO Convert the CompletableFuture into a ListenableFuture
+fun <T> future(block: () -> T): Future<T> = CompletableFuture.supplyAsync(block)
 
 // Some utilities for working with Guava listenable futures.
 fun <T> ListenableFuture<T>.then(executor: Executor, body: () -> Unit) = addListener(Runnable(body), executor)

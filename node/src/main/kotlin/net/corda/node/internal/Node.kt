@@ -8,8 +8,8 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.then
 import net.corda.core.utilities.loggerFor
 import net.corda.node.serialization.NodeClock
-import net.corda.node.services.PropertiesFileRPCUserService
 import net.corda.node.services.RPCUserService
+import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
@@ -118,7 +118,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
     private lateinit var userService: RPCUserService
 
     override fun makeMessagingService(): MessagingServiceInternal {
-        userService = PropertiesFileRPCUserService(configuration.rpcUsersFile)
+        userService = RPCUserServiceImpl(configuration.config)
         val serverAddr = with(configuration) {
             messagingServerAddress ?: {
                 messageBroker = ArtemisMessagingServer(this, artemisAddress, services.networkMapCache, userService)

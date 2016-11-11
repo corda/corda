@@ -18,6 +18,7 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.makeTestDataSourceProperties
+import com.typesafe.config.ConfigFactory
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
@@ -59,7 +60,7 @@ class ArtemisMessagingTests {
 
     @Before
     fun setUp() {
-        userService = PropertiesFileRPCUserService(temporaryFolder.newFile().toPath())
+        userService = RPCUserServiceImpl(ConfigFactory.empty())
         // TODO: create a base class that provides a default implementation
         config = object : NodeConfiguration {
             override val basedir: Path = temporaryFolder.newFolder().toPath()

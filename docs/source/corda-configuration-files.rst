@@ -41,6 +41,9 @@ General node configuration file for hosting the IRSDemo services.
     extraAdvertisedServiceIds: "corda.interest_rates"
     networkMapAddress : "localhost:12345"
     useHTTPS : false
+    rpcUsers : [
+        { user=user1, password=letmein, permissions=[ cash ] }
+    ]
 
 NetworkMapService plus Simple Notary configuration file.
 
@@ -97,20 +100,12 @@ Configuration File Fields
 
 :useHTTPS: If false the node's web server will be plain HTTP. If true the node will use the same certificate and private key from the ``<workspace>/certificates/sslkeystore.jks`` file as the ArtemisMQ port for HTTPS. If HTTPS is enabled then unencrypted HTTP traffic to the node's **webAddress** port is not supported.
 
-RPC Users File
-==============
+:rpcUsers:
+    A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
+    following fields:
 
-Corda also uses the ``rpc-users.properties`` file, found in the base directory, to control access to the RPC subsystem.
-This is a Java properties file (details can be found in the `Javadocs <https://docs.oracle.com/javase/8/docs/api/java/util/Properties.html#load-java.io.Reader->`_)
-which specifies a list of users with their password and list of permissions they're enabled for.
+        :user: Username consisting only of word characters (a-z, A-Z, 0-9 and _)
+        :password: The password
+        :permissions: A list of permission strings which RPC methods can use to control access
 
-.. code-block:: text
-    :caption: Sample
-
-    admin=notsecure,ADMIN
-    user1=letmein,CASH,PAPER
-
-In this example ``user1`` has password ``letmein`` and has permissions for ``CASH`` and ``PAPER``. The permissions are
-free-form strings which can be used by the RPC methods to control access.
-
-If ``rpc-users.properties`` is empty or doesn't exist then the RPC subsystem is effectively locked down.
+    If this field is absent or an empty list then RPC is effectively locked down.
