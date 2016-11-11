@@ -1,24 +1,34 @@
 package net.corda.contracts;
 
-import com.google.common.collect.*;
-import net.corda.contracts.asset.*;
+import com.google.common.collect.ImmutableList;
+import kotlin.Pair;
+import kotlin.Unit;
+import net.corda.contracts.asset.CashKt;
 import net.corda.core.contracts.*;
-import net.corda.core.contracts.Timestamp;
-import net.corda.core.contracts.TransactionForContract.*;
-import net.corda.core.contracts.clauses.*;
-import net.corda.core.node.services.*;
-import net.corda.core.transactions.*;
-import kotlin.*;
-import net.corda.core.crypto.*;
-import org.jetbrains.annotations.*;
+import net.corda.core.contracts.TransactionForContract.InOutGroup;
+import net.corda.core.contracts.clauses.AnyComposition;
+import net.corda.core.contracts.clauses.Clause;
+import net.corda.core.contracts.clauses.ClauseVerifier;
+import net.corda.core.contracts.clauses.GroupClauseVerifier;
+import net.corda.core.crypto.CryptoUtilitiesKt;
+import net.corda.core.crypto.Party;
+import net.corda.core.crypto.PublicKeyTree;
+import net.corda.core.crypto.SecureHash;
+import net.corda.core.node.services.VaultService;
+import net.corda.core.transactions.TransactionBuilder;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.security.*;
-import java.time.*;
-import java.util.*;
-import java.util.stream.*;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.Currency;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-import static net.corda.core.contracts.ContractsDSL.*;
-import static kotlin.collections.CollectionsKt.*;
+import static kotlin.collections.CollectionsKt.single;
+import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
+import static net.corda.core.contracts.ContractsDSL.requireThat;
 
 
 /**
@@ -30,14 +40,14 @@ public class JavaCommercialPaper implements Contract {
 
     public static class State implements OwnableState, ICommercialPaperState {
         private PartyAndReference issuance;
-        private PublicKey owner;
+        private PublicKeyTree owner;
         private Amount<Issued<Currency>> faceValue;
         private Instant maturityDate;
 
         public State() {
         }  // For serialization
 
-        public State(PartyAndReference issuance, PublicKey owner, Amount<Issued<Currency>> faceValue,
+        public State(PartyAndReference issuance, PublicKeyTree owner, Amount<Issued<Currency>> faceValue,
                      Instant maturityDate) {
             this.issuance = issuance;
             this.owner = owner;
@@ -49,13 +59,13 @@ public class JavaCommercialPaper implements Contract {
             return new State(this.issuance, this.owner, this.faceValue, this.maturityDate);
         }
 
-        public ICommercialPaperState withOwner(PublicKey newOwner) {
+        public ICommercialPaperState withOwner(PublicKeyTree newOwner) {
             return new State(this.issuance, newOwner, this.faceValue, this.maturityDate);
         }
 
         @NotNull
         @Override
-        public Pair<CommandData, OwnableState> withNewOwner(@NotNull PublicKey newOwner) {
+        public Pair<CommandData, OwnableState> withNewOwner(@NotNull PublicKeyTree newOwner) {
             return new Pair<>(new Commands.Move(), new State(this.issuance, newOwner, this.faceValue, this.maturityDate));
         }
 
@@ -76,7 +86,7 @@ public class JavaCommercialPaper implements Contract {
         }
 
         @NotNull
-        public PublicKey getOwner() {
+        public PublicKeyTree getOwner() {
             return owner;
         }
 
@@ -117,12 +127,12 @@ public class JavaCommercialPaper implements Contract {
         }
 
         public State withoutOwner() {
-            return new State(issuance, NullPublicKey.INSTANCE, faceValue, maturityDate);
+            return new State(issuance, CryptoUtilitiesKt.getNullPublicKeyTree(), faceValue, maturityDate);
         }
 
         @NotNull
         @Override
-        public List<PublicKey> getParticipants() {
+        public List<PublicKeyTree> getParticipants() {
             return ImmutableList.of(this.owner);
         }
 
@@ -311,7 +321,7 @@ public class JavaCommercialPaper implements Contract {
         tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getData().getOwner()));
     }
 
-    public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKey newOwner) {
+    public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKeyTree newOwner) {
         tx.addInputState(paper);
         tx.addOutputState(new TransactionState<>(new State(paper.getState().getData().getIssuance(), newOwner, paper.getState().getData().getFaceValue(), paper.getState().getData().getMaturityDate()), paper.getState().getNotary()));
         tx.addCommand(new Command(new Commands.Move(), paper.getState().getData().getOwner()));

@@ -6,6 +6,7 @@ import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
@@ -155,8 +156,8 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
      */
     override fun generateSpend(tx: TransactionBuilder,
                                amount: Amount<Currency>,
-                               to: PublicKey,
-                               onlyFromParties: Set<Party>?): Pair<TransactionBuilder, List<PublicKey>> {
+                               to: PublicKeyTree,
+                               onlyFromParties: Set<Party>?): Pair<TransactionBuilder, List<PublicKeyTree>> {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -239,7 +240,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         return Pair(tx, keysList)
     }
 
-    private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: PublicKey)
+    private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: PublicKeyTree)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
     /**
@@ -292,7 +293,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
 
     private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>): Boolean {
         return if (state is OwnableState) {
-            state.owner in ourKeys
+            state.owner.containsAny(ourKeys)
         } else if (state is LinearState) {
             // It's potentially of interest to the vault
             state.isRelevant(ourKeys)

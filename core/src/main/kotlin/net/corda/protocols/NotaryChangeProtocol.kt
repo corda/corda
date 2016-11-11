@@ -6,12 +6,12 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.protocols.NotaryChangeProtocol.Acceptor
 import net.corda.protocols.NotaryChangeProtocol.Instigator
-import java.security.PublicKey
 
 /**
  * A protocol to be used for changing a state's Notary. This is required since all input states to a transaction
@@ -36,7 +36,7 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
         override fun assembleProposal(stateRef: StateRef, modification: Party, stx: SignedTransaction): AbstractStateReplacementProtocol.Proposal<Party>
             = Proposal(stateRef, modification, stx)
 
-        override fun assembleTx(): Pair<SignedTransaction, List<PublicKey>> {
+        override fun assembleTx(): Pair<SignedTransaction, List<PublicKeyTree>> {
             val state = originalState.state
             val newState = state.withNotary(modification)
             val participants = state.data.participants

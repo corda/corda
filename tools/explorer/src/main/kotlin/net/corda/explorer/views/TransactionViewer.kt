@@ -1,20 +1,5 @@
 package net.corda.explorer.views
 
-import net.corda.client.fxutils.*
-import net.corda.client.model.*
-import net.corda.contracts.asset.Cash
-import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.toStringShort
-import net.corda.core.node.NodeInfo
-import net.corda.core.protocols.StateMachineRunId
-import net.corda.explorer.AmountDiff
-import net.corda.explorer.formatters.AmountFormatter
-import net.corda.explorer.identicon.identicon
-import net.corda.explorer.identicon.identiconToolTip
-import net.corda.explorer.model.ReportingCurrencyModel
-import net.corda.explorer.sign
-import net.corda.explorer.ui.setCustomCellFactory
 import javafx.beans.binding.Bindings
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
@@ -29,8 +14,23 @@ import javafx.scene.layout.BackgroundFill
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.CornerRadii
 import javafx.scene.paint.Color
+import net.corda.client.fxutils.*
+import net.corda.client.model.*
+import net.corda.contracts.asset.Cash
+import net.corda.core.contracts.*
+import net.corda.core.crypto.PublicKeyTree
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.tree
+import net.corda.core.node.NodeInfo
+import net.corda.core.protocols.StateMachineRunId
+import net.corda.explorer.AmountDiff
+import net.corda.explorer.formatters.AmountFormatter
+import net.corda.explorer.identicon.identicon
+import net.corda.explorer.identicon.identiconToolTip
+import net.corda.explorer.model.ReportingCurrencyModel
+import net.corda.explorer.sign
+import net.corda.explorer.ui.setCustomCellFactory
 import tornadofx.*
-import java.security.PublicKey
 import java.util.*
 
 class TransactionViewer : View() {
@@ -136,7 +136,7 @@ class TransactionViewer : View() {
         override val root: Parent by fxml()
         private val inputs: ListView<StateNode> by fxid()
         private val outputs: ListView<StateNode> by fxid()
-        private val signatures: ListView<PublicKey> by fxid()
+        private val signatures: ListView<PublicKeyTree> by fxid()
         private val inputPane: TitledPane by fxid()
         private val outputPane: TitledPane by fxid()
         private val signaturesPane: TitledPane by fxid()
@@ -148,7 +148,7 @@ class TransactionViewer : View() {
                 StateNode(PartiallyResolvedTransaction.InputResolution.Resolved(StateAndRef(transactionState, stateRef)).lift(), stateRef)
             }
 
-            val signatureData = transaction.transaction.sigs.map { it.by }
+            val signatureData = transaction.transaction.sigs.map { it.by.tree }
             // Bind count to TitlePane
             inputPane.textProperty().bind(inputStates.lift().map { "Input (${it.count()})" })
             outputPane.textProperty().bind(outputStates.lift().map { "Output (${it.count()})" })
@@ -172,14 +172,14 @@ class TransactionViewer : View() {
                                     }
                                     field("Issuer :") {
                                         label("${data.amount.token.issuer}") {
-                                            tooltip(data.amount.token.issuer.party.owningKey.toStringShort())
+                                            tooltip(data.amount.token.issuer.party.owningKey.toString())
                                         }
                                     }
                                     field("Owner :") {
                                         val owner = data.owner
                                         val nodeInfo = Models.get<NetworkIdentityModel>(TransactionViewer::class).lookup(owner)
                                         label(nodeInfo?.legalIdentity?.name ?: "???") {
-                                            tooltip(data.owner.toStringShort())
+                                            tooltip(data.owner.toString())
                                         }
                                     }
                                 }
@@ -201,7 +201,7 @@ class TransactionViewer : View() {
             signatures.apply {
                 cellFormat { key ->
                     val nodeInfo = Models.get<NetworkIdentityModel>(TransactionViewer::class).lookup(key)
-                    text = "${key.toStringShort()} (${nodeInfo?.legalIdentity?.name ?: "???"})"
+                    text = "$key (${nodeInfo?.legalIdentity?.name ?: "???"})"
                 }
                 prefHeight = 185.0
             }

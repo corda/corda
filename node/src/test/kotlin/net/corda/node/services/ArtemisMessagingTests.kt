@@ -1,12 +1,8 @@
 package net.corda.node.services
 
 import com.google.common.net.HostAndPort
-import net.corda.core.contracts.ClientToServiceCommand
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.tree
 import net.corda.core.messaging.Message
 import net.corda.core.messaging.createMessage
 import net.corda.core.node.services.DEFAULT_SESSION_ID
@@ -147,7 +143,7 @@ class ArtemisMessagingTests {
 
     private fun createMessagingClient(server: HostAndPort = hostAndPort): NodeMessagingClient {
         return databaseTransaction(database) {
-            NodeMessagingClient(config, server, identity.public, AffinityExecutor.ServiceAffinityExecutor("ArtemisMessagingTests", 1), database).apply {
+            NodeMessagingClient(config, server, identity.public.tree, AffinityExecutor.ServiceAffinityExecutor("ArtemisMessagingTests", 1), database).apply {
                 configureWithDevSSLCertificate()
                 messagingClient = this
             }

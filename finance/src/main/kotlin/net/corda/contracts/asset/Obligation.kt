@@ -1,16 +1,18 @@
 package net.corda.contracts.asset
 
 import com.google.common.annotations.VisibleForTesting
+import net.corda.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.contracts.clause.*
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.*
 import net.corda.core.random63BitValue
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.*
-import net.corda.core.crypto.*
+import net.corda.core.utilities.Emoji
+import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.TEST_TX_TIME
+import net.corda.core.utilities.nonEmptySetOf
 import java.math.BigInteger
-import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -267,21 +269,21 @@ class Obligation<P> : Contract {
             val template: Terms<P>,
             val quantity: Long,
             /** The public key of the entity the contract pays to */
-            val beneficiary: PublicKey
+            val beneficiary: PublicKeyTree
     ) : FungibleAsset<Obligation.Terms<P>>, NettableState<State<P>, MultilateralNetState<P>> {
         override val amount: Amount<Issued<Terms<P>>> = Amount(quantity, Issued(obligor.ref(0), template))
         override val contract = OBLIGATION_PROGRAM_ID
-        override val exitKeys: Collection<PublicKey> = setOf(beneficiary)
+        override val exitKeys: Collection<PublicKeyTree> = setOf(beneficiary)
         val dueBefore: Instant = template.dueBefore
-        override val participants: List<PublicKey> = listOf(obligor.owningKey, beneficiary)
-        override val owner: PublicKey = beneficiary
+        override val participants: List<PublicKeyTree> = listOf(obligor.owningKey, beneficiary)
+        override val owner: PublicKeyTree = beneficiary
 
-        override fun move(newAmount: Amount<Issued<Terms<P>>>, newOwner: PublicKey): State<P>
+        override fun move(newAmount: Amount<Issued<Terms<P>>>, newOwner: PublicKeyTree): State<P>
                 = copy(quantity = newAmount.quantity, beneficiary = newOwner)
 
         override fun toString() = when (lifecycle) {
-            Lifecycle.NORMAL -> "${Emoji.bagOfCash}Debt($amount due $dueBefore to ${beneficiary.toStringShort()})"
-            Lifecycle.DEFAULTED -> "${Emoji.bagOfCash}Debt($amount unpaid by $dueBefore to ${beneficiary.toStringShort()})"
+            Lifecycle.NORMAL -> "${Emoji.bagOfCash}Debt($amount due $dueBefore to $beneficiary)"
+            Lifecycle.DEFAULTED -> "${Emoji.bagOfCash}Debt($amount unpaid by $dueBefore to $beneficiary)"
         }
 
         override val bilateralNetState: BilateralNetState<P>
@@ -309,7 +311,7 @@ class Obligation<P> : Contract {
             }
         }
 
-        override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(beneficiary = newOwner))
+        override fun withNewOwner(newOwner: PublicKeyTree) = Pair(Commands.Move(), copy(beneficiary = newOwner))
     }
 
     // Just for grouping
@@ -414,7 +416,7 @@ class Obligation<P> : Contract {
      * and same parties involved).
      */
     fun generateCloseOutNetting(tx: TransactionBuilder,
-                                signer: PublicKey,
+                                signer: PublicKeyTree,
                                 vararg states: State<P>) {
         val netState = states.firstOrNull()?.bilateralNetState
 
@@ -442,7 +444,7 @@ class Obligation<P> : Contract {
      */
     @Suppress("unused")
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Terms<P>>>,
-                     assetStates: List<StateAndRef<Obligation.State<P>>>): PublicKey
+                     assetStates: List<StateAndRef<Obligation.State<P>>>): PublicKeyTree
             = Clauses.ConserveAmount<P>().generateExit(tx, amountIssued, assetStates,
             deriveState = { state, amount, owner -> state.copy(data = state.data.move(amount, owner)) },
             generateMoveCommand = { -> Commands.Move() },
@@ -456,7 +458,7 @@ class Obligation<P> : Contract {
                       obligor: Party,
                       issuanceDef: Terms<P>,
                       pennies: Long,
-                      beneficiary: PublicKey,
+                      beneficiary: PublicKeyTree,
                       notary: Party) {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().map { it.data }.sumObligationsOrNull<P>() == null)
@@ -472,7 +474,7 @@ class Obligation<P> : Contract {
             "all states are in the normal lifecycle state " by (states.all { it.lifecycle == Lifecycle.NORMAL })
         }
         val groups = states.groupBy { it.multilateralNetState }
-        val partyLookup = HashMap<PublicKey, Party>()
+        val partyLookup = HashMap<PublicKeyTree, Party>()
         val signers = states.map { it.beneficiary }.union(states.map { it.obligor.owningKey }).toSet()
 
         // Create a lookup table of the party that each public key represents.
@@ -516,7 +518,7 @@ class Obligation<P> : Contract {
         // Produce a new set of states
         val groups = statesAndRefs.groupBy { it.state.data.amount.token }
         for ((aggregateState, stateAndRefs) in groups) {
-            val partiesUsed = ArrayList<PublicKey>()
+            val partiesUsed = ArrayList<PublicKeyTree>()
             stateAndRefs.forEach { stateAndRef ->
                 val outState = stateAndRef.state.data.copy(lifecycle = lifecycle)
                 tx.addInputState(stateAndRef)
@@ -561,7 +563,7 @@ class Obligation<P> : Contract {
         val template: Terms<P> = issuanceDef.product
         val obligationTotal: Amount<P> = Amount(states.map { it.data }.sumObligations<P>().quantity, template.product)
         var obligationRemaining: Amount<P> = obligationTotal
-        val assetSigners = HashSet<PublicKey>()
+        val assetSigners = HashSet<PublicKeyTree>()
 
         statesAndRefs.forEach { tx.addInputState(it) }
 
@@ -613,8 +615,8 @@ class Obligation<P> : Contract {
  *
  * @return a map of obligor/beneficiary pairs to the balance due.
  */
-fun <P> extractAmountsDue(product: Obligation.Terms<P>, states: Iterable<Obligation.State<P>>): Map<Pair<PublicKey, PublicKey>, Amount<Obligation.Terms<P>>> {
-    val balances = HashMap<Pair<PublicKey, PublicKey>, Amount<Obligation.Terms<P>>>()
+fun <P> extractAmountsDue(product: Obligation.Terms<P>, states: Iterable<Obligation.State<P>>): Map<Pair<PublicKeyTree, PublicKeyTree>, Amount<Obligation.Terms<P>>> {
+    val balances = HashMap<Pair<PublicKeyTree, PublicKeyTree>, Amount<Obligation.Terms<P>>>()
 
     states.forEach { state ->
         val key = Pair(state.obligor.owningKey, state.beneficiary)
@@ -628,8 +630,8 @@ fun <P> extractAmountsDue(product: Obligation.Terms<P>, states: Iterable<Obligat
 /**
  * Net off the amounts due between parties.
  */
-fun <P> netAmountsDue(balances: Map<Pair<PublicKey, PublicKey>, Amount<P>>): Map<Pair<PublicKey, PublicKey>, Amount<P>> {
-    val nettedBalances = HashMap<Pair<PublicKey, PublicKey>, Amount<P>>()
+fun <P> netAmountsDue(balances: Map<Pair<PublicKeyTree, PublicKeyTree>, Amount<P>>): Map<Pair<PublicKeyTree, PublicKeyTree>, Amount<P>> {
+    val nettedBalances = HashMap<Pair<PublicKeyTree, PublicKeyTree>, Amount<P>>()
 
     balances.forEach { balance ->
         val (obligor, beneficiary) = balance.key
@@ -653,8 +655,8 @@ fun <P> netAmountsDue(balances: Map<Pair<PublicKey, PublicKey>, Amount<P>>): Map
  * @param balances payments due, indexed by obligor and beneficiary. Zero balances are stripped from the map before being
  * returned.
  */
-fun <P> sumAmountsDue(balances: Map<Pair<PublicKey, PublicKey>, Amount<P>>): Map<PublicKey, Long> {
-    val sum = HashMap<PublicKey, Long>()
+fun <P> sumAmountsDue(balances: Map<Pair<PublicKeyTree, PublicKeyTree>, Amount<P>>): Map<PublicKeyTree, Long> {
+    val sum = HashMap<PublicKeyTree, Long>()
 
     // Fill the map with zeroes initially
     balances.keys.forEach {
@@ -695,19 +697,19 @@ fun <P> Iterable<ContractState>.sumObligationsOrZero(issuanceDef: Issued<Obligat
         = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrZero(issuanceDef)
 
 infix fun <T> Obligation.State<T>.at(dueBefore: Instant) = copy(template = template.copy(dueBefore = dueBefore))
-infix fun <T> Obligation.State<T>.between(parties: Pair<Party, PublicKey>) = copy(obligor = parties.first, beneficiary = parties.second)
-infix fun <T> Obligation.State<T>.`owned by`(owner: PublicKey) = copy(beneficiary = owner)
+infix fun <T> Obligation.State<T>.between(parties: Pair<Party, PublicKeyTree>) = copy(obligor = parties.first, beneficiary = parties.second)
+infix fun <T> Obligation.State<T>.`owned by`(owner: PublicKeyTree) = copy(beneficiary = owner)
 infix fun <T> Obligation.State<T>.`issued by`(party: Party) = copy(obligor = party)
 // For Java users:
-@Suppress("unused") fun <T> Obligation.State<T>.ownedBy(owner: PublicKey) = copy(beneficiary = owner)
+@Suppress("unused") fun <T> Obligation.State<T>.ownedBy(owner: PublicKeyTree) = copy(beneficiary = owner)
 @Suppress("unused") fun <T> Obligation.State<T>.issuedBy(party: Party) = copy(obligor = party)
 
 /** A randomly generated key. */
 val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
-val DUMMY_OBLIGATION_ISSUER by lazy { Party("Snake Oil Issuer", DUMMY_OBLIGATION_ISSUER_KEY.public) }
+val DUMMY_OBLIGATION_ISSUER by lazy { Party("Snake Oil Issuer", DUMMY_OBLIGATION_ISSUER_KEY.public.tree) }
 
 val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
     get() = Obligation.Terms(nonEmptySetOf(Cash().legalContractReference), nonEmptySetOf(this), TEST_TX_TIME)
 val Amount<Issued<Currency>>.OBLIGATION: Obligation.State<Currency>
-    get() = Obligation.State(Obligation.Lifecycle.NORMAL, DUMMY_OBLIGATION_ISSUER, token.OBLIGATION_DEF, quantity, NullPublicKey)
+    get() = Obligation.State(Obligation.Lifecycle.NORMAL, DUMMY_OBLIGATION_ISSUER, token.OBLIGATION_DEF, quantity, NullPublicKeyTree)

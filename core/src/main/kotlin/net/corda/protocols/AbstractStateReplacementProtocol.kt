@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.signWithECDSA
 import net.corda.core.node.recordTransactions
 import net.corda.core.protocols.ProtocolLogic
@@ -15,7 +16,6 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.protocols.AbstractStateReplacementProtocol.Acceptor
 import net.corda.protocols.AbstractStateReplacementProtocol.Instigator
-import java.security.PublicKey
 
 /**
  * Abstract protocol to be used for replacing one state with another, for example when changing the notary of a state.
@@ -67,10 +67,10 @@ abstract class AbstractStateReplacementProtocol<T> {
         }
 
         abstract protected fun assembleProposal(stateRef: StateRef, modification: T, stx: SignedTransaction): Proposal<T>
-        abstract protected fun assembleTx(): Pair<SignedTransaction, List<PublicKey>>
+        abstract protected fun assembleTx(): Pair<SignedTransaction, List<PublicKeyTree>>
 
         @Suspendable
-        private fun collectSignatures(participants: List<PublicKey>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
+        private fun collectSignatures(participants: List<PublicKeyTree>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
             val parties = participants.map {
                 val participantNode = serviceHub.networkMapCache.getNodeByPublicKey(it) ?:
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")
@@ -95,7 +95,7 @@ abstract class AbstractStateReplacementProtocol<T> {
             val participantSignature = response.unwrap {
                 if (it.sig == null) throw StateReplacementException(it.error!!)
                 else {
-                    check(it.sig.by == party.owningKey) { "Not signed by the required participant" }
+                    check(party.owningKey.isFulfilledBy(it.sig.by)) { "Not signed by the required participant" }
                     it.sig.verifyWithECDSA(stx.id)
                     it.sig
                 }

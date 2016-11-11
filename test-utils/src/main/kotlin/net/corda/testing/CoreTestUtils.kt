@@ -6,10 +6,9 @@ import com.google.common.base.Throwables
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
+import com.typesafe.config.Config
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.*
 import net.corda.core.node.ServiceHub
 import net.corda.core.protocols.ProtocolLogic
 import net.corda.core.transactions.TransactionBuilder
@@ -21,11 +20,9 @@ import net.corda.node.services.statemachine.StateMachineManager.Change
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.testing.node.MockIdentityService
 import net.corda.testing.node.MockServices
-import com.typesafe.config.Config
 import rx.Subscriber
 import java.net.ServerSocket
 import java.security.KeyPair
-import java.security.PublicKey
 import kotlin.reflect.KClass
 
 /**
@@ -48,24 +45,24 @@ import kotlin.reflect.KClass
 
 // A few dummy values for testing.
 val MEGA_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MEGA_CORP_PUBKEY: PublicKey get() = MEGA_CORP_KEY.public
+val MEGA_CORP_PUBKEY: PublicKeyTree get() = MEGA_CORP_KEY.public.tree
 
 val MINI_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MINI_CORP_PUBKEY: PublicKey get() = MINI_CORP_KEY.public
+val MINI_CORP_PUBKEY: PublicKeyTree get() = MINI_CORP_KEY.public.tree
 
 val ORACLE_KEY: KeyPair by lazy { generateKeyPair() }
-val ORACLE_PUBKEY: PublicKey get() = ORACLE_KEY.public
+val ORACLE_PUBKEY: PublicKeyTree get() = ORACLE_KEY.public.tree
 
 val ALICE_KEY: KeyPair by lazy { generateKeyPair() }
-val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
+val ALICE_PUBKEY: PublicKeyTree get() = ALICE_KEY.public.tree
 val ALICE: Party get() = Party("Alice", ALICE_PUBKEY)
 
 val BOB_KEY: KeyPair by lazy { generateKeyPair() }
-val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
+val BOB_PUBKEY: PublicKeyTree get() = BOB_KEY.public.tree
 val BOB: Party get() = Party("Bob", BOB_PUBKEY)
 
 val CHARLIE_KEY: KeyPair by lazy { generateKeyPair() }
-val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
+val CHARLIE_PUBKEY: PublicKeyTree get() = CHARLIE_KEY.public.tree
 val CHARLIE: Party get() = Party("Charlie", CHARLIE_PUBKEY)
 
 val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)

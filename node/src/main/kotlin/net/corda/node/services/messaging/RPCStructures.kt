@@ -9,10 +9,15 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
 import com.google.common.net.HostAndPort
+import de.javakaffee.kryoserializers.ArraysAsListSerializer
+import de.javakaffee.kryoserializers.guava.*
 import net.corda.contracts.asset.Cash
 import net.corda.core.ErrorOr
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
+import net.corda.core.crypto.SecureHash
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PhysicalLocation
 import net.corda.core.node.ServiceEntry
@@ -23,9 +28,6 @@ import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.User
-import de.javakaffee.kryoserializers.ArraysAsListSerializer
-import de.javakaffee.kryoserializers.guava.*
-import net.corda.core.crypto.*
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.objenesis.strategy.StdInstantiatorStrategy
@@ -148,6 +150,8 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(ByteArray::class.java)
         register(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
         register(EdDSAPrivateKey::class.java, Ed25519PrivateKeySerializer)
+        register(PublicKeyTree.Leaf::class.java)
+        register(PublicKeyTree.Node::class.java)
         register(Vault::class.java)
         register(Vault.Update::class.java)
         register(StateMachineRunId::class.java)
@@ -179,7 +183,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(ArtemisMessagingComponent.NodeAddress::class.java,
                 read = { kryo, input ->
                     ArtemisMessagingComponent.NodeAddress(
-                            parsePublicKeyBase58(kryo.readObject(input, String::class.java)),
+                            PublicKeyTree.parseFromBase58(kryo.readObject(input, String::class.java)),
                             kryo.readObject(input, HostAndPort::class.java))
                 },
                 write = { kryo, output, nodeAddress ->

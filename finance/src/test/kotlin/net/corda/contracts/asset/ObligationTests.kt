@@ -2,13 +2,13 @@ package net.corda.contracts.asset
 
 import net.corda.contracts.asset.Obligation.Lifecycle
 import net.corda.core.contracts.*
-import net.corda.core.crypto.NullPublicKey
+import net.corda.core.crypto.NullPublicKeyTree
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.utilities.*
 import net.corda.testing.*
 import org.junit.Test
-import java.security.PublicKey
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -506,7 +506,7 @@ class ObligationTests {
         val oneUnitFcoj = Amount(1, defaultFcoj)
         val obligationDef = Obligation.Terms(nonEmptySetOf(CommodityContract().legalContractReference), nonEmptySetOf(defaultFcoj), TEST_TX_TIME)
         val oneUnitFcojObligation = Obligation.State(Obligation.Lifecycle.NORMAL, ALICE,
-                obligationDef, oneUnitFcoj.quantity, NullPublicKey)
+                obligationDef, oneUnitFcoj.quantity, NullPublicKeyTree)
         // Try settling a simple commodity obligation
         ledger {
             unverifiedTransaction {
@@ -830,7 +830,7 @@ class ObligationTests {
                 Pair(Pair(ALICE_PUBKEY, BOB_PUBKEY), Amount(100000000, GBP)),
                 Pair(Pair(BOB_PUBKEY, ALICE_PUBKEY), Amount(100000000, GBP))
         )
-        val expected: Map<Pair<PublicKey, PublicKey>, Amount<Currency>> = emptyMap() // Zero balances are stripped before returning
+        val expected: Map<Pair<PublicKeyTree, PublicKeyTree>, Amount<Currency>> = emptyMap() // Zero balances are stripped before returning
         val actual = netAmountsDue(balanced)
         assertEquals(expected, actual)
     }
@@ -851,8 +851,8 @@ class ObligationTests {
 
     @Test
     fun `summing empty balances due between parties`() {
-        val empty = emptyMap<Pair<PublicKey, PublicKey>, Amount<Currency>>()
-        val expected = emptyMap<PublicKey, Long>()
+        val empty = emptyMap<Pair<PublicKeyTree, PublicKeyTree>, Amount<Currency>>()
+        val expected = emptyMap<PublicKeyTree, Long>()
         val actual = sumAmountsDue(empty)
         assertEquals(expected, actual)
     }
@@ -872,7 +872,7 @@ class ObligationTests {
                 Pair(Pair(ALICE_PUBKEY, BOB_PUBKEY), Amount(100000000, GBP)),
                 Pair(Pair(BOB_PUBKEY, ALICE_PUBKEY), Amount(100000000, GBP))
         )
-        val expected: Map<PublicKey, Long> = emptyMap() // Zero balances are stripped before returning
+        val expected: Map<PublicKeyTree, Long> = emptyMap() // Zero balances are stripped before returning
         val actual = sumAmountsDue(balanced)
         assertEquals(expected, actual)
     }

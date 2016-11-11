@@ -5,6 +5,7 @@ import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.tree
 import net.corda.core.days
 import net.corda.core.node.recordTransactions
 import net.corda.core.node.services.Vault
@@ -19,8 +20,8 @@ import net.corda.core.utilities.TEST_TX_TIME
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
-import net.corda.testing.node.MockServices
 import net.corda.testing.*
+import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -277,8 +278,8 @@ class CommercialPaperTestsGeneric {
             // Alice pays $9000 to BigCorp to own some of their debt.
             moveTX = run {
                 val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-                aliceVaultService.generateSpend(ptx, 9000.DOLLARS, bigCorpServices.key.public)
-                CommercialPaper().generateMove(ptx, issueTX.tx.outRef(0), aliceServices.key.public)
+                aliceVaultService.generateSpend(ptx, 9000.DOLLARS, bigCorpServices.key.public.tree)
+                CommercialPaper().generateMove(ptx, issueTX.tx.outRef(0), aliceServices.key.public.tree)
                 ptx.signWith(bigCorpServices.key)
                 ptx.signWith(aliceServices.key)
                 ptx.signWith(DUMMY_NOTARY_KEY)

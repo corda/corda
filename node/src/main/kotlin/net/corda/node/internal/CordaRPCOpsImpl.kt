@@ -4,6 +4,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.keys
 import net.corda.core.crypto.toStringShort
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -101,7 +102,7 @@ class CordaRPCOpsImpl(
             val (spendTX, keysForSigning) = services.vaultService.generateSpend(builder,
                     req.amount.withoutIssuer(), req.recipient.owningKey, setOf(req.amount.token.issuer.party))
 
-            keysForSigning.forEach {
+            keysForSigning.keys.forEach {
                 val key = services.keyManagementService.keys[it] ?: throw IllegalStateException("Could not find signing key for ${it.toStringShort()}")
                 builder.signWith(KeyPair(it, key))
             }

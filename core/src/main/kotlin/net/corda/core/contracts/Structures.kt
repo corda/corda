@@ -2,8 +2,8 @@ package net.corda.core.contracts
 
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.toStringShort
 import net.corda.core.node.services.ServiceType
 import net.corda.core.protocols.ProtocolLogicRef
 import net.corda.core.protocols.ProtocolLogicRefFactory
@@ -113,7 +113,7 @@ interface ContractState {
      * The participants list should normally be derived from the contents of the state. E.g. for [Cash] the participants
      * list should just contain the owner.
      */
-    val participants: List<PublicKey>
+    val participants: List<PublicKeyTree>
 
     /**
      * All contract states may be _encumbered_ by up to one other state.
@@ -184,10 +184,10 @@ fun <T> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, token.pr
  */
 interface OwnableState : ContractState {
     /** There must be a MoveCommand signed by this key to claim the amount */
-    val owner: PublicKey
+    val owner: PublicKeyTree
 
     /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
-    fun withNewOwner(newOwner: PublicKey): Pair<CommandData, OwnableState>
+    fun withNewOwner(newOwner: PublicKeyTree): Pair<CommandData, OwnableState>
 }
 
 /** Something which is scheduled to happen at a point in time */
@@ -351,15 +351,15 @@ abstract class TypeOnlyCommandData : CommandData {
 }
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
-data class Command(val value: CommandData, val signers: List<PublicKey>) {
+data class Command(val value: CommandData, val signers: List<PublicKeyTree>) {
     init {
         require(signers.isNotEmpty())
     }
 
-    constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
+    constructor(data: CommandData, key: PublicKeyTree) : this(data, listOf(key))
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
-    override fun toString() = "${commandDataToString()} with pubkeys ${signers.map { it.toStringShort() }}"
+    override fun toString() = "${commandDataToString()} with pubkeys ${signers.joinToString()}"
 }
 
 /** A common issue command, to enforce that issue commands have a nonce value. */
@@ -386,7 +386,7 @@ interface NetCommand : CommandData {
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
 data class AuthenticatedObject<out T : Any>(
-        val signers: List<PublicKey>,
+        val signers: List<PublicKeyTree>,
         /** If any public keys were recognised, the looked up institutions are available here */
         val signingParties: List<Party>,
         val value: T

@@ -3,10 +3,10 @@ package net.corda.contracts
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.days
 import net.corda.core.transactions.TransactionBuilder
-import java.security.PublicKey
 import java.time.Instant
 import java.time.LocalDate
 import java.time.Period
@@ -58,7 +58,7 @@ class LOC : Contract {
     ) : ContractState {
         override val contract = LOC_PROGRAM_ID
 
-        override val participants: List<PublicKey>
+        override val participants: List<PublicKeyTree>
             get() = listOf()
     }
 

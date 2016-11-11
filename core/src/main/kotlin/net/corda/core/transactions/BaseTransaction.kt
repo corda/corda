@@ -2,7 +2,7 @@ package net.corda.core.transactions
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
-import java.security.PublicKey
+import net.corda.core.crypto.PublicKeyTree
 import java.util.*
 
 /**
@@ -25,7 +25,7 @@ abstract class BaseTransaction(
          * transaction until the transaction is verified by using [LedgerTransaction.verify]. It includes the
          * notary key, if the notary field is set.
          */
-        val mustSign: List<PublicKey>,
+        val mustSign: List<PublicKeyTree>,
         /**
          * Pointer to a class that defines the behaviour of this transaction: either normal, or "notary changing".
          */

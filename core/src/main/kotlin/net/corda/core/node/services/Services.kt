@@ -4,7 +4,9 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.toStringShort
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import rx.Observable
@@ -184,8 +186,8 @@ interface VaultService {
     @Throws(InsufficientBalanceException::class)
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,
-                      to: PublicKey,
-                      onlyFromParties: Set<Party>? = null): Pair<TransactionBuilder, List<PublicKey>>
+                      to: PublicKeyTree,
+                      onlyFromParties: Set<Party>? = null): Pair<TransactionBuilder, List<PublicKeyTree>>
 }
 
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)
@@ -201,13 +203,18 @@ inline fun <reified T : DealState> VaultService.dealsWith(party: Party) = linear
  * The current interface is obviously not usable for those use cases: this is just where we'd put a real signing
  * interface if/when one is developed.
  */
+
 interface KeyManagementService {
     /** Returns a snapshot of the current pubkey->privkey mapping. */
     val keys: Map<PublicKey, PrivateKey>
 
-    fun toPrivate(publicKey: PublicKey) = keys[publicKey] ?: throw IllegalStateException("No private key known for requested public key")
+    // TODO: make toPrivate return null if not found instead of throwing
+    fun toPrivate(publicKey: PublicKey) = keys[publicKey] ?: throw IllegalStateException("No private key known for requested public key ${publicKey.toStringShort()}")
 
     fun toKeyPair(publicKey: PublicKey) = KeyPair(publicKey, toPrivate(publicKey))
+
+    /** Returns the first [KeyPair] matching any of the [publicKeys] */
+    fun toKeyPair(publicKeys: Iterable<PublicKey>) = publicKeys.first { keys.contains(it) }.let { toKeyPair(it) }
 
     /** Generates a new random key and adds it to the exposed map. */
     fun freshKey(): KeyPair

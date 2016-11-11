@@ -1,12 +1,13 @@
 package net.corda.core.contracts
 
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.crypto.tree
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.testing.node.MockTransactionStorage
 import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.node.MockTransactionStorage
 import org.junit.Test
 import java.security.KeyPair
 import kotlin.test.assertEquals
@@ -31,7 +32,7 @@ class TransactionGraphSearchTests {
     fun buildTransactions(command: CommandData, signer: KeyPair): GraphTransactionStorage {
         val originTx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
             addOutputState(DummyState(random31BitValue()))
-            addCommand(command, signer.public)
+            addCommand(command, signer.public.tree)
             signWith(signer)
             signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction(false)

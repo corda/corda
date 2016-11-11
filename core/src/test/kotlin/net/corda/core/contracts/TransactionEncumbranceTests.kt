@@ -1,12 +1,14 @@
 package net.corda.core.contracts
 
 import net.corda.contracts.asset.Cash
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.utilities.DUMMY_PUBKEY_1
 import net.corda.core.utilities.DUMMY_PUBKEY_2
-import net.corda.testing.*
+import net.corda.testing.MEGA_CORP
+import net.corda.testing.ledger
+import net.corda.testing.transaction
 import org.junit.Test
-import java.security.PublicKey
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -42,7 +44,7 @@ class TransactionEncumbranceTests {
         data class State(
                 val validFrom: Instant
         ) : ContractState {
-            override val participants: List<PublicKey> = emptyList()
+            override val participants: List<PublicKeyTree> = emptyList()
             override val contract: Contract = TEST_TIMELOCK_ID
         }
     }

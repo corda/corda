@@ -2,10 +2,9 @@ package net.corda.contracts
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.toStringShort
 import net.corda.core.transactions.TransactionBuilder
-import java.security.PublicKey
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.*
@@ -44,24 +43,24 @@ class AccountReceivable : Contract {
 
     data class State(
             // technical variables
-            override val owner: PublicKey,
+            override val owner: PublicKeyTree,
             val status: StatusEnum,
             val props: AccountReceivableProperties
 
     ) : OwnableState {
         override val contract = ACCOUNTRECEIVABLE_PROGRAM_ID
 
-        override val participants: List<PublicKey>
+        override val participants: List<PublicKeyTree>
             get() = listOf(owner)
 
-        override fun toString() = "AR owned by ${owner.toStringShort()})"
+        override fun toString() = "AR owned by $owner)"
 
         fun checkInvoice(invoice: Invoice.State): Boolean {
             val arProps = Helper.invoicePropsToARProps(invoice.props, props.discountRate)
             return props == arProps
         }
 
-        override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Issue(), copy(owner = newOwner, status = StatusEnum.Issued))
+        override fun withNewOwner(newOwner: PublicKeyTree) = Pair(Commands.Issue(), copy(owner = newOwner, status = StatusEnum.Issued))
 
     }
 

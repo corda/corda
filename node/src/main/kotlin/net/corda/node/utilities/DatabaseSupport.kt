@@ -1,11 +1,12 @@
 package net.corda.node.utilities
 
 import co.paralleluniverse.strands.Strand
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.TransactionInterface
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -137,15 +138,17 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
 }
 
 // Composite columns for use with below Exposed helpers.
-data class PartyColumns(val name: Column<String>, val owningKey: Column<PublicKey>)
+data class PartyColumns(val name: Column<String>, val owningKey: Column<PublicKeyTree>)
 data class StateRefColumns(val txId: Column<SecureHash>, val index: Column<Int>)
 
 /**
  * [Table] column helpers for use with Exposed, as per [varchar] etc.
  */
 fun Table.publicKey(name: String) = this.registerColumn<PublicKey>(name, PublicKeyColumnType)
+
+fun Table.publicKeyTree(name: String) = this.registerColumn<PublicKeyTree>(name, PublicKeyTreeColumnType)
 fun Table.secureHash(name: String) = this.registerColumn<SecureHash>(name, SecureHashColumnType)
-fun Table.party(nameColumnName: String, keyColumnName: String) = PartyColumns(this.varchar(nameColumnName, length = 255), this.publicKey(keyColumnName))
+fun Table.party(nameColumnName: String, keyColumnName: String) = PartyColumns(this.varchar(nameColumnName, length = 255), this.publicKeyTree(keyColumnName))
 fun Table.uuidString(name: String) = this.registerColumn<UUID>(name, UUIDStringColumnType)
 fun Table.localDate(name: String) = this.registerColumn<LocalDate>(name, LocalDateColumnType)
 fun Table.localDateTime(name: String) = this.registerColumn<LocalDateTime>(name, LocalDateTimeColumnType)
@@ -161,6 +164,15 @@ object PublicKeyColumnType : ColumnType() {
     override fun valueFromDB(value: Any): Any = parsePublicKeyBase58(value.toString())
 
     override fun notNullValueToDB(value: Any): Any = if (value is PublicKey) value.toBase58String() else value
+}
+
+/**
+ * [ColumnType] for marshalling to/from database on behalf of [PublicKeyTree].
+ */
+object PublicKeyTreeColumnType : ColumnType() {
+    override fun sqlType(): String = "VARCHAR"
+    override fun valueFromDB(value: Any): Any = PublicKeyTree.parseFromBase58(value.toString())
+    override fun notNullValueToDB(value: Any): Any = if (value is PublicKeyTree) value.toBase58String() else value
 }
 
 /**

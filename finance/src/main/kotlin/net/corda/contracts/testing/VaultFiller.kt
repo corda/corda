@@ -7,16 +7,15 @@ import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
-import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import java.security.KeyPair
-import java.security.PublicKey
 import java.util.*
 
 
@@ -36,12 +35,12 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     atMostThisManyStates: Int = 10,
                                     rng: Random = Random(),
                                     ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 1 })),
-                                    ownedBy: PublicKey? = null,
+                                    ownedBy: PublicKeyTree? = null,
                                     issuedBy: PartyAndReference = DUMMY_CASH_ISSUER,
                                     issuerKey: KeyPair = DUMMY_CASH_ISSUER_KEY): Vault {
     val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
-    val myKey: PublicKey = ownedBy ?: myInfo.legalIdentity.owningKey
+    val myKey: PublicKeyTree = ownedBy ?: myInfo.legalIdentity.owningKey
 
     // We will allocate one state to one transaction, for simplicities sake.
     val cash = Cash()

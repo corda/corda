@@ -4,6 +4,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
+import net.corda.core.crypto.tree
 import net.corda.core.node.recordTransactions
 import net.corda.core.node.services.VaultService
 import net.corda.core.transactions.SignedTransaction
@@ -72,7 +73,7 @@ class VaultWithCashTest {
 
             val state = w.states.toList()[0].state.data as Cash.State
             assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
-            assertEquals(services.key.public, state.owner)
+            assertEquals(services.key.public.tree, state.owner)
 
             assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[2].state.data as Cash.State).amount)
             assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[1].state.data as Cash.State).amount)
@@ -85,7 +86,7 @@ class VaultWithCashTest {
             // A tx that sends us money.
             val freshKey = services.keyManagementService.freshKey()
             val usefulTX = TransactionType.General.Builder(null).apply {
-                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
+                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public.tree, DUMMY_NOTARY)
                 signWith(MEGA_CORP_KEY)
             }.toSignedTransaction()
 
@@ -103,7 +104,7 @@ class VaultWithCashTest {
 
             // A tx that doesn't send us anything.
             val irrelevantTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), BOB_KEY.public, DUMMY_NOTARY)
+                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), BOB_KEY.public.tree, DUMMY_NOTARY)
                 signWith(MEGA_CORP_KEY)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -127,8 +128,8 @@ class VaultWithCashTest {
 
             // Issue a linear state
             val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
-                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public.tree)))
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public.tree)))
                 signWith(freshKey)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -148,7 +149,7 @@ class VaultWithCashTest {
 
             // Issue a linear state
             val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public.tree)))
                 signWith(freshKey)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -160,7 +161,7 @@ class VaultWithCashTest {
 
             // Move the same state
             val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public.tree)))
                 addInputState(dummyIssue.tx.outRef<LinearState>(0))
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()

@@ -2,12 +2,11 @@ package net.corda.node.services.messaging
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.net.HostAndPort
-import net.corda.core.crypto.parsePublicKeyBase58
-import net.corda.core.crypto.toBase58String
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.read
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.config.NodeSSLConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -18,7 +17,6 @@ import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.security.KeyStore
-import java.security.PublicKey
 
 /**
  * The base class for Artemis services that defines shared data structures and transport configuration
@@ -77,7 +75,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      * may change or evolve and code that relies upon it being a simple host/port may not function correctly.
      * For instance it may contain onion routing data.
      */
-    data class NodeAddress(val identity: PublicKey, override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
+    data class NodeAddress(val identity: PublicKeyTree, override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
         override val queueName: SimpleString by lazy { SimpleString(PEERS_PREFIX+identity.toBase58String()) }
         override fun toString(): String = "${javaClass.simpleName}(identity = $queueName, $hostAndPort)"
     }
@@ -85,9 +83,9 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
     /** The config object is used to pass in the passwords for the certificate KeyStore and TrustStore */
     abstract val config: NodeSSLConfiguration
 
-    protected fun parseKeyFromQueueName(name: String): PublicKey {
+    protected fun parseKeyFromQueueName(name: String): PublicKeyTree {
         require(name.startsWith(PEERS_PREFIX))
-        return parsePublicKeyBase58(name.substring(PEERS_PREFIX.length))
+        return PublicKeyTree.parseFromBase58(name.substring(PEERS_PREFIX.length))
     }
 
     protected enum class ConnectionDirection { INBOUND, OUTBOUND }

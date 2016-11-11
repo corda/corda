@@ -2,6 +2,7 @@ package net.corda.node.services.messaging
 
 import com.google.common.net.HostAndPort
 import net.corda.core.ThreadBox
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.messaging.*
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.opaque
@@ -19,7 +20,6 @@ import org.apache.activemq.artemis.api.core.client.*
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
-import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
@@ -49,7 +49,7 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class NodeMessagingClient(override val config: NodeConfiguration,
                           val serverHostPort: HostAndPort,
-                          val myIdentity: PublicKey?,
+                          val myIdentity: PublicKeyTree?,
                           val executor: AffinityExecutor,
                           val database: Database) : ArtemisMessagingComponent(), MessagingServiceInternal {
     companion object {

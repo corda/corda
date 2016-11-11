@@ -10,6 +10,8 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
 import com.esotericsoftware.kryo.serializers.MapSerializer
+import de.javakaffee.kryoserializers.ArraysAsListSerializer
+import de.javakaffee.kryoserializers.guava.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.node.AttachmentsClassLoader
@@ -18,9 +20,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.NonEmptySetSerializer
-import de.javakaffee.kryoserializers.ArraysAsListSerializer
-import de.javakaffee.kryoserializers.guava.*
-import net.corda.core.crypto.*
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
@@ -32,7 +31,6 @@ import java.io.ObjectOutputStream
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
@@ -268,7 +266,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
             val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
             val commands = kryo.readClassAndObject(input) as List<Command>
             val notary = kryo.readClassAndObject(input) as Party?
-            val signers = kryo.readClassAndObject(input) as List<PublicKey>
+            val signers = kryo.readClassAndObject(input) as List<PublicKeyTree>
             val transactionType = kryo.readClassAndObject(input) as TransactionType
             val timestamp = kryo.readClassAndObject(input) as Timestamp?
 

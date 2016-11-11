@@ -2,7 +2,7 @@
 package net.corda.core.contracts
 
 import net.corda.core.crypto.Party
-import java.security.PublicKey
+import net.corda.core.crypto.PublicKeyTree
 import java.util.*
 
 /**
@@ -60,16 +60,16 @@ inline fun <R> requireThat(body: Requirements.() -> R) = R.body()
 //// Authenticated commands ///////////////////////////////////////////////////////////////////////////////////////////
 
 /** Filters the command list by type, party and public key all at once. */
-inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signer: PublicKey? = null,
-                                                                                   party: Party? = null) =
+inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signer: PublicKeyTree? = null,
+                                                                                         party: Party? = null) =
         filter { it.value is T }.
         filter { if (signer == null) true else signer in it.signers }.
         filter { if (party == null) true else party in it.signingParties }.
         map { AuthenticatedObject(it.signers, it.signingParties, it.value as T) }
 
 /** Filters the command list by type, parties and public keys all at once. */
-inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signers: Collection<PublicKey>?,
-                                                                                   parties: Collection<Party>?) =
+inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signers: Collection<PublicKeyTree>?,
+                                                                                         parties: Collection<Party>?) =
         filter { it.value is T }.
         filter { if (signers == null) true else it.signers.containsAll(signers)}.
         filter { if (parties == null) true else it.signingParties.containsAll(parties) }.

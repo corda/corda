@@ -1,6 +1,6 @@
 package net.corda.core.contracts
 
-import java.security.PublicKey
+import net.corda.core.crypto.PublicKeyTree
 
 class InsufficientBalanceException(val amountMissing: Amount<*>) : Exception() {
     override fun toString() = "Insufficient balance, missing $amountMissing"
@@ -26,10 +26,11 @@ interface FungibleAsset<T> : OwnableState {
      * There must be an ExitCommand signed by these keys to destroy the amount. While all states require their
      * owner to sign, some (i.e. cash) also require the issuer.
      */
-    val exitKeys: Collection<PublicKey>
+    val exitKeys: Collection<PublicKeyTree>
     /** There must be a MoveCommand signed by this key to claim the amount */
-    override val owner: PublicKey
-    fun move(newAmount: Amount<Issued<T>>, newOwner: PublicKey): FungibleAsset<T>
+    override val owner: PublicKeyTree
+
+    fun move(newAmount: Amount<Issued<T>>, newOwner: PublicKeyTree): FungibleAsset<T>
 
     // Just for grouping
     interface Commands : CommandData {

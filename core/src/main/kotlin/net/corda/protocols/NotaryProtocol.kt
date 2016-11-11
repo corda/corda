@@ -1,21 +1,16 @@
 package net.corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.crypto.*
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.protocols.ProtocolLogic
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
-import java.security.PublicKey
 
 object NotaryProtocol {
 
@@ -177,5 +172,5 @@ sealed class NotaryError {
 
     class TransactionInvalid : NotaryError()
 
-    class SignaturesMissing(val missingSigners: Set<PublicKey>) : NotaryError()
+    class SignaturesMissing(val missingSigners: Set<PublicKeyTree>) : NotaryError()
 }

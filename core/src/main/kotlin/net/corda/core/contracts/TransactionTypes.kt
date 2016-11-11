@@ -1,9 +1,9 @@
 package net.corda.core.contracts
 
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import java.security.PublicKey
 
 /** Defines transaction build & validation logic for a specific transaction type */
 sealed class TransactionType {
@@ -25,7 +25,7 @@ sealed class TransactionType {
     }
 
     /** Check that the list of signers includes all the necessary keys */
-    fun verifySigners(tx: LedgerTransaction): Set<PublicKey> {
+    fun verifySigners(tx: LedgerTransaction): Set<PublicKeyTree> {
         val notaryKey = tx.inputs.map { it.state.notary.owningKey }.toSet()
         if (notaryKey.size > 1) throw TransactionVerificationException.MoreThanOneNotary(tx)
 
@@ -39,7 +39,7 @@ sealed class TransactionType {
      * Return the list of public keys that that require signatures for the transaction type.
      * Note: the notary key is checked separately for all transactions and need not be included.
      */
-    abstract fun getRequiredSigners(tx: LedgerTransaction): Set<PublicKey>
+    abstract fun getRequiredSigners(tx: LedgerTransaction): Set<PublicKeyTree>
 
     /** Implement type specific transaction validation logic */
     abstract fun verifyTransaction(tx: LedgerTransaction)

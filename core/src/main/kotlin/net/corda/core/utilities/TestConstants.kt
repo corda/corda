@@ -2,20 +2,15 @@
 package net.corda.core.utilities
 
 import net.corda.core.crypto.*
-import net.corda.core.crypto.DummyPublicKey
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.crypto.generateKeyPair
 import java.math.BigInteger
 import java.security.KeyPair
-import java.security.PublicKey
 import java.time.Instant
 
 // A dummy time at which we will be pretending test transactions are created.
 val TEST_TX_TIME: Instant get() = Instant.parse("2015-04-17T12:00:00.00Z")
 
-val DUMMY_PUBKEY_1: PublicKey get() = DummyPublicKey("x1")
-val DUMMY_PUBKEY_2: PublicKey get() = DummyPublicKey("x2")
+val DUMMY_PUBKEY_1: PublicKeyTree get() = DummyPublicKey("x1").tree
+val DUMMY_PUBKEY_2: PublicKeyTree get() = DummyPublicKey("x2").tree
 
 val DUMMY_KEY_1: KeyPair by lazy { generateKeyPair() }
 val DUMMY_KEY_2: KeyPair by lazy { generateKeyPair() }

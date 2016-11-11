@@ -3,6 +3,7 @@ package net.corda.core.transactions
 import com.esotericsoftware.kryo.Kryo
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.indexOfOrThrow
 import net.corda.core.node.ServiceHub
@@ -29,7 +30,7 @@ class WireTransaction(
         /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
         val commands: List<Command>,
         notary: Party?,
-        signers: List<PublicKey>,
+        signers: List<PublicKeyTree>,
         type: TransactionType,
         timestamp: Timestamp?
 ) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp) {

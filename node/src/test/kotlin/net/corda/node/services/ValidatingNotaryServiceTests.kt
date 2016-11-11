@@ -3,6 +3,7 @@ package net.corda.node.services
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.tree
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -56,7 +57,7 @@ class ValidatingNotaryServiceTests {
     }
 
     @Test fun `should report error for missing signatures`() {
-        val expectedMissingKey = MEGA_CORP_KEY.public
+        val expectedMissingKey = MEGA_CORP_KEY.public.tree
         val stx = run {
             val inputState = issueState(clientNode)
 

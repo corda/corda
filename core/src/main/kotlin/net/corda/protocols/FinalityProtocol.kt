@@ -50,5 +50,9 @@ class FinalityProtocol(val transaction: SignedTransaction,
     }
 
     private fun needsNotarySignature(stx: SignedTransaction) = stx.tx.notary != null && hasNoNotarySignature(stx)
-    private fun hasNoNotarySignature(stx: SignedTransaction) = stx.tx.notary?.owningKey !in stx.sigs.map { it.by }
+    private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {
+        val notaryKey = stx.tx.notary?.owningKey
+        val signers = stx.sigs.map { it.by }.toSet()
+        return !(notaryKey?.isFulfilledBy(signers) ?: false)
+    }
 }

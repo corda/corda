@@ -2,11 +2,11 @@ package net.corda.testing
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.seconds
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.DUMMY_NOTARY
-import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 
@@ -46,7 +46,7 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * @param signers The signer public keys.
      * @param commandData The contents of the command.
      */
-    fun _command(signers: List<PublicKey>, commandData: CommandData)
+    fun _command(signers: List<PublicKeyTree>, commandData: CommandData)
 
     /**
      * Adds a timestamp to the transaction.
@@ -99,12 +99,12 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
     /**
      * @see TransactionDSLInterpreter._command
      */
-    fun command(vararg signers: PublicKey, commandDataClosure: () -> CommandData) =
+    fun command(vararg signers: PublicKeyTree, commandDataClosure: () -> CommandData) =
             _command(listOf(*signers), commandDataClosure())
     /**
      * @see TransactionDSLInterpreter._command
      */
-    fun command(signer: PublicKey, commandData: CommandData) = _command(listOf(signer), commandData)
+    fun command(signer: PublicKeyTree, commandData: CommandData) = _command(listOf(signer), commandData)
 
     /**
      * Adds a timestamp command to the transaction.

@@ -1,18 +1,10 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package net.corda.contracts.isolated
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.TransactionBuilder
-import java.security.PublicKey
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
 
@@ -21,7 +13,7 @@ val ANOTHER_DUMMY_PROGRAM_ID = AnotherDummyContract()
 class AnotherDummyContract : Contract, net.corda.core.node.DummyContractBackdoor {
     data class State(val magicNumber: Int = 0) : ContractState {
         override val contract = ANOTHER_DUMMY_PROGRAM_ID
-        override val participants: List<PublicKey>
+        override val participants: List<PublicKeyTree>
             get() = emptyList()
     }
 

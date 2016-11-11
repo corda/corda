@@ -146,8 +146,9 @@ class CordaRPCOpsImplTest {
                         require(tx.tx.outputs.size == 1)
                         val signaturePubKeys = tx.sigs.map { it.by }.toSet()
                         // Only Alice signed
-                        require(signaturePubKeys.size == 1)
-                        require(signaturePubKeys.contains(aliceNode.info.legalIdentity.owningKey))
+                        val aliceKey = aliceNode.info.legalIdentity.owningKey
+                        require(signaturePubKeys.size <= aliceKey.keys.size)
+                        require(aliceKey.isFulfilledBy(signaturePubKeys))
                     },
                     // MOVE
                     expect { tx ->
@@ -155,9 +156,8 @@ class CordaRPCOpsImplTest {
                         require(tx.tx.outputs.size == 1)
                         val signaturePubKeys = tx.sigs.map { it.by }.toSet()
                         // Alice and Notary signed
-                        require(signaturePubKeys.size == 2)
-                        require(signaturePubKeys.contains(aliceNode.info.legalIdentity.owningKey))
-                        require(signaturePubKeys.contains(notaryNode.info.notaryIdentity.owningKey))
+                        require(aliceNode.info.legalIdentity.owningKey.isFulfilledBy(signaturePubKeys))
+                        require(notaryNode.info.notaryIdentity.owningKey.isFulfilledBy(signaturePubKeys))
                     }
             )
         }

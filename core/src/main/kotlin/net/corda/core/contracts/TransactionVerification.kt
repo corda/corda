@@ -1,10 +1,9 @@
 package net.corda.core.contracts
 
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.toStringShort
 import net.corda.core.transactions.LedgerTransaction
-import java.security.PublicKey
 import java.util.*
 
 // TODO: Consider moving this out of the core module and providing a different way for unit tests to test contracts.
@@ -94,8 +93,8 @@ class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTra
 sealed class TransactionVerificationException(val tx: LedgerTransaction, cause: Throwable?) : Exception(cause) {
     class ContractRejection(tx: LedgerTransaction, val contract: Contract, cause: Throwable?) : TransactionVerificationException(tx, cause)
     class MoreThanOneNotary(tx: LedgerTransaction) : TransactionVerificationException(tx, null)
-    class SignersMissing(tx: LedgerTransaction, val missing: List<PublicKey>) : TransactionVerificationException(tx, null)  {
-        override fun toString() = "Signers missing: ${missing.map { it.toStringShort() }}"
+    class SignersMissing(tx: LedgerTransaction, val missing: List<PublicKeyTree>) : TransactionVerificationException(tx, null) {
+        override fun toString() = "Signers missing: ${missing.joinToString()}"
     }
     class InvalidNotaryChange(tx: LedgerTransaction) : TransactionVerificationException(tx, null)
     class NotaryChangeInWrongTransactionType(tx: LedgerTransaction, val outputNotary: Party) : TransactionVerificationException(tx, null) {

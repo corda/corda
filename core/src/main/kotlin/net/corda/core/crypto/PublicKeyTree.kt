@@ -26,10 +26,10 @@ sealed class PublicKeyTree {
     fun isFulfilledBy(key: PublicKey) = isFulfilledBy(setOf(key))
 
     /** Returns all [PublicKey]s contained within the tree leaves */
-    abstract fun getKeys(): Set<PublicKey>
+    abstract val keys: Set<PublicKey>
 
     /** Checks whether any of the given [keys] matches a leaf on the tree */
-    fun containsAny(keys: Iterable<PublicKey>) = getKeys().intersect(keys).isNotEmpty()
+    fun containsAny(otherKeys: Iterable<PublicKey>) = keys.intersect(otherKeys).isNotEmpty()
 
     // TODO: implement a proper encoding/decoding mechanism
     fun toBase58String(): String = Base58.encode(this.serialize().bits)
@@ -42,21 +42,17 @@ sealed class PublicKeyTree {
     class Leaf(val publicKey: PublicKey) : PublicKeyTree() {
         override fun isFulfilledBy(keys: Iterable<PublicKey>) = publicKey in keys
 
-        override fun getKeys(): Set<PublicKey> = setOf(publicKey)
+        override val keys: Set<PublicKey>
+            get() = setOf(publicKey)
 
-        // Auto-generated. TODO: remove once data class inheritance is enabled
+        // TODO: remove once data class inheritance is enabled
         override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other?.javaClass != javaClass) return false
-
-            other as Leaf
-
-            if (publicKey != other.publicKey) return false
-
-            return true
+            return this === other || other is Leaf && other.publicKey == this.publicKey
         }
 
         override fun hashCode() = publicKey.hashCode()
+
+        override fun toString() = publicKey.toStringShort()
     }
 
     /**
@@ -78,7 +74,8 @@ sealed class PublicKeyTree {
             return totalWeight >= threshold
         }
 
-        override fun getKeys(): Set<PublicKey> = children.flatMap { it.getKeys() }.toSet()
+        override val keys: Set<PublicKey>
+            get() = children.flatMap { it.keys }.toSet()
 
         // Auto-generated. TODO: remove once data class inheritance is enabled
         override fun equals(other: Any?): Boolean {
@@ -100,6 +97,8 @@ sealed class PublicKeyTree {
             result = 31 * result + children.hashCode()
             return result
         }
+
+        override fun toString() = "(${children.joinToString()})"
     }
 
     /** A helper class for building a [PublicKeyTree.Node]. */
@@ -119,8 +118,7 @@ sealed class PublicKeyTree {
             return this
         }
 
-        fun addLeaves(publicKeys: List<PublicKey>): Builder = addLeaves(*publicKeys.toTypedArray())
-        fun addLeaves(vararg publicKeys: PublicKey) = addKeys(*publicKeys.map { it.tree }.toTypedArray())
+        fun addKeys(publicKeys: List<PublicKeyTree>): Builder = addKeys(*publicKeys.toTypedArray())
 
         /**
          * Builds the [PublicKeyTree.Node]. If [threshold] is not specified, it will default to
@@ -131,7 +129,16 @@ sealed class PublicKeyTree {
             else Node(threshold ?: children.size, children.toList(), weights.toList())
         }
     }
+
+    /**
+     * Returns the enclosed [PublicKey] for a [PublicKeyTree] with a single node
+     *
+     * @throws IllegalArgumentException if the [PublicKeyTree] contains more than one node
+     */
+    val singleKey: PublicKey
+        get() = keys.singleOrNull() ?: throw IllegalStateException("The public key tree has more than one node")
 }
 
 /** Returns the set of all [PublicKey]s contained in the leaves of the [PublicKeyTree]s */
-fun Iterable<PublicKeyTree>.getKeys() = flatMap { it.getKeys() }.toSet()
+val Iterable<PublicKeyTree>.keys: Set<PublicKey>
+    get() = flatMap { it.keys }.toSet()

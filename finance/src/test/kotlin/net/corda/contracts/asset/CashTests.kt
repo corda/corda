@@ -2,9 +2,7 @@ package net.corda.contracts.asset
 
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.*
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.OpaqueBytes
@@ -22,12 +20,10 @@ import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.jetbrains.exposed.sql.Database
-import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.Closeable
 import java.security.KeyPair
-import java.security.PublicKey
 import java.util.*
 import kotlin.test.*
 
@@ -459,7 +455,7 @@ class CashTests {
     // Spend tx generation
 
     val OUR_KEY: KeyPair by lazy { generateKeyPair() }
-    val OUR_PUBKEY_1: PublicKey get() = OUR_KEY.public
+    val OUR_PUBKEY_1: PublicKeyTree get() = OUR_KEY.public.tree
 
     val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
 
@@ -485,7 +481,7 @@ class CashTests {
         return tx.toWireTransaction()
     }
 
-    fun makeSpend(amount: Amount<Currency>, dest: PublicKey): WireTransaction {
+    fun makeSpend(amount: Amount<Currency>, dest: PublicKeyTree): WireTransaction {
         val tx = TransactionType.General.Builder(DUMMY_NOTARY)
         databaseTransaction(database) {
             vault.generateSpend(tx, amount, dest)

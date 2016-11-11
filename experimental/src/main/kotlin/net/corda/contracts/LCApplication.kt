@@ -1,11 +1,11 @@
 package net.corda.contracts
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.NullPublicKey
+import net.corda.core.crypto.NullPublicKeyTree
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.TransactionBuilder
-import java.security.PublicKey
 import java.time.LocalDate
 import java.time.Period
 import java.util.*
@@ -108,14 +108,14 @@ class LCApplication : Contract {
     }
 
     data class State(
-            val owner: PublicKey,
+            val owner: PublicKeyTree,
             val status: Status,
             val props: LCApplicationProperties
     ) : ContractState {
 
         override val contract = LC_APPLICATION_PROGRAM_ID
 
-        override val participants: List<PublicKey>
+        override val participants: List<PublicKeyTree>
             get() = listOf(owner)
 
         // returns true when the actual business properties of the
@@ -125,7 +125,7 @@ class LCApplication : Contract {
         }
 
         // iterate over the goods list and sum up the price for each
-        fun withoutOwner() = copy(owner = NullPublicKey)
+        fun withoutOwner() = copy(owner = NullPublicKeyTree)
     }
 
     fun generateApply(props: LCApplicationProperties, notary: Party, purchaseOrder: Attachment): TransactionBuilder {

@@ -1,7 +1,7 @@
 package net.corda.core.node.services
 
 import net.corda.core.crypto.Party
-import java.security.PublicKey
+import net.corda.core.crypto.PublicKeyTree
 
 /**
  * An identity service maintains an bidirectional map of [Party]s to their associated public keys and thus supports
@@ -15,6 +15,6 @@ interface IdentityService {
     // indefinitely. It may be that in the long term we need to drop or archive very old Party information for space,
     // but for now this is not supported.
 
-    fun partyFromKey(key: PublicKey): Party?
+    fun partyFromKey(key: PublicKeyTree): Party?
     fun partyFromName(name: String): Party?
 }

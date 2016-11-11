@@ -2,10 +2,10 @@ package net.corda.contracts
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.days
 import net.corda.core.transactions.TransactionBuilder
-import java.security.PublicKey
 import java.time.Instant
 import java.time.LocalDate
 
@@ -46,15 +46,15 @@ class BillOfLadingAgreement : Contract {
 
     data class State(
             // technical variables
-            override val owner: PublicKey,
+            override val owner: PublicKeyTree,
             val beneficiary: Party,
             val props: BillOfLadingProperties
 
     ) : OwnableState {
-        override val participants: List<PublicKey>
+        override val participants: List<PublicKeyTree>
             get() = listOf(owner)
 
-        override fun withNewOwner(newOwner: PublicKey): Pair<CommandData, OwnableState> {
+        override fun withNewOwner(newOwner: PublicKeyTree): Pair<CommandData, OwnableState> {
             return Pair(Commands.TransferPossession(), copy(owner = newOwner))
         }
 
@@ -112,7 +112,7 @@ class BillOfLadingAgreement : Contract {
     /**
      * Returns a transaction that issues a Bill of Lading Agreement
      */
-    fun generateIssue(owner: PublicKey, beneficiary: Party, props: BillOfLadingProperties, notary: Party): TransactionBuilder {
+    fun generateIssue(owner: PublicKeyTree, beneficiary: Party, props: BillOfLadingProperties, notary: Party): TransactionBuilder {
         val state = State(owner, beneficiary, props)
         val builder = TransactionType.General.Builder(notary = notary)
         builder.setTime(Instant.now(), 1.days)
@@ -122,17 +122,17 @@ class BillOfLadingAgreement : Contract {
     /**
      * Updates the given partial transaction with an input/output/command to reassign ownership of the paper.
      */
-    fun generateTransferAndEndorse(tx: TransactionBuilder, BoL: StateAndRef<State>, newOwner: PublicKey, newBeneficiary: Party) {
+    fun generateTransferAndEndorse(tx: TransactionBuilder, BoL: StateAndRef<State>, newOwner: PublicKeyTree, newBeneficiary: Party) {
         tx.addInputState(BoL)
         tx.addOutputState(BoL.state.data.copy(owner = newOwner, beneficiary = newBeneficiary))
-        val signers: List<PublicKey> = listOf(BoL.state.data.owner, BoL.state.data.beneficiary.owningKey)
+        val signers: List<PublicKeyTree> = listOf(BoL.state.data.owner, BoL.state.data.beneficiary.owningKey)
         tx.addCommand(Commands.TransferAndEndorseBL(), signers)
     }
 
     /**
      * Updates the given partial transaction with an input/output/command to reassign ownership of the paper.
      */
-    fun generateTransferPossession(tx: TransactionBuilder, BoL: StateAndRef<State>, newOwner: PublicKey) {
+    fun generateTransferPossession(tx: TransactionBuilder, BoL: StateAndRef<State>, newOwner: PublicKeyTree) {
         tx.addInputState(BoL)
         tx.addOutputState(BoL.state.data.copy(owner = newOwner))
 //        tx.addOutputState(BoL.state.data.copy().withNewOwner(newOwner))

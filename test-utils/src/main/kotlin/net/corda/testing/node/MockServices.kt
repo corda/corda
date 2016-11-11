@@ -2,10 +2,7 @@ package net.corda.testing.node
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.Attachment
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.sha256
+import net.corda.core.crypto.*
 import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -63,18 +60,18 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = throw UnsupportedOperationException()
     override val schedulerService: SchedulerService get() = throw UnsupportedOperationException()
-    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {} , Party("MegaCorp", key.public))
+    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party("MegaCorp", key.public.tree))
 }
 
 @ThreadSafe
 class MockIdentityService(val identities: List<Party>) : IdentityService, SingletonSerializeAsToken() {
-    private val keyToParties: Map<PublicKey, Party>
+    private val keyToParties: Map<PublicKeyTree, Party>
         get() = synchronized(identities) { identities.associateBy { it.owningKey } }
     private val nameToParties: Map<String, Party>
         get() = synchronized(identities) { identities.associateBy { it.name } }
 
     override fun registerIdentity(party: Party) { throw UnsupportedOperationException() }
-    override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]
+    override fun partyFromKey(key: PublicKeyTree): Party? = keyToParties[key]
     override fun partyFromName(name: String): Party? = nameToParties[name]
 }
 

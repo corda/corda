@@ -3,6 +3,7 @@ package net.corda.contracts
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
@@ -71,7 +72,7 @@ class Invoice : Contract {
 
         override val contract = INVOICE_PROGRAM_ID
 
-        override val participants: List<PublicKey>
+        override val participants: List<PublicKeyTree>
             get() = listOf(owner.owningKey)
 
         // returns true when the actual business properties of the
@@ -86,7 +87,7 @@ class Invoice : Contract {
         val amount: Amount<Issued<Currency>> get() = props.amount
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return owner.owningKey in ourKeys || buyer.owningKey in ourKeys
+            return owner.owningKey.containsAny(ourKeys) || buyer.owningKey.containsAny(ourKeys)
         }
     }
 

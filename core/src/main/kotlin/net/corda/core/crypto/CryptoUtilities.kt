@@ -31,7 +31,8 @@ open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
         fun verifyWithECDSA(content: OpaqueBytes) = by.verifyWithECDSA(content.bits, this)
     }
 
-    class LegallyIdentifiable(val signer: Party, bits: ByteArray) : WithKey(signer.owningKey, bits)
+    // TODO: consider removing this as whoever needs to identify the signer should be able to derive it from the public key
+    class LegallyIdentifiable(val signer: Party, bits: ByteArray) : WithKey(signer.owningKey.singleKey, bits)
 }
 
 object NullPublicKey : PublicKey, Comparable<PublicKey> {
@@ -41,6 +42,8 @@ object NullPublicKey : PublicKey, Comparable<PublicKey> {
     override fun compareTo(other: PublicKey): Int = if (other == NullPublicKey) 0 else -1
     override fun toString() = "NULL_KEY"
 }
+
+val NullPublicKeyTree = NullPublicKey.tree
 
 // TODO: Clean up this duplication between Null and Dummy public key
 class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
@@ -78,7 +81,7 @@ fun KeyPair.signWithECDSA(bitsToSign: ByteArray) = private.signWithECDSA(bitsToS
 fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes) = private.signWithECDSA(bitsToSign.bits, public)
 fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes, party: Party) = signWithECDSA(bitsToSign.bits, party)
 fun KeyPair.signWithECDSA(bitsToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
-    check(public == party.owningKey)
+    check(public in party.owningKey.keys)
     val sig = signWithECDSA(bitsToSign)
     return DigitalSignature.LegallyIdentifiable(party, sig.bits)
 }
@@ -98,8 +101,6 @@ fun PublicKey.toStringShort(): String {
         "DL" + Base58.encode(key.abyte)   // DL -> Distributed Ledger
     } ?: toString()
 }
-
-fun Iterable<PublicKey>.toStringsShort(): String = map { it.toStringShort() }.toString()
 
 /** Creates a [PublicKeyTree] with a single leaf node containing the public key */
 val PublicKey.tree: PublicKeyTree get() = PublicKeyTree.Leaf(this)

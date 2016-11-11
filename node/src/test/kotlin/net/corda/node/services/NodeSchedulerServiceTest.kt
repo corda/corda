@@ -1,6 +1,8 @@
 package net.corda.node.services
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.PublicKeyTree
+import net.corda.core.crypto.tree
 import net.corda.core.days
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.recordTransactions
@@ -109,7 +111,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     }
 
     class TestState(val protocolLogicRef: ProtocolLogicRef, val instant: Instant) : LinearState, SchedulableState {
-        override val participants: List<PublicKey>
+        override val participants: List<PublicKeyTree>
             get() = throw UnsupportedOperationException()
 
         override val linearId = UniqueIdentifier()
@@ -268,7 +270,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 val state = TestState(factory.create(TestProtocolLogic::class.java, increment), instant)
                 val usefulTX = TransactionType.General.Builder(null).apply {
                     addOutputState(state, DUMMY_NOTARY)
-                    addCommand(Command(), freshKey.public)
+                    addCommand(Command(), freshKey.public.tree)
                     signWith(freshKey)
                 }.toSignedTransaction()
                 val txHash = usefulTX.id

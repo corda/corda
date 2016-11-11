@@ -1,13 +1,13 @@
 package net.corda.client.model
 
+import javafx.collections.ObservableList
+import kotlinx.support.jdk8.collections.removeIf
 import net.corda.client.fxutils.foldToObservableList
 import net.corda.client.fxutils.map
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.node.services.network.NetworkMapService
-import javafx.collections.ObservableList
-import kotlinx.support.jdk8.collections.removeIf
-import java.security.PublicKey
 
 class NetworkIdentityModel {
     private val networkIdentityObservable by observable(NodeMonitorModel::networkMap)
@@ -34,7 +34,7 @@ class NetworkIdentityModel {
         return advertisedServices.any { it.info.type == NetworkMapService.type || it.info.type.isNotary() }
     }
 
-    fun lookup(publicKey: PublicKey): NodeInfo? {
-        return parties.firstOrNull { it.legalIdentity.owningKey == publicKey } ?: notaries.firstOrNull { it.notaryIdentity.owningKey == publicKey }
+    fun lookup(publicKeyTree: PublicKeyTree): NodeInfo? {
+        return parties.firstOrNull { it.legalIdentity.owningKey == publicKeyTree } ?: notaries.firstOrNull { it.notaryIdentity.owningKey == publicKeyTree }
     }
 }

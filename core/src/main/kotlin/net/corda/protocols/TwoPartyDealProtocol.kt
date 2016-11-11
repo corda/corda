@@ -1,11 +1,10 @@
 package net.corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.TransientProperty
-import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.DealState
+import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.recordTransactions
 import net.corda.core.node.services.ServiceType
@@ -17,9 +16,7 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.trace
-import java.math.BigDecimal
 import java.security.KeyPair
-import java.security.PublicKey
 
 /**
  * Classes for manipulating a two party deal or agreement.
@@ -42,7 +39,7 @@ object TwoPartyDealProtocol {
     }
 
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
-    data class Handshake<out T>(val payload: T, val publicKey: PublicKey)
+    data class Handshake<out T>(val payload: T, val publicKey: PublicKeyTree)
 
     class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySig: DigitalSignature.LegallyIdentifiable)
 
@@ -90,7 +87,7 @@ object TwoPartyDealProtocol {
             progressTracker.currentStep = AWAITING_PROPOSAL
 
             // Make the first message we'll send to kick off the protocol.
-            val hello = Handshake(payload, myKeyPair.public)
+            val hello = Handshake(payload, myKeyPair.public.tree)
             val maybeSTX = sendAndReceive<SignedTransaction>(otherParty, hello)
 
             return maybeSTX
@@ -104,7 +101,7 @@ object TwoPartyDealProtocol {
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
-                val wtx: WireTransaction = stx.verifySignatures(myKeyPair.public, notaryNode.notaryIdentity.owningKey)
+                val wtx: WireTransaction = stx.verifySignatures(myKeyPair.public.tree, notaryNode.notaryIdentity.owningKey)
                 logger.trace { "Received partially signed transaction: ${stx.id}" }
 
                 checkDependencies(stx)
@@ -251,18 +248,18 @@ object TwoPartyDealProtocol {
             return sendAndReceive<SignaturesFromPrimary>(otherParty, stx).unwrap { it }
         }
 
-        private fun signWithOurKeys(signingPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
+        private fun signWithOurKeys(signingPubKeys: List<PublicKeyTree>, ptx: TransactionBuilder): SignedTransaction {
             // Now sign the transaction with whatever keys we need to move the cash.
-            for (k in signingPubKeys) {
-                val priv = serviceHub.keyManagementService.toPrivate(k)
-                ptx.signWith(KeyPair(k, priv))
+            for (publicKey in signingPubKeys.keys) {
+                val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
+                ptx.signWith(KeyPair(publicKey, privateKey))
             }
 
             return ptx.toSignedTransaction(checkSufficientSignatures = false)
         }
 
         @Suspendable protected abstract fun validateHandshake(handshake: Handshake<U>): Handshake<U>
-        @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Pair<TransactionBuilder, List<PublicKey>>
+        @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Pair<TransactionBuilder, List<PublicKeyTree>>
     }
 
 
@@ -295,7 +292,7 @@ object TwoPartyDealProtocol {
             return handshake.copy(payload = autoOffer.copy(dealBeingOffered = deal))
         }
 
-        override fun assembleSharedTX(handshake: Handshake<AutoOffer>): Pair<TransactionBuilder, List<PublicKey>> {
+        override fun assembleSharedTX(handshake: Handshake<AutoOffer>): Pair<TransactionBuilder, List<PublicKeyTree>> {
             val deal = handshake.payload.dealBeingOffered
             val ptx = deal.generateAgreement(handshake.payload.notary)
 

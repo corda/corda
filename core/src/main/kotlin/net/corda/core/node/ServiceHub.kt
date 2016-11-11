@@ -1,13 +1,13 @@
 package net.corda.core.node
 
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.contracts.TransactionState
 import net.corda.core.messaging.MessagingService
 import net.corda.core.node.services.*
 import net.corda.core.protocols.ProtocolLogic
+import net.corda.core.transactions.SignedTransaction
 import java.security.KeyPair
 import java.time.Clock
 
@@ -59,8 +59,11 @@ interface ServiceHub {
      * Helper property to shorten code for fetching the Node's KeyPair associated with the
      * public legalIdentity Party from the key management service.
      * Typical use is during signing in protocols and for unit test signing.
+     *
+     * TODO: legalIdentity can now be composed of multiple keys, should we return a list of keyPairs here? Right now
+     * the logic assumes the legal identity has a public key tree with only one node
      */
-    val legalIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.legalIdentity.owningKey)
+    val legalIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.legalIdentity.owningKey.keys)
 
     /**
      * Helper property to shorten code for fetching the Node's KeyPair associated with the
@@ -69,7 +72,7 @@ interface ServiceHub {
      * an IllegalArgumentException.
      * Typical use is during signing in protocols and for unit test signing.
      */
-    val notaryIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.notaryIdentity.owningKey)
+    val notaryIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.notaryIdentity.owningKey.keys)
 
 }
 /**

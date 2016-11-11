@@ -1,6 +1,7 @@
 package net.corda.node.services.network
 
 import com.google.common.annotations.VisibleForTesting
+import kotlinx.support.jdk8.collections.compute
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
@@ -23,7 +24,6 @@ import net.corda.node.services.api.AbstractNodeService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.AddOrRemove
 import net.corda.protocols.ServiceRequestMessage
-import kotlinx.support.jdk8.collections.compute
 import java.security.PrivateKey
 import java.security.SignatureException
 import java.time.Instant
@@ -333,7 +333,7 @@ class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddOrRemo
      */
     fun toWire(privateKey: PrivateKey): WireNodeRegistration {
         val regSerialized = this.serialize()
-        val regSig = privateKey.signWithECDSA(regSerialized.bits, node.legalIdentity.owningKey)
+        val regSig = privateKey.signWithECDSA(regSerialized.bits, node.legalIdentity.owningKey.singleKey)
 
         return WireNodeRegistration(regSerialized, regSig)
     }
@@ -347,7 +347,7 @@ class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddOrRemo
 class WireNodeRegistration(raw: SerializedBytes<NodeRegistration>, sig: DigitalSignature.WithKey) : SignedData<NodeRegistration>(raw, sig) {
     @Throws(IllegalArgumentException::class)
     override fun verifyData(data: NodeRegistration) {
-        require(data.node.legalIdentity.owningKey == sig.by)
+        require(data.node.legalIdentity.owningKey.isFulfilledBy(sig.by))
     }
 }
 

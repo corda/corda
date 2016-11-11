@@ -9,7 +9,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.core.crypto.*
 import java.io.InputStream
 import java.security.KeyPair
 import java.security.PublicKey
@@ -130,7 +129,7 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.addAttachment(attachmentId)
     }
 
-    override fun _command(signers: List<PublicKey>, commandData: CommandData) {
+    override fun _command(signers: List<PublicKeyTree>, commandData: CommandData) {
         val command = Command(commandData, signers)
         transactionBuilder.addCommand(command)
     }
@@ -325,7 +324,7 @@ fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: List<KeyPair>)
     (ALL_TEST_KEYS + extraKeys).forEach {
         keyLookup[it.public] = it
     }
-    wtx.mustSign.forEach {
+    wtx.mustSign.keys.forEach {
         val key = keyLookup[it] ?: throw IllegalArgumentException("Missing required key for ${it.toStringShort()}")
         signatures += key.signWithECDSA(wtx.id)
     }

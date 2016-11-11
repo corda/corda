@@ -6,9 +6,7 @@ import com.pholser.junit.quickcheck.generator.java.lang.StringGenerator
 import com.pholser.junit.quickcheck.generator.java.util.ArrayListGenerator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.*
 import net.corda.core.serialization.OpaqueBytes
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -41,9 +39,15 @@ class PublicKeyGenerator: Generator<PublicKey>(PublicKey::class.java) {
     }
 }
 
+class PublicKeyTreeGenerator : Generator<PublicKeyTree>(PublicKeyTree::class.java) {
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus): PublicKeyTree {
+        return entropyToKeyPair(random.nextBigInteger(32)).public.tree
+    }
+}
+
 class PartyGenerator: Generator<Party>(Party::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Party {
-        return Party(StringGenerator().generate(random, status), PublicKeyGenerator().generate(random, status))
+        return Party(StringGenerator().generate(random, status), PublicKeyTreeGenerator().generate(random, status))
     }
 }
 

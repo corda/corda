@@ -1,7 +1,7 @@
 package net.corda.core.utilities
 
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.parsePublicKeyBase58
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.node.ServiceHub
 import javax.ws.rs.core.Response
 
@@ -17,7 +17,7 @@ class ApiUtils(val services: ServiceHub) {
      */
     fun withParty(partyKeyStr: String, notFound: (String) -> Response = defaultNotFound, found: (Party) -> Response): Response {
         return try {
-            val partyKey = parsePublicKeyBase58(partyKeyStr)
+            val partyKey = PublicKeyTree.parseFromBase58(partyKeyStr)
             val party = services.identityService.partyFromKey(partyKey)
             if(party == null) notFound("Unknown party") else found(party)
         } catch (e: IllegalArgumentException) {

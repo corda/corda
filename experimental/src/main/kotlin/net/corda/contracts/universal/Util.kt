@@ -2,15 +2,11 @@ package net.corda.contracts.universal
 
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Sets
-import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Frequency
 import net.corda.core.crypto.Party
-import com.sun.org.apache.xpath.internal.operations.Bool
-import java.math.BigDecimal
-import java.security.PublicKey
+import net.corda.core.crypto.PublicKeyTree
 import java.time.Instant
 import java.time.LocalDate
-import java.util.*
 
 /**
  * Created by sofusmortensen on 23/05/16.
@@ -20,44 +16,44 @@ fun Instant.toLocalDate(): LocalDate = LocalDate.ofEpochDay(this.epochSecond / 6
 
 fun LocalDate.toInstant(): Instant = Instant.ofEpochSecond(this.toEpochDay() * 60 * 60 * 24)
 
-private fun liablePartiesVisitor(arrangement: Arrangement): ImmutableSet<PublicKey> =
+private fun liablePartiesVisitor(arrangement: Arrangement): ImmutableSet<PublicKeyTree> =
         when (arrangement) {
-            is Zero -> ImmutableSet.of<PublicKey>()
+            is Zero -> ImmutableSet.of<PublicKeyTree>()
             is Transfer -> ImmutableSet.of(arrangement.from.owningKey)
             is And ->
-                arrangement.arrangements.fold(ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
+                arrangement.arrangements.fold(ImmutableSet.builder<PublicKeyTree>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
             is Actions ->
-                arrangement.actions.fold(ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
+                arrangement.actions.fold(ImmutableSet.builder<PublicKeyTree>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
             is RollOut -> liablePartiesVisitor(arrangement.template)
-            is Continuation -> ImmutableSet.of<PublicKey>()
+            is Continuation -> ImmutableSet.of<PublicKeyTree>()
             else -> throw IllegalArgumentException("liableParties " + arrangement)
         }
 
-private fun liablePartiesVisitor(action: Action): ImmutableSet<PublicKey> =
+private fun liablePartiesVisitor(action: Action): ImmutableSet<PublicKeyTree> =
         if (action.actors.size != 1)
             liablePartiesVisitor(action.arrangement)
         else
             Sets.difference(liablePartiesVisitor(action.arrangement), ImmutableSet.of(action.actors.single())).immutableCopy()
 
 /** returns list of potentially liable parties for a given contract */
-fun liableParties(contract: Arrangement): Set<PublicKey> = liablePartiesVisitor(contract)
+fun liableParties(contract: Arrangement): Set<PublicKeyTree> = liablePartiesVisitor(contract)
 
-private fun involvedPartiesVisitor(action: Action): Set<PublicKey> =
+private fun involvedPartiesVisitor(action: Action): Set<PublicKeyTree> =
         Sets.union(involvedPartiesVisitor(action.arrangement), action.actors.map { it.owningKey }.toSet()).immutableCopy()
 
-private fun involvedPartiesVisitor(arrangement: Arrangement): ImmutableSet<PublicKey> =
+private fun involvedPartiesVisitor(arrangement: Arrangement): ImmutableSet<PublicKeyTree> =
         when (arrangement) {
-            is Zero -> ImmutableSet.of<PublicKey>()
+            is Zero -> ImmutableSet.of<PublicKeyTree>()
             is Transfer -> ImmutableSet.of(arrangement.from.owningKey)
             is And ->
-                arrangement.arrangements.fold(ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
+                arrangement.arrangements.fold(ImmutableSet.builder<PublicKeyTree>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
             is Actions ->
-                arrangement.actions.fold(ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
+                arrangement.actions.fold(ImmutableSet.builder<PublicKeyTree>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
             else -> throw IllegalArgumentException()
         }
 
 /** returns list of involved parties for a given contract */
-fun involvedParties(arrangement: Arrangement): Set<PublicKey> = involvedPartiesVisitor(arrangement)
+fun involvedParties(arrangement: Arrangement): Set<PublicKeyTree> = involvedPartiesVisitor(arrangement)
 
 fun replaceParty(action: Action, from: Party, to: Party): Action =
         if (action.actors.contains(from)) {

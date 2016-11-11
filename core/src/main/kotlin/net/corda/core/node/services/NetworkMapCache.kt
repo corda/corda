@@ -4,12 +4,12 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.Contract
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import org.slf4j.LoggerFactory
 import rx.Observable
-import java.security.PublicKey
 
 /**
  * A network map contains lists of nodes on the network along with information about their identity keys, services
@@ -74,7 +74,7 @@ interface NetworkMapCache {
     /**
      * Look up the node info for a public key.
      */
-    fun getNodeByPublicKey(publicKey: PublicKey): NodeInfo?
+    fun getNodeByPublicKey(publicKey: PublicKeyTree): NodeInfo?
 
     /**
      * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further

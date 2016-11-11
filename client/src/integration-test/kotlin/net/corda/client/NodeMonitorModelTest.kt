@@ -174,8 +174,9 @@ class NodeMonitorModelTest {
                         require(tx.tx.outputs.size == 1)
                         val signaturePubKeys = tx.sigs.map { it.by }.toSet()
                         // Only Alice signed
-                        require(signaturePubKeys.size == 1)
-                        require(signaturePubKeys.contains(aliceNode.legalIdentity.owningKey))
+                        val aliceKey = aliceNode.legalIdentity.owningKey
+                        require(signaturePubKeys.size <= aliceKey.keys.size)
+                        require(aliceKey.isFulfilledBy(signaturePubKeys))
                         issueTx = tx
                     },
                     // MOVE
@@ -184,9 +185,8 @@ class NodeMonitorModelTest {
                         require(tx.tx.outputs.size == 1)
                         val signaturePubKeys = tx.sigs.map { it.by }.toSet()
                         // Alice and Notary signed
-                        require(signaturePubKeys.size == 2)
-                        require(signaturePubKeys.contains(aliceNode.legalIdentity.owningKey))
-                        require(signaturePubKeys.contains(notaryNode.notaryIdentity.owningKey))
+                        require(aliceNode.legalIdentity.owningKey.isFulfilledBy(signaturePubKeys))
+                        require(notaryNode.notaryIdentity.owningKey.isFulfilledBy(signaturePubKeys))
                         moveTx = tx
                     }
             )

@@ -1,10 +1,13 @@
 package net.corda.contracts;
 
-import net.corda.core.contracts.*;
+import net.corda.core.contracts.Amount;
+import net.corda.core.contracts.ContractState;
+import net.corda.core.contracts.Issued;
+import net.corda.core.contracts.PartyAndReference;
+import net.corda.core.crypto.PublicKeyTree;
 
-import java.security.*;
-import java.time.*;
-import java.util.*;
+import java.time.Instant;
+import java.util.Currency;
 
 /* This is an interface solely created to demonstrate that the same kotlin tests can be run against
  * either a Java implementation of the CommercialPaper or a kotlin implementation.
@@ -12,7 +15,7 @@ import java.util.*;
  * ultimately either language can be used against a common test framework (and therefore can be used for real).
  */
 public interface ICommercialPaperState extends ContractState {
-    ICommercialPaperState withOwner(PublicKey newOwner);
+    ICommercialPaperState withOwner(PublicKeyTree newOwner);
 
     ICommercialPaperState withIssuance(PartyAndReference newIssuance);
 

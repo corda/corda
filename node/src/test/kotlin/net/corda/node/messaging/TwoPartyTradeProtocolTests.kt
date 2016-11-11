@@ -5,7 +5,9 @@ import net.corda.contracts.asset.*
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.tree
 import net.corda.core.days
 import net.corda.core.map
 import net.corda.core.messaging.SingleMessageRecipient
@@ -40,7 +42,6 @@ import rx.Observable
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.security.KeyPair
-import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
@@ -250,7 +251,7 @@ class TwoPartyTradeProtocolTests {
             }
             val attachmentID = attachment(ByteArrayInputStream(stream.toByteArray()))
 
-            val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public, notaryNode.info.notaryIdentity).second
+            val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public.tree, notaryNode.info.notaryIdentity).second
             val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
                     1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID, notaryNode.info.notaryIdentity).second
@@ -342,7 +343,7 @@ class TwoPartyTradeProtocolTests {
             }
             val attachmentID = attachment(ByteArrayInputStream(stream.toByteArray()))
 
-            val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public, notaryNode.info.notaryIdentity).second
+            val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public.tree, notaryNode.info.notaryIdentity).second
             insertFakeTransactions(bobsFakeCash, bobNode)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
                     1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID, notaryNode.info.notaryIdentity).second
@@ -433,7 +434,7 @@ class TwoPartyTradeProtocolTests {
         val bobKey = bobNode.services.legalIdentityKey
         val issuer = MEGA_CORP.ref(1, 2, 3)
 
-        val bobsBadCash = fillUpForBuyer(bobError, bobKey.public, notaryNode.info.notaryIdentity).second
+        val bobsBadCash = fillUpForBuyer(bobError, bobKey.public.tree, notaryNode.info.notaryIdentity).second
         val alicesFakePaper = fillUpForSeller(aliceError, aliceNode.info.legalIdentity.owningKey,
                 1200.DOLLARS `issued by` issuer, null, notaryNode.info.notaryIdentity).second
 
@@ -480,7 +481,7 @@ class TwoPartyTradeProtocolTests {
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
             withError: Boolean,
-            owner: PublicKey = BOB_PUBKEY,
+            owner: PublicKeyTree = BOB_PUBKEY,
             notary: Party): Pair<Vault, List<WireTransaction>> {
         val issuer = DUMMY_CASH_ISSUER
         // Bob (Buyer) has some cash he got from the Bank of Elbonia, Alice (Seller) has some commercial paper she
@@ -490,10 +491,10 @@ class TwoPartyTradeProtocolTests {
             output("elbonian money 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
             output("elbonian money 2", notary = notary) { 1000.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
             if (!withError)
-                command(DUMMY_CASH_ISSUER_KEY.public) { Cash.Commands.Issue() }
+                command(DUMMY_CASH_ISSUER_KEY.public.tree) { Cash.Commands.Issue() }
             else
                 // Put a broken command on so at least a signature is created
-                command(DUMMY_CASH_ISSUER_KEY.public) { Cash.Commands.Move() }
+                command(DUMMY_CASH_ISSUER_KEY.public.tree) { Cash.Commands.Move() }
             timestamp(TEST_TX_TIME)
             if (withError) {
                 this.fails()
@@ -524,7 +525,7 @@ class TwoPartyTradeProtocolTests {
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForSeller(
             withError: Boolean,
-            owner: PublicKey,
+            owner: PublicKeyTree,
             amount: Amount<Issued<Currency>>,
             attachmentID: SecureHash?,
             notary: Party): Pair<Vault, List<WireTransaction>> {

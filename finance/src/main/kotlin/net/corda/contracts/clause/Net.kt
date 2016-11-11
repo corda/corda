@@ -6,7 +6,7 @@ import net.corda.contracts.asset.extractAmountsDue
 import net.corda.contracts.asset.sumAmountsDue
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.Clause
-import java.security.PublicKey
+import net.corda.core.crypto.PublicKeyTree
 
 /**
  * Common interface for the state subsets used when determining nettability of two or more states. Exposes the
@@ -22,7 +22,7 @@ interface NetState<P> {
  * Bilateral states are used in close-out netting.
  */
 data class BilateralNetState<P>(
-        val partyKeys: Set<PublicKey>,
+        val partyKeys: Set<PublicKeyTree>,
         override val template: Obligation.Terms<P>
 ) : NetState<P>
 

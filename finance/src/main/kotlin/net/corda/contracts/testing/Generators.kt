@@ -5,7 +5,10 @@ import com.pholser.junit.quickcheck.generator.Generator
 import com.pholser.junit.quickcheck.generator.java.util.ArrayListGenerator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import net.corda.contracts.asset.Cash
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.NullSignature
 import net.corda.core.testing.*
 import net.corda.core.transactions.SignedTransaction
@@ -22,7 +25,7 @@ class ContractStateGenerator : Generator<ContractState>(ContractState::class.jav
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): ContractState {
         return Cash.State(
                 amount = AmountGenerator(IssuedGenerator(CurrencyGenerator())).generate(random, status),
-                owner = PublicKeyGenerator().generate(random, status)
+                owner = PublicKeyTreeGenerator().generate(random, status)
         )
     }
 }
@@ -55,8 +58,8 @@ class CommandDataGenerator : Generator<CommandData>(CommandData::class.java) {
 class CommandGenerator : Generator<Command>(Command::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Command {
         val signersGenerator = ArrayListGenerator()
-        signersGenerator.addComponentGenerators(listOf(PublicKeyGenerator()))
-        return Command(CommandDataGenerator().generate(random, status), PublicKeyGenerator().generate(random, status))
+        signersGenerator.addComponentGenerators(listOf(PublicKeyTreeGenerator()))
+        return Command(CommandDataGenerator().generate(random, status), PublicKeyTreeGenerator().generate(random, status))
     }
 }
 

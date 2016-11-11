@@ -1,14 +1,10 @@
 package net.corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.crypto.*
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.protocols.ProtocolLogic
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
@@ -17,7 +13,6 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.trace
 import java.security.KeyPair
-import java.security.PublicKey
 import java.util.*
 
 /**
@@ -56,7 +51,7 @@ object TwoPartyTradeProtocol {
     data class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
             val price: Amount<Currency>,
-            val sellerOwnerKey: PublicKey
+            val sellerOwnerKey: PublicKeyTree
     )
 
     data class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
@@ -104,8 +99,9 @@ object TwoPartyTradeProtocol {
         private fun receiveAndCheckProposedTransaction(): SignedTransaction {
             progressTracker.currentStep = AWAITING_PROPOSAL
 
+            val myPublicKey = myKeyPair.public.tree
             // Make the first message we'll send to kick off the protocol.
-            val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public)
+            val hello = SellerTradeInfo(assetToSell, price, myPublicKey)
 
             val maybeSTX = sendAndReceive<SignedTransaction>(otherParty, hello)
 
@@ -115,14 +111,14 @@ object TwoPartyTradeProtocol {
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
-                val wtx: WireTransaction = it.verifySignatures(myKeyPair.public, notaryNode.notaryIdentity.owningKey)
+                val wtx: WireTransaction = it.verifySignatures(myPublicKey, notaryNode.notaryIdentity.owningKey)
                 logger.trace { "Received partially signed transaction: ${it.id}" }
 
                 // Download and check all the things that this transaction depends on and verify it is contract-valid,
                 // even though it is missing signatures.
                 subProtocol(ResolveTransactionsProtocol(wtx, otherParty))
 
-                if (wtx.outputs.map { it.data }.sumCashBy(myKeyPair.public).withoutIssuer() != price)
+                if (wtx.outputs.map { it.data }.sumCashBy(myPublicKey).withoutIssuer() != price)
                     throw IllegalArgumentException("Transaction is not sending us the right amount of cash")
 
                 // There are all sorts of funny games a malicious secondary might play here, we should fix them:
@@ -227,17 +223,17 @@ object TwoPartyTradeProtocol {
             return sendAndReceive<SignaturesFromSeller>(otherParty, stx).unwrap { it }
         }
 
-        private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
+        private fun signWithOurKeys(cashSigningPubKeys: List<PublicKeyTree>, ptx: TransactionBuilder): SignedTransaction {
             // Now sign the transaction with whatever keys we need to move the cash.
-            for (k in cashSigningPubKeys) {
-                val priv = serviceHub.keyManagementService.toPrivate(k)
-                ptx.signWith(KeyPair(k, priv))
+            for (publicKey in cashSigningPubKeys.keys) {
+                val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
+                ptx.signWith(KeyPair(publicKey, privateKey))
             }
 
             return ptx.toSignedTransaction(checkSufficientSignatures = false)
         }
 
-        private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
+        private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKeyTree>> {
             val ptx = TransactionType.General.Builder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
@@ -251,7 +247,7 @@ object TwoPartyTradeProtocol {
             // reveal who the owner actually is. The key management service is expected to derive a unique key from some
             // initial seed in order to provide privacy protection.
             val freshKey = serviceHub.keyManagementService.freshKey()
-            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public)
+            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public.tree)
             tx.addOutputState(state, tradeRequest.assetForSale.state.notary)
             tx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
 
