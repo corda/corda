@@ -1,6 +1,10 @@
 package net.corda.node.services
 
 import com.google.common.net.HostAndPort
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
+import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.tree
 import net.corda.core.messaging.Message
@@ -12,13 +16,13 @@ import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.messaging.RPCOps
 import net.corda.node.services.network.InMemoryNetworkMapCache
+import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.makeTestDataSourceProperties
-import com.typesafe.config.ConfigFactory
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
@@ -34,6 +38,7 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ArtemisMessagingTests {
     @Rule @JvmField val temporaryFolder = TemporaryFolder()
@@ -46,7 +51,7 @@ class ArtemisMessagingTests {
     lateinit var dataSource: Closeable
     lateinit var database: Database
     lateinit var userService: RPCUserService
-
+    lateinit var networkMapRegistrationFuture: ListenableFuture<Unit>
 
     var messagingClient: NodeMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
@@ -76,6 +81,7 @@ class ArtemisMessagingTests {
         val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
+        networkMapRegistrationFuture = Futures.immediateFuture(Unit)
     }
 
     @After
@@ -99,7 +105,8 @@ class ArtemisMessagingTests {
         val remoteServerAddress = freeLocalHostAndPort()
 
         createMessagingServer(remoteServerAddress).start()
-        createMessagingClient(server = remoteServerAddress).start(rpcOps, userService)
+        createMessagingClient(server = remoteServerAddress)
+        startNodeMessagingClient()
     }
 
     @Test
@@ -110,30 +117,22 @@ class ArtemisMessagingTests {
         createMessagingServer(serverAddress).start()
 
         messagingClient = createMessagingClient(server = invalidServerAddress)
-        assertThatThrownBy { messagingClient!!.start(rpcOps, userService) }
+        assertThatThrownBy { startNodeMessagingClient() }
         messagingClient = null
     }
 
     @Test
     fun `client should connect to local server`() {
         createMessagingServer().start()
-        createMessagingClient().start(rpcOps, userService)
+        createMessagingClient()
+        startNodeMessagingClient()
     }
 
     @Test
     fun `client should be able to send message to itself`() {
         val receivedMessages = LinkedBlockingQueue<Message>()
 
-        createMessagingServer().start()
-
-        val messagingClient = createMessagingClient()
-        messagingClient.start(rpcOps, userService)
-        thread { messagingClient.run() }
-
-        messagingClient.addMessageHandler(topic) { message, r ->
-            receivedMessages.add(message)
-        }
-
+        val messagingClient = createAndStartClientAndServer(receivedMessages)
         val message = messagingClient.createMessage(topic, DEFAULT_SESSION_ID, "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
@@ -142,9 +141,88 @@ class ArtemisMessagingTests {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
+    @Test
+    fun `client should be able to send message to itself before network map is available, and receive after`() {
+        val settableFuture: SettableFuture<Unit> = SettableFuture.create()
+        networkMapRegistrationFuture = settableFuture
+
+        val receivedMessages = LinkedBlockingQueue<Message>()
+
+        val messagingClient = createAndStartClientAndServer(receivedMessages)
+        val message = messagingClient.createMessage(topic, DEFAULT_SESSION_ID, "first msg".toByteArray())
+        messagingClient.send(message, messagingClient.myAddress)
+
+        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, "second msg".toByteArray())
+        messagingClient.send(networkMapMessage, messagingClient.myAddress)
+
+        val actual: Message = receivedMessages.take()
+        assertEquals("second msg", String(actual.data))
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+        settableFuture.set(Unit)
+        val firstActual: Message = receivedMessages.take()
+        assertEquals("first msg", String(firstActual.data))
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+    }
+
+    @Test
+    fun `client should be able to send large numbers of messages to itself before network map is available and survive restart, then receive messages`() {
+        // Crank the iteration up as high as you want... just takes longer to run.
+        val iterations = 100
+        val settableFuture: SettableFuture<Unit> = SettableFuture.create()
+        networkMapRegistrationFuture = settableFuture
+
+        val receivedMessages = LinkedBlockingQueue<Message>()
+
+        val messagingClient = createAndStartClientAndServer(receivedMessages)
+        for (iter in 1..iterations) {
+            val message = messagingClient.createMessage(topic, DEFAULT_SESSION_ID, "first msg $iter".toByteArray())
+            messagingClient.send(message, messagingClient.myAddress)
+        }
+
+        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, "second msg".toByteArray())
+        messagingClient.send(networkMapMessage, messagingClient.myAddress)
+
+        val actual: Message = receivedMessages.take()
+        assertEquals("second msg", String(actual.data))
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+
+        // Stop client and server and create afresh.
+        messagingClient.stop()
+        messagingServer?.stop()
+
+        networkMapRegistrationFuture = Futures.immediateFuture(Unit)
+
+        createAndStartClientAndServer(receivedMessages)
+        for (iter in 1..iterations) {
+            val firstActual: Message = receivedMessages.take()
+            assertTrue(String(firstActual.data).equals("first msg $iter"))
+        }
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+    }
+
+    private fun startNodeMessagingClient() {
+        messagingClient!!.start(rpcOps, userService)
+    }
+
+    private fun createAndStartClientAndServer(receivedMessages: LinkedBlockingQueue<Message>): NodeMessagingClient {
+        createMessagingServer().start()
+
+        val messagingClient = createMessagingClient()
+        startNodeMessagingClient()
+        messagingClient.addMessageHandler(topic) { message, r ->
+            receivedMessages.add(message)
+        }
+        messagingClient.addMessageHandler(NetworkMapService.FETCH_PROTOCOL_TOPIC) { message, r ->
+            receivedMessages.add(message)
+        }
+        // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
+        thread { messagingClient.run() }
+        return messagingClient
+    }
+
     private fun createMessagingClient(server: HostAndPort = hostAndPort): NodeMessagingClient {
         return databaseTransaction(database) {
-            NodeMessagingClient(config, server, identity.public.tree, AffinityExecutor.ServiceAffinityExecutor("ArtemisMessagingTests", 1), database).apply {
+            NodeMessagingClient(config, server, identity.public.tree, AffinityExecutor.ServiceAffinityExecutor("ArtemisMessagingTests", 1), database, networkMapRegistrationFuture).apply {
                 configureWithDevSSLCertificate()
                 messagingClient = this
             }
