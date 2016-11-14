@@ -11,14 +11,9 @@ import net.corda.core.utilities.ProgressTracker
  * Finalise a transaction by notarising it, then recording it locally, and then sending it to all involved parties.
  *
  * @param transaction to commit.
- * @param events information on the event(s) which triggered the transaction.
  * @param participants a list of participants involved in the transaction.
  * @return a list of participants who were successfully notified of the transaction.
  */
-// TODO: Event needs to be replaced with something that's meaningful, but won't ever contain sensitive
-//       information (such as internal details of an account to take payment from). Suggest
-//       splitting ClientToServiceCommand into public and private parts, with only the public parts
-//       relayed here.
 class FinalityProtocol(val transaction: SignedTransaction,
                        val participants: Set<Party>,
                        override val progressTracker: ProgressTracker = tracker()): ProtocolLogic<Unit>() {

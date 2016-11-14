@@ -41,4 +41,5 @@ data class User(val username: String, val password: String, val permissions: Set
     override fun toString(): String = "${javaClass.simpleName}($username, permissions=$permissions)"
 }
 
-inline fun <reified P : ProtocolLogic<*>> startProtocolPermission(): String = P::class.java.name
+fun <P : ProtocolLogic<*>> startProtocolPermission(clazz: Class<P>) = "StartProtocol.${clazz.name}"
+inline fun <reified P : ProtocolLogic<*>> startProtocolPermission(): String = startProtocolPermission(P::class.java)

@@ -15,6 +15,7 @@ import net.corda.core.toObservable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.messaging.*
+import net.corda.node.services.startProtocolPermission
 import net.corda.node.services.statemachine.ProtocolStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.databaseTransaction
@@ -78,8 +79,9 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun <T: Any> startProtocolGeneric(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ProtocolHandle<T> {
-        requirePermission(logicType.name)
+    // TODO: Check that this protocol is annotated as being intended for RPC invocation
+    override fun <T: Any> startProtocolDynamic(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ProtocolHandle<T> {
+        requirePermission(startProtocolPermission(logicType))
         val stateMachine = services.invokeProtocolAsync(logicType, *args) as ProtocolStateMachineImpl<T>
         return ProtocolHandle(
                 id = stateMachine.id,

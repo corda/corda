@@ -28,7 +28,7 @@ import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.User
-import net.corda.protocols.TransactionBuildResult
+import net.corda.protocols.CashProtocolResult
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.objenesis.strategy.StdInstantiatorStrategy
@@ -174,8 +174,8 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(Cash.Clauses.ConserveAmount::class.java)
         register(listOf(Unit).javaClass) // SingletonList
         register(setOf(Unit).javaClass) // SingletonSet
-        register(TransactionBuildResult.ProtocolStarted::class.java)
-        register(TransactionBuildResult.Failed::class.java)
+        register(CashProtocolResult.Success::class.java)
+        register(CashProtocolResult.Failed::class.java)
         register(ServiceEntry::class.java)
         register(NodeInfo::class.java)
         register(PhysicalLocation::class.java)

@@ -96,7 +96,7 @@ interface CordaRPCOps : RPCOps {
      * result of running the protocol.
      */
     @RPCReturnsObservables
-    fun <T: Any> startProtocolGeneric(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ProtocolHandle<T>
+    fun <T: Any> startProtocolDynamic(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ProtocolHandle<T>
 
     /**
      * Returns Node's identity, assuming this will not change while the node is running.
@@ -115,7 +115,7 @@ interface CordaRPCOps : RPCOps {
 }
 
 /**
- * These allow type safe invocations of protocols, e.g.:
+ * These allow type safe invocations of protocols from Kotlin, e.g.:
  *
  * val rpc: CordaRPCOps = (..)
  * rpc.startProtocol(::ResolveTransactionsProtocol, setOf<SecureHash>(), aliceIdentity)
@@ -126,25 +126,25 @@ interface CordaRPCOps : RPCOps {
 inline fun <T : Any, reified R : ProtocolLogic<T>> CordaRPCOps.startProtocol(
         @Suppress("UNUSED_PARAMETER")
         protocolConstructor: () -> R
-) = startProtocolGeneric(R::class.java)
+) = startProtocolDynamic(R::class.java)
 inline fun <T : Any, A, reified R : ProtocolLogic<T>> CordaRPCOps.startProtocol(
         @Suppress("UNUSED_PARAMETER")
         protocolConstructor: (A) -> R,
         arg0: A
-) = startProtocolGeneric(R::class.java, arg0)
+) = startProtocolDynamic(R::class.java, arg0)
 inline fun <T : Any, A, B, reified R : ProtocolLogic<T>> CordaRPCOps.startProtocol(
         @Suppress("UNUSED_PARAMETER")
         protocolConstructor: (A, B) -> R,
         arg0: A,
         arg1: B
-) = startProtocolGeneric(R::class.java, arg0, arg1)
+) = startProtocolDynamic(R::class.java, arg0, arg1)
 inline fun <T : Any, A, B, C, reified R: ProtocolLogic<T>> CordaRPCOps.startProtocol(
         @Suppress("UNUSED_PARAMETER")
         protocolConstructor: (A, B, C) -> R,
         arg0: A,
         arg1: B,
         arg2: C
-) = startProtocolGeneric(R::class.java, arg0, arg1, arg2)
+) = startProtocolDynamic(R::class.java, arg0, arg1, arg2)
 inline fun <T : Any, A, B, C, D, reified R : ProtocolLogic<T>> CordaRPCOps.startProtocol(
         @Suppress("UNUSED_PARAMETER")
         protocolConstructor: (A, B, C, D) -> R,
@@ -152,7 +152,7 @@ inline fun <T : Any, A, B, C, D, reified R : ProtocolLogic<T>> CordaRPCOps.start
         arg1: B,
         arg2: C,
         arg3: D
-) = startProtocolGeneric(R::class.java, arg0, arg1, arg2, arg3)
+) = startProtocolDynamic(R::class.java, arg0, arg1, arg2, arg3)
 
 data class ProtocolHandle<A>(
         val id: StateMachineRunId,

@@ -11,15 +11,18 @@ import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import org.slf4j.LoggerFactory
 import java.security.KeyPair
 import java.util.*
 
-class CashProtocol(val command: CashCommand): ProtocolLogic<TransactionBuildResult>() {
+/**
+ * Initiates a protocol that produces an Issue/Move or Exit Cash transaction.
+ *
+ * @param command Indicates what Cash transaction to create with what parameters.
+ */
+class CashProtocol(val command: CashCommand): ProtocolLogic<CashProtocolResult>() {
 
     @Suspendable
-    override fun call(): TransactionBuildResult {
-        LoggerFactory.getLogger("DEBUG").warn("CashProtocol call()ed with $command")
+    override fun call(): CashProtocolResult {
         return when (command) {
             is CashCommand.IssueCash -> issueCash(command)
             is CashCommand.PayCash -> initiatePayment(command)
@@ -27,8 +30,9 @@ class CashProtocol(val command: CashCommand): ProtocolLogic<TransactionBuildResu
         }
     }
 
+    // TODO check with the recipient if they want to accept the cash.
     @Suspendable
-    private fun initiatePayment(req: CashCommand.PayCash): TransactionBuildResult {
+    private fun initiatePayment(req: CashCommand.PayCash): CashProtocolResult {
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
         // TODO: Have some way of restricting this to states the caller controls
         try {
@@ -43,18 +47,18 @@ class CashProtocol(val command: CashCommand): ProtocolLogic<TransactionBuildResu
             val tx = spendTX.toSignedTransaction(checkSufficientSignatures = false)
             val protocol = FinalityProtocol(tx, setOf(req.recipient))
             subProtocol(protocol)
-            return TransactionBuildResult.ProtocolStarted(
+            return CashProtocolResult.Success(
                     psm.id,
                     tx,
                     "Cash payment transaction generated"
             )
         } catch(ex: InsufficientBalanceException) {
-            return TransactionBuildResult.Failed(ex.message ?: "Insufficient balance")
+            return CashProtocolResult.Failed(ex.message ?: "Insufficient balance")
         }
     }
 
     @Suspendable
-    private fun exitCash(req: CashCommand.ExitCash): TransactionBuildResult {
+    private fun exitCash(req: CashCommand.ExitCash): CashProtocolResult {
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
         try {
             val issuer = PartyAndReference(serviceHub.myInfo.legalIdentity, req.issueRef)
@@ -78,18 +82,18 @@ class CashProtocol(val command: CashCommand): ProtocolLogic<TransactionBuildResu
             // Commit the transaction
             val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
             subProtocol(FinalityProtocol(tx, participants))
-            return TransactionBuildResult.ProtocolStarted(
+            return CashProtocolResult.Success(
                     psm.id,
                     tx,
                     "Cash destruction transaction generated"
             )
         } catch (ex: InsufficientBalanceException) {
-            return TransactionBuildResult.Failed(ex.message ?: "Insufficient balance")
+            return CashProtocolResult.Failed(ex.message ?: "Insufficient balance")
         }
     }
 
     @Suspendable
-    private fun issueCash(req: CashCommand.IssueCash): TransactionBuildResult {
+    private fun issueCash(req: CashCommand.IssueCash): CashProtocolResult {
         val builder: TransactionBuilder = TransactionType.General.Builder(notary = null)
         val issuer = PartyAndReference(serviceHub.myInfo.legalIdentity, req.issueRef)
         Cash().generateIssue(builder, req.amount.issuedBy(issuer), req.recipient.owningKey, req.notary)
@@ -98,7 +102,7 @@ class CashProtocol(val command: CashCommand): ProtocolLogic<TransactionBuildResu
         val tx = builder.toSignedTransaction(checkSufficientSignatures = true)
         // Issuance transactions do not need to be notarised, so we can skip directly to broadcasting it
         subProtocol(BroadcastTransactionProtocol(tx, setOf(req.recipient)))
-        return TransactionBuildResult.ProtocolStarted(
+        return CashProtocolResult.Success(
                 psm.id,
                 tx,
                 "Cash issuance completed"
@@ -120,7 +124,6 @@ sealed class CashCommand {
      * to use the single byte "0x01" as a default.
      * @param recipient the party to issue the cash to.
      * @param notary the notary to use for this transaction.
-     * @param id the ID to be provided in events resulting from this request.
      */
     class IssueCash(val amount: Amount<Currency>,
                     val issueRef: OpaqueBytes,
@@ -132,7 +135,6 @@ sealed class CashCommand {
      *
      * @param amount the amount of currency to issue on to the ledger.
      * @param recipient the party to issue the cash to.
-     * @param id the ID to be provided in events resulting from this request.
      */
     class PayCash(val amount: Amount<Issued<Currency>>, val recipient: Party) : CashCommand()
 
@@ -141,29 +143,23 @@ sealed class CashCommand {
      *
      * @param amount the amount of currency to exit from the ledger.
      * @param issueRef the reference previously specified on the issuance.
-     * @param id the ID to be provided in events resulting from this request.
      */
     class ExitCash(val amount: Amount<Currency>, val issueRef: OpaqueBytes) : CashCommand()
 }
 
-sealed class TransactionBuildResult {
+sealed class CashProtocolResult {
     /**
-     * State indicating that a protocol is managing this request, and that the client should track protocol state machine
-     * updates for further information. The monitor will separately receive notification of the state machine having been
-     * added, as it would any other state machine. This response is used solely to enable the monitor to identify
-     * the state machine (and its progress) as associated with the request.
-     *
-     * @param transaction the transaction created as a result, in the case where the protocol has completed.
+     * @param transaction the transaction created as a result, in the case where the protocol completed successfully.
      */
-    class ProtocolStarted(val id: StateMachineRunId, val transaction: SignedTransaction?, val message: String?) : TransactionBuildResult() {
-        override fun toString() = "Started($message)"
+    class Success(val id: StateMachineRunId, val transaction: SignedTransaction?, val message: String?) : CashProtocolResult() {
+        override fun toString() = "Success($message)"
     }
 
     /**
      * State indicating the action undertaken failed, either directly (it is not something which requires a
      * state machine), or before a state machine was started.
      */
-    class Failed(val message: String?) : TransactionBuildResult() {
+    class Failed(val message: String?) : CashProtocolResult() {
         override fun toString() = "Failed($message)"
     }
 }

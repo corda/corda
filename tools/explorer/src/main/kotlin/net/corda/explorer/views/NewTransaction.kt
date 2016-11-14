@@ -22,7 +22,7 @@ import net.corda.node.services.messaging.CordaRPCOps
 import net.corda.node.services.messaging.startProtocol
 import net.corda.protocols.CashCommand
 import net.corda.protocols.CashProtocol
-import net.corda.protocols.TransactionBuildResult
+import net.corda.protocols.CashProtocolResult
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.View
 import java.math.BigDecimal
@@ -144,12 +144,12 @@ class NewTransaction : View() {
                         rpcProxy.startProtocol(::CashProtocol, command).returnValue.toBlocking().first()
                     }.ui {
                         dialog.contentText = when (it) {
-                            is TransactionBuildResult.ProtocolStarted -> {
+                            is CashProtocolResult.Success -> {
                                 dialog.alertType = Alert.AlertType.INFORMATION
                                 dialog.setOnCloseRequest { resetScreen() }
                                 "Transaction Started \nTransaction ID : ${it.transaction?.id} \nMessage : ${it.message}"
                             }
-                            is TransactionBuildResult.Failed -> {
+                            is CashProtocolResult.Failed -> {
                                 dialog.alertType = Alert.AlertType.ERROR
                                 it.toString()
                             }
