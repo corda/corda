@@ -6,7 +6,6 @@
 \usepackage{amsfonts}
 \usepackage{minted}
 \usemintedstyle{vs}
-
 \newminted{kotlin}{%
     breakbytoken,%
     breaklines,%
@@ -27,11 +26,11 @@
 \usepackage{textcomp}
 \usepackage{scrextend}
 \usepackage{cleveref}
+\usepackage{csquotes}
 \crefformat{section}{\S#2#1#3}
 \addtokomafont{labelinglabel}{\sffamily}
 %\usepackage[natbibapa]{apacite}
 \renewcommand{\thefootnote}{\alph{footnote}}
-
 %\epigraphfontsize{\small\itshape}
 \setlength\epigraphwidth{4.5cm}
 \setlength\epigraphrule{0pt}
@@ -43,9 +42,9 @@
 
 %\renewcommand{\abstractname}{An introduction}
 \begin{center}
-Version 0.3
+Version 0.4
 
-\emph{Confidential: For R3 DLG only - INCOMPLETE}
+\emph{Confidential: For R3 DLG members only}
 \end{center}
 
 \vspace{10mm}
@@ -199,6 +198,8 @@ More complex notions of identity that may attest to many time-varying attributes
 system: the base identity is always just an X.500 name. Note that even though messaging is always identified, transactions
 themselves may still contain anonymous public keys.
 
+% TODO: Currently the node only lets you pick the CN and the rest of the X.500 name is dummy data.
+
 \subsection{The network map}
 
 Every network requires a network map service, which may itself be composed of multiple cooperating nodes. This is
@@ -255,7 +256,7 @@ of its content. The purpose of the receipts is to give a node undeniable evidenc
 notification that would stand up later in a dispute mediation process. Corda does not attempt to support deniable
 messaging.
 
-\section{Flow framework}
+\section{Flow framework}\label{sec:flows}
 
 It is common in decentralised ledger systems for complex multi-party protocols to be needed. The Bitcoin payment channel
 protocol\cite{PaymentChannels} involves two parties putting money into a multi-signature pot, then iterating with your
@@ -391,10 +392,10 @@ have occurrred. This is discussed in more detail below.
 is useful for secure signing devices (see \cref{sec:secure-signing-devices}).
 \end{labeling}
 
-% TODO: Update this one transaction types are separated.
+% TODO: Update this once transaction types are separated.
 % TODO: This description ignores the participants field in states, because it probably needs a rethink.
-% TODO: Specify the curve used here once we decide how much we care about BIP32 public derivation.
-% TODO: Messages aren't implemented.
+% TODO: Specify the elliptic curve used here once we finalise our choice.
+% TODO: Summaries aren't implemented.
 
 Signatures are appended to the end of a transaction and transactions are identified by the hash used for signing, so
 signature malleability is not a problem. There is never a need to identify a transaction including its accompanying
@@ -560,7 +561,7 @@ lag between the ledger becoming inaccurate and it catching up with reality. In t
 can be used in which the involved parties minus the uncooperative party agree to mark the relevant states as
 no longer consumed/spent. This is essentially a limited form of database rollback.
 
-\subsection{Identity lookups}
+\subsection{Identity lookups}\label{sec:identity-lookups}
 
 In all block chain inspired systems there exists a tension between wanting to know who you are dealing with and
 not wanting others to know. A standard technique is to use randomised public keys in the shared data, and keep
@@ -886,7 +887,6 @@ to, such as file IO or external entropy.
 \item Sets the \texttt{strictfp} flag on all methods, which requires the JVM to do floating point arithmetic in a hardware
 independent fashion. Whilst we anticipate that floating point arithmetic is unlikely to feature in most smart contracts
 (big integer and big decimal libraries are available), it is available for those who want to use it.
-% TODO: The sandbox code doesn't flip the strictfp flag yet.
 \item Forbids \texttt{invokedynamic} bytecode except in special cases, as the libraries that support this functionality have
 historically had security problems and it is primarily needed only by scripting languages. Support for the specific
 lambda and string concatenation metafactories used by Java code itself are allowed.
@@ -938,6 +938,12 @@ algorithm for a notary service, there is no requirement to do so and in cases wh
 ensure protocol compliance a higher performance algorithm like RAFT may be used. Because multiple notaries can co-exist
 a single network may provide a single global BFT notary for general use and region-specific RAFT notaries for low
 latency trading within a unified regulatory area, for example London or New York.
+
+Notaries accept transactions submitted to them for processing and either return a signature over the transaction, or
+a rejection error that states that a double spend has occurred. The presence of a notary signature from the state's
+chosen notary indicates transaction finality. An app developer triggers notarisation by invoking the
+\texttt{Finality} flow on the transaction once all other necessary signatures have been gathered. Once the finality flow
+returns successfully, the transaction can be considered committed to the database.
 
 \subsection{Comparison to Nakamoto block chains}
 
@@ -1058,6 +1064,47 @@ standalone notary could be run against a hardware security module with audit log
 use a private database and run on a single machine, with the logs exported to the people running a global network for
 asynchronous post-hoc verification.
 
+\subsection{Guaranteed data distribution}
+
+In any global consensus system the user is faced with the question of whether they have the latest state of the database.
+Programmers working with block chains often make the simplifying assumption that because there is no formal map
+of miner locations and thus transactions are distributed to miners via broadcast, that they can listen to the
+stream of broadcasts and learn if they have the latest data. Alas, nothing stops someone privately providing a
+miner who has a known location with a transaction that they agree not to broadcast. The first time the rest of
+the network finds out about this transaction is when a block containing it is broadcast. When used to do double
+spending fraud this type of attack is known as a Finney Attack\cite{FinneyAttack}. Proof-of-work based systems
+rely on aligned incentives to discourage such attacks: to quote the Bitcoin white paper, \blockquote{He ought to
+find it more profitable to play by the rules ... than to undermine the system and the validity of his own wealth.}
+In practice this approach appears to work well enough most of the time, given that miners typically do not accept
+privately submitted transactions.
+
+In a system without global broadcast things are very different: the notary clusters \emph{must} accept transactions
+directly and there is no mechanism to ensure that everyone sees that the transaction is occurring. Sometimes this
+doesn't matter: most transactions are irrelevant for you and having to download them just wastes resources. But
+occasionally you do wish to become aware that the ledger state has been changed by someone else. A simple example
+is an option contract in which you wish to expire the option unless the counterparty has already exercised it. Them
+exercising the option must not require the seller to sign off on it, as it may be advantageous for the seller to refuse
+if it would cause them to lose money. Whilst the seller would discover if the buyer had exercised the option when they
+attempted to expire it, due to the notary informing them that their expiry transaction was a double spend, it is
+preferable to find out immediately.
+
+The obvious way to implement this is to give notaries the responsibility for ensuring all interested parties find out
+about a transaction. However, this would require the notaries to know who the involved parties actually are, which
+would create an undesirable privacy leak. It would also place extra network load on the notaries who would frequently
+be sending transaction data to parties that may already have it, or may simply not care. In many cases there may be
+no requirement for the notary to act as a trusted third party for data distribution purposes, as game-theoretic
+assumptions or legal assurances are sufficiently strong that peers can be trusted to deliver transaction data as part
+of their regular flows.
+
+To solve this, app developers can choose whether to request transaction distribution by the notary or not. This works
+by simply piggybacking on the standard identity lookup flows (see \cref{sec:identity-lookups}). If a node wishes to be
+informed by the notary when a state is consumed, it can send the certificates linking the random keys in the state
+to the notary cluster, which then stores it in the local databases as per usual. Once the notary cluster has committed
+the transaction, key identities are looked up and any which resolve successfully are sent copies of the transaction. In
+normal operation the notary is not provided with the certificates linking the random keys to the long term identity keys
+and thus does not know who is involved with the operation (assuming source IP address obfuscation is in use, see
+\cref{sec:privacy}).
+
 \section{The vault}\label{sec:vault}
 
 In any blockchain based system most nodes have a wallet, or as we call it, a vault.
@@ -1135,23 +1182,60 @@ annotated in other ways, for instance to customise its mapping to XML/JSON, or t
 \cite{BeanValidation}. These annotations won't affect the behaviour of the node directly but may be useful when working
 with states in surrounding software.
 
-%\section{Integration with market infrastructure}
-%
-%Trade is the lifeblood of the economy. A distributed ledger needs to provide a vibrant platform on which trading may
-%take place. However, the decentralised nature of such a network makes it difficult to build competitive
-%market infrastructure on top of it, especially for highly liquid assets like securities. Markets typically provide
-%features like a low latency orderbook, integrated regulatory compliance, price feeds and other things that benefit
-%from a central meeting point.
-%
-%The Corda data model allows for integration of the ledger with existing markets and exchanges. A sell order for
-%an asset that exists on-ledger can have a \emph{partially signed transaction} attached to it. A partial
-%signature ... % TODO
+\subsection{Key randomisation}\label{sec:key-randomisation}
 
-% In many markets, central infrastructures such as clearing houses (also known as Central Counterparties, or CCPs)
-% and Central Securities Depositories (CSD) have been created. They provide governance, rules definition and
-% enforcement, risk management and shared data and processing services. The partial data visibility, flexible
-% transaction verification logic and pluggable notary design means Corda could be a particularly good fit for
-% future distributed ledger services contemplated by CCPs and CSDs.
+A standard privacy technique in block chain systems is the use of randomised unlinkable public keys to stand in for
+actual verified identities. Ownership of these pseudonyms may be revealed to a counterparty using a simple interactive
+protocol in which Alice selects a random nonce (`number used once') and sends it to Bob, who then signs the nonce with
+the private key corresponding to the public key he is proving ownership of.
+
+Generating fresh keys for each new deal or asset transfer rapidly results in many private keys being created. These
+keys must all be backed up and kept safe, which poses a significant management problem when done at scale. The canonical
+way to resolve this problem is through the use of deterministic key derivation, as pioneered by the Bitcoin community in
+BIP 32 `Hierarchical Deterministic Wallets'\cite{BIP32}. Deterministic key derivation allows all private key
+material needed to be derived from a single, small pool of entropy (e.g. a carefully protected and backed up 128 bits of
+random data). More importantly, when the full BIP 32 technique is used in combination with an elliptic curve that supports
+it, public keys may also be deterministically derived \emph{without} access to the underlying private key material. This
+allows devices to provide fresh public keys to counterparties without being able to sign with those keys, enabling
+better security along with operational efficiencies.
+
+Corda does not place any constraints on the mathematical properties of the digital signature algorithms parties use.
+However, implementations are recommended to use hierarchical deterministic key derivation when possible.
+
+\section{Integration with market infrastructure}
+
+Trade is the lifeblood of the economy. A distributed ledger needs to provide a vibrant platform on which trading may
+take place. However, the decentralised nature of such a network makes it difficult to build competitive
+market infrastructure on top of it, especially for highly liquid assets like securities. Markets typically provide
+features like a low latency order book, integrated regulatory compliance, price feeds and other things that benefit
+from a central meeting point.
+
+The Corda data model allows for integration of the ledger with existing markets and exchanges. A sell order for
+an asset that exists on-ledger can have a \emph{partially signed transaction} attached to it. A partial
+signature is a signature that allows the signed data to be changed in controlled ways after signing. Partial signatures
+are directly equivalent to Bitcoin's \texttt{SIGHASH} flags and work in the same way - signatures contain metadata
+describing which parts of the transaction are covered. Normally all of a transaction would be covered, but using this
+metadata it is possible to create a signature that only covers some inputs and outputs, whilst allowing more to be
+added later.
+
+This feature is intended for integration of the ledger with the order books of markets and exchanges. Consider a stock
+exchange. A buy order can be submitted along with a partially signed transaction that signs a cash input state
+and a output state representing some quantity of the stock owned by the buyer. By itself this transaction is invalid,
+as the cash does not appear in the outputs list and there is no input for the stock. A sell order can be combined with
+a mirror-image partially signed transaction that has a stock state as the input and a cash state as the output. When
+the two orders cross on the order book, the exchange itself can take the two partially signed transactions and merge
+them together, creating a valid transaction that it then notarises and distributes to both buyer and seller. In this
+way trading and settlement become atomic, with the ownership of assets on the ledger being synchronised with the view
+of market participants. Note that in this design the distributed ledger itself is \emph{not} a marketplace, and does
+not handle distribution or matching of orders. Rather, it focuses on management of the pre- and post- trade lifecycles.
+
+\paragraph{Central counterparties.}In many markets, central infrastructures such as clearing houses (also known as
+Central Counterparties, or CCPs) and Central Securities Depositories (CSD) have been created. They provide governance,
+rules definition and enforcement, risk management and shared data and processing services. The partial data visibility,
+flexible transaction verification logic and pluggable notary design means Corda could be a particularly good fit for
+future distributed ledger services contemplated by CCPs and CSDs.
+
+% TODO: Partial signatures are not implemented.
 
 \section{Domain specific languages}
 
@@ -1241,6 +1325,15 @@ any JVM bytecode, formally verifiable languages that target this instruction set
 of smart contracts. A good example of this is the Whiley language by Dr David Pearce\cite{Pearce2015191}, which
 checks program-integrated proofs at compile time. By building on industry-standard platforms, we gain access to
 cutting edge research from the computer science community outside of the distributed systems world.
+
+\subsection{Projectional editing}
+
+Custom languages and type systems for the expression of contract logic can be naturally combined with \emph{projectional
+editing}, in which source code is not edited textually but rather a structure aware
+editor\cite{DBLP:conf/models/VoelterL14}. Such languages can consist not only of traditional grammar-driven text
+oriented structures but also diagrams, tables and recursive compositions of them together. Given the frequent occurrence
+of data tables and English-oriented nature of many financial contracts, a dedicated environment for the construction of
+smart contract logic may be appreciated by the users.
 
 \section{Secure signing devices}\label{sec:secure-signing-devices}
 
@@ -1400,18 +1493,121 @@ are ideal for the task.
 Being able to connect live data structures directly to UI toolkits also contributes to the avoidance
 of XSS exploits, XSRF exploits and similar security problems based on losing track of buffer boundaries.
 
-\section{Privacy}
-
-TODO
 
 \section{Data distribution groups}
 
-TODO
+By default, distribution of transaction data is defined by app-provided flows (see \cref{sec:flows}). Flows specify
+when and to which peers transactions should be sent. Typically these destinations will be calculated based on the content
+of the states and the available identity lookup certificates, as the intended use case of financial data usually
+contains the identities of the relevant parties within it. Sometimes though, the set of parties that should receive
+data isn't known ahead of time and may change after a transaction has been created. For these cases partial data
+visibility is not a good fit and an alternative mechanism is needed.
 
-\section{Future work}
+A data distribution group (DDG) is created by generating a keypair and a self-signed certificate for it. Groups are
+identified internally by their public key and may be given string names in the certificate, but nothing in the
+software assumes the name is unique: it's intended only for human consumption and it may conflict with other independent
+groups. In case of conflict user interfaces disambiguate by appending a few characters of the base58 encoded public key
+to the name like so:  "My popular group name (a4T)". As groups are not globally visible anyway, it is unlikely that
+conflicts will be common or require many code letters to deconflict, and some groups may not even be intended for
+human consumption at all.
 
-Although intended to be a production-ready platform for building decentralised financial databases, there are
-multiple areas of research remaining to be explored.
+Once a group is created other nodes can be invited to join it by using an invitation flow. Membership can be either
+read only or read/write. To add a node as read-only, the certificate i.e. pubkey alone is sent. To add a node as
+read/write the cert and private key are sent. A future elaboration on the design may support giving each member a
+separate private key which would allow tracing who added transactions to a group, but this is left for future work.
+In either case the node records in its local database which other nodes it has invited to the group once they accept
+the invitation.
+
+When the invite is received the target node runs the other side of the flow as normal, which may either automatically
+accept membership if it's configured to trust the inviting node, or send a message to a message queue for processing by an
+external system, or kick it up to a human administrator for approval. Invites to groups the node is already a
+member of are rejected. The accepting node also records which node invited it. So, there ends up being a two-way
+recorded relationship between inviter and invitee stored in their vaults. Finally the inviter side of the
+invitation flow pushes a list of all the transaction IDs that exist in the group and the invitee side resolves all of
+them. The end result is that all the transactions that are in the group are sent to the new node (along with all
+dependencies).
+
+Note that this initial download is potentially infinite if transactions are added to the group as fast or faster than the
+new node is downloading and checking them. Thus whilst it may be tempting to try and expose a notion of `doneness' to
+the act of joining a group, it's better to see the act of joining as happening at a specific point in time and the
+resultant flood of transaction data as an ongoing stream, rather than being like a traditional file download.
+
+When a transaction is sent to the vault, it always undergoes a relevancy test, regardless of whether it is in a group
+or not (see \cref{sec:vault}). This test is extended to check also for the
+signatures of any groups the node is a member of. If there's a match then the transaction's states are all considered
+relevant. In addition, the vault looks up which nodes it invited to this group, and also which nodes invited it, removes
+any nodes that have recently sent us this transaction and then kicks off a \texttt{PropagateTransactionToGroup} flow
+with each of them.  The other side of this flow checks if the transaction is already known, if not requests it, checks
+that it is indeed signed by the group in question, resolves it and then assuming success, sends it to the vault. In this
+way a transaction added by any member of the group propagates up and down the membership tree until all the members have
+seen it. Propagation is idempotent - if the vault has already seen a transaction before then it isn't processed again.
+
+The structure we have so far has some advantages and one big disadvantage. The advantages are:
+
+\begin{itemize}
+\item [Simplicity] The core data model is unchanged. Access control is handled using existing tools like signatures, certificates and flows.
+\item [Privacy] It is possible to join a group without the other members being aware that you have done so. It is possible to create groups without non-members knowing the group exists.
+\item [Scalability] Groups are not registered in any central directory. A group that exists between four parties imposes costs only on those four.
+\item [Performance] Groups can be created as fast as you can generate keypairs and invite other nodes to join you.
+\item [Responsibility] For every member of the group there is always a node that has a responsibility for sending you
+new data under the protocol (the inviting node). Unlike with Kademlia style distributed hash tables, or Bitcoin style
+global broadcast, you can never find yourself in a position where you didn't receive data yet nobody has violated the
+protocol. There are no points at which you pick a random selection of nodes and politely ask them to do something for
+you, hoping that they'll choose to stick around.
+\end{itemize}
+
+The big disadvantage is that it's brittle. If you have a membership tree and a node goes offline for a while,
+then propagation of data will split and back up in the outbound queues of the parents and children of the offline
+node until it comes back.
+
+To strengthen groups we can add a new feature, membership broadcasts. Members of the group that have write access may
+choose to sign a membership announcement and propagate it through the tree. These announcements are recorded in the
+local database of each node in the group. Nodes may include these announced members when sending newly added
+transactions. This converts the membership tree to a graph that may contain cycles, but infinite propagation loops are
+not possible because nodes ignore announcements of new transactions/attachments they've already received. Whether a group
+prefers privacy or availability may be hinted in the certificate that defines it: if availability is preferred, this is
+a signal that members should always announce themselves (which would lead to a mesh).
+
+The network map for a network defines the event horizon, the span of time that is allowed to elapse before an offline
+node is considered to be permanently gone. Once a peer has been offline for longer than the event horizon any nodes that
+invited it remove it from their local tables. If a node was invited to a group by a gone peer and there are no other
+nodes that announced their membership it can use, the node should post a message a queue and/or notify the
+administrator, as it's now effectively been evicted from the group.
+
+The resulting arrangement may appear similar to a gossip network. However the underlying membership tree structure
+remains. Thus when all nodes are online (or online enough) messages are guaranteed to propagate to everyone in the
+network. You can't get situations where a part of the club has become split from the rest without anyone being aware of
+that fact; an unlikely but possible occurrence in a gossip network. It also isn't like a distributed hash table where
+data isn't fully replicated, so we avoid situations where data has been added to the group but stops being available due
+to node outages. It is always possible to reason about the behaviour of the network and always possible to assign
+responsibility if something goes wrong.
+
+Note that it is not possible to remove members after they have been added to a group. We could provide a remove
+announcement but it'd be advisory only: nothing stops nodes from ignoring it. It is also not possible to enumerate
+members of a group because there is no requirement to do a membership broadcast when you join and no way to enforce such
+a requirement.
+
+% TODO: Nothing related to data distribution groups is implemented.
+
+\section{Privacy}
+
+Privacy is not a standalone feature in the way that many other aspects described in this paper are, so this section
+summarises features described elsewhere. Corda exploits multiple techniques to improve user privacy over other
+distributed ledger systems:
+
+\paragraph{Partial data visibility.}Transactions are not globally broadcast as in many other systems.
+\paragraph{Transaction tear-offs.}Transactions are structured as Merkle trees, and may have individual subcomponents be
+revealed to parties who already know the Merkle root hash. Additionally, they may sign the transaction without being
+able to see all of it. See \cref{sec:tear-offs}
+\paragraph{Key randomisation.}The vault generates and uses random keys that are unlinkable to an identity without the
+corresponding linkage certificate. See \cref{sec:vault}.
+\paragraph{Graph pruning.}Large transaction graphs that involve liquid assets can be `pruned' by requesting the asset
+issuer to re-issue the asset onto the ledger with a new reference field. This operation is not atomic, but effectively
+unlinks the new version of the asset from the old, meaning that nodes won't attempt to explore the original dependency
+graph during verification.
+
+Corda has been designed with the future integration of additional privacy technologies in mind. Of all potential
+upgrades, three are particularly worth a mention.
 
 \paragraph{Secure hardware.}Although we narrow the scope of data propagation to only nodes that need to see that
 data, `need' can still be an unintuitive concept in a decentralised database where often data is required only
@@ -1431,28 +1627,36 @@ of writing smart contracts. However, it does still require the sensitive data to
 who may then attempt to attack the hardware or exploit side channels to extract business intelligence from
 inside the encrypted container.
 
+\paragraph{Mix networks.}Some nodes may be in the position of learning about transactions that aren't directly related
+to trades they are doing, for example notaries or regulator nodes. Even when key randomisation is used these nodes can
+still learn valuable identity information by simply examining the source IP addresses or the authentication certificates
+of the nodes sending the data for notarisation. The traditional cryptographic solution to this problem is a
+\emph{mix network}\cite{Chaum:1981:UEM:358549.358563}. The most famous mix network is Tor, but a more appropriate design
+for Corda would be that of an anonymous remailer. In a mix network a message is repeatedly encrypted in an onion-like
+fashion using keys owned by a small set of randomly selected nodes. Each layer in the onion contains the address of the
+next `hop'. Once the message is delivered to the first hop, it decrypts it to reveal the next encrypted layer and
+forwards it onwards. The return path operates in a similar fashion. Adding a mix network to the Corda protocol
+would allow users to opt-in to a privacy upgrade, at the cost of higher latencies and more exposure to failed network
+nodes.
+
 \paragraph{Zero knowledge proofs.}The holy grail of privacy in decentralised database systems is the use of zero
-knowledge proofs to convince a peer that a transaction is valid without revealing the contents of the transaction to
+knowledge proofs to convince a peer that a transaction is valid, without revealing the contents of the transaction to
 them. Although these techniques are not yet practical for execution of general purpose smart contracts, enormous
 progress has been made in recent years and we have designed our data model on the assumption that we will one day wish
 to migrate to the use of \emph{zero knowledge succinct non-interactive arguments of knowledge}\cite{184425}
-(`zkSNARKs'). These algorithms allow for the calculation of a fixed-size mathematical proof that a program was
-correctly executed with a mix of public and private inputs on a simple simulated CPU (`vnTinyRAM'). Because the program
-is shared, the combination of an agreed upon function (i.e. a smart contract) along with private input data is
-sufficient to verify correctness, as long as the prover's program may recursively verify other proofs, i.e. the proofs
-of the input transactions. The BCTV techniques rely on recursive proof composition for the execution of vnTinyRAM
-opcodes, so this is not a problem. Integration with Corda would require the addition of a vnTinyRAM compiler backend to
-an ahead of time JVM bytecode compiler, such as Graal\cite{Graal}, along with the significant adaptations required for
-execution in the highly limited proving environment.
-
-\paragraph{New domain specific languages.} Custom languages and type systems for the expression
-of contract logic can be naturally combined with \emph{projectional editing}, in which source code is not edited
-textually but rather a structure aware editor\cite{DBLP:conf/models/VoelterL14}. Such languages can consist not
-only of traditional grammar-driven text oriented structures but also diagrams, tables and recursive compositions of
-them together. Given the frequent occurrence of data tables and English-oriented nature of many financial
-contracts, a dedicated environment for the construction of smart contract logic may be appreciated by the users.
-Additionally, DSLs for contract development may choose to explore approaches that trade off ease of use to gain
-correctness, for example, total languages, formally verifiable languages, a subset of Haskell or Idris etc.
+(`zkSNARKs'). These algorithms allow for the calculation of a fixed-size mathematical proof that a program was correctly
+executed with a mix of public and private inputs. Programs can be expressed either directly as a system of low-degree
+multivariate polynomials encoding an algebraic constraint system, or by execution on a simple simulated CPU (`vnTinyRAM') which is itself
+implemented as a large pre-computed set of constraints. Because the program is shared the combination of an
+agreed upon function (i.e. a smart contract) along with private input data is sufficient to verify correctness,
+as long as the prover's program may recursively verify other proofs, i.e. the proofs of the input transactions.
+The BCTV zkSNARK algorithms rely on recursive proof composition for the execution of vnTinyRAM opcodes, so this is not a
+problem. The most obvious integration with Corda would require tightly written assembly language versions of common
+smart contracts (e.g. cash) to be written by hand and aligned with the JVM versions. Less obvious but more powerful
+integrations would involve the addition of a vnTinyRAM backend to an ahead of time JVM bytecode compiler, such as
+Graal\cite{Graal}, or a direct translation of Graal's graph based intermediate representation into systems of constraints.
+Direct translation of an SSA-form compiler IR to constraints would be best integrated with recent research
+into `scalable probabilistically checkable proofs'\cite{cryptoeprint:2016:646}, and is an open research problem.
 
 \section{Conclusion}
 
@@ -1470,9 +1674,8 @@ length-prefixed buffers throughout for the systematic avoidance of common buffer
 ledger data relevant to them by issuing ordinary SQL queries against mature database engines, and may craft complex
 multi-party transactions with ease in programming languages that are already familiar to them.
 
-% TODO: Write a section on integration with market infrastructure.
-% Finally, the platform defines standard ways to integrate the global ledger with financial infrastructure like high
-% performance markets and netting services.
+Finally, the platform defines standard ways to integrate the global ledger with financial infrastructure like high
+performance markets and netting services.
 
 \section{Acknowledgements}
 
