@@ -4,7 +4,16 @@
 \title{Corda: A distributed ledger}
 %%\setlength{\parskip}{\baselineskip}
 \usepackage{amsfonts}
-\usepackage{listings}
+\usepackage{minted}
+\usemintedstyle{vs}
+
+\newminted{kotlin}{%
+    breakbytoken,%
+    breaklines,%
+    autogobble,%
+    frame=lines,%
+    framesep=2\fboxsep%
+}
 \usepackage{color}
 \usepackage{epigraph}
 \usepackage{graphicx}
@@ -34,7 +43,7 @@
 
 %\renewcommand{\abstractname}{An introduction}
 \begin{center}
-Version 0.2
+Version 0.3
 
 \emph{Confidential: For R3 DLG only - INCOMPLETE}
 \end{center}
@@ -257,11 +266,11 @@ state machine with timeouts and error cases, and possibly interaction with inter
 this can become quite involved. The implementation of Bitcoin payment channels in the bitcoinj library is approximately
 9000 lines of Java, very little of which involves cryptography.
 
-As another example, the core Bitcoin protocol only
-allows you to append transactions to the ledger. Transmitting other information that might be useful such as a text message,
-refund address, identity information and so on is not supported and must be handled in some other way - typically by
-wrapping the raw ledger transaction bytes in a larger message that adds the desired metadata and giving responsibility
-for broadcasting the embedded transaction to the recipient, as in Bitcoin's BIP 70\cite{BIP70}.
+As another example, the core Bitcoin protocol only allows you to append transactions to the ledger. Transmitting other
+information that might be useful such as a text message, refund address, identity information and so on is not supported
+and must be handled in some other way - typically by wrapping the raw ledger transaction bytes in a larger message that
+adds the desired metadata and giving responsibility for broadcasting the embedded transaction to the recipient, as in
+Bitcoin's BIP 70\cite{BIP70}.
 
 In Corda transaction data is not globally broadcast. Instead it is transmitted to the relevant parties only when they
 need to see it. Moreover even quite simple use cases - like sending cash - may involve a multi-step negotiation between
@@ -279,7 +288,7 @@ abstracted away. This is achieved with the following components.
 \paragraph{Just-in-time state machine compiler.}Code that is written in a blocking manner typically cannot be stopped
 and transparently restarted later. The first time a flow's \texttt{call} method is invoked a bytecode-to-bytecode
 transformation occurs that rewrites the classes into a form that implements a resumable state machine. These state
-machines are sometimes called fibers or coroutines, and the transformation engine Corda uses is capable of rewriting
+machines are sometimes called fibers or coroutines, and the transformation engine Corda uses (Quasar) is capable of rewriting
 code arbitrarily deep in the stack on the fly. The developer may thus break his or her logic into multiple methods and
 classes, use loops, and generally structure their program as if it were executing in a single blocking thread. There's only a
 small list of things they should not do: sleeping, directly accessing the network APIs, or doing other tasks that might
@@ -417,7 +426,7 @@ mathematically, we choose the less space efficient explicit form in order to all
 algorithms. In this way old algorithms can be phased out and new algorithms phased in without requiring all
 participants in a group to upgrade simultaneously.
 
-\subsection{Timestamps}
+\subsection{Timestamps}\label{sec:timestamps}
 
 Transaction timestamps specify a \texttt{[start, end]} time window within which the transaction is asserted to have
 occurred. Timestamps are expressed as windows because in a distributed system there is no true time, only a large number
@@ -639,7 +648,7 @@ unworkably high. Because oracles sign specific transactions, not specific statem
 for its services can amortise the cost of determining the truth of a statement over many users who cannot then
 share the signature itself (because it covers a one-time-use structure by definition).
 
-\subsection{Encumbrances}
+\subsection{Encumbrances}\label{sec:encumbrances}
 
 Each state in a transaction specifies a contract (boolean function) that is invoked with the entire transaction as input. All contracts must accept
 in order for the transaction to be considered valid. Sometimes we would like to compose the behaviours of multiple
@@ -699,7 +708,7 @@ To request scheduled events, a state may implement the \texttt{SchedulableState}
 request from the \texttt{nextScheduledActivity} function. The state will be queried when it is committed to the
 vault and the scheduler will ensure the relevant flow is started at the right time.
 
-\section{Assets and obligations}
+\section{Assets and obligations}\label{sec:assets}
 
 A ledger that cannot record the ownership of assets is not very useful. We define a set of classes that model
 asset-like behaviour and provide some platform contracts to ensure interoperable notions of cash and obligations.
@@ -733,18 +742,107 @@ issued by some party. It encapsulates what the asset is, who issued it, and an o
 parsed by the platform - it is intended to help the issuer keep track of e.g. an account number, the location where
 the asset can be found in storage, etc.
 
-% TODO: FungibleState description
-% TODO: Obligations
+\paragraph{Obligations.}It is common in finance to be paid with an IOU rather than hard cash (note that in this
+section `hard cash' means a balance with the central bank). This is frequently done to minimise the amount of
+cash on hand when trading institutions have some degree of trust each other: if you make a payment to a
+counterparty that you know will soon be making a payment back to you as part of some other deal, then there is
+an incentive to simply note the fact that you owe the other institution and then `net out' these obligations at a
+later time. Netting, sometimes called \emph{trade compression}, is a process which simulates the settlement of
+many inter-institutional obligations. The final output is the amount of money that needs to actually be
+transferred. Corda models a nettable obligation with the \texttt{Obligation} contract, which is a subclass of
+\texttt{FungibleAsset}. Obligations have a lifecycle and can express constraints on the on-ledger assets used
+for settlement. The contract allows not only for trading and fungibility of obligations but also bi-lateral and
+multi-lateral netting.
 
-TODO: Complete this section
+It is important to note here that netting calculations can get very complex and the financial industry contains
+firms that compete on the quality of their netting algorithms. The \texttt{Obligation} contract provides methods
+to calculate  simple bi-lateral nettings, and verify the correctness of both bi and multi-lateral nettings. For
+very large, complex multi-lateral nettings it is expected that institutions would use pre-existing trade
+compression implementations.
 
-\section{Non-asset instruments}
-
-TODO
+Netting is usually done when markets are closed. This is because it is hard to calculate nettings and settle up
+concurrently with the trading positions changing. The problem can be seen as analagous to garbage collection in
+a managed runtime: compacting the heap requires the running program to be stopped so the contents of the heap
+can be rewritten. If a group of trading institutions wish to implement a checked form of `market close' then they
+can use an encumbrance (see \cref{sec:encumbrances}) to prevent an obligation being changed during certain hours,
+as determined by the clocks of the notaries (see \cref{sec:timestamps}).
 
 \section{Scalability}
 
-TODO
+Scalability of blockchains and blockchain inspired systems has been a constant topic of discussion since Nakamoto
+first proposed the technology in 2008. We make a variety of choices and tradeoffs that affect and
+ensure scalability. As most of the initial intended use cases do not involve very high levels of traffic, the
+reference implementation is not heavily optimised. However, the architecture allows for much greater levels of
+scalability to be achieved when desired.
+
+\paragraph{Partial visibility.}Nodes only encounter transactions if they are involved in some way, or if the
+transactions are dependencies of transactions that involve them in some way. This loosely connected
+design means that it is entirely possible for most nodes to never see most of the transaction graph, and thus
+they do not need to process it. This makes direct scaling comparisons with other distributed and
+decentralised database systems difficult, as they invariably measure performance in transctions/second.
+For Corda, as writes are lazily replicated on demand, it is difficult to quote a transactions/second figure for
+the whole network.
+
+\paragraph{Distributed node.}At the center of a Corda node is a message queue broker. Nodes are logically structured
+as a series of microservices and have the potential in future to be run on separate machines. For example, the
+embedded relational database can be swapped out for an external database that runs on dedicated hardware. Whilst
+a single flow cannot be parallelised, a node under heavy load would be typically be running many flows in parallel.
+As flows access the network via the broker and local state via an ordinary database connection, more flow processing
+capacity could be added by just bringing online additional flow workers. This is likewise the case for RPC processing.
+
+\paragraph{Signatures outside the transactions.}Corda transaction identifiers are the root of a Merkle tree
+calculated over its contents excluding signatures. This has the downside that a signed and partially signed
+transaction cannot be distinguished by their canonical identifier, but means that signatures can easily be
+verified in parallel. Corda smart contracts are deliberately isolated from the underlying cryptography and are
+not able to request signature checks themselves: they are run \emph{after} signature verification has
+taken place and don't execute at all if required signatures are missing. This ensures that signatures can be
+checked concurrently even though the smart contract code itself is not parallelisable.
+
+\paragraph{Multiple notaries.}It is possible to increase scalability in some cases by bringing online additional
+notary clusters. Note that this only adds capacity if the transaction graph has underlying exploitable structure
+(e.g. geographical biases), as a purely random transaction graph would end up constantly crossing notaries and
+the additional transactions to move states from one notary to another would negate the benefit. In real
+trading however the transaction graph is not random at all, and thus this approach may be helpful.
+
+\paragraph{Asset reissuance.}In the case where the issuer of an asset is both trustworthy and online, they may
+exit and re-issue an asset state back onto the ledger with a new reference field. This effectively truncates the
+dependency graph of that asset which both improves privacy and scalability, at the cost of losing atomicity (it
+is possible for the issuer to exit the asset but not re-issue it, either through incompetence or malice).
+
+\paragraph{Non-validating notaries.}The overhead of checking a transaction for validity before it is notarised is
+likely to be the main overhead for non-BFT notaries. In the case where raw throughput is more important than
+ledger integrity it is possible to use a non-validating notary. See \cref{sec:non-validating-notaries}.
+
+The primary bottleneck in a Corda network is expected to be the notary clusters, especially for byzantine fault
+tolerant (BFT) clusters made up of mutually distrusting nodes. BFT clusters are likely to be slow partly because the
+underlying protocols are typically chatty and latency sensitive, and partly because the primary situation when
+using a BFT protocol is beneficial is when there is no shared legal system which can be used to resolve fraud or
+other disputes, i.e. when cluster participants are spread around the world and thus the speed of light becomes
+a major limiting factor.
+
+The primary bottleneck in a Corda node is expected to be flow checkpointing, as this process involves walking the
+stack and heap then writing out the snapshotted state to stable storage. Both of these operations are computationally
+intensive. This may seem unexpected, as other platforms typically bottleneck on signature
+checking operations. It is worth noting though that the main reason other platforms do not bottleneck
+on checkpointing operations is that they typically don't provide any kind of app-level robustness services
+at all, and so the cost of checkpointing state (which must be paid eventually!) is accounted to the application
+developer rather than the platform. When a flow developer knows that a network communication is idempotent and
+thus can be replayed, they can opt out of the checkpointing process to gain throughput at the cost of additional
+wasted work if the flow needs to be evicted to disk. Note that checkpoints and transaction data can be stored in
+any NoSQL database (such as Cassandra), at the cost of a more complex backup strategy.
+
+% TODO: Opting out of checkpointing isn't available yet.
+% TODO: Ref impl doesn't support using a NoSQL store for flow checkpoints.
+
+Due to partial visibility nodes check transaction graphs `just in time' rather than as a steady stream of
+announcements by other participants. This complicates the question of how to measure the scalability of a Corda
+node. Other blockchain systems quote performance as a constant rate of transactions per unit time.
+However, our `unit time' is not evenly distributed: being able to check 1000 transactions/sec is not
+necessarily good enough if on presentation of a valuable asset you need to check a transation graph that consists
+of 3 million transactions and the user is expecting the transaction to show up instantly. Future versions of
+the platform may provide features that allow developers to smooth out the spikey nature of Corda transaction
+checking by, for example, pre-pushing transactions to a node when the developer knows they will soon request
+the data anyway.
 
 \section{Deterministic JVM}
 
@@ -916,7 +1014,7 @@ because such a model is inherently limited in the range of operations that can b
 \item Separate networks can start independent and be merged together later (see below).
 \end{itemize}
 
-\subsection{Validating and non-validating notaries}
+\subsection{Validating and non-validating notaries}\label{sec:non-validating-notaries}
 
 Validating notaries resolve and fully check transactions they are asked to deconflict. Thus in the degenerate case of a
 network with just a single notary and without the use of any privacy features, they gain full visibility into every
@@ -1032,9 +1130,106 @@ annotated in other ways, for instance to customise its mapping to XML/JSON, or t
 \cite{BeanValidation}. These annotations won't affect the behaviour of the node directly but may be useful when working
 with states in surrounding software.
 
-\section{Clauses}
+%\section{Integration with market infrastructure}
+%
+%Trade is the lifeblood of the economy. A distributed ledger needs to provide a vibrant platform on which trading may
+%take place. However, the decentralised nature of such a network works makes it difficult to build competitive
+%market infrastructure on top of it, especially for highly liquid assets like securities. Markets typically provide
+%features like a low latency orderbook, integrated regulatory compliance, price feeds and other things that benefit
+%from a central meeting point.
+%
+%The Corda data model allows for integration of the ledger with existing markets and exchanges. A sell order for
+%an asset that exists on-ledger can have a \emph{partially signed transaction} attached to it. A partial
+%signature ... % TODO
 
-TODO
+% TODO: Should we mention clearing houses here? Is there anything worth mentioning?
+
+\section{Domain specific languages}
+
+\subsection{Clauses}
+When writing a smart contract, many desired features and patterns crop up repeatedly. For example it is expected
+that all production quality asset contracts would want the following features:
+
+\begin{itemize}
+\item Issuance and exit transactions.
+\item Movement transactions (reassignment of ownership).
+\item Fungibility management (see \cref{sec:assets}).
+\item Support for upgrading to new versions of the contract.
+\end{itemize}
+
+Many of these seemingly simple features have obscure edge cases. One example is a need to prevent the creation of
+asset states that contain zero or negative quantities of the asset. Another is to ensure that states are summed
+for fungibility purposes without accidentally assuming that the transaction only moves one type of asset at once.
+Rather than expect contract developers to reimplement these pieces of low level logic the Corda standard library
+provides \emph{clauses}, a small class library that implement reusable pieces of contract logic. A contract writer
+may create their own clauses and then pass the set of contract clauses together to a library function that
+interprets them.
+
+\subsection{Combinator libraries}
+Domain specific languages for the expression of financial contracts are a popular area of research. A seminal work
+is `Composing contracts' by Peyton-Jones, Seward and Eber [PJSE2000\cite{PeytonJones:2000:CCA:357766.351267}] in which
+financial contracts are modelled with a small library of Haskell combinators. These models can then be used for
+valuation of the underlying deals. Blockchain systems use the term `contract' in a slightly different sense to
+how PJSE do but the underlying concepts can be adapted to our context as well. The platform provides an
+experimental \emph{universal contract} that builds on the language extension features of the Kotlin programming
+language. To avoid linguistic confusion it refers to the combined code/data bundle as an `arrangement' rather
+than a contract. A European FX swap expressed in this language looks like this:
+
+\begin{kotlincode}
+fun fx_swap(expiry: String, notional: BigDecimal,
+            strike: BigDecimal, foreignCurrency: Currency,
+            domesticCurrency: Currency,
+            partyA: Party, partyB: Party) =
+
+        arrange {
+            actions {
+                (partyA or partyB) may {
+                    "execute".givenThat(after(expiry)) {
+                        swap(
+                            partyA, notional * strike,
+                            domesticCurrency, partyB,
+                            notional, foreignCurrency
+                        )
+                    }
+                }
+            }
+        }
+
+arrange {
+    actions {
+        acmeCorp may {
+            "exercise".givenThat(before("2017-09-01")) {
+                fx_swap("2017-09-01", 1.M, 1.2.bd, EUR, USD,
+                        acmeCorp, highStreetBank)
+            }
+        }
+
+        (acmeCorp or highStreetBank) may {
+            "expire".anytime {
+                zero
+            }
+        }
+    }
+}
+\end{kotlincode}
+
+The programmer may define arbitrary `actions' along with constraints on when the actions may be invoked. The
+\texttt{zero} token indicates the termination of the deal.
+
+As can be seen, this DSL combines both \emph{what} is allowed and deal-specific data like \emph{when} and \emph{how much}
+is allowed. It therefore blurs the distinction the core model has between code and data.
+
+\subsection{Formally verifiable languages}
+
+Corda contracts can be upgraded. However, given the coordination problems inherent in convincing many participants
+in a large network to accept a new version of a contract, a frequently cited desire is for formally verifiable
+languages to be used to try and guarantee the correctness of the implementations.
+
+We do not attempt to tackle this problem ourselves. However, because Corda focuses on deterministic execution of
+any JVM bytecode, formally verifiable languages that target this instruction set are usable for the expression
+of smart contracts. A good example of this is the Whiley language by Dr David Pearce\cite{Pearce2015191}, which
+checks program-integrated proofs at compile time. By building on industry-standard platforms, we gain access to
+cutting edge research from the computer science community outside of the distributed systems world.
 
 \section{Secure signing devices}\label{sec:secure-signing-devices}
 
@@ -1194,20 +1389,90 @@ are ideal for the task.
 Being able to connect live data structures directly to UI toolkits also contributes to the avoidance
 of XSS exploits, XSRF exploits and similar security problems based on losing track of buffer boundaries.
 
-\section{Future work}
+\section{Privacy}
 
 TODO
 
-\paragraph{Secure hardware}
-\paragraph{Zero knowledge proofs}
+\section{Data distribution groups}
+
+TODO
+
+\section{Future work}
+
+Although intended to be a production-ready platform for building decentralised financial databases, there are
+multiple areas of research remaining to be explored.
+
+\paragraph{Secure hardware.}Although we narrow the scope of data propagation to only nodes that need to see that
+data, `need' can still be an unintuitive concept in a decentralised database where often data is required only
+to perform security checks. We have successfully experimented with running contract verification inside a
+secure enclave protected JVM using Intel SGX\texttrademark~, an implementation of the `trusted computing'
+concept\cite{mitchell2005trusted}. Secure hardware platforms allow computation to be performed
+in an undebuggable tamper-proof execution environment, for the software running inside that environment to derive
+encryption keys accessible only to that instance, and for the software to \emph{remotely attest} to a third party
+over the internet that it is indeed running in the secure state. By having nodes remotely attest to each other
+that they are running smart contract verification logic inside an enclave it becomes possible for the dependencies
+of a transaction to be transmitted to a peer encrypted under an enclave key, thus allowing them to
+verify the dependencies using software they have audited themselves, but without being able to see the data on
+which it operates.
+
+Secure hardware opens up the potential for a one-shot privacy model that would dramatically simplify the task
+of writing smart contracts. However, it does still require the sensitive data to be sent to the peer
+who may then attempt to attack the hardware or exploit side channels to extract business intelligence from
+inside the encrypted container.
+
+\paragraph{Zero knowledge proofs.}The holy grail of privacy in decentralised database systems is the use of
+zero knowledge proofs to convince a peer that a transaction is valid without revealing the contents of the
+transaction to them. Although these techniques are not yet practical, enormous progress has been made in recent
+years and we have designed our data model on the assumption that we will one day wish to migrate to the use of
+\emph{zero knowledge succinct non-interactive arguments of knowledge}\cite{184425} (`zkSNARKs'). The BCTV algorithms
+allow for the calculation of a fixed-size mathematical proof that a program was correctly executed with a mix of
+public and private inputs on a simple simulated CPU (`vnTinyRAM'). Because the program is shared, the combination
+of an agreed upon function (i.e. a smart contract) along with private input data is sufficient to verify correctness,
+as long as the prover's program may recursively verify other proofs, i.e. the proofs of the input transactions.
+The BCTV techniques rely on recursive proof composition for the execution of vnTinyRAM opcodes, so this is not
+a problem. Integration with Corda would require the addition of a vnTinyRAM compiler backend to an ahead of time JVM
+bytecode compiler, such as Graal\cite{Graal}, along with the significant adaptations required for execution in
+the highly limited proving environment.
+
+\paragraph{New domain specific languages.} Custom languages and type systems for the expression
+of contract logic can be naturally combined with \emph{projectional editing}, in which source code is not edited
+textually but rather a structure aware editor\cite{DBLP:conf/models/VoelterL14}. Such languages can consist not
+only of traditional grammar-driven text oriented structures but also diagrams, tables and recursive compositions of
+them together. Given the frequent occurrence of data tables and English-oriented nature of many financial
+contracts, a dedicated environment for the construction of smart contract logic may be appreciated by the users.
+Additionally, DSLs for contract development may choose to explore approaches that trade off ease of use to gain
+correctness, for example, total languages, formally verifiable languages, a subset of Haskell or Idris etc.
 
 \section{Conclusion}
 
-TODO
+We have presented Corda, a decentralised database designed for the financial sector. It allows for data to be
+distributed amongst many mutually distrusting nodes in a unified data set, with smart contracts running on the JVM
+providing access control and schema definitions. A novel continuation-based persistence framework assists
+developers with coordinating the flow of data across the network. An identity management system ensures that
+parties always know who they are trading with. Notaries ensure algorithmic agility with respect to distributed
+consensus systems, and the system operates without mining or a block chain.
+
+A standard type system is provided for the modelling of financial logic. The design considers security throughout: it
+supports the integration of secure signing devices for transaction authorisation, secure enclaves for transaction
+processing, compound keys for expressing complex authorisation policies, and is based on binary protocols with
+length-prefixed buffers throughout for the systematic avoidance of common buffer management exploits. Users may analyse
+ledger data relevant to them by issuing ordinary SQL queries against mature database engines, and may craft complex
+multi-party transactions with ease in programming languages that are already familiar to them.
+
+% TODO: Write a section on integration with market infrastructure.
+% Finally, the platform defines standard ways to integrate the global ledger with financial infrastructure like high
+% performance markets and trade compression services.
 
 \section{Acknowledgements}
 
-TODO
+The author would like to thank Richard Gendal Brown, James Carlyle, Shams Asari, Rick Parker, Andras Slemmer,
+Ross Nicoll, Andrius Dagys, Matthew Nesbit, Jose Coll, Katarzyna Streich, Clinton Alexander, Sofus Mortensen,
+Patrick Kuo, Richard Green and Roger Willis for their insights and contributions to this design. We would
+also like to thank the numerous architects and subject matter experts at financial institutions around the world
+who contributed their knowledge, requirements and ideas, and we'd like to thank the authors of the many frameworks,
+protocols and components we have built upon.
+
+Finally, we would like to thank Satoshi Nakamoto. Without them none of it would have been possible.
 
 \bibliographystyle{unsrt}
 \bibliography{Ref}
