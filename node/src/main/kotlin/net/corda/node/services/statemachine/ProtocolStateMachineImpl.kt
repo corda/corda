@@ -182,11 +182,20 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
         }
     }
 
+    /**
+     * Creates a new session. The provided [otherParty] can be an identity of any advertised service on the network,
+     * and might be advertised by more than one node. Therefore we first choose a single node that advertises it
+     * and use its *legal identity* for communication. At the moment a single node can compose its legal identity out of
+     * multiple public keys, but we **don't support multiple nodes advertising the same legal identity**.
+     */
     @Suspendable
     private fun startNewSession(otherParty: Party, sessionProtocol: ProtocolLogic<*>, firstPayload: Any?) : ProtocolSession {
-        val session = ProtocolSession(sessionProtocol, otherParty, random63BitValue(), null)
-        openSessions[Pair(sessionProtocol, otherParty)] = session
-        val counterpartyProtocol = sessionProtocol.getCounterpartyMarker(otherParty).name
+        val node = serviceHub.networkMapCache.getRepresentativeNode(otherParty) ?: throw IllegalArgumentException("Don't know about party $otherParty")
+        val nodeIdentity = node.legalIdentity
+        logger.trace { "Initiating a new session with $nodeIdentity (representative of $otherParty)" }
+        val session = ProtocolSession(sessionProtocol, nodeIdentity, random63BitValue(), null)
+        openSessions[Pair(sessionProtocol, nodeIdentity)] = session
+        val counterpartyProtocol = sessionProtocol.getCounterpartyMarker(nodeIdentity).name
         val sessionInit = SessionInit(session.ourSessionId, serviceHub.myInfo.legalIdentity, counterpartyProtocol, firstPayload)
         val sessionInitResponse = sendAndReceiveInternal<SessionInitResponse>(session, sessionInit)
         if (sessionInitResponse is SessionConfirm) {
@@ -194,7 +203,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
             return session
         } else {
             sessionInitResponse as SessionReject
-            throw ProtocolSessionException("Party $otherParty rejected session attempt: ${sessionInitResponse.errorMessage}")
+            throw ProtocolSessionException("Party $nodeIdentity rejected session attempt: ${sessionInitResponse.errorMessage}")
         }
     }
 

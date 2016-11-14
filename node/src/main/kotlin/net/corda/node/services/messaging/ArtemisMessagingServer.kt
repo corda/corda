@@ -150,7 +150,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                 if (queueName.startsWith(PEERS_PREFIX) && queueName != NETWORK_MAP_ADDRESS) {
                     try {
                         val identity = parseKeyFromQueueName(queueName.toString())
-                        val nodeInfo = networkMapCache.getNodeByPublicKey(identity)
+                        val nodeInfo = networkMapCache.getNodeByPublicKeyTree(identity)
                         if (nodeInfo != null) {
                             maybeDeployBridgeForAddress(queueName, nodeInfo.address)
                         } else {

@@ -18,6 +18,7 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.NetworkMapCache.MapChangeType
 import net.corda.core.node.services.ServiceType
+import net.corda.core.randomOrNull
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -35,6 +36,8 @@ import javax.annotation.concurrent.ThreadSafe
 
 /**
  * Extremely simple in-memory cache of the network map.
+ *
+ * TODO: some method implementations can be moved up to [NetworkMapCache]
  */
 @ThreadSafe
 open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCache {
@@ -65,17 +68,39 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override fun get(serviceType: ServiceType) = registeredNodes.filterValues { it.advertisedServices.any { it.info.type.isSubTypeOf(serviceType) } }.map { it.value }
     override fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo? = get(type).firstOrNull()
     override fun getNodeByLegalName(name: String) = get().singleOrNull { it.legalIdentity.name == name }
-    override fun getNodeByPublicKey(publicKey: PublicKeyTree): NodeInfo? {
+    override fun getNodeByPublicKeyTree(publicKeyTree: PublicKeyTree): NodeInfo? {
         // Although we should never have more than one match, it is theoretically possible. Report an error if it happens.
         val candidates = get().filter {
-            (it.legalIdentity.owningKey == publicKey)
-                    || it.advertisedServices.any { it.identity.owningKey == publicKey }
+            (it.legalIdentity.owningKey == publicKeyTree)
+                    || it.advertisedServices.any { it.identity.owningKey == publicKeyTree }
         }
         if (candidates.size > 1) {
-            throw IllegalStateException("Found more than one match for key $publicKey")
+            throw IllegalStateException("Found more than one match for key $publicKeyTree")
         }
         return candidates.singleOrNull()
     }
+
+    override fun getRepresentativeNode(party: Party): NodeInfo? {
+        return partyNodes.randomOrNull { it.legalIdentity == party || it.advertisedServices.any { it.identity == party } }
+    }
+
+    override fun getNotary(name: String): Party? {
+        val notaryNode = notaryNodes.randomOrNull { it.advertisedServices.any { it.info.type.isSubTypeOf(ServiceType.notary) && it.info.name == name } }
+        return notaryNode?.notaryIdentity
+    }
+
+    override fun getAnyNotary(type: ServiceType?): Party? {
+        val nodes = if (type == null) {
+            notaryNodes
+        } else {
+            require(type != ServiceType.notary && type.isSubTypeOf(ServiceType.notary)) { "The provided type must be a specific notary sub-type" }
+            notaryNodes.filter { it.advertisedServices.any { it.info.type == type } }
+        }
+
+        return nodes.randomOrNull()?.notaryIdentity
+    }
+
+    override fun isNotary(party: Party) = notaryNodes.any { it.notaryIdentity == party }
 
     override fun addMapService(net: MessagingService, networkMapAddress: SingleMessageRecipient, subscribe: Boolean,
                                ifChangedSinceVer: Int?): ListenableFuture<Unit> {

@@ -20,10 +20,12 @@ abstract class BaseTransaction(
          */
         val notary: Party?,
         /**
-         * Keys that are required to have signed the wrapping [SignedTransaction], ordered to match the list of
-         * signatures. There is nothing that forces the list to be the _correct_ list of signers for this
-         * transaction until the transaction is verified by using [LedgerTransaction.verify]. It includes the
-         * notary key, if the notary field is set.
+         * Public key trees that need to be fulfilled by signatures in order for the transaction to be valid.
+         * In a [SignedTransaction] this list is used to check whether there are any missing signatures. Note that
+         * there is nothing that forces the list to be the _correct_ list of signers for this transaction until
+         * the transaction is verified by using [LedgerTransaction.verify].
+         *
+         * It includes the notary key, if the notary field is set.
          */
         val mustSign: List<PublicKeyTree>,
         /**

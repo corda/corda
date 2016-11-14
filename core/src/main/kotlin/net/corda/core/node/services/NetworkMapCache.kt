@@ -72,9 +72,38 @@ interface NetworkMapCache {
     fun getNodeByLegalName(name: String): NodeInfo?
 
     /**
-     * Look up the node info for a public key.
+     * Look up the node info for a public key tree.
      */
-    fun getNodeByPublicKey(publicKey: PublicKeyTree): NodeInfo?
+    fun getNodeByPublicKeyTree(publicKeyTree: PublicKeyTree): NodeInfo?
+
+    /**
+     * Given a [party], returns a node advertising it as an identity. If more than one node found the result
+     * is chosen at random.
+     *
+     * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of
+     * the services it provides. In case of a distributed service – run by multiple nodes – each participant advertises
+     * the identity of the *whole group*. If the provided [party] is a group identity, multiple nodes advertising it
+     * will be found, and this method will return a randomly chosen one. If [party] is an individual (legal) identity,
+     * we currently assume that it will be advertised by one node only, which will be returned as the result.
+     */
+    fun getRepresentativeNode(party: Party): NodeInfo?
+
+    /**
+     * Gets a notary identity by the given name.
+     */
+    fun getNotary(name: String): Party?
+
+    /**
+     * Returns a notary identity advertised by any of the nodes on the network (chosen at random)
+     *
+     * @param type Limits the result to notaries of the specified type (optional)
+     */
+    fun getAnyNotary(type: ServiceType? = null): Party?
+
+    /**
+     * Checks whether a given party is an advertised notary identity
+     */
+    fun isNotary(party: Party): Boolean
 
     /**
      * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further

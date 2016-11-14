@@ -7,8 +7,8 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.crypto.newSecureRandom
 import kotlinx.support.jdk7.use
+import net.corda.core.crypto.newSecureRandom
 import org.slf4j.Logger
 import rx.Observable
 import rx.subjects.UnicastSubject
@@ -154,6 +154,16 @@ fun <T> Iterable<T>.noneOrSingle(): T? {
     }
     return single
 }
+
+/** Returns a random element in the list, or null if empty */
+fun <T> List<T>.randomOrNull(): T? {
+    if (size <= 1) return firstOrNull()
+    val randomIndex = (Math.random() * size).toInt()
+    return get(randomIndex)
+}
+
+/** Returns a random element in the list matching the given predicate, or null if none found */
+fun <T> List<T>.randomOrNull(predicate: (T) -> Boolean) = filter(predicate).randomOrNull()
 
 // An alias that can sometimes make code clearer to read.
 val RunOnCallerThread = MoreExecutors.directExecutor()

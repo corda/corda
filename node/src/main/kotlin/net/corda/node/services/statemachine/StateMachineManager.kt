@@ -7,6 +7,7 @@ import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.Kryo
 import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.support.jdk8.collections.removeIf
 import net.corda.core.ThreadBox
 import net.corda.core.abbreviate
 import net.corda.core.crypto.Party
@@ -28,7 +29,6 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.isolatedTransaction
-import kotlinx.support.jdk8.collections.removeIf
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
 import rx.Observable
@@ -432,7 +432,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun sendSessionMessage(party: Party, message: SessionMessage, psm: ProtocolStateMachineImpl<*>?) {
-        val node = serviceHub.networkMapCache.getNodeByPublicKey(party.owningKey)
+        val node = serviceHub.networkMapCache.getNodeByPublicKeyTree(party.owningKey)
                 ?: throw IllegalArgumentException("Don't know about party $party")
         val logger = psm?.logger ?: logger
         logger.trace { "Sending $message to party $party" }

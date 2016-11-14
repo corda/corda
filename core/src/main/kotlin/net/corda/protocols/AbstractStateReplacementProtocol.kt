@@ -72,7 +72,7 @@ abstract class AbstractStateReplacementProtocol<T> {
         @Suspendable
         private fun collectSignatures(participants: List<PublicKeyTree>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
             val parties = participants.map {
-                val participantNode = serviceHub.networkMapCache.getNodeByPublicKey(it) ?:
+                val participantNode = serviceHub.networkMapCache.getNodeByPublicKeyTree(it) ?:
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")
                 participantNode.legalIdentity
             }
