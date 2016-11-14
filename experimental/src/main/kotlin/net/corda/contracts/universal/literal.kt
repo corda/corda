@@ -31,14 +31,14 @@ class ActionsBuilder {
             else
                 Actions(actions.toSet())
 
-    fun Party.may(init: ActionBuilder.() -> Action): Action {
+    infix fun Party.may(init: ActionBuilder.() -> Action): Action {
         val builder = ActionBuilder(setOf(this))
         builder.init()
         actions.addAll( builder.actions )
         return builder.actions.first()
     }
 
-    fun Set<Party>.may(init: ActionBuilder.() -> Action): Action {
+    infix fun Set<Party>.may(init: ActionBuilder.() -> Action): Action {
         val builder = ActionBuilder(this)
         builder.init()
         actions.addAll( builder.actions )

@@ -1,11 +1,6 @@
 package net.corda.contracts.universal
 
-import net.corda.core.contracts.Amount
 import net.corda.core.contracts.USD
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.generateKeyPair
-import java.math.BigDecimal
-import java.util.*
 
 /**
  * Created by sofusmortensen on 23/05/16.
@@ -15,7 +10,7 @@ import java.util.*
 
 val cds_contract = arrange {
     actions {
-        acmeCorp.may {
+        acmeCorp may {
             "claim".givenThat(acmeCorporationHasDefaulted and before("2017-09-01")) {
                 highStreetBank.gives(acmeCorp, 1.M, USD)
             }
@@ -27,7 +22,7 @@ val cds_contract = arrange {
 // both parties have the right to trigger the exchange of cash flows
 val an_fx_swap = arrange {
     actions {
-        (acmeCorp or highStreetBank).may {
+        (acmeCorp or highStreetBank) may {
             "execute".givenThat(after("2017-09-01")) {
                 highStreetBank.gives(acmeCorp, 1200.K, USD)
                 acmeCorp.gives(highStreetBank, 1.M, EUR)
@@ -38,7 +33,7 @@ val an_fx_swap = arrange {
 
 val american_fx_option = arrange {
     actions {
-        acmeCorp.may {
+        acmeCorp may {
             "exercise".givenThat(before("2017-09-01")) {
                 highStreetBank.gives(acmeCorp, 1200.K, USD)
                 acmeCorp.gives(highStreetBank, 1.M, EUR)
@@ -49,12 +44,12 @@ val american_fx_option = arrange {
 
 val european_fx_option = arrange {
     actions {
-        acmeCorp.may {
+        acmeCorp may {
             "exercise".givenThat(before("2017-09-01")) {
                 fx_swap("2017-09-01", 1.M, 1.2.bd, EUR, USD, acmeCorp, highStreetBank)
             }
         }
-        (acmeCorp or highStreetBank).may {
+        (acmeCorp or highStreetBank) may {
             "expire".anytime {
                 zero
             }
@@ -64,7 +59,7 @@ val european_fx_option = arrange {
 
 val contractZeroCouponBond = arrange {
     actions {
-        acmeCorp.may {
+        acmeCorp may {
             "execute".givenThat(after("2017-11-01")) {
                 highStreetBank.gives(acmeCorp, 1.M, USD)
             }
@@ -75,7 +70,7 @@ val contractZeroCouponBond = arrange {
 // maybe in the presence of negative interest rates you would want other side of contract to be able to take initiative as well
 val zero_coupon_bond_2 = arrange {
     actions {
-        (acmeCorp or highStreetBank).may {
+        (acmeCorp or highStreetBank) may {
             "execute".givenThat(after("2017-09-01")) {
                 highStreetBank.gives(acmeCorp, 1.M, USD)
             }
@@ -94,12 +89,12 @@ val zero_coupon_bond_2 = arrange {
 //
 val no_touch = arrange {
     actions {
-        (acmeCorp or highStreetBank).may {
+        (acmeCorp or highStreetBank) may {
             "execute".givenThat(after("2017-09-01")) {
                 highStreetBank.gives(acmeCorp, 1.M, USD)
             }
         }
-        highStreetBank.may {
+        highStreetBank may {
             "knock out".givenThat(EUR / USD gt 1.3) {
                 zero
             }
@@ -109,12 +104,12 @@ val no_touch = arrange {
 
 val one_touch = arrange {
     actions {
-        highStreetBank.may {
+        highStreetBank may {
             "expire".givenThat(after("2017-09-01")) {
                 zero
             }
         }
-        acmeCorp.may {
+        acmeCorp may {
             "knock in".givenThat(EUR / USD gt 1.3) {
                 highStreetBank.gives(acmeCorp, 1.M, USD)
             }
