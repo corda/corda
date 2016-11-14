@@ -22,7 +22,7 @@ object NotaryProtocol {
      *                         by another transaction or the timestamp is invalid.
      */
     open class Client(private val stx: SignedTransaction,
-                      override val progressTracker: ProgressTracker = Client.tracker()) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
+                      override val progressTracker: ProgressTracker = Client.tracker()) : ProtocolLogic<DigitalSignature.WithKey>() {
 
         companion object {
 
@@ -36,7 +36,7 @@ object NotaryProtocol {
         lateinit var notaryParty: Party
 
         @Suspendable
-        override fun call(): DigitalSignature.LegallyIdentifiable {
+        override fun call(): DigitalSignature.WithKey {
             progressTracker.currentStep = REQUESTING
             val wtx = stx.tx
             notaryParty = wtx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
@@ -56,7 +56,7 @@ object NotaryProtocol {
         }
 
         @Throws(NotaryException::class, IllegalStateException::class)
-        private fun validateResponse(response: UntrustworthyData<Result>): DigitalSignature.LegallyIdentifiable {
+        private fun validateResponse(response: UntrustworthyData<Result>): DigitalSignature.WithKey {
             return response.unwrap { notaryResult ->
                 progressTracker.currentStep = VALIDATING
                 when (notaryResult) {
@@ -74,8 +74,8 @@ object NotaryProtocol {
             }
         }
 
-        private fun validateSignature(sig: DigitalSignature.LegallyIdentifiable, data: ByteArray) {
-            check(sig.signer == notaryParty) { "Notary result not signed by the correct service" }
+        private fun validateSignature(sig: DigitalSignature.WithKey, data: ByteArray) {
+            check(sig.by in notaryParty.owningKey.keys) { "Invalid signer for the notary result" }
             sig.verifyWithECDSA(data)
         }
     }
@@ -140,11 +140,9 @@ object NotaryProtocol {
             }
         }
 
-        private fun sign(bits: ByteArray): DigitalSignature.LegallyIdentifiable {
-            val myNodeInfo = serviceHub.myInfo
-            val myIdentity = myNodeInfo.notaryIdentity
+        private fun sign(bits: ByteArray): DigitalSignature.WithKey {
             val mySigningKey = serviceHub.notaryIdentityKey
-            return mySigningKey.signWithECDSA(bits, myIdentity)
+            return mySigningKey.signWithECDSA(bits)
         }
     }
 
@@ -153,7 +151,7 @@ object NotaryProtocol {
 
     sealed class Result {
         class Error(val error: NotaryError): Result()
-        class Success(val sig: DigitalSignature.LegallyIdentifiable) : Result()
+        class Success(val sig: DigitalSignature.WithKey) : Result()
     }
 
 }

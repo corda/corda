@@ -55,7 +55,7 @@ object TwoPartyTradeProtocol {
     )
 
     data class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
-                                    val notarySig: DigitalSignature.LegallyIdentifiable)
+                                    val notarySig: DigitalSignature.WithKey)
 
     open class Seller(val otherParty: Party,
                       val notaryNode: NodeInfo,
@@ -90,7 +90,7 @@ object TwoPartyTradeProtocol {
         }
 
         @Suspendable
-        private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.LegallyIdentifiable {
+        private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = NOTARY
             return subProtocol(NotaryProtocol.Client(stx))
         }
@@ -142,7 +142,7 @@ object TwoPartyTradeProtocol {
 
         @Suspendable
         private fun sendSignatures(allPartySignedTx: SignedTransaction, ourSignature: DigitalSignature.WithKey,
-                                   notarySignature: DigitalSignature.LegallyIdentifiable): SignedTransaction {
+                                   notarySignature: DigitalSignature.WithKey): SignedTransaction {
             progressTracker.currentStep = SENDING_SIGS
             val fullySigned = allPartySignedTx + notarySignature
 
