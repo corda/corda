@@ -746,10 +746,14 @@ the asset can be found in storage, etc.
 section `hard cash' means a balance with the central bank). This is frequently done to minimise the amount of
 cash on hand when trading institutions have some degree of trust each other: if you make a payment to a
 counterparty that you know will soon be making a payment back to you as part of some other deal, then there is
-an incentive to simply note the fact that you owe the other institution and then `net out' these obligations at a
-later time. Netting, sometimes called \emph{trade compression}, is a process which simulates the settlement of
-many inter-institutional obligations. The final output is the amount of money that needs to actually be
-transferred. Corda models a nettable obligation with the \texttt{Obligation} contract, which is a subclass of
+an incentive to simply note the fact that you owe the other institution and then `net out' these obligations
+at a later time, either bilaterally or multilaterally. Netting is a process by which a set of gross obligations
+is replaced by an economically-equivalent set where eligible offsetting obligations have been elided. The process
+is conceptually similar to trade compression, whereby a set of trades between two or more parties are replaced
+with an economically similar, but simpler, set. The final output is the amount of money that needs to actually be
+transferred.
+
+Corda models a nettable obligation with the \texttt{Obligation} contract, which is a subclass of
 \texttt{FungibleAsset}. Obligations have a lifecycle and can express constraints on the on-ledger assets used
 for settlement. The contract allows not only for trading and fungibility of obligations but also bi-lateral and
 multi-lateral netting.
@@ -757,8 +761,8 @@ multi-lateral netting.
 It is important to note here that netting calculations can get very complex and the financial industry contains
 firms that compete on the quality of their netting algorithms. The \texttt{Obligation} contract provides methods
 to calculate  simple bi-lateral nettings, and verify the correctness of both bi and multi-lateral nettings. For
-very large, complex multi-lateral nettings it is expected that institutions would use pre-existing trade
-compression implementations.
+very large, complex multi-lateral nettings it is expected that institutions would use pre-existing netting
+implementations.
 
 Netting is usually done when markets are closed. This is because it is hard to calculate nettings and settle up
 concurrently with the trading positions changing. The problem can be seen as analagous to garbage collection in
@@ -786,7 +790,7 @@ the whole network.
 \paragraph{Distributed node.}At the center of a Corda node is a message queue broker. Nodes are logically structured
 as a series of microservices and have the potential in future to be run on separate machines. For example, the
 embedded relational database can be swapped out for an external database that runs on dedicated hardware. Whilst
-a single flow cannot be parallelised, a node under heavy load would be typically be running many flows in parallel.
+a single flow cannot be parallelised, a node under heavy load would typically be running many flows in parallel.
 As flows access the network via the broker and local state via an ordinary database connection, more flow processing
 capacity could be added by just bringing online additional flow workers. This is likewise the case for RPC processing.
 
@@ -795,8 +799,9 @@ calculated over its contents excluding signatures. This has the downside that a 
 transaction cannot be distinguished by their canonical identifier, but means that signatures can easily be
 verified in parallel. Corda smart contracts are deliberately isolated from the underlying cryptography and are
 not able to request signature checks themselves: they are run \emph{after} signature verification has
-taken place and don't execute at all if required signatures are missing. This ensures that signatures can be
-checked concurrently even though the smart contract code itself is not parallelisable.
+taken place and don't execute at all if required signatures are missing. This ensures that signatures for a single
+transaction can be checked concurrently even though the smart contract code for that transaction is not parallelisable.
+(note that unlike some other systems, transactions involving the same contracts \emph{can} be checked in parallel.)
 
 \paragraph{Multiple notaries.}It is possible to increase scalability in some cases by bringing online additional
 notary clusters. Note that this only adds capacity if the transaction graph has underlying exploitable structure
@@ -814,7 +819,7 @@ likely to be the main overhead for non-BFT notaries. In the case where raw throu
 ledger integrity it is possible to use a non-validating notary. See \cref{sec:non-validating-notaries}.
 
 The primary bottleneck in a Corda network is expected to be the notary clusters, especially for byzantine fault
-tolerant (BFT) clusters made up of mutually distrusting nodes. BFT clusters are likely to be slow partly because the
+tolerant (BFT) clusters made up of mutually distrusting nodes. BFT clusters are likely to be slower partly because the
 underlying protocols are typically chatty and latency sensitive, and partly because the primary situation when
 using a BFT protocol is beneficial is when there is no shared legal system which can be used to resolve fraud or
 other disputes, i.e. when cluster participants are spread around the world and thus the speed of light becomes
@@ -839,7 +844,7 @@ announcements by other participants. This complicates the question of how to mea
 node. Other blockchain systems quote performance as a constant rate of transactions per unit time.
 However, our `unit time' is not evenly distributed: being able to check 1000 transactions/sec is not
 necessarily good enough if on presentation of a valuable asset you need to check a transation graph that consists
-of 3 million transactions and the user is expecting the transaction to show up instantly. Future versions of
+of many more transactions and the user is expecting the transaction to show up instantly. Future versions of
 the platform may provide features that allow developers to smooth out the spikey nature of Corda transaction
 checking by, for example, pre-pushing transactions to a node when the developer knows they will soon request
 the data anyway.
@@ -1133,7 +1138,7 @@ with states in surrounding software.
 %\section{Integration with market infrastructure}
 %
 %Trade is the lifeblood of the economy. A distributed ledger needs to provide a vibrant platform on which trading may
-%take place. However, the decentralised nature of such a network works makes it difficult to build competitive
+%take place. However, the decentralised nature of such a network makes it difficult to build competitive
 %market infrastructure on top of it, especially for highly liquid assets like securities. Markets typically provide
 %features like a low latency orderbook, integrated regulatory compliance, price feeds and other things that benefit
 %from a central meeting point.
@@ -1142,7 +1147,11 @@ with states in surrounding software.
 %an asset that exists on-ledger can have a \emph{partially signed transaction} attached to it. A partial
 %signature ... % TODO
 
-% TODO: Should we mention clearing houses here? Is there anything worth mentioning?
+% In many markets, central infrastructures such as clearing houses (also known as Central Counterparties, or CCPs)
+% and Central Securities Depositories (CSD) have been created. They provide governance, rules definition and
+% enforcement, risk management and shared data and processing services. The partial data visibility, flexible
+% transaction verification logic and pluggable notary design means Corda could be a particularly good fit for
+% future distributed ledger services contemplated by CCPs and CSDs.
 
 \section{Domain specific languages}
 
@@ -1217,7 +1226,9 @@ The programmer may define arbitrary `actions' along with constraints on when the
 \texttt{zero} token indicates the termination of the deal.
 
 As can be seen, this DSL combines both \emph{what} is allowed and deal-specific data like \emph{when} and \emph{how much}
-is allowed. It therefore blurs the distinction the core model has between code and data.
+is allowed, therefore blurring the distinction the core model has between code and data. It builds on prior work
+to enable not only valuation/cash flow calculations, but also direct enforcement of the contract's logic at the
+database level as well.
 
 \subsection{Formally verifiable languages}
 
@@ -1420,19 +1431,19 @@ of writing smart contracts. However, it does still require the sensitive data to
 who may then attempt to attack the hardware or exploit side channels to extract business intelligence from
 inside the encrypted container.
 
-\paragraph{Zero knowledge proofs.}The holy grail of privacy in decentralised database systems is the use of
-zero knowledge proofs to convince a peer that a transaction is valid without revealing the contents of the
-transaction to them. Although these techniques are not yet practical, enormous progress has been made in recent
-years and we have designed our data model on the assumption that we will one day wish to migrate to the use of
-\emph{zero knowledge succinct non-interactive arguments of knowledge}\cite{184425} (`zkSNARKs'). The BCTV algorithms
-allow for the calculation of a fixed-size mathematical proof that a program was correctly executed with a mix of
-public and private inputs on a simple simulated CPU (`vnTinyRAM'). Because the program is shared, the combination
-of an agreed upon function (i.e. a smart contract) along with private input data is sufficient to verify correctness,
-as long as the prover's program may recursively verify other proofs, i.e. the proofs of the input transactions.
-The BCTV techniques rely on recursive proof composition for the execution of vnTinyRAM opcodes, so this is not
-a problem. Integration with Corda would require the addition of a vnTinyRAM compiler backend to an ahead of time JVM
-bytecode compiler, such as Graal\cite{Graal}, along with the significant adaptations required for execution in
-the highly limited proving environment.
+\paragraph{Zero knowledge proofs.}The holy grail of privacy in decentralised database systems is the use of zero
+knowledge proofs to convince a peer that a transaction is valid without revealing the contents of the transaction to
+them. Although these techniques are not yet practical for execution of general purpose smart contracts, enormous
+progress has been made in recent years and we have designed our data model on the assumption that we will one day wish
+to migrate to the use of \emph{zero knowledge succinct non-interactive arguments of knowledge}\cite{184425}
+(`zkSNARKs'). These algorithms allow for the calculation of a fixed-size mathematical proof that a program was
+correctly executed with a mix of public and private inputs on a simple simulated CPU (`vnTinyRAM'). Because the program
+is shared, the combination of an agreed upon function (i.e. a smart contract) along with private input data is
+sufficient to verify correctness, as long as the prover's program may recursively verify other proofs, i.e. the proofs
+of the input transactions. The BCTV techniques rely on recursive proof composition for the execution of vnTinyRAM
+opcodes, so this is not a problem. Integration with Corda would require the addition of a vnTinyRAM compiler backend to
+an ahead of time JVM bytecode compiler, such as Graal\cite{Graal}, along with the significant adaptations required for
+execution in the highly limited proving environment.
 
 \paragraph{New domain specific languages.} Custom languages and type systems for the expression
 of contract logic can be naturally combined with \emph{projectional editing}, in which source code is not edited
@@ -1461,16 +1472,16 @@ multi-party transactions with ease in programming languages that are already fam
 
 % TODO: Write a section on integration with market infrastructure.
 % Finally, the platform defines standard ways to integrate the global ledger with financial infrastructure like high
-% performance markets and trade compression services.
+% performance markets and netting services.
 
 \section{Acknowledgements}
 
-The author would like to thank Richard Gendal Brown, James Carlyle, Shams Asari, Rick Parker, Andras Slemmer,
-Ross Nicoll, Andrius Dagys, Matthew Nesbit, Jose Coll, Katarzyna Streich, Clinton Alexander, Sofus Mortensen,
-Patrick Kuo, Richard Green and Roger Willis for their insights and contributions to this design. We would
-also like to thank the numerous architects and subject matter experts at financial institutions around the world
-who contributed their knowledge, requirements and ideas, and we'd like to thank the authors of the many frameworks,
-protocols and components we have built upon.
+The author would like to thank Richard Gendal Brown, James Carlyle, Shams Asari, Rick Parker, Andras Slemmer, Ross
+Nicoll, Andrius Dagys, Matthew Nesbit, Jose Coll, Katarzyna Streich, Clinton Alexander, Patrick Kuo, Richard Green, Ian
+Grigg, Mark Oldfield and Roger Willis for their insights and contributions to this design. We would also like to thank
+Sofus Mortesen for his work on the universal contract DSL, and the numerous architects and subject matter experts
+at financial institutions around the world who contributed their knowledge, requirements and ideas. Thanks also to
+the authors of the many frameworks, protocols and components we have built upon.
 
 Finally, we would like to thank Satoshi Nakamoto. Without them none of it would have been possible.
 
