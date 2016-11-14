@@ -30,7 +30,6 @@ Read on to learn:
    inthebox
    getting-set-up
    running-the-demos
-   initialmarginagreement
 
 .. toctree::
    :maxdepth: 2
@@ -77,6 +76,7 @@ Read on to learn:
 
    network-simulator
    node-explorer
+   initial-margin-agreement
 
 .. toctree::
    :maxdepth: 2

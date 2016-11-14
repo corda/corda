@@ -43,7 +43,6 @@ git configuration are quite seemless although the first time you use it, you wil
 of your git command installation. More details regarding this can be found
 on the `JetBrains website <https://www.jetbrains.com/help/idea/2016.2/using-git-integration.html>`_
 
-
 Gradle
 ------
 
@@ -51,7 +50,6 @@ Gradle is our primary means of building Corda and managing dependencies. Intelli
 may need to be resynced from time to time. This can be done within IntelliJ by pressing the "gradle refresh" icon located
 on the gradle tab (generally found on the right hand side), or by following the gradle commands specific for the task you
 are performing (details expounded later). Whenever prompted about gradle, accept the defaults suggested by IntelliJ.
-
 
 
 Corda Source Code
