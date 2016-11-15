@@ -33,6 +33,9 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/finance/isolated/isolated.iml" filepath="$PROJECT_DIR$/.idea/modules/finance/isolated/isolated.iml" group="finance/isolated" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/finance/isolated/isolated_main.iml" filepath="$PROJECT_DIR$/.idea/modules/finance/isolated/isolated_main.iml" group="finance/isolated" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/finance/isolated/isolated_test.iml" filepath="$PROJECT_DIR$/.idea/modules/finance/isolated/isolated_test.iml" group="finance/isolated" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/tools/loadtest/loadtest.iml" filepath="$PROJECT_DIR$/.idea/modules/tools/loadtest/loadtest.iml" group="tools/loadtest" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/tools/loadtest/loadtest_main.iml" filepath="$PROJECT_DIR$/.idea/modules/tools/loadtest/loadtest_main.iml" group="tools/loadtest" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/tools/loadtest/loadtest_test.iml" filepath="$PROJECT_DIR$/.idea/modules/tools/loadtest/loadtest_test.iml" group="tools/loadtest" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node.iml" group="node" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node_integrationTest.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node_integrationTest.iml" group="node" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node_main.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node_main.iml" group="node" />

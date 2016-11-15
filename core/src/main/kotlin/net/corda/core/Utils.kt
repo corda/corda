@@ -285,12 +285,12 @@ fun extractZipFile(zipPath: Path, toPath: Path) {
 val Throwable.rootCause: Throwable get() = Throwables.getRootCause(this)
 
 /** Representation of an operation that may have thrown an error. */
-data class ErrorOr<out A> private constructor(val value: A?, val error: Throwable?) {
+data class ErrorOr<out A : Any> private constructor(val value: A?, val error: Throwable?) {
     constructor(value: A) : this(value, null)
 
     companion object {
         /** Runs the given lambda and wraps the result. */
-        inline fun <T> catch(body: () -> T): ErrorOr<T> = try { ErrorOr(body()) } catch (t: Throwable) { ErrorOr.of(t) }
+        inline fun <T : Any> catch(body: () -> T): ErrorOr<T> = try { ErrorOr(body()) } catch (t: Throwable) { ErrorOr.of(t) }
         fun of(t: Throwable) = ErrorOr(null, t)
     }
 
@@ -311,15 +311,15 @@ data class ErrorOr<out A> private constructor(val value: A?, val error: Throwabl
     }
 
     // Functor
-    fun <B> map(function: (A) -> B) = ErrorOr(value?.let(function), error)
+    fun <B : Any> map(function: (A) -> B) = ErrorOr(value?.let(function), error)
 
     // Applicative
-    fun <B, C> combine(other: ErrorOr<B>, function: (A, B) -> C): ErrorOr<C> {
+    fun <B : Any, C : Any> combine(other: ErrorOr<B>, function: (A, B) -> C): ErrorOr<C> {
         return ErrorOr(value?.let { a -> other.value?.let { b -> function(a, b) } }, error ?: other.error)
     }
 
     // Monad
-    fun <B> bind(function: (A) -> ErrorOr<B>) = value?.let(function) ?: ErrorOr.of(error!!)
+    fun <B : Any> bind(function: (A) -> ErrorOr<B>) = value?.let(function) ?: ErrorOr.of(error!!)
 }
 
 /**

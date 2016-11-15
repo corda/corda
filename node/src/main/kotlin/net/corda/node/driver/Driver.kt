@@ -31,6 +31,7 @@ import java.util.*
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * This file defines a small "Driver" DSL for starting up nodes that is only intended for development, demos and tests.
@@ -77,8 +78,9 @@ sealed class PortAllocation {
     abstract fun nextPort(): Int
     fun nextHostAndPort(): HostAndPort = HostAndPort.fromParts("localhost", nextPort())
 
-    class Incremental(private var portCounter: Int) : PortAllocation() {
-        override fun nextPort() = portCounter++
+    class Incremental(startingPort: Int) : PortAllocation() {
+        val portCounter = AtomicInteger(startingPort)
+        override fun nextPort() = portCounter.andIncrement
     }
     class RandomFree(): PortAllocation() {
         override fun nextPort(): Int {

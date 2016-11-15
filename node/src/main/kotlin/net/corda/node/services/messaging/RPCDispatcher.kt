@@ -71,7 +71,7 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService) {
     fun dispatch(msg: ClientRPCRequestMessage) {
         val (argsBytes, replyTo, observationsTo, methodName) = msg
 
-        val response: ErrorOr<Any?> = ErrorOr.catch {
+        val response: ErrorOr<Any> = ErrorOr.catch {
             val method = methodTable[methodName] ?: throw RPCException("Received RPC for unknown method $methodName - possible client/server version skew?")
             if (method.isAnnotationPresent(RPCReturnsObservables::class.java) && observationsTo == null)
                 throw RPCException("Received RPC without any destination for observations, but the RPC returns observables")

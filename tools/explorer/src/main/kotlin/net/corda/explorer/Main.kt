@@ -70,7 +70,8 @@ fun main(args: Array<String>) {
             )
             eventGenerator.clientToServiceCommandGenerator.map { command ->
                 rpcProxy?.startProtocol(::CashProtocol, command)
-            }.generate(Random())
+                Unit
+            }.generate(SplittableRandom())
         }
         waitForAllNodesToFinish()
     }

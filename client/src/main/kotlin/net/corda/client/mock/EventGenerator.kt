@@ -24,13 +24,11 @@ class EventGenerator(
     val currencies = setOf(USD, GBP, CHF).toList() // + Currency.getAvailableCurrencies().toList().subList(0, 3).toSet()).toList()
     val currencyGenerator = Generator.pickOne(currencies)
 
-    val amountIssuedGenerator =
-            Generator.intRange(1, 10000).combine(issuerGenerator, currencyGenerator) { amount, issuer, currency ->
-                Amount(amount.toLong(), Issued(issuer, currency))
-            }
+    val issuedGenerator = issuerGenerator.combine(currencyGenerator) { issuer, currency -> Issued(issuer, currency) }
+    val amountIssuedGenerator = generateAmount(1, 10000, issuedGenerator)
 
-    val publicKeyGenerator = Generator.oneOf(parties.map { it.owningKey })
-    val partyGenerator = Generator.oneOf(parties)
+    val publicKeyGenerator = Generator.pickOne(parties.map { it.owningKey })
+    val partyGenerator = Generator.pickOne(parties)
 
     val cashStateGenerator = amountIssuedGenerator.combine(publicKeyGenerator) { amount, from ->
         val builder = TransactionBuilder(notary = notary)
