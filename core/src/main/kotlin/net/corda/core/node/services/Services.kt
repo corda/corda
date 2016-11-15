@@ -208,7 +208,6 @@ interface KeyManagementService {
     /** Returns a snapshot of the current pubkey->privkey mapping. */
     val keys: Map<PublicKey, PrivateKey>
 
-    // TODO: make toPrivate return null if not found instead of throwing
     fun toPrivate(publicKey: PublicKey) = keys[publicKey] ?: throw IllegalStateException("No private key known for requested public key ${publicKey.toStringShort()}")
 
     fun toKeyPair(publicKey: PublicKey) = KeyPair(publicKey, toPrivate(publicKey))
