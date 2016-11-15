@@ -8,10 +8,6 @@ import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
 
-/**
- * Created by sofusmortensen on 25/08/16.
- */
-
 class Caplet {
 
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
@@ -47,11 +43,11 @@ class Caplet {
 
     val contractFinal = arrange { highStreetBank.gives(acmeCorp, 250.K, EUR) }
 
-    val stateStart = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contract)
+    val stateStart = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contract)
 
-    val stateFixed = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contractFixed)
+    val stateFixed = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractFixed)
 
-    val stateFinal = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contractFinal )
+    val stateFinal = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractFinal)
 
     @Test
     fun issue() {

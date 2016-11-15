@@ -1,17 +1,8 @@
 package net.corda.contracts.universal
 
 import net.corda.core.contracts.Frequency
-import java.math.BigDecimal
-
-/**
- * Created by sofusmortensen on 28/06/16.
- */
-
-// Swaption
-
 
 class Swaption {
-
     val notional = 10.M
     val currency = USD
     val coupon = 1.5.bd

@@ -8,10 +8,6 @@ import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals
 
-/**
- * Created by sofusmortensen on 08/09/16.
- */
-
 class RollOutTests {
 
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
@@ -129,14 +125,17 @@ class RollOutTests {
     fun `arrangement equality transfer`() {
         assertEquals(contract_transfer1, contract_transfer2)
     }
+
     @Test
     fun `arrangement equality action`() {
         assertEquals(contract_action1, contract_action2)
     }
+
     @Test
     fun `arrangement equality and`() {
         assertEquals(contract_and1, contract_and2)
     }
+
     @Test
     fun `arrangement equality complex`() {
         assertEquals(contract, contract2)
@@ -174,10 +173,10 @@ class RollOutTests {
             output { stateStep1b }
             timestamp(TEST_TX_TIME_1)
 
-         /*   tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
-                this `fails with` "action must be defined"
-            }*/
+            /*   tweak {
+                   command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                   this `fails with` "action must be defined"
+               }*/
 
             command(highStreetBank.owningKey) { UniversalContract.Commands.Action("transfer") }
 

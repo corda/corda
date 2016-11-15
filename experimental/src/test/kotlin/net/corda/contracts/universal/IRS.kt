@@ -8,10 +8,6 @@ import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
 
-/**
- * Created by sofusmortensen on 12/09/16.
- */
-
 class IRS {
 
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
@@ -42,7 +38,7 @@ class IRS {
     }
 
 
-    val stateStart = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contract)
+    val stateStart = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contract)
 
     @Test
     fun issue() {

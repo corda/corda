@@ -4,15 +4,11 @@ import net.corda.core.crypto.Party
 import java.math.BigDecimal
 import java.util.*
 
-/**
- * Created by sofusmortensen on 23/05/16.
- */
-
 fun swap(partyA: Party, amountA: BigDecimal, currencyA: Currency, partyB: Party, amountB: BigDecimal, currencyB: Currency) =
-    arrange {
-        partyA.gives(partyB, amountA, currencyA)
-        partyB.gives(partyA, amountB, currencyB)
-    }
+        arrange {
+            partyA.gives(partyB, amountA, currencyA)
+            partyB.gives(partyA, amountB, currencyB)
+        }
 
 fun fx_swap(expiry: String, notional: BigDecimal, strike: BigDecimal,
             foreignCurrency: Currency, domesticCurrency: Currency,

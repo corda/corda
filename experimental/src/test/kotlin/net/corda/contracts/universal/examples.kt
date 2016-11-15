@@ -2,10 +2,6 @@ package net.corda.contracts.universal
 
 import net.corda.core.contracts.USD
 
-/**
- * Created by sofusmortensen on 23/05/16.
- */
-
 // various example arrangements using basic syntax
 
 val cds_contract = arrange {

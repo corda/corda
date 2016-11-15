@@ -10,10 +10,6 @@ import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
 
-/**
- * Created by sofusmortensen on 05/09/16.
- */
-
 class Cap {
 
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
@@ -135,13 +131,13 @@ class Cap {
 
     val stateInitial = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractInitial)
 
-    val stateAfterFixingFirst = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contractAfterFixingFirst)
+    val stateAfterFixingFirst = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractAfterFixingFirst)
 
-    val stateAfterExecutionFirst = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contractAfterExecutionFirst)
-    val statePaymentFirst = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), paymentFirst)
+    val stateAfterExecutionFirst = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractAfterExecutionFirst)
+    val statePaymentFirst = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), paymentFirst)
 
-    val stateAfterFixingFinal = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contractAfterFixingFinal)
-    val statePaymentFinal = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), paymentFinal)
+    val stateAfterFixingFinal = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractAfterFixingFinal)
+    val statePaymentFinal = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), paymentFinal)
 
     val contractLimitedCap = arrange {
         rollOut("2016-04-01".ld, "2017-04-01".ld, Frequency.SemiAnnual, object {

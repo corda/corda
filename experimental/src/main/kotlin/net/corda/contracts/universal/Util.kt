@@ -8,10 +8,6 @@ import net.corda.core.crypto.PublicKeyTree
 import java.time.Instant
 import java.time.LocalDate
 
-/**
- * Created by sofusmortensen on 23/05/16.
- */
-
 fun Instant.toLocalDate(): LocalDate = LocalDate.ofEpochDay(this.epochSecond / 60 / 60 / 24)
 
 fun LocalDate.toInstant(): Instant = Instant.ofEpochSecond(this.toEpochDay() * 60 * 60 * 24)
@@ -35,7 +31,7 @@ private fun liablePartiesVisitor(action: Action): ImmutableSet<PublicKeyTree> =
         else
             Sets.difference(liablePartiesVisitor(action.arrangement), ImmutableSet.of(action.actors.single())).immutableCopy()
 
-/** returns list of potentially liable parties for a given contract */
+/** Returns list of potentially liable parties for a given contract */
 fun liableParties(contract: Arrangement): Set<PublicKeyTree> = liablePartiesVisitor(contract)
 
 private fun involvedPartiesVisitor(action: Action): Set<PublicKeyTree> =
@@ -71,14 +67,14 @@ fun replaceParty(arrangement: Arrangement, from: Party, to: Party): Arrangement 
     else -> throw IllegalArgumentException()
 }
 
-fun extractRemainder(arrangement: Arrangement, action: Action) : Arrangement = when (arrangement) {
+fun extractRemainder(arrangement: Arrangement, action: Action): Arrangement = when (arrangement) {
     is Actions -> if (arrangement.actions.contains(action)) zero else arrangement
     is And -> {
         val a = arrangement.arrangements.map { extractRemainder(it, action) }.filter { it != zero }
         when (a.size) {
             0 -> zero
             1 -> a.single()
-            else -> And( a.toSet() )
+            else -> And(a.toSet())
         }
     }
     else -> arrangement
@@ -100,11 +96,11 @@ fun actions(arrangement: Arrangement): Map<String, Action> = when (arrangement) 
 }
 
 fun debugCompare(left: String, right: String) {
-    assert(left.equals(right))
+    assert(left == right)
 }
 
-fun<T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
-    if (perLeft.equals(perRight)) return
+fun <T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
+    if (perLeft == perRight) return
 
     when (perLeft) {
         is UnaryPlus -> {
@@ -117,7 +113,7 @@ fun<T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
             if (perRight is PerceivableOperation) {
                 debugCompare(perLeft.left, perRight.left)
                 debugCompare(perLeft.right, perRight.right)
-                assert( perLeft.op.equals(perRight.op) )
+                assert(perLeft.op == perRight.op)
                 return
             }
         }
@@ -127,7 +123,7 @@ fun<T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
                 debugCompare(perLeft.interest, perRight.interest)
                 debugCompare(perLeft.start, perRight.start)
                 debugCompare(perLeft.end, perRight.end)
-                assert(perLeft.dayCountConvention.equals(perRight.dayCountConvention))
+                assert(perLeft.dayCountConvention == perRight.dayCountConvention)
                 return
             }
         }
@@ -145,23 +141,25 @@ fun<T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
 }
 
 fun debugCompare(parLeft: Party, parRight: Party) {
-    assert( parLeft.equals(parRight) )
+    assert(parLeft == parRight)
 }
+
 fun debugCompare(left: Frequency, right: Frequency) {
-    assert( left.equals(right) )
+    assert(left == right)
 }
+
 fun debugCompare(left: LocalDate, right: LocalDate) {
-    assert( left.equals(right) )
+    assert(left == right)
 }
 
 fun debugCompare(parLeft: Set<Party>, parRight: Set<Party>) {
-    if (parLeft.equals(parRight)) return
+    if (parLeft == parRight) return
 
-    assert( parLeft.equals(parRight) )
+    assert(parLeft == parRight)
 }
 
 fun debugCompare(arrLeft: Arrangement, arrRight: Arrangement) {
-    if (arrLeft.equals(arrRight)) return
+    if (arrLeft == arrRight) return
 
     when (arrLeft) {
         is Transfer -> {
@@ -175,7 +173,7 @@ fun debugCompare(arrLeft: Arrangement, arrRight: Arrangement) {
         }
         is And -> {
             if (arrRight is And) {
-                arrLeft.arrangements.zip( arrRight.arrangements).forEach {
+                arrLeft.arrangements.zip(arrRight.arrangements).forEach {
                     debugCompare(it.first, it.second)
                 }
                 return
@@ -183,7 +181,7 @@ fun debugCompare(arrLeft: Arrangement, arrRight: Arrangement) {
         }
         is Actions -> {
             if (arrRight is Actions) {
-                arrLeft.actions.zip( arrRight.actions ).forEach {
+                arrLeft.actions.zip(arrRight.actions).forEach {
                     debugCompare(it.first.arrangement, it.second.arrangement)
                     debugCompare(it.first.condition, it.second.condition)
                     debugCompare(it.first.actors, it.second.actors)
@@ -203,5 +201,5 @@ fun debugCompare(arrLeft: Arrangement, arrRight: Arrangement) {
         }
     }
 
-    assert( false)
+    assert(false)
 }

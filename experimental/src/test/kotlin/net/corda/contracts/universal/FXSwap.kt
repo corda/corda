@@ -1,13 +1,9 @@
 package net.corda.contracts.universal
 
-import net.corda.testing.*
 import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.transaction
 import org.junit.Test
 import java.time.Instant
-
-/**
- * Created by sofusmortensen on 01/06/16.
- */
 
 class FXSwap {
 
@@ -28,18 +24,18 @@ class FXSwap {
     val transfer1 = arrange { highStreetBank.gives(acmeCorp, 1200.K, USD) }
     val transfer2 = arrange { acmeCorp.gives(highStreetBank, 1.M, EUR) }
 
-    val outState1 = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transfer1 )
-    val outState2 = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transfer2 )
+    val outState1 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transfer1)
+    val outState2 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transfer2)
 
     val transferBad1 = arrange { highStreetBank.gives(acmeCorp, 1200.K, GBP) } // wrong currency
     val transferBad2 = arrange { acmeCorp.gives(highStreetBank, 900.K, EUR) } // wrong amount
     val transferBad3 = arrange { highStreetBank.gives(highStreetBank, 1.M, EUR) } // wrong party
 
-    val outStateBad1 = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transferBad1 )
-    val outStateBad2 = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transferBad2 )
-    val outStateBad3 = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transferBad3 )
+    val outStateBad1 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transferBad1)
+    val outStateBad2 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transferBad2)
+    val outStateBad3 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transferBad3)
 
-    val inState = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contract)
+    val inState = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contract)
 
     @Test
     fun `issue - signature`() {

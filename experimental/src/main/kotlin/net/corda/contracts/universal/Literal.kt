@@ -7,14 +7,6 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.*
 
-/**
- * Created by sofusmortensen on 23/05/16.
- */
-
-
-// operator fun Long.times(currency: Currency) = Amount(this.toLong(), currency)
-// operator fun Double.times(currency: Currency) = Amount(BigDecimal(this.toDouble()), currency)
-
 val Int.M: BigDecimal get() = BigDecimal(this) * BigDecimal(1000000)
 val Int.K: BigDecimal get() = BigDecimal(this) * BigDecimal(1000)
 
@@ -34,14 +26,14 @@ class ActionsBuilder {
     infix fun Party.may(init: ActionBuilder.() -> Action): Action {
         val builder = ActionBuilder(setOf(this))
         builder.init()
-        actions.addAll( builder.actions )
+        actions.addAll(builder.actions)
         return builder.actions.first()
     }
 
     infix fun Set<Party>.may(init: ActionBuilder.() -> Action): Action {
         val builder = ActionBuilder(this)
         builder.init()
-        actions.addAll( builder.actions )
+        actions.addAll(builder.actions)
 
         return builder.actions.first()
     }
@@ -53,7 +45,7 @@ class ActionsBuilder {
 open class ContractBuilder {
     private val contracts = mutableListOf<Arrangement>()
 
-    fun actions(init: ActionsBuilder.() -> Action ) : Arrangement {
+    fun actions(init: ActionsBuilder.() -> Action): Arrangement {
         val b = ActionsBuilder()
         b.init()
         val c = b.final()
@@ -97,12 +89,6 @@ open class ContractBuilder {
     @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
     fun Set<Party>.may(init: ActionBuilder.() -> Action) {
     }
-
-    /*  fun Party.gives(beneficiary: Party, amount: Perceivable<Long>, currency: Currency) {
-          contracts.add( Transfer(amount, currency, this, beneficiary))
-      }*/
-
-//    infix fun Arrangement.and(arrangement: Arrangement) = And(setOf(this, arrangement))
 
     val start = StartDate()
     val end = EndDate()
@@ -155,15 +141,15 @@ interface GivenThatResolve {
 class ActionBuilder(val actors: Set<Party>) {
     val actions = mutableListOf<Action>()
 
-    fun String.givenThat(condition: Perceivable<Boolean>, init: ContractBuilder.() -> Arrangement ) : Action {
+    fun String.givenThat(condition: Perceivable<Boolean>, init: ContractBuilder.() -> Arrangement): Action {
         val b = ContractBuilder()
         b.init()
-        val a = Action(this, condition, actors, b.final() )
-        actions.add( a )
+        val a = Action(this, condition, actors, b.final())
+        actions.add(a)
         return a
     }
 
-    fun String.givenThat(condition: Perceivable<Boolean> ) : GivenThatResolve {
+    fun String.givenThat(condition: Perceivable<Boolean>): GivenThatResolve {
         val This = this
         return object : GivenThatResolve {
             override fun resolve(contract: Arrangement) {
@@ -172,16 +158,16 @@ class ActionBuilder(val actors: Set<Party>) {
         }
     }
 
-    fun String.anytime(init: ContractBuilder.() -> Unit ) : Action {
+    fun String.anytime(init: ContractBuilder.() -> Unit): Action {
         val b = ContractBuilder()
         b.init()
-        val a = Action(this, const(true), actors, b.final() )
-        actions.add( a )
+        val a = Action(this, const(true), actors, b.final())
+        actions.add(a)
         return a
     }
 }
 
-fun arrange(init: ContractBuilder.() -> Unit ) : Arrangement {
+fun arrange(init: ContractBuilder.() -> Unit): Arrangement {
     val b = ContractBuilder()
     b.init()
     return b.final()
@@ -189,13 +175,11 @@ fun arrange(init: ContractBuilder.() -> Unit ) : Arrangement {
 
 data class Parameter<T>(val initialValue: T) : Perceivable<T>
 
-fun<T> variable(v: T) = Parameter<T>(v)
+fun <T> variable(v: T) = Parameter<T>(v)
 
 class RollOutBuilder<T>(val startDate: LocalDate, val endDate: LocalDate, val frequency: Frequency, val vars: T) : ContractBuilder() {
     override fun final() =
             RollOut(startDate, endDate, frequency, super.final())
 }
-
-
 
 class Dummy {}

@@ -2,6 +2,8 @@
  
 This is a demonstration of how to build a universal contract or higher order contracts on top of Corda. Think of the universal contract as a generalized Ricardian contract where a meta language is used as contract parameter making it possible for a single smart contract type to span a very large family of contracts.
 
+This experimental module is maintained by Sofus Mortensen of Nordea Bank.
+
 ## Overview
 
 ### Motivation and Layers of smart contracts

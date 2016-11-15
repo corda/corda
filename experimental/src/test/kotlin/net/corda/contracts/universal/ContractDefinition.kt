@@ -5,10 +5,6 @@ import net.corda.core.crypto.generateKeyPair
 import org.junit.Test
 import java.util.*
 
-/**
- * Created by sofusmortensen on 08/06/16.
- */
-
 // Test parties
 val acmeCorp = Party("ACME Corporation", generateKeyPair().public)
 val highStreetBank = Party("High Street Bank", generateKeyPair().public)
@@ -83,29 +79,29 @@ class ContractDefinition {
     }
 
 
- /*   @Test
-    fun `builder problem - should not compile`() {
-        val arr = arrange {
-            actions {
-                acmeCorp.may {
-                    "execute".anytime {
-                        acmeCorp.may {
-                            "problem".anytime {
-                                highStreetBank.gives(acmeCorp, 1.M, USD)
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    /*   @Test
+       fun `builder problem - should not compile`() {
+           val arr = arrange {
+               actions {
+                   acmeCorp.may {
+                       "execute".anytime {
+                           acmeCorp.may {
+                               "problem".anytime {
+                                   highStreetBank.gives(acmeCorp, 1.M, USD)
+                               }
+                           }
+                       }
+                   }
+               }
+           }
 
-        assert( arr is Actions )
+           assert( arr is Actions )
 
-        if (arr is Actions) {
-            assert( arr.actions.size == 1)
-        }
-    }
-*/
+           if (arr is Actions) {
+               assert( arr.actions.size == 1)
+           }
+       }
+   */
     @Test
     fun `builder problem - legal`() {
         val arr = arrange {
@@ -124,10 +120,10 @@ class ContractDefinition {
             }
         }
 
-        assert( arr is Actions )
+        assert(arr is Actions)
 
         if (arr is Actions) {
-            assert( arr.actions.size == 1)
+            assert(arr.actions.size == 1)
         }
     }
 

@@ -8,16 +8,9 @@ import net.corda.core.transactions.TransactionBuilder
 import java.math.BigDecimal
 import java.time.Instant
 
-/**
- * Created by sofusmortensen on 23/05/16.
- */
-
-
-
 val UNIVERSAL_PROGRAM_ID = UniversalContract()
 
 class UniversalContract : Contract {
-
     data class State(override val participants: List<PublicKeyTree>,
                      val details: Arrangement) : ContractState {
         override val contract = UNIVERSAL_PROGRAM_ID
@@ -75,7 +68,7 @@ class UniversalContract : Contract {
                         Operation.DIV -> l / r
                         Operation.MINUS -> l - r
                         Operation.PLUS -> l + r
-                        Operation.TIMES -> l*r
+                        Operation.TIMES -> l * r
                         else -> throw NotImplementedError("eval - amount - operation " + expr.op)
                     }
                 }
@@ -87,7 +80,7 @@ class UniversalContract : Contract {
                     val a = eval(tx, expr.amount)
                     val i = eval(tx, expr.interest)
 
-                    //todo
+                    //TODO
 
                     a * i / 100.0.bd
                 }
@@ -104,53 +97,53 @@ class UniversalContract : Contract {
         else -> arrangement
     }
 
-    // todo: think about multi layered rollouts
-    fun reduceRollOut(rollOut: RollOut) : Arrangement {
+    // TODO: think about multi layered rollouts
+    fun reduceRollOut(rollOut: RollOut): Arrangement {
         val start = rollOut.startDate
         val end = rollOut.endDate
 
-        // todo: calendar + rolling conventions
+        // TODO: calendar + rolling conventions
         val schedule = BusinessCalendar.createGenericSchedule(start, rollOut.frequency, noOfAdditionalPeriods = 1, endDate = end)
 
         val nextStart = schedule.first()
-        // todo: look into schedule for final dates
+        // TODO: look into schedule for final dates
 
         val arr = replaceStartEnd(rollOut.template, start.toInstant(), nextStart.toInstant())
 
         if (nextStart < end) {
-            // todo: we may have to save original start date in order to roll out correctly
+            // TODO: we may have to save original start date in order to roll out correctly
             val newRollOut = RollOut(nextStart, end, rollOut.frequency, rollOut.template)
-            return replaceNext(arr, newRollOut )
-        }
-        else {
+            return replaceNext(arr, newRollOut)
+        } else {
             return removeNext(arr)
         }
     }
 
-    fun<T> replaceStartEnd(p: Perceivable<T>, start: Instant, end: Instant) : Perceivable<T> =
+    @Suppress("UNCHECKED_CAST")
+    fun <T> replaceStartEnd(p: Perceivable<T>, start: Instant, end: Instant): Perceivable<T> =
             when (p) {
                 is Const -> p
-                is TimePerceivable -> TimePerceivable( p.cmp, replaceStartEnd(p.instant, start, end) ) as Perceivable<T>
+                is TimePerceivable -> TimePerceivable(p.cmp, replaceStartEnd(p.instant, start, end)) as Perceivable<T>
                 is EndDate -> const(end) as Perceivable<T>
                 is StartDate -> const(start) as Perceivable<T>
-                is UnaryPlus -> UnaryPlus( replaceStartEnd(p.arg, start, end) )
-                is PerceivableOperation -> PerceivableOperation<T>( replaceStartEnd(p.left, start, end), p.op, replaceStartEnd(p.right, start, end) )
-                is Interest -> Interest( replaceStartEnd(p.amount, start, end), p.dayCountConvention, replaceStartEnd(p.interest, start, end), replaceStartEnd(p.start, start, end), replaceStartEnd(p.end, start, end) ) as Perceivable<T>
-                is Fixing -> Fixing( p.source, replaceStartEnd(p.date, start, end), p.tenor) as Perceivable<T>
+                is UnaryPlus -> UnaryPlus(replaceStartEnd(p.arg, start, end))
+                is PerceivableOperation -> PerceivableOperation<T>(replaceStartEnd(p.left, start, end), p.op, replaceStartEnd(p.right, start, end))
+                is Interest -> Interest(replaceStartEnd(p.amount, start, end), p.dayCountConvention, replaceStartEnd(p.interest, start, end), replaceStartEnd(p.start, start, end), replaceStartEnd(p.end, start, end)) as Perceivable<T>
+                is Fixing -> Fixing(p.source, replaceStartEnd(p.date, start, end), p.tenor) as Perceivable<T>
                 else -> throw NotImplementedError("replaceStartEnd " + p.javaClass.name)
             }
 
-    fun replaceStartEnd(arrangement: Arrangement, start: Instant, end: Instant) : Arrangement =
+    fun replaceStartEnd(arrangement: Arrangement, start: Instant, end: Instant): Arrangement =
             when (arrangement) {
                 is And -> And(arrangement.arrangements.map { replaceStartEnd(it, start, end) }.toSet())
                 is Zero -> arrangement
-                is Transfer -> Transfer( replaceStartEnd(arrangement.amount, start, end), arrangement.currency, arrangement.from, arrangement.to)
-                is Actions -> Actions( arrangement.actions.map { Action(it.name, replaceStartEnd(it.condition, start, end), it.actors, replaceStartEnd(it.arrangement, start, end) ) }.toSet())
+                is Transfer -> Transfer(replaceStartEnd(arrangement.amount, start, end), arrangement.currency, arrangement.from, arrangement.to)
+                is Actions -> Actions(arrangement.actions.map { Action(it.name, replaceStartEnd(it.condition, start, end), it.actors, replaceStartEnd(it.arrangement, start, end)) }.toSet())
                 is Continuation -> arrangement
                 else -> throw NotImplementedError("replaceStartEnd " + arrangement.javaClass.name)
             }
 
-    fun replaceNext(arrangement: Arrangement, nextReplacement: RollOut) : Arrangement =
+    fun replaceNext(arrangement: Arrangement, nextReplacement: RollOut): Arrangement =
             when (arrangement) {
                 is Actions -> Actions(arrangement.actions.map { Action(it.name, it.condition, it.actors, replaceNext(it.arrangement, nextReplacement)) }.toSet())
                 is And -> And(arrangement.arrangements.map { replaceNext(it, nextReplacement) }.toSet())
@@ -160,7 +153,7 @@ class UniversalContract : Contract {
                 else -> throw NotImplementedError("replaceNext " + arrangement.javaClass.name)
             }
 
-    fun removeNext(arrangement: Arrangement) : Arrangement =
+    fun removeNext(arrangement: Arrangement): Arrangement =
             when (arrangement) {
                 is Actions -> Actions(arrangement.actions.map { Action(it.name, it.condition, it.actors, removeNext(it.arrangement)) }.toSet())
                 is And -> {
@@ -199,7 +192,7 @@ class UniversalContract : Contract {
 
                 val action = actions[value.name] ?: throw IllegalArgumentException("Failed requirement: action must be defined")
 
-                // todo: not sure this is necessary??
+                // TODO: not sure this is necessary??
                 val rest = extractRemainder(arr, action)
 
                 // for now - let's assume not
@@ -264,8 +257,6 @@ class UniversalContract : Contract {
                 val expectedArr = replaceFixing(tx, arr,
                         value.fixes.associateBy({ it.of }, { it.value }), unusedFixes)
 
-//                debugCompare(expectedArr, outState.details)
-
                 requireThat {
                     "relevant fixing must be included" by unusedFixes.isEmpty()
                     "output state does not reflect fix command" by
@@ -276,6 +267,7 @@ class UniversalContract : Contract {
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
     fun <T> replaceFixing(tx: TransactionForContract, perceivable: Perceivable<T>,
                           fixings: Map<FixOf, BigDecimal>, unusedFixings: MutableSet<FixOf>): Perceivable<T> =
             when (perceivable) {
@@ -307,7 +299,7 @@ class UniversalContract : Contract {
                 is Zero -> arr
                 is And -> And(arr.arrangements.map { replaceFixing(tx, it, fixings, unusedFixings) }.toSet())
                 is Transfer -> Transfer(replaceFixing(tx, arr.amount, fixings, unusedFixings), arr.currency, arr.from, arr.to)
-                is Actions -> Actions( arr.actions.map { Action(it.name, it.condition, it.actors, replaceFixing(tx, it.arrangement, fixings, unusedFixings) ) }.toSet())
+                is Actions -> Actions(arr.actions.map { Action(it.name, it.condition, it.actors, replaceFixing(tx, it.arrangement, fixings, unusedFixings)) }.toSet())
                 is RollOut -> RollOut(arr.startDate, arr.endDate, arr.frequency, replaceFixing(tx, arr.template, fixings, unusedFixings))
                 is Continuation -> arr
                 else -> throw NotImplementedError("replaceFixing - " + arr.javaClass.name)

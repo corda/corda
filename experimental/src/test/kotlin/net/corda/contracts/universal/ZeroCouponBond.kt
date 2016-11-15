@@ -1,13 +1,9 @@
 package net.corda.contracts.universal
 
-import net.corda.testing.*
 import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.transaction
 import org.junit.Test
 import java.time.Instant
-
-/**
- * Created by sofusmortensen on 01/06/16.
- */
 
 class ZeroCouponBond {
 
@@ -36,16 +32,16 @@ class ZeroCouponBond {
     val transfer = arrange { highStreetBank.gives(acmeCorp, 100.K, GBP) }
     val transferWrong = arrange { highStreetBank.gives(acmeCorp, 80.K, GBP) }
 
-    val inState = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contract )
+    val inState = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contract)
 
-    val outState = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transfer )
-    val outStateWrong = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transferWrong )
+    val outState = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transfer)
+    val outStateWrong = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transferWrong)
 
-    val outStateMove = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contractMove )
+    val outStateMove = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractMove)
 
     @Test
     fun basic() {
-        assert( Zero().equals(Zero()))
+        assert(Zero().equals(Zero()))
     }
 
 
@@ -131,7 +127,7 @@ class ZeroCouponBond {
                 this `fails with` "output state does not reflect move command"
             }
 
-            output { outStateMove}
+            output { outStateMove }
 
             command(acmeCorp.owningKey, momAndPop.owningKey, highStreetBank.owningKey) {
                 UniversalContract.Commands.Move(acmeCorp, momAndPop)
