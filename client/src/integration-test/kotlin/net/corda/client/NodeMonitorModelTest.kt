@@ -3,7 +3,10 @@ package net.corda.client
 import net.corda.client.model.NodeMonitorModel
 import net.corda.client.model.ProgressTrackingEvent
 import net.corda.core.bufferUntilSubscribed
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.Issued
+import net.corda.core.contracts.PartyAndReference
+import net.corda.core.contracts.USD
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceInfo
@@ -13,13 +16,15 @@ import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.driver.driver
-import net.corda.node.internal.CordaRPCOpsImpl
 import net.corda.node.services.User
 import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.messaging.StateMachineUpdate
 import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.startProtocolPermission
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.protocols.CashCommand
+import net.corda.protocols.CashProtocol
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.sequence
@@ -43,7 +48,7 @@ class NodeMonitorModelTest {
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update>
     lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
-    lateinit var clientToService: Observer<ClientToServiceCommand>
+    lateinit var clientToService: Observer<CashCommand>
     lateinit var newNode: (String) -> NodeInfo
 
     @Before
@@ -51,7 +56,7 @@ class NodeMonitorModelTest {
         val driverStarted = CountDownLatch(1)
         driverThread = thread {
             driver {
-                val cashUser = User("user1", "test", permissions = setOf(CordaRPCOpsImpl.CASH_PERMISSION))
+                val cashUser = User("user1", "test", permissions = setOf(startProtocolPermission<CashProtocol>()))
                 val aliceNodeFuture = startNode("Alice", rpcUsers = listOf(cashUser))
                 val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
 
@@ -106,7 +111,7 @@ class NodeMonitorModelTest {
 
     @Test
     fun `cash issue works end to end`() {
-        clientToService.onNext(ClientToServiceCommand.IssueCash(
+        clientToService.onNext(CashCommand.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                 recipient = aliceNode.legalIdentity,
@@ -131,14 +136,14 @@ class NodeMonitorModelTest {
 
     @Test
     fun `cash issue and move`() {
-        clientToService.onNext(ClientToServiceCommand.IssueCash(
+        clientToService.onNext(CashCommand.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                 recipient = aliceNode.legalIdentity,
                 notary = notaryNode.notaryIdentity
         ))
 
-        clientToService.onNext(ClientToServiceCommand.PayCash(
+        clientToService.onNext(CashCommand.PayCash(
                 amount = Amount(100, Issued(PartyAndReference(aliceNode.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
                 recipient = aliceNode.legalIdentity
         ))

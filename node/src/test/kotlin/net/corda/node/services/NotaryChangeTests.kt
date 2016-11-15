@@ -53,7 +53,7 @@ class NotaryChangeTests {
 
         net.runNetwork()
 
-        val newState = future.get()
+        val newState = future.resultFuture.get()
         assertEquals(newState.state.notary, newNotary)
     }
 
@@ -66,7 +66,7 @@ class NotaryChangeTests {
 
         net.runNetwork()
 
-        val newState = future.get()
+        val newState = future.resultFuture.get()
         assertEquals(newState.state.notary, newNotary)
         val loadedStateA = clientNodeA.services.loadState(newState.ref)
         val loadedStateB = clientNodeB.services.loadState(newState.ref)
@@ -82,7 +82,7 @@ class NotaryChangeTests {
 
         net.runNetwork()
 
-        val ex = assertFailsWith(ExecutionException::class) { future.get() }
+        val ex = assertFailsWith(ExecutionException::class) { future.resultFuture.get() }
         val error = (ex.cause as StateReplacementException).error
         assertTrue(error is StateReplacementRefused)
     }

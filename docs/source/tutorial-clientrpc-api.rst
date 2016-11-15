@@ -1,31 +1,33 @@
 .. _graphstream: http://graphstream-project.org/
 
-Client RPC API
-==============
+Client RPC API Tutorial
+=======================
 
-In this tutorial we will build a simple command line utility that connects to a node and dumps the transaction graph to
-the standard output. We will then put some simple visualisation on top. For an explanation on how the RPC works see
-:doc:`clientrpc`.
+In this tutorial we will build a simple command line utility that
+connects to a node, creates some Cash transactions and meanwhile dumps
+the transaction graph to the standard output. We will then put some
+simple visualisation on top. For an explanation on how the RPC works
+see :doc:`clientrpc`.
 
-We start off by connecting to the node itself. For the purposes of the tutorial we will run the Trader demo on some
-local port and connect to the Buyer side. We will pass in the address as a command line argument. To connect to the node
-we also need to access the certificates of the node, we will access the node's ``certificates`` directory directly.
+We start off by connecting to the node itself. For the purposes of the tutorial we will use the Driver to start up a notary and a node that issues/exits and moves Cash around for herself. To authenticate we will use the certificates of the nodes directly.
 
-.. literalinclude:: example-code/src/main/kotlin/net.corda.docs/ClientRpcTutorial.kt
+Note how we configure the node to create a user that has permission to start the CashProtocol.
+
+.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcTutorial.kt
     :language: kotlin
     :start-after: START 1
     :end-before: END 1
 
-Now we can connect to the node itself using a valid RPC login. By default the user `user1` is available with password `test`.
+Now we can connect to the node itself using a valid RPC login. We login using the configured user.
 
-.. literalinclude:: example-code/src/main/kotlin/net.corda.docs/ClientRpcTutorial.kt
+.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcTutorial.kt
     :language: kotlin
     :start-after: START 2
     :end-before: END 2
 
-``proxy`` now exposes the full RPC interface of the node:
+We start generating transactions in a different thread (``generateTransactions`` to be defined later) using ``proxy``, which exposes the full RPC interface of the node:
 
-.. literalinclude:: ../../node/src/main/kotlin/net.corda.node/services/messaging/CordaRPCOps.kt
+.. literalinclude:: ../../node/src/main/kotlin/net/corda/node/services/messaging/CordaRPCOps.kt
     :language: kotlin
     :start-after: interface CordaRPCOps
     :end-before: }
@@ -34,7 +36,7 @@ The one we need in order to dump the transaction graph is ``verifiedTransactions
 RPC will return a list of transactions and an Observable stream. This is a general pattern, we query some data and the
 node will return the current snapshot and future updates done to it.
 
-.. literalinclude:: example-code/src/main/kotlin/net.corda.docs/ClientRpcTutorial.kt
+.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcTutorial.kt
     :language: kotlin
     :start-after: START 3
     :end-before: END 3
@@ -43,41 +45,37 @@ The graph will be defined by nodes and edges between them. Each node represents 
 output-input relations. For now let's just print ``NODE <txhash>`` for the former and ``EDGE <txhash> <txhash>`` for the
 latter.
 
-.. literalinclude:: example-code/src/main/kotlin/net.corda.docs/ClientRpcTutorial.kt
+.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcTutorial.kt
     :language: kotlin
     :start-after: START 4
     :end-before: END 4
 
-Now we can start the trader demo as per described in :doc:`running-the-demos`::
 
-    # Build the demo
-    ./gradlew installDist
-    # Start the buyer
-    ./build/install/r3prototyping/bin/trader-demo --role=BUYER
+Now we just need to create the transactions themselves!
 
-In another terminal we can connect to it with our client::
+.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcTutorial.kt
+    :language: kotlin
+    :start-after: START 6
+    :end-before: END 6
 
-    # Connect to localhost:31337
-    ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial localhost:31337 Print
+We utilise several RPC functions here to query things like the notaries in the node cluster or our own vault.
 
-We should see some ``NODE``-s printed. This is because the buyer self-issues some cash for the demo.
-Unless we ran the seller before we shouldn't see any ``EDGE``-s because the cash hasn't been spent yet.
+Then in a loop we generate randomly either an Issue, a Pay or an Exit transaction.
 
-In another terminal we can now start the seller::
+The RPC we need to initiate a Cash transaction is ``startProtocolDynamic`` which may start an arbitrary protocol, given sufficient permissions to do so. We won't use this function directly, but rather a type-safe wrapper around it ``startProtocol`` that type-checks the arguments for us.
 
-    # Start sellers in a loop
-    for i in {0..9} ; do ./build/install/r3prototyping/bin/trader-demo --role=SELLER ; done
+Finally we have everything in place: we start a couple of nodes, connect to them, and start creating transactions while listening on successfully created ones, which are dumped to the console. We just need to run it!:
 
-We should start seeing new ``NODE``-s and ``EDGE``-s appearing.
+    # Build the example
+    ./gradlew docs/source/example-code:installDist
+    # Start it
+    ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Print
 
 Now let's try to visualise the transaction graph. We will use a graph drawing library called graphstream_
 
-.. literalinclude:: example-code/src/main/kotlin/net.corda.docs/ClientRpcTutorial.kt
+.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcTutorial.kt
     :language: kotlin
     :start-after: START 5
     :end-before: END 5
 
-If we run the client with ``Visualise`` we should see a simple graph being drawn as new transactions are being created
-by the seller runs.
-
-That's it! We saw how to connect to the node and stream data from it.
+If we run the client with ``Visualise`` we should see a simple random graph being drawn as new transactions are being created.

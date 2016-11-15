@@ -1,8 +1,8 @@
 package net.corda.client.model
 
 import com.google.common.net.HostAndPort
+import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.CordaRPCClient
-import net.corda.core.contracts.ClientToServiceCommand
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
@@ -12,7 +12,9 @@ import net.corda.node.services.config.NodeSSLConfiguration
 import net.corda.node.services.messaging.CordaRPCOps
 import net.corda.node.services.messaging.StateMachineInfo
 import net.corda.node.services.messaging.StateMachineUpdate
-import javafx.beans.property.SimpleObjectProperty
+import net.corda.node.services.messaging.startProtocol
+import net.corda.protocols.CashCommand
+import net.corda.protocols.CashProtocol
 import rx.Observable
 import rx.subjects.PublishSubject
 
@@ -46,8 +48,8 @@ class NodeMonitorModel {
     val progressTracking: Observable<ProgressTrackingEvent> = progressTrackingSubject
     val networkMap: Observable<NetworkMapCache.MapChange> = networkMapSubject
 
-    private val clientToServiceSource = PublishSubject.create<ClientToServiceCommand>()
-    val clientToService: PublishSubject<ClientToServiceCommand> = clientToServiceSource
+    private val clientToServiceSource = PublishSubject.create<CashCommand>()
+    val clientToService: PublishSubject<CashCommand> = clientToServiceSource
 
     val proxyObservable = SimpleObjectProperty<CordaRPCOps?>()
 
@@ -98,7 +100,7 @@ class NodeMonitorModel {
 
         // Client -> Service
         clientToServiceSource.subscribe {
-            proxy.executeCommand(it)
+            proxy.startProtocol(::CashProtocol, it)
         }
         proxyObservable.set(proxy)
     }

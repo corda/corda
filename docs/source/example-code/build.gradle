@@ -19,6 +19,14 @@ repositories {
     }
 }
 
+sourceSets {
+    main {
+        resources {
+            srcDir "../../../config/dev"
+        }
+    }
+}
+
 dependencies {
     compile project(':core')
     compile project(':client')

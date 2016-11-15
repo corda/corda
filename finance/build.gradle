@@ -1,6 +1,7 @@
 apply plugin: 'kotlin'
 apply plugin: CanonicalizerPlugin
 apply plugin: DefaultPublishTasks
+apply plugin: QuasarPlugin
 
 repositories {
     mavenLocal()

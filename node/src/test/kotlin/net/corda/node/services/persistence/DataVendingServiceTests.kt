@@ -96,7 +96,7 @@ class DataVendingServiceTests {
 
     private class NotifyTxProtocol(val otherParty: Party, val stx: SignedTransaction) : ProtocolLogic<Unit>() {
         @Suspendable
-        override fun call() = send(otherParty, NotifyTxRequest(stx, emptySet()))
+        override fun call() = send(otherParty, NotifyTxRequest(stx))
     }
 
 }

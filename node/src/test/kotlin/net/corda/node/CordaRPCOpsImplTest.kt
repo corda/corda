@@ -12,9 +12,13 @@ import net.corda.node.services.User
 import net.corda.node.services.messaging.CURRENT_RPC_USER
 import net.corda.node.services.messaging.PermissionException
 import net.corda.node.services.messaging.StateMachineUpdate
+import net.corda.node.services.messaging.startProtocol
 import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.startProtocolPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.databaseTransaction
+import net.corda.protocols.CashCommand
+import net.corda.protocols.CashProtocol
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.node.MockNetwork
@@ -44,7 +48,7 @@ class CordaRPCOpsImplTest {
         aliceNode = network.createNode(networkMapAddress = networkMap.info.address)
         notaryNode = network.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type), networkMapAddress = networkMap.info.address)
         rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
-        CURRENT_RPC_USER.set(User("user", "pwd", permissions = setOf(CordaRPCOpsImpl.CASH_PERMISSION)))
+        CURRENT_RPC_USER.set(User("user", "pwd", permissions = setOf(startProtocolPermission<CashProtocol>())))
 
         stateMachineUpdates = rpc.stateMachinesAndUpdates().second
         transactions = rpc.verifiedTransactions().second
@@ -63,8 +67,8 @@ class CordaRPCOpsImplTest {
 
         // Tell the monitoring service node to issue some cash
         val recipient = aliceNode.info.legalIdentity
-        val outEvent = ClientToServiceCommand.IssueCash(Amount(quantity, GBP), ref, recipient, notaryNode.info.notaryIdentity)
-        rpc.executeCommand(outEvent)
+        val outEvent = CashCommand.IssueCash(Amount(quantity, GBP), ref, recipient, notaryNode.info.notaryIdentity)
+        rpc.startProtocol(::CashProtocol, outEvent)
         network.runNetwork()
 
         val expectedState = Cash.State(Amount(quantity,
@@ -101,7 +105,7 @@ class CordaRPCOpsImplTest {
     @Test
     fun `issue and move`() {
 
-        rpc.executeCommand(ClientToServiceCommand.IssueCash(
+        rpc.startProtocol(::CashProtocol, CashCommand.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                 recipient = aliceNode.info.legalIdentity,
@@ -110,7 +114,7 @@ class CordaRPCOpsImplTest {
 
         network.runNetwork()
 
-        rpc.executeCommand(ClientToServiceCommand.PayCash(
+        rpc.startProtocol(::CashProtocol, CashCommand.PayCash(
                 amount = Amount(100, Issued(PartyAndReference(aliceNode.info.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
                 recipient = aliceNode.info.legalIdentity
         ))
@@ -182,7 +186,7 @@ class CordaRPCOpsImplTest {
     fun `cash command by user not permissioned for cash`() {
         CURRENT_RPC_USER.set(User("user", "pwd", permissions = emptySet()))
         assertThatExceptionOfType(PermissionException::class.java).isThrownBy {
-            rpc.executeCommand(ClientToServiceCommand.IssueCash(
+            rpc.startProtocol(::CashProtocol, CashCommand.IssueCash(
                     amount = Amount(100, USD),
                     issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                     recipient = aliceNode.info.legalIdentity,

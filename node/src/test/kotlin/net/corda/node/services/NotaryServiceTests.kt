@@ -101,7 +101,7 @@ class NotaryServiceTests {
 
         net.runNetwork()
 
-        val ex = assertFailsWith(ExecutionException::class) { future.get() }
+        val ex = assertFailsWith(ExecutionException::class) { future.resultFuture.get() }
         val notaryError = (ex.cause as NotaryException).error as NotaryError.Conflict
         assertEquals(notaryError.tx, stx.tx)
         notaryError.conflict.verified()
@@ -110,7 +110,7 @@ class NotaryServiceTests {
 
     private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.WithKey> {
         val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.services.startProtocol(protocol)
+        val future = clientNode.services.startProtocol(protocol).resultFuture
         net.runNetwork()
         return future
     }

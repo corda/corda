@@ -34,7 +34,7 @@ class RPCUserServiceImplTest {
     @Test
     fun `single permission, which is in lower case`() {
         val service = loadWithContents("rpcUsers : [{ user=user1, password=letmein, permissions=[cash] }]")
-        assertThat(service.getUser("user1")?.permissions).containsOnly("CASH")
+        assertThat(service.getUser("user1")?.permissions).containsOnly("cash")
     }
 
     @Test

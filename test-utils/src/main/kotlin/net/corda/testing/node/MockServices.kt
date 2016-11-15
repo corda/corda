@@ -1,6 +1,5 @@
 package net.corda.testing.node
 
-import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.*
 import net.corda.core.messaging.MessagingService
@@ -9,6 +8,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
 import net.corda.core.protocols.ProtocolLogic
+import net.corda.core.protocols.ProtocolStateMachine
 import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
@@ -38,7 +38,7 @@ import javax.annotation.concurrent.ThreadSafe
  * building chains of transactions and verifying them. It isn't sufficient for testing protocols however.
  */
 open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
-    override fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ListenableFuture<T> {
+    override fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ProtocolStateMachine<T> {
         throw UnsupportedOperationException("not implemented")
     }
 

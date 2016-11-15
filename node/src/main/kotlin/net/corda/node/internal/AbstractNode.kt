@@ -14,6 +14,7 @@ import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChangeType
 import net.corda.core.protocols.ProtocolLogic
 import net.corda.core.protocols.ProtocolLogicRefFactory
+import net.corda.core.protocols.ProtocolStateMachine
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -43,6 +44,8 @@ import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.services.vault.CashBalanceAsMetricsObserver
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.*
+import net.corda.protocols.CashCommand
+import net.corda.protocols.CashProtocol
 import net.corda.protocols.sendRequest
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
@@ -110,7 +113,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
         override val protocolLogicRefFactory: ProtocolLogicRefFactory get() = protocolLogicFactory
 
-        override fun <T> startProtocol(logic: ProtocolLogic<T>): ListenableFuture<T> = smm.add(logic).resultFuture
+        override fun <T> startProtocol(logic: ProtocolLogic<T>): ProtocolStateMachine<T> = smm.add(logic)
 
         override fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>) {
             require(markerClass !in protocolFactories) { "${markerClass.java.name} has already been used to register a protocol" }
@@ -307,8 +310,24 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         }
     }
 
+    private val defaultProtocolWhiteList: Map<Class<out ProtocolLogic<*>>, Set<Class<*>>> = mapOf(
+            CashProtocol::class.java to setOf(
+                    CashCommand.IssueCash::class.java,
+                    CashCommand.PayCash::class.java,
+                    CashCommand.ExitCash::class.java
+            )
+    )
     private fun initialiseProtocolLogicFactory(): ProtocolLogicRefFactory {
         val protocolWhitelist = HashMap<String, Set<String>>()
+
+        for ((protocolClass, extraArgumentTypes) in defaultProtocolWhiteList) {
+            val argumentWhitelistClassNames = HashSet(extraArgumentTypes.map { it.name })
+            protocolClass.constructors.forEach {
+                it.parameters.mapTo(argumentWhitelistClassNames) { it.type.name }
+            }
+            protocolWhitelist.merge(protocolClass.name, argumentWhitelistClassNames, { x, y -> x + y })
+        }
+
         for (plugin in pluginRegistries) {
             for ((className, classWhitelist) in plugin.requiredProtocols) {
                 protocolWhitelist.merge(className, classWhitelist, { x, y -> x + y })

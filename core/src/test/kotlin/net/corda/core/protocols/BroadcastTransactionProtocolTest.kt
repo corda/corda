@@ -19,7 +19,7 @@ class BroadcastTransactionProtocolTest {
 
     class NotifyTxRequestMessageGenerator : Generator<NotifyTxRequest>(NotifyTxRequest::class.java) {
         override fun generate(random: SourceOfRandomness, status: GenerationStatus): NotifyTxRequest {
-            return NotifyTxRequest(tx = SignedTransactionGenerator().generate(random, status), events = setOf())
+            return NotifyTxRequest(tx = SignedTransactionGenerator().generate(random, status))
         }
     }
 

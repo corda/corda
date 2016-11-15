@@ -80,7 +80,7 @@ class ValidatingNotaryServiceTests {
 
     private fun runClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.WithKey> {
         val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.services.startProtocol(protocol)
+        val future = clientNode.services.startProtocol(protocol).resultFuture
         net.runNetwork()
         return future
     }

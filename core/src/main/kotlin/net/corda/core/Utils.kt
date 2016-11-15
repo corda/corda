@@ -99,6 +99,21 @@ inline fun <T> SettableFuture<T>.catch(block: () -> T) {
     }
 }
 
+fun <A> ListenableFuture<A>.toObservable(): Observable<A> {
+    return Observable.create { subscriber ->
+        then {
+            try {
+                subscriber.onNext(get())
+                subscriber.onCompleted()
+            } catch (e: ExecutionException) {
+                subscriber.onError(e.cause!!)
+            } catch (t: Throwable) {
+                subscriber.onError(t)
+            }
+        }
+    }
+}
+
 /** Allows you to write code like: Paths.get("someDir") / "subdir" / "filename" but using the Paths API to avoid platform separator problems. */
 operator fun Path.div(other: String): Path = resolve(other)
 fun Path.createDirectory(vararg attrs: FileAttribute<*>): Path = Files.createDirectory(this, *attrs)
