@@ -1,8 +1,6 @@
-package com.r3corda.node.services
+package net.corda.node.services
 
 import com.typesafe.config.ConfigFactory
-import net.corda.node.services.RPCUserServiceImpl
-import net.corda.node.services.User
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
