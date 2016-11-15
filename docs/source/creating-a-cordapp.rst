@@ -16,6 +16,7 @@ specific details of the implementation, but you can extend the server in the fol
 2. Service plugins: Register your services (see below).
 3. Web APIs: You may register your own endpoints under /api/ of the built-in web server.
 4. Static web endpoints: You may register your own static serving directories for serving web content.
+5. Registering your additional classes used in RPC.
 
 Services
 --------

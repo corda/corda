@@ -1,5 +1,7 @@
 package net.corda.core.node
 
+import com.esotericsoftware.kryo.Kryo
+
 /**
  * Implement this interface on a class advertised in a META-INF/services/net.corda.core.node.CordaPluginRegistry file
  * to extend a Corda node with additional application services.
@@ -35,4 +37,16 @@ abstract class CordaPluginRegistry {
      * allow access to the protocol factory and protocol initiation entry points there.
      */
     open val servicePlugins: List<Class<*>> = emptyList()
+
+    /**
+     * Optionally register types with [Kryo] for use over RPC, as we lock down the types that can be serialised in this
+     * particular use case.
+     * For example, if you add an RPC interface that carries some contract states back and forth, you need to register
+     * those classes here using the [register] method on Kryo.
+     *
+     * TODO: Kryo and likely the requirement to register classes here will go away when we replace the serialization implementation.
+     *
+     * @return true if you register types, otherwise you will be filtered out of the list of plugins considered in future.
+     */
+    open fun registerRPCKryoTypes(kryo: Kryo): Boolean = false
 }

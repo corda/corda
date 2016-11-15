@@ -20,10 +20,7 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
-import net.corda.core.node.NodeInfo
-import net.corda.core.node.PhysicalLocation
-import net.corda.core.node.ServiceEntry
-import net.corda.core.node.WorldCoordinate
+import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.serialization.*
@@ -117,6 +114,14 @@ class PermissionException(msg: String) : RuntimeException(msg)
 // This is annoying to write out, but will make it easier to formalise the wire protocol when the time comes,
 // because we can see everything we're using in one place.
 private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null) : Kryo() {
+    companion object {
+        private val pluginRegistries: List<CordaPluginRegistry> by lazy {
+            val unusedKryo = Kryo()
+            // Sorting required to give a stable ordering, as Kryo allocates integer tokens for each registered class.
+            ServiceLoader.load(CordaPluginRegistry::class.java).toList().filter { it.registerRPCKryoTypes(unusedKryo) }.sortedBy { it.javaClass.name }
+        }
+    }
+
     init {
         isRegistrationRequired = true
         // Allow construction of objects using a JVM backdoor that skips invoking the constructors, if there is no
@@ -215,6 +220,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(ProtocolHandle::class.java)
         register(KryoException::class.java)
         register(StringBuffer::class.java)
+        pluginRegistries.forEach { it.registerRPCKryoTypes(this) }
     }
 
     // Helper method, attempt to reduce boiler plate code
