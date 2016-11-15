@@ -51,6 +51,14 @@ allprojects {
     version '0.6-SNAPSHOT'
 }
 
+// Check that we are running on a Java 8 JDK. The source/targetCompatibility values above aren't sufficient to
+// guarantee this because those are properties checked by the Java plugin, but we're using Kotlin.
+//
+// We recommend a specific minor version (unfortunately, not checkable directly) because JavaFX adds APIs in
+// minor releases, so we can't work with just any Java 8, it has to be a recent one.
+if (!JavaVersion.current().java8Compatible)
+    throw new GradleException("Corda requires Java 8, please upgrade to at least 1.8.0_112")
+
 repositories {
     mavenCentral()
     jcenter()
