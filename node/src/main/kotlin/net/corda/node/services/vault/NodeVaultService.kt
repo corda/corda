@@ -18,6 +18,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.utilities.*
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -50,7 +51,8 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
     }
 
     private object TransactionNotesTable : JDBCHashedTable("${NODE_DATABASE_PREFIX}vault_txn_notes") {
-        val txnNote = txnNote("txnId", "note")
+        val txnId = secureHash("txnId").index()
+        val note = text("note")
     }
 
     private val mutex = ThreadBox(content = object {
@@ -64,11 +66,16 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         }
 
         val transactionNotes = object : AbstractJDBCHashSet<TxnNote, TransactionNotesTable>(TransactionNotesTable) {
-            override fun elementFromRow(row: ResultRow): TxnNote = TxnNote(row[table.txnNote.txId], row[table.txnNote.note])
+            override fun elementFromRow(row: ResultRow): TxnNote = TxnNote(row[table.txnId], row[table.note])
 
             override fun addElementToInsert(insert: InsertStatement, entry: TxnNote, finalizables: MutableList<() -> Unit>) {
-                insert[table.txnNote.txId] = entry.txnId
-                insert[table.txnNote.note] = entry.note
+                insert[table.txnId] = entry.txnId
+                insert[table.note] = entry.note
+            }
+
+            // TODO: caching (2nd tier db cache) and db results filtering (max records, date, other)
+            fun select(txnId: SecureHash) : Iterable<String> {
+                return table.select { table.txnId.eq(txnId) }.map { row -> row[table.note] }.toSet().asIterable()
             }
         }
 
@@ -134,7 +141,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
 
     override fun getTransactionNotes(txnId: SecureHash): Iterable<String> {
         mutex.locked {
-            return transactionNotes.filter { it.txnId == txnId }.map { it.note }
+            return transactionNotes.select(txnId)
         }
     }
 
