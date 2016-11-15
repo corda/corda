@@ -1,5 +1,7 @@
 apply plugin: 'groovy'
 apply plugin: 'net.corda.plugins.publish-utils' // TODO: Remove when bintray publishing code is in master
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
 
 dependencies {
     compile gradleApi()
@@ -8,6 +10,28 @@ dependencies {
 
 repositories {
     mavenCentral()
+}
+
+task("sourceJar", type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task("javadocJar", type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+bintray {
+    user = System.getenv('CORDA_BINTRAY_USER')
+    key = System.getenv('CORDA_BINTRAY_KEY')
+    publications = ['publishUtils']
+    pkg {
+        repo = 'corda'
+        name = 'publish-utils'
+        userOrg = 'r3'
+        licenses = ['Apache-2.0']
+    }
 }
 
 publishing {
