@@ -285,7 +285,8 @@ fun extractZipFile(zipPath: Path, toPath: Path) {
 val Throwable.rootCause: Throwable get() = Throwables.getRootCause(this)
 
 /** Representation of an operation that may have thrown an error. */
-data class ErrorOr<out A : Any> private constructor(val value: A?, val error: Throwable?) {
+data class ErrorOr<out A> private constructor(val value: A?, val error: Throwable?) {
+    // The ErrorOr holds a value iff error == null
     constructor(value: A) : this(value, null)
 
     companion object {
@@ -295,31 +296,38 @@ data class ErrorOr<out A : Any> private constructor(val value: A?, val error: Th
     }
 
     fun <T> match(onValue: (A) -> T, onError: (Throwable) -> T): T {
-        if (value != null) {
-            return onValue(value)
+        if (error == null) {
+            return onValue(value as A)
         } else {
-            return onError(error!!)
+            return onError(error)
         }
     }
 
     fun getOrThrow(): A {
-        if (value != null) {
-            return value
+        if (error == null) {
+            return value as A
         } else {
-            throw error!!
+            throw error
         }
     }
 
     // Functor
-    fun <B : Any> map(function: (A) -> B) = ErrorOr(value?.let(function), error)
+    fun <B> map(function: (A) -> B) = ErrorOr(value?.let(function), error)
 
     // Applicative
-    fun <B : Any, C : Any> combine(other: ErrorOr<B>, function: (A, B) -> C): ErrorOr<C> {
-        return ErrorOr(value?.let { a -> other.value?.let { b -> function(a, b) } }, error ?: other.error)
+    fun <B, C> combine(other: ErrorOr<B>, function: (A, B) -> C): ErrorOr<C> {
+        val newError = error ?: other.error
+        return ErrorOr(if (newError == null) null else function(value as A, other.value as B), newError)
     }
 
     // Monad
-    fun <B : Any> bind(function: (A) -> ErrorOr<B>) = value?.let(function) ?: ErrorOr.of(error!!)
+    fun <B : Any> bind(function: (A) -> ErrorOr<B>): ErrorOr<B> {
+        return if (error == null) {
+            function(value as A)
+        } else {
+            ErrorOr.of(error)
+        }
+    }
 }
 
 /**
