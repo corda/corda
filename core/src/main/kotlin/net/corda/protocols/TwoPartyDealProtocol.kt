@@ -41,7 +41,7 @@ object TwoPartyDealProtocol {
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
     data class Handshake<out T>(val payload: T, val publicKey: PublicKeyTree)
 
-    class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySig: DigitalSignature.LegallyIdentifiable)
+    class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySig: DigitalSignature.WithKey)
 
     /**
      * [Primary] at the end sends the signed tx to all the regulator parties. This a seperate workflow which needs a
@@ -160,7 +160,7 @@ object TwoPartyDealProtocol {
         }
 
         @Suspendable
-        private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.LegallyIdentifiable {
+        private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = NOTARY
             return subProtocol(NotaryProtocol.Client(stx))
         }
@@ -172,7 +172,7 @@ object TwoPartyDealProtocol {
 
         @Suspendable
         private fun sendSignatures(allPartySignedTx: SignedTransaction, ourSignature: DigitalSignature.WithKey,
-                                   notarySignature: DigitalSignature.LegallyIdentifiable): SignedTransaction {
+                                   notarySignature: DigitalSignature.WithKey): SignedTransaction {
             progressTracker.currentStep = SENDING_SIGS
             val fullySigned = allPartySignedTx + notarySignature
 

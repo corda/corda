@@ -78,7 +78,7 @@ class ValidatingNotaryServiceTests {
         assertEquals(setOf(expectedMissingKey), missingKeys)
     }
 
-    private fun runClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.LegallyIdentifiable> {
+    private fun runClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.WithKey> {
         val protocol = NotaryProtocol.Client(stx)
         val future = clientNode.services.startProtocol(protocol)
         net.runNetwork()

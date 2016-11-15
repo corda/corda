@@ -105,7 +105,7 @@ abstract class AbstractStateReplacementProtocol<T> {
         }
 
         @Suspendable
-        private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.LegallyIdentifiable {
+        private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = NOTARY
             return subProtocol(NotaryProtocol.Client(stx))
         }
