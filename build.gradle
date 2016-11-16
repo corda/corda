@@ -21,6 +21,7 @@ buildscript {
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
+        classpath 'net.corda.plugins:publish-utils:0.5'
 
         // Can run 'gradle dependencyUpdates' to find new versions of things.
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'

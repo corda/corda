@@ -8,7 +8,7 @@ import org.gradle.api.Project
 /**
  * A utility plugin that when applied will automatically create source and javadoc publishing tasks
  */
-class DefaultPublishTasks implements Plugin<Project> {
+class PublishTasks implements Plugin<Project> {
     void apply(Project project) {
         project.task("sourceJar", type: Jar, dependsOn: project.classes) {
             classifier = 'sources'
