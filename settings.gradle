@@ -11,6 +11,7 @@ include 'test-utils'
 include 'tools:explorer'
 include 'tools:loadtest'
 include 'docs/source/example-code' // Note that we are deliberately choosing to use '/' here. With ':' gradle would treat the directories as actual projects.
+include 'core:sandbox'
 include 'samples:attachment-demo'
 include 'samples:trader-demo'
 include 'samples:irs-demo'
