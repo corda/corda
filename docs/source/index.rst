@@ -10,9 +10,12 @@ of documentation you may find useful, from highest level to lowest:
 1. The `Introductory white paper`_ describes the motivating vision and background of the project. It is the kind
    of document your boss should read. It describes why the project exists and briefly compares it to alternative
    systems on the market.
-2. This user guide. It describes *how* to use the system to write apps. It assumes you already have read the
-   relevant sections of the technology white paper and now wish to learn how to use it.
-3. The `API docs`_.
+2. The `Technical white paper`_ describes the entire intended design from beginning to end. It is the kind of
+   document that you should read, or at least, read parts of. Note that because the technical white paper
+   describes the intended end state, it does not always align with the implementation.
+3. This user guide. It describes *how* to use the system to write apps, as currently implemented. It assumes
+   you already have read the relevant sections of the technology white paper and now wish to learn how to use it.
+4. The `API docs`_.
 
 .. _`Introductory white paper`: _static/corda-introductory-whitepaper.pdf
 .. _`Technical white paper`: _static/corda-technical-whitepaper.pdf
