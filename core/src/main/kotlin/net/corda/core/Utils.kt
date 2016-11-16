@@ -317,7 +317,7 @@ data class ErrorOr<out A> private constructor(val value: A?, val error: Throwabl
     // Applicative
     fun <B, C> combine(other: ErrorOr<B>, function: (A, B) -> C): ErrorOr<C> {
         val newError = error ?: other.error
-        return ErrorOr(if (newError == null) null else function(value as A, other.value as B), newError)
+        return ErrorOr(if (newError != null) null else function(value as A, other.value as B), newError)
     }
 
     // Monad
