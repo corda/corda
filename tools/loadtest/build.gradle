@@ -21,7 +21,7 @@ sourceSets {
     }
 }
 
-mainClassName = 'com.r3corda.loadtest.MainKt'
+mainClassName = 'net.corda.loadtest.MainKt'
 
 dependencies {
     compile project(':client')
