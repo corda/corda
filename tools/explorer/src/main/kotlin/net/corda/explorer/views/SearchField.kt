@@ -1,23 +1,23 @@
 package net.corda.explorer.views
 
+import javafx.collections.ObservableList
+import javafx.scene.Node
+import javafx.scene.Parent
+import javafx.scene.control.TextField
+import javafx.scene.input.MouseButton
+import javafx.scene.input.MouseEvent
 import net.corda.client.fxutils.ChosenList
 import net.corda.client.fxutils.filter
 import net.corda.client.fxutils.lift
 import net.corda.client.fxutils.map
-import javafx.collections.ObservableList
-import javafx.scene.Parent
-import javafx.scene.control.TextField
-import javafx.scene.image.ImageView
-import javafx.scene.input.MouseButton
-import javafx.scene.input.MouseEvent
 import tornadofx.UIComponent
 import tornadofx.observable
 
-class SearchField<T>(private val data: ObservableList<T>, filterCriteria: Array<(T, String) -> Boolean>) : UIComponent() {
+class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria: (T, String) -> Boolean) : UIComponent() {
 
     override val root: Parent by fxml()
     private val textField by fxid<TextField>()
-    private val clearButton by fxid<ImageView>()
+    private val clearButton by fxid<Node>()
 
     // Currently this method apply each filter to the collection and return the collection with most matches.
     // TODO : Allow user to chose if there are matches in multiple category.
@@ -30,7 +30,7 @@ class SearchField<T>(private val data: ObservableList<T>, filterCriteria: Array<
     init {
         clearButton.setOnMouseClicked { event: MouseEvent ->
             if (event.button == MouseButton.PRIMARY) {
-                textField.text = ""
+                textField.clear()
             }
         }
     }
