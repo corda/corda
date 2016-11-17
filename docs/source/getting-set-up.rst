@@ -10,22 +10,21 @@ A JVM
 
 Corda runs in a JVM and is written predominantly in Kotlin with some example use cases demonstrated in Java that we have
 incorporated to demonstrate that Kotlin and Java can work seemlessly together. We recommend the most recent production
-version of Java 8. This can be obtained `from Oracle <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_.
+version of Java 8. The JDK can be obtained `from Oracle <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_.
 Other implementations of the JVM are not actively supported, but as mentioned, we are interested in finding out any issues you
 do have with them.
 
 IntelliJ
 --------
-We strongly recommend the use of IntelliJ's Development Environment known as IDEA. Download it from
+We strongly recommend the use of IntelliJ's Development Environment known as IDEA. Download it for free from
 `JetBrains <https://www.jetbrains.com/idea/download/>`_. The primary reason we recommend this particular IDE is that it integrates
-very well with our choice of language for Corda "Kotlin", as Jetbrains also support the development of Kotlin.
+very well with our choice of language for Corda, "Kotlin", as Jetbrains also support the development of Kotlin.
 
 
 Kotlin
 ------
-Kotlin is available as a downloadable plugin to IntelliJ. As the configuration of this may change while this document is
-being prepared, we advise you to refer to IntelliJ's own reference on
-`Getting Started with Kotlin and IntelliJ <https://kotlinlang.org/docs/tutorials/getting-started.html>`_. Additionally,
+Kotlin is available as a downloadable plugin to IntelliJ. Refer to IntelliJ's instructions on
+`getting Started with Kotlin and IntelliJ <https://kotlinlang.org/docs/tutorials/getting-started.html>`_. Additionally,
 if you would like to start getting to grips with the Kotlin language, then we strongly recommend you work through some
 of the tutorials (known as "koans") as well. Also see our :doc:`further-notes-on-kotlin`.
 
@@ -33,12 +32,8 @@ of the tutorials (known as "koans") as well. Also see our :doc:`further-notes-on
 Version Control via Git
 -----------------------
 
-We use git to version control Corda. However, git installation is not essential to install and use Corda - it is possible
-to download a snapshot "M" release of the code and work with that. Nonetheless, we recommend that you do use git in order
-to easily keep up-to-date with the software as it progresses.
-
-The authorative place to obtain git is from the main `git website <https://git-scm.com/downloads>`_ but
-it may be the case that your operating system provides git with a supported utility (e.g. for Apple, git is provided along
+We use git to version control Corda. The authorative place to obtain git is from the main `git website <https://git-scm.com/downloads>`_
+but it may be the case that your operating system provides git with a supported utility (e.g. for Apple, git is provided along
 with XCode - their free development environment). If this is the case, we would recommend you obtain git via that
 supported route.
 
