@@ -20,6 +20,22 @@ so far. We have:
 Trader demo
 -----------
 
+This demo brings up three nodes: Bank A, Bank B and a notary/network map node that they both use. Bank A will
+be the buyer, and self-issues some cash in order to acquire the commercial paper from Bank B, the seller.
+
+This can be run either from the command line (recommended for Mac/Linux/BSD users), or from inside IntelliJ.
+
+To run from the command line:
+
+1. Run ``./gradlew samples:trader-demo:deployNodes`` to create a set of configs and installs under ``samples/trader-demo/build/nodes``
+2. Run ``./samples/trader-demo/build/nodes/runnodes`` to open up three new terminal tabs/windows with the three nodes.
+3. Run ``./gradlew samples:trader-demo:runBuyer`` to set up the buyer node with some self-issued cash. This step
+   is not expected to print much.
+4. Run ``./gradlew samples:trader-demo:runSeller`` to trigger the transaction. You can see both sides of the
+   trade print their progress and final transaction state in the bank node tabs/windows.
+
+To run from IntelliJ:
+
 1. Open the Corda project in IntelliJ and run the "Install" configuration
 2. Open the Corda samples project in IntelliJ and run the "Trader Demo: Run Nodes" configuration
 3. Run "Trader Demo: Run Buyer"
