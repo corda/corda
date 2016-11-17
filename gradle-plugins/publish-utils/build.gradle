@@ -1,5 +1,5 @@
 apply plugin: 'groovy'
-apply plugin: DefaultPublishTasks
+apply plugin: 'net.corda.plugins.publish-utils' // TODO: Remove when bintray publishing code is in master
 
 dependencies {
     compile gradleApi()

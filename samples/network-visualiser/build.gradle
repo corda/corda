@@ -25,6 +25,10 @@ repositories {
     maven {
         url 'https://dl.bintray.com/kotlin/exposed'
     }
+    // A hack to allow the samples to use the locally built corda.jar. Do not copy in other cordapps.
+    flatDir {
+        dirs rootProject.buildDir.toString() + '/libs'
+    }
 }
 
 dependencies {

@@ -209,7 +209,7 @@ class Node {
      * @return A file representing the Corda JAR.
      */
     private File verifyAndGetCordaJar() {
-        def maybeCordaJAR = project.configurations.runtime.filter { it.toString().contains("corda-${project.rootProject.corda_version}.jar")}
+        def maybeCordaJAR = project.configurations.runtime.filter { it.toString().contains("corda-${project.corda_version}.jar")}
         if(maybeCordaJAR.size() == 0) {
             throw new RuntimeException("No Corda Capsule JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-${project.corda_version}.jar\"")
         } else {

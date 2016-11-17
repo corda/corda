@@ -35,7 +35,6 @@ repositories {
     }
 }
 
-
 sourceSets {
     main {
         resources {
