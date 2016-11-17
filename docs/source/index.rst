@@ -1,5 +1,5 @@
-Welcome to the Corda!
-=====================
+Welcome to the Corda documentation!
+===================================
 
 .. warning:: This build of the docs is from the *master branch*, not a milestone release. It may not reflect the
    current state of the code.
@@ -59,6 +59,7 @@ Read on to learn:
    :caption: CorDapps
 
    creating-a-cordapp
+   tutorial-cordapp
 
 .. toctree::
    :maxdepth: 2
@@ -68,7 +69,6 @@ Read on to learn:
    tutorial-contract
    tutorial-contract-clauses
    tutorial-test-dsl
-   tutorial-cordapp
    tutorial-clientrpc-api
    flow-state-machines
    flow-testing

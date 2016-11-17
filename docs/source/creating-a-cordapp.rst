@@ -1,5 +1,5 @@
-Creating a CorDapp
-==================
+CorDapps Background
+===================
 
 A Cordapp is an application that runs on the Corda platform using the platform APIs and plugin system. They are self
 contained in separate JARs from the node server JAR that are created and distributed.
