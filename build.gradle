@@ -103,7 +103,7 @@ tasks.withType(Test) {
 // TODO: Move fat JAR building into node subproject.
 task buildCordaJAR(type: FatCapsule, dependsOn: ['quasarScan', 'buildCertSigningRequestUtilityJAR']) {
     applicationClass 'net.corda.node.MainKt'
-    archiveName 'corda.jar'
+    archiveName "corda-${corda_version}.jar"
     applicationSource = files(project.tasks.findByName('jar'), 'node/build/classes/main/CordaCaplet.class')
 
     capsuleManifest {
@@ -125,7 +125,7 @@ task buildCertSigningRequestUtilityJAR(type: FatCapsule, dependsOn: project.jar)
 }
 
 // TODO: Use the Cordformation plugin.
-task installTemplateNodes(dependsOn: 'buildCordaJAR') << {
+task deployNodes(dependsOn: 'buildCordaJAR') << {
     copy {
         from buildCordaJAR.outputs.getFiles()
         from 'config/dev/nameservernode.conf'

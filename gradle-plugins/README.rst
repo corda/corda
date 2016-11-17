@@ -9,3 +9,11 @@ the rest of the Corda libraries.
      Some of the plugins here are duplicated with the ones in buildSrc. While the duplication is unwanted any
      currently known solution (such as publishing from buildSrc or setting up a separate project/repo) would
      introduce a two step build which is less convenient.
+
+Installing
+----------
+
+If you need to bootstrap the corda repository you can install these plugins with
+
+
+     gradle install

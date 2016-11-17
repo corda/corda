@@ -1,5 +1,5 @@
 apply plugin: 'groovy'
-apply plugin: DefaultPublishTasks
+apply plugin: 'net.corda.plugins.publish-utils'
 
 dependencies {
     compile gradleApi()

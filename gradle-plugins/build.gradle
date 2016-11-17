@@ -1,0 +1,27 @@
+// This script exists just to allow bootstrapping the gradle plugins if maven central or jcenter are unavailable
+// or if you are developing these plugins. See the readme for more information.
+
+buildscript {
+    // Our version: bump this on release.
+    ext.corda_version = "0.6-SNAPSHOT"
+    ext.corda_published_version = "0.5" // Depend on our existing published publishing plugin.
+
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath "net.corda.plugins:publish-utils:$corda_published_version"
+    }
+}
+
+apply plugin: 'maven-publish'
+
+allprojects {
+    group 'net.corda'
+    version "$corda_version"
+}
+
+// Aliasing the publishToMavenLocal for simplicity.
+task(install, dependsOn: 'publishToMavenLocal')
+
