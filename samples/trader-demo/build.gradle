@@ -75,6 +75,9 @@ dependencies {
     compile("org.graphstream:gs-ui:1.3") {
         exclude group: "bouncycastle"
     }
+
+    // Cordapp dependencies
+    // Specify your cordapp's dependencies below, including dependent cordapps
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install']) {
