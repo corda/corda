@@ -53,7 +53,7 @@ class Cordform extends DefaultTask {
      */
     protected Node getNodeByName(String name) {
         for(Node node : nodes) {
-            if(node.name == networkMapNodeName) {
+            if(node.name == name) {
                 return node
             }
         }
