@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<restrict>
+    <http>
+        <method>post</method>
+        <method>get</method>
+    </http>
+
+    <commands>
+        <command>read</command>
+        <command>list</command>
+    </commands>
+
+    <!-- allow anyone to force a garbage collection -->
+    <allow>
+        <mbean>
+            <name>java.lang:type=Memory</name>
+            <operation>gc</operation>
+        </mbean>
+    </allow>
+
+    <!-- in case we ever end up using c3pio connection pooling, this example from the docs prevents the password being exported -->
+    <deny>
+        <mbean>
+            <name>com.mchange.v2.c3p0:type=PooledDataSource,*</name>
+            <attribute>properties</attribute>
+        </mbean>
+    </deny>
+
+</restrict>
