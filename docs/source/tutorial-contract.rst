@@ -7,28 +7,52 @@
 Writing a contract
 ==================
 
-This tutorial will take you through how the commercial paper contract works. This uses a simple contract structure of
-everything being in one contract class, while most actual contracts in Corda are broken into clauses (which we'll
-discuss in the next tutorial). Clauses help reduce tedious boilerplate, but it's worth understanding how a
-contract is built without them before starting.
+This tutorial will take you through writing a contract, using a simple commercial paper contract as an example.
+Smart contracts in Corda have three key elements:
 
-You can see the full Kotlin version of this contract in the code as ``CommercialPaperLegacy``. The code in this
-tutorial is available in both Kotlin and Java. You can quickly switch between them to get a feeling for how
-Kotlin syntax works.
+* Executable code (validation logic)
+* State objects
+* Commands
+
+The core of a smart contract is the executable code which validates changes to state objects in transactions. State
+objects are the data held on the ledger, which represent the current state of an instance of a contract, and are used as
+inputs and outputs of transactions. Commands are additional data included in transactions to describe what is going on,
+used to instruct the executable code on how to verify the transaction. For example an ``Issue`` command may indicate
+that the validation logic should expect to see an output which does not exist as an input, issued by the same entity
+that signed the command.
+
+The first thing to think about with a new contract is the lifecycle of contract states, how are they issued, what happens
+to them after they are issued, and how are they destroyed (if applicable). For the commercial paper contract, states are
+issued by a legal entity which wishes to create a contract to pay money in the future (the maturity date), in return for
+a lesser payment now. They are then transferred (moved) to another owner as part of a transaction where the issuer
+receives funds in payment, and later (after the maturity date) are destroyed (redeemed) by paying the owner the face
+value of the commercial paper.
+
+This lifecycle for commercial paper is illustrated in the diagram below:
+
+.. image:: tutorial-contract-cp.png
 
 Where to put your code
 ----------------------
 
-A CorDapp is a collection of contracts, state definitions, flows and other ways to extend the server. To create
-one you would just create a Java-style project as normal, with your choice of build system (Maven, Gradle, etc).
-Then add a dependency on ``net.corda.core:0.X`` where X is the milestone number you are depending on. The core
-module defines the base classes used in this tutorial.
+A CorDapp is a collection of contracts, state definitions, flows and other ways to extend the Corda platform.
+To create one you would typically clone the CorDapp template project ("cordapp-template"), which provides an example
+structure for the code. Alternatively you can just create a Java-style project as normal, with your choice of build
+system (Maven, Gradle, etc), then add a dependency on ``net.corda.core:0.X`` where X is the milestone number you are
+depending on. The core module defines the base classes used in this tutorial.
 
 Starting the commercial paper class
 -----------------------------------
 
-A smart contract is a class that implements the ``Contract`` interface. This can be either implemented directly, or
-by subclassing an abstract contract such as ``OnLedgerAsset``.
+A smart contract is a class that implements the ``Contract`` interface. This can be either implemented directly, as done
+here, or by subclassing an abstract contract such as ``OnLedgerAsset``. The heart of any contract in Corda is the
+``verify()'' function, which determined whether any given transaction is valid. This example shows how to write a
+``verify()'' function from scratch. A later tutorial will introduce "clauses", which are reusable chunks of verification
+logic, but first it's worth understanding how a contract is built without them.
+
+You can see the full Kotlin version of this contract in the code as ``CommercialPaperLegacy``. The code in this
+tutorial is available in both Kotlin and Java. You can quickly switch between them to get a feeling for how
+Kotlin syntax works.
 
 .. container:: codeset
 
@@ -71,7 +95,10 @@ piece of issued paper.
 States
 ------
 
-A state is a class that stores data that is checked by the contract.
+A state is a class that stores data that is checked by the contract. A commercial paper state is structured as below:
+
+.. image:: tutorial-contract-cp-state.png
+
 
 .. container:: codeset
 
@@ -174,7 +201,7 @@ A state is a class that stores data that is checked by the contract.
 We define a class that implements the ``ContractState`` interface.
 
 The ``ContractState`` interface requires us to provide a ``getContract`` method that returns an instance of the
-contract class itself. In future, this will change to support dynamic loading of contracts with versioning
+contract class itself. In future, this may change to support dynamic loading of contracts with versioning
 and signing constraints, but for now this is how it's written.
 
 We have four fields in our state:
@@ -202,8 +229,9 @@ The Java code compiles to almost identical bytecode as the Kotlin version, but a
 Commands
 --------
 
-The logic for a contract may vary depending on what stage of a lifecycle it is automating. So it can be useful to
-pass additional data into the contract code that isn't represented by the states which exist permanently in the ledger.
+The validation logic for a contract may vary depending on what stage of a state's lifecycle it is automating. So it can
+be useful to pass additional data into the contract code that isn't represented by the states which exist permanently
+in the ledger, in order to clarify intent of a transaction.
 
 For this purpose we have commands. Often they don't need to contain any data at all, they just need to exist. A command
 is a piece of data associated with some *signatures*. By the time the contract runs the signatures have already been
