@@ -1,4 +1,4 @@
-package com.r3cev.corda.netmap
+package net.corda.netmap
 
 import javafx.scene.paint.Color
 

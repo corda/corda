@@ -1,4 +1,4 @@
-package com.r3cev.corda.netmap
+package net.corda.netmap
 
 import net.corda.core.utilities.ProgressTracker
 import net.corda.simulation.IRSSimulation

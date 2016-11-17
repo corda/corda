@@ -1,7 +1,5 @@
-package com.r3cev.corda.netmap
+package net.corda.netmap
 
-import com.r3cev.corda.netmap.VisualiserViewModel.Style
-import net.corda.core.utilities.ProgressTracker
 import javafx.animation.KeyFrame
 import javafx.animation.Timeline
 import javafx.application.Platform
@@ -22,6 +20,8 @@ import javafx.scene.shape.Polygon
 import javafx.scene.text.Font
 import javafx.stage.Stage
 import javafx.util.Duration
+import net.corda.core.utilities.ProgressTracker
+import net.corda.netmap.VisualiserViewModel.Style
 
 data class TrackerWidget(val vbox: VBox, val cursorBox: Pane, val label: Label, val cursor: Polygon)
 

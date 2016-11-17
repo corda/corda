@@ -1,14 +1,6 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
+package net.corda.netmap
 
-package com.r3cev.corda.netmap
-
-import com.r3cev.corda.netmap.VisualiserViewModel.Style
+import net.corda.netmap.VisualiserViewModel.Style
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.serialization.deserialize
 import net.corda.core.then

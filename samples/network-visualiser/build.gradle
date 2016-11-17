@@ -14,6 +14,7 @@ buildscript {
 apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'idea'
+apply plugin: 'application'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'us.kirchmeier.capsule'
 
@@ -57,8 +58,10 @@ idea {
     }
 }
 
+mainClassName = 'net.corda.netmap.NetworkMapVisualiser'
+
 task deployVisualiser(type: FatCapsule) {
-    applicationClass 'net.corda.netmap.NetworkExplorerKt'
+    applicationClass 'net.corda.netmap.NetworkMapVisualiser'
     reallyExecutable
     capsuleManifest {
         minJavaVersion = '1.8.0'
