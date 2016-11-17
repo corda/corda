@@ -90,7 +90,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         cordapps = []
     }
     node {
-        name "NodeA"
+        name "Bank A"
         dirName "nodea"
         nearestCity "London"
         advertisedServices = []
@@ -99,7 +99,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         cordapps = []
     }
     node {
-        name "NodeB"
+        name "Bank B"
         dirName "nodeb"
         nearestCity "New York"
         advertisedServices = []

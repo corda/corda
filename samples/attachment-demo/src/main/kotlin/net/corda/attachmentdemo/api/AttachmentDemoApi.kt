@@ -50,7 +50,7 @@ class AttachmentDemoApi(val services: ServiceHub) {
 
             // Send the transaction to the other recipient
             val tx = ptx.toSignedTransaction()
-            services.invokeProtocolAsync<Unit>(FinalityProtocol::class.java, tx, emptySet<CashCommand>(), setOf(it)).resultFuture.success {
+            services.invokeProtocolAsync<Unit>(FinalityProtocol::class.java, tx, setOf(it)).resultFuture.success {
                 logger.info("Successfully sent attachment with the FinalityProtocol")
             }.failure {
                 logger.error("Failed to send attachment with the FinalityProtocol")
