@@ -1,14 +1,13 @@
 package net.corda.plugins
 
-import org.gradle.api.internal.file.AbstractFileCollection
-import org.gradle.api.Project
-import java.nio.file.Files
-import java.nio.charset.StandardCharsets
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigValueFactory
 import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.config.ConfigValueFactory
+import org.gradle.api.Project
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 /**
  * Represents a node that will be installed.
  */
@@ -212,7 +211,7 @@ class Node {
     private File verifyAndGetCordaJar() {
         def maybeCordaJAR = project.configurations.runtime.filter { it.toString().contains("corda-${project.corda_version}.jar")}
         if(maybeCordaJAR.size() == 0) {
-            throw new RuntimeException("No Corda Capsule JAR found. Have you deployed the Corda project to Maven?")
+            throw new RuntimeException("No Corda Capsule JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-${project.corda_version}.jar\"")
         } else {
             def cordaJar = maybeCordaJAR.getSingleFile()
             assert(cordaJar.isFile())

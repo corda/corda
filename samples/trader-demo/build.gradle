@@ -60,6 +60,7 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
     // Corda integration dependencies
+    compile "net.corda:corda:$corda_version"   // TODO
     compile project(':core')
     compile project(':client')
     compile project(':node')
@@ -79,7 +80,7 @@ dependencies {
     // Specify your cordapp's dependencies below, including dependent cordapps
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install']) {
     directory "./build/nodes"
     networkMap "Controller"
     node {

@@ -33,6 +33,7 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
     // Corda integration dependencies
+    compile "net.corda:corda:$corda_version"   // TODO
     compile project(':core')
     compile project(':client')
     compile project(':node')
@@ -57,7 +58,7 @@ idea {
 }
 
 task deployVisualiser(type: FatCapsule) {
-    applicationClass 'com.r3cev.corda.netmap.NetworkExplorerKt'
+    applicationClass 'net.corda.netmap.NetworkExplorerKt'
     reallyExecutable
     capsuleManifest {
         minJavaVersion = '1.8.0'
