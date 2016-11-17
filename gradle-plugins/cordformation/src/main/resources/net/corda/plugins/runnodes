@@ -14,6 +14,7 @@ if which osascript >/dev/null; then
         if [ -d $dir ]; then
             script="$script
     tell application \"System Events\" to tell process \"Terminal\" to keystroke \"t\" using command down
+    delay 0.5
     do script \"cd $rootdir/$dir; java -jar JAR_NAME; exit\" in window 1"
             first=false
         fi
