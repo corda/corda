@@ -14,9 +14,9 @@ public class StateViewer {
 
     public static void main(String[] args) {
         JFrame frame = new JFrame("StateViewer");
-        List<Pair<String, Object>> props = new ArrayList<>();
-        props.add(new Pair<>("a", 123));
-        props.add(new Pair<>("things", "bar"));
+        List<Pair<String, Object>> props = new ArrayList<Pair<String, Object>>();
+        props.add(new Pair<String, Object>("a", 123));
+        props.add(new Pair<String, Object>("things", "bar"));
         frame.setContentPane(new StateViewer(props).root);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
@@ -37,7 +37,7 @@ public class StateViewer {
         frame.setVisible(true);
     }
 
-    private StateViewer(List<Pair<String, Object>> props) {
+    private StateViewer(final List<Pair<String, Object>> props) {
         propsTable.setModel(new AbstractTableModel() {
             @Override
             public int getRowCount() {
