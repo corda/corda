@@ -12,3 +12,8 @@ include 'gradle-plugins:quasar-utils'
 include 'gradle-plugins:publish-utils'
 include 'gradle-plugins:cordformation'
 include 'docs/source/example-code' // Note that we are deliberately choosing to use '/' here. With ':' gradle would treat the directories as actual projects.
+include 'samples:attachment-demo'
+include 'samples:trader-demo'
+include 'samples:irs-demo'
+include 'samples:network-visualiser'
+include 'samples:simm-valuation-demo'

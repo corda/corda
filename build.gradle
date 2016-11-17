@@ -1,4 +1,7 @@
 buildscript {
+    // Our version: bump this on release.
+    ext.corda_version = "0.6-SNAPSHOT"
+
     ext.kotlin_version = '1.0.5'
     ext.quasar_version = '0.7.6'
     ext.asm_version = '0.5.3'
@@ -46,9 +49,8 @@ allprojects {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
     }
 
-    // Our version: bump this on release.
     group 'net.corda'
-    version '0.6-SNAPSHOT'
+    version "$corda_version"
 }
 
 // Check that we are running on a Java 8 JDK. The source/targetCompatibility values above aren't sufficient to

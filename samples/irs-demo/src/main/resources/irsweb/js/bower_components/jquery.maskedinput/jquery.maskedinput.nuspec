@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>jQuery.MaskedInput</id>
+    <version>1.4.1.0</version>
+    <authors>digitalBush</authors>
+    <owners>stimms</owners>
+    <licenseUrl>https://github.com/digitalBush/jquery.maskedinput/blob/master/LICENSE</licenseUrl>
+    <projectUrl>http://digitalbush.com/projects/masked-input-plugin/</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A jQuery plugin which applies a mask to input boxes to provide both a UI hint for users as well as some rudimentary input checking.</description>
+    <tags>jQuery,plugins</tags>
+    <dependencies>
+      <dependency id="jQuery" version="1.9" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="dist/jquery.maskedinput.js" target="content\scripts" />
+    <file src="dist/jquery.maskedinput.min.js" target="content\scripts" />
+  </files>
+</package>

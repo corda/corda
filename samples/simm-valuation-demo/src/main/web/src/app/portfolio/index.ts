@@ -1,0 +1,1 @@
+export * from './portfolio.component';

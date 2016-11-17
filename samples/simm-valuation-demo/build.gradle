@@ -1,0 +1,155 @@
+buildscript {
+    ext.strata_version = '1.0.0'
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "net.corda.plugins:quasar-utils:$corda_version"
+        classpath "net.corda.plugins:publish-utils:$corda_version"
+        classpath "net.corda.plugins:cordformation:$corda_version"
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'idea'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'maven-publish'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
+}
+
+
+sourceSets {
+    main {
+        resources {
+            srcDir "../../config/dev"
+        }
+    }
+    test {
+        resources {
+            srcDir "../../config/test"
+        }
+    }
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+
+    // Corda integration dependencies
+    compile "net.corda:core:$corda_version"
+    compile "net.corda:finance:$corda_version"
+    compile "net.corda:node:$corda_version"
+    compile "net.corda:corda:$corda_version"
+    compile "net.corda:test-utils:$corda_version"
+
+    // Javax is required for webapis
+    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+
+    // Cordapp dependencies
+    // Specify your cordapp's dependencies below, including dependent cordapps
+    compile "com.opengamma.strata:strata-basics:${strata_version}"
+    compile "com.opengamma.strata:strata-product:${strata_version}"
+    compile "com.opengamma.strata:strata-data:${strata_version}"
+    compile "com.opengamma.strata:strata-calc:${strata_version}"
+    compile "com.opengamma.strata:strata-pricer:${strata_version}"
+    compile "com.opengamma.strata:strata-report:${strata_version}"
+    compile "com.opengamma.strata:strata-market:${strata_version}"
+    compile "com.opengamma.strata:strata-collect:${strata_version}"
+    compile "com.opengamma.strata:strata-loader:${strata_version}"
+    compile "com.opengamma.strata:strata-math:${strata_version}"
+}
+
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+    directory "./build/nodes"
+    networkMap "Controller"
+    node {
+        name "Controller"
+        dirName "controller"
+        nearestCity "London"
+        advertisedServices = ["corda.notary.validating"]
+        artemisPort 10002
+        webPort 10003
+        cordapps = []
+    }
+    node {
+        name "NodeA"
+        dirName "nodea"
+        nearestCity "London"
+        advertisedServices = []
+        artemisPort 10004
+        webPort 10005
+        cordapps = []
+    }
+    node {
+        name "NodeB"
+        dirName "nodeb"
+        nearestCity "New York"
+        advertisedServices = []
+        artemisPort 10006
+        webPort 10007
+        cordapps = []
+    }
+}
+
+
+task npmInstall(type: Exec) {
+    workingDir 'src/main/web'
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        commandLine 'cmd', '/c', 'npm', 'install'
+    } else {
+        commandLine 'npm', 'install'
+    }
+
+    outputs.upToDateWhen { file('src/main/web/node_modules').exists() }
+}
+
+task cleanWeb() << {
+    delete 'src/main/resources/simmvaluationweb'
+    delete 'src/main/web/dist'
+}
+
+task buildWeb(type: Exec, dependsOn: [cleanWeb, npmInstall]) {
+    workingDir 'src/main/web'
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        commandLine 'cmd', '/c', 'ng', 'build'
+    } else {
+        commandLine 'ng', 'build'
+    }
+}
+
+task installWeb(type: Copy, dependsOn: [buildWeb]) {
+    from 'src/main/web/dist'
+    into 'src/main/resources/simmvaluationweb'
+}
+
+quasarScan.dependsOn('classes')
+
+publishing {
+    publications {
+        simmvaluationdemo(MavenPublication) {
+            from components.java
+            artifactId 'simmvaluationdemo'
+
+            artifact sourceJar
+            artifact javadocJar
+        }
+    }
+}

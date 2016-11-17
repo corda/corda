@@ -1,0 +1,6 @@
+Curve Name,Value Type,Day Count,Interpolator,Left Extrapolator,Right Extrapolator
+USD-Disc,Zero,Act/Act ISDA,Linear,Flat,Flat
+USD-3ML,Zero,Act/Act ISDA,Linear,Flat,Flat
+USD-6ML,Zero,Act/Act ISDA,Linear,Flat,Flat
+GBP-Disc,Zero,Act/Act ISDA,Linear,Flat,Flat
+GBP-3ML,Zero,Act/Act ISDA,Linear,Flat,Flat

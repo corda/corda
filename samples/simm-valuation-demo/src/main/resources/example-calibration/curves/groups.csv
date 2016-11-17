@@ -1,0 +1,4 @@
+Group Name,Curve Type,Reference,Curve Name
+USD-DSCON-LIBOR3M,Discount,USD,USD-Disc
+USD-DSCON-LIBOR3M,Forward,USD-FED-FUND,USD-Disc
+USD-DSCON-LIBOR3M,Forward,USD-LIBOR-3M,USD-3ML
