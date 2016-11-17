@@ -140,6 +140,7 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
 // Composite columns for use with below Exposed helpers.
 data class PartyColumns(val name: Column<String>, val owningKey: Column<PublicKeyTree>)
 data class StateRefColumns(val txId: Column<SecureHash>, val index: Column<Int>)
+data class TxnNoteColumns(val txId: Column<SecureHash>, val note: Column<String>)
 
 /**
  * [Table] column helpers for use with Exposed, as per [varchar] etc.
@@ -154,6 +155,7 @@ fun Table.localDate(name: String) = this.registerColumn<LocalDate>(name, LocalDa
 fun Table.localDateTime(name: String) = this.registerColumn<LocalDateTime>(name, LocalDateTimeColumnType)
 fun Table.instant(name: String) = this.registerColumn<Instant>(name, InstantColumnType)
 fun Table.stateRef(txIdColumnName: String, indexColumnName: String) = StateRefColumns(this.secureHash(txIdColumnName), this.integer(indexColumnName))
+fun Table.txnNote(txIdColumnName: String, txnNoteColumnName: String) = TxnNoteColumns(this.secureHash(txIdColumnName), this.text(txnNoteColumnName))
 
 /**
  * [ColumnType] for marshalling to/from database on behalf of [PublicKey].

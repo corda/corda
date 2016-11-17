@@ -18,6 +18,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.utilities.*
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -45,9 +46,13 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         val stateRef = stateRef("transaction_id", "output_index")
     }
 
+    private data class TxnNote(val txnId: SecureHash, val note: String) {
+        override fun toString() = "$txnId: $note"
+    }
+
     private object TransactionNotesTable : JDBCHashedTable("${NODE_DATABASE_PREFIX}vault_txn_notes") {
-        val txnId = secureHash("txnId")
-        val notes = text("notes")
+        val txnId = secureHash("txnId").index()
+        val note = text("note")
     }
 
     private val mutex = ThreadBox(content = object {
@@ -60,21 +65,17 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             }
         }
 
-        val transactionNotes = object : AbstractJDBCHashMap<SecureHash, Set<String>, TransactionNotesTable>(TransactionNotesTable, loadOnInit = false) {
-            override fun keyFromRow(row: ResultRow): SecureHash {
-                return row[table.txnId]
+        val transactionNotes = object : AbstractJDBCHashSet<TxnNote, TransactionNotesTable>(TransactionNotesTable) {
+            override fun elementFromRow(row: ResultRow): TxnNote = TxnNote(row[table.txnId], row[table.note])
+
+            override fun addElementToInsert(insert: InsertStatement, entry: TxnNote, finalizables: MutableList<() -> Unit>) {
+                insert[table.txnId] = entry.txnId
+                insert[table.note] = entry.note
             }
 
-            override fun valueFromRow(row: ResultRow): Set<String> {
-                return row[table.notes].split(delimiters = ";").toSet()
-            }
-
-            override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, Set<String>>, finalizables: MutableList<() -> Unit>) {
-                insert[table.txnId] = entry.key
-            }
-
-            override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, Set<String>>, finalizables: MutableList<() -> Unit>) {
-                insert[table.notes] = entry.value.joinToString(separator = ";")
+            // TODO: caching (2nd tier db cache) and db results filtering (max records, date, other)
+            fun select(txnId: SecureHash) : Iterable<String> {
+                return table.select { table.txnId.eq(txnId) }.map { row -> row[table.note] }.toSet().asIterable()
             }
         }
 
@@ -101,14 +102,14 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         }
     })
 
-    override val currentVault: Vault get() = mutex.locked { Vault(allUnconsumedStates(), transactionNotes) }
+    override val currentVault: Vault get() = mutex.locked { Vault(allUnconsumedStates()) }
 
     override val updates: Observable<Vault.Update>
         get() = mutex.locked { _updatesPublisher }
 
     override fun track(): Pair<Vault, Observable<Vault.Update>> {
         return mutex.locked {
-            Pair(Vault(allUnconsumedStates(), transactionNotes), _updatesPublisher.bufferUntilSubscribed())
+            Pair(Vault(allUnconsumedStates()), _updatesPublisher.bufferUntilSubscribed())
         }
     }
 
@@ -134,16 +135,13 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
 
     override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
         mutex.locked {
-            val notes = transactionNotes.getOrPut(key = txnId, defaultValue = {
-                setOf(noteText)
-            })
-            transactionNotes.put(txnId, notes.plus(noteText))
+            transactionNotes.add(TxnNote(txnId, noteText))
         }
     }
 
     override fun getTransactionNotes(txnId: SecureHash): Iterable<String> {
         mutex.locked {
-            return transactionNotes.get(txnId)!!.asIterable()
+            return transactionNotes.select(txnId)
         }
     }
 

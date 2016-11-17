@@ -112,7 +112,7 @@ class NodeVaultServiceTest {
             services.vaultService.addNoteToTransaction(usefulTX.id, "USD Sample Note 1")
             services.vaultService.addNoteToTransaction(usefulTX.id, "USD Sample Note 2")
             services.vaultService.addNoteToTransaction(usefulTX.id, "USD Sample Note 3")
-            assertEquals(1, services.vaultService.currentVault.transactionNotes.toList().size)
+            val results = services.vaultService.getTransactionNotes(usefulTX.id)
             assertEquals(3, services.vaultService.getTransactionNotes(usefulTX.id).count())
 
             // Issue more Money (GBP)
@@ -124,7 +124,6 @@ class NodeVaultServiceTest {
             services.recordTransactions(listOf(anotherTX))
 
             services.vaultService.addNoteToTransaction(anotherTX.id, "GPB Sample Note 1")
-            assertEquals(2, services.vaultService.currentVault.transactionNotes.toList().size)
             assertEquals(1, services.vaultService.getTransactionNotes(anotherTX.id).count())
         }
     }
