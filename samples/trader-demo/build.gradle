@@ -82,10 +82,12 @@ dependencies {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install']) {
     directory "./build/nodes"
-    networkMap "Controller"
+    // This name "Notary" is hard-coded into TraderDemoClientApi so if you change it here, change it there too.
+    // In this demo the node that runs a standalone notary also acts as the network map server.
+    networkMap "Notary"
     node {
-        name "Controller"
-        dirName "controller"
+        name "Notary"
+        dirName "notary"
         nearestCity "London"
         advertisedServices = ["corda.notary.validating"]
         artemisPort 10002
@@ -136,4 +138,18 @@ publishing {
             artifact javadocJar
         }
     }
+}
+
+task runBuyer(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'net.corda.traderdemo.TraderDemoKt'
+    args '--role'
+    args 'BUYER'
+}
+
+task runSeller(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'net.corda.traderdemo.TraderDemoKt'
+    args '--role'
+    args 'SELLER'
 }
