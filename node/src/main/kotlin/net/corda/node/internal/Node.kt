@@ -127,7 +127,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
         }
         val legalIdentity = obtainLegalIdentity()
         val myIdentityOrNullIfNetworkMapService = if (networkMapService != null) legalIdentity.owningKey else null
-        return NodeMessagingClient(configuration, serverAddr, myIdentityOrNullIfNetworkMapService, serverThread, database)
+        return NodeMessagingClient(configuration, serverAddr, myIdentityOrNullIfNetworkMapService, serverThread, database, networkMapRegistrationFuture)
     }
 
     override fun startMessagingService(rpcOps: RPCOps) {
