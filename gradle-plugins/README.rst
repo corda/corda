@@ -16,4 +16,4 @@ Installing
 If you need to bootstrap the corda repository you can install these plugins with
 
 
-     gradle -u install
+     gradle install
