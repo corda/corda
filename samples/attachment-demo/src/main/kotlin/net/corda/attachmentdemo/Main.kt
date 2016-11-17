@@ -10,7 +10,7 @@ import net.corda.node.services.transactions.SimpleNotaryService
  */
 fun main(args: Array<String>) {
     driver(dsl = {
-        startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.Companion.type)))
+        startNode("Controller", setOf(ServiceInfo(SimpleNotaryService.Companion.type)))
         startNode("Bank A")
         startNode("Bank B")
         waitForAllNodesToFinish()

@@ -69,6 +69,17 @@ blotter to view it.
 Attachment demo
 ---------------
 
+This demo brings up three nodes, and sends a transaction containing an attachment from one to the other. To run
+it from the command line (recommended for Mac/UNIX users!):
+
+1. Run ``./gradlew samples:attachment-demo:deployNodes`` to create a set of configs and installs under ``samples/trader-demo/build/nodes``
+2. Run ``./samples/attachment-demo/build/nodes/runnodes`` to open up three new terminal tabs/windows with the three nodes.
+3. Run ``./gradlew samples:attachment-demo:runRecipient``, which will block waiting for something to happen.
+4. Run ``./gradlew samples:attachment-demo:runSender`` in another terminal window to trigger the transaction.
+   Now look at the other windows to see the output of the demo.
+
+Or you can run them from inside IntelliJ, but when done this way, all the node output is printed to a single console.
+
 1. Open the Corda project in IntelliJ and run the "Install" configuration
 2. Open the Corda samples project in IntelliJ and run the "Attachment Demo: Run Nodes" configuration
 3. Run "Attachment Demo: Run Recipient" - this waits for a trade to start

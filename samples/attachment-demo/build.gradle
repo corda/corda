@@ -91,7 +91,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install']) {
         cordapps = []
     }
     node {
-        name "NodeA"
+        name "Bank A"
         dirName "nodea"
         nearestCity "London"
         advertisedServices = []
@@ -100,7 +100,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install']) {
         cordapps = []
     }
     node {
-        name "NodeB"
+        name "Bank B"
         dirName "nodeb"
         nearestCity "New York"
         advertisedServices = []
@@ -134,4 +134,18 @@ publishing {
             artifact javadocJar
         }
     }
+}
+
+task runSender(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'net.corda.attachmentdemo.AttachmentDemoKt'
+    args '--role'
+    args 'SENDER'
+}
+
+task runRecipient(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'net.corda.attachmentdemo.AttachmentDemoKt'
+    args '--role'
+    args 'RECIPIENT'
 }
