@@ -153,7 +153,7 @@ class PortfolioApi(val services: ServiceHub) {
         return withParty(partyName) {
             val buyer = if (swap.buySell.isBuy) ownParty else it
             val seller = if (swap.buySell.isSell) ownParty else it
-            services.invokeProtocolAsync(IRSTradeProtocol.Requester::class.java, swap.toData(buyer, seller), it).get()
+            services.invokeProtocolAsync(IRSTradeProtocol.Requester::class.java, swap.toData(buyer, seller), it).resultFuture.get()
             Response.accepted().entity("{}").build()
         }
     }
@@ -268,9 +268,9 @@ class PortfolioApi(val services: ServiceHub) {
         return withParty(partyName) { otherParty ->
             val existingSwap = getPortfolioWith(otherParty)
             if (existingSwap == null) {
-                services.invokeProtocolAsync(SimmProtocol.Requester::class.java, otherParty, params.valuationDate).get()
+                services.invokeProtocolAsync(SimmProtocol.Requester::class.java, otherParty, params.valuationDate).resultFuture.get()
             } else {
-                services.invokeProtocolAsync(SimmRevaluation.Initiator::class.java, getPortfolioStateAndRefWith(otherParty).ref, params.valuationDate).get()
+                services.invokeProtocolAsync(SimmRevaluation.Initiator::class.java, getPortfolioStateAndRefWith(otherParty).ref, params.valuationDate).resultFuture.get()
             }
 
             withPortfolio(otherParty) { portfolioState ->

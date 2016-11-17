@@ -126,7 +126,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         showConsensusFor(listOf(node1, node2, regulators[0]))
 
         val instigator = Instigator(node2.info.legalIdentity, AutoOffer(notary.info.notaryIdentity, irs), node1.keyPair!!)
-        val instigatorTx: ListenableFuture<SignedTransaction> = node1.services.startProtocol(instigator)
+        val instigatorTx: ListenableFuture<SignedTransaction> = node1.services.startProtocol(instigator).resultFuture
 
         return Futures.allAsList(instigatorTx, acceptorTx).flatMap { instigatorTx }
     }

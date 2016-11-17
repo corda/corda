@@ -201,7 +201,7 @@ class NodeInterestRatesTest {
         val protocol = RatesFixProtocol(tx, filterFuns, oracle, fixOf, "0.675".bd, "0.1".bd)
         LogHelper.setLevel("rates")
         net.runNetwork()
-        val future = n1.services.startProtocol(protocol)
+        val future = n1.services.startProtocol(protocol).resultFuture
         net.runNetwork()
         future.get()
         // We should now have a valid signature over our tx from the oracle.

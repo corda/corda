@@ -65,10 +65,10 @@ class InterestRateSwapAPI(val services: ServiceHub) {
     @Consumes(MediaType.APPLICATION_JSON)
     fun storeDeal(newDeal: InterestRateSwap.State): Response {
         try {
-            services.invokeProtocolAsync(AutoOfferProtocol.Requester::class.java, newDeal).get()
+            services.invokeProtocolAsync(AutoOfferProtocol.Requester::class.java, newDeal).resultFuture.get()
             return Response.created(URI.create(generateDealLink(newDeal))).build()
         } catch (ex: Throwable) {
-            logger.info("Exception when creating deal: ${ex.toString()}")
+            logger.info("Exception when creating deal: $ex")
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.toString()).build()
         }
     }
@@ -92,7 +92,7 @@ class InterestRateSwapAPI(val services: ServiceHub) {
         val priorDemoDate = fetchDemoDate()
         // Can only move date forwards
         if (newDemoDate.isAfter(priorDemoDate)) {
-            services.invokeProtocolAsync(UpdateBusinessDayProtocol.Broadcast::class.java, newDemoDate).get()
+            services.invokeProtocolAsync(UpdateBusinessDayProtocol.Broadcast::class.java, newDemoDate).resultFuture.get()
             return Response.ok().build()
         }
         val msg = "demodate is already $priorDemoDate and can only be updated with a later date"
@@ -111,7 +111,7 @@ class InterestRateSwapAPI(val services: ServiceHub) {
     @Path("restart")
     @Consumes(MediaType.APPLICATION_JSON)
     fun exitServer(): Response {
-        services.invokeProtocolAsync(ExitServerProtocol.Broadcast::class.java, 83).get()
+        services.invokeProtocolAsync(ExitServerProtocol.Broadcast::class.java, 83).resultFuture.get()
         return Response.ok().build()
     }
 }

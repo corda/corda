@@ -56,7 +56,7 @@ class TraderDemoApi(val services: ServiceHub) {
             }
 
             // The line below blocks and waits for the future to resolve.
-            val stx = services.invokeProtocolAsync<SignedTransaction>(SellerProtocol::class.java, otherParty, params.amount.DOLLARS).get()
+            val stx = services.invokeProtocolAsync<SignedTransaction>(SellerProtocol::class.java, otherParty, params.amount.DOLLARS).resultFuture.get()
             logger.info("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(stx.tx)}")
             return Response.status(Response.Status.OK).build()
         } else {

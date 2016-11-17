@@ -60,11 +60,11 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
     // Corda integration dependencies
-    compile "net.corda:core:$corda_version"
-    compile "net.corda:finance:$corda_version"
-    compile "net.corda:node:$corda_version"
-    compile "net.corda:corda:$corda_version"
-    compile "net.corda:test-utils:$corda_version"
+    compile project(':core')
+    compile project(':client')
+    compile project(':node')
+    compile project(':finance')
+    compile project(':test-utils')
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
