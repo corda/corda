@@ -25,20 +25,37 @@ Read on to learn:
 
 .. toctree::
    :maxdepth: 2
-   :caption: Overview
+   :caption: Getting started
 
    inthebox
    getting-set-up
+   running-the-demos
+   initialmarginagreement
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Key concepts
+
    data-model
    transaction-data-types
    merkle-trees
    consensus
+
+.. toctree::
+   :maxdepth: 2
+   :caption: The Corda node
+
+   clientrpc
    messaging
    persistence
-   creating-a-cordapp
-   running-the-demos
    node-administration
    corda-configuration-files
+
+.. toctree::
+   :maxdepth: 2
+   :caption: CorDapps
+
+   creating-a-cordapp
 
 .. toctree::
    :maxdepth: 2
@@ -56,17 +73,17 @@ Read on to learn:
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contracts
+   :caption: Other
 
-   contract-catalogue
-   contract-irs
-   initialmarginagreement
+   network-simulator
+   node-explorer
 
 .. toctree::
    :maxdepth: 2
-   :caption: Node API
+   :caption: Component library
 
-   clientrpc
+   contract-catalogue
+   contract-irs
 
 .. toctree::
    :maxdepth: 2
@@ -75,7 +92,10 @@ Read on to learn:
    secure-coding-guidelines
    release-process
    release-notes
-   network-simulator
-   node-explorer
    codestyle
    building-the-docs
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Glossary
+
