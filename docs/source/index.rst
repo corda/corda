@@ -72,6 +72,7 @@ Read on to learn:
    :maxdepth: 2
    :caption: Appendix
 
+   loadtesting
    secure-coding-guidelines
    release-process
    release-notes
