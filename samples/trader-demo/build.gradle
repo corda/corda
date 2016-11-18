@@ -80,7 +80,7 @@ dependencies {
     // Specify your cordapp's dependencies below, including dependent cordapps
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install', 'build']) {
     directory "./build/nodes"
     // This name "Notary" is hard-coded into TraderDemoClientApi so if you change it here, change it there too.
     // In this demo the node that runs a standalone notary also acts as the network map server.

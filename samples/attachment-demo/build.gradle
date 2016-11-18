@@ -78,7 +78,7 @@ dependencies {
     }
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install', 'build']) {
     directory "./build/nodes"
     networkMap "Controller"
     node {
