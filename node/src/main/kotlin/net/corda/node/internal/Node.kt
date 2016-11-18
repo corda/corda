@@ -5,6 +5,8 @@ import net.corda.core.div
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.ServiceType
+import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.then
 import net.corda.core.utilities.loggerFor
 import net.corda.node.serialization.NodeClock
@@ -16,6 +18,8 @@ import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.messaging.RPCOps
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.node.services.transactions.RaftUniquenessProvider
+import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.servlets.AttachmentDownloadServlet
 import net.corda.node.servlets.Config
 import net.corda.node.servlets.DataUploadServlet
@@ -259,7 +263,14 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
         }
     }
 
-    override fun makeUniquenessProvider() = PersistentUniquenessProvider()
+    override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider {
+        return when (type) {
+            RaftValidatingNotaryService.type -> with(configuration) {
+                RaftUniquenessProvider(basedir, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
+            }
+            else -> PersistentUniquenessProvider()
+        }
+    }
 
     /**
      * If the node is persisting to an embedded H2 database, then expose this via TCP with a JDBC URL of the form:

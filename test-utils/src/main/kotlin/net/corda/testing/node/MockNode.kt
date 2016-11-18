@@ -9,9 +9,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.div
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.PhysicalLocation
-import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.VaultService
+import net.corda.core.node.services.*
 import net.corda.core.random63BitValue
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.loggerFor
@@ -147,7 +145,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // There is no need to slow down the unit tests by initialising CityDatabase
         override fun findMyLocation(): PhysicalLocation? = null
 
-        override fun makeUniquenessProvider() = InMemoryUniquenessProvider()
+        override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider = InMemoryUniquenessProvider()
 
         override fun start(): MockNode {
             super.start()

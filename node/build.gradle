@@ -145,6 +145,9 @@ dependencies {
     // Capsule is a library for building independently executable fat JARs.
     compile 'co.paralleluniverse:capsule:1.0.3'
 
+    // Java Atomix: RAFT library
+    compile 'io.atomix:atomix-all:1.0.0-rc4'
+
     // Integration test helpers
     integrationTestCompile 'junit:junit:4.12'
 
