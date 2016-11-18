@@ -8,3 +8,4 @@ Please refer to `README.md` in the individual project folders.  There are the fo
 * **Network-visualiser** A tool that uses a simulation to visualise the interaction and messages between nodes on the Corda network. Currently only works for the IRS demo.
 * **simm-valudation-demo** A demo showing two nodes reaching agreement on the valuation of a derivatives portfolio.
 * **raft-notary-demo** A simple demonstration of a node getting multiple transactions notarised by a distributed (Raft-based) notary.
+* **bank-of-corda-demo** A demo showing a node acting as an issuer of fungible assets (initially Cash)

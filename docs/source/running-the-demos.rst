@@ -13,6 +13,8 @@ so far. We have:
 5. The SIMM valuation demo, a large demo which shows two nodes agreeing on a portfolio and valuing the initial margin
    using the Standard Initial Margin Model.
 6. The distributed notary demo, which demonstrates a single node getting multiple transactions notarised by a distributed (Raft-based) notary.
+7. The Bank of Corda demo, which demonstrates a node acting as an issuer of assets (the Bank of Corda) and remote client
+    applications requesting issuance (via RPC, HTTP) of some cash on behalf of a node called Big Corporation.
 
 .. note:: If any demos don't work please jump on our mailing list and let us know.
 
@@ -155,6 +157,58 @@ by using the H2 web console:
   You will be presented with a web application that enumerates all the available tables and provides an interface for you to query them using SQL.
 - The committed states are stored in the ``NOTARY_COMMITTED_STATES`` table. Note that the raw data is not human-readable,
   but we're only interested in the row count for this demo.
+
+Bank Of Corda demo
+------------------
+
+This demo brings up three nodes: a notary, a node acting as the Bank of Corda that accepts requests for issuance of some asset
+and a node acting as Big Corporation which requests issuance of an asset (cash in this example).
+Upon receipt of a request the Bank of Corda node self-issues the asset and then transfers ownership to the requester
+after successful notarisation and recording of the issue transaction on the ledger.
+
+.. note:: The Bank of Corda is somewhat like the "Bitcoin faucet", that used to dispense free bitcoins to developers for
+          testing and experimentation purposes.
+
+To run from the command line (recommended for Mac/UNIX users!):
+
+1. Run ``./gradlew samples:bank-of-corda-demo:deployNodes`` to create a set of configs and installs under ``samples/bank-of-corda-demo/build/nodes``
+2. Run ``./samples/bank-of-corda-demo/build/nodes/runnodes`` to open up three new terminal tabs/windows with the three nodes.
+
+.. note:: to verify the Bank of Corda node is alive and running navigate to the following URL
+          http://localhost:10005/api/bank/date
+
+3. Run ``./gradlew samples:bank-of-corda-demo:runRPCCashIssue`` in another terminal window to trigger a cash issuance request
+4. Run ``./gradlew samples:bank-of-corda-demo:runWebCashIssue`` in another terminal window to trigger another cash issuance request
+   Now look at the other windows to see the output of the demo.
+
+Or you can run them from inside IntelliJ as follows:
+
+1. Open the Corda project in IntelliJ and run the "Install" configuration
+2. Open the Corda samples project in IntelliJ and run the "Bank Of Corda Demo: Run Issuer" configuration
+3. Run "Bank Of Corda Demo: Run RPC Cash Issue" - requests issuance of some cash on behalf of Big Corporation via RPC
+4. Run "Bank Of Corda Demo: Run Web Cash Issue" - requests issuance of some cash on behalf of Big Corporation via HTTP
+
+In the "Bank Of Corda Demo: Run Issuer" window you should see the following information lines displayed:
+
+- Awaiting issuance request
+- Self issuing asset
+- Transferring asset to issuance requester
+- Confirming asset issuance to requester
+
+In the the client issue request window you should see the following printed:
+
+- Successfully processed Cash Issue request
+
+Launch the Explorer application to visualize the issuance and transfer of cash on each node:
+
+    ``./gradlew tools:explorer:run``
+
+And use the following logon details:
+
+- for the Bank of Corda node specify localhost, port 10004, username user1, password test
+- for the Big Corporation node specify localhost, port 10006, username user1, password test
+
+See https://docs.corda.net/node-explorer.html for further details on usage.
 
 SIMM and Portfolio Demo - aka the Initial Margin Agreement Demo
 ---------------------------------------------------------------
