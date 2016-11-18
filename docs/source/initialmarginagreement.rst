@@ -69,5 +69,5 @@ Run via CLI::
     1. Navigate to the `cordapp-samples` directory in your shell
     2. Run the gradle target `deployNodes` (ie; ./gradlew deployNodes for Unix or gradlew.bat on Windows)
         1. Unix: `cd simm-valuation-demo/build/nodes && ./runnodes`.
-        2. Windows: Open a command line window in each subdirectory of `simm-valuation-demo/build/nodes` and run `java -jar corda.jar`
+        2. Windows: `cd simm-valuation-demo/build/nodes & runnodes.bat`
     4. Browse to http://localhost:10005/web/simmvaluationdemo

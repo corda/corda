@@ -54,8 +54,8 @@ Unix:
 
 Windows:
 
-Windows users currently have to manually enter each directory in `build/nodes` and run `java -jar corda.jar` in each.
-This will be updated soon.
+     cd build/nodes
+     ruunnodes.bat
 
 This will now have nodes running on your machine running this Cordapp. You can now begin developing your Cordapp. 
 

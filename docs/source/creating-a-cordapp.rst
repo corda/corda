@@ -245,7 +245,8 @@ You can create more configurations with new tasks that extend Cordform.
 New nodes can be added by simply adding another node block and giving it a different name, directory and ports. When you
 run this task it will install the nodes to the directory specified and a script will be generated (for UNIX users only
 at present) to run the nodes with one command (``runnodes``). On MacOS X this script will run each node in a new
-terminal tab, and on Linux it will open up a new XTerm for each node.
+terminal tab, and on Linux it will open up a new XTerm for each node. On Windows the (``runnodes.bat``) script will run
+one node per window.
 
 Other cordapps can also be specified if they are already specified as classpath or compile dependencies in your
 ``build.gradle``.
