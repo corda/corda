@@ -75,6 +75,10 @@ class Node {
         config = config.withValue("useHTTPS", ConfigValueFactory.fromAnyRef(isHttps))
     }
 
+    void useTestClock() {
+        config = config.withValue("useTestClock", ConfigValueFactory.fromAnyRef(true))
+    }
+
     /**
      * Set the artemis port for this node.
      *

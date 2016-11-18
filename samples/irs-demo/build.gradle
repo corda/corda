@@ -20,6 +20,7 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
+apply plugin: 'application'
 
 repositories {
     mavenLocal()
@@ -29,6 +30,8 @@ repositories {
         url 'https://dl.bintray.com/kotlin/exposed'
     }
 }
+
+mainClassName = 'net.corda.irs.IRSDemo'
 
 sourceSets {
     main {
@@ -77,33 +80,36 @@ dependencies {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install']) {
     directory "./build/nodes"
-    networkMap "Controller"
+    networkMap "Notary"
     node {
-        name "Controller"
+        name "Notary"
         dirName "controller"
         nearestCity "London"
         advertisedServices = ["corda.notary.validating", "corda.interest_rates"]
         artemisPort 10002
         webPort 10003
         cordapps = []
+        useTestClock()
     }
     node {
-        name "NodeA"
+        name "Bank A"
         dirName "nodea"
         nearestCity "London"
         advertisedServices = []
         artemisPort 10004
         webPort 10005
         cordapps = []
+        useTestClock()
     }
     node {
-        name "NodeB"
+        name "Bank B"
         dirName "nodeb"
         nearestCity "New York"
         advertisedServices = []
         artemisPort 10006
         webPort 10007
         cordapps = []
+        useTestClock()
     }
 }
 
