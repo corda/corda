@@ -156,9 +156,16 @@ will do as long as the other side registers with it.</p>
 </tr>
 <tr>
 <td>
+<a href="../../net.corda.protocols/-cash-protocol/index.html">CashProtocol</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">CashProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../net.corda.protocols/-cash-protocol-result/index.html"><span class="identifier">CashProtocolResult</span></a><span class="symbol">&gt;</span></code><p>Initiates a protocol that produces an Issue/Move or Exit Cash transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../../net.corda.protocols/-notary-protocol/-client/index.html">Client</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a><span class="symbol">&gt;</span></code><p>A protocol to be used for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
+<code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span></code><p>A protocol to be used for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
 timestamp is correct and none of its inputs have been used in another completed transaction.</p>
 </td>
 </tr>

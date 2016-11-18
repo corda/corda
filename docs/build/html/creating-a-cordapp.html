@@ -116,7 +116,6 @@
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -124,7 +123,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
@@ -142,6 +141,7 @@
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
@@ -222,18 +222,22 @@ construction, where message handlers should be registered and threads started.</
 </div>
 <div class="section" id="starting-nodes">
 <h2>Starting Nodes<a class="headerlink" href="#starting-nodes" title="Permalink to this headline">¶</a></h2>
-<p>To use an app you must also have a node server. To create a node server run the gradle installTemplateNodes task.</p>
+<p>To use an app you must also have a node server. To create a node server run the <code class="docutils literal"><span class="pre">gradle</span> <span class="pre">deployNodes</span></code> task.</p>
 <p>This will output the node JAR to <code class="docutils literal"><span class="pre">build/libs/corda.jar</span></code> and several sample/standard
 node setups to <code class="docutils literal"><span class="pre">build/nodes</span></code>. For now you can use the <code class="docutils literal"><span class="pre">build/nodes/nodea</span></code> configuration as a template.</p>
 <p>Each node server by default must have a <code class="docutils literal"><span class="pre">node.conf</span></code> file in the current working directory. After first
-execution of the node server there will be many other configuration and persistence files created in a node workspace directory. This is specified as the basedir property of the node.conf file, or else can be overidden using <code class="docutils literal"><span class="pre">--base-directory=&lt;workspace&gt;</span></code>.</p>
+execution of the node server there will be many other configuration and persistence files created in a node
+workspace directory. This is specified as the basedir property of the node.conf file, or else can be overidden
+using <code class="docutils literal"><span class="pre">--base-directory=&lt;workspace&gt;</span></code>.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">Outside of development environments do not store your node directories in the build folder.</p>
 </div>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
-<p class="last">Also note that the bootstrapping process of the <code class="docutils literal"><span class="pre">corda.jar</span></code> unpacks the Corda dependencies into a temporary folder. It is therefore suggested that the CAPSULE_CACHE_DIR environment variable be set before starting the process to control this location.</p>
+<p class="last">Also note that the bootstrapping process of the <code class="docutils literal"><span class="pre">corda.jar</span></code> unpacks the Corda dependencies into a
+temporary folder. It is therefore suggested that the CAPSULE_CACHE_DIR environment variable be set before
+starting the process to control this location.</p>
 </div>
 </div>
 <div class="section" id="installing-apps">
@@ -408,7 +412,9 @@ is a three node example;</p>
 <p>You can create more configurations with new tasks that extend Cordform.</p>
 <p>New nodes can be added by simply adding another node block and giving it a different name, directory and ports. When you
 run this task it will install the nodes to the directory specified and a script will be generated (for UNIX users only
-at present) to run the nodes with one command.</p>
+at present) to run the nodes with one command (<code class="docutils literal"><span class="pre">runnodes</span></code>). On MacOS X this script will run each node in a new
+terminal tab, and on Linux it will open up a new XTerm for each node. On Windows the (<code class="docutils literal"><span class="pre">runnodes.bat</span></code>) script will run
+one node per window.</p>
 <p>Other cordapps can also be specified if they are already specified as classpath or compile dependencies in your
 <code class="docutils literal"><span class="pre">build.gradle</span></code>.</p>
 </div>

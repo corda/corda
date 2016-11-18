@@ -100,7 +100,6 @@
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -108,7 +107,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
@@ -126,6 +125,7 @@
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
@@ -187,13 +187,16 @@
 contract. It can optionally also show network setup, during which nodes register themselves with the network
 map service and are notified of the changes to the map. The network simulator is run from the command line via Gradle:</p>
 <p><strong>Windows</strong>:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">gradlew</span><span class="p">.</span><span class="n">bat</span> <span class="n">network</span><span class="p">-</span><span class="n">simulator</span><span class="p">:</span><span class="n">run</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">gradlew</span><span class="p">.</span><span class="n">bat</span> <span class="p">:</span><span class="n">samples</span><span class="p">:</span><span class="n">network</span><span class="p">-</span><span class="n">visualiser</span><span class="p">:</span><span class="n">run</span>
 </pre></div>
 </div>
 <p><strong>Other</strong>:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">gradlew</span> <span class="n">network</span><span class="p">-</span><span class="n">simulator</span><span class="p">:</span><span class="n">run</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">gradlew</span> <span class="p">:</span><span class="n">samples</span><span class="p">:</span><span class="n">network</span><span class="p">-</span><span class="n">visualiser</span><span class="p">:</span><span class="n">run</span>
 </pre></div>
 </div>
+<p>You can produce a standalone JAR of the tool by using the <code class="docutils literal"><span class="pre">:samples:network-visualiser:deployVisualiser</span></code> target
+and then using the <code class="docutils literal"><span class="pre">samples/network-visualiser/build/libs/network-visualiser-*-capsule.jar</span></code> file, where * is
+whatever the current Corda version is.</p>
 <div class="section" id="interface">
 <h2>Interface<a class="headerlink" href="#interface" title="Permalink to this headline">¶</a></h2>
 <img alt="_images/network-simulator.png" src="_images/network-simulator.png" />

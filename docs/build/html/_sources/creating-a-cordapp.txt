@@ -29,17 +29,21 @@ construction, where message handlers should be registered and threads started.
 Starting Nodes
 --------------
 
-To use an app you must also have a node server. To create a node server run the gradle installTemplateNodes task.
+To use an app you must also have a node server. To create a node server run the ``gradle deployNodes`` task.
 
 This will output the node JAR to ``build/libs/corda.jar`` and several sample/standard
 node setups to ``build/nodes``. For now you can use the ``build/nodes/nodea`` configuration as a template.
 
 Each node server by default must have a ``node.conf`` file in the current working directory. After first
-execution of the node server there will be many other configuration and persistence files created in a node workspace directory. This is specified as the basedir property of the node.conf file, or else can be overidden using ``--base-directory=<workspace>``.
+execution of the node server there will be many other configuration and persistence files created in a node
+workspace directory. This is specified as the basedir property of the node.conf file, or else can be overidden
+using ``--base-directory=<workspace>``.
 
 .. note:: Outside of development environments do not store your node directories in the build folder.
 
-.. warning:: Also note that the bootstrapping process of the ``corda.jar`` unpacks the Corda dependencies into a temporary folder. It is therefore suggested that the CAPSULE_CACHE_DIR environment variable be set before starting the process to control this location.
+.. warning:: Also note that the bootstrapping process of the ``corda.jar`` unpacks the Corda dependencies into a
+   temporary folder. It is therefore suggested that the CAPSULE_CACHE_DIR environment variable be set before
+   starting the process to control this location.
 
 Installing Apps
 ---------------
@@ -240,7 +244,9 @@ You can create more configurations with new tasks that extend Cordform.
 
 New nodes can be added by simply adding another node block and giving it a different name, directory and ports. When you
 run this task it will install the nodes to the directory specified and a script will be generated (for UNIX users only
-at present) to run the nodes with one command.
+at present) to run the nodes with one command (``runnodes``). On MacOS X this script will run each node in a new
+terminal tab, and on Linux it will open up a new XTerm for each node. On Windows the (``runnodes.bat``) script will run
+one node per window.
 
 Other cordapps can also be specified if they are already specified as classpath or compile dependencies in your
 ``build.gradle``.

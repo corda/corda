@@ -50,7 +50,10 @@ Partial Merkle Tree is a minimal tree needed to check that a given set of leaves
 <td>
 <a href="-party/index.html">Party</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Party</span></code><p>A <a href="-party/index.html">Party</a> is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate.</p>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Party</span></code><p>The <a href="-party/index.html">Party</a> class represents an entity on the network, which is typically identified by a legal <a href="-party/name.html">name</a> and public key
+that it can sign transactions under. As parties may use multiple keys for signing and, for example, have offline backup
+keys, the "public key" of a party is represented by a composite construct – a <a href="-public-key-tree/index.html">PublicKeyTree</a>, which combines multiple
+cryptographic public key primitives into a tree structure.</p>
 </td>
 </tr>
 <tr>
@@ -157,6 +160,12 @@ that we can delegate most of the checking to the proper Java code. We simply add
 <h3>Properties</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="-null-public-key-tree.html">NullPublicKeyTree</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">NullPublicKeyTree</span><span class="symbol">: </span><a href="-public-key-tree/index.html"><span class="identifier">PublicKeyTree</span></a></code></td>
+</tr>
 <tr>
 <td>
 <a href="ed25519-curve.html">ed25519Curve</a></td>

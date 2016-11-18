@@ -7,11 +7,15 @@ map service and are notified of the changes to the map. The network simulator is
 
 **Windows**::
 
-    gradlew.bat network-simulator:run
+    gradlew.bat :samples:network-visualiser:run
 
 **Other**::
 
-    ./gradlew network-simulator:run
+    ./gradlew :samples:network-visualiser:run
+
+You can produce a standalone JAR of the tool by using the ``:samples:network-visualiser:deployVisualiser`` target
+and then using the ``samples/network-visualiser/build/libs/network-visualiser-*-capsule.jar`` file, where * is
+whatever the current Corda version is.
 
 Interface
 ---------

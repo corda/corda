@@ -338,6 +338,26 @@ the same transaction.</p>
 </tr>
 <tr>
 <td>
+<a href="../net.corda.protocols/-cash-command/index.html">net.corda.protocols.CashCommand</a></td>
+<td>
+<p>A command to initiate the Cash protocol with.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.protocols/-cash-protocol/index.html">net.corda.protocols.CashProtocol</a></td>
+<td>
+<p>Initiates a protocol that produces an Issue/Move or Exit Cash transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.protocols/-cash-protocol-result/index.html">net.corda.protocols.CashProtocolResult</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../net.corda.schemas/-cash-schema.html">net.corda.schemas.CashSchema</a></td>
 <td>
 <p>An object used to fully qualify the <a href="../net.corda.schemas/-cash-schema.html">CashSchema</a> family name (i.e. independent of version).</p>
@@ -408,13 +428,6 @@ provided directly by this clause.</p>
 <a href="../net.corda.node.services.messaging/-client-r-p-c-request-message/index.html">net.corda.node.services.messaging.ClientRPCRequestMessage</a></td>
 <td>
 <p>The contents of an RPC request message, separated from the MQ layer.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.core.contracts/-client-to-service-command/index.html">net.corda.core.contracts.ClientToServiceCommand</a></td>
-<td>
-<p>A command from the monitoring client, to the node.</p>
 </td>
 </tr>
 <tr>
@@ -619,7 +632,7 @@ useful tasks. See the documentation for <a href="../net.corda.client/-corda-r-p-
 <a href="../net.corda.node.services.messaging/-corda-r-p-c-ops/index.html">net.corda.node.services.messaging.CordaRPCOps</a></td>
 <td>
 <p>RPC operations that the node exposes to clients using the Java client library. These can be called from
-client apps and are implemented by the node in the <a href="#">ServerRPCOps</a> class.</p>
+client apps and are implemented by the node in the <a href="#">CordaRPCOpsImpl</a> class.</p>
 </td>
 </tr>
 <tr>
@@ -1128,6 +1141,12 @@ set via the constructor and the class is immutable.</p>
 <a href="../net.corda.node.services.transactions/-in-memory-uniqueness-provider/index.html">net.corda.node.services.transactions.InMemoryUniquenessProvider</a></td>
 <td>
 <p>A dummy Uniqueness provider that stores the whole history of consumed states in memory</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.protocols/-input-state-ref-resolve-failed/index.html">net.corda.protocols.InputStateRefResolveFailed</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -1890,7 +1909,10 @@ because of permissioning)</p>
 <td>
 <a href="../net.corda.core.crypto/-party/index.html">net.corda.core.crypto.Party</a></td>
 <td>
-<p>A <a href="../net.corda.core.crypto/-party/index.html">Party</a> is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate.</p>
+<p>The <a href="../net.corda.core.crypto/-party/index.html">Party</a> class represents an entity on the network, which is typically identified by a legal <a href="../net.corda.core.crypto/-party/name.html">name</a> and public key
+that it can sign transactions under. As parties may use multiple keys for signing and, for example, have offline backup
+keys, the "public key" of a party is represented by a composite construct – a <a href="../net.corda.core.crypto/-public-key-tree/index.html">PublicKeyTree</a>, which combines multiple
+cryptographic public key primitives into a tree structure.</p>
 </td>
 </tr>
 <tr>
@@ -2031,13 +2053,13 @@ a singleton).</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.services/-properties-file-r-p-c-user-service/index.html">net.corda.node.services.PropertiesFileRPCUserService</a></td>
+<a href="../net.corda.node.api/-protocol-class-ref/index.html">net.corda.node.api.ProtocolClassRef</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.api/-protocol-class-ref/index.html">net.corda.node.api.ProtocolClassRef</a></td>
+<a href="../net.corda.node.services.messaging/-protocol-handle/index.html">net.corda.node.services.messaging.ProtocolHandle</a></td>
 <td>
 </td>
 </tr>
@@ -2144,6 +2166,19 @@ For any given flow there is only one PSM, even if that protocol invokes subproto
 </tr>
 <tr>
 <td>
+<a href="../net.corda.node.utilities/-public-key-tree-column-type/index.html">net.corda.node.utilities.PublicKeyTreeColumnType</a></td>
+<td>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="../net.corda.core.crypto/-public-key-tree/index.html">PublicKeyTree</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.testing/-public-key-tree-generator/index.html">net.corda.core.testing.PublicKeyTreeGenerator</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../net.corda.core.schemas/-queryable-state/index.html">net.corda.core.schemas.QueryableState</a></td>
 <td>
 <p>A contract state that may be mapped to database schemas configured for this node to support querying for,
@@ -2199,6 +2234,12 @@ will buffer up on the server until theyre consumed by the client.</p>
 <p>Service for retrieving <a href="../net.corda.node.services/-user/index.html">User</a> objects representing RPC users who are authorised to use the RPC system. A <a href="../net.corda.node.services/-user/index.html">User</a>
 contains their login username and password along with a set of permissions for RPC services they are allowed access
 to. These permissions are represented as <a href="#">String</a>s to allow RPC implementations to add their own permissioning.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.services/-r-p-c-user-service-impl/index.html">net.corda.node.services.RPCUserServiceImpl</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -2753,12 +2794,6 @@ between (after, before).</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.services.messaging/-transaction-build-result/index.html">net.corda.node.services.messaging.TransactionBuildResult</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../net.corda.node.api/-transaction-build-step/index.html">net.corda.node.api.TransactionBuildStep</a></td>
 <td>
 <p>Encapsulate a generateXXX method call on a contract.</p>
@@ -2870,6 +2905,12 @@ and seller) and the following steps:</p>
 <a href="../net.corda.core.node.services/-tx-writable-storage-service/index.html">net.corda.core.node.services.TxWritableStorageService</a></td>
 <td>
 <p>Storage service, with extensions to allow validated transactions to be added to. For use only within <a href="#">ServiceHub</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.utilities/-txn-note-columns/index.html">net.corda.node.utilities.TxnNoteColumns</a></td>
+<td>
 </td>
 </tr>
 <tr>

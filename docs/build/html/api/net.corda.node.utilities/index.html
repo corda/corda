@@ -140,6 +140,13 @@ adjusted externally.</p>
 </tr>
 <tr>
 <td>
+<a href="-public-key-tree-column-type/index.html">PublicKeyTreeColumnType</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">PublicKeyTreeColumnType</span></code><p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="../net.corda.core.crypto/-public-key-tree/index.html">PublicKeyTree</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-secure-hash-column-type/index.html">SecureHashColumnType</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">SecureHashColumnType</span></code><p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="../net.corda.core.crypto/-secure-hash/index.html">SecureHash</a>.</p>
@@ -165,6 +172,12 @@ our environment:</p>
 <td>
 <code><span class="keyword">class </span><span class="identifier">TestClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-mutable-clock/index.html"><span class="identifier">MutableClock</span></a><span class="symbol">, </span><a href="../net.corda.core.serialization/-serialize-as-token/index.html"><span class="identifier">SerializeAsToken</span></a></code><p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the date advanced for use in demos.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="-txn-note-columns/index.html">TxnNoteColumns</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TxnNoteColumns</span></code></td>
 </tr>
 <tr>
 <td>
@@ -276,6 +289,12 @@ our environment:</p>
 </tr>
 <tr>
 <td>
+<a href="public-key-tree.html">publicKeyTree</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">publicKeyTree</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$publicKeyTree(, kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="secure-hash.html">secureHash</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">secureHash</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$secureHash(, kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
@@ -291,6 +310,12 @@ our environment:</p>
 <a href="state-ref.html">stateRef</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">stateRef</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$stateRef(, kotlin.String, kotlin.String)/txIdColumnName">txIdColumnName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities$stateRef(, kotlin.String, kotlin.String)/indexColumnName">indexColumnName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="txn-note.html">txnNote</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">txnNote</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$txnNote(, kotlin.String, kotlin.String)/txIdColumnName">txIdColumnName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities$txnNote(, kotlin.String, kotlin.String)/txnNoteColumnName">txnNoteColumnName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
 <tr>
 <td>

@@ -35,7 +35,7 @@ likely preferrable.</p>
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">JDBCHashMap</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.JDBCHashMap$<init>(kotlin.String, kotlin.Boolean)/tableName">tableName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.JDBCHashMap$<init>(kotlin.String, kotlin.Boolean)/loadOnInit">loadOnInit</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span></code><p>A convenient JDBC table backed hash map with iteration order based on insertion order.
+<code><span class="identifier">JDBCHashMap</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.JDBCHashMap$<init>(kotlin.String, kotlin.Boolean, kotlin.Int)/tableName">tableName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.JDBCHashMap$<init>(kotlin.String, kotlin.Boolean, kotlin.Int)/loadOnInit">loadOnInit</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.JDBCHashMap$<init>(kotlin.String, kotlin.Boolean, kotlin.Int)/maxBuckets">maxBuckets</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;256<span class="symbol">)</span></code><p>A convenient JDBC table backed hash map with iteration order based on insertion order.
 See <a href="../-abstract-j-d-b-c-hash-map/index.html">AbstractJDBCHashMap</a> for further implementation details.</p>
 </td>
 </tr>
@@ -61,6 +61,12 @@ See <a href="../-abstract-j-d-b-c-hash-map/index.html">AbstractJDBCHashMap</a> f
 <a href="../-abstract-j-d-b-c-hash-map/load-on-init.html">loadOnInit</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">loadOnInit</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-j-d-b-c-hash-map/max-buckets.html">maxBuckets</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">maxBuckets</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
 </tr>
 <tr>
 <td>

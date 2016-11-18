@@ -100,14 +100,12 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Running the demos</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#trader-demo">Trader demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#irs-demo">IRS demo</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#irs-web-demo">IRS web demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#attachment-demo">Attachment demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#simm-and-portfolio-demo">SIMM and Portfolio Demo</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -115,7 +113,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
@@ -133,6 +131,7 @@
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
@@ -201,14 +200,25 @@ using the Standard Initial Margin Model.</li>
 </ol>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">The demos currently must be run from IntelliJ, this will change before M6.</p>
-</div>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
 <p class="last">If any demos don&#8217;t work please jump on our mailing list and let us know.</p>
 </div>
+<p>The demos can be run either from the command line, or from inside IntelliJ. Running from the command line is
+recommended if you are just wanting to see them run, using IntelliJ can be helpful if you want to debug or
+develop the demos themselves.</p>
 <div class="section" id="trader-demo">
 <h2>Trader demo<a class="headerlink" href="#trader-demo" title="Permalink to this headline">¶</a></h2>
+<p>This demo brings up three nodes: Bank A, Bank B and a notary/network map node that they both use. Bank A will
+be the buyer, and self-issues some cash in order to acquire the commercial paper from Bank B, the seller.</p>
+<p>To run from the command line:</p>
+<ol class="arabic simple">
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:trader-demo:deployNodes</span></code> to create a set of configs and installs under <code class="docutils literal"><span class="pre">samples/trader-demo/build/nodes</span></code></li>
+<li>Run <code class="docutils literal"><span class="pre">./samples/trader-demo/build/nodes/runnodes</span></code> (or <code class="docutils literal"><span class="pre">runnodes.bat</span></code> on Windows) to open up three new terminals with the three nodes.</li>
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:trader-demo:runBuyer</span></code> to set up the buyer node with some self-issued cash. This step
+is not expected to print much.</li>
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:trader-demo:runSeller</span></code> to trigger the transaction. You can see both sides of the
+trade print their progress and final transaction state in the bank node tabs/windows.</li>
+</ol>
+<p>To run from IntelliJ:</p>
 <ol class="arabic simple">
 <li>Open the Corda project in IntelliJ and run the &#8220;Install&#8221; configuration</li>
 <li>Open the Corda samples project in IntelliJ and run the &#8220;Trader Demo: Run Nodes&#8221; configuration</li>
@@ -220,6 +230,22 @@ using the Standard Initial Margin Model.</li>
 </div>
 <div class="section" id="irs-demo">
 <h2>IRS demo<a class="headerlink" href="#irs-demo" title="Permalink to this headline">¶</a></h2>
+<p>This demo brings up three nodes: Bank A, Bank B and a node that runs a notary, a network map and an interest rates
+oracle together. The two banks agree on an interest rate swap, and then do regular fixings of the deal as the time
+on a simulated clock passes.</p>
+<p>To run from the command line:</p>
+<ol class="arabic simple">
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:irs-demo:deployNodes</span> <span class="pre">samples:irs-demo:installDist</span></code> to install configs and a command line tool under <code class="docutils literal"><span class="pre">samples/irs-demo/build</span></code>.</li>
+<li>Change to the <code class="docutils literal"><span class="pre">samples/irs-demo/build</span></code> directory.</li>
+<li>Run <code class="docutils literal"><span class="pre">./nodes/runnodes</span></code> (or <code class="docutils literal"><span class="pre">runnodes.bat</span></code> on Windows) to open up three new terminals with the three nodes.</li>
+<li>Run <code class="docutils literal"><span class="pre">./install/irs-demo/bin/irs-demo</span> <span class="pre">--role</span> <span class="pre">UploadRates</span></code> (or use <code class="docutils literal"><span class="pre">irs-demo.bat</span></code> on Windows). You should see a
+message be printed to the first node (the notary/oracle/network map node) saying that it has accepted some new
+interest rates.</li>
+<li>Now run <code class="docutils literal"><span class="pre">irs-demo</span></code> as in step 4, but this time with <code class="docutils literal"><span class="pre">--role</span> <span class="pre">Trade</span> <span class="pre">1</span></code>. The number is a trade ID. You should
+see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle and so on.</li>
+<li>Now run <code class="docutils literal"><span class="pre">irs-demo</span> <span class="pre">--role</span> <span class="pre">Date</span> <span class="pre">2016-12-12</span></code> to roll the simulated clock forward and see some fixings take place.</li>
+</ol>
+<p>To run from IntelliJ:</p>
 <ol class="arabic simple">
 <li>Open the Corda project in IntelliJ and run the &#8220;Install&#8221; configuration</li>
 <li>Open the Corda samples project in IntelliJ and run the &#8220;IRS Demo: Run Nodes&#8221; configuration</li>
@@ -229,17 +255,24 @@ using the Standard Initial Margin Model.</li>
 </ol>
 <p>In the &#8220;IRS Demo: Run Nodes&#8221; window you&#8217;ll see a lot of activity when you run the trade and when you run the date change.
 The date change rolls the clock forwards and causes the nodes to agree on the fixings over a period.</p>
-</div>
-<div class="section" id="irs-web-demo">
-<h2>IRS web demo<a class="headerlink" href="#irs-web-demo" title="Permalink to this headline">¶</a></h2>
-<p>There is also an IRS web demo installed. To use this follow steps 1-3 in the IRS demo and then navigate to
-<a class="reference external" href="http://localhost:10005/web/irsdemo">http://localhost:10005/web/irsdemo</a> and <a class="reference external" href="http://localhost:10005/web/irsdemo">http://localhost:10005/web/irsdemo</a> to see both node&#8217;s view of the trades.</p>
+<p>There is also an web app as part of this demo. To use this set up the trades and then navigate to
+<a class="reference external" href="http://localhost:10005/web/irsdemo">http://localhost:10005/web/irsdemo</a> and <a class="reference external" href="http://localhost:10005/web/irsdemo">http://localhost:10005/web/irsdemo</a> to see both node&#8217;s view of the ledger.</p>
 <p>To use the demos click the &#8220;Create Deal&#8221; button, fill in the form, then click the &#8220;Submit&#8221; button. Now you will be
 able to use the time controls at the top left of the home page to run the fixings. Click any individual trade in the
 blotter to view it.</p>
 </div>
 <div class="section" id="attachment-demo">
 <h2>Attachment demo<a class="headerlink" href="#attachment-demo" title="Permalink to this headline">¶</a></h2>
+<p>This demo brings up three nodes, and sends a transaction containing an attachment from one to the other. To run
+it from the command line (recommended for Mac/UNIX users!):</p>
+<ol class="arabic simple">
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:attachment-demo:deployNodes</span></code> to create a set of configs and installs under <code class="docutils literal"><span class="pre">samples/trader-demo/build/nodes</span></code></li>
+<li>Run <code class="docutils literal"><span class="pre">./samples/attachment-demo/build/nodes/runnodes</span></code> to open up three new terminal tabs/windows with the three nodes.</li>
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:attachment-demo:runRecipient</span></code>, which will block waiting for something to happen.</li>
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:attachment-demo:runSender</span></code> in another terminal window to trigger the transaction.
+Now look at the other windows to see the output of the demo.</li>
+</ol>
+<p>Or you can run them from inside IntelliJ, but when done this way, all the node output is printed to a single console.</p>
 <ol class="arabic simple">
 <li>Open the Corda project in IntelliJ and run the &#8220;Install&#8221; configuration</li>
 <li>Open the Corda samples project in IntelliJ and run the &#8220;Attachment Demo: Run Nodes&#8221; configuration</li>

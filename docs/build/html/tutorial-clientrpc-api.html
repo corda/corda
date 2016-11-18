@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Client RPC API &mdash; R3 Corda latest documentation</title>
+  <title>Client RPC API Tutorial &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -100,7 +100,6 @@
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
@@ -108,7 +107,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Client RPC API</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Client RPC API Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
@@ -126,6 +125,7 @@
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
@@ -164,7 +164,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>Client RPC API</li>
+    <li>Client RPC API Tutorial</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -178,46 +178,189 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="client-rpc-api">
-<h1>Client RPC API<a class="headerlink" href="#client-rpc-api" title="Permalink to this headline">¶</a></h1>
-<p>In this tutorial we will build a simple command line utility that connects to a node and dumps the transaction graph to
-the standard output. We will then put some simple visualisation on top. For an explanation on how the RPC works see
-<a class="reference internal" href="clientrpc.html"><span class="doc">Client RPC</span></a>.</p>
-<p>We start off by connecting to the node itself. For the purposes of the tutorial we will run the Trader demo on some
-local port and connect to the Buyer side. We will pass in the address as a command line argument. To connect to the node
-we also need to access the certificates of the node, we will access the node&#8217;s <code class="docutils literal"><span class="pre">certificates</span></code> directory directly.</p>
-<p>Now we can connect to the node itself using a valid RPC login. By default the user <cite>user1</cite> is available with password <cite>test</cite>.</p>
-<p><code class="docutils literal"><span class="pre">proxy</span></code> now exposes the full RPC interface of the node:</p>
+  <div class="section" id="client-rpc-api-tutorial">
+<h1>Client RPC API Tutorial<a class="headerlink" href="#client-rpc-api-tutorial" title="Permalink to this headline">¶</a></h1>
+<p>In this tutorial we will build a simple command line utility that
+connects to a node, creates some Cash transactions and meanwhile dumps
+the transaction graph to the standard output. We will then put some
+simple visualisation on top. For an explanation on how the RPC works
+see <a class="reference internal" href="clientrpc.html"><span class="doc">Client RPC</span></a>.</p>
+<p>We start off by connecting to the node itself. For the purposes of the tutorial we will use the Driver to start up a notary and a node that issues/exits and moves Cash around for herself. To authenticate we will use the certificates of the nodes directly.</p>
+<p>Note how we configure the node to create a user that has permission to start the CashProtocol.</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>enum class PrintOrVisualise {
+    Print,
+    Visualise
+}
+
+fun main(args: Array&lt;String&gt;) {
+    if (args.size &lt; 1) {
+        throw IllegalArgumentException(&quot;Usage: &lt;binary&gt; [Print|Visualise]&quot;)
+    }
+    val printOrVisualise = PrintOrVisualise.valueOf(args[0])
+
+    val baseDirectory = Paths.get(&quot;build/rpc-api-tutorial&quot;)
+    val user = User(&quot;user&quot;, &quot;password&quot;, permissions = setOf(startProtocolPermission&lt;CashProtocol&gt;()))
+
+    driver(driverDirectory = baseDirectory) {
+        startNode(&quot;Notary&quot;, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
+        val node = startNode(&quot;Alice&quot;, rpcUsers = listOf(user)).get()
+        val sslConfig = object : NodeSSLConfiguration {
+            override val certificatesPath = baseDirectory / &quot;Alice&quot; / &quot;certificates&quot;
+            override val keyStorePassword = &quot;cordacadevpass&quot;
+            override val trustStorePassword = &quot;trustpass&quot;
+        }
+</pre></div>
+</div>
+<p>Now we can connect to the node itself using a valid RPC login. We login using the configured user.</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        <span class="k">val</span> <span class="py">client</span> <span class="p">=</span> <span class="n">CordaRPCClient</span><span class="p">(</span><span class="n">FullNodeConfiguration</span><span class="p">(</span><span class="n">node</span><span class="p">.</span><span class="n">config</span><span class="p">).</span><span class="n">artemisAddress</span><span class="p">,</span> <span class="n">sslConfig</span><span class="p">)</span>
+        <span class="n">client</span><span class="p">.</span><span class="n">start</span><span class="p">(</span><span class="s">&quot;user&quot;</span><span class="p">,</span> <span class="s">&quot;password&quot;</span><span class="p">)</span>
+        <span class="k">val</span> <span class="py">proxy</span> <span class="p">=</span> <span class="n">client</span><span class="p">.</span><span class="n">proxy</span><span class="p">()</span>
+
+        <span class="n">thread</span> <span class="p">{</span>
+            <span class="n">generateTransactions</span><span class="p">(</span><span class="n">proxy</span><span class="p">)</span>
+        <span class="p">}</span>
+</pre></div>
+</div>
+<p>We start generating transactions in a different thread (<code class="docutils literal"><span class="pre">generateTransactions</span></code> to be defined later) using <code class="docutils literal"><span class="pre">proxy</span></code>, which exposes the full RPC interface of the node:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>    /**
+     * Returns a pair of currently in-progress state machine infos and an observable of future state machine adds/removes.
+     */
+    @RPCReturnsObservables
+    fun stateMachinesAndUpdates(): Pair&lt;List&lt;StateMachineInfo&gt;, Observable&lt;StateMachineUpdate&gt;&gt;
+
+    /**
+     * Returns a pair of head states in the vault and an observable of future updates to the vault.
+     */
+    @RPCReturnsObservables
+    fun vaultAndUpdates(): Pair&lt;List&lt;StateAndRef&lt;ContractState&gt;&gt;, Observable&lt;Vault.Update&gt;&gt;
+
+    /**
+     * Returns a pair of all recorded transactions and an observable of future recorded ones.
+     */
+    @RPCReturnsObservables
+    fun verifiedTransactions(): Pair&lt;List&lt;SignedTransaction&gt;, Observable&lt;SignedTransaction&gt;&gt;
+
+    /**
+     * Returns a snapshot list of existing state machine id - recorded transaction hash mappings, and a stream of future
+     * such mappings as well.
+     */
+    @RPCReturnsObservables
+    fun stateMachineRecordedTransactionMapping(): Pair&lt;List&lt;StateMachineTransactionMapping&gt;, Observable&lt;StateMachineTransactionMapping&gt;&gt;
+
+    /**
+     * Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.
+     */
+    @RPCReturnsObservables
+    fun networkMapUpdates(): Pair&lt;List&lt;NodeInfo&gt;, Observable&lt;NetworkMapCache.MapChange&gt;&gt;
+
+    /**
+     * Start the given protocol with the given arguments, returning an [Observable] with a single observation of the
+     * result of running the protocol.
+     */
+    @RPCReturnsObservables
+    fun &lt;T: Any&gt; startProtocolDynamic(logicType: Class&lt;out ProtocolLogic&lt;T&gt;&gt;, vararg args: Any?): ProtocolHandle&lt;T&gt;
+
+    /**
+     * Returns Node&#39;s identity, assuming this will not change while the node is running.
+     */
+    fun nodeIdentity(): NodeInfo
+
+    /*
+     * Add note(s) to an existing Vault transaction
+     */
+    fun addVaultTransactionNote(txnId: SecureHash, txnNote: String)
+
+    /*
+     * Retrieve existing note(s) for a given Vault transaction
+     */
+    fun getVaultTransactionNotes(txnId: SecureHash): Iterable&lt;String&gt;
+</pre></div>
+</div>
 <p>The one we need in order to dump the transaction graph is <code class="docutils literal"><span class="pre">verifiedTransactions</span></code>. The type signature tells us that the
 RPC will return a list of transactions and an Observable stream. This is a general pattern, we query some data and the
 node will return the current snapshot and future updates done to it.</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        val (transactions: List&lt;SignedTransaction&gt;, futureTransactions: Observable&lt;SignedTransaction&gt;) = proxy.verifiedTransactions()
+</pre></div>
+</div>
 <p>The graph will be defined by nodes and edges between them. Each node represents a transaction and edges represent
 output-input relations. For now let&#8217;s just print <code class="docutils literal"><span class="pre">NODE</span> <span class="pre">&lt;txhash&gt;</span></code> for the former and <code class="docutils literal"><span class="pre">EDGE</span> <span class="pre">&lt;txhash&gt;</span> <span class="pre">&lt;txhash&gt;</span></code> for the
 latter.</p>
-<p>Now we can start the trader demo as per described in <a class="reference internal" href="running-the-demos.html"><span class="doc">Running the demos</span></a>:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span># Build the demo
-./gradlew installDist
-# Start the buyer
-./build/install/r3prototyping/bin/trader-demo --role=BUYER
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        <span class="k">when</span> <span class="p">(</span><span class="n">printOrVisualise</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">PrintOrVisualise</span><span class="p">.</span><span class="n">Print</span> <span class="p">-&gt;</span> <span class="p">{</span>
+                <span class="n">futureTransactions</span><span class="p">.</span><span class="n">startWith</span><span class="p">(</span><span class="n">transactions</span><span class="p">).</span><span class="n">subscribe</span> <span class="p">{</span> <span class="n">transaction</span> <span class="p">-&gt;</span>
+                    <span class="n">println</span><span class="p">(</span><span class="s">&quot;NODE ${transaction.id}&quot;</span><span class="p">)</span>
+                    <span class="n">transaction</span><span class="p">.</span><span class="n">tx</span><span class="p">.</span><span class="n">inputs</span><span class="p">.</span><span class="n">forEach</span> <span class="p">{</span> <span class="n">input</span> <span class="p">-&gt;</span>
+                        <span class="n">println</span><span class="p">(</span><span class="s">&quot;EDGE ${input.txhash} ${transaction.id}&quot;</span><span class="p">)</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
 </pre></div>
 </div>
-<p>In another terminal we can connect to it with our client:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span># Connect to localhost:31337
-./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial localhost:31337 Print
+<p>Now we just need to create the transactions themselves!</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">fun</span> <span class="nf">generateTransactions</span><span class="p">(</span><span class="n">proxy</span><span class="p">:</span> <span class="n">CordaRPCOps</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">var</span> <span class="py">ownedQuantity</span> <span class="p">=</span> <span class="n">proxy</span><span class="p">.</span><span class="n">vaultAndUpdates</span><span class="p">().</span><span class="n">first</span><span class="p">.</span><span class="n">fold</span><span class="p">(</span><span class="m">0L</span><span class="p">)</span> <span class="p">{</span> <span class="n">sum</span><span class="p">,</span> <span class="n">state</span> <span class="p">-&gt;</span>
+        <span class="n">sum</span> <span class="p">+</span> <span class="p">(</span><span class="n">state</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="k">data</span> <span class="k">as</span> <span class="n">Cash</span><span class="p">.</span><span class="n">State</span><span class="p">).</span><span class="n">amount</span><span class="p">.</span><span class="n">quantity</span>
+    <span class="p">}</span>
+    <span class="k">val</span> <span class="py">issueRef</span> <span class="p">=</span> <span class="n">OpaqueBytes</span><span class="p">.</span><span class="n">of</span><span class="p">(</span><span class="m">0</span><span class="p">)</span>
+    <span class="k">val</span> <span class="py">notary</span> <span class="p">=</span> <span class="n">proxy</span><span class="p">.</span><span class="n">networkMapUpdates</span><span class="p">().</span><span class="n">first</span><span class="p">.</span><span class="n">first</span> <span class="p">{</span> <span class="n">it</span><span class="p">.</span><span class="n">advertisedServices</span><span class="p">.</span><span class="n">any</span> <span class="p">{</span> <span class="n">it</span><span class="p">.</span><span class="n">info</span><span class="p">.</span><span class="n">type</span><span class="p">.</span><span class="n">isNotary</span><span class="p">()</span> <span class="p">}</span> <span class="p">}.</span><span class="n">notaryIdentity</span>
+    <span class="k">val</span> <span class="py">me</span> <span class="p">=</span> <span class="n">proxy</span><span class="p">.</span><span class="n">nodeIdentity</span><span class="p">().</span><span class="n">legalIdentity</span>
+    <span class="k">val</span> <span class="py">meAndRef</span> <span class="p">=</span> <span class="n">PartyAndReference</span><span class="p">(</span><span class="n">me</span><span class="p">,</span> <span class="n">issueRef</span><span class="p">)</span>
+    <span class="k">while</span> <span class="p">(</span><span class="k">true</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">Thread</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="m">1000</span><span class="p">)</span>
+        <span class="k">val</span> <span class="py">random</span> <span class="p">=</span> <span class="n">SplittableRandom</span><span class="p">()</span>
+        <span class="k">val</span> <span class="py">n</span> <span class="p">=</span> <span class="n">random</span><span class="p">.</span><span class="n">nextDouble</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">ownedQuantity</span> <span class="p">&gt;</span> <span class="m">10000</span> <span class="p">&amp;&amp;</span> <span class="n">n</span> <span class="p">&gt;</span> <span class="m">0.8</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">val</span> <span class="py">quantity</span> <span class="p">=</span> <span class="n">Math</span><span class="p">.</span><span class="n">abs</span><span class="p">(</span><span class="n">random</span><span class="p">.</span><span class="n">nextLong</span><span class="p">())</span> <span class="p">%</span> <span class="m">2000</span>
+            <span class="n">proxy</span><span class="p">.</span><span class="n">startProtocol</span><span class="p">(</span><span class="o">::</span><span class="n">CashProtocol</span><span class="p">,</span> <span class="n">CashCommand</span><span class="p">.</span><span class="n">ExitCash</span><span class="p">(</span><span class="n">Amount</span><span class="p">(</span><span class="n">quantity</span><span class="p">,</span> <span class="n">USD</span><span class="p">),</span> <span class="n">issueRef</span><span class="p">))</span>
+            <span class="n">ownedQuantity</span> <span class="p">-=</span> <span class="n">quantity</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">ownedQuantity</span> <span class="p">&gt;</span> <span class="m">1000</span> <span class="p">&amp;&amp;</span> <span class="n">n</span> <span class="p">&lt;</span> <span class="m">0.7</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">val</span> <span class="py">quantity</span> <span class="p">=</span> <span class="n">Math</span><span class="p">.</span><span class="n">abs</span><span class="p">(</span><span class="n">random</span><span class="p">.</span><span class="n">nextLong</span><span class="p">()</span> <span class="p">%</span> <span class="n">Math</span><span class="p">.</span><span class="n">min</span><span class="p">(</span><span class="n">ownedQuantity</span><span class="p">,</span> <span class="m">2000</span><span class="p">))</span>
+            <span class="n">proxy</span><span class="p">.</span><span class="n">startProtocol</span><span class="p">(</span><span class="o">::</span><span class="n">CashProtocol</span><span class="p">,</span> <span class="n">CashCommand</span><span class="p">.</span><span class="n">PayCash</span><span class="p">(</span><span class="n">Amount</span><span class="p">(</span><span class="n">quantity</span><span class="p">,</span> <span class="n">Issued</span><span class="p">(</span><span class="n">meAndRef</span><span class="p">,</span> <span class="n">USD</span><span class="p">)),</span> <span class="n">me</span><span class="p">))</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="k">val</span> <span class="py">quantity</span> <span class="p">=</span> <span class="n">Math</span><span class="p">.</span><span class="n">abs</span><span class="p">(</span><span class="n">random</span><span class="p">.</span><span class="n">nextLong</span><span class="p">()</span> <span class="p">%</span> <span class="m">1000</span><span class="p">)</span>
+            <span class="n">proxy</span><span class="p">.</span><span class="n">startProtocol</span><span class="p">(</span><span class="o">::</span><span class="n">CashProtocol</span><span class="p">,</span> <span class="n">CashCommand</span><span class="p">.</span><span class="n">IssueCash</span><span class="p">(</span><span class="n">Amount</span><span class="p">(</span><span class="n">quantity</span><span class="p">,</span> <span class="n">USD</span><span class="p">),</span> <span class="n">issueRef</span><span class="p">,</span> <span class="n">me</span><span class="p">,</span> <span class="n">notary</span><span class="p">))</span>
+            <span class="n">ownedQuantity</span> <span class="p">+=</span> <span class="n">quantity</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
-<p>We should see some <code class="docutils literal"><span class="pre">NODE</span></code>-s printed. This is because the buyer self-issues some cash for the demo.
-Unless we ran the seller before we shouldn&#8217;t see any <code class="docutils literal"><span class="pre">EDGE</span></code>-s because the cash hasn&#8217;t been spent yet.</p>
-<p>In another terminal we can now start the seller:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span># Start sellers in a loop
-for i in {0..9} ; do ./build/install/r3prototyping/bin/trader-demo --role=SELLER ; done
-</pre></div>
-</div>
-<p>We should start seeing new <code class="docutils literal"><span class="pre">NODE</span></code>-s and <code class="docutils literal"><span class="pre">EDGE</span></code>-s appearing.</p>
+<p>We utilise several RPC functions here to query things like the notaries in the node cluster or our own vault.</p>
+<p>Then in a loop we generate randomly either an Issue, a Pay or an Exit transaction.</p>
+<p>The RPC we need to initiate a Cash transaction is <code class="docutils literal"><span class="pre">startProtocolDynamic</span></code> which may start an arbitrary protocol, given sufficient permissions to do so. We won&#8217;t use this function directly, but rather a type-safe wrapper around it <code class="docutils literal"><span class="pre">startProtocol</span></code> that type-checks the arguments for us.</p>
+<p>Finally we have everything in place: we start a couple of nodes, connect to them, and start creating transactions while listening on successfully created ones, which are dumped to the console. We just need to run it!:</p>
+<blockquote>
+<div># Build the example
+./gradlew docs/source/example-code:installDist
+# Start it
+./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Print</div></blockquote>
 <p>Now let&#8217;s try to visualise the transaction graph. We will use a graph drawing library called <a class="reference external" href="http://graphstream-project.org/">graphstream</a></p>
-<p>If we run the client with <code class="docutils literal"><span class="pre">Visualise</span></code> we should see a simple graph being drawn as new transactions are being created
-by the seller runs.</p>
-<p>That&#8217;s it! We saw how to connect to the node and stream data from it.</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>            <span class="n">PrintOrVisualise</span><span class="p">.</span><span class="n">Visualise</span> <span class="p">-&gt;</span> <span class="p">{</span>
+                <span class="k">val</span> <span class="py">graph</span> <span class="p">=</span> <span class="n">MultiGraph</span><span class="p">(</span><span class="s">&quot;transactions&quot;</span><span class="p">)</span>
+                <span class="n">transactions</span><span class="p">.</span><span class="n">forEach</span> <span class="p">{</span> <span class="n">transaction</span> <span class="p">-&gt;</span>
+                    <span class="n">graph</span><span class="p">.</span><span class="n">addNode</span><span class="p">&lt;</span><span class="n">Node</span><span class="p">&gt;(</span><span class="s">&quot;${transaction.id}&quot;</span><span class="p">)</span>
+                <span class="p">}</span>
+                <span class="n">transactions</span><span class="p">.</span><span class="n">forEach</span> <span class="p">{</span> <span class="n">transaction</span> <span class="p">-&gt;</span>
+                    <span class="n">transaction</span><span class="p">.</span><span class="n">tx</span><span class="p">.</span><span class="n">inputs</span><span class="p">.</span><span class="n">forEach</span> <span class="p">{</span> <span class="n">ref</span> <span class="p">-&gt;</span>
+                        <span class="n">graph</span><span class="p">.</span><span class="n">addEdge</span><span class="p">&lt;</span><span class="n">Edge</span><span class="p">&gt;(</span><span class="s">&quot;$ref&quot;</span><span class="p">,</span> <span class="s">&quot;${ref.txhash}&quot;</span><span class="p">,</span> <span class="s">&quot;${transaction.id}&quot;</span><span class="p">)</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+                <span class="n">futureTransactions</span><span class="p">.</span><span class="n">subscribe</span> <span class="p">{</span> <span class="n">transaction</span> <span class="p">-&gt;</span>
+                    <span class="n">graph</span><span class="p">.</span><span class="n">addNode</span><span class="p">&lt;</span><span class="n">Node</span><span class="p">&gt;(</span><span class="s">&quot;${transaction.id}&quot;</span><span class="p">)</span>
+                    <span class="n">transaction</span><span class="p">.</span><span class="n">tx</span><span class="p">.</span><span class="n">inputs</span><span class="p">.</span><span class="n">forEach</span> <span class="p">{</span> <span class="n">ref</span> <span class="p">-&gt;</span>
+                        <span class="n">graph</span><span class="p">.</span><span class="n">addEdge</span><span class="p">&lt;</span><span class="n">Edge</span><span class="p">&gt;(</span><span class="s">&quot;$ref&quot;</span><span class="p">,</span> <span class="s">&quot;${ref.txhash}&quot;</span><span class="p">,</span> <span class="s">&quot;${transaction.id}&quot;</span><span class="p">)</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+                <span class="n">graph</span><span class="p">.</span><span class="n">display</span><span class="p">()</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="n">waitForAllNodesToFinish</span><span class="p">()</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>If we run the client with <code class="docutils literal"><span class="pre">Visualise</span></code> we should see a simple random graph being drawn as new transactions are being created.</p>
 </div>
 
 

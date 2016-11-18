@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Secure coding guidelines" href="secure-coding-guidelines.html"/>
+        <link rel="next" title="Load testing" href="loadtesting.html"/>
         <link rel="prev" title="Initial Margin Agreements" href="initialmarginagreement.html"/> 
 
   
@@ -100,7 +100,6 @@
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -108,7 +107,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
@@ -134,6 +133,7 @@
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
@@ -202,13 +202,12 @@ detail on how to use this is provided in the docs for the proxy method.</p>
 resources. When you&#8217;re done with it, cast it to <code class="docutils literal"><span class="pre">Closeable</span></code> or <code class="docutils literal"><span class="pre">AutoCloseable</span></code> and close it. Don&#8217;t create
 one for every call you make - create a proxy and reuse it.</p>
 </div>
-<p>For a brief tutorial on how one can use the RPC API see <a class="reference internal" href="tutorial-clientrpc-api.html"><span class="doc">Client RPC API</span></a>.</p>
+<p>For a brief tutorial on how one can use the RPC API see <a class="reference internal" href="tutorial-clientrpc-api.html"><span class="doc">Client RPC API Tutorial</span></a>.</p>
 <div class="section" id="security">
 <h2>Security<a class="headerlink" href="#security" title="Permalink to this headline">¶</a></h2>
 <p>Users wanting to use the RPC library are first required to authenticate themselves with the node using a valid username
-and password. These are kept in <code class="docutils literal"><span class="pre">rpc-users.properties</span></code> in the node base directory. This file also specifies
-permissions for each user, which the RPC implementation can use to control access. The file format is described in
-<a class="reference internal" href="corda-configuration-files.html"><span class="doc">The Corda Configuration File</span></a>.</p>
+and password. These are specified in the configuration file. Each user can be configured with a set of permissions which
+the RPC can use for fine-grain access control.</p>
 </div>
 <div class="section" id="observables">
 <h2>Observables<a class="headerlink" href="#observables" title="Permalink to this headline">¶</a></h2>
@@ -269,7 +268,7 @@ This is likely to change in a future release.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="secure-coding-guidelines.html" class="btn btn-neutral float-right" title="Secure coding guidelines" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="loadtesting.html" class="btn btn-neutral float-right" title="Load testing" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="initialmarginagreement.html" class="btn btn-neutral" title="Initial Margin Agreements" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

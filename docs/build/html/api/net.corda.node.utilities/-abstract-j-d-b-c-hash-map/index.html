@@ -17,16 +17,19 @@ would be necessary if you do this.</p>
 <p>Subclasses must provide their own mapping to and from keys/values and the database table columns, but there are
 inherited columns that all tables must provide to support iteration order and hashing.</p>
 <p>The map operates in one of two modes.</p>
-<ol><li><p>loadOnInit=true where the entire table is materialised in the JVM and only writes need to perform database access.</p>
-</li><li><p>loadOnInit=false where all entries with the same key hash code are materialised in the JVM on demand when accessed
-via any method other than via keys/values/entries properties, and thus the whole map is not materialised.</p>
+<ol><li><p>loadOnInit=true where the entire table is loaded into memory in the constructor and all entries remain in memory,
+with only writes needing to perform database access.</p>
+</li><li><p>loadOnInit=false where all entries with the same key hash code are loaded from the database on demand when accessed
+via any method other than via keys/values/entries properties, and thus the whole map is not loaded into memory.  The number
+of entries retained in memory is controlled indirectly by an LRU algorithm (courtesy of <a href="http://docs.oracle.com/javase/6/docs/api/java/util/LinkedHashMap.html">LinkedHashMap</a>) and a maximum
+number of hash "buckets", where one bucket represents all entries with the same hash code.  There is a default value
+for maximum buckets.</p>
 </li></ol><p>All operations require a <a href="../database-transaction.html">databaseTransaction</a> to be started.</p>
 <p>The keys/values/entries collections are really designed just for iterating and other uses might turn out to be
 costly in terms of performance.  Beware when loadOnInit=true, the iterator first sorts the entries which could be
 costly too.</p>
 <p>This class is <emph>not</emph> thread safe.</p>
-<p>TODO: buckets grows forever.  Support some form of LRU cache option (e.g. use <a href="http://docs.oracle.com/javase/6/docs/api/java/util/LinkedHashMap.html#removeEldestEntry(java.util.Map.Entry<K,V>)">LinkedHashMap.removeEldestEntry</a> feature).
-TODO: consider caching size once calculated for the first time.
+<p>TODO: consider caching size once calculated for the first time.
 TODO: buckets just use a list and so are vulnerable to poor hash code implementations with collisions.
 TODO: if iterators are used extensively when loadOnInit=true, consider maintaining a collection of keys in iteration order to avoid sorting each time.
 TODO: revisit whether we need the loadOnInit==true functionality and remove if not.</p>
@@ -41,7 +44,7 @@ TODO: revisit whether we need the loadOnInit==true functionality and remove if n
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">AbstractJDBCHashMap</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean)/table">table</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean)/loadOnInit">loadOnInit</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span></code><p>A base class for a JDBC table backed hash map that iterates in insertion order by using
+<code><span class="identifier">AbstractJDBCHashMap</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean, kotlin.Int)/table">table</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean, kotlin.Int)/loadOnInit">loadOnInit</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean, kotlin.Int)/maxBuckets">maxBuckets</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;256<span class="symbol">)</span></code><p>A base class for a JDBC table backed hash map that iterates in insertion order by using
 an ever increasing sequence number on entries.  Iterators supports remove() but entries are not really mutable and
 do not support setValue() method from <a href="#">MutableMap.MutableEntry</a>.</p>
 </td>
@@ -68,6 +71,12 @@ do not support setValue() method from <a href="#">MutableMap.MutableEntry</a>.</
 <a href="load-on-init.html">loadOnInit</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">loadOnInit</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="max-buckets.html">maxBuckets</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">maxBuckets</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
 </tr>
 <tr>
 <td>

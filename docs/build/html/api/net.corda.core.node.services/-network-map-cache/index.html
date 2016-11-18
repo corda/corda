@@ -115,6 +115,13 @@ updates.</p>
 </tr>
 <tr>
 <td>
+<a href="get-any-notary.html">getAnyNotary</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getAnyNotary</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$getAnyNotary(net.corda.core.node.services.ServiceType)/type">type</span><span class="symbol">:</span>&nbsp;<a href="../-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span></code><p>Returns a notary identity advertised by any of the nodes on the network (chosen at random)</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="get-node-by-legal-name.html">getNodeByLegalName</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getNodeByLegalName</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$getNodeByLegalName(kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span></code><p>Look up the node info for a legal name.</p>
@@ -122,9 +129,16 @@ updates.</p>
 </tr>
 <tr>
 <td>
-<a href="get-node-by-public-key.html">getNodeByPublicKey</a></td>
+<a href="get-node-by-public-key-tree.html">getNodeByPublicKeyTree</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getNodeByPublicKey</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$getNodeByPublicKey(java.security.PublicKey)/publicKey">publicKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span></code><p>Look up the node info for a public key.</p>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getNodeByPublicKeyTree</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$getNodeByPublicKeyTree(net.corda.core.crypto.PublicKeyTree)/publicKeyTree">publicKeyTree</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-public-key-tree/index.html"><span class="identifier">PublicKeyTree</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span></code><p>Look up the node info for a public key tree.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="get-notary.html">getNotary</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getNotary</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$getNotary(kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span></code><p>Gets a notary identity by the given name.</p>
 </td>
 </tr>
 <tr>
@@ -134,6 +148,21 @@ updates.</p>
 <code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getRecommended</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$getRecommended(net.corda.core.node.services.ServiceType, net.corda.core.contracts.Contract, kotlin.Array((net.corda.core.crypto.Party)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="../-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$getRecommended(net.corda.core.node.services.ServiceType, net.corda.core.contracts.Contract, kotlin.Array((net.corda.core.crypto.Party)))/contract">contract</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a><span class="symbol">, </span><span class="keyword">vararg</span> <span class="identifier" id="net.corda.core.node.services.NetworkMapCache$getRecommended(net.corda.core.node.services.ServiceType, net.corda.core.contracts.Contract, kotlin.Array((net.corda.core.crypto.Party)))/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span></code><p>Get a recommended node that advertises a service, and is suitable for the specified contract and parties.
 Implementations might understand, for example, the correct regulator to use for specific contracts/parties,
 or the appropriate oracle for a contract.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="get-representative-node.html">getRepresentativeNode</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getRepresentativeNode</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$getRepresentativeNode(net.corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span></code><p>Given a <a href="get-representative-node.html#net.corda.core.node.services.NetworkMapCache$getRepresentativeNode(net.corda.core.crypto.Party)/party">party</a>, returns a node advertising it as an identity. If more than one node found the result
+is chosen at random.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="is-notary.html">isNotary</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">isNotary</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$isNotary(net.corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>Checks whether a given party is an advertised notary identity</p>
 </td>
 </tr>
 <tr>

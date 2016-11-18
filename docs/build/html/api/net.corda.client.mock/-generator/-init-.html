@@ -7,7 +7,7 @@
 <a href="../index.html">net.corda.client.mock</a>&nbsp;/&nbsp;<a href="index.html">Generator</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
 <br/>
 <h1>&lt;init&gt;</h1>
-<code><span class="identifier">Generator</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.mock.Generator$<init>(kotlin.Function1((java.util.Random, net.corda.core.ErrorOr((net.corda.client.mock.Generator.A)))))/generate">generate</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Random.html"><span class="identifier">Random</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../net.corda.core/-error-or/index.html"><span class="identifier">ErrorOr</span></a><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">)</span></code><br/>
+<code><span class="identifier">Generator</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.mock.Generator$<init>(kotlin.Function1((java.util.SplittableRandom, net.corda.core.ErrorOr((net.corda.client.mock.Generator.A)))))/generate">generate</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/SplittableRandom.html"><span class="identifier">SplittableRandom</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../net.corda.core/-error-or/index.html"><span class="identifier">ErrorOr</span></a><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">)</span></code><br/>
 <p>This file defines a basic <a href="index.html">Generator</a> library for composing random generators of objects.</p>
 <p>An object of type <a href="index.html">Generator</a>&lt;<a href="#">A</a>&gt; captures a generator of <a href="#">A</a>s. Generators may be composed in several ways.</p>
 <p><a href="choice.html">Generator.choice</a> picks a generator from the specified list and runs that.
@@ -26,7 +26,7 @@ val animalsGenerator = Generator.frequency(
 0.2 to birdsGenerator,
 0.8 to mammalsGenerator
 )
-val animals = animalsGenerator.generate(Random()).getOrThrow()</p>
+val animals = animalsGenerator.generate(SplittableRandom()).getOrThrow()</p>
 <p>The above will generate a random list of animals.</p>
 <br/>
 <br/>

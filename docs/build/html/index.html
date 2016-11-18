@@ -99,7 +99,6 @@
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -107,7 +106,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
@@ -125,6 +124,7 @@
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
@@ -190,8 +190,11 @@ of documentation you may find useful, from highest level to lowest:</p>
 <li>The <a class="reference external" href="_static/corda-introductory-whitepaper.pdf">Introductory white paper</a> describes the motivating vision and background of the project. It is the kind
 of document your boss should read. It describes why the project exists and briefly compares it to alternative
 systems on the market.</li>
-<li>This user guide. It describes <em>how</em> to use the system to write apps. It assumes you already have read the
-relevant sections of the technology white paper and now wish to learn how to use it.</li>
+<li>The <a class="reference external" href="_static/corda-technical-whitepaper.pdf">Technical white paper</a> describes the entire intended design from beginning to end. It is the kind of
+document that you should read, or at least, read parts of. Note that because the technical white paper
+describes the intended end state, it does not always align with the implementation.</li>
+<li>This user guide. It describes <em>how</em> to use the system to write apps, as currently implemented. It assumes
+you already have read the relevant sections of the technology white paper and now wish to learn how to use it.</li>
 <li>The <a class="reference external" href="api/index.html">API docs</a>.</li>
 </ol>
 <p>Read on to learn:</p>
@@ -274,7 +277,6 @@ relevant sections of the technology white paper and now wish to learn how to use
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#trader-demo">Trader demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#irs-demo">IRS demo</a></li>
-<li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#irs-web-demo">IRS web demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#attachment-demo">Attachment demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#simm-and-portfolio-demo">SIMM and Portfolio Demo</a></li>
 </ul>
@@ -293,7 +295,6 @@ relevant sections of the technology white paper and now wish to learn how to use
 <li class="toctree-l2"><a class="reference internal" href="corda-configuration-files.html#configuration-file-fields">Configuration File Fields</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html#rpc-users-file">RPC Users File</a></li>
 </ul>
 </div>
 <div class="toctree-wrapper compound" id="tutorials">
@@ -333,7 +334,7 @@ relevant sections of the technology white paper and now wish to learn how to use
 <li class="toctree-l2"><a class="reference internal" href="tutorial-test-dsl.html#chaining-transactions">Chaining transactions</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="protocol-state-machines.html#theory">Theory</a></li>
@@ -409,6 +410,13 @@ relevant sections of the technology white paper and now wish to learn how to use
 <div class="toctree-wrapper compound" id="appendix">
 <p class="caption"><span class="caption-text">Appendix</span><a class="headerlink" href="#appendix" title="Permalink to this toctree">¶</a></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="loadtesting.html#configuration-of-the-load-testing-cluster">Configuration of the load testing cluster</a></li>
+<li class="toctree-l2"><a class="reference internal" href="loadtesting.html#running-the-load-tests">Running the load tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="loadtesting.html#configuration-of-individual-load-tests">Configuration of individual load tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="loadtesting.html#how-to-write-a-load-test">How to write a load test</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="secure-coding-guidelines.html#protocols">Protocols</a></li>
 <li class="toctree-l2"><a class="reference internal" href="secure-coding-guidelines.html#contracts">Contracts</a></li>

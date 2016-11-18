@@ -7,7 +7,7 @@
 <a href="../../index.html">net.corda.protocols</a>&nbsp;/&nbsp;<a href="../index.html">NotaryProtocol</a>&nbsp;/&nbsp;<a href=".">Client</a><br/>
 <br/>
 <h1>Client</h1>
-<code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span></code><br/>
 <p>A protocol to be used for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
 timestamp is correct and none of its inputs have been used in another completed transaction.</p>
 <h3>Exceptions</h3>
@@ -102,7 +102,7 @@ access this lazily or from inside <a href="../../../net.corda.core.protocols/-pr
 <td>
 <a href="call.html">call</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a></code><p>This is where you fill out your business logic.</p>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a></code><p>This is where you fill out your business logic.</p>
 </td>
 </tr>
 </tbody>

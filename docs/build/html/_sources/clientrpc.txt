@@ -21,9 +21,8 @@ Security
 --------
 
 Users wanting to use the RPC library are first required to authenticate themselves with the node using a valid username
-and password. These are kept in ``rpc-users.properties`` in the node base directory. This file also specifies
-permissions for each user, which the RPC implementation can use to control access. The file format is described in
-:doc:`corda-configuration-files`.
+and password. These are specified in the configuration file. Each user can be configured with a set of permissions which
+the RPC can use for fine-grain access control.
 
 Observables
 -----------
