@@ -75,8 +75,8 @@ class Node {
         config = config.withValue("useHTTPS", ConfigValueFactory.fromAnyRef(isHttps))
     }
 
-    void useTestClock() {
-        config = config.withValue("useTestClock", ConfigValueFactory.fromAnyRef(true))
+    void useTestClock(Boolean useTestClock) {
+        config = config.withValue("useTestClock", ConfigValueFactory.fromAnyRef(useTestClock))
     }
 
     /**
