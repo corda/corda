@@ -62,6 +62,8 @@ class CommercialPaperLegacy : Contract {
         val command = tx.commands.requireSingleCommand<CommercialPaperLegacy.Commands>()
         val timestamp: Timestamp? = tx.timestamp
 
+        // Suppress compiler warning as 'key' is an unused variable when destructuring 'groups'.
+        @Suppress("UNUSED_VARIABLE")
         for ((inputs, outputs, key) in groups) {
             when (command.value) {
                 is Commands.Move -> {

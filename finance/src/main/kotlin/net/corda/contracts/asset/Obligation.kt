@@ -480,6 +480,8 @@ class Obligation<P> : Contract {
         // Create a lookup table of the party that each public key represents.
         states.map { it.obligor }.forEach { partyLookup.put(it.owningKey, it) }
 
+        // Suppress compiler warning as 'groupStates' is an unused variable when destructuring 'groups'.
+        @Suppress("UNUSED_VARIABLE")
         for ((netState, groupStates) in groups) {
             // Extract the net balances
             val netBalances = netAmountsDue(extractAmountsDue(issued.product, states.asIterable()))
