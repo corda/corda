@@ -1,5 +1,6 @@
 package net.corda.contracts
 
+import javafx.beans.property.SimpleObjectProperty
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullPublicKeyTree
@@ -20,6 +21,7 @@ import java.util.*
 val CP_LEGACY_PROGRAM_ID = CommercialPaperLegacy()
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
+@SuppressWarnings("unused")
 class CommercialPaperLegacy : Contract {
     // TODO: should reference the content of the legal agreement, not its URI
     override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
@@ -62,6 +64,8 @@ class CommercialPaperLegacy : Contract {
         val command = tx.commands.requireSingleCommand<CommercialPaperLegacy.Commands>()
         val timestamp: Timestamp? = tx.timestamp
 
+        // Suppress compiler warning as 'key' is an unused variable when destructuring 'groups'.
+        @Suppress("UNUSED_VARIABLE")
         for ((inputs, outputs, key) in groups) {
             when (command.value) {
                 is Commands.Move -> {
