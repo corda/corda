@@ -85,7 +85,9 @@ a:visited{
 	font-size:1.1em;
 	color:#EC1D24;
 	text-transform:none;
-
+	background-color: #5a090b;
+	padding: 0 0.5em;
+	margin-top: 0.5em;
 }
 
  /* Code snippets */
