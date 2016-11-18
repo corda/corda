@@ -79,3 +79,19 @@ Now let's try to visualise the transaction graph. We will use a graph drawing li
     :end-before: END 5
 
 If we run the client with ``Visualise`` we should see a simple random graph being drawn as new transactions are being created.
+
+Registering classes from your Cordapp with RPC Kryo
+--------------------------------------------------
+
+As described in :doc:`clientrpc`, you currently have to register any additional classes you add that are needed in RPC
+requests or responses with the `Kryo` instance RPC uses.  Here's an example of how you do this for an example class.
+
+.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcTutorial.kt
+    :language: kotlin
+    :start-after: START 7
+    :end-before: END 7
+
+See more on plugins in :doc:`creating-a-cordapp`.
+
+.. warning:: We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin
+    customisation point will either go away completely or change.
