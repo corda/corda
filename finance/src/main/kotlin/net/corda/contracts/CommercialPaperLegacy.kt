@@ -1,6 +1,5 @@
 package net.corda.contracts
 
-import javafx.beans.property.SimpleObjectProperty
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullPublicKeyTree
