@@ -17,11 +17,17 @@ buildscript {
     repositories {
         mavenCentral()
         jcenter()
+        // TODO: Remove this once all packages are published to jcenter or maven central. (M6 or 7).
+        maven {
+            url  "http://r3.bintray.com/corda"
+        }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
         classpath 'net.corda.plugins:publish-utils:0.5'
+        classpath 'net.corda.plugins:quasar-utils:0.5'
+        classpath 'net.corda.plugins:cordformation:0.5'
 
         // Can run 'gradle dependencyUpdates' to find new versions of things.
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'
@@ -38,7 +44,7 @@ apply plugin: 'kotlin'
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'maven-publish'
-apply plugin: QuasarPlugin
+apply plugin: 'net.corda.plugins.quasar-utils'
 
 allprojects {
     apply plugin: 'java'
