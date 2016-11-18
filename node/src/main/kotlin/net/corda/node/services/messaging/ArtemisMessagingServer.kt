@@ -7,6 +7,7 @@ import net.corda.core.div
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.loggerFor
+import net.corda.node.printBasicNodeInfo
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer.NodeLoginModule.Companion.NODE_USER
@@ -170,6 +171,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             }
         }
         activeMQServer.start()
+        printBasicNodeInfo("Node listening on address", myHostPort.toString())
     }
 
     private fun createArtemisConfig(): Configuration = ConfigurationImpl().apply {

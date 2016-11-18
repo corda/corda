@@ -112,11 +112,10 @@ tasks.withType(Test) {
 task buildCordaJAR(type: FatCapsule, dependsOn: ['quasarScan', 'buildCertSigningRequestUtilityJAR']) {
     applicationClass 'net.corda.node.MainKt'
     archiveName "corda-${corda_version}.jar"
-    applicationSource = files(project.tasks.findByName('jar'), 'node/build/classes/main/CordaCaplet.class')
+    applicationSource = files(project.tasks.findByName('jar'), 'node/build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
 
     capsuleManifest {
         appClassPath = ["jolokia-agent-war-${project.ext.jolokia_version}.war"]
-        systemProperties['log4j.configuration'] = 'log4j2.xml'
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
         minJavaVersion = '1.8.0'
         caplets = ['CordaCaplet']

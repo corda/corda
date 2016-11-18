@@ -9,6 +9,7 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.then
 import net.corda.core.utilities.loggerFor
+import net.corda.node.printBasicNodeInfo
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
@@ -41,6 +42,7 @@ import org.jetbrains.exposed.sql.Database
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.lang.reflect.InvocationTargetException
+import java.net.InetAddress
 import java.nio.channels.FileLock
 import java.time.Clock
 import java.util.*
@@ -63,12 +65,6 @@ class ConfigurationException(message: String) : Exception(message)
  */
 class Node(override val configuration: FullNodeConfiguration, networkMapAddress: SingleMessageRecipient?,
            advertisedServices: Set<ServiceInfo>, clock: Clock = NodeClock()) : AbstractNode(configuration, networkMapAddress, advertisedServices, clock) {
-    companion object {
-        /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */
-        @JvmField
-        val DEFAULT_PORT = 31337
-    }
-
     override val log = loggerFor<Node>()
 
     // DISCUSSION
@@ -198,11 +194,11 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
             httpConnector
         }
         server.connectors = arrayOf<Connector>(connector)
-        log.info("Starting web API server on port ${connector.port}")
 
         server.handler = handlerCollection
         runOnStop += Runnable { server.stop() }
         server.start()
+        printBasicNodeInfo("Embedded web server is listening on", "http://${InetAddress.getLocalHost().hostAddress}:${connector.port}/")
         return server
     }
 
@@ -295,7 +291,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
                         "-tcpDaemon",
                         "-key", "node", databaseName)
                 val url = server.start().url
-                log.info("H2 JDBC url is jdbc:h2:$url/node")
+                printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
         }
         super.initialiseDatabasePersistence(insideTransaction)
@@ -362,7 +358,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
                 shutdownThread = null
             }
         }
-        log.info("Shutting down ...")
+        printBasicNodeInfo("Shutting down ...")
 
         // All the Node started subsystems were registered with the runOnStop list at creation.
         // So now simply call the parent to stop everything in reverse order.

@@ -1,61 +1,81 @@
 package net.corda.node
 
+import com.typesafe.config.ConfigException
+import joptsimple.OptionParser
+import net.corda.core.div
+import net.corda.core.randomOrNull
+import net.corda.core.rootCause
+import net.corda.core.then
+import net.corda.core.utilities.Emoji
+import net.corda.node.internal.Node
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
-import joptsimple.OptionParser
+import net.corda.node.utilities.ANSIProgressObserver
+import org.fusesource.jansi.Ansi
 import org.slf4j.LoggerFactory
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
-import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.system.exitProcess
 
-private val log = LoggerFactory.getLogger("Main")
+private var renderBasicInfoToConsole = true
 
-object ParamsSpec {
-    val parser = OptionParser()
-
-    // The intent of allowing a command line configurable directory and config path is to allow deployment flexibility.
-    // Other general configuration should live inside the config file unless we regularly need temporary overrides on the command line
-    val baseDirectoryArg =
-            parser.accepts("base-directory", "The directory to put all files under")
-                    .withOptionalArg()
-    val configFileArg =
-            parser.accepts("config-file", "The path to the config file")
-                    .withOptionalArg()
+/** Used for useful info that we always want to show, even when not logging to the console */
+fun printBasicNodeInfo(description: String, info: String? = null) {
+    if (renderBasicInfoToConsole) {
+        val msg = if (info == null) description else "${description.padEnd(40)}: $info"
+        println(msg)
+    } else {
+        val msg = if (info == null) description else "$description: $info"
+        LoggerFactory.getLogger("Main").info(msg)
+    }
 }
 
 fun main(args: Array<String>) {
-    log.info("Starting Corda Node")
+    val parser = OptionParser()
+    // The intent of allowing a command line configurable directory and config path is to allow deployment flexibility.
+    // Other general configuration should live inside the config file unless we regularly need temporary overrides on the command line
+    val baseDirectoryArg = parser.accepts("base-directory", "The directory to put all files under").withOptionalArg()
+    val configFileArg = parser.accepts("config-file", "The path to the config file").withOptionalArg()
+    val logToConsoleArg = parser.accepts("log-to-console", "If set, prints logging to the console as well as to a file.")
+    val helpArg = parser.accepts("help").forHelp()
+
     val cmdlineOptions = try {
-        ParamsSpec.parser.parse(*args)
+        parser.parse(*args)
     } catch (ex: Exception) {
-        log.error("Unable to parse args", ex)
-        System.exit(1)
-        return
+        println("Unknown command line arguments: ${ex.message}")
+        exitProcess(1)
     }
 
-    val baseDirectoryPath = if (cmdlineOptions.has(ParamsSpec.baseDirectoryArg)) Paths.get(cmdlineOptions.valueOf(ParamsSpec.baseDirectoryArg)) else Paths.get(".").normalize()
-    val configFile = if (cmdlineOptions.has(ParamsSpec.configFileArg)) Paths.get(cmdlineOptions.valueOf(ParamsSpec.configFileArg)) else null
-    val conf = FullNodeConfiguration(ConfigHelper.loadConfig(baseDirectoryPath, configFile))
+    // Maybe render command line help.
+    if (cmdlineOptions.has(helpArg)) {
+        parser.printHelpOn(System.out)
+        exitProcess(0)
+    }
+
+    // Set up logging.
+    if (cmdlineOptions.has(logToConsoleArg)) {
+        // This property is referenced from the XML config file.
+        System.setProperty("consoleLogLevel", "info")
+        renderBasicInfoToConsole = false
+    }
+
+    drawBanner()
+
+    val baseDirectoryPath = if (cmdlineOptions.has(baseDirectoryArg)) Paths.get(cmdlineOptions.valueOf(baseDirectoryArg)) else Paths.get(".").normalize()
+    System.setProperty("log-path", (baseDirectoryPath / "logs").toAbsolutePath().toString())
+
+    val log = LoggerFactory.getLogger("Main")
+    printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
+    val configFile = if (cmdlineOptions.has(configFileArg)) Paths.get(cmdlineOptions.valueOf(configFileArg)) else null
+    val conf = try {
+        FullNodeConfiguration(ConfigHelper.loadConfig(baseDirectoryPath, configFile))
+    } catch (e: ConfigException) {
+        println("Unable to load the configuration file: ${e.rootCause.message}")
+        exitProcess(2)
+    }
     val dir = conf.basedir.toAbsolutePath().normalize()
-    logInfo(args, dir)
 
-    try {
-        val dirFile = dir.toFile()
-        if (!dirFile.exists())
-            dirFile.mkdirs()
-
-        val node = conf.createNode()
-        node.start()
-        node.run()
-    } catch (e: Exception) {
-        log.error("Exception during node startup", e)
-        System.exit(1)
-    }
-    System.exit(0)
-}
-
-private fun logInfo(args: Array<String>, dir: Path?) {
     log.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().getPath()}")
     val info = ManagementFactory.getRuntimeMXBean()
     log.info("CommandLine Args: ${info.getInputArguments().joinToString(" ")}")
@@ -65,5 +85,69 @@ private fun logInfo(args: Array<String>, dir: Path?) {
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
     log.info("Working Directory: ${dir}")
+
+    try {
+        val dirFile = dir.toFile()
+        if (!dirFile.exists())
+            dirFile.mkdirs()
+
+        val node = conf.createNode()
+        val startTime = System.currentTimeMillis()
+
+        node.start()
+        printPluginsAndServices(node)
+
+        node.networkMapRegistrationFuture.then {
+            val elapsed = (System.currentTimeMillis() - startTime) / 10 / 1000.0
+            printBasicNodeInfo("Node started up and registered in $elapsed sec")
+
+            if (renderBasicInfoToConsole)
+                ANSIProgressObserver(node.smm)
+        }
+        node.run()
+    } catch (e: Exception) {
+        log.error("Exception during node startup", e)
+        exitProcess(1)
+    }
+    exitProcess(0)
 }
+
+private fun printPluginsAndServices(node: Node) {
+    node.configuration.extraAdvertisedServiceIds.let { if (it.isNotEmpty()) printBasicNodeInfo("Providing network services", it) }
+    val plugins = node.pluginRegistries.map { it.javaClass.name }.filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") }.map { it.replaceAfter('$', "") }
+    if (plugins.isNotEmpty())
+        printBasicNodeInfo("Loaded plugins", plugins.joinToString())
+}
+
+private fun messageOfTheDay(): Pair<String, String> {
+    val messages = arrayListOf(
+            "The only distributed ledger that pays\nhomage to Pac Man in its logo.",
+            "The officially approved platform of the\nglobal capitalist lizard conspiracy™ ${Emoji.bagOfCash}",
+            "It's not who you know, it's who you know\nknows what you know you know.",
+            "It runs on the JVM because QuickBasic\nis apparently not 'professional' enough.",
+            "\"It's OK computer, I go to sleep after\ntwenty minutes of inactivity too!\"",
+            "It's kind of like a block chain but\ncords sounded healthier than chains.",
+            "Computer science and finance together.\nYou should see our crazy Christmas parties!"
+
+    )
+    if (Emoji.hasEmojiTerminal)
+        messages +=
+            "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"
+    val (a, b) = messages.randomOrNull()!!.split('\n')
+    return Pair(a, b)
+}
+
+private fun drawBanner() {
+    val (msg1, msg2) = Emoji.renderIfSupported { messageOfTheDay() }
+
+    println(Ansi.ansi().fgBrightRed().a(
+"""
+   ______               __
+  / ____/     _________/ /___ _
+ / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
+"/ /___  /_/ / /  / /_/ / /_/ /          ").fgBrightBlue().a(msg2).newline().fgBrightRed().a(
+"""\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().
+a("--- DEVELOPER SNAPSHOT ------------------------------------------------------------").newline().reset())
+}
+
 

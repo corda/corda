@@ -41,7 +41,10 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.*
 import net.corda.node.services.vault.CashBalanceAsMetricsObserver
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.utilities.*
+import net.corda.node.utilities.AddOrRemove
+import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.configureDatabase
+import net.corda.node.utilities.databaseTransaction
 import net.corda.protocols.CashCommand
 import net.corda.protocols.CashProtocol
 import net.corda.protocols.sendRequest
@@ -165,7 +168,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         get() = _networkMapRegistrationFuture
 
     /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
-    protected val pluginRegistries: List<CordaPluginRegistry> by lazy {
+    val pluginRegistries: List<CordaPluginRegistry> by lazy {
         ServiceLoader.load(CordaPluginRegistry::class.java).toList()
     }
 
@@ -233,8 +236,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             buildAdvertisedServices()
 
             // TODO: this model might change but for now it provides some de-coupling
-            // Add SMM observers
-            ANSIProgressObserver(smm)
             // Add vault observers
             CashBalanceAsMetricsObserver(services)
             ScheduledActivityObserver(services)

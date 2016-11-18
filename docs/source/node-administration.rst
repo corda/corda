@@ -4,6 +4,15 @@ Node administration
 When a node is running, it exposes an embedded database server, an embedded web server that lets you monitor it,
 you can upload and download attachments, access a REST API and so on.
 
+Logging
+-------
+
+Logs are stored to the logs subdirectory of the node directory and are rotated from time to time. You can
+have logging printed to the console as well by passing the ``--log-to-console`` command line flag. Corda
+uses the log4j2 framework to manage its logging, so you can also configure it in more detail by writing
+a custom logging configuration file and passing ``-Dlog4j.configurationFile=my-config-file.xml`` on the
+command line as well.
+
 Database access
 ---------------
 

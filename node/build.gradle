@@ -46,6 +46,11 @@ sourceSets {
             srcDir "../config/test"
         }
     }
+    main {
+        resources {
+            srcDir "../config/dev"
+        }
+    }
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
