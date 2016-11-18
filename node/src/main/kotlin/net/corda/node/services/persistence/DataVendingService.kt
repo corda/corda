@@ -3,19 +3,20 @@ package net.corda.node.services.persistence
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
-import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.recordTransactions
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.*
+import net.corda.core.node.CordaPluginRegistry
 import java.io.InputStream
 import javax.annotation.concurrent.ThreadSafe
+import java.util.function.Function
 
 object DataVending {
 
     class Plugin : CordaPluginRegistry() {
-        override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
+        override val servicePlugins = listOf(Function(::Service))
     }
 
     /**
@@ -36,8 +37,6 @@ object DataVending {
         companion object {
             val logger = loggerFor<DataVending.Service>()
         }
-
-        class TransactionRejectedError(msg: String) : Exception(msg)
 
         init {
             services.registerFlowInitiator(FetchTransactionsFlow::class, ::FetchTransactionsHandler)

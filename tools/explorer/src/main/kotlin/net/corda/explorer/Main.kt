@@ -8,10 +8,10 @@ import javafx.scene.control.ButtonType
 import javafx.scene.image.Image
 import javafx.stage.Stage
 import jfxtras.resources.JFXtrasFontRoboto
-import net.corda.client.CordaRPCClient
 import net.corda.client.mock.EventGenerator
 import net.corda.client.model.Models
 import net.corda.client.model.observableValue
+import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.explorer.model.CordaViewModel
@@ -24,7 +24,7 @@ import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent
-import net.corda.node.services.messaging.startFlow
+import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import org.apache.commons.lang.SystemUtils

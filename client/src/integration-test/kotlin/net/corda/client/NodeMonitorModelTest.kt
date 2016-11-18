@@ -9,6 +9,7 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.getOrThrow
+import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceInfo
@@ -22,7 +23,6 @@ import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.ArtemisMessagingComponent
-import net.corda.node.services.messaging.StateMachineUpdate
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService

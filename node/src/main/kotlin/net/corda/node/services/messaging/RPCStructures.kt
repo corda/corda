@@ -20,6 +20,9 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.messaging.FlowHandle
+import net.corda.core.messaging.StateMachineInfo
+import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.serialization.*
@@ -28,6 +31,7 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.flows.CashFlowResult
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.User
+import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -37,6 +41,7 @@ import org.slf4j.LoggerFactory
 import rx.Notification
 import rx.Observable
 import java.time.Instant
+import java.time.LocalDateTime
 import java.util.*
 
 /** Global RPC logger */
@@ -44,15 +49,6 @@ val rpcLog: Logger by lazy { LoggerFactory.getLogger("net.corda.rpc") }
 
 /** Used in the RPC wire protocol to wrap an observation with the handle of the observable it's intended for. */
 data class MarshalledObservation(val forHandle: Int, val what: Notification<*>)
-
-/**
- * If an RPC is tagged with this annotation it may return one or more observables anywhere in its response graph.
- * Calling such a method comes with consequences: it's slower, and consumes server side resources as observations
- * will buffer up on the server until they're consumed by the client.
- */
-@Target(AnnotationTarget.FUNCTION)
-@MustBeDocumented
-annotation class RPCReturnsObservables
 
 /** Records the protocol version in which this RPC was added. */
 @Target(AnnotationTarget.FUNCTION)
@@ -75,15 +71,6 @@ data class ClientRPCRequestMessage(
 }
 
 /**
- * Base interface that all RPC servers must implement. Note: in Corda there's only one RPC interface. This base
- * interface is here in case we split the RPC system out into a separate library one day.
- */
-interface RPCOps {
-    /** Returns the RPC protocol version. Exists since version 0 so guaranteed to be present. */
-    val protocolVersion: Int
-}
-
-/**
  * This is available to RPC implementations to query the validated [User] that is calling it. Each user has a set of
  * permissions they're entitled to which can be used to control access.
  */
@@ -92,8 +79,11 @@ val CURRENT_RPC_USER: ThreadLocal<User> = ThreadLocal()
 
 /** Helper method which checks that the current RPC user is entitled for the given permission. Throws a [PermissionException] otherwise. */
 fun requirePermission(permission: String) {
-    if (permission !in CURRENT_RPC_USER.get().permissions) {
-        throw PermissionException("User not permissioned for $permission")
+    // TODO remove the NODE_USER condition once webserver doesn't need it
+    val currentUser = CURRENT_RPC_USER.get()
+    val currentUserPermissions = currentUser.permissions
+    if (currentUser.username != NODE_USER && permission !in currentUserPermissions) {
+        throw PermissionException("User not permissioned for $permission, permissions are $currentUserPermissions")
     }
 }
 
@@ -236,6 +226,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(FlowHandle::class.java)
         register(KryoException::class.java)
         register(StringBuffer::class.java)
+        register(Unit::class.java)
         for ((_flow, argumentTypes) in AbstractNode.defaultFlowWhiteList) {
             for (type in argumentTypes) {
                 register(type)

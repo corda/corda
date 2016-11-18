@@ -10,8 +10,8 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.transactions.SignedTransaction
-import net.corda.node.services.messaging.StateMachineUpdate
 import org.fxmisc.easybind.EasyBind
 
 data class GatheredTransactionData(

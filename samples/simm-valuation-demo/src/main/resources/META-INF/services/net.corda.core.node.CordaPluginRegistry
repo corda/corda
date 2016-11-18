@@ -1,2 +1,2 @@
-# Register a ServiceLoader service extending from net.corda.node.CordaPluginRegistry
+# Register a ServiceLoader service extending from net.corda.core.node.CordaPluginRegistry
 net.corda.vega.services.SimmService$Plugin

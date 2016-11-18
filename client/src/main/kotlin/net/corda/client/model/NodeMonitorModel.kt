@@ -2,8 +2,11 @@ package net.corda.client.model
 
 import com.google.common.net.HostAndPort
 import javafx.beans.property.SimpleObjectProperty
-import net.corda.client.CordaRPCClient
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.StateMachineInfo
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
@@ -11,10 +14,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.node.services.config.NodeSSLConfiguration
-import net.corda.node.services.messaging.CordaRPCOps
-import net.corda.node.services.messaging.StateMachineInfo
-import net.corda.node.services.messaging.StateMachineUpdate
-import net.corda.node.services.messaging.startFlow
+import net.corda.node.services.messaging.CordaRPCClient
 import rx.Observable
 import rx.subjects.PublishSubject
 

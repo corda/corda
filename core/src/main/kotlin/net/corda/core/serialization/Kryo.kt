@@ -25,9 +25,7 @@ import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.objenesis.strategy.StdInstantiatorStrategy
-import java.io.ByteArrayOutputStream
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
+import java.io.*
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -200,6 +198,55 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
             throw e.cause!!
         }
     }
+}
+
+// TODO This is a temporary inefficient serialiser for sending InputStreams through RPC. This may be done much more
+// efficiently using Artemis's large message feature.
+class InputStreamSerializer : Serializer<InputStream>() {
+    override fun write(kryo: Kryo, output: Output, stream: InputStream) {
+        val buffer = ByteArray(4096)
+        while (true) {
+            val numberOfBytesRead = stream.read(buffer)
+            if (numberOfBytesRead > 0) {
+                output.writeInt(numberOfBytesRead, true)
+                output.writeBytes(buffer, 0, numberOfBytesRead)
+            } else {
+                output.writeInt(0)
+                break
+            }
+        }
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<InputStream>): InputStream {
+        val chunks = ArrayList<ByteArray>()
+        while (true) {
+            val chunk = input.readBytesWithLength()
+            if (chunk.isEmpty()) {
+                break
+            } else {
+                chunks.add(chunk)
+            }
+        }
+
+        return object : InputStream() {
+            var offset = 0
+            override fun read(): Int {
+                while (!chunks.isEmpty()) {
+                    val chunk = chunks[0]
+                    if (offset >= chunk.size) {
+                        offset = 0
+                        chunks.removeAt(0)
+                    } else {
+                        val byte = chunk[offset]
+                        offset++
+                        return byte.toInt() and 0xFF
+                    }
+                }
+                return -1
+            }
+        }
+    }
+
 }
 
 inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T): T {
@@ -404,6 +451,8 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
         /** This ensures any kotlin objects that implement [DeserializeAsKotlinObjectDef] are read back in as singletons. */
         addDefaultSerializer(DeserializeAsKotlinObjectDef::class.java, KotlinObjectSerializer)
+
+        addDefaultSerializer(InputStream::class.java, InputStreamSerializer())
 
         ImmutableListSerializer.registerSerializers(k)
         ImmutableSetSerializer.registerSerializers(k)

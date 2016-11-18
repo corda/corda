@@ -22,7 +22,8 @@ object NotaryFlow {
      *                         by another transaction or the timestamp is invalid.
      */
     open class Client(private val stx: SignedTransaction,
-                      override val progressTracker: ProgressTracker = Client.tracker()) : FlowLogic<DigitalSignature.WithKey>() {
+                      override val progressTracker: ProgressTracker) : FlowLogic<DigitalSignature.WithKey>() {
+        constructor(stx: SignedTransaction) : this(stx, Client.tracker())
 
         companion object {
 
