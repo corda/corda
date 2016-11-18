@@ -25,8 +25,10 @@ class JDBCHashMapTestSuite {
         lateinit var transaction: Transaction
         lateinit var database: Database
         lateinit var loadOnInitFalseMap: JDBCHashMap<String, String>
+        lateinit var memoryConstrainedMap: JDBCHashMap<String, String>
         lateinit var loadOnInitTrueMap: JDBCHashMap<String, String>
         lateinit var loadOnInitFalseSet: JDBCHashSet<String>
+        lateinit var memoryConstrainedSet: JDBCHashSet<String>
         lateinit var loadOnInitTrueSet: JDBCHashSet<String>
 
         @JvmStatic
@@ -37,8 +39,10 @@ class JDBCHashMapTestSuite {
             database = dataSourceAndDatabase.second
             setUpDatabaseTx()
             loadOnInitFalseMap = JDBCHashMap<String, String>("test_map_false", loadOnInit = false)
+            memoryConstrainedMap = JDBCHashMap<String, String>("test_map_constrained", loadOnInit = false, maxBuckets = 1)
             loadOnInitTrueMap = JDBCHashMap<String, String>("test_map_true", loadOnInit = true)
             loadOnInitFalseSet = JDBCHashSet<String>("test_set_false", loadOnInit = false)
+            memoryConstrainedSet = JDBCHashSet<String>("test_set_constrained", loadOnInit = false, maxBuckets = 1)
             loadOnInitTrueSet = JDBCHashSet<String>("test_set_true", loadOnInit = true)
         }
 
@@ -50,8 +54,8 @@ class JDBCHashMapTestSuite {
         }
 
         @JvmStatic
-        fun createMapTestSuite(loadOnInit: Boolean): TestSuite = com.google.common.collect.testing.MapTestSuiteBuilder
-                .using(JDBCHashMapTestGenerator(loadOnInit = loadOnInit))
+        fun createMapTestSuite(loadOnInit: Boolean, constrained: Boolean): TestSuite = com.google.common.collect.testing.MapTestSuiteBuilder
+                .using(JDBCHashMapTestGenerator(loadOnInit = loadOnInit, constrained = constrained))
                 .named("test JDBCHashMap with loadOnInit=$loadOnInit")
                 .withFeatures(
                         com.google.common.collect.testing.features.CollectionSize.ANY,
@@ -65,8 +69,8 @@ class JDBCHashMapTestSuite {
                 .createTestSuite()
 
         @JvmStatic
-        fun createSetTestSuite(loadOnInit: Boolean): TestSuite = com.google.common.collect.testing.SetTestSuiteBuilder
-                .using(JDBCHashSetTestGenerator(loadOnInit = loadOnInit))
+        fun createSetTestSuite(loadOnInit: Boolean, constrained: Boolean): TestSuite = com.google.common.collect.testing.SetTestSuiteBuilder
+                .using(JDBCHashSetTestGenerator(loadOnInit = loadOnInit, constrained = constrained))
                 .named("test JDBCHashSet with loadOnInit=$loadOnInit")
                 .withFeatures(
                         com.google.common.collect.testing.features.CollectionSize.ANY,
@@ -96,31 +100,41 @@ class JDBCHashMapTestSuite {
     }
 
     /**
-     * Guava test suite generator for JDBCHashMap(loadOnInit=false).
+     * Guava test suite generator for JDBCHashMap(loadOnInit=false, constrained = false).
      */
     class MapLoadOnInitFalse {
         companion object {
             @JvmStatic
-            fun suite(): TestSuite = createMapTestSuite(false)
+            fun suite(): TestSuite = createMapTestSuite(false, false)
         }
     }
 
     /**
-     * Guava test suite generator for JDBCHashMap(loadOnInit=true).
+     * Guava test suite generator for JDBCHashMap(loadOnInit=false, constrained = true).
+     */
+    class MapConstained {
+        companion object {
+            @JvmStatic
+            fun suite(): TestSuite = createMapTestSuite(false, true)
+        }
+    }
+
+    /**
+     * Guava test suite generator for JDBCHashMap(loadOnInit=true, constrained = false).
      */
     class MapLoadOnInitTrue {
         companion object {
             @JvmStatic
-            fun suite(): TestSuite = createMapTestSuite(true)
+            fun suite(): TestSuite = createMapTestSuite(true, false)
         }
     }
 
     /**
      * Generator of map instances needed for testing.
      */
-    class JDBCHashMapTestGenerator(val loadOnInit: Boolean) : com.google.common.collect.testing.TestStringMapGenerator() {
+    class JDBCHashMapTestGenerator(val loadOnInit: Boolean, val constrained: Boolean) : com.google.common.collect.testing.TestStringMapGenerator() {
         override fun create(elements: Array<Map.Entry<String, String>>): Map<String, String> {
-            val map = if (loadOnInit) loadOnInitTrueMap else loadOnInitFalseMap
+            val map = if (loadOnInit) loadOnInitTrueMap else if(constrained) memoryConstrainedMap else loadOnInitFalseMap
             map.clear()
             map.putAll(elements.associate { Pair(it.key, it.value) })
             return map
@@ -128,31 +142,41 @@ class JDBCHashMapTestSuite {
     }
 
     /**
-     * Guava test suite generator for JDBCHashSet(loadOnInit=false).
+     * Guava test suite generator for JDBCHashSet(loadOnInit=false, constrained = false).
      */
     class SetLoadOnInitFalse {
         companion object {
             @JvmStatic
-            fun suite(): TestSuite = createSetTestSuite(false)
+            fun suite(): TestSuite = createSetTestSuite(false, false)
         }
     }
 
     /**
-     * Guava test suite generator for JDBCHashSet(loadOnInit=true).
+     * Guava test suite generator for JDBCHashSet(loadOnInit=false, constrained = true).
+     */
+    class SetConstrained {
+        companion object {
+            @JvmStatic
+            fun suite(): TestSuite = createSetTestSuite(false, true)
+        }
+    }
+
+    /**
+     * Guava test suite generator for JDBCHashSet(loadOnInit=true, constrained = false).
      */
     class SetLoadOnInitTrue {
         companion object {
             @JvmStatic
-            fun suite(): TestSuite = createSetTestSuite(true)
+            fun suite(): TestSuite = createSetTestSuite(true, false)
         }
     }
 
     /**
      * Generator of set instances needed for testing.
      */
-    class JDBCHashSetTestGenerator(val loadOnInit: Boolean) : com.google.common.collect.testing.TestStringSetGenerator() {
+    class JDBCHashSetTestGenerator(val loadOnInit: Boolean, val constrained: Boolean) : com.google.common.collect.testing.TestStringSetGenerator() {
         override fun create(elements: Array<String>): Set<String> {
-            val set = if (loadOnInit) loadOnInitTrueSet else loadOnInitFalseSet
+            val set = if (loadOnInit) loadOnInitTrueSet else if(constrained) memoryConstrainedSet else loadOnInitFalseSet
             set.clear()
             set.addAll(elements)
             return set

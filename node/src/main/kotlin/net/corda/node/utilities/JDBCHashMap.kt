@@ -26,7 +26,10 @@ import kotlin.system.measureTimeMillis
  * If you can extend [AbstractJDBCHashMap] and implement less Kryo dependent key and/or value mappings then that is
  * likely preferrable.
  */
-class JDBCHashMap<K : Any, V : Any>(tableName: String, loadOnInit: Boolean = false) : AbstractJDBCHashMap<K, V, JDBCHashMap.BlobMapTable>(BlobMapTable(tableName), loadOnInit) {
+class JDBCHashMap<K : Any, V : Any>(tableName: String,
+                                    loadOnInit: Boolean = false,
+                                    maxBuckets: Int = 256)
+    : AbstractJDBCHashMap<K, V, JDBCHashMap.BlobMapTable>(BlobMapTable(tableName), loadOnInit, maxBuckets) {
 
     class BlobMapTable(tableName: String) : JDBCHashedTable(tableName) {
         val key = blob("key")
@@ -73,7 +76,10 @@ fun <T : Any> deserializeFromBlob(blob: Blob): T = bytesFromBlob<T>(blob).deseri
  * If you can extend [AbstractJDBCHashSet] and implement less Kryo dependent element mappings then that is
  * likely preferrable.
  */
-class JDBCHashSet<K : Any>(tableName: String, loadOnInit: Boolean = false) : AbstractJDBCHashSet<K, JDBCHashSet.BlobSetTable>(BlobSetTable(tableName), loadOnInit) {
+class JDBCHashSet<K : Any>(tableName: String,
+                           loadOnInit: Boolean = false,
+                           maxBuckets: Int = 256)
+    : AbstractJDBCHashSet<K, JDBCHashSet.BlobSetTable>(BlobSetTable(tableName), loadOnInit, maxBuckets) {
 
     class BlobSetTable(tableName: String) : JDBCHashedTable(tableName) {
         val key = blob("key")
@@ -92,8 +98,10 @@ class JDBCHashSet<K : Any>(tableName: String, loadOnInit: Boolean = false) : Abs
  *
  * See [AbstractJDBCHashMap] for implementation details.
  */
-abstract class AbstractJDBCHashSet<K : Any, out T : JDBCHashedTable>(protected val table: T, loadOnInit: Boolean = false) : MutableSet<K>, AbstractSet<K>() {
-    protected val innerMap = object : AbstractJDBCHashMap<K, Unit, T>(table, loadOnInit) {
+abstract class AbstractJDBCHashSet<K : Any, out T : JDBCHashedTable>(protected val table: T,
+                                                                     loadOnInit: Boolean = false,
+                                                                     maxBuckets: Int = 256) : MutableSet<K>, AbstractSet<K>() {
+    protected val innerMap = object : AbstractJDBCHashMap<K, Unit, T>(table, loadOnInit, maxBuckets) {
         override fun keyFromRow(row: ResultRow): K = this@AbstractJDBCHashSet.elementFromRow(row)
 
         // Return constant.
@@ -163,9 +171,13 @@ abstract class AbstractJDBCHashSet<K : Any, out T : JDBCHashedTable>(protected v
  * inherited columns that all tables must provide to support iteration order and hashing.
  *
  * The map operates in one of two modes.
- * 1. loadOnInit=true where the entire table is materialised in the JVM and only writes need to perform database access.
- * 2. loadOnInit=false where all entries with the same key hash code are materialised in the JVM on demand when accessed
- * via any method other than via keys/values/entries properties, and thus the whole map is not materialised.
+ * 1. loadOnInit=true where the entire table is loaded into memory in the constructor and all entries remain in memory,
+ * with only writes needing to perform database access.
+ * 2. loadOnInit=false where all entries with the same key hash code are loaded from the database on demand when accessed
+ * via any method other than via keys/values/entries properties, and thus the whole map is not loaded into memory.  The number
+ * of entries retained in memory is controlled indirectly by an LRU algorithm (courtesy of [LinkedHashMap]) and a maximum
+ * number of hash "buckets", where one bucket represents all entries with the same hash code.  There is a default value
+ * for maximum buckets.
  *
  * All operations require a [databaseTransaction] to be started.
  *
@@ -175,22 +187,32 @@ abstract class AbstractJDBCHashSet<K : Any, out T : JDBCHashedTable>(protected v
  *
  * This class is *not* thread safe.
  *
- * TODO: buckets grows forever.  Support some form of LRU cache option (e.g. use [LinkedHashMap.removeEldestEntry] feature).
  * TODO: consider caching size once calculated for the first time.
  * TODO: buckets just use a list and so are vulnerable to poor hash code implementations with collisions.
  * TODO: if iterators are used extensively when loadOnInit=true, consider maintaining a collection of keys in iteration order to avoid sorting each time.
  * TODO: revisit whether we need the loadOnInit==true functionality and remove if not.
  */
-abstract class AbstractJDBCHashMap<K : Any, V : Any, out T : JDBCHashedTable>(val table: T, val loadOnInit: Boolean = false) : MutableMap<K, V>, AbstractMap<K,V>() {
+abstract class AbstractJDBCHashMap<K : Any, V : Any, out T : JDBCHashedTable>(val table: T,
+                                                                              val loadOnInit: Boolean = false,
+                                                                              val maxBuckets: Int = 256) : MutableMap<K, V>, AbstractMap<K,V>() {
 
     companion object {
         protected val log = loggerFor<AbstractJDBCHashMap<*,*,*>>()
+
+        private const val INITIAL_CAPACITY: Int = 16
+        private const val LOAD_FACTOR: Float = 0.75f
     }
 
-    // Hash code -> entries mapping.  Lazy when loadOnInit=false.
-    private val buckets = HashMap<Int, MutableList<NotReallyMutableEntry<K, V>>>()
+    // Hash code -> entries mapping.
+    // When loadOnInit = false, size will be limited to maxBuckets entries (which are hash buckets) and map maintains access order rather than insertion order.
+    private val buckets = object : LinkedHashMap<Int, MutableList<NotReallyMutableEntry<K, V>>>(INITIAL_CAPACITY, LOAD_FACTOR, !loadOnInit) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, MutableList<NotReallyMutableEntry<K, V>>>?): Boolean {
+            return !loadOnInit && size > maxBuckets
+        }
+    }
 
     init {
+        check(maxBuckets > 0) { "The maximum number of buckets to retain in memory must be a positive integer." }
         // TODO: Move this to schema version managment tool.
         createTablesIfNecessary()
         if (loadOnInit) {
