@@ -89,7 +89,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install', 'buil
         artemisPort 10002
         webPort 10003
         cordapps = []
-        useTestClock()
+        useTestClock true
     }
     node {
         name "Bank A"
@@ -99,7 +99,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install', 'buil
         artemisPort 10004
         webPort 10005
         cordapps = []
-        useTestClock()
+        useTestClock true
     }
     node {
         name "Bank B"
@@ -109,7 +109,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install', 'buil
         artemisPort 10006
         webPort 10007
         cordapps = []
-        useTestClock()
+        useTestClock true
     }
 }
 
