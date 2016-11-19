@@ -147,7 +147,7 @@ inline fun <reified P : ProtocolLogic<*>> AbstractNode.initiateSingleShotProtoco
 
     val subscriber = object : Subscriber<Change>() {
         override fun onNext(change: Change) {
-            if (change.logic is P && change.addOrRemove == ADD) {
+            if (change.addOrRemove == ADD) {
                 unsubscribe()
                 future.set(change.logic as P)
             }
