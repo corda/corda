@@ -48,7 +48,7 @@ opened by clicking on "Event Log" at the bottom right of the IntelliJ window. Ei
     :width: 410 px
     :alt: IntelliJ Gradle Prompt
 
-Wait for it to think and download the dependencies. After that you might have another popup titled "Unindexed remote maven repositories found." This is general IntelliJ question and doesn't affect Corda, therefore you can decided to index them or not. Next click on the "green arrow" next to "All tests" pop-up on the top toolbar.
+Wait for it to think and download the dependencies. After that you might have another popup titled "Unindexed remote maven repositories found." This is a general IntelliJ question and doesn't affect Corda, therefore you can decided to index them or not. Next click on the "green arrow" next to "All tests" pop-up on the top toolbar.
 
 The code should build, the unit tests should show as all green.
 
