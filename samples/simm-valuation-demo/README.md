@@ -1,4 +1,4 @@
-# Simm Valuation Demo
+# SIMM Valuation Demo
 
 ## Introduction and Background
 
@@ -12,7 +12,7 @@ This demo does not, however, include real SIMM valuation code but a stub for the
 
 ## Preparation / Building
 
-You will need to build the core corda component libraries and ensure they have been installed into your local maven repository.  Do this by following the instructions if you haven't done this already. 
+You will need to build the core Corda component libraries and ensure they have been installed into your local maven repository.  Do this by following the instructions if you haven't done this already. 
 
 .. TODO: Link Instructions when finalised 
 
@@ -27,7 +27,7 @@ Once they are available, you will need to run (in the directory containing the s
 
 This demo is best run via the command line and a web browser, although it can be run via IntelliJ for debugging purposes.
 
-Change directory to `simm-valuation-demo/build/nodes` and execute the `runnodes` script.  This will start three nodes - a notary node and two bank nodes. Wait until the message TODO: _when logging output changes completed_ appears and then all of the nodes will be ready for interaction
+Change directory to `simm-valuation-demo/build/nodes` and execute the `runnodes` script.  This will start four nodes - a notary node and three bank nodes. Wait until the message TODO: _when logging output changes completed_ appears and then all of the nodes will be ready for interaction.
 
 ## Interacting
 
@@ -37,7 +37,7 @@ Start by browsing [here](http://localhost:10005/web/simmvaluationdemo/) . This i
 
 Once the portfolio has some trades, you can start the valuation and agreement flow. Do this by clicking the "Agree Valuations" tab and then the "Start Calculations" button. The flow will execute and then the web page will demonstrate a simulation of the agreement as it proceeds. Eventually, the flow will complete with the Initial Margin figures being agreed by and then signed by both nodes. For more details on exactly what is happening here, please see the link in the Introduction and Background section. 
 
-Please note that any url text after `simmvaluationdemo` should not be bookmarked or navigated directly to as they are only for aesthetics. 
+Please note that any URL text after `simmvaluationdemo` should not be bookmarked or navigated directly to as they are only for aesthetics. 
 
 ### Shutting down
 
@@ -45,7 +45,7 @@ The script to start the nodes has been written such that when you press a key in
 
 ## SIMM Library Licensing
 
-This demo was built in partnership with OpenGamma and used their SIMM library, however, due to licensing constraints we cannot distribute their library with this code. For this reason, we have stubbed out the relevant parts and replaced it with a very simplistic template that returns fake (but correctly structured) data. However, if you wish to use a realistic library, then please do get in touch with OpenGamma directly for access to their libraries and we will be happy to demonstrate how to replace the stub code. 
+This demo was built in partnership with OpenGamma and used their SIMM library. However, due to licensing constraints we cannot distribute their library with this code. For this reason, we have stubbed out the relevant parts and replaced it with a very simplistic template that returns fake (but correctly structured) data. However, if you wish to use a realistic library, then please do get in touch with OpenGamma directly for access to their libraries and we will be happy to demonstrate how to replace the stub code. 
 
 
 ## Troubleshooting
