@@ -168,6 +168,7 @@ object TwoPartyTradeFlow {
 
         override val progressTracker = ProgressTracker(RECEIVING, VERIFYING, SIGNING, SWAPPING_SIGNATURES)
 
+        // DOCSTART 1
         @Suspendable
         override fun call(): SignedTransaction {
             val tradeRequest = receiveAndValidateTradeRequest()
@@ -257,5 +258,6 @@ object TwoPartyTradeFlow {
             tx.setTime(currentTime, 30.seconds)
             return Pair(tx, cashSigningPubKeys)
         }
+        // DOCEND 1
     }
 }
