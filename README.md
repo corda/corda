@@ -42,7 +42,3 @@ Now [go read the documentation](https://docs.corda.net).
 
 * [Forums](https://not.here.yet)
 * [Chat](https://cordaledger.slack.com)
-
-# License
-
-Apache 2.0
