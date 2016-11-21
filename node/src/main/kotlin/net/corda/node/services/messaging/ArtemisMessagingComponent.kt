@@ -2,7 +2,7 @@ package net.corda.node.services.messaging
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.net.HostAndPort
-import net.corda.core.crypto.PublicKeyTree
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.read
@@ -75,7 +75,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      * may change or evolve and code that relies upon it being a simple host/port may not function correctly.
      * For instance it may contain onion routing data.
      */
-    data class NodeAddress(val identity: PublicKeyTree, override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
+    data class NodeAddress(val identity: CompositeKey, override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
         override val queueName: SimpleString by lazy { SimpleString(PEERS_PREFIX+identity.toBase58String()) }
         override fun toString(): String = "${javaClass.simpleName}(identity = $queueName, $hostAndPort)"
     }
@@ -83,9 +83,9 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
     /** The config object is used to pass in the passwords for the certificate KeyStore and TrustStore */
     abstract val config: NodeSSLConfiguration
 
-    protected fun parseKeyFromQueueName(name: String): PublicKeyTree {
+    protected fun parseKeyFromQueueName(name: String): CompositeKey {
         require(name.startsWith(PEERS_PREFIX))
-        return PublicKeyTree.parseFromBase58(name.substring(PEERS_PREFIX.length))
+        return CompositeKey.parseFromBase58(name.substring(PEERS_PREFIX.length))
     }
 
     protected enum class ConnectionDirection { INBOUND, OUTBOUND }

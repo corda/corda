@@ -405,24 +405,24 @@ the transaction will not be valid unless every key listed in every command has a
 structures are themselves opaque. In this way algorithmic agility is retained: new signature algorithms can be deployed
 without adjusting the code of the smart contracts themselves.
 
-\subsection{Compound keys}\label{sec:compound-keys}
+\subsection{Composite keys}\label{sec:composite-keys}
 
-The term ``public key'' in the description above actually refers to a \emph{compound key}. Compound keys are trees in
+The term ``public key'' in the description above actually refers to a \emph{composite key}. Composite keys are trees in
 which leaves are regular cryptographic public keys with an accompanying algorithm identifiers. Nodes in the tree specify
 both the weights of each child and a threshold weight that must be met. The validty of a set of signatures can be
 determined by walking the tree bottom-up, summing the weights of the keys that have a valid signature and comparing
 against the threshold. By using weights and thresholds a variety of conditions can be encoded, including boolean
 formulas with AND and OR.
 
-Compound keys are useful in multiple scenarios. For example, assets can be placed under the control of a 2-of-2
-compound key where one leaf key is owned by a user, and the other by an independent risk analysis system. The
+Composite keys are useful in multiple scenarios. For example, assets can be placed under the control of a 2-of-2
+composite key where one leaf key is owned by a user, and the other by an independent risk analysis system. The
 risk analysis system refuses to sign if the transaction seems suspicious, like if too much value has been
 transferred in too short a time window. Another example involves encoding corporate structures into the key,
-allowing a CFO to sign a large transaction alone but his subordinates are required to work together. Compound keys
+allowing a CFO to sign a large transaction alone but his subordinates are required to work together. Composite keys
 are also useful for notaries. Each participant in a distributed notary is represented by a leaf, and the threshold
 is set such that some participants can be offline or refusing to sign yet the signature of the group is still valid.
 
-Whilst there are threshold signature schemes in the literature that allow compound keys and signatures to be produced
+Whilst there are threshold signature schemes in the literature that allow composite keys and signatures to be produced
 mathematically, we choose the less space efficient explicit form in order to allow a mixture of keys using different
 algorithms. In this way old algorithms can be phased out and new algorithms phased in without requiring all
 participants in a group to upgrade simultaneously.
@@ -581,7 +581,7 @@ email address or EV (extended validation) organisation name.
 
 Corda takes this concept further. States may define fields of type \texttt{Party}, which encapsulates an identity
 and a public key. When a state is deserialised from a transaction in its raw form, the identity field of the
-\texttt{Party} object is null and only the public (compound) key is present. If a transaction is deserialised
+\texttt{Party} object is null and only the public (composite) key is present. If a transaction is deserialised
 in conjunction with X.509 certificate chains linking the transient public keys to long term identity keys the
 identity field is set. In this way a single data representation can be used for both the anonymised case, such
 as when validating dependencies of a transaction, and the identified case, such as when trading directly with
@@ -689,8 +689,8 @@ publishing a bad contract version, at the cost of increased difficulty in releas
 may also specify third parties they wish to review contract code. Regardless of which set of tradeoffs is chosen,
 the framework can accomodate them.
 
-A contract constraint may use a compound key of the type described in \cref{sec:compound-keys}. The standard JAR
-signing protocol allows for multiple signatures from different private keys, thus being able to satisfy compound
+A contract constraint may use a composite key of the type described in \cref{sec:composite-keys}. The standard JAR
+signing protocol allows for multiple signatures from different private keys, thus being able to satisfy composite
 keys. The allowed signing algorithms are \texttt{SHA256withRSA} and \texttt{SHA256withECDSA}. Note that the
 cryptographic algorithms used for code signing may not always be the same as those used for transaction signing,
 as for code signing we place initial focus on being able to re-use the infrastructure.
@@ -715,10 +715,10 @@ A ledger that cannot record the ownership of assets is not very useful. We defin
 asset-like behaviour and provide some platform contracts to ensure interoperable notions of cash and obligations.
 
 We define the notion of an \texttt{OwnableState}, implemented as an interface which any state may conform to. Ownable
-states are required to have an \texttt{owner} field which is a compound key (see \cref{sec:compound-keys}). This is
+states are required to have an \texttt{owner} field which is a composite key (see \cref{sec:composite-keys}). This is
 utilised by generic code in the vault (see \cref{sec:vault}) to manipulate ownable states.
 
-% TODO: Currently OwnableState.owner is just a regular PublicKeyTree.
+% TODO: Currently OwnableState.owner is just a regular CompositeKey.
 
 From \texttt{OwnableState} we derive a \texttt{FungibleAsset} concept to represent assets of measurable quantity, in
 which units are sufficiently similar to represented together in a single ledger state. Making that concrete, pound notes
@@ -932,7 +932,7 @@ transaction ordering and timestamping services, thus abstracting the role miners
 component.
 
 Notaries are expected to be composed of multiple mutually distrusting parties who use a standard consensus algorithm.
-Notaries are identified by and sign with compound public keys (\cref{sec:compound-keys})that conceptually follow the
+Notaries are identified by and sign with composite public keys (\cref{sec:composite-keys})that conceptually follow the
 Interledger Crypto-Conditions specification\cite{ILPCC}. Note that whilst it would be conventional to use a BFT
 algorithm for a notary service, there is no requirement to do so and in cases where the legal system is sufficient to
 ensure protocol compliance a higher performance algorithm like RAFT may be used. Because multiple notaries can co-exist
@@ -1669,7 +1669,7 @@ consensus systems, and the system operates without mining or a block chain.
 
 A standard type system is provided for the modelling of financial logic. The design considers security throughout: it
 supports the integration of secure signing devices for transaction authorisation, secure enclaves for transaction
-processing, compound keys for expressing complex authorisation policies, and is based on binary protocols with
+processing, composite keys for expressing complex authorisation policies, and is based on binary protocols with
 length-prefixed buffers throughout for the systematic avoidance of common buffer management exploits. Users may analyse
 ledger data relevant to them by issuing ordinary SQL queries against mature database engines, and may craft complex
 multi-party transactions with ease in programming languages that are already familiar to them.

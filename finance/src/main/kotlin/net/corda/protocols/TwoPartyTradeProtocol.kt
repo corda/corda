@@ -51,7 +51,7 @@ object TwoPartyTradeProtocol {
     data class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
             val price: Amount<Currency>,
-            val sellerOwnerKey: PublicKeyTree
+            val sellerOwnerKey: CompositeKey
     )
 
     data class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
@@ -99,7 +99,7 @@ object TwoPartyTradeProtocol {
         private fun receiveAndCheckProposedTransaction(): SignedTransaction {
             progressTracker.currentStep = AWAITING_PROPOSAL
 
-            val myPublicKey = myKeyPair.public.tree
+            val myPublicKey = myKeyPair.public.composite
             // Make the first message we'll send to kick off the protocol.
             val hello = SellerTradeInfo(assetToSell, price, myPublicKey)
 
@@ -223,7 +223,7 @@ object TwoPartyTradeProtocol {
             return sendAndReceive<SignaturesFromSeller>(otherParty, stx).unwrap { it }
         }
 
-        private fun signWithOurKeys(cashSigningPubKeys: List<PublicKeyTree>, ptx: TransactionBuilder): SignedTransaction {
+        private fun signWithOurKeys(cashSigningPubKeys: List<CompositeKey>, ptx: TransactionBuilder): SignedTransaction {
             // Now sign the transaction with whatever keys we need to move the cash.
             for (publicKey in cashSigningPubKeys.keys) {
                 val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
@@ -233,7 +233,7 @@ object TwoPartyTradeProtocol {
             return ptx.toSignedTransaction(checkSufficientSignatures = false)
         }
 
-        private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKeyTree>> {
+        private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<CompositeKey>> {
             val ptx = TransactionType.General.Builder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
@@ -247,7 +247,7 @@ object TwoPartyTradeProtocol {
             // reveal who the owner actually is. The key management service is expected to derive a unique key from some
             // initial seed in order to provide privacy protection.
             val freshKey = serviceHub.keyManagementService.freshKey()
-            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public.tree)
+            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public.composite)
             tx.addOutputState(state, tradeRequest.assetForSale.state.notary)
             tx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
 

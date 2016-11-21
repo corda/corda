@@ -13,7 +13,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.protocols.NotaryProtocol
 import net.corda.protocols.TwoPartyTradeProtocol
-import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
@@ -41,7 +40,7 @@ class SellerProtocol(val otherParty: Party,
 
         val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
         val cpOwnerKey = serviceHub.legalIdentityKey
-        val commercialPaper = selfIssueSomeCommercialPaper(cpOwnerKey.public.tree, notary)
+        val commercialPaper = selfIssueSomeCommercialPaper(cpOwnerKey.public.composite, notary)
 
         progressTracker.currentStep = TRADING
 
@@ -61,7 +60,7 @@ class SellerProtocol(val otherParty: Party,
     }
 
     @Suspendable
-    fun selfIssueSomeCommercialPaper(ownedBy: PublicKeyTree, notaryNode: NodeInfo): StateAndRef<CommercialPaper.State> {
+    fun selfIssueSomeCommercialPaper(ownedBy: CompositeKey, notaryNode: NodeInfo): StateAndRef<CommercialPaper.State> {
         // Make a fake company that's issued its own paper.
         val keyPair = generateKeyPair()
         val party = Party("Bank of London", keyPair.public)

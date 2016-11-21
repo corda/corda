@@ -5,8 +5,8 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.Contract
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.map
 import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
@@ -68,14 +68,14 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override fun get(serviceType: ServiceType) = registeredNodes.filterValues { it.advertisedServices.any { it.info.type.isSubTypeOf(serviceType) } }.map { it.value }
     override fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo? = get(type).firstOrNull()
     override fun getNodeByLegalName(name: String) = get().singleOrNull { it.legalIdentity.name == name }
-    override fun getNodeByPublicKeyTree(publicKeyTree: PublicKeyTree): NodeInfo? {
+    override fun getNodeByCompositeKey(compositeKey: CompositeKey): NodeInfo? {
         // Although we should never have more than one match, it is theoretically possible. Report an error if it happens.
         val candidates = get().filter {
-            (it.legalIdentity.owningKey == publicKeyTree)
-                    || it.advertisedServices.any { it.identity.owningKey == publicKeyTree }
+            (it.legalIdentity.owningKey == compositeKey)
+                    || it.advertisedServices.any { it.identity.owningKey == compositeKey }
         }
         if (candidates.size > 1) {
-            throw IllegalStateException("Found more than one match for key $publicKeyTree")
+            throw IllegalStateException("Found more than one match for key $compositeKey")
         }
         return candidates.singleOrNull()
     }

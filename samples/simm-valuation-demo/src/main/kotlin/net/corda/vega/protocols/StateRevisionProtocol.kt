@@ -2,14 +2,13 @@ package net.corda.vega.protocols
 
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.protocols.AbstractStateReplacementProtocol
 import net.corda.vega.contracts.RevisionedState
-import java.security.PublicKey
 
 /**
  * Protocol that generates an update on a mutable deal state and commits the resulting transaction reaching consensus
@@ -25,7 +24,7 @@ object StateRevisionProtocol {
         override fun assembleProposal(stateRef: StateRef, modification: T, stx: SignedTransaction): AbstractStateReplacementProtocol.Proposal<T>
                 = Proposal(stateRef, modification, stx)
 
-        override fun assembleTx(): Pair<SignedTransaction, List<PublicKeyTree>> {
+        override fun assembleTx(): Pair<SignedTransaction, List<CompositeKey>> {
             val state = originalState.state.data
             val tx = state.generateRevision(originalState.state.notary, originalState, updatedData)
             tx.setTime(serviceHub.clock.instant(), 30.seconds)

@@ -8,8 +8,8 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.TransactionType
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
@@ -35,12 +35,12 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     atMostThisManyStates: Int = 10,
                                     rng: Random = Random(),
                                     ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 1 })),
-                                    ownedBy: PublicKeyTree? = null,
+                                    ownedBy: CompositeKey? = null,
                                     issuedBy: PartyAndReference = DUMMY_CASH_ISSUER,
                                     issuerKey: KeyPair = DUMMY_CASH_ISSUER_KEY): Vault {
     val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
-    val myKey: PublicKeyTree = ownedBy ?: myInfo.legalIdentity.owningKey
+    val myKey: CompositeKey = ownedBy ?: myInfo.legalIdentity.owningKey
 
     // We will allocate one state to one transaction, for simplicities sake.
     val cash = Cash()

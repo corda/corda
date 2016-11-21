@@ -3,8 +3,8 @@ package net.corda.core.contracts
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.composite
 import net.corda.core.crypto.signWithECDSA
-import net.corda.core.crypto.tree
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -30,7 +30,7 @@ class TransactionTests {
                 outputs = emptyList(),
                 commands = emptyList(),
                 notary = DUMMY_NOTARY,
-                signers = listOf(DUMMY_KEY_1.public.tree, DUMMY_KEY_2.public.tree),
+                signers = listOf(DUMMY_KEY_1.public.composite, DUMMY_KEY_2.public.composite),
                 type = TransactionType.General(),
                 timestamp = null
         )
@@ -39,20 +39,20 @@ class TransactionTests {
         assertFailsWith<IllegalArgumentException> { make().verifySignatures() }
 
         assertEquals(
-                setOf(DUMMY_KEY_1.public.tree),
+                setOf(DUMMY_KEY_1.public.composite),
                 assertFailsWith<SignedTransaction.SignaturesMissingException> { make(DUMMY_KEY_2).verifySignatures() }.missing
         )
         assertEquals(
-                setOf(DUMMY_KEY_2.public.tree),
+                setOf(DUMMY_KEY_2.public.composite),
                 assertFailsWith<SignedTransaction.SignaturesMissingException> { make(DUMMY_KEY_1).verifySignatures() }.missing
         )
         assertEquals(
-                setOf(DUMMY_KEY_2.public.tree),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { make(DUMMY_CASH_ISSUER_KEY).verifySignatures(DUMMY_KEY_1.public.tree) }.missing
+                setOf(DUMMY_KEY_2.public.composite),
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { make(DUMMY_CASH_ISSUER_KEY).verifySignatures(DUMMY_KEY_1.public.composite) }.missing
         )
 
-        make(DUMMY_KEY_1).verifySignatures(DUMMY_KEY_2.public.tree)
-        make(DUMMY_KEY_2).verifySignatures(DUMMY_KEY_1.public.tree)
+        make(DUMMY_KEY_1).verifySignatures(DUMMY_KEY_2.public.composite)
+        make(DUMMY_KEY_2).verifySignatures(DUMMY_KEY_1.public.composite)
 
         make(DUMMY_KEY_1, DUMMY_KEY_2).verifySignatures()
     }
@@ -65,7 +65,7 @@ class TransactionTests {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public.tree)
+        val signers = listOf(DUMMY_NOTARY_KEY.public.composite)
         val timestamp: Timestamp? = null
         val transaction: LedgerTransaction = LedgerTransaction(
                 inputs,
@@ -92,7 +92,7 @@ class TransactionTests {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public.tree)
+        val signers = listOf(DUMMY_NOTARY_KEY.public.composite)
         val timestamp: Timestamp? = null
         val transaction: LedgerTransaction = LedgerTransaction(
                 inputs,

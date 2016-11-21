@@ -5,8 +5,8 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
@@ -36,7 +36,7 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
         override fun assembleProposal(stateRef: StateRef, modification: Party, stx: SignedTransaction): AbstractStateReplacementProtocol.Proposal<Party>
             = Proposal(stateRef, modification, stx)
 
-        override fun assembleTx(): Pair<SignedTransaction, List<PublicKeyTree>> {
+        override fun assembleTx(): Pair<SignedTransaction, List<CompositeKey>> {
             val state = originalState.state
             val newState = state.withNotary(modification)
             val participants = state.data.participants

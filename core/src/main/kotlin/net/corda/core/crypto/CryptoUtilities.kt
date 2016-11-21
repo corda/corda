@@ -43,7 +43,7 @@ object NullPublicKey : PublicKey, Comparable<PublicKey> {
     override fun toString() = "NULL_KEY"
 }
 
-val NullPublicKeyTree = NullPublicKey.tree
+val NullCompositeKey = NullPublicKey.composite
 
 // TODO: Clean up this duplication between Null and Dummy public key
 class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
@@ -102,8 +102,8 @@ fun PublicKey.toStringShort(): String {
     } ?: toString()
 }
 
-/** Creates a [PublicKeyTree] with a single leaf node containing the public key */
-val PublicKey.tree: PublicKeyTree get() = PublicKeyTree.Leaf(this)
+/** Creates a [CompositeKey] with a single leaf node containing the public key */
+val PublicKey.composite: CompositeKey get() = CompositeKey.Leaf(this)
 
 /** Returns the set of all [PublicKey]s of the signatures */
 fun Iterable<DigitalSignature.WithKey>.byKeys() = map { it.by }.toSet()

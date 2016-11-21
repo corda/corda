@@ -2,7 +2,7 @@ package net.corda.contracts.clause
 
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.Clause
-import net.corda.core.crypto.PublicKeyTree
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.transactions.TransactionBuilder
 import java.util.*
 
@@ -47,9 +47,9 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
      */
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
                      assetStates: List<StateAndRef<S>>,
-                     deriveState: (TransactionState<S>, Amount<Issued<T>>, PublicKeyTree) -> TransactionState<S>,
+                     deriveState: (TransactionState<S>, Amount<Issued<T>>, CompositeKey) -> TransactionState<S>,
                      generateMoveCommand: () -> CommandData,
-                     generateExitCommand: (Amount<Issued<T>>) -> CommandData): PublicKeyTree {
+                     generateExitCommand: (Amount<Issued<T>>) -> CommandData): CompositeKey {
         val owner = assetStates.map { it.state.data.owner }.toSet().single()
         val currency = amountIssued.token.product
         val amount = Amount(amountIssued.quantity, currency)
@@ -92,7 +92,7 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
         val outputAmount: Amount<Issued<T>> = outputs.sumFungibleOrZero(groupingKey)
 
         // If we want to remove assets from the ledger, that must be signed for by the issuer and owner.
-        val exitKeys: Set<PublicKeyTree> = inputs.flatMap { it.exitKeys }.toSet()
+        val exitKeys: Set<CompositeKey> = inputs.flatMap { it.exitKeys }.toSet()
         val exitCommand = matchedCommands.select<FungibleAsset.Commands.Exit<T>>(parties = null, signers = exitKeys).filter { it.value.amount.token == groupingKey }.singleOrNull()
         val amountExitingLedger: Amount<Issued<T>> = exitCommand?.value?.amount ?: Amount(0, groupingKey)
 

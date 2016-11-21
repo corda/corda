@@ -2,7 +2,7 @@ package net.corda.contracts.asset
 
 import net.corda.contracts.clause.AbstractConserveAmount
 import net.corda.core.contracts.*
-import net.corda.core.crypto.PublicKeyTree
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.transactions.TransactionBuilder
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -39,7 +39,7 @@ abstract class OnLedgerAsset<T : Any, C: CommandData, S : FungibleAsset<T>> : Co
      * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
      */
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
-                     assetStates: List<StateAndRef<S>>): PublicKeyTree
+                     assetStates: List<StateAndRef<S>>): CompositeKey
         = conserveClause.generateExit(tx, amountIssued, assetStates,
             deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
             generateMoveCommand = { -> generateMoveCommand() },
@@ -55,5 +55,5 @@ abstract class OnLedgerAsset<T : Any, C: CommandData, S : FungibleAsset<T>> : Co
      * implementations to have fields in their state which we don't know about here, and we simply leave them untouched
      * when sending out "change" from spending/exiting.
      */
-    abstract fun deriveState(txState: TransactionState<S>, amount: Amount<Issued<T>>, owner: PublicKeyTree): TransactionState<S>
+    abstract fun deriveState(txState: TransactionState<S>, amount: Amount<Issued<T>>, owner: CompositeKey): TransactionState<S>
 }

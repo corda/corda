@@ -14,11 +14,10 @@ import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.guava.*
 import net.corda.contracts.asset.Cash
 import net.corda.core.ErrorOr
-import net.corda.core.TransientProperty
 import net.corda.core.contracts.*
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.*
 import net.corda.core.node.services.*
@@ -36,7 +35,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Notification
 import rx.Observable
-import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
@@ -160,8 +158,8 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(ByteArray::class.java)
         register(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
         register(EdDSAPrivateKey::class.java, Ed25519PrivateKeySerializer)
-        register(PublicKeyTree.Leaf::class.java)
-        register(PublicKeyTree.Node::class.java)
+        register(CompositeKey.Leaf::class.java)
+        register(CompositeKey.Node::class.java)
         register(Vault::class.java)
         register(Vault.Update::class.java)
         register(StateMachineRunId::class.java)
@@ -193,7 +191,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(ArtemisMessagingComponent.NodeAddress::class.java,
                 read = { kryo, input ->
                     ArtemisMessagingComponent.NodeAddress(
-                            PublicKeyTree.parseFromBase58(kryo.readObject(input, String::class.java)),
+                            CompositeKey.parseFromBase58(kryo.readObject(input, String::class.java)),
                             kryo.readObject(input, HostAndPort::class.java))
                 },
                 write = { kryo, output, nodeAddress ->

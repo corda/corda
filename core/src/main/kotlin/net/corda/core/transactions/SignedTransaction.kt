@@ -2,8 +2,8 @@ package net.corda.core.transactions
 
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializedBytes
@@ -37,7 +37,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         temp
     }
 
-    class SignaturesMissingException(val missing: Set<PublicKeyTree>, val descriptions: List<String>, override val id: SecureHash) : NamedByHash, SignatureException() {
+    class SignaturesMissingException(val missing: Set<CompositeKey>, val descriptions: List<String>, override val id: SecureHash) : NamedByHash, SignatureException() {
         override fun toString(): String {
             return "Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}"
         }
@@ -56,7 +56,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * @throws SignaturesMissingException if any signatures should have been present but were not.
      */
     @Throws(SignatureException::class)
-    fun verifySignatures(vararg allowedToBeMissing: PublicKeyTree): WireTransaction {
+    fun verifySignatures(vararg allowedToBeMissing: CompositeKey): WireTransaction {
         // Embedded WireTransaction is not deserialised until after we check the signatures.
         checkSignaturesAreValid()
 
@@ -86,7 +86,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         }
     }
 
-    private fun getMissingSignatures(): Set<PublicKeyTree> {
+    private fun getMissingSignatures(): Set<CompositeKey> {
         val sigKeys = sigs.map { it.by }.toSet()
         val missing = tx.mustSign.filter { !it.isFulfilledBy(sigKeys) }.toSet()
         return missing
@@ -96,7 +96,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * Get a human readable description of where signatures are required from, and are missing, to assist in debugging
      * the underlying cause.
      */
-    private fun getMissingKeyDescriptions(missing: Set<PublicKeyTree>): ArrayList<String> {
+    private fun getMissingKeyDescriptions(missing: Set<CompositeKey>): ArrayList<String> {
         // TODO: We need a much better way of structuring this data
         val missingElements = ArrayList<String>()
         this.tx.commands.forEach { command ->

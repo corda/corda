@@ -5,8 +5,8 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.typesafe.config.ConfigFactory
+import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.tree
 import net.corda.core.messaging.Message
 import net.corda.core.messaging.createMessage
 import net.corda.core.node.services.DEFAULT_SESSION_ID
@@ -222,7 +222,7 @@ class ArtemisMessagingTests {
 
     private fun createMessagingClient(server: HostAndPort = hostAndPort): NodeMessagingClient {
         return databaseTransaction(database) {
-            NodeMessagingClient(config, server, identity.public.tree, AffinityExecutor.ServiceAffinityExecutor("ArtemisMessagingTests", 1), database, networkMapRegistrationFuture).apply {
+            NodeMessagingClient(config, server, identity.public.composite, AffinityExecutor.ServiceAffinityExecutor("ArtemisMessagingTests", 1), database, networkMapRegistrationFuture).apply {
                 configureWithDevSSLCertificate()
                 messagingClient = this
             }

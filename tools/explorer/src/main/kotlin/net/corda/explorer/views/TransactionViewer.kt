@@ -21,8 +21,8 @@ import net.corda.client.fxutils.*
 import net.corda.client.model.*
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
-import net.corda.core.crypto.PublicKeyTree
-import net.corda.core.crypto.tree
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.composite
 import net.corda.core.node.NodeInfo
 import net.corda.core.protocols.StateMachineRunId
 import net.corda.explorer.AmountDiff
@@ -147,7 +147,7 @@ class TransactionViewer : CordaView("Transactions") {
         override val root: Parent by fxml()
         private val inputs: ListView<StateNode> by fxid()
         private val outputs: ListView<StateNode> by fxid()
-        private val signatures: ListView<PublicKeyTree> by fxid()
+        private val signatures: ListView<CompositeKey> by fxid()
         private val inputPane: TitledPane by fxid()
         private val outputPane: TitledPane by fxid()
         private val signaturesPane: TitledPane by fxid()
@@ -159,7 +159,7 @@ class TransactionViewer : CordaView("Transactions") {
                 StateNode(PartiallyResolvedTransaction.InputResolution.Resolved(StateAndRef(transactionState, stateRef)).lift(), stateRef)
             }
 
-            val signatureData = transaction.transaction.sigs.map { it.by.tree }
+            val signatureData = transaction.transaction.sigs.map { it.by.composite }
             // Bind count to TitlePane
             inputPane.textProperty().bind(inputStates.lift().map { "Input (${it.count()})" })
             outputPane.textProperty().bind(outputStates.lift().map { "Output (${it.count()})" })

@@ -1,8 +1,8 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 
 /**
@@ -27,7 +27,7 @@ class LedgerTransaction(
         /** The hash of the original serialised WireTransaction. */
         override val id: SecureHash,
         notary: Party?,
-        signers: List<PublicKeyTree>,
+        signers: List<CompositeKey>,
         timestamp: Timestamp?,
         type: TransactionType
 ) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp) {

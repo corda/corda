@@ -2,8 +2,8 @@ package net.corda.irs.contract
 
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.ServiceType
 import net.corda.core.protocols.ProtocolLogicRefFactory
@@ -664,7 +664,7 @@ class InterestRateSwap() : Contract {
 
         override val ref = common.tradeID
 
-        override val participants: List<PublicKeyTree>
+        override val participants: List<CompositeKey>
             get() = parties.map { it.owningKey }
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {

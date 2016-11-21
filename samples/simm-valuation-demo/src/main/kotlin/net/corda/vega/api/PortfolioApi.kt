@@ -2,8 +2,8 @@ package net.corda.vega.api
 
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.dealsWith
 import net.corda.vega.analytics.InitialMarginTriple
@@ -33,7 +33,7 @@ class PortfolioApi(val services: ServiceHub) {
      * Used as such: withParty(name) { doSomethingWith(it) }
      */
     private fun withParty(partyName: String, func: (Party) -> Response): Response {
-        val otherParty = services.identityService.partyFromKey(PublicKeyTree.parseFromBase58(partyName))
+        val otherParty = services.identityService.partyFromKey(CompositeKey.parseFromBase58(partyName))
         return if (otherParty != null) {
             func(otherParty)
         } else {

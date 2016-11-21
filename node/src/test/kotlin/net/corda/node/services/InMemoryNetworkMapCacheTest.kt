@@ -1,7 +1,7 @@
 package net.corda.node.services
 
+import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.tree
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.expect
@@ -34,12 +34,12 @@ class InMemoryNetworkMapCacheTest {
         val nodeB = network.createNode(null, -1, MockNetwork.DefaultFactory, true, "Node B", keyPair, ServiceInfo(NetworkMapService.type))
 
         // Node A currently knows only about itself, so this returns node A
-        assertEquals(nodeA.netMapCache.getNodeByPublicKeyTree(keyPair.public.tree), nodeA.info)
+        assertEquals(nodeA.netMapCache.getNodeByCompositeKey(keyPair.public.composite), nodeA.info)
 
         nodeA.netMapCache.addNode(nodeB.info)
         // Now both nodes match, so it throws an error
         expect<IllegalStateException> {
-            nodeA.netMapCache.getNodeByPublicKeyTree(keyPair.public.tree)
+            nodeA.netMapCache.getNodeByCompositeKey(keyPair.public.composite)
         }
     }
 }

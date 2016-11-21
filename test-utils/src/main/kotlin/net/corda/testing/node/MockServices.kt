@@ -60,18 +60,18 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = throw UnsupportedOperationException()
     override val schedulerService: SchedulerService get() = throw UnsupportedOperationException()
-    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party("MegaCorp", key.public.tree))
+    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party("MegaCorp", key.public.composite))
 }
 
 @ThreadSafe
 class MockIdentityService(val identities: List<Party>) : IdentityService, SingletonSerializeAsToken() {
-    private val keyToParties: Map<PublicKeyTree, Party>
+    private val keyToParties: Map<CompositeKey, Party>
         get() = synchronized(identities) { identities.associateBy { it.owningKey } }
     private val nameToParties: Map<String, Party>
         get() = synchronized(identities) { identities.associateBy { it.name } }
 
     override fun registerIdentity(party: Party) { throw UnsupportedOperationException() }
-    override fun partyFromKey(key: PublicKeyTree): Party? = keyToParties[key]
+    override fun partyFromKey(key: CompositeKey): Party? = keyToParties[key]
     override fun partyFromName(name: String): Party? = nameToParties[name]
 }
 

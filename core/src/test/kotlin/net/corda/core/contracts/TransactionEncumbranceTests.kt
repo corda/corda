@@ -1,7 +1,7 @@
 package net.corda.core.contracts
 
 import net.corda.contracts.asset.Cash
-import net.corda.core.crypto.PublicKeyTree
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.utilities.DUMMY_PUBKEY_1
 import net.corda.core.utilities.DUMMY_PUBKEY_2
@@ -44,7 +44,7 @@ class TransactionEncumbranceTests {
         data class State(
                 val validFrom: Instant
         ) : ContractState {
-            override val participants: List<PublicKeyTree> = emptyList()
+            override val participants: List<CompositeKey> = emptyList()
             override val contract: Contract = TEST_TIMELOCK_ID
         }
     }

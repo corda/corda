@@ -1,8 +1,8 @@
 package net.corda.vega.contracts
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.protocols.ProtocolLogicRefFactory
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.vega.protocols.SimmRevaluation
@@ -10,7 +10,6 @@ import java.security.PublicKey
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
-import java.util.*
 
 /**
  * Represents an aggregate set of trades agreed between two parties and a possible valuation of that portfolio at a
@@ -29,7 +28,7 @@ data class PortfolioState(val portfolio: List<StateRef>,
     override val ref: String = linearId.toString()
     val valuer: Party get() = parties[0]
 
-    override val participants: List<PublicKeyTree>
+    override val participants: List<CompositeKey>
         get() = parties.map { it.owningKey }
 
     override fun nextScheduledActivity(thisStateRef: StateRef, protocolLogicRefFactory: ProtocolLogicRefFactory): ScheduledActivity {

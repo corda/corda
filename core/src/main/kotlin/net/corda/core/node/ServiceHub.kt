@@ -61,7 +61,7 @@ interface ServiceHub {
      * Typical use is during signing in protocols and for unit test signing.
      *
      * TODO: legalIdentity can now be composed of multiple keys, should we return a list of keyPairs here? Right now
-     * the logic assumes the legal identity has a public key tree with only one node
+     *       the logic assumes the legal identity has a composite key with only one node
      */
     val legalIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.legalIdentity.owningKey.keys)
 

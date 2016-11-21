@@ -39,15 +39,15 @@ class PublicKeyGenerator: Generator<PublicKey>(PublicKey::class.java) {
     }
 }
 
-class PublicKeyTreeGenerator : Generator<PublicKeyTree>(PublicKeyTree::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): PublicKeyTree {
-        return entropyToKeyPair(random.nextBigInteger(32)).public.tree
+class CompositeKeyGenerator : Generator<CompositeKey>(CompositeKey::class.java) {
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus): CompositeKey {
+        return entropyToKeyPair(random.nextBigInteger(32)).public.composite
     }
 }
 
 class PartyGenerator: Generator<Party>(Party::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Party {
-        return Party(StringGenerator().generate(random, status), PublicKeyTreeGenerator().generate(random, status))
+        return Party(StringGenerator().generate(random, status), CompositeKeyGenerator().generate(random, status))
     }
 }
 

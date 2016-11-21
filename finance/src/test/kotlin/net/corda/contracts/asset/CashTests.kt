@@ -455,7 +455,7 @@ class CashTests {
     // Spend tx generation
 
     val OUR_KEY: KeyPair by lazy { generateKeyPair() }
-    val OUR_PUBKEY_1: PublicKeyTree get() = OUR_KEY.public.tree
+    val OUR_PUBKEY_1: CompositeKey get() = OUR_KEY.public.composite
 
     val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
 
@@ -481,7 +481,7 @@ class CashTests {
         return tx.toWireTransaction()
     }
 
-    fun makeSpend(amount: Amount<Currency>, dest: PublicKeyTree): WireTransaction {
+    fun makeSpend(amount: Amount<Currency>, dest: CompositeKey): WireTransaction {
         val tx = TransactionType.General.Builder(DUMMY_NOTARY)
         databaseTransaction(database) {
             vault.generateSpend(tx, amount, dest)
