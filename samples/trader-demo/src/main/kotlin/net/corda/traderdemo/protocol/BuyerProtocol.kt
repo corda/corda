@@ -12,13 +12,12 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.ProgressTracker
-import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.protocols.TwoPartyTradeProtocol
 import java.nio.file.Path
 import java.util.*
 
-class  BuyerProtocol(val otherParty: Party,
+class BuyerProtocol(val otherParty: Party,
                     private val attachmentsPath: Path,
                     override val progressTracker: ProgressTracker = ProgressTracker(STARTING_BUY)) : ProtocolLogic<Unit>() {
 
@@ -54,7 +53,7 @@ class  BuyerProtocol(val otherParty: Party,
         // TODO: This should be moved into the protocol itself.
         serviceHub.recordTransactions(listOf(tradeTX))
 
-        logger.info("Purchase complete - we are a happy customer! Final transaction is: " +
+        println("Purchase complete - we are a happy customer! Final transaction is: " +
                 "\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
 
         logIssuanceAttachment(tradeTX)
@@ -63,7 +62,7 @@ class  BuyerProtocol(val otherParty: Party,
 
     private fun logBalance() {
         val balances = serviceHub.vaultService.cashBalances.entries.map { "${it.key.currencyCode} ${it.value}" }
-        logger.info("Remaining balance: ${balances.joinToString()}")
+        println("Remaining balance: ${balances.joinToString()}")
     }
 
     private fun logIssuanceAttachment(tradeTX: SignedTransaction) {
@@ -75,7 +74,7 @@ class  BuyerProtocol(val otherParty: Party,
 
         cpIssuance.attachments.first().let {
             val p = attachmentsPath.toAbsolutePath().resolve("$it.jar")
-            logger.info("""
+            println("""
 
 The issuance of the commercial paper came with an attachment. You can find it expanded in this directory:
 $p

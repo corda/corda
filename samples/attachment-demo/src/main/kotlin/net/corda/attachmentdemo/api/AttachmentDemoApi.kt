@@ -8,7 +8,6 @@ import net.corda.core.success
 import net.corda.core.utilities.ApiUtils
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.loggerFor
-import net.corda.protocols.CashCommand
 import net.corda.protocols.FinalityProtocol
 import net.corda.testing.ALICE_KEY
 import java.util.concurrent.CompletableFuture
@@ -51,7 +50,7 @@ class AttachmentDemoApi(val services: ServiceHub) {
             // Send the transaction to the other recipient
             val tx = ptx.toSignedTransaction()
             services.invokeProtocolAsync<Unit>(FinalityProtocol::class.java, tx, setOf(it)).resultFuture.success {
-                logger.info("Successfully sent attachment with the FinalityProtocol")
+                println("Successfully sent attachment with the FinalityProtocol")
             }.failure {
                 logger.error("Failed to send attachment with the FinalityProtocol")
             }
@@ -76,7 +75,7 @@ class AttachmentDemoApi(val services: ServiceHub) {
                 val attachment = services.storageService.attachments.openAttachment(tx.attachments.first())
                 assertEquals(PROSPECTUS_HASH, attachment?.id)
 
-                logger.info("File received - we're happy!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(event.tx)}")
+                println("File received - we're happy!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(event.tx)}")
                 Response.ok().entity("Final transaction is: ${Emoji.renderIfSupported(event.tx)}").build()
             } else {
                 Response.serverError().entity("No attachments passed").build()

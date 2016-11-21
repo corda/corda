@@ -32,6 +32,8 @@ fun printBasicNodeInfo(description: String, info: String? = null) {
 }
 
 fun main(args: Array<String>) {
+    val startTime = System.currentTimeMillis()
+
     val parser = OptionParser()
     // The intent of allowing a command line configurable directory and config path is to allow deployment flexibility.
     // Other general configuration should live inside the config file unless we regularly need temporary overrides on the command line
@@ -92,13 +94,12 @@ fun main(args: Array<String>) {
             dirFile.mkdirs()
 
         val node = conf.createNode()
-        val startTime = System.currentTimeMillis()
 
         node.start()
         printPluginsAndServices(node)
 
         node.networkMapRegistrationFuture.then {
-            val elapsed = (System.currentTimeMillis() - startTime) / 10 / 1000.0
+            val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             printBasicNodeInfo("Node started up and registered in $elapsed sec")
 
             if (renderBasicInfoToConsole)
