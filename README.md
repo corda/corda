@@ -9,7 +9,7 @@ Corda is a decentralised database system in which nodes trust each other as litt
 * A P2P network of nodes.
 * Smart contracts.
 * Protocol framework.
-* UTXO notary infrastructure with distributed notaries.
+* "Notary" infrastructure to validate uniqueness of transactions.
 * Written as a platform for distributed apps called CorDapps.
 * Written in [Kotlin](https://kotlinlang.org), targeting the JVM.
  
