@@ -11,6 +11,7 @@ import net.corda.core.div
 import net.corda.core.future
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
@@ -18,7 +19,9 @@ import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.JsonSupport
+import net.corda.node.utilities.ServiceIdentityGenerator
 import org.slf4j.Logger
 import java.io.File
 import java.net.*
@@ -62,7 +65,17 @@ interface DriverDSLExposedInterface {
      */
     fun startNode(providedName: String? = null,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
-                  rpcUsers: List<User> = emptyList()): Future<NodeInfoAndConfig>
+                  rpcUsers: List<User> = emptyList(),
+                  customOverrides: Map<String, Any?> = emptyMap()): Future<NodeInfoAndConfig>
+
+    /**
+     * Starts a distributed notary cluster.
+     *
+     * @param notaryName The legal name of the advertised distributed notary service.
+     * @param clusterSize Number of nodes to create for the cluster.
+     * @param type The advertised notary service type. Currently the only supported type is [RaftValidatingNotaryService.type].
+     */
+    fun startNotaryCluster(notaryName: String, clusterSize: Int = 3, type: ServiceType = RaftValidatingNotaryService.type)
 
     fun waitForAllNodesToFinish()
 }
@@ -292,36 +305,59 @@ open class DriverDSL(
         }
     }
 
-    override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>, rpcUsers: List<User>): Future<NodeInfoAndConfig> {
+    override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>,
+                           rpcUsers: List<User>, customOverrides: Map<String, Any?>): Future<NodeInfoAndConfig> {
         val messagingAddress = portAllocation.nextHostAndPort()
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val name = providedName ?: "${pickA(name)}-${messagingAddress.port}"
 
         val baseDirectory = driverDirectory / name
+        val configOverrides = mapOf(
+                "myLegalName" to name,
+                "basedir" to baseDirectory.normalize().toString(),
+                "artemisAddress" to messagingAddress.toString(),
+                "webAddress" to apiAddress.toString(),
+                "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
+                "networkMapAddress" to networkMapAddress.toString(),
+                "useTestClock" to useTestClock,
+                "rpcUsers" to rpcUsers.map {
+                    mapOf(
+                            "user" to it.username,
+                            "password" to it.password,
+                            "permissions" to it.permissions
+                    )
+                }
+        ) + customOverrides
 
         val config = ConfigHelper.loadConfig(
                 baseDirectoryPath = baseDirectory,
                 allowMissingConfig = true,
-                configOverrides = mapOf(
-                        "myLegalName" to name,
-                        "basedir" to baseDirectory.normalize().toString(),
-                        "artemisAddress" to messagingAddress.toString(),
-                        "webAddress" to apiAddress.toString(),
-                        "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
-                        "networkMapAddress" to networkMapAddress.toString(),
-                        "useTestClock" to useTestClock,
-                        "rpcUsers" to rpcUsers.map { mapOf(
-                                "user" to it.username,
-                                "password" to it.password,
-                                "permissions" to it.permissions)
-                        }
-                )
+                configOverrides = configOverrides
         )
 
         return future {
             registerProcess(DriverDSL.startNode(FullNodeConfiguration(config), quasarJarPath, debugPort))
             NodeInfoAndConfig(queryNodeInfo(apiAddress)!!, config)
+        }
+    }
+
+    override fun startNotaryCluster(notaryName: String, clusterSize: Int, type: ServiceType) {
+        val nodeNames = (1..clusterSize).map { "Notary Node $it" }
+        val paths = nodeNames.map { driverDirectory / it }
+        ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
+
+        val serviceInfo = ServiceInfo(type, notaryName)
+        val advertisedService = setOf(serviceInfo)
+        val notaryClusterAddress = portAllocation.nextHostAndPort()
+
+        // Start the first node that will bootstrap the cluster
+        startNode(nodeNames.first(), advertisedService, emptyList(), mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
+        // All other nodes will join the cluster
+        nodeNames.drop(1).forEach {
+            val nodeAddress = portAllocation.nextHostAndPort()
+            val configOverride = mapOf("notaryNodeAddress" to nodeAddress.toString(), "notaryClusterAddress" to notaryClusterAddress.toString())
+            startNode(it, advertisedService, emptyList(), configOverride)
         }
     }
 
