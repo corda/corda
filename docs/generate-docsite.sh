@@ -21,7 +21,7 @@ fi
         virtualenv -p python2.7 virtualenv
     fi
     . virtualenv/bin/activate
-    if [ ! -d "docs/virtualenv/lib/python2.7/site-packages/sphinx" ]
+    if [ ! -d "virtualenv/lib/python2.7/site-packages/sphinx" ]
     then
         echo "Installing pip dependencies ... "
         pip install -r requirements.txt
