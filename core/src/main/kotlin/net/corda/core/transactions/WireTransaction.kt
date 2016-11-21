@@ -37,8 +37,8 @@ class WireTransaction(
     init { checkInvariants() }
 
     // Cache the serialised form of the transaction and its hash to give us fast access to it.
-    @Volatile @Transient private var cachedBits: SerializedBytes<WireTransaction>? = null
-    val serialized: SerializedBytes<WireTransaction> get() = cachedBits ?: serialize().apply { cachedBits = this }
+    @Volatile @Transient private var cachedBytes: SerializedBytes<WireTransaction>? = null
+    val serialized: SerializedBytes<WireTransaction> get() = cachedBytes ?: serialize().apply { cachedBytes = this }
 
     //We need cashed leaves hashes and whole tree for an id and Partial Merkle Tree calculation.
     @Volatile @Transient private var cachedLeavesHashes: List<SecureHash>? = null
@@ -50,9 +50,9 @@ class WireTransaction(
     override val id: SecureHash get() = merkleTree.hash
 
     companion object {
-        fun deserialize(bits: SerializedBytes<WireTransaction>, kryo: Kryo = THREAD_LOCAL_KRYO.get()): WireTransaction {
-            val wtx = bits.bits.deserialize<WireTransaction>(kryo)
-            wtx.cachedBits = bits
+        fun deserialize(data: SerializedBytes<WireTransaction>, kryo: Kryo = THREAD_LOCAL_KRYO.get()): WireTransaction {
+            val wtx = data.bytes.deserialize<WireTransaction>(kryo)
+            wtx.cachedBytes = data
             return wtx
         }
     }

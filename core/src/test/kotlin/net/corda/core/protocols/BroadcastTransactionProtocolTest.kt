@@ -26,7 +26,7 @@ class BroadcastTransactionProtocolTest {
     @Property
     fun serialiseDeserialiseOfNotifyMessageWorks(@From(NotifyTxRequestMessageGenerator::class) message: NotifyTxRequest) {
         val kryo = createKryo()
-        val serialized = message.serialize().bits
+        val serialized = message.serialize().bytes
         val deserialized = kryo.readClassAndObject(Input(serialized))
         assertEquals(deserialized, message)
     }

@@ -34,8 +34,8 @@ class TransactionTests {
                 type = TransactionType.General(),
                 timestamp = null
         )
-        val bits: SerializedBytes<WireTransaction> = wtx.serialized
-        fun make(vararg keys: KeyPair) = SignedTransaction(bits, keys.map { it.signWithECDSA(wtx.id.bits) }, wtx.id)
+        val bytes: SerializedBytes<WireTransaction> = wtx.serialized
+        fun make(vararg keys: KeyPair) = SignedTransaction(bytes, keys.map { it.signWithECDSA(wtx.id.bytes) }, wtx.id)
         assertFailsWith<IllegalArgumentException> { make().verifySignatures() }
 
         assertEquals(

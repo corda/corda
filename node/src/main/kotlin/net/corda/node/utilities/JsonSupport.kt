@@ -15,7 +15,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.crypto.*
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -113,7 +112,7 @@ object JsonSupport {
 
     object NodeInfoSerializer : JsonSerializer<NodeInfo>() {
         override fun serialize(value: NodeInfo, gen: JsonGenerator, serializers: SerializerProvider) {
-            gen.writeString(Base58.encode(value.serialize().bits))
+            gen.writeString(Base58.encode(value.serialize().bytes))
         }
     }
 

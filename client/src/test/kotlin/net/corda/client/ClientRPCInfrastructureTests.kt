@@ -73,9 +73,9 @@ class ClientRPCInfrastructureTests {
             override val users: List<User> get() = throw UnsupportedOperationException()
         }
         val dispatcher = object : RPCDispatcher(TestOpsImpl(), userService) {
-            override fun send(bits: SerializedBytes<*>, toAddress: String) {
+            override fun send(data: SerializedBytes<*>, toAddress: String) {
                 val msg = serverSession.createMessage(false).apply {
-                    writeBodyBufferBytes(bits.bits)
+                    writeBodyBufferBytes(data.bytes)
                     // Use the magic deduplication property built into Artemis as our message identity too
                     putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
                 }

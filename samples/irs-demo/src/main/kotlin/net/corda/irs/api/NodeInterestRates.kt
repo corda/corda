@@ -13,12 +13,10 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.protocols.ProtocolLogic
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.irs.protocols.FixingProtocol
 import net.corda.irs.protocols.RatesFixProtocol
 import net.corda.node.services.api.AcceptsFileUpload
-import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.AbstractJDBCHashSet
 import net.corda.node.utilities.FiberBox
 import net.corda.node.utilities.JDBCHashedTable
@@ -224,7 +222,7 @@ object NodeInterestRates {
             //
             // Note that we will happily sign an invalid transaction: we don't bother trying to validate the whole
             // thing. This is so that later on we can start using tear-offs.
-            return signingKey.signWithECDSA(merkleRoot.bits, identity)
+            return signingKey.signWithECDSA(merkleRoot.bytes, identity)
         }
     }
 

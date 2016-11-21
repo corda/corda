@@ -82,7 +82,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     @Throws(SignatureException::class)
     fun checkSignaturesAreValid() {
         for (sig in sigs) {
-            sig.verifyWithECDSA(id.bits)
+            sig.verifyWithECDSA(id.bytes)
         }
     }
 

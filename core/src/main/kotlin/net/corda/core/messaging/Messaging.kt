@@ -142,7 +142,7 @@ fun MessagingService.send(topic: String, sessionID: Long, payload: Any, to: Mess
         = send(TopicSession(topic, sessionID), payload, to, uuid)
 
 fun MessagingService.send(topicSession: TopicSession, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID())
-        = send(createMessage(topicSession, payload.serialize().bits, uuid), to)
+        = send(createMessage(topicSession, payload.serialize().bytes, uuid), to)
 
 interface MessageHandlerRegistration
 

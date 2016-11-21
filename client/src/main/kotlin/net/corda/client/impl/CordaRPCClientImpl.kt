@@ -195,7 +195,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
                 } catch (e: KryoException) {
                     throw RPCException("Could not serialize RPC arguments", e)
                 }
-                msg.writeBodyBufferBytes(serializedArgs.bits)
+                msg.writeBodyBufferBytes(serializedArgs.bytes)
                 producer!!.send(ArtemisMessagingComponent.RPC_REQUESTS_QUEUE, msg)
                 return kryo
             }

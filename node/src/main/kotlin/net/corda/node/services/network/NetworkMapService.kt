@@ -199,7 +199,7 @@ abstract class AbstractNetworkMapService
         // TODO: Once we have a better established messaging system, we can probably send
         //       to a MessageRecipientGroup that nodes join/leave, rather than the network map
         //       service itself managing the group
-        val update = NetworkMapService.Update(wireReg, mapVersion, net.myAddress).serialize().bits
+        val update = NetworkMapService.Update(wireReg, mapVersion, net.myAddress).serialize().bytes
         val message = net.createMessage(NetworkMapService.PUSH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, update)
 
         subscribers.locked {
@@ -333,7 +333,7 @@ class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddOrRemo
      */
     fun toWire(privateKey: PrivateKey): WireNodeRegistration {
         val regSerialized = this.serialize()
-        val regSig = privateKey.signWithECDSA(regSerialized.bits, node.legalIdentity.owningKey.singleKey)
+        val regSig = privateKey.signWithECDSA(regSerialized.bytes, node.legalIdentity.owningKey.singleKey)
 
         return WireNodeRegistration(regSerialized, regSig)
     }

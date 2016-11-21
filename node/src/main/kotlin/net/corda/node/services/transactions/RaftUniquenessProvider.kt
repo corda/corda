@@ -117,7 +117,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
      */
     private fun encode(items: List<Pair<StateRef, UniquenessProvider.ConsumingTx>>): Map<String, ByteArray> {
         fun StateRef.encoded() = "$txhash:$index"
-        return items.map { it.first.encoded() to it.second.serialize().bits }.toMap()
+        return items.map { it.first.encoded() to it.second.serialize().bytes }.toMap()
     }
 
     private fun decode(items: Map<String, ByteArray>): Map<StateRef, UniquenessProvider.ConsumingTx> {

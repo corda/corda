@@ -110,7 +110,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
                 try {
                     val req = message.data.deserialize<NetworkMapService.Update>()
                     val ackMessage = net.createMessage(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC, DEFAULT_SESSION_ID,
-                            NetworkMapService.UpdateAcknowledge(req.mapVersion, net.myAddress).serialize().bits)
+                            NetworkMapService.UpdateAcknowledge(req.mapVersion, net.myAddress).serialize().bytes)
                     net.send(ackMessage, req.replyTo)
                     processUpdatePush(req)
                 } catch(e: NodeMapError) {

@@ -72,11 +72,11 @@ val THREAD_LOCAL_KRYO = ThreadLocal.withInitial { createKryo() }
  * A type safe wrapper around a byte array that contains a serialised object. You can call [SerializedBytes.deserialize]
  * to get the original object back.
  */
-class SerializedBytes<T : Any>(bits: ByteArray) : OpaqueBytes(bits) {
+class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
     // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
-    val hash: SecureHash by lazy { bits.sha256() }
+    val hash: SecureHash by lazy { bytes.sha256() }
 
-    fun writeToFile(path: Path) = Files.write(path, bits)
+    fun writeToFile(path: Path) = Files.write(path, bytes)
 }
 
 // Some extension functions that make deserialisation convenient and provide auto-casting of the result.
@@ -86,14 +86,14 @@ fun <T : Any> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T {
 }
 
 fun <T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T {
-    return this.bits.deserialize(kryo)
+    return this.bytes.deserialize(kryo)
 }
 
 // The more specific deserialize version results in the bytes being cached, which is faster.
 @JvmName("SerializedBytesWireTransaction")
 fun SerializedBytes<WireTransaction>.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): WireTransaction = WireTransaction.deserialize(this, kryo)
 
-fun <T : Any> SerializedBytes<T>.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = bits.deserialize(kryo)
+fun <T : Any> SerializedBytes<T>.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = bytes.deserialize(kryo)
 
 /**
  * A serialiser that avoids writing the wrapper class to the byte stream, thus ensuring [SerializedBytes] is a pure
@@ -101,8 +101,8 @@ fun <T : Any> SerializedBytes<T>.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get(
  */
 object SerializedBytesSerializer : Serializer<SerializedBytes<Any>>() {
     override fun write(kryo: Kryo, output: Output, obj: SerializedBytes<Any>) {
-        output.writeVarInt(obj.bits.size, true)
-        output.writeBytes(obj.bits)
+        output.writeVarInt(obj.bytes.size, true)
+        output.writeBytes(obj.bytes)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<SerializedBytes<Any>>): SerializedBytes<Any> {

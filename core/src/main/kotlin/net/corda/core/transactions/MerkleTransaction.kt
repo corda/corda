@@ -4,12 +4,13 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
-import net.corda.core.crypto.*
-import net.corda.core.serialization.*
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.PartialMerkleTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.serialization.createKryo
+import net.corda.core.serialization.extendKryoHash
+import net.corda.core.serialization.serialize
 import java.util.*
 
 /**
@@ -29,7 +30,7 @@ fun WireTransaction.calculateLeavesHashes(): List<SecureHash> {
     return resultHashes
 }
 
-fun SecureHash.hashConcat(other: SecureHash) = (this.bits + other.bits).sha256()
+fun SecureHash.hashConcat(other: SecureHash) = (this.bytes + other.bytes).sha256()
 
 fun <T: Any> serializedHash(x: T): SecureHash {
     val kryo = extendKryoHash(createKryo()) //Dealing with HashMaps inside states.

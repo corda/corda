@@ -61,7 +61,7 @@ object NotaryProtocol {
                 progressTracker.currentStep = VALIDATING
                 when (notaryResult) {
                     is Result.Success -> {
-                        validateSignature(notaryResult.sig, stx.id.bits)
+                        validateSignature(notaryResult.sig, stx.id.bytes)
                         notaryResult.sig
                     }
                     is Result.Error -> {
@@ -103,7 +103,7 @@ object NotaryProtocol {
                 beforeCommit(stx, reqIdentity)
                 commitInputStates(wtx, reqIdentity)
 
-                val sig = sign(stx.id.bits)
+                val sig = sign(stx.id.bytes)
                 Result.Success(sig)
             } catch(e: NotaryException) {
                 Result.Error(e.error)
@@ -135,7 +135,7 @@ object NotaryProtocol {
                 uniquenessProvider.commit(tx.inputs, tx.id, reqIdentity)
             } catch (e: UniquenessException) {
                 val conflictData = e.error.serialize()
-                val signedConflict = SignedData(conflictData, sign(conflictData.bits))
+                val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
                 throw NotaryException(NotaryError.Conflict(tx, signedConflict))
             }
         }
