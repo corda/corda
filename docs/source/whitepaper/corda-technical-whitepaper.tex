@@ -582,7 +582,7 @@ Platforms such as Bitcoin and Ethereum have relatively ad-hoc mechanisms for lin
 it is the user's responsibility to manually label public keys in their wallet software using knowledge gleaned from
 websites, shop signs and so on. Because these mechanisms are ad hoc and tedious many users don't bother, which
 can make it hard to figure out where money went later. It also complicates the deployment of secure signing devices
-and risk analysis engines. Bitcoin has BIP 70\cite{BIP70} which specifies a way of signed a ``payment
+and risk analysis engines. Bitcoin has BIP 70\cite{BIP70} which specifies a way of signing a ``payment
 request'' using X.509 certificates linked to the web PKI, giving a cryptographically secured and standardised way
 of knowing who you are dealing with. Identities in this system are the same as used in the web PKI: a domain name,
 email address or EV (extended validation) organisation name.
@@ -730,7 +730,7 @@ utilised by generic code in the vault (see \cref{sec:vault}) to manipulate ownab
 % TODO: Currently OwnableState.owner is just a regular CompositeKey.
 
 From \texttt{OwnableState} we derive a \texttt{FungibleAsset} concept to represent assets of measurable quantity, in
-which units are sufficiently similar to represented together in a single ledger state. Making that concrete, pound notes
+which units are sufficiently similar to be represented together in a single ledger state. Making that concrete, pound notes
 are a fungible asset: regardless of whether you represent \pounds10 as a single \pounds10 note or two notes of \pounds5
 each the total value is the same. Other kinds of fungible asset could be barrels of Brent Oil (but not all kinds of
 crude oil worldwide, because oil comes in different grades which are not interchangeable), litres of clean water,
@@ -1056,7 +1056,7 @@ Nodes come with an embedded database engine out of the box, but may also be conf
 The node stores not only state data but also all node working data in the database, including flow checkpoints. Thus
 the state of a node and all communications it is engaged in can be backed up by simply backing up the database itself.
 The JPA annotations are independent of any particular database engine or SQL dialect and thus states cannot use any
-proprietary column types or other features, however, because the the ORM is only used on the write paths users are free
+proprietary column types or other features, however, because the ORM is only used on the write paths users are free
 to connect to the backing database directly and issue SQL queries that utilise any features of their chosen database
 engine that they like. They can also create their own tables and create merged views of the underlying data for end
 user applications, as long as they don't impose any constraints that would prevent the node from syncing the database
@@ -1187,7 +1187,7 @@ cutting edge research from the computer science community outside of the distrib
 \subsection{Projectional editing}
 
 Custom languages and type systems for the expression of contract logic can be naturally combined with \emph{projectional
-editing}, in which source code is not edited textually but rather a structure aware
+editing}, in which source code is not edited textually but rather by a structure aware
 editor\cite{DBLP:conf/models/VoelterL14}. Such languages can consist not only of traditional grammar-driven text
 oriented structures but also diagrams, tables and recursive compositions of them together. Given the frequent occurrence
 of data tables and English-oriented nature of many financial contracts, a dedicated environment for the construction of
@@ -1429,12 +1429,12 @@ a signal that members should always announce themselves (which would lead to a m
 The network map for a network defines the event horizon, the span of time that is allowed to elapse before an offline
 node is considered to be permanently gone. Once a peer has been offline for longer than the event horizon any nodes that
 invited it remove it from their local tables. If a node was invited to a group by a gone peer and there are no other
-nodes that announced their membership it can use, the node should post a message a queue and/or notify the
+nodes that announced their membership it can use, the node should post a message to a queue and/or notify the
 administrator, as it's now effectively been evicted from the group.
 
 The resulting arrangement may appear similar to a gossip network. However the underlying membership tree structure
 remains. Thus when all nodes are online (or online enough) messages are guaranteed to propagate to everyone in the
-network. You can't get situations where a part of the club has become split from the rest without anyone being aware of
+network. You can't get situations where a part of the group has become split from the rest without anyone being aware of
 that fact; an unlikely but possible occurrence in a gossip network. It also isn't like a distributed hash table where
 data isn't fully replicated, so we avoid situations where data has been added to the group but stops being available due
 to node outages. It is always possible to reason about the behaviour of the network and always possible to assign
@@ -1696,7 +1696,7 @@ Sofus Mortesen for his work on the universal contract DSL, and the numerous arch
 at financial institutions around the world who contributed their knowledge, requirements and ideas. Thanks also to
 the authors of the many frameworks, protocols and components we have built upon.
 
-Finally, we would like to thank Satoshi Nakamoto. Without them none of it would have been possible.
+Finally, we would like to thank Satoshi Nakamoto. Without him none of it would have been possible.
 
 \bibliographystyle{unsrt}
 \bibliography{Ref}
