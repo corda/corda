@@ -46,13 +46,14 @@ class QuasarPlugin implements Plugin<Project> {
             ant.taskdef(name:'scanSuspendables', classname:'co.paralleluniverse.fibers.instrument.SuspendablesScanner',
                     classpath: "${project.sourceSets.main.output.classesDir}:${project.sourceSets.main.output.resourcesDir}:${project.configurations.runtime.asPath}")
             project.delete "$project.sourceSets.main.output.resourcesDir/META-INF/suspendables", "$project.sourceSets.main.output.resourcesDir/META-INF/suspendable-supers"
-            ant.scanSuspendables(
-                    auto:false,
-                    suspendablesFile: "$project.sourceSets.main.output.resourcesDir/META-INF/suspendables",
-                    supersFile: "$project.sourceSets.main.output.resourcesDir/META-INF/suspendable-supers") {
-                fileset(dir: project.sourceSets.main.output.classesDir)
+            if(project.sourceSets.main.output.classesDir.exists()) {
+                ant.scanSuspendables(
+                        auto:false,
+                        suspendablesFile: "$project.sourceSets.main.output.resourcesDir/META-INF/suspendables",
+                        supersFile: "$project.sourceSets.main.output.resourcesDir/META-INF/suspendable-supers") {
+                    fileset(dir: project.sourceSets.main.output.classesDir)
+                }
             }
-
         }
 
         project.jar.dependsOn project.quasarScan
