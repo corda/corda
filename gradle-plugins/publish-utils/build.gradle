@@ -1,5 +1,6 @@
 apply plugin: 'groovy'
-apply plugin: 'net.corda.plugins.publish-utils' // TODO: Remove when bintray publishing code is in master
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
 
 dependencies {
     compile gradleApi()
@@ -10,6 +11,31 @@ repositories {
     mavenCentral()
 }
 
+task("sourceJar", type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task("javadocJar", type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+bintray {
+    user = System.getenv('CORDA_BINTRAY_USER')
+    key = System.getenv('CORDA_BINTRAY_KEY')
+    publications = ['publishUtils']
+    dryRun = false
+    pkg {
+        repo = 'corda'
+        name = 'publish-utils'
+        userOrg = 'r3'
+        licenses = ['Apache-2.0']
+    }
+}
+
+task(install, dependsOn: 'publishToMavenLocal')
+
 publishing {
     publications {
         publishUtils(MavenPublication) {
@@ -19,6 +45,26 @@ publishing {
 
             artifact sourceJar
             artifact javadocJar
+
+            pom.withXml {
+                asNode().children().last() + {
+                    resolveStrategy = Closure.DELEGATE_FIRST
+                    name 'publish-utils'
+                    description 'A small gradle plugin that adds a couple of convenience functions for publishing to Maven'
+                    url 'https://github.com/corda/corda'
+                    scm {
+                        url 'https://github.com/corda/corda'
+                    }
+
+                    licenses {
+                        license {
+                            name 'Apache-2.0'
+                            url 'https://www.apache.org/licenses/LICENSE-2.0'
+                            distribution 'repo'
+                        }
+                    }
+                }
+            }
         }
     }
 }

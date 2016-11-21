@@ -1,5 +1,7 @@
 apply plugin: 'groovy'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
 
 dependencies {
     compile gradleApi()
@@ -12,6 +14,19 @@ repositories {
     mavenCentral()
 }
 
+bintray {
+    user = System.getenv('CORDA_BINTRAY_USER')
+    key = System.getenv('CORDA_BINTRAY_KEY')
+    publications = ['cordformation']
+    dryRun = false
+    pkg {
+        repo = 'corda'
+        name = 'cordformation'
+        userOrg = 'r3'
+        licenses = ['Apache-2.0']
+    }
+}
+
 publishing {
     publications {
         cordformation(MavenPublication) {
@@ -21,6 +36,26 @@ publishing {
 
             artifact sourceJar
             artifact javadocJar
+
+            pom.withXml {
+                asNode().children().last() + {
+                    resolveStrategy = Closure.DELEGATE_FIRST
+                    name 'cordformation'
+                    description 'A small gradle plugin for adding some basic Quasar tasks and configurations to reduce build.gradle bloat.'
+                    url 'https://github.com/corda/corda'
+                    scm {
+                        url 'https://github.com/corda/corda'
+                    }
+
+                    licenses {
+                        license {
+                            name 'Apache-2.0'
+                            url 'https://www.apache.org/licenses/LICENSE-2.0'
+                            distribution 'repo'
+                        }
+                    }
+                }
+            }
         }
     }
 }

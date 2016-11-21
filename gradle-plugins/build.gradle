@@ -12,6 +12,7 @@ buildscript {
 
     dependencies {
         classpath "net.corda.plugins:publish-utils:$corda_published_version"
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
     }
 }
 
@@ -19,7 +20,7 @@ apply plugin: 'maven-publish'
 
 allprojects {
     group 'net.corda'
-    version "$corda_version"
+    version "$corda_published_version"
 }
 
 // Aliasing the publishToMavenLocal for simplicity.
