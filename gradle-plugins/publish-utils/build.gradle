@@ -34,8 +34,6 @@ bintray {
     }
 }
 
-task(install, dependsOn: 'publishToMavenLocal')
-
 publishing {
     publications {
         publishUtils(MavenPublication) {
