@@ -109,11 +109,13 @@ another node on demand, but there is no global broadcast of \emph{all} transacti
 \emph{flows} to be modelled as blocking code. The code is transformed into an asynchronous state machine, with
 checkpoints written to the node's backing database when messages are sent and received. A node may potentially have
 millions of flows active at once and they may last days, across node restarts and even upgrades. Flows expose progress
-information to node administrators and users and may interact with people as well as other nodes.
+information to node administrators and users and may interact with people as well as other nodes. A Flow library is provided
+to enable developers to re-use common Flow types such as notarisation, membership broadcast and so on.
 \item The data model allows for arbitrary object graphs to be stored in the ledger. These graphs are called \emph{states} and are the atomic unit of data.
 \item Nodes are backed by a relational database and data placed in the ledger can be queried using SQL as well as joined
 with private tables, thanks to slots in the state definitions that are reserved for join keys.
-\item The platform provides a rich type system for the representation of things like dates, currencies, legal entities and so on.
+\item The platform provides a rich type system for the representation of things like dates, currencies, legal entities and
+financial entities such as cash, issuance, deals and so on.
 \item States can declare a relational mapping and can be queried using SQL.
 \item Integration with existing systems is considered from the start. The network can support rapid bulk data imports
 from other database systems without placing load on the network. Events on the ledger are exposed via an embedded JMS
@@ -171,6 +173,8 @@ A Corda network consists of the following components:
 \item Zero or more oracle services. An oracle is a well known service that signs transactions if they state a fact
 and that fact is considered to be true. They may also optionally also provide the facts. This is how the ledger can be
 connected to the real world, despite being fully deterministic.
+\item CorDapps that represent custom applications with business flows written by Corda developers
+\item Remote applications for Corda network visualization, flow and dispute resolution and other administrative tools
 \end{itemize}
 
 A purely in-memory implementation of the messaging subsystem is provided which can inject simulated latency between
@@ -188,7 +192,7 @@ This `identity' does not have to be a legal or true identity. In the same way th
 unique pseudonym that is ultimately rooted by the top of the DNS hierarchy, so too can a Corda network work with
 arbitrary self-selected usernames. The permissioning service can implement any policy it likes as long as the
 identities it signs are globally unique. Thus an entirely anonymous Corda network is possible if a suitable
-IP obfuscation system like Tor is also used.
+IP obfuscation system like Tor [add ref] is also used.
 
 Whilst simple string identities are likely sufficient for some networks, the financial industry typically requires some
 level of \emph{know your customer} checking, and differentiation between different legal entities, branches and desks
