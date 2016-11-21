@@ -23,7 +23,7 @@ class Cordformation implements Plugin<Project> {
      * @return A file handle to the file in the JAR.
      */
     static File getPluginFile(Project project, String filePathInJar) {
-        return project.resources.text.fromArchiveEntry(project.buildscript.configurations.classpath.find {
+        return project.rootProject.resources.text.fromArchiveEntry(project.rootProject.buildscript.configurations.classpath.find {
             it.name.contains('cordformation')
         }, filePathInJar).asFile()
     }
