@@ -31,7 +31,7 @@ open class TransactionBuilder(
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command> = arrayListOf(),
-        protected val signers: MutableSet<PublicKeyTree> = mutableSetOf(),
+        protected val signers: MutableSet<CompositeKey> = mutableSetOf(),
         protected var timestamp: Timestamp? = null) {
 
     val time: Timestamp? get() = timestamp
@@ -136,7 +136,7 @@ open class TransactionBuilder(
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
             val gotKeys = currentSigs.map { it.by }.toSet()
-            val missing: Set<PublicKeyTree> = signers.filter { !it.isFulfilledBy(gotKeys) }.toSet()
+            val missing: Set<CompositeKey> = signers.filter { !it.isFulfilledBy(gotKeys) }.toSet()
             if (missing.isNotEmpty())
                 throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.joinToString()}")
         }
@@ -178,8 +178,8 @@ open class TransactionBuilder(
         commands.add(arg)
     }
 
-    fun addCommand(data: CommandData, vararg keys: PublicKeyTree) = addCommand(Command(data, listOf(*keys)))
-    fun addCommand(data: CommandData, keys: List<PublicKeyTree>) = addCommand(Command(data, keys))
+    fun addCommand(data: CommandData, vararg keys: CompositeKey) = addCommand(Command(data, listOf(*keys)))
+    fun addCommand(data: CommandData, keys: List<CompositeKey>) = addCommand(Command(data, keys))
 
     // Accessors that yield immutable snapshots.
     fun inputStates(): List<StateRef> = ArrayList(inputs)

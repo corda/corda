@@ -6,7 +6,7 @@ import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.POUNDS
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.`issued by`
-import net.corda.core.crypto.tree
+import net.corda.core.crypto.composite
 import net.corda.core.node.services.TxWritableStorageService
 import net.corda.core.node.services.VaultService
 import net.corda.core.transactions.SignedTransaction
@@ -103,7 +103,7 @@ class NodeVaultServiceTest {
 
             // Issue a txn to Send us some Money
             val usefulTX = TransactionType.General.Builder(null).apply {
-                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public.tree, DUMMY_NOTARY)
+                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public.composite, DUMMY_NOTARY)
                 signWith(MEGA_CORP_KEY)
             }.toSignedTransaction()
 
@@ -117,7 +117,7 @@ class NodeVaultServiceTest {
 
             // Issue more Money (GBP)
             val anotherTX = TransactionType.General.Builder(null).apply {
-                Cash().generateIssue(this, 200.POUNDS `issued by` MEGA_CORP.ref(1), freshKey.public.tree, DUMMY_NOTARY)
+                Cash().generateIssue(this, 200.POUNDS `issued by` MEGA_CORP.ref(1), freshKey.public.composite, DUMMY_NOTARY)
                 signWith(MEGA_CORP_KEY)
             }.toSignedTransaction()
 

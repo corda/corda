@@ -266,7 +266,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
             val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
             val commands = kryo.readClassAndObject(input) as List<Command>
             val notary = kryo.readClassAndObject(input) as Party?
-            val signers = kryo.readClassAndObject(input) as List<PublicKeyTree>
+            val signers = kryo.readClassAndObject(input) as List<CompositeKey>
             val transactionType = kryo.readClassAndObject(input) as TransactionType
             val timestamp = kryo.readClassAndObject(input) as Timestamp?
 

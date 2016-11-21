@@ -15,7 +15,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.crypto.*
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -54,9 +53,9 @@ object JsonSupport {
         cordaModule.addSerializer(EdDSAPublicKey::class.java, PublicKeySerializer)
         cordaModule.addDeserializer(EdDSAPublicKey::class.java, PublicKeyDeserializer)
 
-        // For public key trees
-        cordaModule.addSerializer(PublicKeyTree::class.java, PublicKeyTreeSerializer)
-        cordaModule.addDeserializer(PublicKeyTree::class.java, PublicKeyTreeDeserializer)
+        // For composite keys
+        cordaModule.addSerializer(CompositeKey::class.java, CompositeKeySerializer)
+        cordaModule.addDeserializer(CompositeKey::class.java, CompositeKeyDeserializer)
 
         // For NodeInfo
         // TODO this tunnels the Kryo representation as a Base58 encoded string. Replace when RPC supports this.
@@ -181,18 +180,18 @@ object JsonSupport {
         }
     }
 
-    object PublicKeyTreeSerializer : JsonSerializer<PublicKeyTree>() {
-        override fun serialize(obj: PublicKeyTree, generator: JsonGenerator, provider: SerializerProvider) {
+    object CompositeKeySerializer : JsonSerializer<CompositeKey>() {
+        override fun serialize(obj: CompositeKey, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeString(obj.toBase58String())
         }
     }
 
-    object PublicKeyTreeDeserializer : JsonDeserializer<PublicKeyTree>() {
-        override fun deserialize(parser: JsonParser, context: DeserializationContext): PublicKeyTree {
+    object CompositeKeyDeserializer : JsonDeserializer<CompositeKey>() {
+        override fun deserialize(parser: JsonParser, context: DeserializationContext): CompositeKey {
             return try {
-                PublicKeyTree.parseFromBase58(parser.text)
+                CompositeKey.parseFromBase58(parser.text)
             } catch (e: Exception) {
-                throw JsonParseException(parser, "Invalid public key tree ${parser.text}: ${e.message}")
+                throw JsonParseException(parser, "Invalid composite key ${parser.text}: ${e.message}")
             }
         }
     }

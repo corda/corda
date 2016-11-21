@@ -4,9 +4,9 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.signWithECDSA
 import net.corda.core.node.recordTransactions
 import net.corda.core.protocols.ProtocolLogic
@@ -67,12 +67,12 @@ abstract class AbstractStateReplacementProtocol<T> {
         }
 
         abstract protected fun assembleProposal(stateRef: StateRef, modification: T, stx: SignedTransaction): Proposal<T>
-        abstract protected fun assembleTx(): Pair<SignedTransaction, List<PublicKeyTree>>
+        abstract protected fun assembleTx(): Pair<SignedTransaction, List<CompositeKey>>
 
         @Suspendable
-        private fun collectSignatures(participants: List<PublicKeyTree>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
+        private fun collectSignatures(participants: List<CompositeKey>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
             val parties = participants.map {
-                val participantNode = serviceHub.networkMapCache.getNodeByPublicKeyTree(it) ?:
+                val participantNode = serviceHub.networkMapCache.getNodeByCompositeKey(it) ?:
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")
                 participantNode.legalIdentity
             }

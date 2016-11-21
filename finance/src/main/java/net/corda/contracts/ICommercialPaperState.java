@@ -4,7 +4,7 @@ import net.corda.core.contracts.Amount;
 import net.corda.core.contracts.ContractState;
 import net.corda.core.contracts.Issued;
 import net.corda.core.contracts.PartyAndReference;
-import net.corda.core.crypto.PublicKeyTree;
+import net.corda.core.crypto.CompositeKey;
 
 import java.time.Instant;
 import java.util.Currency;
@@ -15,7 +15,7 @@ import java.util.Currency;
  * ultimately either language can be used against a common test framework (and therefore can be used for real).
  */
 public interface ICommercialPaperState extends ContractState {
-    ICommercialPaperState withOwner(PublicKeyTree newOwner);
+    ICommercialPaperState withOwner(CompositeKey newOwner);
 
     ICommercialPaperState withIssuance(PartyAndReference newIssuance);
 

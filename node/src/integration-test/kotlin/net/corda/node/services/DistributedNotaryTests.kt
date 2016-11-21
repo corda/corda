@@ -5,10 +5,10 @@ import net.corda.core.contracts.DummyContract
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
+import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.tree
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.random63BitValue
@@ -92,7 +92,7 @@ class DistributedNotaryTests {
         val notaryClusterAddress = freeLocalHostAndPort()
         val keyPairs = (1..clusterSize).map { generateKeyPair() }
 
-        val notaryKeyTree = PublicKeyTree.Builder().addKeys(keyPairs.map { it.public.tree }).build(1)
+        val notaryKeyTree = CompositeKey.Builder().addKeys(keyPairs.map { it.public.composite }).build(1)
         val notaryParty = Party(notaryName, notaryKeyTree).serialize()
 
         var networkMapAddress: SingleMessageRecipient? = null

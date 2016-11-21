@@ -5,8 +5,8 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.*
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
@@ -154,8 +154,8 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
      */
     override fun generateSpend(tx: TransactionBuilder,
                                amount: Amount<Currency>,
-                               to: PublicKeyTree,
-                               onlyFromParties: Set<Party>?): Pair<TransactionBuilder, List<PublicKeyTree>> {
+                               to: CompositeKey,
+                               onlyFromParties: Set<Party>?): Pair<TransactionBuilder, List<CompositeKey>> {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -238,7 +238,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         return Pair(tx, keysList)
     }
 
-    private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: PublicKeyTree)
+    private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: CompositeKey)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
     /**

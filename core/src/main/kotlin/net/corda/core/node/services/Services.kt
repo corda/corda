@@ -3,8 +3,8 @@ package net.corda.core.node.services
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.*
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.transactions.TransactionBuilder
@@ -185,8 +185,8 @@ interface VaultService {
     @Throws(InsufficientBalanceException::class)
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,
-                      to: PublicKeyTree,
-                      onlyFromParties: Set<Party>? = null): Pair<TransactionBuilder, List<PublicKeyTree>>
+                      to: CompositeKey,
+                      onlyFromParties: Set<Party>? = null): Pair<TransactionBuilder, List<CompositeKey>>
 }
 
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)

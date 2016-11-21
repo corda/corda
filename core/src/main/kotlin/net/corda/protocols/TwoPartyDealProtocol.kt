@@ -39,7 +39,7 @@ object TwoPartyDealProtocol {
     }
 
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
-    data class Handshake<out T>(val payload: T, val publicKey: PublicKeyTree)
+    data class Handshake<out T>(val payload: T, val publicKey: CompositeKey)
 
     class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySig: DigitalSignature.WithKey)
 
@@ -87,7 +87,7 @@ object TwoPartyDealProtocol {
             progressTracker.currentStep = AWAITING_PROPOSAL
 
             // Make the first message we'll send to kick off the protocol.
-            val hello = Handshake(payload, myKeyPair.public.tree)
+            val hello = Handshake(payload, myKeyPair.public.composite)
             val maybeSTX = sendAndReceive<SignedTransaction>(otherParty, hello)
 
             return maybeSTX
@@ -101,7 +101,7 @@ object TwoPartyDealProtocol {
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
-                val wtx: WireTransaction = stx.verifySignatures(myKeyPair.public.tree, notaryNode.notaryIdentity.owningKey)
+                val wtx: WireTransaction = stx.verifySignatures(myKeyPair.public.composite, notaryNode.notaryIdentity.owningKey)
                 logger.trace { "Received partially signed transaction: ${stx.id}" }
 
                 checkDependencies(stx)
@@ -248,7 +248,7 @@ object TwoPartyDealProtocol {
             return sendAndReceive<SignaturesFromPrimary>(otherParty, stx).unwrap { it }
         }
 
-        private fun signWithOurKeys(signingPubKeys: List<PublicKeyTree>, ptx: TransactionBuilder): SignedTransaction {
+        private fun signWithOurKeys(signingPubKeys: List<CompositeKey>, ptx: TransactionBuilder): SignedTransaction {
             // Now sign the transaction with whatever keys we need to move the cash.
             for (publicKey in signingPubKeys.keys) {
                 val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
@@ -259,7 +259,7 @@ object TwoPartyDealProtocol {
         }
 
         @Suspendable protected abstract fun validateHandshake(handshake: Handshake<U>): Handshake<U>
-        @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Pair<TransactionBuilder, List<PublicKeyTree>>
+        @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Pair<TransactionBuilder, List<CompositeKey>>
     }
 
 
@@ -292,7 +292,7 @@ object TwoPartyDealProtocol {
             return handshake.copy(payload = autoOffer.copy(dealBeingOffered = deal))
         }
 
-        override fun assembleSharedTX(handshake: Handshake<AutoOffer>): Pair<TransactionBuilder, List<PublicKeyTree>> {
+        override fun assembleSharedTX(handshake: Handshake<AutoOffer>): Pair<TransactionBuilder, List<CompositeKey>> {
             val deal = handshake.payload.dealBeingOffered
             val ptx = deal.generateAgreement(handshake.payload.notary)
 

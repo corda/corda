@@ -45,24 +45,24 @@ import kotlin.reflect.KClass
 
 // A few dummy values for testing.
 val MEGA_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MEGA_CORP_PUBKEY: PublicKeyTree get() = MEGA_CORP_KEY.public.tree
+val MEGA_CORP_PUBKEY: CompositeKey get() = MEGA_CORP_KEY.public.composite
 
 val MINI_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MINI_CORP_PUBKEY: PublicKeyTree get() = MINI_CORP_KEY.public.tree
+val MINI_CORP_PUBKEY: CompositeKey get() = MINI_CORP_KEY.public.composite
 
 val ORACLE_KEY: KeyPair by lazy { generateKeyPair() }
-val ORACLE_PUBKEY: PublicKeyTree get() = ORACLE_KEY.public.tree
+val ORACLE_PUBKEY: CompositeKey get() = ORACLE_KEY.public.composite
 
 val ALICE_KEY: KeyPair by lazy { generateKeyPair() }
-val ALICE_PUBKEY: PublicKeyTree get() = ALICE_KEY.public.tree
+val ALICE_PUBKEY: CompositeKey get() = ALICE_KEY.public.composite
 val ALICE: Party get() = Party("Alice", ALICE_PUBKEY)
 
 val BOB_KEY: KeyPair by lazy { generateKeyPair() }
-val BOB_PUBKEY: PublicKeyTree get() = BOB_KEY.public.tree
+val BOB_PUBKEY: CompositeKey get() = BOB_KEY.public.composite
 val BOB: Party get() = Party("Bob", BOB_PUBKEY)
 
 val CHARLIE_KEY: KeyPair by lazy { generateKeyPair() }
-val CHARLIE_PUBKEY: PublicKeyTree get() = CHARLIE_KEY.public.tree
+val CHARLIE_PUBKEY: CompositeKey get() = CHARLIE_KEY.public.composite
 val CHARLIE: Party get() = Party("Charlie", CHARLIE_PUBKEY)
 
 val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)

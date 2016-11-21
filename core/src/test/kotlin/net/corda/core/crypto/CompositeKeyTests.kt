@@ -5,14 +5,14 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class PublicKeyTreeTests {
+class CompositeKeyTests {
     val aliceKey = generateKeyPair()
     val bobKey = generateKeyPair()
     val charlieKey = generateKeyPair()
 
-    val alicePublicKey = PublicKeyTree.Leaf(aliceKey.public)
-    val bobPublicKey = PublicKeyTree.Leaf(bobKey.public)
-    val charliePublicKey = PublicKeyTree.Leaf(charlieKey.public)
+    val alicePublicKey = CompositeKey.Leaf(aliceKey.public)
+    val bobPublicKey = CompositeKey.Leaf(bobKey.public)
+    val charliePublicKey = CompositeKey.Leaf(charlieKey.public)
 
     val message = OpaqueBytes("Transaction".toByteArray())
 
@@ -26,22 +26,22 @@ class PublicKeyTreeTests {
 
     @Test
     fun `(Alice or Bob) fulfilled by Bob signature`() {
-        val aliceOrBob = PublicKeyTree.Builder().addKeys(alicePublicKey, bobPublicKey).build(threshold = 1)
+        val aliceOrBob = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build(threshold = 1)
         assertTrue { aliceOrBob.isFulfilledBy(bobSignature.by) }
     }
 
     @Test
     fun `(Alice and Bob) fulfilled by Alice, Bob signatures`() {
-        val aliceAndBob = PublicKeyTree.Builder().addKeys(alicePublicKey, bobPublicKey).build()
+        val aliceAndBob = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build()
         val signatures = listOf(aliceSignature, bobSignature)
         assertTrue { aliceAndBob.isFulfilledBy(signatures.byKeys()) }
     }
 
     @Test
     fun `((Alice and Bob) or Charlie) signature verifies`() {
-        // TODO: Look into a DSL for building multi-level public key trees if that becomes a common use case
-        val aliceAndBob = PublicKeyTree.Builder().addKeys(alicePublicKey, bobPublicKey).build()
-        val aliceAndBobOrCharlie = PublicKeyTree.Builder().addKeys(aliceAndBob, charliePublicKey).build(threshold = 1)
+        // TODO: Look into a DSL for building multi-level composite keys if that becomes a common use case
+        val aliceAndBob = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build()
+        val aliceAndBobOrCharlie = CompositeKey.Builder().addKeys(aliceAndBob, charliePublicKey).build(threshold = 1)
 
         val signatures = listOf(aliceSignature, bobSignature)
 
@@ -50,11 +50,11 @@ class PublicKeyTreeTests {
 
     @Test
     fun `encoded tree decodes correctly`() {
-        val aliceAndBob = PublicKeyTree.Builder().addKeys(alicePublicKey, bobPublicKey).build()
-        val aliceAndBobOrCharlie = PublicKeyTree.Builder().addKeys(aliceAndBob, charliePublicKey).build(threshold = 1)
+        val aliceAndBob = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build()
+        val aliceAndBobOrCharlie = CompositeKey.Builder().addKeys(aliceAndBob, charliePublicKey).build(threshold = 1)
 
         val encoded = aliceAndBobOrCharlie.toBase58String()
-        val decoded = PublicKeyTree.parseFromBase58(encoded)
+        val decoded = CompositeKey.parseFromBase58(encoded)
 
         assertEquals(decoded, aliceAndBobOrCharlie)
     }

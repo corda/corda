@@ -7,8 +7,8 @@ import net.corda.core.contracts.clauses.AnyComposition
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.contracts.clauses.GroupClauseVerifier
 import net.corda.core.contracts.clauses.verifyClause
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.VaultService
 import net.corda.core.random63BitValue
@@ -59,22 +59,22 @@ class CommercialPaper : Contract {
 
     data class State(
             val issuance: PartyAndReference,
-            override val owner: PublicKeyTree,
+            override val owner: CompositeKey,
             val faceValue: Amount<Issued<Currency>>,
             val maturityDate: Instant
     ) : OwnableState, QueryableState, ICommercialPaperState {
         override val contract = CP_PROGRAM_ID
-        override val participants: List<PublicKeyTree>
+        override val participants: List<CompositeKey>
             get() = listOf(owner)
 
         val token: Issued<Terms>
             get() = Issued(issuance, Terms(faceValue.token, maturityDate))
 
-        override fun withNewOwner(newOwner: PublicKeyTree) = Pair(Commands.Move(), copy(owner = newOwner))
+        override fun withNewOwner(newOwner: CompositeKey) = Pair(Commands.Move(), copy(owner = newOwner))
         override fun toString() = "${Emoji.newspaper}CommercialPaper(of $faceValue redeemable on $maturityDate by '$issuance', owned by $owner)"
 
         // Although kotlin is smart enough not to need these, as we are using the ICommercialPaperState, we need to declare them explicitly for use later,
-        override fun withOwner(newOwner: PublicKeyTree): ICommercialPaperState = copy(owner = newOwner)
+        override fun withOwner(newOwner: CompositeKey): ICommercialPaperState = copy(owner = newOwner)
 
         override fun withIssuance(newIssuance: PartyAndReference): ICommercialPaperState = copy(issuance = newIssuance)
         override fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): ICommercialPaperState = copy(faceValue = newFaceValue)
@@ -200,7 +200,7 @@ class CommercialPaper : Contract {
     /**
      * Updates the given partial transaction with an input/output/command to reassign ownership of the paper.
      */
-    fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: PublicKeyTree) {
+    fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: CompositeKey) {
         tx.addInputState(paper)
         tx.addOutputState(TransactionState(paper.state.data.copy(owner = newOwner), paper.state.notary))
         tx.addCommand(Commands.Move(), paper.state.data.owner)
@@ -223,8 +223,8 @@ class CommercialPaper : Contract {
     }
 }
 
-infix fun CommercialPaper.State.`owned by`(owner: PublicKeyTree) = copy(owner = owner)
+infix fun CommercialPaper.State.`owned by`(owner: CompositeKey) = copy(owner = owner)
 infix fun CommercialPaper.State.`with notary`(notary: Party) = TransactionState(this, notary)
-infix fun ICommercialPaperState.`owned by`(newOwner: PublicKeyTree) = withOwner(newOwner)
+infix fun ICommercialPaperState.`owned by`(newOwner: CompositeKey) = withOwner(newOwner)
 
 

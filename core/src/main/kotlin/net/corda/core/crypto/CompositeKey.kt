@@ -1,7 +1,7 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.PublicKeyTree.Leaf
-import net.corda.core.crypto.PublicKeyTree.Node
+import net.corda.core.crypto.CompositeKey.Leaf
+import net.corda.core.crypto.CompositeKey.Node
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import java.security.PublicKey
@@ -19,7 +19,7 @@ import java.security.PublicKey
  * Using these constructs we can express e.g. 1 of N (OR) or N of N (AND) signature requirements. By nesting we can
  * create multi-level requirements such as *"either the CEO or 3 of 5 of his assistants need to sign"*.
  */
-sealed class PublicKeyTree {
+sealed class CompositeKey {
     /** Checks whether [keys] match a sufficient amount of leaf nodes */
     abstract fun isFulfilledBy(keys: Iterable<PublicKey>): Boolean
 
@@ -35,11 +35,11 @@ sealed class PublicKeyTree {
     fun toBase58String(): String = Base58.encode(this.serialize().bits)
 
     companion object {
-        fun parseFromBase58(encoded: String) = Base58.decode(encoded).deserialize<PublicKeyTree>()
+        fun parseFromBase58(encoded: String) = Base58.decode(encoded).deserialize<CompositeKey>()
     }
 
-    /** The leaf node of the public key tree – a wrapper around a [PublicKey] primitive */
-    class Leaf(val publicKey: PublicKey) : PublicKeyTree() {
+    /** The leaf node of the tree – a wrapper around a [PublicKey] primitive */
+    class Leaf(val publicKey: PublicKey) : CompositeKey() {
         override fun isFulfilledBy(keys: Iterable<PublicKey>) = publicKey in keys
 
         override val keys: Set<PublicKey>
@@ -56,15 +56,15 @@ sealed class PublicKeyTree {
     }
 
     /**
-     * Represents a node in the [PublicKeyTree]. It maintains a list of child nodes – sub-trees, and associated
+     * Represents a node in the key tree. It maintains a list of child nodes – sub-trees, and associated
      * [weights] carried by child node signatures.
      *
      * The [threshold] specifies the minimum total weight required (in the simple case – the minimum number of child
-     * signatures required) to satisfy the public key sub-tree rooted at this node.
+     * signatures required) to satisfy the sub-tree rooted at this node.
      */
     class Node(val threshold: Int,
-               val children: List<PublicKeyTree>,
-               val weights: List<Int>) : PublicKeyTree() {
+               val children: List<CompositeKey>,
+               val weights: List<Int>) : CompositeKey() {
 
         override fun isFulfilledBy(keys: Iterable<PublicKey>): Boolean {
             val totalWeight = children.mapIndexed { i, childNode ->
@@ -101,44 +101,44 @@ sealed class PublicKeyTree {
         override fun toString() = "(${children.joinToString()})"
     }
 
-    /** A helper class for building a [PublicKeyTree.Node]. */
+    /** A helper class for building a [CompositeKey.Node]. */
     class Builder() {
-        private val children: MutableList<PublicKeyTree> = mutableListOf()
+        private val children: MutableList<CompositeKey> = mutableListOf()
         private val weights: MutableList<Int> = mutableListOf()
 
-        /** Adds a child [PublicKeyTree] node. Specifying a [weight] for the child is optional and will default to 1. */
-        fun addKey(publicKey: PublicKeyTree, weight: Int = 1): Builder {
-            children.add(publicKey)
+        /** Adds a child [CompositeKey] node. Specifying a [weight] for the child is optional and will default to 1. */
+        fun addKey(key: CompositeKey, weight: Int = 1): Builder {
+            children.add(key)
             weights.add(weight)
             return this
         }
 
-        fun addKeys(vararg publicKeys: PublicKeyTree): Builder {
-            publicKeys.forEach { addKey(it) }
+        fun addKeys(vararg keys: CompositeKey): Builder {
+            keys.forEach { addKey(it) }
             return this
         }
 
-        fun addKeys(publicKeys: List<PublicKeyTree>): Builder = addKeys(*publicKeys.toTypedArray())
+        fun addKeys(keys: List<CompositeKey>): Builder = addKeys(*keys.toTypedArray())
 
         /**
-         * Builds the [PublicKeyTree.Node]. If [threshold] is not specified, it will default to
+         * Builds the [CompositeKey.Node]. If [threshold] is not specified, it will default to
          * the size of the children, effectively generating an "N of N" requirement.
          */
-        fun build(threshold: Int? = null): PublicKeyTree {
+        fun build(threshold: Int? = null): CompositeKey {
             return if (children.size == 1) children.first()
             else Node(threshold ?: children.size, children.toList(), weights.toList())
         }
     }
 
     /**
-     * Returns the enclosed [PublicKey] for a [PublicKeyTree] with a single node
+     * Returns the enclosed [PublicKey] for a [CompositeKey] with a single leaf node
      *
-     * @throws IllegalArgumentException if the [PublicKeyTree] contains more than one node
+     * @throws IllegalArgumentException if the [CompositeKey] contains more than one node
      */
     val singleKey: PublicKey
-        get() = keys.singleOrNull() ?: throw IllegalStateException("The public key tree has more than one node")
+        get() = keys.singleOrNull() ?: throw IllegalStateException("The key is composed of more than one PublicKey primitive")
 }
 
-/** Returns the set of all [PublicKey]s contained in the leaves of the [PublicKeyTree]s */
-val Iterable<PublicKeyTree>.keys: Set<PublicKey>
+/** Returns the set of all [PublicKey]s contained in the leaves of the [CompositeKey]s */
+val Iterable<CompositeKey>.keys: Set<PublicKey>
     get() = flatMap { it.keys }.toSet()

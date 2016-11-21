@@ -1,7 +1,7 @@
 package net.corda.core.node
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.PublicKeyTree
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.Vault
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -20,7 +20,7 @@ class VaultUpdateTests {
     }
 
     private class DummyState : ContractState {
-        override val participants: List<PublicKeyTree>
+        override val participants: List<CompositeKey>
             get() = emptyList()
         override val contract = VaultUpdateTests.DummyContract
     }

@@ -3,7 +3,7 @@ package net.corda.node.services.messaging
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.ThreadBox
-import net.corda.core.crypto.PublicKeyTree
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.messaging.*
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.opaque
@@ -51,7 +51,7 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class NodeMessagingClient(override val config: NodeConfiguration,
                           val serverHostPort: HostAndPort,
-                          val myIdentity: PublicKeyTree?,
+                          val myIdentity: CompositeKey?,
                           val executor: AffinityExecutor,
                           val database: Database,
                           val networkMapRegistrationFuture: ListenableFuture<Unit>) : ArtemisMessagingComponent(), MessagingServiceInternal {

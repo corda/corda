@@ -1,8 +1,8 @@
 @file:JvmName("ContractsDSL")
 package net.corda.core.contracts
 
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import java.util.*
 
 /**
@@ -60,7 +60,7 @@ inline fun <R> requireThat(body: Requirements.() -> R) = R.body()
 //// Authenticated commands ///////////////////////////////////////////////////////////////////////////////////////////
 
 /** Filters the command list by type, party and public key all at once. */
-inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signer: PublicKeyTree? = null,
+inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signer: CompositeKey? = null,
                                                                                          party: Party? = null) =
         filter { it.value is T }.
         filter { if (signer == null) true else signer in it.signers }.
@@ -68,7 +68,7 @@ inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>
         map { AuthenticatedObject(it.signers, it.signingParties, it.value as T) }
 
 /** Filters the command list by type, parties and public keys all at once. */
-inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signers: Collection<PublicKeyTree>?,
+inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signers: Collection<CompositeKey>?,
                                                                                          parties: Collection<Party>?) =
         filter { it.value is T }.
         filter { if (signers == null) true else it.signers.containsAll(signers)}.

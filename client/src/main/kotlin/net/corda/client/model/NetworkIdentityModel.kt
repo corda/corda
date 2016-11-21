@@ -4,7 +4,7 @@ import javafx.collections.ObservableList
 import kotlinx.support.jdk8.collections.removeIf
 import net.corda.client.fxutils.foldToObservableList
 import net.corda.client.fxutils.map
-import net.corda.core.crypto.PublicKeyTree
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.node.services.network.NetworkMapService
@@ -34,7 +34,7 @@ class NetworkIdentityModel {
         return advertisedServices.any { it.info.type == NetworkMapService.type || it.info.type.isNotary() }
     }
 
-    fun lookup(publicKeyTree: PublicKeyTree): NodeInfo? {
-        return parties.firstOrNull { it.legalIdentity.owningKey == publicKeyTree } ?: notaries.firstOrNull { it.notaryIdentity.owningKey == publicKeyTree }
+    fun lookup(compositeKey: CompositeKey): NodeInfo? {
+        return parties.firstOrNull { it.legalIdentity.owningKey == compositeKey } ?: notaries.firstOrNull { it.notaryIdentity.owningKey == compositeKey }
     }
 }

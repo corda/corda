@@ -4,11 +4,10 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.DealState
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
-import java.util.*
 
 /**
  * Represents an OpenGamma IRS between two parties. Does not implement any fixing functionality.
@@ -32,6 +31,6 @@ data class IRSState(val swap: SwapData,
         return TransactionType.General.Builder(notary).withItems(state, Command(OGTrade.Commands.Agree(), parties.map { it.owningKey }))
     }
 
-    override val participants: List<PublicKeyTree>
+    override val participants: List<CompositeKey>
         get() = parties.map { it.owningKey }
 }

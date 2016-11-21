@@ -1,8 +1,8 @@
 package net.corda.contracts.universal
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.TransactionBuilder
 import java.math.BigDecimal
@@ -11,7 +11,7 @@ import java.time.Instant
 val UNIVERSAL_PROGRAM_ID = UniversalContract()
 
 class UniversalContract : Contract {
-    data class State(override val participants: List<PublicKeyTree>,
+    data class State(override val participants: List<CompositeKey>,
                      val details: Arrangement) : ContractState {
         override val contract = UNIVERSAL_PROGRAM_ID
     }
@@ -308,7 +308,7 @@ class UniversalContract : Contract {
     override val legalContractReference: SecureHash
         get() = throw UnsupportedOperationException()
 
-    fun generateIssue(tx: TransactionBuilder, arrangement: Arrangement, at: PartyAndReference, notary: PublicKeyTree) {
+    fun generateIssue(tx: TransactionBuilder, arrangement: Arrangement, at: PartyAndReference, notary: CompositeKey) {
         check(tx.inputStates().isEmpty())
         tx.addOutputState(State(listOf(notary), arrangement))
         tx.addCommand(Commands.Issue(), at.party.owningKey)

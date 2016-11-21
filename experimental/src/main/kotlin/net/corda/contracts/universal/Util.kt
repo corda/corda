@@ -3,8 +3,8 @@ package net.corda.contracts.universal
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Sets
 import net.corda.core.contracts.Frequency
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
 import java.time.Instant
 import java.time.LocalDate
 
@@ -12,44 +12,44 @@ fun Instant.toLocalDate(): LocalDate = LocalDate.ofEpochDay(this.epochSecond / 6
 
 fun LocalDate.toInstant(): Instant = Instant.ofEpochSecond(this.toEpochDay() * 60 * 60 * 24)
 
-private fun liablePartiesVisitor(arrangement: Arrangement): ImmutableSet<PublicKeyTree> =
+private fun liablePartiesVisitor(arrangement: Arrangement): ImmutableSet<CompositeKey> =
         when (arrangement) {
-            is Zero -> ImmutableSet.of<PublicKeyTree>()
+            is Zero -> ImmutableSet.of<CompositeKey>()
             is Transfer -> ImmutableSet.of(arrangement.from.owningKey)
             is And ->
-                arrangement.arrangements.fold(ImmutableSet.builder<PublicKeyTree>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
+                arrangement.arrangements.fold(ImmutableSet.builder<CompositeKey>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
             is Actions ->
-                arrangement.actions.fold(ImmutableSet.builder<PublicKeyTree>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
+                arrangement.actions.fold(ImmutableSet.builder<CompositeKey>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
             is RollOut -> liablePartiesVisitor(arrangement.template)
-            is Continuation -> ImmutableSet.of<PublicKeyTree>()
+            is Continuation -> ImmutableSet.of<CompositeKey>()
             else -> throw IllegalArgumentException("liableParties " + arrangement)
         }
 
-private fun liablePartiesVisitor(action: Action): ImmutableSet<PublicKeyTree> =
+private fun liablePartiesVisitor(action: Action): ImmutableSet<CompositeKey> =
         if (action.actors.size != 1)
             liablePartiesVisitor(action.arrangement)
         else
             Sets.difference(liablePartiesVisitor(action.arrangement), ImmutableSet.of(action.actors.single())).immutableCopy()
 
 /** Returns list of potentially liable parties for a given contract */
-fun liableParties(contract: Arrangement): Set<PublicKeyTree> = liablePartiesVisitor(contract)
+fun liableParties(contract: Arrangement): Set<CompositeKey> = liablePartiesVisitor(contract)
 
-private fun involvedPartiesVisitor(action: Action): Set<PublicKeyTree> =
+private fun involvedPartiesVisitor(action: Action): Set<CompositeKey> =
         Sets.union(involvedPartiesVisitor(action.arrangement), action.actors.map { it.owningKey }.toSet()).immutableCopy()
 
-private fun involvedPartiesVisitor(arrangement: Arrangement): ImmutableSet<PublicKeyTree> =
+private fun involvedPartiesVisitor(arrangement: Arrangement): ImmutableSet<CompositeKey> =
         when (arrangement) {
-            is Zero -> ImmutableSet.of<PublicKeyTree>()
+            is Zero -> ImmutableSet.of<CompositeKey>()
             is Transfer -> ImmutableSet.of(arrangement.from.owningKey)
             is And ->
-                arrangement.arrangements.fold(ImmutableSet.builder<PublicKeyTree>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
+                arrangement.arrangements.fold(ImmutableSet.builder<CompositeKey>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
             is Actions ->
-                arrangement.actions.fold(ImmutableSet.builder<PublicKeyTree>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
+                arrangement.actions.fold(ImmutableSet.builder<CompositeKey>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
             else -> throw IllegalArgumentException()
         }
 
 /** returns list of involved parties for a given contract */
-fun involvedParties(arrangement: Arrangement): Set<PublicKeyTree> = involvedPartiesVisitor(arrangement)
+fun involvedParties(arrangement: Arrangement): Set<CompositeKey> = involvedPartiesVisitor(arrangement)
 
 fun replaceParty(action: Action, from: Party, to: Party): Action =
         if (action.actors.contains(from)) {

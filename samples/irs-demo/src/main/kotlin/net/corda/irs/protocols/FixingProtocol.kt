@@ -3,9 +3,8 @@ package net.corda.irs.protocols
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.TransientProperty
 import net.corda.core.contracts.*
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.PublicKeyTree
-import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.ServiceType
@@ -15,11 +14,9 @@ import net.corda.core.transactions.FilterFuns
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.trace
-import net.corda.node.services.api.ServiceHubInternal
 import net.corda.protocols.TwoPartyDealProtocol
 import java.math.BigDecimal
 import java.security.KeyPair
-import java.security.PublicKey
 
 object FixingProtocol {
 
@@ -58,7 +55,7 @@ object FixingProtocol {
         }
 
         @Suspendable
-        override fun assembleSharedTX(handshake: TwoPartyDealProtocol.Handshake<FixingSession>): Pair<TransactionBuilder, List<PublicKeyTree>> {
+        override fun assembleSharedTX(handshake: TwoPartyDealProtocol.Handshake<FixingSession>): Pair<TransactionBuilder, List<CompositeKey>> {
             @Suppress("UNCHECKED_CAST")
             val fixOf = deal.nextFixingOf()!!
 
