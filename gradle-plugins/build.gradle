@@ -20,7 +20,11 @@ apply plugin: 'maven-publish'
 
 allprojects {
     group 'net.corda'
-    version "$corda_published_version"
+    version "$corda_version"
+}
+
+subprojects {
+	task(install, dependsOn: 'publishToMavenLocal')
 }
 
 // Aliasing the publishToMavenLocal for simplicity.
