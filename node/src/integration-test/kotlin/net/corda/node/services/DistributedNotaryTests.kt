@@ -41,7 +41,7 @@ import kotlin.test.assertFailsWith
 
 // TODO: clean up and rewrite this using DriverDSL
 class DistributedNotaryTests {
-    val baseDir = "build/notaryTest/${Date()}"
+    val baseDir = "build/notaryTest"
     val notaryName = "Notary Service"
     val clusterSize = 3
 
@@ -49,6 +49,7 @@ class DistributedNotaryTests {
     fun setup() {
         LogHelper.setLevel("-org.apache.activemq")
         LogHelper.setLevel(NetworkMapService::class)
+        File(baseDir).deleteRecursively()
         File(baseDir).mkdirs()
     }
 
