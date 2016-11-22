@@ -75,7 +75,7 @@ In the "IRS Demo: Run Nodes" window you'll see a lot of activity when you run th
 The date change rolls the clock forwards and causes the nodes to agree on the fixings over a period.
 
 There is also an web app as part of this demo. To use this set up the trades and then navigate to
-http://localhost:10005/web/irsdemo and http://localhost:10005/web/irsdemo to see both node's view of the ledger.
+http://localhost:10005/web/irsdemo and http://localhost:10007/web/irsdemo to see both node's view of the ledger.
 
 To use the demos click the "Create Deal" button, fill in the form, then click the "Submit" button. Now you will be
 able to use the time controls at the top left of the home page to run the fixings. Click any individual trade in the
@@ -113,6 +113,6 @@ To run the demo run:
 1. Open the Corda project in IntelliJ and run the "Install" configuration
 2. Open the Corda samples project in IntelliJ and run the "Simm Valuation Demo" configuration
 
-Now open http://localhost:10005/web/simmvaluationdemo and http://localhost:10005/web/simmvaluationdemo to view the two nodes that this
+Now open http://localhost:10005/web/simmvaluationdemo and http://localhost:10007/web/simmvaluationdemo to view the two nodes that this
 will have started respectively. You can now use the demo by creating trades and agreeing the valuations.
 
