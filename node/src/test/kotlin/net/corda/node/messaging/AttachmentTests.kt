@@ -6,12 +6,12 @@ import net.corda.core.crypto.sha256
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.write
+import net.corda.flows.FetchAttachmentsFlow
+import net.corda.flows.FetchDataFlow
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.protocols.FetchAttachmentsProtocol
-import net.corda.protocols.FetchDataProtocol
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.rootCauseExceptions
 import org.junit.Before
@@ -49,9 +49,9 @@ class AttachmentTests {
         // Insert an attachment into node zero's store directly.
         val id = n0.storage.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
 
-        // Get node one to run a protocol to fetch it and insert it.
+        // Get node one to run a flow to fetch it and insert it.
         network.runNetwork()
-        val f1 = n1.services.startProtocol(FetchAttachmentsProtocol(setOf(id), n0.info.legalIdentity))
+        val f1 = n1.services.startFlow(FetchAttachmentsFlow(setOf(id), n0.info.legalIdentity))
         network.runNetwork()
         assertEquals(0, f1.resultFuture.get().fromDisk.size)
 
@@ -62,7 +62,7 @@ class AttachmentTests {
         // Shut down node zero and ensure node one can still resolve the attachment.
         n0.stop()
 
-        val response: FetchDataProtocol.Result<Attachment> = n1.services.startProtocol(FetchAttachmentsProtocol(setOf(id), n0.info.legalIdentity)).resultFuture.get()
+        val response: FetchDataFlow.Result<Attachment> = n1.services.startFlow(FetchAttachmentsFlow(setOf(id), n0.info.legalIdentity)).resultFuture.get()
         assertEquals(attachment, response.fromDisk[0])
     }
 
@@ -73,9 +73,9 @@ class AttachmentTests {
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
         network.runNetwork()
-        val f1 = n1.services.startProtocol(FetchAttachmentsProtocol(setOf(hash), n0.info.legalIdentity))
+        val f1 = n1.services.startFlow(FetchAttachmentsFlow(setOf(hash), n0.info.legalIdentity))
         network.runNetwork()
-        val e = assertFailsWith<FetchDataProtocol.HashNotFound> { rootCauseExceptions { f1.resultFuture.get() } }
+        val e = assertFailsWith<FetchDataFlow.HashNotFound> { rootCauseExceptions { f1.resultFuture.get() } }
         assertEquals(hash, e.requested)
     }
 
@@ -104,9 +104,9 @@ class AttachmentTests {
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
         network.runNetwork()
-        val f1 = n1.services.startProtocol(FetchAttachmentsProtocol(setOf(id), n0.info.legalIdentity))
+        val f1 = n1.services.startFlow(FetchAttachmentsFlow(setOf(id), n0.info.legalIdentity))
         network.runNetwork()
-        assertFailsWith<FetchDataProtocol.DownloadedVsRequestedDataMismatch> {
+        assertFailsWith<FetchDataFlow.DownloadedVsRequestedDataMismatch> {
             rootCauseExceptions { f1.resultFuture.get() }
         }
     }

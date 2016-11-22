@@ -1,28 +1,28 @@
 package net.corda.node.utilities
 
 import net.corda.core.ThreadBox
-import net.corda.core.protocols.ProtocolLogic
+import net.corda.core.flows.FlowLogic
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.statemachine.StateMachineManager
 import java.util.*
 
 /**
- * This observes the [StateMachineManager] and follows the progress of [ProtocolLogic]s until they complete in the order
+ * This observes the [StateMachineManager] and follows the progress of [FlowLogic]s until they complete in the order
  * they are added to the [StateMachineManager].
  */
 class ANSIProgressObserver(val smm: StateMachineManager) {
     init {
         smm.changes.subscribe { change ->
             when (change.addOrRemove) {
-                AddOrRemove.ADD -> addProtocolLogic(change.logic)
-                AddOrRemove.REMOVE -> removeProtocolLogic(change.logic)
+                AddOrRemove.ADD -> addFlowLogic(change.logic)
+                AddOrRemove.REMOVE -> removeFlowLogic(change.logic)
             }
         }
     }
 
     private class Content {
-        var currentlyRendering: ProtocolLogic<*>? = null
-        val pending = ArrayDeque<ProtocolLogic<*>>()
+        var currentlyRendering: FlowLogic<*>? = null
+        val pending = ArrayDeque<FlowLogic<*>>()
     }
 
     private val state = ThreadBox(Content())
@@ -39,18 +39,18 @@ class ANSIProgressObserver(val smm: StateMachineManager) {
         }
     }
 
-    private fun removeProtocolLogic(protocolLogic: ProtocolLogic<*>) {
+    private fun removeFlowLogic(flowLogic: FlowLogic<*>) {
         state.locked {
-            protocolLogic.progressTracker?.currentStep = ProgressTracker.DONE
-            if (currentlyRendering == protocolLogic) {
+            flowLogic.progressTracker?.currentStep = ProgressTracker.DONE
+            if (currentlyRendering == flowLogic) {
                 wireUpProgressRendering()
             }
         }
     }
 
-    private fun addProtocolLogic(protocolLogic: ProtocolLogic<*>) {
+    private fun addFlowLogic(flowLogic: FlowLogic<*>) {
         state.locked {
-            pending.add(protocolLogic)
+            pending.add(flowLogic)
             if ((currentlyRendering?.progressTracker?.currentStep ?: ProgressTracker.DONE) == ProgressTracker.DONE) {
                 wireUpProgressRendering()
             }

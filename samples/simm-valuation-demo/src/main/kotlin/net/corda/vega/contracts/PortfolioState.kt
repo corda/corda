@@ -3,9 +3,9 @@ package net.corda.vega.contracts
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.protocols.ProtocolLogicRefFactory
+import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.vega.protocols.SimmRevaluation
+import net.corda.vega.flows.SimmRevaluation
 import java.security.PublicKey
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -31,9 +31,9 @@ data class PortfolioState(val portfolio: List<StateRef>,
     override val participants: List<CompositeKey>
         get() = parties.map { it.owningKey }
 
-    override fun nextScheduledActivity(thisStateRef: StateRef, protocolLogicRefFactory: ProtocolLogicRefFactory): ScheduledActivity {
-        val protocol = protocolLogicRefFactory.create(SimmRevaluation.Initiator::class.java, thisStateRef, LocalDate.now())
-        return ScheduledActivity(protocol, LocalDate.now().plus(1, ChronoUnit.DAYS).atStartOfDay().toInstant(ZoneOffset.UTC))
+    override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity {
+        val flow = flowLogicRefFactory.create(SimmRevaluation.Initiator::class.java, thisStateRef, LocalDate.now())
+        return ScheduledActivity(flow, LocalDate.now().plus(1, ChronoUnit.DAYS).atStartOfDay().toInstant(ZoneOffset.UTC))
     }
 
     override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {

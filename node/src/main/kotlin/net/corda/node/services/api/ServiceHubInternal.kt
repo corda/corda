@@ -1,14 +1,14 @@
 package net.corda.node.services.api
 
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.MessagingService
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.TxWritableStorageService
-import net.corda.core.protocols.ProtocolLogic
-import net.corda.core.protocols.ProtocolLogicRefFactory
-import net.corda.core.protocols.ProtocolStateMachine
 import net.corda.core.transactions.SignedTransaction
-import net.corda.node.services.statemachine.ProtocolStateMachineImpl
+import net.corda.node.services.statemachine.FlowStateMachineImpl
 import org.slf4j.LoggerFactory
 
 interface MessagingServiceInternal : MessagingService {
@@ -38,7 +38,7 @@ private val log = LoggerFactory.getLogger(ServiceHubInternal::class.java)
 
 abstract class ServiceHubInternal : PluginServiceHub {
     abstract val monitoringService: MonitoringService
-    abstract val protocolLogicRefFactory: ProtocolLogicRefFactory
+    abstract val flowLogicRefFactory: FlowLogicRefFactory
     abstract val schemaService: SchemaService
 
     abstract override val networkService: MessagingServiceInternal
@@ -51,7 +51,7 @@ abstract class ServiceHubInternal : PluginServiceHub {
      * @param txs The transactions to record.
      */
     internal fun recordTransactionsInternal(writableStorageService: TxWritableStorageService, txs: Iterable<SignedTransaction>) {
-        val stateMachineRunId = ProtocolStateMachineImpl.currentStateMachine()?.id
+        val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
         if (stateMachineRunId != null) {
             txs.forEach {
                 storageService.stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
@@ -68,12 +68,12 @@ abstract class ServiceHubInternal : PluginServiceHub {
      *       between SMM and the scheduler.  That particular problem should also be resolved by the service manager work
      *       itself, at which point this method would not be needed (by the scheduler).
      */
-    abstract fun <T> startProtocol(logic: ProtocolLogic<T>): ProtocolStateMachine<T>
+    abstract fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T>
 
-    override fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ProtocolStateMachine<T> {
-        val logicRef = protocolLogicRefFactory.create(logicType, *args)
+    override fun <T : Any> invokeFlowAsync(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowStateMachine<T> {
+        val logicRef = flowLogicRefFactory.create(logicType, *args)
         @Suppress("UNCHECKED_CAST")
-        val logic = protocolLogicRefFactory.toProtocolLogic(logicRef) as ProtocolLogic<T>
-        return startProtocol(logic)
+        val logic = flowLogicRefFactory.toFlowLogic(logicRef) as FlowLogic<T>
+        return startFlow(logic)
     }
 }

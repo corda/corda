@@ -58,7 +58,7 @@ open class TransactionBuilder(
     /**
      * Places a [TimestampCommand] in this transaction, removing any existing command if there is one.
      * The command requires a signature from the Notary service, which acts as a Timestamp Authority.
-     * The signature can be obtained using [NotaryProtocol].
+     * The signature can be obtained using [NotaryFlow].
      *
      * The window of time in which the final timestamp may lie is defined as [time] +/- [timeTolerance].
      * If you want a non-symmetrical time window you must add the command via [addCommand] yourself. The tolerance

@@ -1,7 +1,7 @@
 package net.corda.node.services
 
 import com.typesafe.config.Config
-import net.corda.core.protocols.ProtocolLogic
+import net.corda.core.flows.FlowLogic
 import net.corda.node.services.config.getListOrElse
 
 /**
@@ -41,5 +41,5 @@ data class User(val username: String, val password: String, val permissions: Set
     override fun toString(): String = "${javaClass.simpleName}($username, permissions=$permissions)"
 }
 
-fun <P : ProtocolLogic<*>> startProtocolPermission(clazz: Class<P>) = "StartProtocol.${clazz.name}"
-inline fun <reified P : ProtocolLogic<*>> startProtocolPermission(): String = startProtocolPermission(P::class.java)
+fun <P : FlowLogic<*>> startFlowPermission(clazz: Class<P>) = "StartFlow.${clazz.name}"
+inline fun <reified P : FlowLogic<*>> startFlowPermission(): String = startFlowPermission(P::class.java)

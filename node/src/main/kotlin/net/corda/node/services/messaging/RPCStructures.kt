@@ -19,14 +19,14 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.node.*
 import net.corda.core.node.services.*
-import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.flows.CashFlowResult
 import net.corda.node.services.User
-import net.corda.protocols.CashProtocolResult
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -181,8 +181,8 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(Cash.Clauses.ConserveAmount::class.java)
         register(listOf(Unit).javaClass) // SingletonList
         register(setOf(Unit).javaClass) // SingletonSet
-        register(CashProtocolResult.Success::class.java)
-        register(CashProtocolResult.Failed::class.java)
+        register(CashFlowResult.Success::class.java)
+        register(CashFlowResult.Failed::class.java)
         register(ServiceEntry::class.java)
         register(NodeInfo::class.java)
         register(PhysicalLocation::class.java)
@@ -215,7 +215,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(Array<StackTraceElement>::class.java, read = { kryo, input -> emptyArray() }, write = { kryo, output, o -> })
         register(Collections.unmodifiableList(emptyList<String>()).javaClass)
         register(PermissionException::class.java)
-        register(ProtocolHandle::class.java)
+        register(FlowHandle::class.java)
         register(KryoException::class.java)
         register(StringBuffer::class.java)
         pluginRegistries.forEach { it.registerRPCKryoTypes(this) }

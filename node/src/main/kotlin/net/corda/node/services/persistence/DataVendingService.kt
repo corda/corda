@@ -2,14 +2,13 @@ package net.corda.node.services.persistence
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.Party
+import net.corda.core.flows.FlowLogic
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.recordTransactions
-import net.corda.core.protocols.ProtocolLogic
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.api.ServiceHubInternal
-import net.corda.protocols.*
+import net.corda.flows.*
 import java.io.InputStream
 import javax.annotation.concurrent.ThreadSafe
 
@@ -41,16 +40,16 @@ object DataVending {
         class TransactionRejectedError(msg: String) : Exception(msg)
 
         init {
-            services.registerProtocolInitiator(FetchTransactionsProtocol::class, ::FetchTransactionsHandler)
-            services.registerProtocolInitiator(FetchAttachmentsProtocol::class, ::FetchAttachmentsHandler)
-            services.registerProtocolInitiator(BroadcastTransactionProtocol::class, ::NotifyTransactionHandler)
+            services.registerFlowInitiator(FetchTransactionsFlow::class, ::FetchTransactionsHandler)
+            services.registerFlowInitiator(FetchAttachmentsFlow::class, ::FetchAttachmentsHandler)
+            services.registerFlowInitiator(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
         }
 
 
-        private class FetchTransactionsHandler(val otherParty: Party) : ProtocolLogic<Unit>() {
+        private class FetchTransactionsHandler(val otherParty: Party) : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
-                val request = receive<FetchDataProtocol.Request>(otherParty).unwrap {
+                val request = receive<FetchDataFlow.Request>(otherParty).unwrap {
                     require(it.hashes.isNotEmpty())
                     it
                 }
@@ -66,10 +65,10 @@ object DataVending {
 
 
         // TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
-        private class FetchAttachmentsHandler(val otherParty: Party) : ProtocolLogic<Unit>() {
+        private class FetchAttachmentsHandler(val otherParty: Party) : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
-                val request = receive<FetchDataProtocol.Request>(otherParty).unwrap {
+                val request = receive<FetchDataFlow.Request>(otherParty).unwrap {
                     require(it.hashes.isNotEmpty())
                     it
                 }
@@ -91,11 +90,11 @@ object DataVending {
         //       includes us in any outside that list. Potentially just if it includes any outside that list at all.
         // TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
         //       cash without from unknown parties?
-        class NotifyTransactionHandler(val otherParty: Party) : ProtocolLogic<Unit>() {
+        class NotifyTransactionHandler(val otherParty: Party) : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
-                val request = receive<BroadcastTransactionProtocol.NotifyTxRequest>(otherParty).unwrap { it }
-                subProtocol(ResolveTransactionsProtocol(request.tx, otherParty), shareParentSessions = true)
+                val request = receive<BroadcastTransactionFlow.NotifyTxRequest>(otherParty).unwrap { it }
+                subFlow(ResolveTransactionsFlow(request.tx, otherParty), shareParentSessions = true)
                 serviceHub.recordTransactions(request.tx)
             }
         }

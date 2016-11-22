@@ -61,7 +61,7 @@ class ConfigurationException(message: String) : Exception(message)
  * network map service, while bootstrapping a network.
  * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
  * but nodes are not required to advertise services they run (hence subset).
- * @param clock The clock used within the node and by all protocols etc.
+ * @param clock The clock used within the node and by all flows etc.
  */
 class Node(override val configuration: FullNodeConfiguration, networkMapAddress: SingleMessageRecipient?,
            advertisedServices: Set<ServiceInfo>, clock: Clock = NodeClock()) : AbstractNode(configuration, networkMapAddress, advertisedServices, clock) {
@@ -102,7 +102,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
     // layer, which can then react to the backpressure. Artemis MQ in particular knows how to do flow control by paging
     // messages to disk rather than letting us run out of RAM.
     //
-    // The primary work done by the server thread is execution of protocol logics, and related
+    // The primary work done by the server thread is execution of flow logics, and related
     // serialisation/deserialisation work.
     override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread", 1)
 

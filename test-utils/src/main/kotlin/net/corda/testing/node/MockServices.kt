@@ -2,14 +2,14 @@ package net.corda.testing.node
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.*
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowStateMachine
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
-import net.corda.core.protocols.ProtocolLogic
-import net.corda.core.protocols.ProtocolStateMachine
-import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -35,10 +35,10 @@ import javax.annotation.concurrent.ThreadSafe
 
 /**
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
- * building chains of transactions and verifying them. It isn't sufficient for testing protocols however.
+ * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
 open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
-    override fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ProtocolStateMachine<T> {
+    override fun <T : Any> invokeFlowAsync(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowStateMachine<T> {
         throw UnsupportedOperationException("not implemented")
     }
 

@@ -1,16 +1,5 @@
 package net.corda.netmap
 
-import net.corda.netmap.VisualiserViewModel.Style
-import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.serialization.deserialize
-import net.corda.core.then
-import net.corda.core.utilities.ProgressTracker
-import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.simulation.IRSSimulation
-import net.corda.simulation.Simulation
-import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockNetwork
 import javafx.animation.*
 import javafx.application.Application
 import javafx.application.Platform
@@ -22,6 +11,17 @@ import javafx.scene.input.KeyCodeCombination
 import javafx.scene.layout.VBox
 import javafx.stage.Stage
 import javafx.util.Duration
+import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.serialization.deserialize
+import net.corda.core.then
+import net.corda.core.utilities.ProgressTracker
+import net.corda.netmap.VisualiserViewModel.Style
+import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.simulation.IRSSimulation
+import net.corda.simulation.Simulation
+import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.MockNetwork
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.time.format.DateTimeFormatter
@@ -74,8 +74,8 @@ class NetworkMapVisualiser : Application() {
         viewModel.displayStyle = if ("--circle" in parameters.raw) { Style.CIRCLE } else { viewModel.displayStyle }
 
         val simulation = viewModel.simulation
-        // Update the white-backgrounded label indicating what protocol step it's up to.
-        simulation.allProtocolSteps.observeOn(uiThread).subscribe { step: Pair<Simulation.SimulatedNode, ProgressTracker.Change> ->
+        // Update the white-backgrounded label indicating what flow step it's up to.
+        simulation.allFlowSteps.observeOn(uiThread).subscribe { step: Pair<Simulation.SimulatedNode, ProgressTracker.Change> ->
             val (node, change) = step
             val label = viewModel.nodesToWidgets[node]!!.statusLabel
             if (change is ProgressTracker.Change.Position) {
@@ -213,23 +213,23 @@ class NetworkMapVisualiser : Application() {
     }
 
     private fun bindSidebar() {
-        viewModel.simulation.allProtocolSteps.observeOn(uiThread).subscribe { step: Pair<Simulation.SimulatedNode, ProgressTracker.Change> ->
+        viewModel.simulation.allFlowSteps.observeOn(uiThread).subscribe { step: Pair<Simulation.SimulatedNode, ProgressTracker.Change> ->
             val (node, change) = step
 
             if (change is ProgressTracker.Change.Position) {
                 val tracker = change.tracker.topLevelTracker
                 if (change.newStep == ProgressTracker.DONE) {
                     if (change.tracker == tracker) {
-                        // Protocol done; schedule it for removal in a few seconds. We batch them up to make nicer
+                        // Flow done; schedule it for removal in a few seconds. We batch them up to make nicer
                         // animations.
                         updateProgressTrackerWidget(change)
-                        println("Protocol done for ${node.info.legalIdentity.name}")
+                        println("Flow done for ${node.info.legalIdentity.name}")
                         viewModel.doneTrackers += tracker
                     } else {
-                        // Subprotocol is done; ignore it.
+                        // Subflow is done; ignore it.
                     }
                 } else if (!viewModel.trackerBoxes.containsKey(tracker)) {
-                    // New protocol started up; add.
+                    // New flow started up; add.
                     val extraLabel = viewModel.simulation.extraNodeLabels[node]
                     val label = if (extraLabel != null) "${node.info.legalIdentity.name}: $extraLabel" else node.info.legalIdentity.name
                     val widget = view.buildProgressTrackerWidget(label, tracker.topLevelTracker)
@@ -343,7 +343,7 @@ class NetworkMapVisualiser : Application() {
         // Loopback messages are boring.
         if (transfer.sender.myAddress == transfer.recipients) return false
         // Network map push acknowledgements are boring.
-        if (NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC in transfer.message.topicSession.topic) return false
+        if (NetworkMapService.PUSH_ACK_FLOW_TOPIC in transfer.message.topicSession.topic) return false
         val message = transfer.message.data.deserialize<Any>()
         val messageClassType = message.javaClass.name
         when (messageClassType) {

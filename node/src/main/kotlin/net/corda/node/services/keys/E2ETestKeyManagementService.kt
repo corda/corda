@@ -15,7 +15,7 @@ import javax.annotation.concurrent.ThreadSafe
  *
  * - Probably be accessed via the network layer as an internal node service i.e. via a message queue, so it can run
  *   on a separate/firewalled service.
- * - Use the protocol framework so requests to fetch keys can be suspended whilst a human signs off on the request.
+ * - Use the flow framework so requests to fetch keys can be suspended whilst a human signs off on the request.
  * - Use deterministic key derivation.
  * - Possibly have some sort of TREZOR-like two-factor authentication ability.
  *

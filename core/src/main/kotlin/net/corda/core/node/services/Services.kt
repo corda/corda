@@ -220,7 +220,7 @@ interface KeyManagementService {
 
 /**
  * A sketch of an interface to a simple key/value storage system. Intended for persistence of simple blobs like
- * transactions, serialised protocol state machines and so on. Again, this isn't intended to imply lack of SQL or
+ * transactions, serialised flow state machines and so on. Again, this isn't intended to imply lack of SQL or
  * anything like that, this interface is only big enough to support the prototyping work.
  */
 interface StorageService {

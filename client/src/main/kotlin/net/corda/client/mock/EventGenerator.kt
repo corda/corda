@@ -5,7 +5,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.protocols.CashCommand
+import net.corda.flows.CashCommand
 
 /**
  * [Generator]s for incoming/outgoing events to/from the [WalletMonitorService]. Internally it keeps track of owned

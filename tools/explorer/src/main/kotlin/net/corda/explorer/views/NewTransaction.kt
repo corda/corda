@@ -15,10 +15,10 @@ import net.corda.core.crypto.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.explorer.model.CashTransaction
-import net.corda.node.services.messaging.startProtocol
-import net.corda.protocols.CashCommand
-import net.corda.protocols.CashProtocol
-import net.corda.protocols.CashProtocolResult
+import net.corda.flows.CashCommand
+import net.corda.flows.CashFlow
+import net.corda.flows.CashFlowResult
+import net.corda.node.services.messaging.startFlow
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.View
 import tornadofx.observable
@@ -71,14 +71,14 @@ class NewTransaction : View() {
             }
             dialog.show()
             runAsync {
-                rpcProxy.value!!.startProtocol(::CashProtocol, it).returnValue.toBlocking().first()
+                rpcProxy.value!!.startFlow(::CashFlow, it).returnValue.toBlocking().first()
             }.ui {
                 dialog.contentText = when (it) {
-                    is CashProtocolResult.Success -> {
+                    is CashFlowResult.Success -> {
                         dialog.alertType = Alert.AlertType.INFORMATION
                         "Transaction Started \nTransaction ID : ${it.transaction?.id} \nMessage : ${it.message}"
                     }
-                    is CashProtocolResult.Failed -> {
+                    is CashFlowResult.Failed -> {
                         dialog.alertType = Alert.AlertType.ERROR
                         it.toString()
                     }

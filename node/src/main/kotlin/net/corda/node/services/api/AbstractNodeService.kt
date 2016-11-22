@@ -7,7 +7,7 @@ import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.protocols.ServiceRequestMessage
+import net.corda.flows.ServiceRequestMessage
 import javax.annotation.concurrent.ThreadSafe
 
 /**

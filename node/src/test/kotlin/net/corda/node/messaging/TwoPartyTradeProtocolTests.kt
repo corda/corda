@@ -9,11 +9,11 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.composite
 import net.corda.core.days
+import net.corda.core.flows.FlowStateMachine
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.map
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.*
-import net.corda.core.protocols.ProtocolStateMachine
-import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -21,6 +21,8 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.LogHelper
 import net.corda.core.utilities.TEST_TX_TIME
+import net.corda.flows.TwoPartyTradeFlow.Buyer
+import net.corda.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -28,8 +30,6 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.StorageServiceImpl
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.utilities.databaseTransaction
-import net.corda.protocols.TwoPartyTradeProtocol.Buyer
-import net.corda.protocols.TwoPartyTradeProtocol.Seller
 import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
@@ -58,7 +58,7 @@ import kotlin.test.assertTrue
  *
  * We assume that Alice and Bob already found each other via some market, and have agreed the details already.
  */
-class TwoPartyTradeProtocolTests {
+class TwoPartyTradeFlowTests {
 
     lateinit var net: MockNetwork
     lateinit var notaryNode: MockNetwork.MockNode
@@ -146,7 +146,7 @@ class TwoPartyTradeProtocolTests {
             insertFakeTransactions(alicesFakePaper, aliceNode, aliceKey, notaryKey)
             val aliceFuture = runBuyerAndSeller("alice's paper".outputStateAndRef()).sellerResult
 
-            // Everything is on this thread so we can now step through the protocol one step at a time.
+            // Everything is on this thread so we can now step through the flow one step at a time.
             // Seller Alice already sent a message to Buyer Bob. Pump once:
             bobNode.pumpReceive()
 
@@ -408,18 +408,18 @@ class TwoPartyTradeProtocolTests {
 
     private data class RunResult(
             // The buyer is not created immediately, only when the seller starts running
-            val buyer: Future<ProtocolStateMachine<*>>,
+            val buyer: Future<FlowStateMachine<*>>,
             val sellerResult: Future<SignedTransaction>,
             val sellerId: StateMachineRunId
     )
 
     private fun runBuyerAndSeller(assetToSell: StateAndRef<OwnableState>) : RunResult {
-        val buyerFuture = bobNode.initiateSingleShotProtocol(Seller::class) { otherParty ->
+        val buyerFuture = bobNode.initiateSingleShotFlow(Seller::class) { otherParty ->
             Buyer(otherParty, notaryNode.info.notaryIdentity, 1000.DOLLARS, CommercialPaper.State::class.java)
-        }.map { it.psm }
+        }.map { it.fsm }
         val seller = Seller(bobNode.info.legalIdentity, notaryNode.info, assetToSell, 1000.DOLLARS, ALICE_KEY)
         val sellerResultFuture = aliceNode.smm.add(seller).resultFuture
-        return RunResult(buyerFuture, sellerResultFuture, seller.psm.id)
+        return RunResult(buyerFuture, sellerResultFuture, seller.fsm.id)
     }
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.runWithError(

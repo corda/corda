@@ -170,7 +170,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             dbCloser = null
         }
 
-        // You can change this from zero if you have custom [ProtocolLogic] that park themselves.  e.g. [StateMachineManagerTests]
+        // You can change this from zero if you have custom [FlowLogic] that park themselves.  e.g. [StateMachineManagerTests]
         var acceptableLiveFiberCountOnStop: Int = 0
 
         override fun acceptableLiveFiberCountOnStop(): Int = acceptableLiveFiberCountOnStop

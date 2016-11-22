@@ -158,7 +158,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                             log.error("Queue created for a peer that we don't know from the network map: $queueName")
                         }
                     } catch (e: AddressFormatException) {
-                        log.error("Protocol violation: Could not parse queue name as Base 58: $queueName")
+                        log.error("Flow violation: Could not parse queue name as Base 58: $queueName")
                     }
                 }
             }

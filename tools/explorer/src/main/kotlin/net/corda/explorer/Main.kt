@@ -15,16 +15,16 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.explorer.model.CordaViewModel
 import net.corda.explorer.views.*
 import net.corda.explorer.views.cordapps.CashViewer
+import net.corda.flows.CashFlow
 import net.corda.node.driver.PortAllocation
 import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.ArtemisMessagingComponent
-import net.corda.node.services.messaging.startProtocol
-import net.corda.node.services.startProtocolPermission
+import net.corda.node.services.messaging.startFlow
+import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.protocols.CashProtocol
 import org.apache.commons.lang.SystemUtils
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.App
@@ -102,7 +102,7 @@ class Main : App() {
 fun main(args: Array<String>) {
     val portAllocation = PortAllocation.Incremental(20000)
     driver(portAllocation = portAllocation) {
-        val user = User("user1", "test", permissions = setOf(startProtocolPermission<CashProtocol>()))
+        val user = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>()))
         val notary = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         val alice = startNode("Alice", rpcUsers = arrayListOf(user))
         val bob = startNode("Bob", rpcUsers = arrayListOf(user))
@@ -125,7 +125,7 @@ fun main(args: Array<String>) {
                     notary = notaryNode.nodeInfo.notaryIdentity
             )
             eventGenerator.clientToServiceCommandGenerator.map { command ->
-                rpcProxy?.startProtocol(::CashProtocol, command)
+                rpcProxy?.startFlow(::CashFlow, command)
                 Unit
             }.generate(SplittableRandom())
         }

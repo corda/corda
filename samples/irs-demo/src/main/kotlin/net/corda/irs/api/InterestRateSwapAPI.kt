@@ -4,9 +4,9 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.utilities.loggerFor
 import net.corda.irs.contract.InterestRateSwap
-import net.corda.irs.protocols.AutoOfferProtocol
-import net.corda.irs.protocols.ExitServerProtocol
-import net.corda.irs.protocols.UpdateBusinessDayProtocol
+import net.corda.irs.flows.AutoOfferFlow
+import net.corda.irs.flows.ExitServerFlow
+import net.corda.irs.flows.UpdateBusinessDayFlow
 import java.net.URI
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -65,7 +65,7 @@ class InterestRateSwapAPI(val services: ServiceHub) {
     @Consumes(MediaType.APPLICATION_JSON)
     fun storeDeal(newDeal: InterestRateSwap.State): Response {
         try {
-            services.invokeProtocolAsync(AutoOfferProtocol.Requester::class.java, newDeal).resultFuture.get()
+            services.invokeFlowAsync(AutoOfferFlow.Requester::class.java, newDeal).resultFuture.get()
             return Response.created(URI.create(generateDealLink(newDeal))).build()
         } catch (ex: Throwable) {
             logger.info("Exception when creating deal: $ex")
@@ -92,7 +92,7 @@ class InterestRateSwapAPI(val services: ServiceHub) {
         val priorDemoDate = fetchDemoDate()
         // Can only move date forwards
         if (newDemoDate.isAfter(priorDemoDate)) {
-            services.invokeProtocolAsync(UpdateBusinessDayProtocol.Broadcast::class.java, newDemoDate).resultFuture.get()
+            services.invokeFlowAsync(UpdateBusinessDayFlow.Broadcast::class.java, newDemoDate).resultFuture.get()
             return Response.ok().build()
         }
         val msg = "demodate is already $priorDemoDate and can only be updated with a later date"
@@ -111,7 +111,7 @@ class InterestRateSwapAPI(val services: ServiceHub) {
     @Path("restart")
     @Consumes(MediaType.APPLICATION_JSON)
     fun exitServer(): Response {
-        services.invokeProtocolAsync(ExitServerProtocol.Broadcast::class.java, 83).resultFuture.get()
+        services.invokeFlowAsync(ExitServerFlow.Broadcast::class.java, 83).resultFuture.get()
         return Response.ok().build()
     }
 }

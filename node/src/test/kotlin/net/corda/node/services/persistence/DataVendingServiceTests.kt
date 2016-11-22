@@ -7,12 +7,12 @@ import net.corda.core.contracts.Issued
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.Party
-import net.corda.core.protocols.ProtocolLogic
+import net.corda.core.flows.FlowLogic
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.flows.BroadcastTransactionFlow.NotifyTxRequest
 import net.corda.node.services.persistence.DataVending.Service.NotifyTransactionHandler
 import net.corda.node.utilities.databaseTransaction
-import net.corda.protocols.BroadcastTransactionProtocol.NotifyTxRequest
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
@@ -88,13 +88,13 @@ class DataVendingServiceTests {
     }
 
     private fun MockNode.sendNotifyTx(tx: SignedTransaction, walletServiceNode: MockNode) {
-        walletServiceNode.services.registerProtocolInitiator(NotifyTxProtocol::class, ::NotifyTransactionHandler)
-        services.startProtocol(NotifyTxProtocol(walletServiceNode.info.legalIdentity, tx))
+        walletServiceNode.services.registerFlowInitiator(NotifyTxFlow::class, ::NotifyTransactionHandler)
+        services.startFlow(NotifyTxFlow(walletServiceNode.info.legalIdentity, tx))
         network.runNetwork()
     }
 
 
-    private class NotifyTxProtocol(val otherParty: Party, val stx: SignedTransaction) : ProtocolLogic<Unit>() {
+    private class NotifyTxFlow(val otherParty: Party, val stx: SignedTransaction) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() = send(otherParty, NotifyTxRequest(stx))
     }

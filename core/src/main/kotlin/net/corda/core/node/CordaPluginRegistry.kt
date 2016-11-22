@@ -22,19 +22,19 @@ abstract class CordaPluginRegistry {
     open val staticServeDirs: Map<String, String> = emptyMap()
 
     /**
-     * A Map with an entry for each consumed protocol used by the webAPIs.
-     * The key of each map entry should contain the ProtocolLogic<T> class name.
-     * The associated map values are the union of all concrete class names passed to the protocol constructor.
+     * A Map with an entry for each consumed flow used by the webAPIs.
+     * The key of each map entry should contain the FlowLogic<T> class name.
+     * The associated map values are the union of all concrete class names passed to the flow constructor.
      * Standard java.lang.* and kotlin.* types do not need to be included explicitly.
-     * This is used to extend the white listed protocols that can be initiated from the ServiceHub invokeProtocolAsync method.
+     * This is used to extend the white listed flows that can be initiated from the ServiceHub invokeFlowAsync method.
      */
-    open val requiredProtocols: Map<String, Set<String>> = emptyMap()
+    open val requiredFlows: Map<String, Set<String>> = emptyMap()
 
     /**
      * List of additional long lived services to be hosted within the node.
      * They are expected to have a single parameter constructor that takes a [PluginServiceHub] as input.
      * The [PluginServiceHub] will be fully constructed before the plugin service is created and will
-     * allow access to the protocol factory and protocol initiation entry points there.
+     * allow access to the flow factory and flow initiation entry points there.
      */
     open val servicePlugins: List<Class<*>> = emptyList()
 

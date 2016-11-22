@@ -14,6 +14,9 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.LogHelper
+import net.corda.flows.NotaryError
+import net.corda.flows.NotaryException
+import net.corda.flows.NotaryFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.Node
 import net.corda.node.services.config.ConfigHelper
@@ -21,9 +24,6 @@ import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.databaseTransaction
-import net.corda.protocols.NotaryError
-import net.corda.protocols.NotaryException
-import net.corda.protocols.NotaryProtocol
 import net.corda.testing.freeLocalHostAndPort
 import org.junit.After
 import org.junit.Before
@@ -76,12 +76,12 @@ class DistributedNotaryTests {
             tx.toSignedTransaction(false)
         }
 
-        val buildProtocol = { NotaryProtocol.Client(stx) }
+        val buildFlow = { NotaryFlow.Client(stx) }
 
-        val firstSpend = alice.services.startProtocol(buildProtocol())
+        val firstSpend = alice.services.startFlow(buildFlow())
         firstSpend.resultFuture.get()
 
-        val secondSpend = alice.services.startProtocol(buildProtocol())
+        val secondSpend = alice.services.startFlow(buildFlow())
 
         val ex = assertFailsWith(ExecutionException::class) { secondSpend.resultFuture.get() }
         val error = (ex.cause as NotaryException).error as NotaryError.Conflict

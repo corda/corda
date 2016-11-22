@@ -6,7 +6,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.transactions.TransactionBuilder
 
 /**
- * Deals implementing this interface will be usable with the StateRevisionProtocol that allows arbitrary updates
+ * Deals implementing this interface will be usable with the StateRevisionFlow that allows arbitrary updates
  * to a state. This is not really an "amendable" state (recall the Corda model - all states are immutable in the
  * functional sense) however it can be amended and then re-written as another state into the ledger.
  */

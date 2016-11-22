@@ -7,12 +7,12 @@ import net.corda.client.mock.replicatePoisson
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.Party
+import net.corda.flows.CashCommand
+import net.corda.flows.CashFlow
+import net.corda.flows.CashFlowResult
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeHandle
-import net.corda.node.services.messaging.startProtocol
-import net.corda.protocols.CashCommand
-import net.corda.protocols.CashProtocol
-import net.corda.protocols.CashProtocolResult
+import net.corda.node.services.messaging.startFlow
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -60,12 +60,12 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
         },
 
         execute = { command ->
-            val result = command.node.connection.proxy.startProtocol(::CashProtocol, command.command).returnValue.toBlocking().first()
+            val result = command.node.connection.proxy.startFlow(::CashFlow, command.command).returnValue.toBlocking().first()
             when (result) {
-                is CashProtocolResult.Success -> {
+                is CashFlowResult.Success -> {
                     log.info(result.message)
                 }
-                is CashProtocolResult.Failed -> {
+                is CashFlowResult.Failed -> {
                     log.error(result.message)
                 }
             }

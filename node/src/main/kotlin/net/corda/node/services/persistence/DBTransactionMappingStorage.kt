@@ -3,9 +3,9 @@ package net.corda.node.services.persistence
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.node.services.StateMachineRecordedTransactionMappingStorage
 import net.corda.core.node.services.StateMachineTransactionMapping
-import net.corda.core.protocols.StateMachineRunId
 import net.corda.node.utilities.*
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
@@ -17,7 +17,7 @@ import javax.annotation.concurrent.ThreadSafe
  * Database storage of a txhash -> state machine id mapping.
  *
  * Mappings are added as transactions are persisted by [ServiceHub.recordTransaction], and never deleted.  Used in the
- * RPC API to correlate transaction creation with protocols.
+ * RPC API to correlate transaction creation with flows.
  *
  */
 @ThreadSafe

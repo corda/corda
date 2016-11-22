@@ -7,7 +7,7 @@ import net.corda.core.node.services.ServiceType
 
 /**
  * Information for an advertised service including the service specific identity information.
- * The identity can be used in protocols and is distinct from the Node's legalIdentity
+ * The identity can be used in flows and is distinct from the Node's legalIdentity
  */
 data class ServiceEntry(val info: ServiceInfo, val identity: Party)
 

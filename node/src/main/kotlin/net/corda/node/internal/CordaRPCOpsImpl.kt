@@ -3,20 +3,18 @@ package net.corda.node.internal
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.keys
-import net.corda.core.crypto.toStringShort
+import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
-import net.corda.core.protocols.ProtocolLogic
 import net.corda.core.toObservable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.messaging.*
-import net.corda.node.services.startProtocolPermission
-import net.corda.node.services.statemachine.ProtocolStateMachineImpl
+import net.corda.node.services.startFlowPermission
+import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.databaseTransaction
 import org.jetbrains.exposed.sql.Database
@@ -52,7 +50,7 @@ class CordaRPCOpsImpl(
     override fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>> {
         val (allStateMachines, changes) = smm.track()
         return Pair(
-                allStateMachines.map { StateMachineInfo.fromProtocolStateMachineImpl(it) },
+                allStateMachines.map { StateMachineInfo.fromFlowStateMachineImpl(it) },
                 changes.map { StateMachineUpdate.fromStateMachineChange(it) }
         )
     }
@@ -79,11 +77,11 @@ class CordaRPCOpsImpl(
         }
     }
 
-    // TODO: Check that this protocol is annotated as being intended for RPC invocation
-    override fun <T: Any> startProtocolDynamic(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ProtocolHandle<T> {
-        requirePermission(startProtocolPermission(logicType))
-        val stateMachine = services.invokeProtocolAsync(logicType, *args) as ProtocolStateMachineImpl<T>
-        return ProtocolHandle(
+    // TODO: Check that this flow is annotated as being intended for RPC invocation
+    override fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
+        requirePermission(startFlowPermission(logicType))
+        val stateMachine = services.invokeFlowAsync(logicType, *args) as FlowStateMachineImpl<T>
+        return FlowHandle(
                 id = stateMachine.id,
                 progress = stateMachine.logic.progressTracker?.changes ?: Observable.empty<ProgressTracker.Change>(),
                 returnValue = stateMachine.resultFuture.toObservable()
