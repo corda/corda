@@ -100,3 +100,4 @@ Read on to learn:
    :maxdepth: 2
    :caption: Glossary
 
+   glossary
