@@ -87,7 +87,7 @@ Attachment demo
 This demo brings up three nodes, and sends a transaction containing an attachment from one to the other. To run
 it from the command line (recommended for Mac/UNIX users!):
 
-1. Run ``./gradlew samples:attachment-demo:deployNodes`` to create a set of configs and installs under ``samples/trader-demo/build/nodes``
+1. Run ``./gradlew samples:attachment-demo:deployNodes`` to create a set of configs and installs under ``samples/attachment-demo/build/nodes``
 2. Run ``./samples/attachment-demo/build/nodes/runnodes`` to open up three new terminal tabs/windows with the three nodes.
 3. Run ``./gradlew samples:attachment-demo:runRecipient``, which will block waiting for something to happen.
 4. Run ``./gradlew samples:attachment-demo:runSender`` in another terminal window to trigger the transaction.
