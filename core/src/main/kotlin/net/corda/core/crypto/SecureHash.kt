@@ -8,15 +8,15 @@ import java.security.MessageDigest
  * Container for a cryptographically secure hash value.
  * Provides utilities for generating a cryptographic hash using different algorithms (currently only SHA-256 supported).
  */
-sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
+sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes) */
-    class SHA256(bits: ByteArray) : SecureHash(bits) {
+    class SHA256(bytes: ByteArray) : SecureHash(bytes) {
         init {
-            require(bits.size == 32)
+            require(bytes.size == 32)
         }
     }
 
-    override fun toString() = BaseEncoding.base16().encode(bits)
+    override fun toString() = BaseEncoding.base16().encode(bytes)
 
     fun prefixChars(prefixLen: Int = 6) = toString().substring(0, prefixLen)
 
@@ -30,8 +30,8 @@ sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
             }
         }
 
-        @JvmStatic fun sha256(bits: ByteArray) = SHA256(MessageDigest.getInstance("SHA-256").digest(bits))
-        @JvmStatic fun sha256Twice(bits: ByteArray) = sha256(sha256(bits).bits)
+        @JvmStatic fun sha256(bytes: ByteArray) = SHA256(MessageDigest.getInstance("SHA-256").digest(bytes))
+        @JvmStatic fun sha256Twice(bytes: ByteArray) = sha256(sha256(bytes).bytes)
         @JvmStatic fun sha256(str: String) = sha256(str.toByteArray())
 
         @JvmStatic fun randomSHA256() = sha256(newSecureRandom().generateSeed(32))
@@ -41,4 +41,4 @@ sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
 }
 
 fun ByteArray.sha256(): SecureHash.SHA256 = SecureHash.sha256(this)
-fun OpaqueBytes.sha256(): SecureHash.SHA256 = SecureHash.sha256(this.bits)
+fun OpaqueBytes.sha256(): SecureHash.SHA256 = SecureHash.sha256(this.bytes)

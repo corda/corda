@@ -100,7 +100,7 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService) {
         send(responseBits, replyTo)
     }
 
-    abstract fun send(bits: SerializedBytes<*>, toAddress: String)
+    abstract fun send(data: SerializedBytes<*>, toAddress: String)
 
     fun start(rpcConsumer: ClientConsumer, rpcNotificationConsumer: ClientConsumer?, onExecutor: AffinityExecutor) {
         rpcNotificationConsumer?.setMessageHandler { msg ->

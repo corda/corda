@@ -9,9 +9,9 @@ import java.util.*
  * In an ideal JVM this would be a value type and be completely overhead free. Project Valhalla is adding such
  * functionality to Java, but it won't arrive for a few years yet!
  */
-open class OpaqueBytes(val bits: ByteArray) {
+open class OpaqueBytes(val bytes: ByteArray) {
     init {
-        check(bits.isNotEmpty())
+        check(bytes.isNotEmpty())
     }
 
     companion object {
@@ -21,16 +21,16 @@ open class OpaqueBytes(val bits: ByteArray) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is OpaqueBytes) return false
-        return Arrays.equals(bits, other.bits)
+        return Arrays.equals(bytes, other.bytes)
     }
 
-    override fun hashCode() = Arrays.hashCode(bits)
-    override fun toString() = "[" + bits.toHexString() + "]"
+    override fun hashCode() = Arrays.hashCode(bytes)
+    override fun toString() = "[" + bytes.toHexString() + "]"
 
-    val size: Int get() = bits.size
+    val size: Int get() = bytes.size
 
     /** Returns a [ByteArrayInputStream] of the bytes */
-    fun open() = ByteArrayInputStream(bits)
+    fun open() = ByteArrayInputStream(bytes)
 }
 
 fun ByteArray.opaque(): OpaqueBytes = OpaqueBytes(this)

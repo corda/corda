@@ -8,9 +8,9 @@ import com.google.common.collect.testing.testers.CollectionAddAllTester
 import com.google.common.collect.testing.testers.CollectionClearTester
 import com.google.common.collect.testing.testers.CollectionRemoveAllTester
 import com.google.common.collect.testing.testers.CollectionRetainAllTester
+import junit.framework.TestSuite
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import junit.framework.TestSuite
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Suite
@@ -104,7 +104,7 @@ class NonEmptySetTest {
         @Test
         fun `serialize deserialize`() {
             val expected: NonEmptySet<Int> = nonEmptySetOf(-17, 22, 17)
-            val serialized = expected.serialize().bits
+            val serialized = expected.serialize().bytes
             val actual = serialized.deserialize<NonEmptySet<Int>>()
 
             assertEquals(expected, actual)

@@ -37,7 +37,7 @@ abstract class AbstractNodeService(val services: ServiceHubInternal) : Singleton
                 val response = handler(request)
                 // If the return type R is Unit, then do not send a response
                 if (response.javaClass != Unit.javaClass) {
-                    val msg = net.createMessage(topic, request.sessionID, response.serialize().bits)
+                    val msg = net.createMessage(topic, request.sessionID, response.serialize().bytes)
                     net.send(msg, request.replyTo)
                 }
             } catch(e: Exception) {

@@ -61,6 +61,6 @@ data class PersistentStateRef(
         @Column(name = "output_index")
         var index: Int?
 ) : Serializable {
-    constructor(stateRef: StateRef) : this(stateRef.txhash.bits.toHexString(), stateRef.index)
+    constructor(stateRef: StateRef) : this(stateRef.txhash.bytes.toHexString(), stateRef.index)
     constructor() : this(null, null)
 }

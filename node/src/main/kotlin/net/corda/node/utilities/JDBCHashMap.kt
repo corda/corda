@@ -52,7 +52,7 @@ class JDBCHashMap<K : Any, V : Any>(tableName: String,
 fun bytesToBlob(value: SerializedBytes<*>, finalizables: MutableList<() -> Unit>): Blob {
     val blob = TransactionManager.current().connection.createBlob()
     finalizables += { blob.free() }
-    blob.setBytes(1, value.bits)
+    blob.setBytes(1, value.bytes)
     return blob
 }
 

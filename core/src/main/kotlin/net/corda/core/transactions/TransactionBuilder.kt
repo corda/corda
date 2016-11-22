@@ -97,7 +97,7 @@ open class TransactionBuilder(
     fun signWith(key: KeyPair): TransactionBuilder {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         val data = toWireTransaction().id
-        addSignatureUnchecked(key.signWithECDSA(data.bits))
+        addSignatureUnchecked(key.signWithECDSA(data.bytes))
         return this
     }
 

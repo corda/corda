@@ -88,13 +88,13 @@ class CommercialPaper : Contract {
             return when (schema) {
                 is CommercialPaperSchemaV1 -> CommercialPaperSchemaV1.PersistentCommericalPaperState(
                         issuanceParty = this.issuance.party.owningKey.toBase58String(),
-                        issuanceRef = this.issuance.reference.bits,
+                        issuanceRef = this.issuance.reference.bytes,
                         owner = this.owner.toBase58String(),
                         maturity = this.maturityDate,
                         faceValue = this.faceValue.quantity,
                         currency = this.faceValue.token.product.currencyCode,
                         faceValueIssuerParty = this.faceValue.token.issuer.party.owningKey.toBase58String(),
-                        faceValueIssuerRef = this.faceValue.token.issuer.reference.bits
+                        faceValueIssuerRef = this.faceValue.token.issuer.reference.bytes
                 )
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }

@@ -28,7 +28,7 @@ open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
     /** A digital signature that identifies who the public key is owned by. */
     open class WithKey(val by: PublicKey, bits: ByteArray) : DigitalSignature(bits) {
         fun verifyWithECDSA(content: ByteArray) = by.verifyWithECDSA(content, this)
-        fun verifyWithECDSA(content: OpaqueBytes) = by.verifyWithECDSA(content.bits, this)
+        fun verifyWithECDSA(content: OpaqueBytes) = by.verifyWithECDSA(content.bytes, this)
     }
 
     // TODO: consider removing this as whoever needs to identify the signer should be able to derive it from the public key
@@ -60,16 +60,16 @@ class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
 object NullSignature : DigitalSignature.WithKey(NullPublicKey, ByteArray(32))
 
 /** Utility to simplify the act of signing a byte array */
-fun PrivateKey.signWithECDSA(bits: ByteArray): DigitalSignature {
+fun PrivateKey.signWithECDSA(bytes: ByteArray): DigitalSignature {
     val signer = EdDSAEngine()
     signer.initSign(this)
-    signer.update(bits)
+    signer.update(bytes)
     val sig = signer.sign()
     return DigitalSignature(sig)
 }
 
-fun PrivateKey.signWithECDSA(bitsToSign: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
-    return DigitalSignature.WithKey(publicKey, signWithECDSA(bitsToSign).bits)
+fun PrivateKey.signWithECDSA(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
+    return DigitalSignature.WithKey(publicKey, signWithECDSA(bytesToSign).bytes)
 }
 
 val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
@@ -77,13 +77,13 @@ val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED2
 fun parsePublicKeyBase58(base58String: String) = EdDSAPublicKey(EdDSAPublicKeySpec(Base58.decode(base58String), ed25519Curve))
 fun PublicKey.toBase58String() = Base58.encode((this as EdDSAPublicKey).abyte)
 
-fun KeyPair.signWithECDSA(bitsToSign: ByteArray) = private.signWithECDSA(bitsToSign, public)
-fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes) = private.signWithECDSA(bitsToSign.bits, public)
-fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes, party: Party) = signWithECDSA(bitsToSign.bits, party)
-fun KeyPair.signWithECDSA(bitsToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
+fun KeyPair.signWithECDSA(bytesToSign: ByteArray) = private.signWithECDSA(bytesToSign, public)
+fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes) = private.signWithECDSA(bytesToSign.bytes, public)
+fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes, party: Party) = signWithECDSA(bytesToSign.bytes, party)
+fun KeyPair.signWithECDSA(bytesToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
     check(public in party.owningKey.keys)
-    val sig = signWithECDSA(bitsToSign)
-    return DigitalSignature.LegallyIdentifiable(party, sig.bits)
+    val sig = signWithECDSA(bytesToSign)
+    return DigitalSignature.LegallyIdentifiable(party, sig.bytes)
 }
 
 /** Utility to simplify the act of verifying a signature */
@@ -91,7 +91,7 @@ fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
     val verifier = EdDSAEngine()
     verifier.initVerify(this)
     verifier.update(content)
-    if (verifier.verify(signature.bits) == false)
+    if (verifier.verify(signature.bytes) == false)
         throw SignatureException("Signature did not match")
 }
 
@@ -122,8 +122,8 @@ fun generateKeyPair(): KeyPair = KeyPairGenerator().generateKeyPair()
  */
 fun entropyToKeyPair(entropy: BigInteger): KeyPair {
     val params = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
-    val bits = entropy.toByteArray().copyOf(params.curve.field.getb() / 8)
-    val priv = EdDSAPrivateKeySpec(bits, params)
+    val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8)
+    val priv = EdDSAPrivateKeySpec(bytes, params)
     val pub = EdDSAPublicKeySpec(priv.a, params)
     val key = KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
     return key

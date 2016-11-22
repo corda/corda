@@ -30,9 +30,9 @@ class SerializationTokenTest {
         val numBytes: Int
             get() = bytes.size
 
-        override fun hashCode() = bytes.bits.size
+        override fun hashCode() = bytes.size
 
-        override fun equals(other: Any?) = other is LargeTokenizable && other.bytes.bits.size == this.bytes.bits.size
+        override fun equals(other: Any?) = other is LargeTokenizable && other.bytes.size == this.bytes.size
     }
 
     @Test

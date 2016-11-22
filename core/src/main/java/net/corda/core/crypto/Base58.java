@@ -1,7 +1,7 @@
 package net.corda.core.crypto;
 
-import java.math.*;
-import java.util.*;
+import java.math.BigInteger;
+import java.util.Arrays;
 
 /**
  * Base58 is a way to encode Bitcoin addresses (or arbitrary data) as alphanumeric strings.
@@ -137,7 +137,7 @@ public class Base58 {
             throw new AddressFormatException("Input too short");
         byte[] data = Arrays.copyOfRange(decoded, 0, decoded.length - 4);
         byte[] checksum = Arrays.copyOfRange(decoded, decoded.length - 4, decoded.length);
-        byte[] actualChecksum = Arrays.copyOfRange(SecureHash.sha256Twice(data).getBits(), 0, 4);
+        byte[] actualChecksum = Arrays.copyOfRange(SecureHash.sha256Twice(data).getBytes(), 0, 4);
         if (!Arrays.equals(checksum, actualChecksum))
             throw new AddressFormatException("Checksum does not validate");
         return data;

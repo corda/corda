@@ -112,7 +112,7 @@ object JsonSupport {
 
     object NodeInfoSerializer : JsonSerializer<NodeInfo>() {
         override fun serialize(value: NodeInfo, gen: JsonGenerator, serializers: SerializerProvider) {
-            gen.writeString(Base58.encode(value.serialize().bits))
+            gen.writeString(Base58.encode(value.serialize().bytes))
         }
     }
 

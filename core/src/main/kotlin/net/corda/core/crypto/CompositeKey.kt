@@ -32,7 +32,7 @@ sealed class CompositeKey {
     fun containsAny(otherKeys: Iterable<PublicKey>) = keys.intersect(otherKeys).isNotEmpty()
 
     // TODO: implement a proper encoding/decoding mechanism
-    fun toBase58String(): String = Base58.encode(this.serialize().bits)
+    fun toBase58String(): String = Base58.encode(this.serialize().bytes)
 
     companion object {
         fun parseFromBase58(encoded: String) = Base58.decode(encoded).deserialize<CompositeKey>()

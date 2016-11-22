@@ -426,10 +426,10 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     var dispatcher: RPCDispatcher? = null
 
     private fun createRPCDispatcher(ops: RPCOps, userService: RPCUserService) = object : RPCDispatcher(ops, userService) {
-        override fun send(bits: SerializedBytes<*>, toAddress: String) {
+        override fun send(data: SerializedBytes<*>, toAddress: String) {
             state.locked {
                 val msg = session!!.createMessage(false).apply {
-                    writeBodyBufferBytes(bits.bits)
+                    writeBodyBufferBytes(data.bytes)
                     // Use the magic deduplication property built into Artemis as our message identity too
                     putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
                 }

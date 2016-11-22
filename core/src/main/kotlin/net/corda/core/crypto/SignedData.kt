@@ -20,7 +20,7 @@ open class SignedData<T : Any>(val raw: SerializedBytes<T>, val sig: DigitalSign
      */
     @Throws(SignatureException::class)
     fun verified(): T {
-        sig.by.verifyWithECDSA(raw.bits, sig)
+        sig.by.verifyWithECDSA(raw.bytes, sig)
         val data = raw.deserialize()
         verifyData(data)
         return data
