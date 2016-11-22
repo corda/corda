@@ -6,8 +6,8 @@ descriptive commit messages and follow our [coding style guidelines](https://doc
 ## Community Locations
 
 * [GitHub](https://github.com/corda/corda)
-* [Forums](https://not.here.yet)
-* [Chat](https://cordaledger.slack.com)
+* [Forums](https://discourse.corda.net)
+* [Chat](https://slack.corda.net)
 
 ## Developer Certificate of Origin
 

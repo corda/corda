@@ -24,7 +24,7 @@ Read our full and planned feature list [here](https://docs.corda.net/inthebox.ht
 
 ## Development State
  
-Corda is currently in early development and is not yet ready for production. Breaking
+Corda is currently in very early development and should not be used in production systems. Breaking
 changes will happen on minor versions until 1.0. Experimentation with Corda is recommended.
 
 Pull requests, experiments, and contributions are encouraged and welcomed.
