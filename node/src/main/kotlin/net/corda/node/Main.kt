@@ -115,7 +115,7 @@ fun main(args: Array<String>) {
 
 private fun printPluginsAndServices(node: Node) {
     node.configuration.extraAdvertisedServiceIds.let { if (it.isNotEmpty()) printBasicNodeInfo("Providing network services", it) }
-    val plugins = node.pluginRegistries.map { it.javaClass.name }.filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") }.map { it.replaceAfter('$', "") }
+    val plugins = node.pluginRegistries.map { it.javaClass.name }.filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") }.map { it.substringBefore('$') }
     if (plugins.isNotEmpty())
         printBasicNodeInfo("Loaded plugins", plugins.joinToString())
 }
