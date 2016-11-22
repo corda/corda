@@ -17,9 +17,7 @@ import com.opengamma.strata.pricer.rate.ImmutableRatesProvider
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer
 import com.opengamma.strata.product.swap.ResolvedSwapTrade
 import net.corda.core.utilities.loggerFor
-import net.corda.vega.protocols.toCordaCompatible
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import net.corda.vega.flows.toCordaCompatible
 import java.time.LocalDate
 
 /**

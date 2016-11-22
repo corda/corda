@@ -2,11 +2,11 @@ package net.corda.node.services
 
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.Party
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.FlowStateMachine
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.*
-import net.corda.core.protocols.ProtocolLogic
-import net.corda.core.protocols.ProtocolLogicRefFactory
-import net.corda.core.protocols.ProtocolStateMachine
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.api.MessagingServiceInternal
@@ -34,7 +34,7 @@ open class MockServiceHubInternal(
         val mapCache: NetworkMapCache? = MockNetworkMapCache(),
         val scheduler: SchedulerService? = null,
         val overrideClock: Clock? = NodeClock(),
-        val protocolFactory: ProtocolLogicRefFactory? = ProtocolLogicRefFactory(),
+        val flowFactory: FlowLogicRefFactory? = FlowLogicRefFactory(),
         val schemas: SchemaService? = NodeSchemaService()
 ) : ServiceHubInternal() {
     override val vaultService: VaultService = customVault ?: NodeVaultService(this)
@@ -56,8 +56,8 @@ open class MockServiceHubInternal(
         get() = throw UnsupportedOperationException()
 
     override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
-    override val protocolLogicRefFactory: ProtocolLogicRefFactory
-        get() = protocolFactory ?: throw UnsupportedOperationException()
+    override val flowLogicRefFactory: FlowLogicRefFactory
+        get() = flowFactory ?: throw UnsupportedOperationException()
     override val schemaService: SchemaService
         get() = schemas ?: throw UnsupportedOperationException()
 
@@ -65,7 +65,7 @@ open class MockServiceHubInternal(
     private val txStorageService: TxWritableStorageService
         get() = storage ?: throw UnsupportedOperationException()
 
-    private val protocolFactories = ConcurrentHashMap<Class<*>, (Party) -> ProtocolLogic<*>>()
+    private val flowFactories = ConcurrentHashMap<Class<*>, (Party) -> FlowLogic<*>>()
 
     lateinit var smm: StateMachineManager
 
@@ -79,13 +79,13 @@ open class MockServiceHubInternal(
 
     override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(txStorageService, txs)
 
-    override fun <T> startProtocol(logic: ProtocolLogic<T>): ProtocolStateMachine<T> = smm.add(logic)
+    override fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = smm.add(logic)
 
-    override fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>) {
-        protocolFactories[markerClass.java] = protocolFactory
+    override fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party) -> FlowLogic<*>) {
+        flowFactories[markerClass.java] = flowFactory
     }
 
-    override fun getProtocolFactory(markerClass: Class<*>): ((Party) -> ProtocolLogic<*>)? {
-        return protocolFactories[markerClass]
+    override fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)? {
+        return flowFactories[markerClass]
     }
 }

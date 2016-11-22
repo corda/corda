@@ -3,29 +3,29 @@ package net.corda.node.services.messaging
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
-import net.corda.core.protocols.ProtocolLogic
-import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.node.services.statemachine.ProtocolStateMachineImpl
+import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.AddOrRemove
 import rx.Observable
 
 data class StateMachineInfo(
         val id: StateMachineRunId,
-        val protocolLogicClassName: String,
+        val flowLogicClassName: String,
         val progressTrackerStepAndUpdates: Pair<String, Observable<String>>?
 ) {
     companion object {
-        fun fromProtocolStateMachineImpl(psm: ProtocolStateMachineImpl<*>): StateMachineInfo {
+        fun fromFlowStateMachineImpl(psm: FlowStateMachineImpl<*>): StateMachineInfo {
             return StateMachineInfo(
                     id = psm.id,
-                    protocolLogicClassName = psm.logic.javaClass.simpleName,
+                    flowLogicClassName = psm.logic.javaClass.simpleName,
                     progressTrackerStepAndUpdates = psm.logic.track()
             )
         }
@@ -42,7 +42,7 @@ sealed class StateMachineUpdate(val id: StateMachineRunId) {
                 AddOrRemove.ADD -> {
                     val stateMachineInfo = StateMachineInfo(
                             id = change.id,
-                            protocolLogicClassName = change.logic.javaClass.simpleName,
+                            flowLogicClassName = change.logic.javaClass.simpleName,
                             progressTrackerStepAndUpdates = change.logic.track()
                     )
                     StateMachineUpdate.Added(stateMachineInfo)
@@ -92,11 +92,11 @@ interface CordaRPCOps : RPCOps {
     fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>>
 
     /**
-     * Start the given protocol with the given arguments, returning an [Observable] with a single observation of the
-     * result of running the protocol.
+     * Start the given flow with the given arguments, returning an [Observable] with a single observation of the
+     * result of running the flow.
      */
     @RPCReturnsObservables
-    fun <T: Any> startProtocolDynamic(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ProtocolHandle<T>
+    fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
 
     /**
      * Returns Node's identity, assuming this will not change while the node is running.
@@ -115,46 +115,50 @@ interface CordaRPCOps : RPCOps {
 }
 
 /**
- * These allow type safe invocations of protocols from Kotlin, e.g.:
+ * These allow type safe invocations of flows from Kotlin, e.g.:
  *
  * val rpc: CordaRPCOps = (..)
- * rpc.startProtocol(::ResolveTransactionsProtocol, setOf<SecureHash>(), aliceIdentity)
+ * rpc.startFlow(::ResolveTransactionsFlow, setOf<SecureHash>(), aliceIdentity)
  *
  * Note that the passed in constructor function is only used for unification of other type parameters and reification of
- * the Class instance of the protocol. This could be changed to use the constructor function directly.
+ * the Class instance of the flow. This could be changed to use the constructor function directly.
  */
-inline fun <T : Any, reified R : ProtocolLogic<T>> CordaRPCOps.startProtocol(
+inline fun <T : Any, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
-        protocolConstructor: () -> R
-) = startProtocolDynamic(R::class.java)
-inline fun <T : Any, A, reified R : ProtocolLogic<T>> CordaRPCOps.startProtocol(
+        flowConstructor: () -> R
+) = startFlowDynamic(R::class.java)
+
+inline fun <T : Any, A, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
-        protocolConstructor: (A) -> R,
+        flowConstructor: (A) -> R,
         arg0: A
-) = startProtocolDynamic(R::class.java, arg0)
-inline fun <T : Any, A, B, reified R : ProtocolLogic<T>> CordaRPCOps.startProtocol(
+) = startFlowDynamic(R::class.java, arg0)
+
+inline fun <T : Any, A, B, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
-        protocolConstructor: (A, B) -> R,
+        flowConstructor: (A, B) -> R,
         arg0: A,
         arg1: B
-) = startProtocolDynamic(R::class.java, arg0, arg1)
-inline fun <T : Any, A, B, C, reified R: ProtocolLogic<T>> CordaRPCOps.startProtocol(
+) = startFlowDynamic(R::class.java, arg0, arg1)
+
+inline fun <T : Any, A, B, C, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
-        protocolConstructor: (A, B, C) -> R,
+        flowConstructor: (A, B, C) -> R,
         arg0: A,
         arg1: B,
         arg2: C
-) = startProtocolDynamic(R::class.java, arg0, arg1, arg2)
-inline fun <T : Any, A, B, C, D, reified R : ProtocolLogic<T>> CordaRPCOps.startProtocol(
+) = startFlowDynamic(R::class.java, arg0, arg1, arg2)
+
+inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
-        protocolConstructor: (A, B, C, D) -> R,
+        flowConstructor: (A, B, C, D) -> R,
         arg0: A,
         arg1: B,
         arg2: C,
         arg3: D
-) = startProtocolDynamic(R::class.java, arg0, arg1, arg2, arg3)
+) = startFlowDynamic(R::class.java, arg0, arg1, arg2, arg3)
 
-data class ProtocolHandle<A>(
+data class FlowHandle<A>(
         val id: StateMachineRunId,
         val progress: Observable<ProgressTracker.Change>,
         val returnValue: Observable<A>

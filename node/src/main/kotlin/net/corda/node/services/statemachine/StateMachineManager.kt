@@ -11,11 +11,11 @@ import kotlinx.support.jdk8.collections.removeIf
 import net.corda.core.ThreadBox
 import net.corda.core.abbreviate
 import net.corda.core.crypto.Party
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowStateMachine
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.TopicSession
 import net.corda.core.messaging.send
-import net.corda.core.protocols.ProtocolLogic
-import net.corda.core.protocols.ProtocolStateMachine
-import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.*
 import net.corda.core.then
@@ -41,8 +41,8 @@ import java.util.concurrent.ExecutionException
 import javax.annotation.concurrent.ThreadSafe
 
 /**
- * A StateMachineManager is responsible for coordination and persistence of multiple [ProtocolStateMachine] objects.
- * Each such object represents an instantiation of a (two-party) protocol that has reached a particular point.
+ * A StateMachineManager is responsible for coordination and persistence of multiple [FlowStateMachine] objects.
+ * Each such object represents an instantiation of a (two-party) flow that has reached a particular point.
  *
  * An implementation of this class will persist state machines to long term storage so they can survive process restarts
  * and, if run with a single-threaded executor, will ensure no two state machines run concurrently with each other
@@ -51,7 +51,7 @@ import javax.annotation.concurrent.ThreadSafe
  * A "state machine" is a class with a single call method. The call method and any others it invokes are rewritten by
  * a bytecode rewriting engine called Quasar, to ensure the code can be suspended and resumed at any point.
  *
- * The SMM will always invoke the protocol fibers on the given [AffinityExecutor], regardless of which thread actually
+ * The SMM will always invoke the flow fibers on the given [AffinityExecutor], regardless of which thread actually
  * starts them via [add].
  *
  * TODO: Consider the issue of continuation identity more deeply: is it a safe assumption that a serialised
@@ -79,7 +79,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     val scheduler = FiberScheduler()
 
     data class Change(
-            val logic: ProtocolLogic<*>,
+            val logic: FlowLogic<*>,
             val addOrRemove: AddOrRemove,
             val id: StateMachineRunId
     )
@@ -88,10 +88,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     // property.
     private val mutex = ThreadBox(object {
         var started = false
-        val stateMachines = LinkedHashMap<ProtocolStateMachineImpl<*>, Checkpoint>()
+        val stateMachines = LinkedHashMap<FlowStateMachineImpl<*>, Checkpoint>()
         val changesPublisher = PublishSubject.create<Change>()
 
-        fun notifyChangeObservers(psm: ProtocolStateMachineImpl<*>, addOrRemove: AddOrRemove) {
+        fun notifyChangeObservers(psm: FlowStateMachineImpl<*>, addOrRemove: AddOrRemove) {
             changesPublisher.onNext(Change(psm.logic, addOrRemove, psm.id))
         }
     })
@@ -105,35 +105,35 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private val metrics = serviceHub.monitoringService.metrics
 
     init {
-        metrics.register("Protocols.InFlight", Gauge<Int> { mutex.content.stateMachines.size })
+        metrics.register("Flows.InFlight", Gauge<Int> { mutex.content.stateMachines.size })
     }
 
-    private val checkpointingMeter = metrics.meter("Protocols.Checkpointing Rate")
-    private val totalStartedProtocols = metrics.counter("Protocols.Started")
-    private val totalFinishedProtocols = metrics.counter("Protocols.Finished")
+    private val checkpointingMeter = metrics.meter("Flows.Checkpointing Rate")
+    private val totalStartedFlows = metrics.counter("Flows.Started")
+    private val totalFinishedFlows = metrics.counter("Flows.Finished")
 
-    private val openSessions = ConcurrentHashMap<Long, ProtocolSession>()
+    private val openSessions = ConcurrentHashMap<Long, FlowSession>()
     private val recentlyClosedSessions = ConcurrentHashMap<Long, Party>()
 
     // Context for tokenized services in checkpoints
     private val serializationContext = SerializeAsTokenContext(tokenizableServices, quasarKryo())
 
-    /** Returns a list of all state machines executing the given protocol logic at the top level (subprotocols do not count) */
-    fun <P : ProtocolLogic<T>, T> findStateMachines(protocolClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
+    /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
+    fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
         @Suppress("UNCHECKED_CAST")
         return mutex.locked {
             stateMachines.keys
                     .map { it.logic }
-                    .filterIsInstance(protocolClass)
-                    .map { it to (it.psm as ProtocolStateMachineImpl<T>).resultFuture }
+                    .filterIsInstance(flowClass)
+                    .map { it to (it.fsm as FlowStateMachineImpl<T>).resultFuture }
         }
     }
 
-    val allStateMachines: List<ProtocolLogic<*>>
+    val allStateMachines: List<FlowLogic<*>>
         get() = mutex.locked { stateMachines.keys.map { it.logic } }
 
     /**
-     * An observable that emits triples of the changing protocol, the type of change, and a process-specific ID number
+     * An observable that emits triples of the changing flow, the type of change, and a process-specific ID number
      * which may change across restarts.
      */
     val changes: Observable<Change>
@@ -141,7 +141,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     init {
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
-            (fiber as ProtocolStateMachineImpl<*>).logger.error("Caught exception from protocol", throwable)
+            (fiber as FlowStateMachineImpl<*>).logger.error("Caught exception from flow", throwable)
         }
     }
 
@@ -179,7 +179,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * Atomic get snapshot + subscribe. This is needed so we don't miss updates between subscriptions to [changes] and
      * calls to [allStateMachines]
      */
-    fun track(): Pair<List<ProtocolStateMachineImpl<*>>, Observable<Change>> {
+    fun track(): Pair<List<FlowStateMachineImpl<*>>, Observable<Change>> {
         return mutex.locked {
             val bufferedChanges = UnicastSubject.create<Change>()
             changesPublisher.subscribe(bufferedChanges)
@@ -190,7 +190,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private fun restoreFibersFromCheckpoints() {
         mutex.locked {
             checkpointStorage.forEach {
-                // If a protocol is added before start() then don't attempt to restore it
+                // If a flow is added before start() then don't attempt to restore it
                 if (!stateMachines.containsValue(it)) {
                     val fiber = deserializeFiber(it.serializedFiber)
                     initFiber(fiber)
@@ -216,7 +216,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun resumeRestoredFiber(fiber: ProtocolStateMachineImpl<*>) {
+    private fun resumeRestoredFiber(fiber: FlowStateMachineImpl<*>) {
         fiber.openSessions.values.forEach { openSessions[it.ourSessionId] = it }
         if (fiber.openSessions.values.any { it.waitingForResponse }) {
             fiber.logger.info("Restored, pending on receive")
@@ -260,23 +260,23 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val otherParty = sessionInit.initiatorParty
         val otherPartySessionId = sessionInit.initiatorSessionId
         try {
-            val markerClass = Class.forName(sessionInit.protocolName)
-            val protocolFactory = serviceHub.getProtocolFactory(markerClass)
-            if (protocolFactory != null) {
-                val protocol = protocolFactory(otherParty)
-                val psm = createFiber(protocol)
-                val session = ProtocolSession(protocol, otherParty, random63BitValue(), otherPartySessionId)
+            val markerClass = Class.forName(sessionInit.flowName)
+            val flowFactory = serviceHub.getFlowFactory(markerClass)
+            if (flowFactory != null) {
+                val flow = flowFactory(otherParty)
+                val psm = createFiber(flow)
+                val session = FlowSession(flow, otherParty, random63BitValue(), otherPartySessionId)
                 if (sessionInit.firstPayload != null) {
                     session.receivedMessages += SessionData(session.ourSessionId, sessionInit.firstPayload)
                 }
                 openSessions[session.ourSessionId] = session
-                psm.openSessions[Pair(protocol, otherParty)] = session
+                psm.openSessions[Pair(flow, otherParty)] = session
                 updateCheckpoint(psm)
                 sendSessionMessage(otherParty, SessionConfirm(otherPartySessionId, session.ourSessionId), psm)
                 psm.logger.debug { "Initiated from $sessionInit on $session" }
                 startFiber(psm)
             } else {
-                logger.warn("Unknown protocol marker class in $sessionInit")
+                logger.warn("Unknown flow marker class in $sessionInit")
                 sendSessionMessage(otherParty, SessionReject(otherPartySessionId, "Don't know ${markerClass.name}"), null)
             }
         } catch (e: Exception) {
@@ -285,14 +285,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun serializeFiber(fiber: ProtocolStateMachineImpl<*>): SerializedBytes<ProtocolStateMachineImpl<*>> {
+    private fun serializeFiber(fiber: FlowStateMachineImpl<*>): SerializedBytes<FlowStateMachineImpl<*>> {
         val kryo = quasarKryo()
         // add the map of tokens -> tokenizedServices to the kyro context
         SerializeAsTokenSerializer.setContext(kryo, serializationContext)
         return fiber.serialize(kryo)
     }
 
-    private fun deserializeFiber(serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>): ProtocolStateMachineImpl<*> {
+    private fun deserializeFiber(serialisedFiber: SerializedBytes<FlowStateMachineImpl<*>>): FlowStateMachineImpl<*> {
         val kryo = quasarKryo()
         // put the map of token -> tokenized into the kryo context
         SerializeAsTokenSerializer.setContext(kryo, serializationContext)
@@ -304,12 +304,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         return createKryo(serializer.kryo)
     }
 
-    private fun <T> createFiber(logic: ProtocolLogic<T>): ProtocolStateMachineImpl<T> {
+    private fun <T> createFiber(logic: FlowLogic<T>): FlowStateMachineImpl<T> {
         val id = StateMachineRunId.createRandom()
-        return ProtocolStateMachineImpl(id, logic, scheduler).apply { initFiber(this) }
+        return FlowStateMachineImpl(id, logic, scheduler).apply { initFiber(this) }
     }
 
-    private fun initFiber(psm: ProtocolStateMachineImpl<*>) {
+    private fun initFiber(psm: FlowStateMachineImpl<*>) {
         psm.database = database
         psm.serviceHub = serviceHub
         psm.actionOnSuspend = { ioRequest ->
@@ -325,7 +325,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
                 mutex.locked {
                     stateMachines.remove(psm)?.let { checkpointStorage.removeCheckpoint(it) }
-                    totalFinishedProtocols.inc()
+                    totalFinishedFlows.inc()
                     notifyChangeObservers(psm, AddOrRemove.REMOVE)
                 }
                 endAllFiberSessions(psm)
@@ -334,12 +334,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             }
         }
         mutex.locked {
-            totalStartedProtocols.inc()
+            totalStartedFlows.inc()
             notifyChangeObservers(psm, AddOrRemove.ADD)
         }
     }
 
-    private fun endAllFiberSessions(psm: ProtocolStateMachineImpl<*>) {
+    private fun endAllFiberSessions(psm: FlowStateMachineImpl<*>) {
         openSessions.values.removeIf { session ->
             if (session.psm == psm) {
                 val otherPartySessionId = session.otherPartySessionId
@@ -354,17 +354,17 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun startFiber(fiber: ProtocolStateMachineImpl<*>) {
+    private fun startFiber(fiber: FlowStateMachineImpl<*>) {
         try {
             resumeFiber(fiber)
         } catch (e: ExecutionException) {
             // There are two ways we can take exceptions in this method:
             //
-            // 1) A bug in the SMM code itself whilst setting up the new protocol. In that case the exception will
+            // 1) A bug in the SMM code itself whilst setting up the new flow. In that case the exception will
             //    propagate out of this method as it would for any method.
             //
             // 2) An exception in the first part of the fiber after it's been invoked for the first time via
-            //    fiber.start(). In this case the exception will be caught and stashed in the protocol logic future,
+            //    fiber.start(). In this case the exception will be caught and stashed in the flow logic future,
             //    then sent to the unhandled exception handler above which logs it, and is then rethrown wrapped
             //    in an ExecutionException or RuntimeException+EE so we can just catch it here and ignore it.
         } catch (e: RuntimeException) {
@@ -378,10 +378,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * The state machine will be persisted when it suspends, with automated restart if the StateMachineManager is
      * restarted with checkpointed state machines in the storage service.
      */
-    fun <T> add(logic: ProtocolLogic<T>): ProtocolStateMachine<T> {
+    fun <T> add(logic: FlowLogic<T>): FlowStateMachine<T> {
         val fiber = createFiber(logic)
         // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
-        // on the protocol completion future inside that context. The problem is that any progress checkpoints are
+        // on the flow completion future inside that context. The problem is that any progress checkpoints are
         // unable to acquire the table lock and move forward till the calling transaction finishes.
         // Committing in line here on a fresh context ensure we can progress.
         isolatedTransaction(database) {
@@ -396,7 +396,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         return fiber
     }
 
-    private fun updateCheckpoint(psm: ProtocolStateMachineImpl<*>) {
+    private fun updateCheckpoint(psm: FlowStateMachineImpl<*>) {
         check(psm.state != Strand.State.RUNNING) { "Fiber cannot be running when checkpointing" }
         val newCheckpoint = Checkpoint(serializeFiber(psm))
         val previousCheckpoint = mutex.locked { stateMachines.put(psm, newCheckpoint) }
@@ -407,7 +407,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         checkpointingMeter.mark()
     }
 
-    private fun resumeFiber(psm: ProtocolStateMachineImpl<*>) {
+    private fun resumeFiber(psm: FlowStateMachineImpl<*>) {
         // Avoid race condition when setting stopping to true and then checking liveFibers
         incrementLiveFibers()
         if (!stopping) executor.executeASAP {
@@ -418,7 +418,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun processIORequest(ioRequest: ProtocolIORequest) {
+    private fun processIORequest(ioRequest: FlowIORequest) {
         if (ioRequest is SendRequest) {
             if (ioRequest.message is SessionInit) {
                 openSessions[ioRequest.session.ourSessionId] = ioRequest.session
@@ -431,7 +431,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun sendSessionMessage(party: Party, message: SessionMessage, psm: ProtocolStateMachineImpl<*>?) {
+    private fun sendSessionMessage(party: Party, message: SessionMessage, psm: FlowStateMachineImpl<*>?) {
         val node = serviceHub.networkMapCache.getNodeByCompositeKey(party.owningKey)
                 ?: throw IllegalArgumentException("Don't know about party $party")
         val logger = psm?.logger ?: logger
@@ -448,7 +448,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     data class SessionInit(val initiatorSessionId: Long,
                            val initiatorParty: Party,
-                           val protocolName: String,
+                           val flowName: String,
                            val firstPayload: Any?) : SessionMessage
 
     interface SessionInitResponse : ExistingSessionMessage
@@ -470,14 +470,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     data class SessionEnd(override val recipientSessionId: Long) : ExistingSessionMessage
 
 
-    data class ProtocolSession(val protocol: ProtocolLogic<*>,
-                               val otherParty: Party,
-                               val ourSessionId: Long,
-                               var otherPartySessionId: Long?,
-                               @Volatile var waitingForResponse: Boolean = false) {
+    data class FlowSession(val flow: FlowLogic<*>,
+                           val otherParty: Party,
+                           val ourSessionId: Long,
+                           var otherPartySessionId: Long?,
+                           @Volatile var waitingForResponse: Boolean = false) {
 
         val receivedMessages = ConcurrentLinkedQueue<ExistingSessionMessage>()
-        val psm: ProtocolStateMachineImpl<*> get() = protocol.psm as ProtocolStateMachineImpl<*>
+        val psm: FlowStateMachineImpl<*> get() = flow.fsm as FlowStateMachineImpl<*>
 
     }
 

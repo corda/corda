@@ -4,14 +4,14 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.crypto.Party
-import net.corda.core.protocols.ProtocolLogic
-import net.corda.core.protocols.ProtocolSessionException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSessionException
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.deserialize
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.statemachine.StateMachineManager.*
 import net.corda.node.utilities.databaseTransaction
-import net.corda.testing.initiateSingleShotProtocol
+import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.MockNetwork
@@ -49,29 +49,29 @@ class StateMachineManagerTests {
     }
 
     @Test
-    fun `newly added protocol is preserved on restart`() {
-        node1.smm.add(NoOpProtocol(nonTerminating = true))
+    fun `newly added flow is preserved on restart`() {
+        node1.smm.add(NoOpFlow(nonTerminating = true))
         node1.acceptableLiveFiberCountOnStop = 1
-        val restoredProtocol = node1.restartAndGetRestoredProtocol<NoOpProtocol>()
-        assertThat(restoredProtocol.protocolStarted).isTrue()
+        val restoredFlow = node1.restartAndGetRestoredFlow<NoOpFlow>()
+        assertThat(restoredFlow.flowStarted).isTrue()
     }
 
     @Test
-    fun `protocol can lazily use the serviceHub in its constructor`() {
-        val protocol = object : ProtocolLogic<Unit>() {
+    fun `flow can lazily use the serviceHub in its constructor`() {
+        val flow = object : FlowLogic<Unit>() {
             val lazyTime by lazy { serviceHub.clock.instant() }
             @Suspendable
             override fun call() = Unit
         }
-        node1.smm.add(protocol)
-        assertThat(protocol.lazyTime).isNotNull()
+        node1.smm.add(flow)
+        assertThat(flow.lazyTime).isNotNull()
     }
 
     @Test
-    fun `protocol restarted just after receiving payload`() {
-        node2.services.registerProtocolInitiator(SendProtocol::class) { ReceiveThenSuspendProtocol(it) }
+    fun `flow restarted just after receiving payload`() {
+        node2.services.registerFlowInitiator(SendFlow::class) { ReceiveThenSuspendFlow(it) }
         val payload = random63BitValue()
-        node1.smm.add(SendProtocol(payload, node2.info.legalIdentity))
+        node1.smm.add(SendFlow(payload, node2.info.legalIdentity))
 
         // We push through just enough messages to get only the payload sent
         node2.pumpReceive()
@@ -79,60 +79,60 @@ class StateMachineManagerTests {
         node2.acceptableLiveFiberCountOnStop = 1
         node2.stop()
         net.runNetwork()
-        val restoredProtocol = node2.restartAndGetRestoredProtocol<ReceiveThenSuspendProtocol>(node1)
-        assertThat(restoredProtocol.receivedPayloads[0]).isEqualTo(payload)
+        val restoredFlow = node2.restartAndGetRestoredFlow<ReceiveThenSuspendFlow>(node1)
+        assertThat(restoredFlow.receivedPayloads[0]).isEqualTo(payload)
     }
 
     @Test
-    fun `protocol added before network map does run after init`() {
+    fun `flow added before network map does run after init`() {
         val node3 = net.createNode(node1.info.address) //create vanilla node
-        val protocol = NoOpProtocol()
-        node3.smm.add(protocol)
-        assertEquals(false, protocol.protocolStarted) // Not started yet as no network activity has been allowed yet
+        val flow = NoOpFlow()
+        node3.smm.add(flow)
+        assertEquals(false, flow.flowStarted) // Not started yet as no network activity has been allowed yet
         net.runNetwork() // Allow network map messages to flow
-        assertEquals(true, protocol.protocolStarted) // Now we should have run the protocol
+        assertEquals(true, flow.flowStarted) // Now we should have run the flow
     }
 
     @Test
-    fun `protocol added before network map will be init checkpointed`() {
+    fun `flow added before network map will be init checkpointed`() {
         var node3 = net.createNode(node1.info.address) //create vanilla node
-        val protocol = NoOpProtocol()
-        node3.smm.add(protocol)
-        assertEquals(false, protocol.protocolStarted) // Not started yet as no network activity has been allowed yet
+        val flow = NoOpFlow()
+        node3.smm.add(flow)
+        assertEquals(false, flow.flowStarted) // Not started yet as no network activity has been allowed yet
         node3.disableDBCloseOnStop()
         node3.stop()
 
         node3 = net.createNode(node1.info.address, forcedID = node3.id)
-        val restoredProtocol = node3.getSingleProtocol<NoOpProtocol>().first
-        assertEquals(false, restoredProtocol.protocolStarted) // Not started yet as no network activity has been allowed yet
+        val restoredFlow = node3.getSingleFlow<NoOpFlow>().first
+        assertEquals(false, restoredFlow.flowStarted) // Not started yet as no network activity has been allowed yet
         net.runNetwork() // Allow network map messages to flow
         node3.smm.executor.flush()
-        assertEquals(true, restoredProtocol.protocolStarted) // Now we should have run the protocol and hopefully cleared the init checkpoint
+        assertEquals(true, restoredFlow.flowStarted) // Now we should have run the flow and hopefully cleared the init checkpoint
         node3.disableDBCloseOnStop()
         node3.stop()
 
-        // Now it is completed the protocol should leave no Checkpoint.
+        // Now it is completed the flow should leave no Checkpoint.
         node3 = net.createNode(node1.info.address, forcedID = node3.id)
         net.runNetwork() // Allow network map messages to flow
         node3.smm.executor.flush()
-        assertTrue(node3.smm.findStateMachines(NoOpProtocol::class.java).isEmpty())
+        assertTrue(node3.smm.findStateMachines(NoOpFlow::class.java).isEmpty())
     }
 
     @Test
-    fun `protocol loaded from checkpoint will respond to messages from before start`() {
+    fun `flow loaded from checkpoint will respond to messages from before start`() {
         val payload = random63BitValue()
-        node1.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { SendProtocol(payload, it) }
-        node2.smm.add(ReceiveThenSuspendProtocol(node1.info.legalIdentity)) // Prepare checkpointed receive protocol
+        node1.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { SendFlow(payload, it) }
+        node2.smm.add(ReceiveThenSuspendFlow(node1.info.legalIdentity)) // Prepare checkpointed receive flow
         // Make sure the add() has finished initial processing.
         node2.smm.executor.flush()
         node2.disableDBCloseOnStop()
         node2.stop() // kill receiver
-        val restoredProtocol = node2.restartAndGetRestoredProtocol<ReceiveThenSuspendProtocol>(node1)
-        assertThat(restoredProtocol.receivedPayloads[0]).isEqualTo(payload)
+        val restoredFlow = node2.restartAndGetRestoredFlow<ReceiveThenSuspendFlow>(node1)
+        assertThat(restoredFlow.receivedPayloads[0]).isEqualTo(payload)
     }
 
     @Test
-    fun `protocol with send will resend on interrupted restart`() {
+    fun `flow with send will resend on interrupted restart`() {
         val payload = random63BitValue()
         val payload2 = random63BitValue()
 
@@ -140,11 +140,11 @@ class StateMachineManagerTests {
         net.messagingNetwork.sentMessages.toSessionTransfers().filter { it.isPayloadTransfer }.forEach { sentCount++ }
 
         val node3 = net.createNode(node1.info.address)
-        val secondProtocol = node3.initiateSingleShotProtocol(PingPongProtocol::class) { PingPongProtocol(it, payload2) }
+        val secondFlow = node3.initiateSingleShotFlow(PingPongFlow::class) { PingPongFlow(it, payload2) }
         net.runNetwork()
 
         // Kick off first send and receive
-        node2.smm.add(PingPongProtocol(node3.info.legalIdentity, payload))
+        node2.smm.add(PingPongFlow(node3.info.legalIdentity, payload))
         databaseTransaction(node2.database) {
             assertEquals(1, node2.checkpointStorage.checkpoints().size)
         }
@@ -158,55 +158,55 @@ class StateMachineManagerTests {
         }
         val node2b = net.createNode(node1.info.address, node2.id, advertisedServices = *node2.advertisedServices.toTypedArray())
         node2.manuallyCloseDB()
-        val (firstAgain, fut1) = node2b.getSingleProtocol<PingPongProtocol>()
-        // Run the network which will also fire up the second protocol. First message should get deduped. So message data stays in sync.
+        val (firstAgain, fut1) = node2b.getSingleFlow<PingPongFlow>()
+        // Run the network which will also fire up the second flow. First message should get deduped. So message data stays in sync.
         net.runNetwork()
         node2b.smm.executor.flush()
         fut1.get()
 
         val receivedCount = sessionTransfers.count { it.isPayloadTransfer }
-        // Check protocols completed cleanly and didn't get out of phase
-        assertEquals(4, receivedCount, "Protocol should have exchanged 4 unique messages")// Two messages each way
+        // Check flows completed cleanly and didn't get out of phase
+        assertEquals(4, receivedCount, "Flow should have exchanged 4 unique messages")// Two messages each way
         // can't give a precise value as every addMessageHandler re-runs the undelivered messages
         assertTrue(sentCount > receivedCount, "Node restart should have retransmitted messages")
         databaseTransaction(node2b.database) {
-            assertEquals(0, node2b.checkpointStorage.checkpoints().size, "Checkpoints left after restored protocol should have ended")
+            assertEquals(0, node2b.checkpointStorage.checkpoints().size, "Checkpoints left after restored flow should have ended")
         }
         databaseTransaction(node3.database) {
-            assertEquals(0, node3.checkpointStorage.checkpoints().size, "Checkpoints left after restored protocol should have ended")
+            assertEquals(0, node3.checkpointStorage.checkpoints().size, "Checkpoints left after restored flow should have ended")
         }
         assertEquals(payload2, firstAgain.receivedPayload, "Received payload does not match the first value on Node 3")
         assertEquals(payload2 + 1, firstAgain.receivedPayload2, "Received payload does not match the expected second value on Node 3")
-        assertEquals(payload, secondProtocol.get().receivedPayload, "Received payload does not match the (restarted) first value on Node 2")
-        assertEquals(payload + 1, secondProtocol.get().receivedPayload2, "Received payload does not match the expected second value on Node 2")
+        assertEquals(payload, secondFlow.get().receivedPayload, "Received payload does not match the (restarted) first value on Node 2")
+        assertEquals(payload + 1, secondFlow.get().receivedPayload2, "Received payload does not match the expected second value on Node 2")
     }
 
     @Test
     fun `sending to multiple parties`() {
         val node3 = net.createNode(node1.info.address)
         net.runNetwork()
-        node2.services.registerProtocolInitiator(SendProtocol::class) { ReceiveThenSuspendProtocol(it) }
-        node3.services.registerProtocolInitiator(SendProtocol::class) { ReceiveThenSuspendProtocol(it) }
+        node2.services.registerFlowInitiator(SendFlow::class) { ReceiveThenSuspendFlow(it) }
+        node3.services.registerFlowInitiator(SendFlow::class) { ReceiveThenSuspendFlow(it) }
         val payload = random63BitValue()
-        node1.smm.add(SendProtocol(payload, node2.info.legalIdentity, node3.info.legalIdentity))
+        node1.smm.add(SendFlow(payload, node2.info.legalIdentity, node3.info.legalIdentity))
         net.runNetwork()
-        val node2Protocol = node2.getSingleProtocol<ReceiveThenSuspendProtocol>().first
-        val node3Protocol = node3.getSingleProtocol<ReceiveThenSuspendProtocol>().first
-        assertThat(node2Protocol.receivedPayloads[0]).isEqualTo(payload)
-        assertThat(node3Protocol.receivedPayloads[0]).isEqualTo(payload)
+        val node2Flow = node2.getSingleFlow<ReceiveThenSuspendFlow>().first
+        val node3Flow = node3.getSingleFlow<ReceiveThenSuspendFlow>().first
+        assertThat(node2Flow.receivedPayloads[0]).isEqualTo(payload)
+        assertThat(node3Flow.receivedPayloads[0]).isEqualTo(payload)
 
         assertSessionTransfers(node2,
-                node1 sent sessionInit(node1, SendProtocol::class, payload) to node2,
+                node1 sent sessionInit(node1, SendFlow::class, payload) to node2,
                 node2 sent sessionConfirm() to node1,
                 node1 sent sessionEnd() to node2
-                //There's no session end from the other protocols as they're manually suspended
+                //There's no session end from the other flows as they're manually suspended
         )
 
         assertSessionTransfers(node3,
-                node1 sent sessionInit(node1, SendProtocol::class, payload) to node3,
+                node1 sent sessionInit(node1, SendFlow::class, payload) to node3,
                 node3 sent sessionConfirm() to node1,
                 node1 sent sessionEnd() to node3
-                //There's no session end from the other protocols as they're manually suspended
+                //There's no session end from the other flows as they're manually suspended
         )
 
         node2.acceptableLiveFiberCountOnStop = 1
@@ -219,24 +219,24 @@ class StateMachineManagerTests {
         net.runNetwork()
         val node2Payload = random63BitValue()
         val node3Payload = random63BitValue()
-        node2.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { SendProtocol(node2Payload, it) }
-        node3.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { SendProtocol(node3Payload, it) }
-        val multiReceiveProtocol = ReceiveThenSuspendProtocol(node2.info.legalIdentity, node3.info.legalIdentity)
-        node1.smm.add(multiReceiveProtocol)
+        node2.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { SendFlow(node2Payload, it) }
+        node3.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { SendFlow(node3Payload, it) }
+        val multiReceiveFlow = ReceiveThenSuspendFlow(node2.info.legalIdentity, node3.info.legalIdentity)
+        node1.smm.add(multiReceiveFlow)
         node1.acceptableLiveFiberCountOnStop = 1
         net.runNetwork()
-        assertThat(multiReceiveProtocol.receivedPayloads[0]).isEqualTo(node2Payload)
-        assertThat(multiReceiveProtocol.receivedPayloads[1]).isEqualTo(node3Payload)
+        assertThat(multiReceiveFlow.receivedPayloads[0]).isEqualTo(node2Payload)
+        assertThat(multiReceiveFlow.receivedPayloads[1]).isEqualTo(node3Payload)
 
         assertSessionTransfers(node2,
-                node1 sent sessionInit(node1, ReceiveThenSuspendProtocol::class) to node2,
+                node1 sent sessionInit(node1, ReceiveThenSuspendFlow::class) to node2,
                 node2 sent sessionConfirm() to node1,
                 node2 sent sessionData(node2Payload) to node1,
                 node2 sent sessionEnd() to node1
         )
 
         assertSessionTransfers(node3,
-                node1 sent sessionInit(node1, ReceiveThenSuspendProtocol::class) to node3,
+                node1 sent sessionInit(node1, ReceiveThenSuspendFlow::class) to node3,
                 node3 sent sessionConfirm() to node1,
                 node3 sent sessionData(node3Payload) to node1,
                 node3 sent sessionEnd() to node1
@@ -245,12 +245,12 @@ class StateMachineManagerTests {
 
     @Test
     fun `both sides do a send as their first IO request`() {
-        node2.services.registerProtocolInitiator(PingPongProtocol::class) { PingPongProtocol(it, 20L) }
-        node1.smm.add(PingPongProtocol(node2.info.legalIdentity, 10L))
+        node2.services.registerFlowInitiator(PingPongFlow::class) { PingPongFlow(it, 20L) }
+        node1.smm.add(PingPongFlow(node2.info.legalIdentity, 10L))
         net.runNetwork()
 
         assertSessionTransfers(
-                node1 sent sessionInit(node1, PingPongProtocol::class, 10L) to node2,
+                node1 sent sessionInit(node1, PingPongFlow::class, 10L) to node2,
                 node2 sent sessionConfirm() to node1,
                 node2 sent sessionData(20L) to node1,
                 node1 sent sessionData(11L) to node2,
@@ -261,18 +261,18 @@ class StateMachineManagerTests {
 
     @Test
     fun `exception thrown on other side`() {
-        node2.services.registerProtocolInitiator(ReceiveThenSuspendProtocol::class) { ExceptionProtocol }
-        val future = node1.smm.add(ReceiveThenSuspendProtocol(node2.info.legalIdentity)).resultFuture
+        node2.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { ExceptionFlow }
+        val future = node1.smm.add(ReceiveThenSuspendFlow(node2.info.legalIdentity)).resultFuture
         net.runNetwork()
-        assertThatThrownBy { future.get() }.hasCauseInstanceOf(ProtocolSessionException::class.java)
+        assertThatThrownBy { future.get() }.hasCauseInstanceOf(FlowSessionException::class.java)
         assertSessionTransfers(
-                node1 sent sessionInit(node1, ReceiveThenSuspendProtocol::class) to node2,
+                node1 sent sessionInit(node1, ReceiveThenSuspendFlow::class) to node2,
                 node2 sent sessionConfirm() to node1,
                 node2 sent sessionEnd() to node1
         )
     }
 
-    private inline fun <reified P : ProtocolLogic<*>> MockNode.restartAndGetRestoredProtocol(
+    private inline fun <reified P : FlowLogic<*>> MockNode.restartAndGetRestoredFlow(
             networkMapNode: MockNode? = null): P {
         disableDBCloseOnStop() //Handover DB to new node copy
         stop()
@@ -280,15 +280,15 @@ class StateMachineManagerTests {
         newNode.acceptableLiveFiberCountOnStop = 1
         manuallyCloseDB()
         mockNet.runNetwork() // allow NetworkMapService messages to stabilise and thus start the state machine
-        return newNode.getSingleProtocol<P>().first
+        return newNode.getSingleFlow<P>().first
     }
 
-    private inline fun <reified P : ProtocolLogic<*>> MockNode.getSingleProtocol(): Pair<P, ListenableFuture<*>> {
+    private inline fun <reified P : FlowLogic<*>> MockNode.getSingleFlow(): Pair<P, ListenableFuture<*>> {
         return smm.findStateMachines(P::class.java).single()
     }
 
-    private fun sessionInit(initiatorNode: MockNode, protocolMarker: KClass<*>, payload: Any? = null): SessionInit {
-        return SessionInit(0, initiatorNode.info.legalIdentity, protocolMarker.java.name, payload)
+    private fun sessionInit(initiatorNode: MockNode, flowMarker: KClass<*>, payload: Any? = null): SessionInit {
+        return SessionInit(0, initiatorNode.info.legalIdentity, flowMarker.java.name, payload)
     }
 
     private fun sessionConfirm() = SessionConfirm(0, 0)
@@ -334,13 +334,13 @@ class StateMachineManagerTests {
     private infix fun Pair<Int, SessionMessage>.to(node: MockNode): SessionTransfer = SessionTransfer(first, second, node.id)
 
 
-    private class NoOpProtocol(val nonTerminating: Boolean = false) : ProtocolLogic<Unit>() {
+    private class NoOpFlow(val nonTerminating: Boolean = false) : FlowLogic<Unit>() {
 
-        @Transient var protocolStarted = false
+        @Transient var flowStarted = false
 
         @Suspendable
         override fun call() {
-            protocolStarted = true
+            flowStarted = true
             if (nonTerminating) {
                 Fiber.park()
             }
@@ -348,7 +348,7 @@ class StateMachineManagerTests {
     }
 
 
-    private class SendProtocol(val payload: Any, vararg val otherParties: Party) : ProtocolLogic<Unit>() {
+    private class SendFlow(val payload: Any, vararg val otherParties: Party) : FlowLogic<Unit>() {
 
         init {
             require(otherParties.isNotEmpty())
@@ -359,7 +359,7 @@ class StateMachineManagerTests {
     }
 
 
-    private class ReceiveThenSuspendProtocol(vararg val otherParties: Party) : ProtocolLogic<Unit>() {
+    private class ReceiveThenSuspendFlow(vararg val otherParties: Party) : FlowLogic<Unit>() {
 
         init {
             require(otherParties.isNotEmpty())
@@ -375,7 +375,7 @@ class StateMachineManagerTests {
         }
     }
 
-    private class PingPongProtocol(val otherParty: Party, val payload: Long) : ProtocolLogic<Unit>() {
+    private class PingPongFlow(val otherParty: Party, val payload: Long) : FlowLogic<Unit>() {
 
         @Transient var receivedPayload: Long? = null
         @Transient var receivedPayload2: Long? = null
@@ -383,13 +383,13 @@ class StateMachineManagerTests {
         @Suspendable
         override fun call() {
             receivedPayload = sendAndReceive<Long>(otherParty, payload).unwrap { it }
-            println("${psm.id} Received $receivedPayload")
+            println("${fsm.id} Received $receivedPayload")
             receivedPayload2 = sendAndReceive<Long>(otherParty, payload + 1).unwrap { it }
-            println("${psm.id} Received $receivedPayload2")
+            println("${fsm.id} Received $receivedPayload2")
         }
     }
 
-    private object ExceptionProtocol : ProtocolLogic<Nothing>() {
+    private object ExceptionFlow : FlowLogic<Nothing>() {
         override fun call(): Nothing = throw Exception()
     }
 

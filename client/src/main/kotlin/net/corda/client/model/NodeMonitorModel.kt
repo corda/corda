@@ -3,18 +3,18 @@ package net.corda.client.model
 import com.google.common.net.HostAndPort
 import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.CordaRPCClient
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
-import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.transactions.SignedTransaction
+import net.corda.flows.CashCommand
+import net.corda.flows.CashFlow
 import net.corda.node.services.config.NodeSSLConfiguration
 import net.corda.node.services.messaging.CordaRPCOps
 import net.corda.node.services.messaging.StateMachineInfo
 import net.corda.node.services.messaging.StateMachineUpdate
-import net.corda.node.services.messaging.startProtocol
-import net.corda.protocols.CashCommand
-import net.corda.protocols.CashProtocol
+import net.corda.node.services.messaging.startFlow
 import rx.Observable
 import rx.subjects.PublishSubject
 
@@ -63,7 +63,7 @@ class NodeMonitorModel {
         val proxy = client.proxy()
 
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesAndUpdates()
-        // Extract the protocol tracking stream
+        // Extract the flow tracking stream
         // TODO is there a nicer way of doing this? Stream of streams in general results in code like this...
         val currentProgressTrackerUpdates = stateMachines.mapNotNull { stateMachine ->
             ProgressTrackingEvent.createStreamFromStateMachineInfo(stateMachine)
@@ -100,7 +100,7 @@ class NodeMonitorModel {
 
         // Client -> Service
         clientToServiceSource.subscribe {
-            proxy.startProtocol(::CashProtocol, it)
+            proxy.startFlow(::CashFlow, it)
         }
         proxyObservable.set(proxy)
     }

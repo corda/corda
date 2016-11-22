@@ -27,9 +27,9 @@ import kotlin.concurrent.withLock
  * or testing.
  *
  * Currently this is intended for use within a node as a simplified way for Oracles to implement subscriptions for changing
- * data by running a protocol internally to implement the request handler (see [NodeInterestRates.Oracle]), which can then
+ * data by running a flow internally to implement the request handler (see [NodeInterestRates.Oracle]), which can then
  * effectively relinquish control until the data becomes available.  This isn't the most scalable design and is intended
- * to be temporary.  In addition, it's enitrely possible to envisage a time when we want public [ProtocolLogic]
+ * to be temporary.  In addition, it's enitrely possible to envisage a time when we want public [FlowLogic]
  * implementations to be able to wait for some condition to become true outside of message send/receive.  At that point
  * we may revisit this implementation and indeed the whole model for this, when we understand that requirement more fully.
  *

@@ -9,13 +9,13 @@ import com.google.common.util.concurrent.SettableFuture
 import com.typesafe.config.Config
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
+import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
-import net.corda.core.protocols.ProtocolLogic
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.node.internal.AbstractNode
-import net.corda.node.services.statemachine.ProtocolStateMachineImpl
+import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager.Change
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.testing.node.MockIdentityService
@@ -134,14 +134,14 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
 ) = ledger { this.transaction(transactionLabel, transactionBuilder, dsl) }
 
 /**
- * The given protocol factory will be used to initiate just one instance of a protocol of type [P] when a counterparty
- * protocol requests for it using [markerClass].
- * @return Returns a [ListenableFuture] holding the single [ProtocolStateMachineImpl] created by the request.
+ * The given flow factory will be used to initiate just one instance of a flow of type [P] when a counterparty
+ * flow requests for it using [markerClass].
+ * @return Returns a [ListenableFuture] holding the single [FlowStateMachineImpl] created by the request.
  */
-inline fun <reified P : ProtocolLogic<*>> AbstractNode.initiateSingleShotProtocol(
-        markerClass: KClass<out ProtocolLogic<*>>,
-        noinline protocolFactory: (Party) -> P): ListenableFuture<P> {
-    services.registerProtocolInitiator(markerClass, protocolFactory)
+inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
+        markerClass: KClass<out FlowLogic<*>>,
+        noinline flowFactory: (Party) -> P): ListenableFuture<P> {
+    services.registerFlowInitiator(markerClass, flowFactory)
 
     val future = SettableFuture.create<P>()
 

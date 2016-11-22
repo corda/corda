@@ -3,10 +3,10 @@ package net.corda.core.node
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.contracts.TransactionState
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.MessagingService
 import net.corda.core.node.services.*
-import net.corda.core.protocols.ProtocolLogic
-import net.corda.core.protocols.ProtocolStateMachine
 import net.corda.core.transactions.SignedTransaction
 import java.security.KeyPair
 import java.time.Clock
@@ -16,7 +16,7 @@ import java.time.Clock
  * mocked out. This class is useful to pass to chunks of pluggable code that might have need of many different kinds of
  * functionality and you don't want to hard-code which types in the interface.
  *
- * Any services exposed to protocols (public view) need to implement [SerializeAsToken] or similar to avoid their internal
+ * Any services exposed to flows (public view) need to implement [SerializeAsToken] or similar to avoid their internal
  * state from being serialized in checkpoints.
  */
 interface ServiceHub {
@@ -49,16 +49,16 @@ interface ServiceHub {
     }
 
     /**
-     * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the protocol.
+     * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
      *
-     * @throws IllegalProtocolLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
+     * @throws IllegalFlowLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
      */
-    fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ProtocolStateMachine<T>
+    fun <T : Any> invokeFlowAsync(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowStateMachine<T>
 
     /**
      * Helper property to shorten code for fetching the Node's KeyPair associated with the
      * public legalIdentity Party from the key management service.
-     * Typical use is during signing in protocols and for unit test signing.
+     * Typical use is during signing in flows and for unit test signing.
      *
      * TODO: legalIdentity can now be composed of multiple keys, should we return a list of keyPairs here? Right now
      *       the logic assumes the legal identity has a composite key with only one node
@@ -70,7 +70,7 @@ interface ServiceHub {
      * public notaryIdentity Party from the key management service. It is assumed that this is only
      * used in contexts where the Node knows it is hosting a Notary Service. Otherwise, it will throw
      * an IllegalArgumentException.
-     * Typical use is during signing in protocols and for unit test signing.
+     * Typical use is during signing in flows and for unit test signing.
      */
     val notaryIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.notaryIdentity.owningKey.keys)
 

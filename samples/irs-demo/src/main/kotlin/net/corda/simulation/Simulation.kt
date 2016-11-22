@@ -4,12 +4,12 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flatMap
+import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CityDatabase
 import net.corda.core.node.PhysicalLocation
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.containsType
-import net.corda.core.protocols.ProtocolLogic
 import net.corda.core.then
 import net.corda.core.utilities.ProgressTracker
 import net.corda.irs.api.NodeInterestRates
@@ -31,7 +31,7 @@ import java.util.*
 /**
  * Base class for network simulations that are based on the unit test / mock environment.
  *
- * Sets up some nodes that can run protocols between each other, and exposes their progress trackers. Provides banks
+ * Sets up some nodes that can run flows between each other, and exposes their progress trackers. Provides banks
  * in a few cities around the world.
  */
 abstract class Simulation(val networkSendManuallyPumped: Boolean,
@@ -202,9 +202,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val clocks = (serviceProviders + regulators + banks).map { it.services.clock as TestClock }
 
     // These are used from the network visualiser tool.
-    private val _allProtocolSteps = PublishSubject.create<Pair<SimulatedNode, ProgressTracker.Change>>()
+    private val _allFlowSteps = PublishSubject.create<Pair<SimulatedNode, ProgressTracker.Change>>()
     private val _doneSteps = PublishSubject.create<Collection<SimulatedNode>>()
-    @Suppress("unused") val allProtocolSteps: Observable<Pair<SimulatedNode, ProgressTracker.Change>> = _allProtocolSteps
+    @Suppress("unused") val allFlowSteps: Observable<Pair<SimulatedNode, ProgressTracker.Change>> = _allFlowSteps
     @Suppress("unused") val doneSteps: Observable<Collection<SimulatedNode>> = _doneSteps
 
     private var pumpCursor = 0
@@ -268,16 +268,16 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     protected fun showProgressFor(nodes: List<SimulatedNode>) {
         nodes.forEach { node ->
             node.smm.changes.filter { it.addOrRemove == AddOrRemove.ADD }.subscribe {
-                linkProtocolProgress(node, it.logic)
+                linkFlowProgress(node, it.logic)
             }
         }
     }
 
-    private fun linkProtocolProgress(node: SimulatedNode, protocol: ProtocolLogic<*>) {
-        val pt = protocol.progressTracker ?: return
+    private fun linkFlowProgress(node: SimulatedNode, flow: FlowLogic<*>) {
+        val pt = flow.progressTracker ?: return
         pt.changes.subscribe { change: ProgressTracker.Change ->
             // Runs on node thread.
-            _allProtocolSteps.onNext(Pair(node, change))
+            _allFlowSteps.onNext(Pair(node, change))
         }
     }
 
@@ -289,10 +289,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    private fun linkConsensus(nodes: Collection<SimulatedNode>, protocol: ProtocolLogic<*>) {
-        protocol.progressTracker?.changes?.subscribe { change: ProgressTracker.Change ->
+    private fun linkConsensus(nodes: Collection<SimulatedNode>, flow: FlowLogic<*>) {
+        flow.progressTracker?.changes?.subscribe { change: ProgressTracker.Change ->
             // Runs on node thread.
-            if (protocol.progressTracker!!.currentStep == ProgressTracker.DONE) {
+            if (flow.progressTracker!!.currentStep == ProgressTracker.DONE) {
                 _doneSteps.onNext(nodes)
             }
         }

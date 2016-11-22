@@ -7,7 +7,7 @@ import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.Party
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.protocols.CashCommand
+import net.corda.flows.CashCommand
 import java.util.*
 
 fun generateIssue(

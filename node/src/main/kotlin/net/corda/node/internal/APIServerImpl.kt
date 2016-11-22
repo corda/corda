@@ -1,7 +1,10 @@
 package net.corda.node.internal
 
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.DealState
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.linearHeadsOfType
@@ -64,25 +67,25 @@ class APIServerImpl(val node: AbstractNode) : APIServer {
         throw UnsupportedOperationException()
     }
 
-    override fun invokeProtocolSync(type: ProtocolRef, args: Map<String, Any?>): Any? {
-        return invokeProtocolAsync(type, args).get()
+    override fun invokeFlowSync(type: FlowRef, args: Map<String, Any?>): Any? {
+        return invokeFlowAsync(type, args).get()
     }
 
-    private fun invokeProtocolAsync(type: ProtocolRef, args: Map<String, Any?>): ListenableFuture<out Any?> {
-        if (type is ProtocolClassRef) {
-            val protocolLogicRef = node.services.protocolLogicRefFactory.createKotlin(type.className, args)
-            val protocolInstance = node.services.protocolLogicRefFactory.toProtocolLogic(protocolLogicRef)
-            return node.services.startProtocol(protocolInstance).resultFuture
+    private fun invokeFlowAsync(type: FlowRef, args: Map<String, Any?>): ListenableFuture<out Any?> {
+        if (type is FlowClassRef) {
+            val flowLogicRef = node.services.flowLogicRefFactory.createKotlin(type.className, args)
+            val flowInstance = node.services.flowLogicRefFactory.toFlowLogic(flowLogicRef)
+            return node.services.startFlow(flowInstance).resultFuture
         } else {
-            throw UnsupportedOperationException("Unsupported ProtocolRef type: $type")
+            throw UnsupportedOperationException("Unsupported FlowRef type: $type")
         }
     }
 
-    override fun fetchProtocolsRequiringAttention(query: StatesQuery): Map<StateRef, ProtocolRequiringAttention> {
+    override fun fetchFlowsRequiringAttention(query: StatesQuery): Map<StateRef, FlowRequiringAttention> {
         throw UnsupportedOperationException()
     }
 
-    override fun provideProtocolResponse(protocol: ProtocolInstanceRef, choice: SecureHash, args: Map<String, Any?>) {
+    override fun provideFlowResponse(flow: FlowInstanceRef, choice: SecureHash, args: Map<String, Any?>) {
         throw UnsupportedOperationException()
     }
 

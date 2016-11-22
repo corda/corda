@@ -7,24 +7,24 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
-import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
+import net.corda.flows.CashCommand
+import net.corda.flows.CashFlow
 import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.messaging.StateMachineUpdate
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.startProtocolPermission
+import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.protocols.CashCommand
-import net.corda.protocols.CashProtocol
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.sequence
@@ -56,7 +56,7 @@ class NodeMonitorModelTest {
         val driverStarted = CountDownLatch(1)
         driverThread = thread {
             driver {
-                val cashUser = User("user1", "test", permissions = setOf(startProtocolPermission<CashProtocol>()))
+                val cashUser = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>()))
                 val aliceNodeFuture = startNode("Alice", rpcUsers = listOf(cashUser))
                 val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
 

@@ -9,17 +9,17 @@ import net.corda.core.RunOnCallerThread
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flatMap
+import net.corda.core.flows.FlowStateMachine
 import net.corda.core.map
 import net.corda.core.node.services.linearHeadsOfType
-import net.corda.core.protocols.ProtocolStateMachine
 import net.corda.core.success
 import net.corda.core.transactions.SignedTransaction
+import net.corda.flows.TwoPartyDealFlow.Acceptor
+import net.corda.flows.TwoPartyDealFlow.AutoOffer
+import net.corda.flows.TwoPartyDealFlow.Instigator
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.node.utilities.databaseTransaction
-import net.corda.protocols.TwoPartyDealProtocol.Acceptor
-import net.corda.protocols.TwoPartyDealProtocol.AutoOffer
-import net.corda.protocols.TwoPartyDealProtocol.Instigator
-import net.corda.testing.initiateSingleShotProtocol
+import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockIdentityService
 import java.time.LocalDate
@@ -118,15 +118,15 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity
         irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity
 
-        val acceptorTx = node2.initiateSingleShotProtocol(Instigator::class) { Acceptor(it) }.flatMap {
-            (it.psm as ProtocolStateMachine<SignedTransaction>).resultFuture
+        val acceptorTx = node2.initiateSingleShotFlow(Instigator::class) { Acceptor(it) }.flatMap {
+            (it.fsm as FlowStateMachine<SignedTransaction>).resultFuture
         }
 
         showProgressFor(listOf(node1, node2))
         showConsensusFor(listOf(node1, node2, regulators[0]))
 
         val instigator = Instigator(node2.info.legalIdentity, AutoOffer(notary.info.notaryIdentity, irs), node1.keyPair!!)
-        val instigatorTx: ListenableFuture<SignedTransaction> = node1.services.startProtocol(instigator).resultFuture
+        val instigatorTx: ListenableFuture<SignedTransaction> = node1.services.startFlow(instigator).resultFuture
 
         return Futures.allAsList(instigatorTx, acceptorTx).flatMap { instigatorTx }
     }

@@ -5,10 +5,10 @@ import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.ServiceType
-import net.corda.core.protocols.ProtocolLogicRefFactory
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.irs.protocols.FixingProtocol
+import net.corda.irs.flows.FixingFlow
 import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
 import org.apache.commons.jexl3.JexlBuilder
 import org.apache.commons.jexl3.MapContext
@@ -674,12 +674,12 @@ class InterestRateSwap() : Contract {
         override val parties: List<Party>
             get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
 
-        override fun nextScheduledActivity(thisStateRef: StateRef, protocolLogicRefFactory: ProtocolLogicRefFactory): ScheduledActivity? {
+        override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             val nextFixingOf = nextFixingOf() ?: return null
 
             // This is perhaps not how we should determine the time point in the business day, but instead expect the schedule to detail some of these aspects
             val instant = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name, source = floatingLeg.indexSource, date = nextFixingOf.forDay).start
-            return ScheduledActivity(protocolLogicRefFactory.create(FixingProtocol.FixingRoleDecider::class.java, thisStateRef), instant)
+            return ScheduledActivity(flowLogicRefFactory.create(FixingFlow.FixingRoleDecider::class.java, thisStateRef), instant)
         }
 
         override fun generateAgreement(notary: Party): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)

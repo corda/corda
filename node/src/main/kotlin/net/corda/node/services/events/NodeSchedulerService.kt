@@ -2,21 +2,21 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
+import kotlinx.support.jdk8.collections.compute
 import net.corda.core.ThreadBox
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.SchedulerService
-import net.corda.core.protocols.ProtocolLogic
-import net.corda.core.protocols.ProtocolLogicRefFactory
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.*
-import kotlinx.support.jdk8.collections.compute
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
@@ -38,14 +38,14 @@ import javax.annotation.concurrent.ThreadSafe
  * but that starts to sound a lot like off-ledger state.
  *
  * @param services Core node services.
- * @param protocolLogicRefFactory Factory for restoring [ProtocolLogic] instances from references.
+ * @param flowLogicRefFactory Factory for restoring [FlowLogic] instances from references.
  * @param schedulerTimerExecutor The executor the scheduler blocks on waiting for the clock to advance to the next
- * activity.  Only replace this for unit testing purposes.  This is not the executor the [ProtocolLogic] is launched on.
+ * activity.  Only replace this for unit testing purposes.  This is not the executor the [FlowLogic] is launched on.
  */
 @ThreadSafe
 class NodeSchedulerService(private val database: Database,
                            private val services: ServiceHubInternal,
-                           private val protocolLogicRefFactory: ProtocolLogicRefFactory,
+                           private val flowLogicRefFactory: FlowLogicRefFactory,
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor())
 : SchedulerService, SingletonSerializeAsToken() {
 
@@ -87,7 +87,7 @@ class NodeSchedulerService(private val database: Database,
 
     private val mutex = ThreadBox(InnerState())
 
-    // We need the [StateMachineManager] to be constructed before this is called in case it schedules a protocol.
+    // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
         mutex.locked {
             recomputeEarliest()
@@ -152,10 +152,10 @@ class NodeSchedulerService(private val database: Database,
     }
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
-        services.startProtocol(RunScheduled(scheduledState, this@NodeSchedulerService))
+        services.startFlow(RunScheduled(scheduledState, this@NodeSchedulerService))
     }
 
-    class RunScheduled(val scheduledState: ScheduledStateRef, val scheduler: NodeSchedulerService) : ProtocolLogic<Unit>() {
+    class RunScheduled(val scheduledState: ScheduledStateRef, val scheduler: NodeSchedulerService) : FlowLogic<Unit>() {
         companion object {
             object RUNNING : ProgressTracker.Step("Running scheduled...")
 
@@ -169,9 +169,9 @@ class NodeSchedulerService(private val database: Database,
             progressTracker.currentStep = RUNNING
 
             // Ensure we are still scheduled.
-            val scheduledLogic: ProtocolLogic<*>? = getScheduledLogic()
+            val scheduledLogic: FlowLogic<*>? = getScheduledLogic()
             if(scheduledLogic != null) {
-                subProtocol(scheduledLogic)
+                subFlow(scheduledLogic)
             }
         }
 
@@ -180,16 +180,16 @@ class NodeSchedulerService(private val database: Database,
             val state = txState.data as SchedulableState
             return try {
                 // This can throw as running contract code.
-                state.nextScheduledActivity(scheduledState.ref, scheduler.protocolLogicRefFactory)
+                state.nextScheduledActivity(scheduledState.ref, scheduler.flowLogicRefFactory)
             } catch(e: Exception) {
                 logger.error("Attempt to run scheduled state $scheduledState resulted in error.", e)
                 null
             }
         }
 
-        private fun getScheduledLogic(): ProtocolLogic<*>? {
+        private fun getScheduledLogic(): FlowLogic<*>? {
             val scheduledActivity = getScheduledaActivity()
-            var scheduledLogic: ProtocolLogic<*>? = null
+            var scheduledLogic: FlowLogic<*>? = null
             scheduler.mutex.locked {
                 // need to remove us from those scheduled, but only if we are still next
                 scheduledStates.compute(scheduledState.ref) { ref, value ->
@@ -201,11 +201,11 @@ class NodeSchedulerService(private val database: Database,
                             logger.info("Scheduled state $scheduledState has rescheduled to ${scheduledActivity.scheduledAt}.")
                             ScheduledStateRef(scheduledState.ref, scheduledActivity.scheduledAt)
                         } else {
-                            // TODO: ProtocolLogicRefFactory needs to sort out the class loader etc
-                            val logic = scheduler.protocolLogicRefFactory.toProtocolLogic(scheduledActivity.logicRef)
-                            logger.trace { "Scheduler starting ProtocolLogic $logic" }
-                            // ProtocolLogic will be checkpointed by the time this returns.
-                            //scheduler.services.startProtocolAndForget(logic)
+                            // TODO: FlowLogicRefFactory needs to sort out the class loader etc
+                            val logic = scheduler.flowLogicRefFactory.toFlowLogic(scheduledActivity.logicRef)
+                            logger.trace { "Scheduler starting FlowLogic $logic" }
+                            // FlowLogic will be checkpointed by the time this returns.
+                            //scheduler.services.startFlowAndForget(logic)
                             scheduledLogic = logic
                             null
                         }

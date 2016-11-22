@@ -3,8 +3,7 @@ package net.corda.node.services
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.node.services.api.ServiceHubInternal
-import net.corda.protocols.NotaryChangeProtocol
+import net.corda.flows.NotaryChangeFlow
 
 object NotaryChange {
     class Plugin : CordaPluginRegistry() {
@@ -13,11 +12,11 @@ object NotaryChange {
 
     /**
      * A service that monitors the network for requests for changing the notary of a state,
-     * and immediately runs the [NotaryChangeProtocol] if the auto-accept criteria are met.
+     * and immediately runs the [NotaryChangeFlow] if the auto-accept criteria are met.
      */
     class Service(services: PluginServiceHub) : SingletonSerializeAsToken() {
         init {
-            services.registerProtocolInitiator(NotaryChangeProtocol.Instigator::class) { NotaryChangeProtocol.Acceptor(it) }
+            services.registerFlowInitiator(NotaryChangeFlow.Instigator::class) { NotaryChangeFlow.Acceptor(it) }
         }
     }
 }

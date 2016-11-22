@@ -34,7 +34,7 @@ data class DisruptionSpec(
  *     * Exhaust disk space
  *     * Delete non-DB stored files like attachments.
  *   * Strain on DB.
- *     * In theory starting protocols that hang in a tight loop should do the job.
+ *     * In theory starting flows that hang in a tight loop should do the job.
  *     * We could also mess with the database directly.
  *   * Strain on ActiveMQ.
  *     * Requires exposing of the Artemis client in [NodeConnection].

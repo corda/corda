@@ -6,7 +6,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.loggerFor
-import net.corda.traderdemo.protocol.SellerProtocol
+import net.corda.traderdemo.flow.SellerFlow
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
@@ -48,15 +48,15 @@ class TraderDemoApi(val services: ServiceHub) {
             // attachment. Make sure we have the transaction prospectus attachment loaded into our store.
             //
             // This can also be done via an HTTP upload, but here we short-circuit and do it from code.
-            if (services.storageService.attachments.openAttachment(SellerProtocol.PROSPECTUS_HASH) == null) {
+            if (services.storageService.attachments.openAttachment(SellerFlow.PROSPECTUS_HASH) == null) {
                 javaClass.classLoader.getResourceAsStream("bank-of-london-cp.jar").use {
                     val id = services.storageService.attachments.importAttachment(it)
-                    assertEquals(SellerProtocol.PROSPECTUS_HASH, id)
+                    assertEquals(SellerFlow.PROSPECTUS_HASH, id)
                 }
             }
 
             // The line below blocks and waits for the future to resolve.
-            val stx = services.invokeProtocolAsync<SignedTransaction>(SellerProtocol::class.java, otherParty, params.amount.DOLLARS).resultFuture.get()
+            val stx = services.invokeFlowAsync<SignedTransaction>(SellerFlow::class.java, otherParty, params.amount.DOLLARS).resultFuture.get()
             logger.info("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(stx.tx)}")
             return Response.status(Response.Status.OK).build()
         } else {

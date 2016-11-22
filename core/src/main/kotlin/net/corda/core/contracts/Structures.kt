@@ -4,9 +4,9 @@ import net.corda.core.contracts.clauses.Clause
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowLogicRef
+import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.ServiceType
-import net.corda.core.protocols.ProtocolLogicRef
-import net.corda.core.protocols.ProtocolLogicRefFactory
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
@@ -206,16 +206,16 @@ data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instan
 
 /**
  * This class represents the lifecycle activity that a contract state of type [LinearState] would like to perform at a given point in time.
- * e.g. run a fixing protocol.
+ * e.g. run a fixing flow.
  *
- * Note the use of [ProtocolLogicRef] to represent a safe way to transport a [ProtocolLogic] out of the contract sandbox.
+ * Note the use of [FlowLogicRef] to represent a safe way to transport a [FlowLogic] out of the contract sandbox.
  *
- * Currently we support only protocol based activities as we expect there to be a transaction generated off the back of
+ * Currently we support only flow based activities as we expect there to be a transaction generated off the back of
  * the activity, otherwise we have to start tracking secondary state on the platform of which scheduled activities
  * for a particular [ContractState] have been processed/fired etc.  If the activity is not "on ledger" then the
  * scheduled activity shouldn't be either.
  */
-data class ScheduledActivity(val logicRef: ProtocolLogicRef, override val scheduledAt: Instant) : Scheduled
+data class ScheduledActivity(val logicRef: FlowLogicRef, override val scheduledAt: Instant) : Scheduled
 
 /**
  * A state that evolves by superseding itself, all of which share the common "linearId".
@@ -261,16 +261,16 @@ interface SchedulableState : ContractState {
      * [ContractState], what that activity is and at what point in time it should be initiated.
      * This can be used to implement deadlines for payment or processing of financial instruments according to a schedule.
      *
-     * The state has no reference to it's own StateRef, so supply that for use as input to any ProtocolLogic constructed.
+     * The state has no reference to it's own StateRef, so supply that for use as input to any FlowLogic constructed.
      *
      * @return null if there is no activity to schedule.
      */
-    fun nextScheduledActivity(thisStateRef: StateRef, protocolLogicRefFactory: ProtocolLogicRefFactory): ScheduledActivity?
+    fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity?
 }
 
 /**
  * Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
- * implementation of general protocols that manipulate many agreement types.
+ * implementation of general flows that manipulate many agreement types.
  */
 interface DealState : LinearState {
     /** Human readable well known reference (e.g. trade reference) */
@@ -293,7 +293,7 @@ interface DealState : LinearState {
 
     /**
      * Generate a partial transaction representing an agreement (command) to this deal, allowing a general
-     * deal/agreement protocol to generate the necessary transaction for potential implementations.
+     * deal/agreement flow to generate the necessary transaction for potential implementations.
      *
      * TODO: Currently this is the "inception" transaction but in future an offer of some description might be an input state ref
      *

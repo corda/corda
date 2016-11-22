@@ -4,11 +4,11 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.composite
 import net.corda.core.days
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowLogicRef
+import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.recordTransactions
-import net.corda.core.protocols.ProtocolLogic
-import net.corda.core.protocols.ProtocolLogicRef
-import net.corda.core.protocols.ProtocolLogicRefFactory
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.services.events.NodeSchedulerService
@@ -47,7 +47,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     // We have to allow Java boxed primitives but Kotlin warns we shouldn't be using them
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-    val factory = ProtocolLogicRefFactory(mapOf(Pair(TestProtocolLogic::class.java.name, setOf(NodeSchedulerServiceTest::class.java.name, Integer::class.java.name))))
+    val factory = FlowLogicRefFactory(mapOf(Pair(TestFlowLogic::class.java.name, setOf(NodeSchedulerServiceTest::class.java.name, Integer::class.java.name))))
 
     lateinit var services: MockServiceHubInternal
 
@@ -56,12 +56,12 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     lateinit var dataSource: Closeable
     lateinit var database: Database
     lateinit var countDown: CountDownLatch
-    lateinit var smmHasRemovedAllProtocols: CountDownLatch
+    lateinit var smmHasRemovedAllFlows: CountDownLatch
 
     var calls: Int = 0
 
     /**
-     * Have a reference to this test added to [ServiceHub] so that when the [ProtocolLogic] runs it can access the test instance.
+     * Have a reference to this test added to [ServiceHub] so that when the [FlowLogic] runs it can access the test instance.
      * The [TestState] is serialized and deserialized so attempting to use a transient field won't work, as it just
      * results in NPE.
      */
@@ -73,7 +73,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     @Before
     fun setup() {
         countDown = CountDownLatch(1)
-        smmHasRemovedAllProtocols = CountDownLatch(1)
+        smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
         val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
         dataSource = dataSourceAndDatabase.first
@@ -90,7 +90,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             val mockSMM = StateMachineManager(services, listOf(services, scheduler), DBCheckpointStorage(), smmExecutor, database)
             mockSMM.changes.subscribe { change ->
                 if (change.addOrRemove == AddOrRemove.REMOVE && mockSMM.allStateMachines.isEmpty()) {
-                    smmHasRemovedAllProtocols.countDown()
+                    smmHasRemovedAllFlows.countDown()
                 }
             }
             mockSMM.start()
@@ -103,14 +103,14 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     fun tearDown() {
         // We need to make sure the StateMachineManager is done before shutting down executors.
         if (services.smm.allStateMachines.isNotEmpty()) {
-            smmHasRemovedAllProtocols.await()
+            smmHasRemovedAllFlows.await()
         }
         smmExecutor.shutdown()
         smmExecutor.awaitTermination(60, TimeUnit.SECONDS)
         dataSource.close()
     }
 
-    class TestState(val protocolLogicRef: ProtocolLogicRef, val instant: Instant) : LinearState, SchedulableState {
+    class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant) : LinearState, SchedulableState {
         override val participants: List<CompositeKey>
             get() = throw UnsupportedOperationException()
 
@@ -118,13 +118,13 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean = true
 
-        override fun nextScheduledActivity(thisStateRef: StateRef, protocolLogicRefFactory: ProtocolLogicRefFactory): ScheduledActivity? = ScheduledActivity(protocolLogicRef, instant)
+        override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? = ScheduledActivity(flowLogicRef, instant)
 
         override val contract: Contract
             get() = throw UnsupportedOperationException()
     }
 
-    class TestProtocolLogic(val increment: Int = 1) : ProtocolLogic<Unit>() {
+    class TestFlowLogic(val increment: Int = 1) : FlowLogic<Unit>() {
         override fun call() {
             (serviceHub as TestReference).testReference.calls += increment
             (serviceHub as TestReference).testReference.countDown.countDown()
@@ -267,7 +267,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         databaseTransaction(database) {
             apply {
                 val freshKey = services.keyManagementService.freshKey()
-                val state = TestState(factory.create(TestProtocolLogic::class.java, increment), instant)
+                val state = TestState(factory.create(TestFlowLogic::class.java, increment), instant)
                 val usefulTX = TransactionType.General.Builder(null).apply {
                     addOutputState(state, DUMMY_NOTARY)
                     addCommand(Command(), freshKey.public.composite)

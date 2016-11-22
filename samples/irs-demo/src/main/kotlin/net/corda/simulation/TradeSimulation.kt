@@ -10,13 +10,13 @@ import net.corda.core.contracts.OwnableState
 import net.corda.core.contracts.`issued by`
 import net.corda.core.days
 import net.corda.core.flatMap
+import net.corda.core.flows.FlowStateMachine
 import net.corda.core.node.recordTransactions
-import net.corda.core.protocols.ProtocolStateMachine
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.protocols.TwoPartyTradeProtocol.Buyer
-import net.corda.protocols.TwoPartyTradeProtocol.Seller
-import net.corda.testing.initiateSingleShotProtocol
+import net.corda.flows.TwoPartyTradeFlow.Buyer
+import net.corda.flows.TwoPartyTradeFlow.Seller
+import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.node.InMemoryMessagingNetwork
 import java.time.Instant
 
@@ -50,12 +50,12 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
 
         val amount = 1000.DOLLARS
 
-        val buyerFuture = buyer.initiateSingleShotProtocol(Seller::class) {
+        val buyerFuture = buyer.initiateSingleShotFlow(Seller::class) {
             Buyer(it, notary.info.notaryIdentity, amount, CommercialPaper.State::class.java)
-        }.flatMap { (it.psm as ProtocolStateMachine<SignedTransaction>).resultFuture  }
+        }.flatMap { (it.fsm as FlowStateMachine<SignedTransaction>).resultFuture }
 
         val sellerKey = seller.services.legalIdentityKey
-        val sellerProtocol = Seller(
+        val sellerFlow = Seller(
                 buyer.info.legalIdentity,
                 notary.info,
                 issuance.tx.outRef<OwnableState>(0),
@@ -65,7 +65,7 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         showConsensusFor(listOf(buyer, seller, notary))
         showProgressFor(listOf(buyer, seller))
 
-        val sellerFuture = seller.services.startProtocol(sellerProtocol).resultFuture
+        val sellerFuture = seller.services.startFlow(sellerFlow).resultFuture
 
         return Futures.successfulAsList(buyerFuture, sellerFuture)
     }

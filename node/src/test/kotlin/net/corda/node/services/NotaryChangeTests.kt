@@ -7,12 +7,12 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.flows.NotaryChangeFlow.Instigator
+import net.corda.flows.StateReplacementException
+import net.corda.flows.StateReplacementRefused
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.protocols.NotaryChangeProtocol.Instigator
-import net.corda.protocols.StateReplacementException
-import net.corda.protocols.StateReplacementRefused
 import net.corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test
@@ -48,8 +48,8 @@ class NotaryChangeTests {
     fun `should change notary for a state with single participant`() {
         val state = issueState(clientNodeA, oldNotaryNode)
         val newNotary = newNotaryNode.info.notaryIdentity
-        val protocol = Instigator(state, newNotary)
-        val future = clientNodeA.services.startProtocol(protocol)
+        val flow = Instigator(state, newNotary)
+        val future = clientNodeA.services.startFlow(flow)
 
         net.runNetwork()
 
@@ -61,8 +61,8 @@ class NotaryChangeTests {
     fun `should change notary for a state with multiple participants`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
         val newNotary = newNotaryNode.info.notaryIdentity
-        val protocol = Instigator(state, newNotary)
-        val future = clientNodeA.services.startProtocol(protocol)
+        val flow = Instigator(state, newNotary)
+        val future = clientNodeA.services.startFlow(flow)
 
         net.runNetwork()
 
@@ -77,8 +77,8 @@ class NotaryChangeTests {
     fun `should throw when a participant refuses to change Notary`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
         val newEvilNotary = Party("Evil Notary", generateKeyPair().public)
-        val protocol = Instigator(state, newEvilNotary)
-        val future = clientNodeA.services.startProtocol(protocol)
+        val flow = Instigator(state, newEvilNotary)
+        val future = clientNodeA.services.startFlow(flow)
 
         net.runNetwork()
 
@@ -87,7 +87,7 @@ class NotaryChangeTests {
         assertTrue(error is StateReplacementRefused)
     }
 
-    // TODO: Add more test cases once we have a general protocol/service exception handling mechanism:
+    // TODO: Add more test cases once we have a general flow/service exception handling mechanism:
     //       - A participant is offline/can't be found on the network
     //       - The requesting party is not a participant
     //       - The requesting party wants to change additional state fields

@@ -23,8 +23,8 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.composite
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.node.NodeInfo
-import net.corda.core.protocols.StateMachineRunId
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
 import net.corda.explorer.identicon.identicon
@@ -59,7 +59,7 @@ class TransactionViewer : CordaView("Transactions") {
             val outputContracts: List<Contract>,
             val stateMachineRunId: ObservableValue<StateMachineRunId?>,
             val stateMachineStatus: ObservableValue<out StateMachineStatus?>,
-            val protocolStatus: ObservableValue<out ProtocolStatus?>,
+            val flowStatus: ObservableValue<out FlowStatus?>,
             val commandTypes: Collection<Class<CommandData>>,
             val totalValueEquiv: ObservableValue<AmountDiff<Currency>>
     )
@@ -87,7 +87,7 @@ class TransactionViewer : CordaView("Transactions") {
                 inputContracts = it.transaction.inputs.map { it.value as? PartiallyResolvedTransaction.InputResolution.Resolved }.filterNotNull().map { it.stateAndRef.state.data.contract },
                 outputContracts = it.transaction.transaction.tx.outputs.map { it.data.contract },
                 stateMachineRunId = stateMachine.map { it?.id },
-                protocolStatus = stateMachineProperty { it.protocolStatus },
+                flowStatus = stateMachineProperty { it.flowStatus },
                 stateMachineStatus = stateMachineProperty { it.stateMachineStatus },
                 commandTypes = it.transaction.transaction.tx.commands.map { it.value.javaClass },
                 totalValueEquiv = {
@@ -122,7 +122,7 @@ class TransactionViewer : CordaView("Transactions") {
             column("Input Contract Type(s)", ViewerNode::inputContracts).cellFormat { text = (it.map { it.javaClass.simpleName }.toSet().joinToString(", ")) }
             column("Output Contract Type(s)", ViewerNode::outputContracts).cellFormat { text = it.map { it.javaClass.simpleName }.toSet().joinToString(", ") }
             column("State Machine ID", ViewerNode::stateMachineRunId).cellFormat { text = "${it?.uuid ?: ""}" }
-            column("Protocol status", ViewerNode::protocolStatus).cellFormat { text = "${it.value ?: ""}" }
+            column("Flow status", ViewerNode::flowStatus).cellFormat { text = "${it.value ?: ""}" }
             column("SM Status", ViewerNode::stateMachineStatus).cellFormat { text = "${it.value ?: ""}" }
             column("Command type(s)", ViewerNode::commandTypes).cellFormat { text = it.map { it.simpleName }.joinToString(",") }
             column("Total value (USD equiv)", ViewerNode::totalValueEquiv)

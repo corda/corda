@@ -66,7 +66,7 @@ interface MessagingService {
      * available via type casting. Once this function returns the message is queued for delivery but not necessarily
      * delivered: if the recipients are offline then the message could be queued hours or days later.
      *
-     * There is no way to know if a message has been received. If your protocol requires this, you need the recipient
+     * There is no way to know if a message has been received. If your flow requires this, you need the recipient
      * to send an ACK message back.
      */
     fun send(message: Message, target: MessageRecipients)

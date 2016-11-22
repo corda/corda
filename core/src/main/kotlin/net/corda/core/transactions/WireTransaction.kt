@@ -69,7 +69,7 @@ class WireTransaction(
 
     /**
      * Looks up identities and attachments from storage to generate a [LedgerTransaction]. A transaction is expected to
-     * have been fully resolved using the resolution protocol by this point.
+     * have been fully resolved using the resolution flow by this point.
      *
      * @throws FileNotFoundException if a required attachment was not found in storage.
      * @throws TransactionResolutionException if an input points to a transaction not found in storage.

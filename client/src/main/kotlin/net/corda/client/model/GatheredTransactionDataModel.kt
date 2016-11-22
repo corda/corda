@@ -1,18 +1,18 @@
 package net.corda.client.model
 
+import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.value.ObservableValue
+import javafx.collections.ObservableList
+import javafx.collections.ObservableMap
 import net.corda.client.fxutils.*
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.node.services.StateMachineTransactionMapping
-import net.corda.core.protocols.StateMachineRunId
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.messaging.StateMachineUpdate
-import javafx.beans.property.SimpleObjectProperty
-import javafx.beans.value.ObservableValue
-import javafx.collections.ObservableList
-import javafx.collections.ObservableMap
 import org.fxmisc.easybind.EasyBind
 
 data class GatheredTransactionData(
@@ -59,7 +59,7 @@ sealed class TransactionCreateStatus(val message: String?) {
     override fun toString(): String = message ?: javaClass.simpleName
 }
 
-data class ProtocolStatus(
+data class FlowStatus(
         val status: String
 )
 
@@ -71,12 +71,12 @@ sealed class StateMachineStatus(val stateMachineName: String) {
 
 data class StateMachineData(
         val id: StateMachineRunId,
-        val protocolStatus: ObservableValue<ProtocolStatus?>,
+        val flowStatus: ObservableValue<FlowStatus?>,
         val stateMachineStatus: ObservableValue<StateMachineStatus>
 )
 
 /**
- * This model provides an observable list of transactions and what state machines/protocols recorded them
+ * This model provides an observable list of transactions and what state machines/flows recorded them
  */
 class GatheredTransactionDataModel {
 
@@ -92,7 +92,7 @@ class GatheredTransactionDataModel {
                 when (update) {
                     is StateMachineUpdate.Added -> {
                         val added: SimpleObjectProperty<StateMachineStatus> =
-                                SimpleObjectProperty(StateMachineStatus.Added(update.stateMachineInfo.protocolLogicClassName))
+                                SimpleObjectProperty(StateMachineStatus.Added(update.stateMachineInfo.flowLogicClassName))
                         map[update.id] = added
                     }
                     is StateMachineUpdate.Removed -> {
@@ -103,7 +103,7 @@ class GatheredTransactionDataModel {
                 }
             }
     private val stateMachineDataList = LeftOuterJoinedMap(stateMachineStatus, progressEvents) { id, status, progress ->
-                StateMachineData(id, progress.map { it?.let { ProtocolStatus(it.message) } }, status)
+        StateMachineData(id, progress.map { it?.let { FlowStatus(it.message) } }, status)
             }.getObservableValues()
     private val stateMachineDataMap = stateMachineDataList.associateBy(StateMachineData::id)
     private val smTxMappingList = stateMachineTransactionMapping.recordInSequence()

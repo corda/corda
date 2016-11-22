@@ -91,31 +91,31 @@ interface APIServer {
     fun commitTransaction(tx: SerializedBytes<WireTransaction>, signatures: List<DigitalSignature.WithKey>): SecureHash
 
     /**
-     * This method would not return until the protocol is finished (hence the "Sync").
+     * This method would not return until the flow is finished (hence the "Sync").
      *
-     * Longer term we'd add an Async version that returns some kind of ProtocolInvocationRef that could be queried and
+     * Longer term we'd add an Async version that returns some kind of FlowInvocationRef that could be queried and
      * would appear on some kind of event message that is broadcast informing of progress.
      *
-     * Will throw exception if protocol fails.
+     * Will throw exception if flow fails.
      */
-    fun invokeProtocolSync(type: ProtocolRef, args: Map<String, Any?>): Any?
+    fun invokeFlowSync(type: FlowRef, args: Map<String, Any?>): Any?
 
-    // fun invokeProtocolAsync(type: ProtocolRef, args: Map<String, Any?>): ProtocolInstanceRef
+    // fun invokeFlowAsync(type: FlowRef, args: Map<String, Any?>): FlowInstanceRef
 
     /**
-     * Fetch protocols that require a response to some prompt/question by a human (on the "bank" side).
+     * Fetch flows that require a response to some prompt/question by a human (on the "bank" side).
      */
-    fun fetchProtocolsRequiringAttention(query: StatesQuery): Map<StateRef, ProtocolRequiringAttention>
+    fun fetchFlowsRequiringAttention(query: StatesQuery): Map<StateRef, FlowRequiringAttention>
 
     /**
-     * Provide the response that a protocol is waiting for.
+     * Provide the response that a flow is waiting for.
      *
-     * @param protocol Should refer to a previously supplied ProtocolRequiringAttention.
-     * @param stepId Which step of the protocol are we referring too.
-     * @param choice Should be one of the choices presented in the ProtocolRequiringAttention.
+     * @param flow Should refer to a previously supplied FlowRequiringAttention.
+     * @param stepId Which step of the flow are we referring too.
+     * @param choice Should be one of the choices presented in the FlowRequiringAttention.
      * @param args Any arguments required.
      */
-    fun provideProtocolResponse(protocol: ProtocolInstanceRef, choice: SecureHash, args: Map<String, Any?>)
+    fun provideFlowResponse(flow: FlowInstanceRef, choice: SecureHash, args: Map<String, Any?>)
 
 }
 
@@ -131,20 +131,20 @@ data class ContractLedgerRef(val hash: SecureHash) : ContractDefRef
 
 
 /**
- * Encapsulates the protocol to be instantiated.  e.g. TwoPartyTradeProtocol.Buyer.
+ * Encapsulates the flow to be instantiated.  e.g. TwoPartyTradeFlow.Buyer.
  */
-interface ProtocolRef {
+interface FlowRef {
 
 }
 
-data class ProtocolClassRef(val className: String) : ProtocolRef
+data class FlowClassRef(val className: String) : FlowRef
 
-data class ProtocolInstanceRef(val protocolInstance: SecureHash, val protocolClass: ProtocolClassRef, val protocolStepId: String)
+data class FlowInstanceRef(val flowInstance: SecureHash, val flowClass: FlowClassRef, val flowStepId: String)
 
 /**
- * Thinking that Instant is OK for short lived protocol deadlines.
+ * Thinking that Instant is OK for short lived flow deadlines.
  */
-data class ProtocolRequiringAttention(val ref: ProtocolInstanceRef, val prompt: String, val choiceIdsToMessages: Map<SecureHash, String>, val dueBy: Instant)
+data class FlowRequiringAttention(val ref: FlowInstanceRef, val prompt: String, val choiceIdsToMessages: Map<SecureHash, String>, val dueBy: Instant)
 
 
 /**

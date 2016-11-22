@@ -9,12 +9,12 @@ import net.corda.core.node.services.dealsWith
 import net.corda.vega.analytics.InitialMarginTriple
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState
+import net.corda.vega.flows.IRSTradeFlow
+import net.corda.vega.flows.SimmFlow
+import net.corda.vega.flows.SimmRevaluation
 import net.corda.vega.portfolio.Portfolio
 import net.corda.vega.portfolio.toPortfolio
 import net.corda.vega.portfolio.toStateAndRef
-import net.corda.vega.protocols.IRSTradeProtocol
-import net.corda.vega.protocols.SimmProtocol
-import net.corda.vega.protocols.SimmRevaluation
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.ws.rs.*
@@ -153,7 +153,7 @@ class PortfolioApi(val services: ServiceHub) {
         return withParty(partyName) {
             val buyer = if (swap.buySell.isBuy) ownParty else it
             val seller = if (swap.buySell.isSell) ownParty else it
-            services.invokeProtocolAsync(IRSTradeProtocol.Requester::class.java, swap.toData(buyer, seller), it).resultFuture.get()
+            services.invokeFlowAsync(IRSTradeFlow.Requester::class.java, swap.toData(buyer, seller), it).resultFuture.get()
             Response.accepted().entity("{}").build()
         }
     }
@@ -268,9 +268,9 @@ class PortfolioApi(val services: ServiceHub) {
         return withParty(partyName) { otherParty ->
             val existingSwap = getPortfolioWith(otherParty)
             if (existingSwap == null) {
-                services.invokeProtocolAsync(SimmProtocol.Requester::class.java, otherParty, params.valuationDate).resultFuture.get()
+                services.invokeFlowAsync(SimmFlow.Requester::class.java, otherParty, params.valuationDate).resultFuture.get()
             } else {
-                services.invokeProtocolAsync(SimmRevaluation.Initiator::class.java, getPortfolioStateAndRefWith(otherParty).ref, params.valuationDate).resultFuture.get()
+                services.invokeFlowAsync(SimmRevaluation.Initiator::class.java, getPortfolioStateAndRefWith(otherParty).ref, params.valuationDate).resultFuture.get()
             }
 
             withPortfolio(otherParty) { portfolioState ->

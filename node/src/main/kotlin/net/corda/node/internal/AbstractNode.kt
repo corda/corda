@@ -8,17 +8,20 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.X509Utilities
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChangeType
-import net.corda.core.protocols.ProtocolLogic
-import net.corda.core.protocols.ProtocolLogicRefFactory
-import net.corda.core.protocols.ProtocolStateMachine
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
+import net.corda.flows.CashCommand
+import net.corda.flows.CashFlow
+import net.corda.flows.sendRequest
 import net.corda.node.api.APIServer
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
@@ -30,7 +33,7 @@ import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.RPCOps
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_PROTOCOL_TOPIC
+import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_FLOW_TOPIC
 import net.corda.node.services.network.NetworkMapService.RegistrationResponse
 import net.corda.node.services.network.NodeRegistration
 import net.corda.node.services.network.PersistentNetworkMapService
@@ -45,9 +48,6 @@ import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
-import net.corda.protocols.CashCommand
-import net.corda.protocols.CashProtocol
-import net.corda.protocols.sendRequest
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
@@ -66,7 +66,7 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
  * I/O), or a mock implementation suitable for unit test environments.
  *
  * Marked as SingletonSerializeAsToken to prevent the invisible reference to AbstractNode in the ServiceHub accidentally
- * sweeping up the Node into the Kryo checkpoint serialization via any protocols holding a reference to ServiceHub.
+ * sweeping up the Node into the Kryo checkpoint serialization via any flows holding a reference to ServiceHub.
  */
 // TODO: Where this node is the initial network map service, currently no networkMapService is provided.
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
@@ -95,7 +95,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
     protected val _servicesThatAcceptUploads = ArrayList<AcceptsFileUpload>()
     val servicesThatAcceptUploads: List<AcceptsFileUpload> = _servicesThatAcceptUploads
 
-    private val protocolFactories = ConcurrentHashMap<Class<*>, (Party) -> ProtocolLogic<*>>()
+    private val flowFactories = ConcurrentHashMap<Class<*>, (Party) -> FlowLogic<*>>()
     protected val partyKeys = mutableSetOf<KeyPair>()
 
     val services = object : ServiceHubInternal() {
@@ -112,18 +112,18 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
 
         // Internal only
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
-        override val protocolLogicRefFactory: ProtocolLogicRefFactory get() = protocolLogicFactory
+        override val flowLogicRefFactory: FlowLogicRefFactory get() = flowLogicFactory
 
-        override fun <T> startProtocol(logic: ProtocolLogic<T>): ProtocolStateMachine<T> = smm.add(logic)
+        override fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = smm.add(logic)
 
-        override fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>) {
-            require(markerClass !in protocolFactories) { "${markerClass.java.name} has already been used to register a protocol" }
-            log.info("Registering protocol ${markerClass.java.name}")
-            protocolFactories[markerClass.java] = protocolFactory
+        override fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party) -> FlowLogic<*>) {
+            require(markerClass !in flowFactories) { "${markerClass.java.name} has already been used to register a flow" }
+            log.info("Registering flow ${markerClass.java.name}")
+            flowFactories[markerClass.java] = flowFactory
         }
 
-        override fun getProtocolFactory(markerClass: Class<*>): ((Party) -> ProtocolLogic<*>)? {
-            return protocolFactories[markerClass]
+        override fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)? {
+            return flowFactories[markerClass]
         }
 
         override fun recordTransactions(txs: Iterable<SignedTransaction>) {
@@ -149,7 +149,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
     lateinit var netMapCache: NetworkMapCache
     lateinit var api: APIServer
     lateinit var scheduler: NodeSchedulerService
-    lateinit var protocolLogicFactory: ProtocolLogicRefFactory
+    lateinit var flowLogicFactory: FlowLogicRefFactory
     lateinit var schemas: SchemaService
     val customServices: ArrayList<Any> = ArrayList()
     protected val runOnStop: ArrayList<Runnable> = ArrayList()
@@ -204,8 +204,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             // the identity key. But the infrastructure to make that easy isn't here yet.
             keyManagement = makeKeyManagementService()
             api = APIServerImpl(this@AbstractNode)
-            protocolLogicFactory = initialiseProtocolLogicFactory()
-            scheduler = NodeSchedulerService(database, services, protocolLogicFactory)
+            flowLogicFactory = initialiseFlowLogicFactory()
+            scheduler = NodeSchedulerService(database, services, flowLogicFactory)
 
             val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
 
@@ -309,31 +309,32 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         }
     }
 
-    private val defaultProtocolWhiteList: Map<Class<out ProtocolLogic<*>>, Set<Class<*>>> = mapOf(
-            CashProtocol::class.java to setOf(
+    private val defaultFlowWhiteList: Map<Class<out FlowLogic<*>>, Set<Class<*>>> = mapOf(
+            CashFlow::class.java to setOf(
                     CashCommand.IssueCash::class.java,
                     CashCommand.PayCash::class.java,
                     CashCommand.ExitCash::class.java
             )
     )
-    private fun initialiseProtocolLogicFactory(): ProtocolLogicRefFactory {
-        val protocolWhitelist = HashMap<String, Set<String>>()
 
-        for ((protocolClass, extraArgumentTypes) in defaultProtocolWhiteList) {
+    private fun initialiseFlowLogicFactory(): FlowLogicRefFactory {
+        val flowWhitelist = HashMap<String, Set<String>>()
+
+        for ((flowClass, extraArgumentTypes) in defaultFlowWhiteList) {
             val argumentWhitelistClassNames = HashSet(extraArgumentTypes.map { it.name })
-            protocolClass.constructors.forEach {
+            flowClass.constructors.forEach {
                 it.parameters.mapTo(argumentWhitelistClassNames) { it.type.name }
             }
-            protocolWhitelist.merge(protocolClass.name, argumentWhitelistClassNames, { x, y -> x + y })
+            flowWhitelist.merge(flowClass.name, argumentWhitelistClassNames, { x, y -> x + y })
         }
 
         for (plugin in pluginRegistries) {
-            for ((className, classWhitelist) in plugin.requiredProtocols) {
-                protocolWhitelist.merge(className, classWhitelist, { x, y -> x + y })
+            for ((className, classWhitelist) in plugin.requiredFlows) {
+                flowWhitelist.merge(className, classWhitelist, { x, y -> x + y })
             }
         }
 
-        return ProtocolLogicRefFactory(protocolWhitelist)
+        return FlowLogicRefFactory(flowWhitelist)
     }
 
     private fun buildPluginServices(tokenizableServices: MutableList<Any>): List<Any> {
@@ -406,7 +407,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         val reg = NodeRegistration(info, instant.toEpochMilli(), type, expires)
         val legalIdentityKey = obtainLegalIdentityKey()
         val request = NetworkMapService.RegistrationRequest(reg.toWire(legalIdentityKey.private), net.myAddress)
-        return net.sendRequest(REGISTER_PROTOCOL_TOPIC, request, networkMapAddr)
+        return net.sendRequest(REGISTER_FLOW_TOPIC, request, networkMapAddr)
     }
 
     protected open fun makeKeyManagementService(): KeyManagementService = PersistentKeyManagementService(partyKeys)

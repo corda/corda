@@ -8,7 +8,7 @@ import net.corda.core.success
 import net.corda.core.utilities.ApiUtils
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.loggerFor
-import net.corda.protocols.FinalityProtocol
+import net.corda.flows.FinalityFlow
 import net.corda.testing.ALICE_KEY
 import java.util.concurrent.CompletableFuture
 import javax.ws.rs.*
@@ -49,10 +49,10 @@ class AttachmentDemoApi(val services: ServiceHub) {
 
             // Send the transaction to the other recipient
             val tx = ptx.toSignedTransaction()
-            services.invokeProtocolAsync(FinalityProtocol::class.java, tx, setOf(it)).resultFuture.success {
-                println("Successfully sent attachment with the FinalityProtocol")
+            services.invokeFlowAsync<Unit>(FinalityFlow::class.java, tx, setOf(it)).resultFuture.success {
+                println("Successfully sent attachment with the FinalityFlow")
             }.failure {
-                logger.error("Failed to send attachment with the FinalityProtocol", it)
+                logger.error("Failed to send attachment with the FinalityFlow")
             }
 
             Response.accepted().build()
@@ -64,10 +64,10 @@ class AttachmentDemoApi(val services: ServiceHub) {
     @Consumes(MediaType.APPLICATION_JSON)
     fun runRecipient(): Response {
         val future = CompletableFuture<Response>()
-        // Normally we would receive the transaction from a more specific protocol, but in this case we let [FinalityProtocol]
+        // Normally we would receive the transaction from a more specific flow, but in this case we let [FinalityFlow]
         // handle receiving it for us.
         services.storageService.validatedTransactions.updates.subscribe { event ->
-            // When the transaction is received, it's passed through [ResolveTransactionsProtocol], which first fetches any
+            // When the transaction is received, it's passed through [ResolveTransactionsFlow], which first fetches any
             // attachments for us, then verifies the transaction. As such, by the time it hits the validated transaction store,
             // we have a copy of the attachment.
             val tx = event.tx

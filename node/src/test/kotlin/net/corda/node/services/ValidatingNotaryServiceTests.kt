@@ -8,12 +8,12 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.flows.NotaryError
+import net.corda.flows.NotaryException
+import net.corda.flows.NotaryFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.protocols.NotaryError
-import net.corda.protocols.NotaryException
-import net.corda.protocols.NotaryProtocol
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.MINI_CORP_KEY
 import net.corda.testing.node.MockNetwork
@@ -79,8 +79,8 @@ class ValidatingNotaryServiceTests {
     }
 
     private fun runClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.WithKey> {
-        val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.services.startProtocol(protocol).resultFuture
+        val flow = NotaryFlow.Client(stx)
+        val future = clientNode.services.startFlow(flow).resultFuture
         net.runNetwork()
         return future
     }

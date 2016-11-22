@@ -4,18 +4,18 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.RetryableException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.flows.FlowLogic
 import net.corda.core.math.CubicSplineInterpolator
 import net.corda.core.math.Interpolator
 import net.corda.core.math.InterpolatorFactory
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.ServiceType
-import net.corda.core.protocols.ProtocolLogic
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.irs.protocols.FixingProtocol
-import net.corda.irs.protocols.RatesFixProtocol
+import net.corda.irs.flows.FixingFlow
+import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.services.api.AcceptsFileUpload
 import net.corda.node.utilities.AbstractJDBCHashSet
 import net.corda.node.utilities.FiberBox
@@ -46,10 +46,10 @@ object NodeInterestRates {
     val type = ServiceType.corda.getSubType("interest_rates")
 
     /**
-     * Register the protocol that is used with the Fixing integration tests.
+     * Register the flow that is used with the Fixing integration tests.
      */
     class Plugin : CordaPluginRegistry() {
-        override val requiredProtocols: Map<String, Set<String>> = mapOf(Pair(FixingProtocol.FixingRoleDecider::class.java.name, setOf(Duration::class.java.name, StateRef::class.java.name)))
+        override val requiredFlows: Map<String, Set<String>> = mapOf(Pair(FixingFlow.FixingRoleDecider::class.java.name, setOf(Duration::class.java.name, StateRef::class.java.name)))
         override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
     }
 
@@ -67,20 +67,20 @@ object NodeInterestRates {
         init {
             // Note access to the singleton oracle property is via the registered SingletonSerializeAsToken Service.
             // Otherwise the Kryo serialisation of the call stack in the Quasar Fiber extends to include
-            // the framework Oracle and the protocol will crash.
-            services.registerProtocolInitiator(RatesFixProtocol.FixSignProtocol::class) { FixSignHandler(it, this) }
-            services.registerProtocolInitiator(RatesFixProtocol.FixQueryProtocol::class) { FixQueryHandler(it, this) }
+            // the framework Oracle and the flow will crash.
+            services.registerFlowInitiator(RatesFixFlow.FixSignFlow::class) { FixSignHandler(it, this) }
+            services.registerFlowInitiator(RatesFixFlow.FixQueryFlow::class) { FixQueryHandler(it, this) }
         }
 
-        private class FixSignHandler(val otherParty: Party, val service: Service) : ProtocolLogic<Unit>() {
+        private class FixSignHandler(val otherParty: Party, val service: Service) : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
-                val request = receive<RatesFixProtocol.SignRequest>(otherParty).unwrap { it }
+                val request = receive<RatesFixFlow.SignRequest>(otherParty).unwrap { it }
                 send(otherParty, service.oracle.sign(request.ftx, request.rootHash))
             }
         }
 
-        private class FixQueryHandler(val otherParty: Party, val service: Service) : ProtocolLogic<Unit>() {
+        private class FixQueryHandler(val otherParty: Party, val service: Service) : FlowLogic<Unit>() {
 
             companion object {
                 object RECEIVED : ProgressTracker.Step("Received fix request")
@@ -95,7 +95,7 @@ object NodeInterestRates {
 
             @Suspendable
             override fun call(): Unit {
-                val request = receive<RatesFixProtocol.QueryRequest>(otherParty).unwrap { it }
+                val request = receive<RatesFixFlow.QueryRequest>(otherParty).unwrap { it }
                 val answers = service.oracle.query(request.queries, request.deadline)
                 progressTracker.currentStep = SENDING
                 send(otherParty, answers)

@@ -11,12 +11,12 @@ import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.flows.NotaryError
+import net.corda.flows.NotaryException
+import net.corda.flows.NotaryFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.protocols.NotaryError
-import net.corda.protocols.NotaryException
-import net.corda.protocols.NotaryProtocol
 import net.corda.testing.MINI_CORP_KEY
 import net.corda.testing.node.MockNetwork
 import org.junit.Before
@@ -94,10 +94,10 @@ class NotaryServiceTests {
             tx.toSignedTransaction(false)
         }
 
-        val firstSpend = NotaryProtocol.Client(stx)
-        val secondSpend = NotaryProtocol.Client(stx)
-        clientNode.services.startProtocol(firstSpend)
-        val future = clientNode.services.startProtocol(secondSpend)
+        val firstSpend = NotaryFlow.Client(stx)
+        val secondSpend = NotaryFlow.Client(stx)
+        clientNode.services.startFlow(firstSpend)
+        val future = clientNode.services.startFlow(secondSpend)
 
         net.runNetwork()
 
@@ -109,8 +109,8 @@ class NotaryServiceTests {
 
 
     private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.WithKey> {
-        val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.services.startProtocol(protocol).resultFuture
+        val flow = NotaryFlow.Client(stx)
+        val future = clientNode.services.startFlow(flow).resultFuture
         net.runNetwork()
         return future
     }

@@ -15,16 +15,19 @@ import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
 import net.corda.irs.api.NodeInterestRates
-import net.corda.irs.protocols.RatesFixProtocol
-import net.corda.testing.node.MockNetwork
+import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.jetbrains.exposed.sql.Database
-import org.junit.*
+import org.junit.After
+import org.junit.Assert
+import org.junit.Before
+import org.junit.Test
 import java.io.Closeable
 import java.time.Clock
 import kotlin.test.assertEquals
@@ -198,10 +201,10 @@ class NodeInterestRatesTest {
         val oracle = n2.info.serviceIdentities(NodeInterestRates.type).first()
         fun filterCommands(c: Command) = oracle.owningKey in c.signers && c.value is Fix
         val filterFuns = FilterFuns(filterCommands = ::filterCommands)
-        val protocol = RatesFixProtocol(tx, filterFuns, oracle, fixOf, "0.675".bd, "0.1".bd)
+        val flow = RatesFixFlow(tx, filterFuns, oracle, fixOf, "0.675".bd, "0.1".bd)
         LogHelper.setLevel("rates")
         net.runNetwork()
-        val future = n1.services.startProtocol(protocol).resultFuture
+        val future = n1.services.startFlow(flow).resultFuture
         net.runNetwork()
         future.get()
         // We should now have a valid signature over our tx from the oracle.

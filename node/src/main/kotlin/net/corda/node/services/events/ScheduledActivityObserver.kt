@@ -4,7 +4,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.protocols.ProtocolLogicRefFactory
+import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.node.services.api.ServiceHubInternal
 
 /**
@@ -15,14 +15,14 @@ class ScheduledActivityObserver(val services: ServiceHubInternal) {
     init {
         services.vaultService.updates.subscribe { update ->
             update.consumed.forEach { services.schedulerService.unscheduleStateActivity(it) }
-            update.produced.forEach { scheduleStateActivity(it, services.protocolLogicRefFactory) }
+            update.produced.forEach { scheduleStateActivity(it, services.flowLogicRefFactory) }
         }
     }
 
-    private fun scheduleStateActivity(produced: StateAndRef<ContractState>, protocolLogicRefFactory: ProtocolLogicRefFactory) {
+    private fun scheduleStateActivity(produced: StateAndRef<ContractState>, flowLogicRefFactory: FlowLogicRefFactory) {
         val producedState = produced.state.data
         if (producedState is SchedulableState) {
-            val scheduledAt = sandbox { producedState.nextScheduledActivity(produced.ref, protocolLogicRefFactory)?.scheduledAt } ?: return
+            val scheduledAt = sandbox { producedState.nextScheduledActivity(produced.ref, flowLogicRefFactory)?.scheduledAt } ?: return
             services.schedulerService.scheduleStateActivity(ScheduledStateRef(produced.ref, scheduledAt))
         }
     }
