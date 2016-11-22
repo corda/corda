@@ -28,7 +28,7 @@ buildscript {
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
         classpath 'net.corda.plugins:publish-utils:0.5'
         classpath 'net.corda.plugins:quasar-utils:0.5.1'
-        classpath 'net.corda.plugins:cordformation:0.5.2'
+        classpath 'net.corda.plugins:cordformation:0.5.3'
 
         // Can run 'gradle dependencyUpdates' to find new versions of things.
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'

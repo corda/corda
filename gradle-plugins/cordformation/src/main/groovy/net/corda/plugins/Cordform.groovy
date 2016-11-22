@@ -71,6 +71,7 @@ class Cordform extends DefaultTask {
             filter { String line -> line.replace("JAR_NAME", Node.JAR_NAME) }
             // Replaces end of line with lf to avoid issues with the bash interpreter and Windows style line endings.
             filter(FixCrLfFilter.class, eol: FixCrLfFilter.CrLf.newInstance("lf"))
+            fileMode 0755
             into "${directory}/"
         }
     }
