@@ -21,10 +21,9 @@ import java.util.*
  * to disk, and sharing them across the cluster. A new node joining the cluster will have to obtain and install a snapshot
  * containing the entire JDBC table contents.
  */
-class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: String = DEFAULT_TABLE_NAME) : StateMachine(), Snapshottable {
+class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: String) : StateMachine(), Snapshottable {
     companion object {
         private val log = loggerFor<DistributedImmutableMap<*, *>>()
-        private val DEFAULT_TABLE_NAME = "committed_states"
     }
 
     object Commands {

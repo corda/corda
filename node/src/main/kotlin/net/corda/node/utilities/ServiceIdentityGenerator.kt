@@ -8,6 +8,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 
 object ServiceIdentityGenerator {
     private val log = loggerFor<ServiceIdentityGenerator>()
@@ -37,4 +38,13 @@ object ServiceIdentityGenerator {
             keyPair.serialize().writeToFile(dir.resolve(privateKeyFile))
         }
     }
+}
+
+fun main(args: Array<String>) {
+    val dirs = args[0].split(",").map { Paths.get(it) }
+    val serviceId = args[1]
+    val serviceName = args[2]
+
+    println("Generating service identity for \"$serviceName\"")
+    ServiceIdentityGenerator.generateToDisk(dirs, serviceId, serviceName)
 }

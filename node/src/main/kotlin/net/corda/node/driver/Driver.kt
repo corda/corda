@@ -356,7 +356,7 @@ open class DriverDSL(
         // All other nodes will join the cluster
         nodeNames.drop(1).forEach {
             val nodeAddress = portAllocation.nextHostAndPort()
-            val configOverride = mapOf("notaryNodeAddress" to nodeAddress.toString(), "notaryClusterAddress" to notaryClusterAddress.toString())
+            val configOverride = mapOf("notaryNodeAddress" to nodeAddress.toString(), "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))
             startNode(it, advertisedService, emptyList(), configOverride)
         }
     }

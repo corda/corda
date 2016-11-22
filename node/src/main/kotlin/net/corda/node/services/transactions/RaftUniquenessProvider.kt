@@ -44,6 +44,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
                              db: Database, config: NodeSSLConfiguration) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
+        private val DB_TABLE_NAME = "notary_committed_states"
     }
 
     private val _clientFuture: CompletableFuture<CopycatClient>
@@ -56,7 +57,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
 
     init {
         log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
-        val stateMachineFactory = { DistributedImmutableMap<String, ByteArray>(db) }
+        val stateMachineFactory = { DistributedImmutableMap<String, ByteArray>(db, DB_TABLE_NAME) }
         val address = Address(myAddress.hostText, myAddress.port)
         val storage = buildStorage(storagePath)
         val transport = buildTransport(config)

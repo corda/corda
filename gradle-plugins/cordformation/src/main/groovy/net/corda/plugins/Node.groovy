@@ -20,6 +20,11 @@ class Node {
      * A list of advertised services ID strings.
      */
     protected List<String> advertisedServices = []
+
+    /**
+     * If running a distributed notary, a list of node addresses for joining the Raft cluster
+     */
+    protected List<String> notaryClusterAddresses = []
     /**
      * Set the list of CorDapps to install to the plugins directory. Each cordapp is a fully qualified Maven
      * dependency name, eg: com.example:product-name:0.1
@@ -102,6 +107,14 @@ class Node {
     void webPort(Integer webPort) {
         config = config.withValue("webAddress",
                 ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$webPort".toString()))
+    }
+
+    /**
+     * Set the port which to bind the Copycat (Raft) node to
+     */
+    void notaryNodePort(Integer notaryPort) {
+        config = config.withValue("notaryNodeAddress",
+                ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$notaryPort".toString()))
     }
 
     /**
@@ -205,8 +218,10 @@ class Node {
      */
     private void installConfig() {
         // Adding required default values
-        config = config.withValue('extraAdvertisedServiceIds',
-                ConfigValueFactory.fromAnyRef(advertisedServices.join(',')))
+        config = config.withValue('extraAdvertisedServiceIds', ConfigValueFactory.fromAnyRef(advertisedServices.join(',')))
+        if (notaryClusterAddresses.size() > 0) {
+            config = config.withValue('notaryClusterAddresses', ConfigValueFactory.fromIterable(notaryClusterAddresses))
+        }
         def configFileText = config.root().render(new ConfigRenderOptions(false, false, true, false)).split("\n").toList()
 
         // Need to write a temporary file first to use the project.copy, which resolves directories correctly.
