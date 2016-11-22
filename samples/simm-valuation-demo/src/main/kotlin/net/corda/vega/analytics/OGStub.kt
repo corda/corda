@@ -35,7 +35,7 @@ object BimmAnalysisUtils {
     fun computeMargin(combinedRatesProvider: ImmutableRatesProvider?, normalizer: PortfolioNormalizer, calculatorTotal: RwamBimmNotProductClassesCalculator,
                       first: CurrencyParameterSensitivities, second: MultiCurrencyAmount): Triple<Double, Double, Double> {
 
-        val amount = (second.amounts.map{ it -> it.amount}.fold(0.0,{ total, increment -> total + increment })) / 100.0 // Not to be used for financial purposes...
+        val amount = second.amounts.map { it.amount }.sum()
         return Triple<Double, Double, Double>(amount, 0.0, amount)
     }
 }
