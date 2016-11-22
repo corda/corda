@@ -96,7 +96,7 @@ class InterestRateSwapAPI(val services: ServiceHub) {
             return Response.ok().build()
         }
         val msg = "demodate is already $priorDemoDate and can only be updated with a later date"
-        logger.info("Attempt to set demodate to $newDemoDate but $msg")
+        logger.error("Attempt to set demodate to $newDemoDate but $msg")
         return Response.status(Response.Status.CONFLICT).entity(msg).build()
     }
 

@@ -65,7 +65,7 @@ object NodeInterestRates {
         }
 
         init {
-            // Note access to the singleton oracle property is via the registered SingletonSerializeAsToken Service.
+            // Note: access to the singleton oracle property is via the registered SingletonSerializeAsToken Service.
             // Otherwise the Kryo serialisation of the call stack in the Quasar Fiber extends to include
             // the framework Oracle and the flow will crash.
             services.registerFlowInitiator(RatesFixFlow.FixSignFlow::class) { FixSignHandler(it, this) }
@@ -81,7 +81,6 @@ object NodeInterestRates {
         }
 
         private class FixQueryHandler(val otherParty: Party, val service: Service) : FlowLogic<Unit>() {
-
             companion object {
                 object RECEIVED : ProgressTracker.Step("Received fix request")
                 object SENDING : ProgressTracker.Step("Sending fix response")
@@ -108,13 +107,10 @@ object NodeInterestRates {
 
         override fun upload(data: InputStream): String {
             val fixes = parseFile(data.bufferedReader().readText())
-            // TODO: Save the uploaded fixes to the storage service and reload on construction.
-
-            // This assignment is thread safe because knownFixes is volatile and the oracle code always snapshots
-            // the pointer to the stack before working with the map.
             oracle.knownFixes = fixes
-
-            return "Accepted ${fixes.size} new interest rate fixes"
+            val msg = "Interest rates oracle accepted ${fixes.size} new interest rate fixes"
+            println(msg)
+            return msg
         }
     }
 
@@ -125,7 +121,6 @@ object NodeInterestRates {
      */
     @ThreadSafe
     class Oracle(val identity: Party, private val signingKey: KeyPair, val clock: Clock) {
-
         private object Table : JDBCHashedTable("demo_interest_rate_fixes") {
             val name = varchar("index_name", length = 255)
             val forDay = localDate("for_day")
@@ -220,8 +215,9 @@ object NodeInterestRates {
 
             // It all checks out, so we can return a signature.
             //
-            // Note that we will happily sign an invalid transaction: we don't bother trying to validate the whole
-            // thing. This is so that later on we can start using tear-offs.
+            // Note that we will happily sign an invalid transaction, as we are only being presented with a filtered
+            // version so we can't resolve or check it ourselves. However, that doesn't matter much, as if we sign
+            // an invalid transaction the signature is worthless.
             return signingKey.signWithECDSA(merkleRoot.bytes, identity)
         }
     }
