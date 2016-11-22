@@ -73,13 +73,13 @@ commands of type ``Fix`` as in IRSDemo example. Then we can construct ``Filtered
         val wtx: WireTransaction = partialTx.toWireTransaction()
         val ftx = FilteredTransaction.buildMerkleTransaction(wtx, filterFuns)
 
-In the Oracle example this step takes place in ``RatesFixProtocol``:
+In the Oracle example this step takes place in ``RatesFixFlow``:
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
-        val protocol = RatesFixProtocol(partialTx, filterFuns, oracle, fixOf, "0.675".bd, "0.1".bd)
+        val flow = RatesFixFlow(partialTx, filterFuns, oracle, fixOf, "0.675".bd, "0.1".bd)
 
 ``FilteredTransaction`` holds ``filteredLeaves`` (data that we wanted to reveal) and Merkle branch for them.
 

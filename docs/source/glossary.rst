@@ -16,7 +16,7 @@ Contract
 Corda
     A Distributed Ledger for recording and managing financial agreements
 CorDapp
-    A Corda Distributed Application. A shared ledger application on Corda consisting of components from: State objects (data), Contract Code (allowable operations),  Flows (aka Transaction Protocols, the business logic choreography), any necessary APIs, wallet plugins, and UI components.
+    A Corda Distributed Application. A shared ledger application on Corda consisting of components from: State objects (data), Contract Code (allowable operations),  Flows (aka Transaction Flows, the business logic choreography), any necessary APIs, wallet plugins, and UI components.
 Cordformation
     A gradle plugin that can be configured via your gradle buildscripts to locally deploy a set of Corda nodes
 Counterparty

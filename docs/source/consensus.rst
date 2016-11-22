@@ -59,18 +59,18 @@ Ensuring that all input states point to the same notary is the responsibility of
 Changing notaries
 ~~~~~~~~~~~~~~~~~
 
-To change the notary for an input state, use the ``NotaryChangeProtocol``. For example:
+To change the notary for an input state, use the ``NotaryChangeFlow``. For example:
 
 .. sourcecode:: kotlin
 
     @Suspendable
     fun changeNotary(originalState: StateAndRef<ContractState>,
                      newNotary: Party): StateAndRef<ContractState> {
-        val protocol = NotaryChangeProtocol.Instigator(originalState, newNotary)
-        return subProtocol(protocol)
+        val flow = NotaryChangeFlow.Instigator(originalState, newNotary)
+        return subFlow(flow)
     }
 
-The protocol will:
+The flow will:
 
 1. Construct a transaction with the old state as the input and the new state as the output
 
@@ -152,10 +152,10 @@ At present we have two basic implementations that store committed input states i
 Obtaining a signature
 ---------------------
 
-Once a transaction is built and ready to be finalised, normally you would call ``FinalityProtocol`` passing in a
+Once a transaction is built and ready to be finalised, normally you would call ``FinalityFlow`` passing in a
 ``SignedTransaction`` (including signatures from the participants) and a list of participants to notify. This requests a
 notary signature if needed, and then sends a copy of the notarised transaction to all participants for them to store.
-``FinalityProtocol`` delegates to ``NotaryProtocol.Client`` followed by ``BroadcastTransactionProtocol`` to do the
+``FinalityFlow`` delegates to ``NotaryFlow.Client`` followed by ``BroadcastTransactionFlow`` to do the
 actual work of notarising and broadcasting the transaction. For example:
 
 .. sourcecode:: kotlin
@@ -165,21 +165,21 @@ actual work of notarising and broadcasting the transaction. For example:
         // We conclusively cannot have all the signatures, as the notary has not signed yet
         val tx = ptx.toSignedTransaction(checkSufficientSignatures = false)
         // The empty set would be the trigger events, which are not used here
-        val protocol = FinalityProtocol(tx, emptySet(), participants)
-        return serviceHub.startProtocol("protocol.finalisation", protocol)
+        val flow = FinalityFlow(tx, emptySet(), participants)
+        return serviceHub.startFlow("flow.finalisation", flow)
     }
 
-To manually obtain a signature from a notary you can call ``NotaryProtocol.Client`` directly. The protocol will work out
+To manually obtain a signature from a notary you can call ``NotaryFlow.Client`` directly. The flow will work out
 which notary needs to be called based on the input states and the timestamp command. For example, the following snippet
-can be used when writing a custom protocol:
+can be used when writing a custom flow:
 
 .. sourcecode:: kotlin
 
     fun getNotarySignature(wtx: WireTransaction): DigitalSignature.LegallyIdentifiable {
-        return subProtocol(NotaryProtocol.Client(wtx))
+        return subFlow(NotaryFlow.Client(wtx))
     }
 
-On conflict the ``NotaryProtocol`` with throw a ``NotaryException`` containing the conflict details:
+On conflict the ``NotaryFlow`` with throw a ``NotaryException`` containing the conflict details:
 
 .. sourcecode:: kotlin
 
@@ -192,4 +192,4 @@ On conflict the ``NotaryProtocol`` with throw a ``NotaryException`` containing t
      */
     data class ConsumingTx(val id: SecureHash, val inputIndex: Int, val requestingParty: Party)
 
-Conflict handling and resolution is currently the responsibility of the protocol author.
+Conflict handling and resolution is currently the responsibility of the flow author.

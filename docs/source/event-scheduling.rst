@@ -28,8 +28,8 @@ due.  If a contract state is consumed in the UTXO model, then what *was* the nex
 and the next time sensitive event is determined by any successor contract state.
 
 Knowing when the next time sensitive event is due to occur is useful, but typically some *activity* is expected to take
-place when this event occurs.  We already have a model for business processes in the form of :doc:`protocols <protocol-state-machines>`,
-so in the platform we have introduced the concept of *scheduled activities* that can invoke protocol state machines
+place when this event occurs.  We already have a model for business processes in the form of :doc:`flows <flow-state-machines>`,
+so in the platform we have introduced the concept of *scheduled activities* that can invoke flow state machines
 at a scheduled time.  A contract state can optionally described the next scheduled activity for itself.  If it omits
 to do so, then nothing will be scheduled.
 
@@ -40,18 +40,18 @@ There are two main steps to implementing scheduled events:
 
 * Have your ``ContractState`` implementation also implement ``SchedulableState``.  This requires a method named
   ``nextScheduledActivity`` to be implemented which returns an optional ``ScheduledActivity`` instance.
-  ``ScheduledActivity`` captures what ``ProtocolLogic`` instance each node will run, to perform the activity, and when it
+  ``ScheduledActivity`` captures what ``FlowLogic`` instance each node will run, to perform the activity, and when it
   will run is described by a ``java.time.Instant``.  Once your state implements this interface and is tracked by the
   wallet, it can expect to be queried for the next activity when committed to the wallet.
-* If nothing suitable exists, implement a ``ProtocolLogic`` to be executed by each node as the activity itself.
+* If nothing suitable exists, implement a ``FlowLogic`` to be executed by each node as the activity itself.
   The important thing to remember is that in the current implementation, each node that is party to the transaction
-  will execute the same ``ProtocolLogic``, so it needs to establish roles in the business process based on the contract
+  will execute the same ``FlowLogic``, so it needs to establish roles in the business process based on the contract
   state and the node it is running on. Each side will follow different but complementary paths through the business logic.
 
 .. note:: The scheduler's clock always operates in the UTC time zone for uniformity, so any time zone logic must be
    performed by the contract, using ``ZonedDateTime``.
 
-In the short term, until we have automatic protocol session set up, you will also likely need to install a network
+In the short term, until we have automatic flow session set up, you will also likely need to install a network
 handler to help with obtaining a unqiue and secure random session.  An example is described below.
 
 The production and consumption of ``ContractStates`` is observed by the scheduler and the activities associated with
@@ -73,30 +73,30 @@ Let's take an example of the interest rate swap fixings for our scheduled events
    .. sourcecode:: kotlin
 
         override fun nextScheduledActivity(thisStateRef: StateRef,
-                                           protocolLogicRefFactory: ProtocolLogicRefFactory): ScheduledActivity? {
+                                           flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             val nextFixingOf = nextFixingOf() ?: return null
 
             val (instant, duration) = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name,
                                                                                 source = floatingLeg.indexSource,
                                                                                 date = nextFixingOf.forDay)
-            return ScheduledActivity(protocolLogicRefFactory.create(TwoPartyDealProtocol.FixingRoleDecider::class.java,
+            return ScheduledActivity(flowLogicRefFactory.create(TwoPartyDealFlow.FixingRoleDecider::class.java,
                                                                     thisStateRef, duration), instant)
         }
 
 The first thing this does is establish if there are any remaining fixings.  If there are none, then it returns ``null``
 to indicate that there is no activity to schedule.  Otherwise it calculates the ``Instant`` at which the interest rate
 should become available and schedules an activity at that time to work out what roles each node will take in the fixing
-business process and to take on those roles.  That ``ProtocolLogic`` will be handed the ``StateRef`` for the interest
+business process and to take on those roles.  That ``FlowLogic`` will be handed the ``StateRef`` for the interest
 rate swap ``State`` in question, as well as a tolerance ``Duration`` of how long to wait after the activity is triggered
 for the interest rate before indicating an error.
 
-.. note:: This is a way to create a reference to the ProtocolLogic class and its constructor parameters to
+.. note:: This is a way to create a reference to the FlowLogic class and its constructor parameters to
    instantiate. The reference can be checked against a per-node whitelist of approved and allowable types as
    part of our overall security sandboxing.
 
 
 As previously mentioned, we currently need a small network handler to assist with session setup until the work to
 automate that is complete.  See the interest rate swap specific implementation ``FixingSessionInitiationHandler`` which
-is responsible for starting a ``ProtocolLogic`` to perform one role in the fixing protocol with the ``sessionID`` sent
-by the ``FixingRoleDecider`` on the other node which then launches the other role in the fixing protocol.  Currently
+is responsible for starting a ``FlowLogic`` to perform one role in the fixing flow with the ``sessionID`` sent
+by the ``FixingRoleDecider`` on the other node which then launches the other role in the fixing flow.  Currently
 the handler needs to be manually installed in the node.

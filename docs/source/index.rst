@@ -65,7 +65,7 @@ Read on to learn:
    tutorial-contract-clauses
    tutorial-test-dsl
    tutorial-clientrpc-api
-   protocol-state-machines
+   flow-state-machines
    oracles
    tutorial-attachments
    event-scheduling

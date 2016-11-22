@@ -5,7 +5,7 @@ The repository contains a small number of demo programs that run two-node networ
 so far. We have:
 
 1. The trader demo, which shows a delivery-vs-payment atomic swap of commercial paper for cash. You can learn more about
-   how this works in :doc:`protocol-state-machines`.
+   how this works in :doc:`flow-state-machines`.
 2. The IRS demo, which shows two nodes establishing an interest rate swap between them and performing fixings with a
    rates oracle, all driven via the HTTP API.
 3. The IRS demo web interface - a web interface to the IRS demo.
