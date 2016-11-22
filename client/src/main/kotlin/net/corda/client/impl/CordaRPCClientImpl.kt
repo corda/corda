@@ -88,16 +88,14 @@ class CordaRPCClientImpl(private val session: ClientSession,
                                                private val rpcLocation: Throwable) : Serializer<Observable<Any>>() {
         override fun read(kryo: Kryo, input: Input, type: Class<Observable<Any>>): Observable<Any> {
             val handle = input.readInt(true)
-            return sessionLock.withLock {
-                var ob = addressToQueueObservables.getIfPresent(qName)
-                if (ob == null) {
-                    ob = QueuedObservable(qName, rpcName, rpcLocation, this)
-                    addressToQueueObservables.put(qName, ob)
+            val ob = sessionLock.withLock {
+                addressToQueueObservables.getIfPresent(qName) ?: QueuedObservable(qName, rpcName, rpcLocation, this).apply {
+                    addressToQueueObservables.put(qName, this)
                 }
-                val result = ob.getForHandle(handle)
-                rpcLog.trace { "Deserializing and connecting a new observable for $rpcName on $qName: $result" }
-                result
             }
+            val result = ob.getForHandle(handle)
+            rpcLog.debug { "Deserializing and connecting a new observable for $rpcName on $qName: $result" }
+            return result
         }
 
         override fun write(kryo: Kryo, output: Output, `object`: Observable<Any>) {
@@ -142,7 +140,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
 
             // All invoked methods on the proxy end up here.
             val location = Throwable()
-            rpcLog.trace {
+            rpcLog.debug {
                 val argStr = args?.joinToString() ?: ""
                 "-> RPC -> ${method.name}($argStr): ${method.returnType}"
             }
@@ -152,7 +150,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
             // sendRequest may return a reconfigured Kryo if the method returns observables.
             val kryo: Kryo = sendRequest(args, location, method) ?: createRPCKryo()
             val next = receiveResponse(kryo, method, timeout)
-            rpcLog.trace { "<- RPC <- ${method.name} = $next" }
+            rpcLog.debug { "<- RPC <- ${method.name} = $next" }
             return unwrapOrThrow(next)
         }
 
@@ -257,7 +255,18 @@ class CordaRPCClientImpl(private val session: ClientSession,
         @Synchronized
         fun getForHandle(handle: Int): Observable<Any> {
             return observables.getOrPut(handle) {
-                rootShared.filter { it.forHandle == handle }.map { it.what }.dematerialize<Any>().bufferUntilSubscribed().share()
+                /**
+                 * Note that the order of bufferUntilSubscribed() -> dematerialize() is very important here.
+                 *
+                 * In particular doing it the other way around may result in the following edge case:
+                 * The RPC returns two (or more) Observables. The first Observable unsubscribes *during serialisation*,
+                 * before the second one is hit, causing the [rootShared] to unsubscribe and consequently closing
+                 * the underlying artemis queue, even though the second Observable was not even registered.
+                 *
+                 * The buffer -> dematerialize order ensures that the Observable may not unsubscribe until the caller
+                 * subscribes, which must be after full deserialisation and registering of all top level Observables.
+                 */
+                rootShared.filter { it.forHandle == handle }.map { it.what }.bufferUntilSubscribed().dematerialize<Any>().share()
             }
         }
 
