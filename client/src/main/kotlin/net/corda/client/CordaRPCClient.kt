@@ -44,6 +44,9 @@ class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfigur
             checkStorePasswords()  // Check the password.
             val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport(ConnectionDirection.OUTBOUND, host.hostText, host.port))
             serverLocator.threadPoolMaxSize = 1
+            // TODO: Configure session reconnection, confirmation window sizes and other Artemis features.
+            // This will allow reconnection in case of server restart/network outages/IP address changes, etc.
+            // See http://activemq.apache.org/artemis/docs/1.5.0/client-reconnection.html
             sessionFactory = serverLocator.createSessionFactory()
             session = sessionFactory.createSession(username, password, false, true, true, serverLocator.isPreAcknowledge, serverLocator.ackBatchSize)
             session.start()
@@ -79,7 +82,8 @@ class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfigur
      *
      * RPC sends and receives are logged on the net.corda.rpc logger.
      *
-     * By default there are no timeouts on calls. RPCs can survive temporary losses or changes in connectivity,
+     * By default there are no timeouts on calls. This is deliberate, RPCs without timeouts can survive restarts,
+     * maintenance downtime and moves of the server. RPCs can survive temporary losses or changes in client connectivity,
      * like switching between wifi networks. You can specify a timeout on the level of a proxy. If a call times
      * out it will throw [RPCException.Deadline].
      *
