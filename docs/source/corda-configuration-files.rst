@@ -23,27 +23,8 @@ Configuration File Examples
 
 General node configuration file for hosting the IRSDemo services.
 
-.. code-block:: text
-
-    basedir : "./nodea"
-    myLegalName : "Bank A"
-    nearestCity : "London"
-    keyStorePassword : "cordacadevpass"
-    trustStorePassword : "trustpass"
-    dataSourceProperties : {
-       dataSourceClassName : org.h2.jdbcx.JdbcDataSource
-       "dataSource.url" : "jdbc:h2:"${basedir}"/persistence"
-       "dataSource.user" : sa
-       "dataSource.password" : ""
-    }
-    artemisAddress : "localhost:31337"
-    webAddress : "localhost:31339"
-    extraAdvertisedServiceIds: "corda.interest_rates"
-    networkMapAddress : "localhost:12345"
-    useHTTPS : false
-    rpcUsers : [
-        { user=user1, password=letmein, permissions=[ cash ] }
-    ]
+.. literalinclude:: example-code/src/main/resources/example-node.conf
+    :language: cfg
 
 NetworkMapService plus Simple Notary configuration file.
 

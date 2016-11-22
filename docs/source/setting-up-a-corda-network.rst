@@ -1,16 +1,15 @@
-A Corda network
-
+.. _log4j2: http://logging.apache.org/log4j/2.x/
 
 Introduction - What is a corda network?
 ========================================================
 
-A Corda network consists of a number of machines running ``node``s, including a single node operating as the network map service. These nodes communicate using persistent protocols in order to create and validate transactions.
+A Corda network consists of a number of machines running nodes, including a single node operating as the network map service. These nodes communicate using persistent protocols in order to create and validate transactions.
 
 There are four broader categories of functionality one such node may have. These pieces of functionality are provided as services, and one node may run several of them.
 
-* Network map: The node running the network map provides a way to resolve identities to physical node addresses.
+* Network map: The node running the network map provides a way to resolve identities to physical node addresses and associated public keys.
 * Notary: Nodes running a notary service witness state spends and have the final say in whether a transaction is a double-spend or not.
-* Oracle: Nodes providing some oracle functionality like exchange rate or interest rate witnesses.
+* Oracle: Network services that link the ledger to the outside world by providing facts that affect the validity of transactions.
 * Regular node: All nodes have a vault and may start protocols communicating with other nodes, notaries and oracles and evolve their private ledger.
 
 Setting up your own network
@@ -19,7 +18,13 @@ Setting up your own network
 Certificates
 ------------
 
-All node certificates' root must be the same. Later R3 will provide the root for production use, but for testing you can use ``certSigningRequestUtility.jar`` to generate a node certificate with a fixed test root:
+If two nodes are to communicate successfully then both need to have
+each other's root certificate in their truststores. The simplest way
+to achieve this is to have all nodes sign off of a single root.
+
+Later R3 will provide this root for production use, but for testing you
+can use ``certSigningRequestUtility.jar`` to generate a node
+certificate with a fixed test root:
 
 .. sourcecode:: bash
 
@@ -31,7 +36,7 @@ All node certificates' root must be the same. Later R3 will provide the root for
 Configuration
 -------------
 
-A node can be configured by adding/editing ``node.conf`` in the node's directory.
+A node can be configured by adding/editing ``node.conf`` in the node's directory. For details see :doc:`corda-configuration-files`
 
 An example configuration:
 
@@ -40,24 +45,37 @@ An example configuration:
 
 The most important fields regarding network configuration are:
 
-* ``artemisAddress``: This specifies a host and port. Note that the address bound will **NOT** be ``cordaload-node1``, but rather ``::`` (all addresses on all interfaces). The hostname specified is the hostname *that must be externally resolvable by other nodes in the network*. In the above configuration this is the resolvable name of a node in a vpn.
+* ``artemisAddress``: This specifies a host and port. Note that the address bound will **NOT** be ``my-corda-node``, but rather ``::`` (all addresses on all interfaces). The hostname specified is the hostname *that must be externally resolvable by other nodes in the network*. In the above configuration this is the resolvable name of a machine in a vpn.
 * ``webAddress``: The address the webserver should bind. Note that the port should be distinct from that of ``artemisAddress``.
 * ``networkMapAddress``: The resolvable name and artemis port of the network map node. Note that if this node itself is to be the network map this field should not be specified.
 
 Starting the nodes
 ------------------
 
-You may now start the nodes in any order. You should see lots of log lines about the startup.
+You may now start the nodes in any order. Note that the node is not fully started until it has successfully registered with the network map!
 
-Note that the node is not fully started until it has successfully registered with the network map! A good way of determining whether a node is up is to check whether its ``webAddress`` is bound.
+You should see a banner, some log lines and eventually ``Node started up and registered``, indicating that the node is fully started.
 
-In terms of process management there is no pre-described method, you may start the jars by hand or perhaps use systemd and friends.
+.. TODO: Add a better way of polling for startup
+A programmatic way of determining whether a node is up is to check whether it's ``webAddress`` is bound.
+
+In terms of process management there is no prescribed method. You may start the jars by hand or perhaps use systemd and friends.
+
+Logging
+-------
+
+Only a handful of important lines are printed to the console. For
+details/diagnosing problems check the logs.
+
+Logging is standard log4j2_ and may be configured accordingly. Logs
+are by default redirected to files in ``NODE_DIRECTORY/logs/``.
+
 
 Connecting to the nodes
 -----------------------
 
 Once a node has started up successfully you may connect to it as a client to initiate protocols/query state etc. Depending on your network setup you may need to tunnel to do this remotely.
 
-See the :doc:`tutorial-clientrpc-api` on how to establish an RPC link, or you can use the web apis as well.
+See the :doc:`tutorial-clientrpc-api` on how to establish an RPC link.
 
 Sidenote: A client is always associated with a single node with a single identity, which only sees their part of the ledger.

@@ -9,15 +9,24 @@ import kotlin.reflect.declaredMemberProperties
 class ExampleNodeConfTest {
     @Test
     fun exampleNodeConfParsesFine() {
-        val configResource = ExampleNodeConfTest::class.java.classLoader.getResource("example-node.conf")
-        val nodeConfig = FullNodeConfiguration(
-                ConfigHelper.loadConfig(
-                        baseDirectoryPath = Paths.get("some-example-base-dir"),
-                        configFileOverride = Paths.get(configResource.toURI())
-                )
+        val exampleNodeConfFilenames = arrayOf(
+                "example-node.conf",
+                "example-network-map-node.conf"
         )
-        nodeConfig.javaClass.kotlin.declaredMemberProperties.forEach { member ->
-            member.get(nodeConfig)
+
+        exampleNodeConfFilenames.forEach {
+            println("Checking $it")
+            val configResource = ExampleNodeConfTest::class.java.classLoader.getResource(it)
+            val nodeConfig = FullNodeConfiguration(
+                    ConfigHelper.loadConfig(
+                            baseDirectoryPath = Paths.get("some-example-base-dir"),
+                            configFileOverride = Paths.get(configResource.toURI())
+                    )
+            )
+            // Force the config fields as they are resolved lazily
+            nodeConfig.javaClass.kotlin.declaredMemberProperties.forEach { member ->
+                member.get(nodeConfig)
+            }
         }
     }
 }

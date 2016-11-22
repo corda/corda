@@ -1,6 +1,7 @@
 package net.corda.node.services
 
 import com.typesafe.config.ConfigFactory
+import net.corda.node.services.config.FullNodeConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -68,6 +69,6 @@ class RPCUserServiceImplTest {
     }
 
     private fun loadWithContents(configString: String): RPCUserServiceImpl {
-        return RPCUserServiceImpl(ConfigFactory.parseString(configString))
+        return RPCUserServiceImpl(FullNodeConfiguration(ConfigFactory.parseString(configString)))
     }
 }

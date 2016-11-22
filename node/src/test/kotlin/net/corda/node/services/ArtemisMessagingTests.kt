@@ -11,6 +11,7 @@ import net.corda.core.messaging.Message
 import net.corda.core.messaging.createMessage
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.utilities.LogHelper
+import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
@@ -65,7 +66,7 @@ class ArtemisMessagingTests {
 
     @Before
     fun setUp() {
-        userService = RPCUserServiceImpl(ConfigFactory.empty())
+        userService = RPCUserServiceImpl(FullNodeConfiguration(ConfigFactory.empty()))
         // TODO: create a base class that provides a default implementation
         config = object : NodeConfiguration {
             override val basedir: Path = temporaryFolder.newFolder().toPath()
