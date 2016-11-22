@@ -173,8 +173,6 @@ A Corda network consists of the following components:
 \item Zero or more oracle services. An oracle is a well known service that signs transactions if they state a fact
 and that fact is considered to be true. They may also optionally also provide the facts. This is how the ledger can be
 connected to the real world, despite being fully deterministic.
-\item CorDapps that represent custom applications with business flows written by Corda developers
-\item Remote applications for Corda network visualization, flow and dispute resolution and other administrative tools
 \end{itemize}
 
 A purely in-memory implementation of the messaging subsystem is provided which can inject simulated latency between
@@ -192,7 +190,7 @@ This `identity' does not have to be a legal or true identity. In the same way th
 unique pseudonym that is ultimately rooted by the top of the DNS hierarchy, so too can a Corda network work with
 arbitrary self-selected usernames. The permissioning service can implement any policy it likes as long as the
 identities it signs are globally unique. Thus an entirely anonymous Corda network is possible if a suitable
-IP obfuscation system like Tor [add ref] is also used.
+IP obfuscation system like Tor\cite{Dingledine:2004:TSO:1251375.1251396} is also used.
 
 Whilst simple string identities are likely sufficient for some networks, the financial industry typically requires some
 level of \emph{know your customer} checking, and differentiation between different legal entities, branches and desks
@@ -690,12 +688,12 @@ by index alone.
 
 \subsection{Contract constraints}\label{sec:contract-constraints}
 
-The simplest way of tying states to the contract code that defines them is by hash. This works for very simple
+The easiest way of tying states to the contract code that defines them is by hash. This works for very simple
 and stable programs, but more complicated contracts may need to be upgraded. In this case it may be preferable
 for states to refer to contracts by the identity of the signer. Because contracts are stored in zip files, and
 because a Java Archive (JAR) file is just a zip with some extra files inside, it is possible to use the standard
-JAR signing infrastructure to identify the source of contract code. Simple constraints such as "any contract of
-this name signed by these keys" allow for some upgrade flexibility, at the cost of increased exposure to rogue
+JAR signing infrastructure to identify the source of contract code. Simple constraints such as ``any contract of
+this name signed by these keys'' allow for some upgrade flexibility, at the cost of increased exposure to rogue
 contract developers. Requiring combinations of signatures helps reduce the risk of a rogue or hacked developer
 publishing a bad contract version, at the cost of increased difficulty in releasing new versions. State creators
 may also specify third parties they wish to review contract code. Regardless of which set of tradeoffs is chosen,
@@ -711,11 +709,11 @@ as for code signing we place initial focus on being able to re-use the infrastru
 
 \subsection{Event scheduling}\label{sec:event-scheduling}
 
-State classes may request flows to be started at given times. When a state is considered relevant by the vault
-and the implementing CorDapp is installed and whitelisted, the node may react to the passage of time by starting
-new interactions with other nodes, people, or internal systems. As financial contracts often have a notion of
-time in them this feature can be useful for many kinds of state transitions, for example, expiry of an option
-contract, management of a default event, re-fixing of an interest rate swap and so on.
+State classes may request flows to be started at given times. When a state is considered relevant by the vault and the
+implementing CorDapp is installed and whitelisted by the administrator (e.g. in the config file), the node may react to
+the passage of time by starting new interactions with other nodes, people, or internal systems. As financial contracts
+often have a notion of time in them this feature can be useful for many kinds of state transitions, for example, expiry
+of an option contract, management of a default event, re-fixing of an interest rate swap and so on.
 
 To request scheduled events, a state may implement the \texttt{SchedulableState} interface and then return a
 request from the \texttt{nextScheduledActivity} function. The state will be queried when it is committed to the
@@ -832,9 +830,9 @@ Notaries are expected to be composed of multiple mutually distrusting parties wh
 Notaries are identified by and sign with composite public keys (\cref{sec:composite-keys})that conceptually follow the
 Interledger Crypto-Conditions specification\cite{ILPCC}. Note that whilst it would be conventional to use a BFT
 algorithm for a notary service, there is no requirement to do so and in cases where the legal system is sufficient to
-ensure protocol compliance a higher performance algorithm like RAFT may be used. Because multiple notaries can co-exist
-a single network may provide a single global BFT notary for general use and region-specific RAFT notaries for low
-latency trading within a unified regulatory area, for example London or New York.
+ensure protocol compliance a higher performance algorithm like Raft\cite{Ongaro:2014:SUC:2643634.2643666} may be used.
+Because multiple notaries can co-exist a single network may provide a single global BFT notary for general use and
+region-specific Raft notaries for lower latency trading within a unified regulatory area, for example London or New York.
 
 Notaries accept transactions submitted to them for processing and either return a signature over the transaction, or
 a rejection error that states that a double spend has occurred. The presence of a notary signature from the state's
@@ -892,7 +890,7 @@ of the art. Unlike most distributed ledger systems Corda does not tightly integr
 only to support upgrades as new algorithms are developed, but also to reflect the fact that different tradeoffs may make
 sense for different situations and networks.
 
-As a simple example, a notary that uses RAFT between nodes that are all within the same city will provide extremely good
+As a simple example, a notary that uses Raft between nodes that are all within the same city will provide extremely good
 performance and latency, at the cost of being more exposed to malicious attacks or errors by whichever node has been elected
 leader. In situations where the members making up a distributed notary service are all large, regulated institutions that
 are not expected to try and corrupt the ledger in their own favour trading off security to gain performance may make sense.
@@ -1121,6 +1119,7 @@ may create their own clauses and then pass the set of contract clauses together 
 interprets them.
 
 \subsection{Combinator libraries}
+
 Domain specific languages for the expression of financial contracts are a popular area of research. A seminal work
 is `Composing contracts' by Peyton-Jones, Seward and Eber [PJSE2000\cite{PeytonJones:2000:CCA:357766.351267}] in which
 financial contracts are modelled with a small library of Haskell combinators. These models can then be used for
@@ -1128,7 +1127,7 @@ valuation of the underlying deals. Blockchain systems use the term `contract' in
 how PJSE do but the underlying concepts can be adapted to our context as well. The platform provides an
 experimental \emph{universal contract} that builds on the language extension features of the Kotlin programming
 language. To avoid linguistic confusion it refers to the combined code/data bundle as an `arrangement' rather
-than a contract. A European FX swap expressed in this language looks like this:
+than a contract. A European FX option expressed in this language looks like this:
 
 \begin{kotlincode}
 fun fx_swap(expiry: String, notional: BigDecimal,
@@ -1318,9 +1317,14 @@ or confusion, as otherwise exploitable confusion attacks may arise.
 
 \section{Client RPC and reactive collections}
 
-Corda nodes expose a simple RPC mechanism that has a couple of unusual features. The underlying transport is
-message queues (AMQP) and methods can return object graphs that contain Rx observables\cite{Rx} which may in
-turn emit more observables.
+Any realistic deployment of a distributed ledger faces the issue of integration with an existing ecosystem of
+surrounding tools and processes. Ideally, programs that interact with the node will be loosely coupled,
+authenticated, robust against transient node outages and restarts, and speed differences (e.g. production of
+work being faster than completion of work) will be handled transparently.
+
+To meet these needs, Corda nodes expose a simple RPC mechanism that has a couple of unusual features. The underlying
+transport is message queues (AMQP) and methods can return object graphs that contain Rx observables\cite{Rx} which may
+in turn emit more observables.
 
 It is a common pattern for RPCs to return a snapshot of some data structure, along with an observable that emits
 objects representing a delta on that data structure. The client library has functionality to reconstruct the
@@ -1343,8 +1347,9 @@ are:
 \begin{itemize}
 \item A preference for binary protocols over textual protocols, as text based protocols tend to be more
 susceptible to escaping and other buffer management problems that can lead to security issues.
-\item Message queue brokers provide significant amounts of infrastructure for building reliable message based apps
-which plain HTTP does not.
+\item Message queue brokers provide significant amounts of infrastructure for building reliable apps
+which plain HTTP does not such as backpressure management, load balancing, queue browsing, management of speed
+differences and so on.
 \item REST based protocols have multiple conventions for streaming of results back to the client, none of which
 are ideal for the task.
 \end{itemize}
@@ -1354,7 +1359,6 @@ are ideal for the task.
 
 Being able to connect live data structures directly to UI toolkits also contributes to the avoidance
 of XSS exploits, XSRF exploits and similar security problems based on losing track of buffer boundaries.
-
 
 \section{Data distribution groups}
 
@@ -1603,7 +1607,7 @@ the platform may provide features that allow developers to smooth out the spikey
 checking by, for example, pre-pushing transactions to a node when the developer knows they will soon request
 the data anyway.
 
-\section{Privacy}
+\section{Privacy}\label{sec:privacy}
 
 Privacy is not a standalone feature in the way that many other aspects described in this paper are, so this section
 summarises features described elsewhere. Corda exploits multiple techniques to improve user privacy over other
