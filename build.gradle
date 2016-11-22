@@ -47,6 +47,15 @@ apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'maven-publish'
 apply plugin: 'net.corda.plugins.quasar-utils'
 
+// We need the following three lines even though they're inside an allprojects {} block below because otherwise
+// IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
+// with the run configurations. It also doesn't realise that the project is a Java 8 project and misconfigures
+// the resulting import. This fixes it.
+apply plugin: 'java'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+
 allprojects {
     apply plugin: 'java'
     apply plugin: 'jacoco'
