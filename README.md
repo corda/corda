@@ -18,7 +18,7 @@ Read our full and planned feature list [here](https://docs.corda.net/inthebox.ht
 ## Useful links
 
 * [Getting started](https://docs.corda.net/getting-set-up.html)
-* [Writing a CorDapp](https://docs.corda.net/creating-a-cordapp.html)
+* [Writing a CorDapp](https://docs.corda.net/tutorial-cordapp.html)
 * [Project website](https://corda.net)
 * [Documentation](https://docs.corda.net)
 
