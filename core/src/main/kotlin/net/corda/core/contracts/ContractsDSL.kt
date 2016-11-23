@@ -48,14 +48,14 @@ infix fun Amount<Currency>.issuedBy(deposit: PartyAndReference) = Amount(quantit
 
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class Requirements {
-    infix fun String.by(expr: Boolean) {
+object Requirements {
+    @Suppress("NOTHING_TO_INLINE")   // Inlining this takes it out of our committed ABI.
+    infix inline fun String.by(expr: Boolean) {
         if (!expr) throw IllegalArgumentException("Failed requirement: $this")
     }
 }
 
-val R = Requirements()
-inline fun <R> requireThat(body: Requirements.() -> R) = R.body()
+inline fun <R> requireThat(body: Requirements.() -> R) = Requirements.body()
 
 //// Authenticated commands ///////////////////////////////////////////////////////////////////////////////////////////
 
