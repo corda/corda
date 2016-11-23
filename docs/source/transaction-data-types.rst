@@ -64,7 +64,7 @@ of state:
 
   ``DealState``
     A LinearState representing an agreement between two or more parties. Intended to simplify implementing generic
-    protocols that manipulate many agreement types.
+    flows that manipulate many agreement types.
 
   ``FixableDealState``
     A deal state, with further functions exposed to support fixing of interest rates.

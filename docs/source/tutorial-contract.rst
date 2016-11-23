@@ -19,7 +19,7 @@ Kotlin syntax works.
 Where to put your code
 ----------------------
 
-A CorDapp is a collection of contracts, state definitions, protocols and other ways to extend the server. To create
+A CorDapp is a collection of contracts, state definitions, flows and other ways to extend the server. To create
 one you would just create a Java-style project as normal, with your choice of build system (Maven, Gradle, etc).
 Then add a dependency on ``net.corda.core:0.X`` where X is the milestone number you are depending on. The core
 module defines the base classes used in this tutorial.
@@ -694,7 +694,7 @@ a multi-party transaction, you're on your own. In Corda data is transmitted only
 multi-party transactions are a way of life, so we provide lots of support for managing them.
 
 You can learn how transactions are moved between peers and taken through the build-sign-notarise-broadcast
-process in a separate tutorial, :doc:`protocol-state-machines`.
+process in a separate tutorial, :doc:`flow-state-machines`.
 
 Non-asset-oriented smart contracts
 ----------------------------------

@@ -43,7 +43,7 @@ Preliminaries
      ISDA SIMM agreement (if none, then use the demo to enter some simple trades as described below).
 
 Initial Margin Agreement Process
-    - Agree that one will be performing the margining calculation against a portfolio of trades with another party, and agree the trades in that portfolio. In practice, one node will start the protocol but it does not matter which node does.
+    - Agree that one will be performing the margining calculation against a portfolio of trades with another party, and agree the trades in that portfolio. In practice, one node will start the flow but it does not matter which node does.
     - Individually (at the node level), identify the data (static, reference etc) one will need in order to be able to calculate the metrics on those trades
     - Confirm with the other counterparty the dataset from the above set
     - Calculate any intermediary steps and values needed for the margin calculation (ie sensitivities to risk factors)

@@ -4,22 +4,22 @@ Secure coding guidelines
 The platform does what it can to be secure by default and safe by design. Unfortunately the platform cannot
 prevent every kind of security mistake. This document describes what to think about when writing applications
 to block various kinds of attack. Whilst it may be tempting to just assume no reasonable counterparty would
-attempt to subvert your trades using protocol level attacks, relying on trust for software security makes it
+attempt to subvert your trades using flow level attacks, relying on trust for software security makes it
 harder to scale up your operations later when you might want to add counterparties quickly and without
 extensive vetting.
 
-Protocols
----------
+Flows
+-----
 
-:doc:`protocol-state-machines` are how your app communicates with other parties on the network. Therefore they
+:doc:`flow-state-machines` are how your app communicates with other parties on the network. Therefore they
 are the typical entry point for malicious data into your app and must be treated with care.
 
 The ``receive`` methods return data wrapped in the ``UntrustworthyData<T>`` marker type. This type doesn't add
 any functionality, it's only there to remind you to properly validate everything that you get from the network.
-Remember that the other side may *not* be running the code you provide to take part in the protocol: they are
+Remember that the other side may *not* be running the code you provide to take part in the flow: they are
 allowed to do anything! Things to watch out for:
 
-* A transaction that doesn't match a partial transaction built or proposed earlier in the protocol, for instance,
+* A transaction that doesn't match a partial transaction built or proposed earlier in the flow, for instance,
   if you propose to trade a cash state worth $100 for an asset, and the transaction to sign comes back from the
   other side, you must check that it points to the state you actually requested. Otherwise the attacker could
   get you to sign a transaction that spends a much larger state to you, if they know the ID of one!
@@ -30,7 +30,7 @@ allowed to do anything! Things to watch out for:
   could re-run the builder logic and do a comparison of the resulting states to ensure that it's what you expected.
   For instance if the data needed to construct the next state is available to both parties, the function to
   calculate the transaction you want to mutually agree could be shared between both classes implementing both
-  sides of the protocol.
+  sides of the flow.
 
 The theme should be clear: signing is a very sensitive operation, so you need to be sure you know what it is you
 are about to sign, and that nothing has changed in the small print!

@@ -4,11 +4,11 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-Protocol state machines
-=======================
+Flow state machines
+===================
 
-This article explains our experimental approach to modelling financial protocols in code. It explains how the
-platform's state machine framework is used, and takes you through the code for a simple 2-party asset trading protocol
+This article explains our experimental approach to modelling financial flows in code. It explains how the
+platform's state machine framework is used, and takes you through the code for a simple 2-party asset trading flow
 which is included in the source.
 
 Introduction
@@ -21,23 +21,23 @@ shared ledger, and transactions may alter many states simultaneously and atomica
 Blockchain systems such as Bitcoin support the idea of building up a finished, signed transaction by passing around
 partially signed invalid transactions outside of the main network, and by doing this you can implement
 *delivery versus payment* such that there is no chance of settlement failure, because the movement of cash and the
-traded asset are performed atomically by the same transaction. To perform such a trade involves a multi-step protocol
+traded asset are performed atomically by the same transaction. To perform such a trade involves a multi-step flow
 in which messages are passed back and forth privately between parties, checked, signed and so on.
 
-Despite how useful these protocols are, platforms such as Bitcoin and Ethereum do not assist the developer with the rather
+Despite how useful these flows are, platforms such as Bitcoin and Ethereum do not assist the developer with the rather
 tricky task of actually building them. That is unfortunate. There are many awkward problems in their implementation
 that a good platform would take care of for you, problems like:
 
 * Avoiding "callback hell" in which code that should ideally be sequential is turned into an unreadable mess due to the
-  desire to avoid using up a thread for every protocol instantiation.
-* Surviving node shutdowns/restarts that may occur in the middle of the protocol without complicating things. This
-  implies that the state of the protocol must be persisted to disk.
+  desire to avoid using up a thread for every flow instantiation.
+* Surviving node shutdowns/restarts that may occur in the middle of the flow without complicating things. This
+  implies that the state of the flow must be persisted to disk.
 * Error handling.
 * Message routing.
 * Serialisation.
 * Catching type errors, in which the developer gets temporarily confused and expects to receive/send one type of message
   when actually they need to receive/send another.
-* Unit testing of the finished protocol.
+* Unit testing of the finished flow.
 
 Actor frameworks can solve some of the above but they are often tightly bound to a particular messaging layer, and
 we would like to keep a clean separation. Additionally, they are typically not type safe, and don't make persistence or
@@ -49,7 +49,7 @@ Java and took over a month of full time work to develop. Most of that code is co
 message passing, lifecycle management, error handling and callback management. Because the business logic is quite
 spread out the code can be difficult to read and debug.
 
-As small contract-specific trading protocols are a common occurence in finance, we provide a framework for the
+As small contract-specific trading flows are a common occurence in finance, we provide a framework for the
 construction of them that automatically handles many of the concerns outlined above.
 
 Theory
@@ -70,19 +70,19 @@ We use continuations for the following reasons:
 
 A *state machine* is a piece of code that moves through various *states*. These are not the same as states in the data
 model (that represent facts about the world on the ledger), but rather indicate different stages in the progression
-of a multi-stage protocol. Typically writing a state machine would require the use of a big switch statement and some
+of a multi-stage flow. Typically writing a state machine would require the use of a big switch statement and some
 explicit variables to keep track of where you're up to. The use of continuations avoids this hassle.
 
-A two party trading protocol
-----------------------------
+A two party trading flow
+------------------------
 
-We would like to implement the "hello world" of shared transaction building protocols: a seller wishes to sell some
+We would like to implement the "hello world" of shared transaction building flows: a seller wishes to sell some
 *asset* (e.g. some commercial paper) in return for *cash*. The buyer wishes to purchase the asset using his cash. They
 want the trade to be atomic so neither side is exposed to the risk of settlement failure. We assume that the buyer
 and seller have found each other and arranged the details on some exchange, or over the counter. The details of how
 the trade is arranged isn't covered in this article.
 
-Our protocol has two parties (B and S for buyer and seller) and will proceed as follows:
+Our flow has two parties (B and S for buyer and seller) and will proceed as follows:
 
 1. S sends a ``StateAndRef`` pointing to the state they want to sell to B, along with info about the price they require
    B to pay.
@@ -91,15 +91,15 @@ Our protocol has two parties (B and S for buyer and seller) and will proceed as 
    it lacks a signature from S authorising movement of the asset.
 3. S signs it and hands the now finalised ``SignedTransaction`` back to B.
 
-You can find the implementation of this protocol in the file ``finance/src/main/kotlin/net.corda.protocols/TwoPartyTradeProtocol.kt``.
+You can find the implementation of this flow in the file ``finance/src/main/kotlin/net.corda.flows/TwoPartyTradeFlow.kt``.
 
-Assuming no malicious termination, they both end the protocol being in posession of a valid, signed transaction that
+Assuming no malicious termination, they both end the flow being in posession of a valid, signed transaction that
 represents an atomic asset swap.
 
 Note that it's the *seller* who initiates contact with the buyer, not vice-versa as you might imagine.
 
-We start by defining a wrapper that namespaces the protocol code, two functions to start either the buy or sell side
-of the protocol, and two classes that will contain the protocol definition. We also pick what data will be used by
+We start by defining a wrapper that namespaces the flow code, two functions to start either the buy or sell side
+of the flow, and two classes that will contain the flow definition. We also pick what data will be used by
 each side.
 
 .. note:: The code samples in this tutorial are only available in Kotlin, but you can use any JVM language to
@@ -109,14 +109,14 @@ each side.
 
    .. sourcecode:: kotlin
 
-      object TwoPartyTradeProtocol {
+      object TwoPartyTradeFlow {
 
           class UnacceptablePriceException(val givenPrice: Amount<Currency>) : Exception("Unacceptable price: $givenPrice")
           class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
               override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
           }
 
-          // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
+          // This object is serialised to the network and is the first flow message the seller sends to the buyer.
           data class SellerTradeInfo(
                   val assetForSale: StateAndRef<OwnableState>,
                   val price: Amount<Currency>,
@@ -131,7 +131,7 @@ each side.
                             val assetToSell: StateAndRef<OwnableState>,
                             val price: Amount<Currency>,
                             val myKeyPair: KeyPair,
-                            override val progressTracker: ProgressTracker = Seller.tracker()) : ProtocolLogic<SignedTransaction>() {
+                            override val progressTracker: ProgressTracker = Seller.tracker()) : FlowLogic<SignedTransaction>() {
               @Suspendable
               override fun call(): SignedTransaction {
                   TODO()
@@ -141,7 +141,7 @@ each side.
           open class Buyer(val otherSide: Party,
                            val notary: Party,
                            val acceptablePrice: Amount<Currency>,
-                           val typeToBuy: Class<out OwnableState>) : ProtocolLogic<SignedTransaction>() {
+                           val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
               @Suspendable
               override fun call(): SignedTransaction {
                   TODO()
@@ -149,8 +149,8 @@ each side.
           }
       }
 
-This code defines several classes nested inside the main ``TwoPartyTradeProtocol`` singleton. Some of the classes are
-simply protocol messages or exceptions. The other two represent the buyer and seller side of the protocol.
+This code defines several classes nested inside the main ``TwoPartyTradeFlow`` singleton. Some of the classes are
+simply flow messages or exceptions. The other two represent the buyer and seller side of the flow.
 
 Going through the data needed to become a seller, we have:
 
@@ -166,11 +166,11 @@ And for the buyer:
 - ``acceptablePrice: Amount<Currency>`` - the price that was agreed upon out of band. If the seller specifies
   a price less than or equal to this, then the trade will go ahead.
 - ``typeToBuy: Class<out OwnableState>`` - the type of state that is being purchased. This is used to check that the
-  sell side of the protocol isn't trying to sell us the wrong thing, whether by accident or on purpose.
+  sell side of the flow isn't trying to sell us the wrong thing, whether by accident or on purpose.
 
-Alright, so using this protocol shouldn't be too hard: in the simplest case we can just create a Buyer or Seller
-with the details of the trade, depending on who we are. We then have to start the protocol in some way. Just
-calling the ``call`` function ourselves won't work: instead we need to ask the framework to start the protocol for
+Alright, so using this flow shouldn't be too hard: in the simplest case we can just create a Buyer or Seller
+with the details of the trade, depending on who we are. We then have to start the flow in some way. Just
+calling the ``call`` function ourselves won't work: instead we need to ask the framework to start the flow for
 us. More on that in a moment.
 
 Suspendable functions
@@ -178,9 +178,9 @@ Suspendable functions
 
 The ``call`` function of the buyer/seller classes is marked with the ``@Suspendable`` annotation. What does this mean?
 
-As mentioned above, our protocol framework will at points suspend the code and serialise it to disk. For this to work,
+As mentioned above, our flow framework will at points suspend the code and serialise it to disk. For this to work,
 any methods on the call stack must have been pre-marked as ``@Suspendable`` so the bytecode rewriter knows to modify
-the underlying code to support this new feature. A protocol is suspended when calling either ``receive``, ``send`` or
+the underlying code to support this new feature. A flow is suspended when calling either ``receive``, ``send`` or
 ``sendAndReceive`` which we will learn more about below. For now, just be aware that when one of these methods is
 invoked, all methods on the stack must have been marked. If you forget, then in the unit test environment you will
 get a useful error message telling you which methods you didn't mark. The fix is simple enough: just add the annotation
@@ -188,30 +188,30 @@ and try again.
 
 .. note:: Java 9 is likely to remove this pre-marking requirement completely.
 
-Starting your protocol
-----------------------
+Starting your flow
+------------------
 
-The ``StateMachineManager`` is the class responsible for taking care of all running protocols in a node. It knows
+The ``StateMachineManager`` is the class responsible for taking care of all running flows in a node. It knows
 how to register handlers with the messaging system (see ":doc:`messaging`") and iterate the right state machine
 when messages arrive. It provides the send/receive/sendAndReceive calls that let the code request network
 interaction and it will save/restore serialised versions of the fiber at the right times.
 
-Protocols can be invoked in several ways. For instance, they can be triggered by scheduled events,
+Flows can be invoked in several ways. For instance, they can be triggered by scheduled events,
 see ":doc:`event-scheduling`" to learn more about this. Or they can be triggered via the HTTP API. Or they can
 be triggered directly via the Java-level node APIs from your app code.
 
-You request a protocol to be invoked by using the ``ServiceHub.invokeProtocolAsync`` method. This takes a
-Java reflection ``Class`` object that describes the protocol class to use (in this case, either ``Buyer`` or ``Seller``).
-It also takes a set of arguments to pass to the constructor. Because it's possible for protocol invocations to
+You request a flow to be invoked by using the ``ServiceHub.invokeFlowAsync`` method. This takes a
+Java reflection ``Class`` object that describes the flow class to use (in this case, either ``Buyer`` or ``Seller``).
+It also takes a set of arguments to pass to the constructor. Because it's possible for flow invocations to
 be requested by untrusted code (e.g. a state that you have been sent), the types that can be passed into the
-protocol are checked against a whitelist, which can be extended by apps themselves at load time.
+flow are checked against a whitelist, which can be extended by apps themselves at load time.
 
-The process of starting a protocol returns a ``ListenableFuture`` that you can use to either block waiting for
+The process of starting a flow returns a ``ListenableFuture`` that you can use to either block waiting for
 the result, or register a callback that will be invoked when the result is ready.
 
-In a two party protocol only one side is to be manually started using ``ServiceHub.invokeProtocolAsync``. The other side
-has to be registered by its node to respond to the initiating protocol via ``ServiceHubInternal.registerProtocolInitiator``.
-In our example it doesn't matter which protocol is the initiator and which is the initiated. For example, if we are to
+In a two party flow only one side is to be manually started using ``ServiceHub.invokeFlowAsync``. The other side
+has to be registered by its node to respond to the initiating flow via ``ServiceHubInternal.registerFlowInitiator``.
+In our example it doesn't matter which flow is the initiator and which is the initiated. For example, if we are to
 take the seller as the initiator then we would register the buyer as such:
 
 .. container:: codeset
@@ -220,20 +220,20 @@ take the seller as the initiator then we would register the buyer as such:
 
       val services: ServiceHubInternal = TODO()
 
-      services.registerProtocolInitiator(Seller::class) { otherParty ->
+      services.registerFlowInitiator(Seller::class) { otherParty ->
         val notary = services.networkMapCache.notaryNodes[0]
         val acceptablePrice = TODO()
         val typeToBuy = TODO()
         Buyer(otherParty, notary, acceptablePrice, typeToBuy)
       }
 
-This is telling the buyer node to fire up an instance of ``Buyer`` (the code in the lambda) when the initiating protocol
+This is telling the buyer node to fire up an instance of ``Buyer`` (the code in the lambda) when the initiating flow
 is a seller (``Seller::class``).
 
 Implementing the seller
 -----------------------
 
-Let's implement the ``Seller.call`` method. This will be run when the protocol is invoked.
+Let's implement the ``Seller.call`` method. This will be run when the flow is invoked.
 
 .. container:: codeset
 
@@ -255,7 +255,7 @@ now signed by both the buyer and the seller. We then send this request to a nota
 timestamp in the transaction (if any) is valid and there are no double spends, and send back both
 our signature and the notaries signature. Note we should not send to the notary until all other required signatures have been appended
 as the notary may validate the signatures as well as verifying for itself the transactional integrity.
-Finally, we hand back to the code that invoked the protocol the finished transaction.
+Finally, we hand back to the code that invoked the flow the finished transaction.
 
 Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
 
@@ -265,7 +265,7 @@ Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
 
       @Suspendable
       private fun receiveAndCheckProposedTransaction(): SignedTransaction {
-          // Make the first message we'll send to kick off the protocol.
+          // Make the first message we'll send to kick off the flow.
           val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public)
 
           val maybeSTX = sendAndReceive<SignedTransaction>(otherSide, hello)
@@ -282,7 +282,7 @@ Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
 
               // Download and check all the things that this transaction depends on and verify it is contract-valid,
               // even though it is missing signatures.
-              subProtocol(ResolveTransactionsProtocol(wtx, otherSide))
+              subFlow(ResolveTransactionsFlow(wtx, otherSide))
 
               if (wtx.outputs.map { it.data }.sumCashBy(myKeyPair.public).withoutIssuer() != price)
                   throw IllegalArgumentException("Transaction is not sending us the right amount of cash")
@@ -291,7 +291,7 @@ Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
           }
       }
 
-Let's break this down. We fill out the initial protocol message with the trade info, and then call ``sendAndReceive``.
+Let's break this down. We fill out the initial flow message with the trade info, and then call ``sendAndReceive``.
 This function takes a few arguments:
 
 - The party on the other side.
@@ -300,8 +300,8 @@ This function takes a few arguments:
   back something else an exception is thrown.
 
 Once ``sendAndReceive`` is called, the call method will be suspended into a continuation and saved to persistent
-storage. If the node crashes or is restarted, the protocol will effectively continue as if nothing had happened. Your
-code may remain blocked inside such a call for seconds, minutes, hours or even days in the case of a protocol that
+storage. If the node crashes or is restarted, the flow will effectively continue as if nothing had happened. Your
+code may remain blocked inside such a call for seconds, minutes, hours or even days in the case of a flow that
 needs human interaction!
 
 .. note:: There are a couple of rules you need to bear in mind when writing a class that will be used as a continuation.
@@ -311,7 +311,7 @@ needs human interaction!
    The second is that as well as being kept on the heap, objects reachable from the stack will be serialised. The state
    of the function call may be resurrected much later! Kryo doesn't require objects be marked as serialisable, but even so,
    doing things like creating threads from inside these calls would be a bad idea. They should only contain business
-   logic and only do I/O via the methods exposed by the protocol framework.
+   logic and only do I/O via the methods exposed by the flow framework.
 
    It's OK to keep references around to many large internal node services though: these will be serialised using a
    special token that's recognised by the platform, and wired up to the right instance when the continuation is
@@ -331,10 +331,10 @@ Our "scrubbing" has three parts:
 2. We resolve the transaction, which we will cover below.
 3. We verify that the transaction is paying us the demanded price.
 
-Subprotocols
-------------
+Sub-flows
+---------
 
-Protocols can be composed via nesting. Invoking a sub-protocol looks similar to an ordinary function call:
+Flows can be composed via nesting. Invoking a sub-flow looks similar to an ordinary function call:
 
 .. container:: codeset
 
@@ -343,18 +343,18 @@ Protocols can be composed via nesting. Invoking a sub-protocol looks similar to 
       @Suspendable
       private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.LegallyIdentifiable {
           progressTracker.currentStep = NOTARY
-          return subProtocol(NotaryProtocol.Client(stx))
+          return subFlow(NotaryFlow.Client(stx))
       }
 
-In this code snippet we are using the ``NotaryProtocol.Client`` to request notarisation of the transaction.
-We simply create the protocol object via its constructor, and then pass it to the ``subProtocol`` method which
-returns the result of the protocol's execution directly. Behind the scenes all this is doing is wiring up progress
+In this code snippet we are using the ``NotaryFlow.Client`` to request notarisation of the transaction.
+We simply create the flow object via its constructor, and then pass it to the ``subFlow`` method which
+returns the result of the flow's execution directly. Behind the scenes all this is doing is wiring up progress
 tracking (discussed more below) and then running the objects ``call`` method. Because this little helper method can
 be on the stack when network IO takes place, we mark it as ``@Suspendable``.
 
-Going back to the previous code snippet, we use a subprotocol called ``ResolveTransactionsProtocol``. This is
+Going back to the previous code snippet, we use a sub-flow called ``ResolveTransactionsFlow``. This is
 responsible for downloading and checking all the dependencies of a transaction, which in Corda are always retrievable
-from the party that sent you a transaction that uses them. This protocol returns a list of ``LedgerTransaction``
+from the party that sent you a transaction that uses them. This flow returns a list of ``LedgerTransaction``
 objects, but we don't need them here so we just ignore the return value.
 
 .. note:: Transaction dependency resolution assumes that the peer you got the transaction from has all of the
@@ -392,7 +392,7 @@ There is an overload for the + operator so signatures can be added to a SignedTr
 two signatures in a simple wrapper message class and send it back. The send won't block waiting for an acknowledgement,
 but the underlying message queue software will retry delivery if the other side has gone away temporarily.
 
-You can also see that every protocol instance has a logger (using the SLF4J API) which you can use to log progress
+You can also see that every flow instance has a logger (using the SLF4J API) which you can use to log progress
 messages.
 
 .. warning:: This sample code is **not secure**. Other than not checking for all possible invalid constructions, if the
@@ -443,7 +443,7 @@ OK, let's do the same for the buyer side:
 
               // Check the transaction that contains the state which is being resolved.
               // We only have a hash here, so if we don't know it already, we have to ask for it.
-              subProtocol(ResolveTransactionsProtocol(setOf(it.assetForSale.ref.txhash), otherSide))
+              subFlow(ResolveTransactionsFlow(setOf(it.assetForSale.ref.txhash), otherSide))
 
               return it
           }
@@ -499,21 +499,21 @@ This code is longer but no more complicated. Here are some things to pay attenti
 2. We create a cash spend in the normal way, by using ``Cash().generateSpend``. See the contracts tutorial if this
    part isn't clear.
 3. We access the *service hub* when we need it to access things that are transient and may change or be recreated
-   whilst a protocol is suspended, things like the wallet or the network map.
+   whilst a flow is suspended, things like the wallet or the network map.
 4. Finally, we send the unfinished, invalid transaction to the seller so they can sign it. They are expected to send
    back to us a ``SignaturesFromSeller``, which once we verify it, should be the final outcome of the trade.
 
-As you can see, the protocol logic is straightforward and does not contain any callbacks or network glue code, despite
+As you can see, the flow logic is straightforward and does not contain any callbacks or network glue code, despite
 the fact that it takes minimal resources and can survive node restarts.
 
-.. warning:: In the current version of the platform, exceptions thrown during protocol execution are not propagated
+.. warning:: In the current version of the platform, exceptions thrown during flow execution are not propagated
    back to the sender. A thorough error handling and exceptions framework will be in a future version of the platform.
 
 Progress tracking
 -----------------
 
 Not shown in the code snippets above is the usage of the ``ProgressTracker`` API. Progress tracking exports information
-from a protocol about where it's got up to in such a way that observers can render it in a useful manner to humans who
+from a flow about where it's got up to in such a way that observers can render it in a useful manner to humans who
 may need to be informed. It may be rendered via an API, in a GUI, onto a terminal window, etc.
 
 A ``ProgressTracker`` is constructed with a series of ``Step`` objects, where each step is an object representing a
@@ -544,16 +544,16 @@ observable exposes all the events generated by its children as well. The changes
 whether the change is one of position (i.e. progress), structure (i.e. new subtasks being added/removed) or some other
 aspect of rendering (i.e. a step has changed in some way and is requesting a re-render).
 
-The protocol framework is somewhat integrated with this API. Each ``ProtocolLogic`` may optionally provide a tracker by
-overriding the ``protocolTracker`` property (``getProtocolTracker`` method in Java). If the
-``ProtocolLogic.subProtocol`` method is used, then the tracker of the sub-protocol will be made a child of the current
-step in the parent protocol automatically, if the parent is using tracking in the first place. The framework will also
-automatically set the current step to ``DONE`` for you, when the protocol is finished.
+The flow framework is somewhat integrated with this API. Each ``FlowLogic`` may optionally provide a tracker by
+overriding the ``flowTracker`` property (``getFlowTracker`` method in Java). If the
+``FlowLogic.subFlow`` method is used, then the tracker of the sub-flow will be made a child of the current
+step in the parent flow automatically, if the parent is using tracking in the first place. The framework will also
+automatically set the current step to ``DONE`` for you, when the flow is finished.
 
-Because a protocol may sometimes wish to configure the children in its progress hierarchy _before_ the sub-protocol
-is constructed, for sub-protocols that always follow the same outline regardless of their parameters it's conventional
+Because a flow may sometimes wish to configure the children in its progress hierarchy _before_ the sub-flow
+is constructed, for sub-flows that always follow the same outline regardless of their parameters it's conventional
 to define a companion object/static method (for Kotlin/Java respectively) that constructs a tracker, and then allow
-the sub-protocol to have the tracker it will use be passed in as a parameter. This allows all trackers to be built
+the sub-flow to have the tracker it will use be passed in as a parameter. This allows all trackers to be built
 and linked ahead of time.
 
 In future, the progress tracking framework will become a vital part of how exceptions, errors, and other faults are
@@ -562,19 +562,19 @@ surfaced to human operators for investigation and resolution.
 Unit testing
 ------------
 
-A protocol can be a fairly complex thing that interacts with many services and other parties over the network. That
+A flow can be a fairly complex thing that interacts with many services and other parties over the network. That
 means unit testing one requires some infrastructure to provide lightweight mock implementations. The MockNetwork
 provides this testing infrastructure layer; you can find this class in the node module
 
-A good example to examine for learning how to unit test protocols is the ``ResolveTransactionsProtocol`` tests. This
-protocol takes care of downloading and verifying transaction graphs, with all the needed dependencies. We start
+A good example to examine for learning how to unit test flows is the ``ResolveTransactionsFlow`` tests. This
+flow takes care of downloading and verifying transaction graphs, with all the needed dependencies. We start
 with this basic skeleton:
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
-      class ResolveTransactionsProtocolTest {
+      class ResolveTransactionsFlowTest {
           lateinit var net: MockNetwork
           lateinit var a: MockNetwork.MockNode
           lateinit var b: MockNetwork.MockNode
@@ -608,8 +608,8 @@ Next, we write a test case:
       @Test
       fun resolveFromTwoHashes() {
           val (stx1, stx2) = makeTransactions()
-          val p = ResolveTransactionsProtocol(setOf(stx2.id), a.info.identity)
-          val future = b.services.startProtocol("resolve", p)
+          val p = ResolveTransactionsFlow(setOf(stx2.id), a.info.identity)
+          val future = b.services.startFlow("resolve", p)
           net.runNetwork()
           val results = future.get()
           assertEquals(listOf(stx1.id, stx2.id), results.map { it.id })
@@ -621,11 +621,11 @@ We'll take a look at the ``makeTransactions`` function in a moment. For now, it'
 ``SignedTransaction`` objects, the second of which spends the first. Both transactions are known by node A
 but not node B.
 
-The test logic is simple enough: we create the protocol, giving it node A's identity as the target to talk to.
+The test logic is simple enough: we create the flow, giving it node A's identity as the target to talk to.
 Then we start it on node B and use the ``net.runNetwork()`` method to bounce messages around until things have
 settled (i.e. there are no more messages waiting to be delivered). All this is done using an in memory message
-routing implementation that is fast to initialise and use. Finally, we obtain the result of the protocol and do
-some tests on it. We also check the contents of node B's database to see that the protocol had the intended effect
+routing implementation that is fast to initialise and use. Finally, we obtain the result of the flow and do
+some tests on it. We also check the contents of node B's database to see that the flow had the intended effect
 on the node's persistent state.
 
 Here's what ``makeTransactions`` looks like:
@@ -665,30 +665,30 @@ Versioning
 ----------
 
 Fibers involve persisting object-serialised stack frames to disk. Although we may do some R&D into in-place upgrades
-in future, for now the upgrade process for protocols is simple: you duplicate the code and rename it so it has a
-new set of class names. Old versions of the protocol can then drain out of the system whilst new versions are
+in future, for now the upgrade process for flows is simple: you duplicate the code and rename it so it has a
+new set of class names. Old versions of the flow can then drain out of the system whilst new versions are
 initiated. When enough time has passed that no old versions are still waiting for anything to happen, the previous
 copy of the code can be deleted.
 
 Whilst kind of ugly, this is a very simple approach that should suffice for now.
 
-.. warning:: Protocols are not meant to live for months or years, and by implication they are not meant to implement entire deal
-   lifecycles. For instance, implementing the entire life cycle of an interest rate swap as a single protocol - whilst
+.. warning:: Flows are not meant to live for months or years, and by implication they are not meant to implement entire deal
+lifecycles. For instance, implementing the entire life cycle of an interest rate swap as a single flow - whilst
    technically possible - would not be a good idea. The platform provides a job scheduler tool that can invoke
-   protocols for this reason (see ":doc:`event-scheduling`")
+   flows for this reason (see ":doc:`event-scheduling`")
 
 Future features
 ---------------
 
-The protocol framework is a key part of the platform and will be extended in major ways in future. Here are some of
+The flow framework is a key part of the platform and will be extended in major ways in future. Here are some of
 the features we have planned:
 
 * Identity based addressing
 * Exposing progress trackers to local (inside the firewall) clients using message queues and/or WebSockets
-* Exception propagation and management, with a "protocol hospital" tool to manually provide solutions to unavoidable
+* Exception propagation and management, with a "flow hospital" tool to manually provide solutions to unavoidable
   problems (e.g. the other side doesn't know the trade)
 * Being able to interact with internal apps and tools via HTTP and similar
 * Being able to interact with people, either via some sort of external ticketing system, or email, or a custom UI.
   For example to implement human transaction authorisations.
-* A standard library of protocols that can be easily sub-classed by local developers in order to integrate internal
+* A standard library of flows that can be easily sub-classed by local developers in order to integrate internal
   reporting logic, or anything else that might be required as part of a communications lifecycle.

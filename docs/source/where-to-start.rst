@@ -21,7 +21,7 @@ A scenario contains:
 
 * A set of participating nodes and their roles.
 * Some business process you wish to automate (typically simplified from the real thing).
-* The smart contracts and protocols that will automate that process.
+* The smart contracts and flows that will automate that process.
 
 It may also specify a REST/JSON API, but this is optional.
 
@@ -40,9 +40,9 @@ The process of implementing a scenario looks like this:
    in Java and Kotlin. The file should define your state classes and your contract class, which will define the
    allowable state transitions. You can learn how these are constructed by reading the ":doc:`tutorial-contract`" tutorial.
 3. It isn't enough to just define static data and logic that controls what's allowed. You must also orchestrate the
-   business process. This is the job of the protocol framework. You can learn how to author these by reading
-   ":doc:`protocol-state-machines`".
-4. Once you have created your states, transactions and protocols, you need a way to demonstrate them (outside of the
+   business process. This is the job of the flow framework. You can learn how to author these by reading
+   ":doc:`flow-state-machines`".
+4. Once you have created your states, transactions and flows, you need a way to demonstrate them (outside of the
    unit tests, of course). This topic is covered below.
 
 The trader demo
@@ -63,7 +63,7 @@ demo drivers and then customise them, as much of the code would end up being sha
 Things you will want to adjust:
 
 1. The name of the grouping directory each node role will create its private directory under.
-2. The demo protocols that just wrap the real business process in some kind of fake trading logic.
+2. The demo flows that just wrap the real business process in some kind of fake trading logic.
 
 The IRS driver program registers REST APIs, but as this is seriously in flux right now and the APIs will change a lot,
 we do not recommend you try this as part of your initial explorations unless you are feeling adventurous.
