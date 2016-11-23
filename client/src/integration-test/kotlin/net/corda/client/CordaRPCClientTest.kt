@@ -75,12 +75,12 @@ class CordaRPCClientTest {
         client.start(rpcUser.username, rpcUser.password)
         println("Creating proxy")
         val proxy = client.proxy()
-        println("Starting protocol")
-        val protocolHandle = proxy.startFlow(::CashFlow, CashCommand.IssueCash(20.DOLLARS, OpaqueBytes.of(0), driverInfo.nodeInfo.legalIdentity, driverInfo.nodeInfo.legalIdentity))
-        println("Started protocol, waiting on result")
-        protocolHandle.progress.subscribe {
+        println("Starting flow")
+        val flowHandle = proxy.startFlow(::CashFlow, CashCommand.IssueCash(20.DOLLARS, OpaqueBytes.of(0), driverInfo.nodeInfo.legalIdentity, driverInfo.nodeInfo.legalIdentity))
+        println("Started flow, waiting on result")
+        flowHandle.progress.subscribe {
             println("PROGRESS $it")
         }
-        println("Result: ${protocolHandle.returnValue.toBlocking().first()}")
+        println("Result: ${flowHandle.returnValue.toBlocking().first()}")
     }
  }
