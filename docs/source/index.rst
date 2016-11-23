@@ -49,6 +49,7 @@ Read on to learn:
    persistence
    node-administration
    corda-configuration-files
+   node-services
 
 .. toctree::
    :maxdepth: 2
