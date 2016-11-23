@@ -1,5 +1,4 @@
 .. highlight:: kotlin
-.. raw:: html
 
 Using attachments
 =================

@@ -55,11 +55,13 @@ are performing (details expounded later). Whenever prompted about gradle, accept
 Corda Source Code
 -----------------
 
-(TODO - when the location has been confirmed)
+You can check out the Corda platform source code from this repository:
 
-Ensure that you have access to R3 git repository.
+    https://github.com/corda/corda.git
 
-    https://TODO/corda-core.git
+and a template app that you can use as a basis for experimenting with app development from:
+
+    https://github.com/corda/cordapp-template.git
 
 You can catch up with the latest code by selecting "VCS -> Update Project" in the IntelliJ menu.
 

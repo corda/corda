@@ -1,7 +1,6 @@
 Getting Set Up : Faultfinding
 =============================
 
-
 IntelliJ issues
 ---------------
 

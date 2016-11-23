@@ -37,6 +37,7 @@ Login
   User can login to any Corda node using the explorer, alternately, `gradlew explorer:runDemoNodes` can be used to start up demo nodes for testing.  
   Corda node address, username and password are required for login, the address is defaulted to localhost:0 if leave blank.
   Username and password can be configured in node's configuration file; for demo nodes, it is defaulted to ``user1`` and ``test``.
+
 .. note:: If you are connecting to the demo nodes, only Alice and Bob (20004, 20006) are accessible using user1 credential, you won't be able to connect to the notary.
 
 .. image:: resources/explorer/login.png

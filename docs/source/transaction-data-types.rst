@@ -161,13 +161,13 @@ node specifies a *threshold* of how many child signatures it requires.
 An illustration of an *"either Alice and Bob, or Charlie"* composite key:
 
 .. image:: resources/composite-key.png
-:width: 300px
+  :width: 300px
 
 To allow further flexibility, each child node can have an associated custom *weight* (the default is 1). The *threshold*
 then specifies the minimum total weight of all children required. Our previous example can also be expressed as:
 
 .. image:: resources/composite-key-2.png
-:width: 300px
+  :width: 300px
 
 Verification
 ^^^^^^^^^^^^

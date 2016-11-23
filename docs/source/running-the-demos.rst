@@ -106,7 +106,7 @@ message "File received - we're happy!" should be printed.
 SIMM and Portfolio Demo
 -----------------------
 
-.. note:: Read more about this demo at :doc:`initialmarginagreement`.
+.. note:: Read more about this demo at :doc:`initial-margin-agreement`.
 
 To run the demo run:
 

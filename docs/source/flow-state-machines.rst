@@ -673,7 +673,7 @@ copy of the code can be deleted.
 Whilst kind of ugly, this is a very simple approach that should suffice for now.
 
 .. warning:: Flows are not meant to live for months or years, and by implication they are not meant to implement entire deal
-lifecycles. For instance, implementing the entire life cycle of an interest rate swap as a single flow - whilst
+   lifecycles. For instance, implementing the entire life cycle of an interest rate swap as a single flow - whilst
    technically possible - would not be a good idea. The platform provides a job scheduler tool that can invoke
    flows for this reason (see ":doc:`event-scheduling`")
 

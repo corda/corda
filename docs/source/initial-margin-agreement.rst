@@ -40,7 +40,7 @@ Process steps
 
 Preliminaries
     - Ensure that there are a number of live trades with another party financial products that are covered under the
-     ISDA SIMM agreement (if none, then use the demo to enter some simple trades as described below).
+      ISDA SIMM agreement (if none, then use the demo to enter some simple trades as described below).
 
 Initial Margin Agreement Process
     - Agree that one will be performing the margining calculation against a portfolio of trades with another party, and agree the trades in that portfolio. In practice, one node will start the flow but it does not matter which node does.
