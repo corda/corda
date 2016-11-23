@@ -80,5 +80,17 @@ Wire protocol
 The client RPC wire protocol is not currently documented. To use it you must use the client library provided.
 This is likely to change in a future release.
 
+Registering Classes With RPC Kryo
+---------------------------------
+
+In the present implementation of the node we use Kryo to generate the *on the wire* representation of contracts states
+or any other classes that form part of the RPC arguments or response.  To avoid the RPC interface being wide open to all
+classes on the classpath, Cordapps will currently have to register any classes or custom serialisers they require with Kryo
+if they are not one of those registered by default in ``RPCKryo`` via the plugin architecture.  See :doc:`creating-a-cordapp`.
+This will require some familiarity with Kryo.  An example is shown in :doc:`tutorial-clientrpc-api`.
+
+.. warning:: We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin
+   customisation point will either go away completely or change.
+
 .. _CordaRPCClient: api/net.corda.client/-corda-r-p-c-client/index.html
 .. _CordaRPCOps: api/net.corda.node.services.messaging/-corda-r-p-c-ops/index.html

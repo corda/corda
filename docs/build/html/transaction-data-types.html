@@ -85,10 +85,14 @@
           
             
             
-                <p class="caption"><span class="caption-text">Overview</span></p>
-<ul class="current">
+                <p class="caption"><span class="caption-text">Getting started</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Data types</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#amount">Amount</a></li>
@@ -98,7 +102,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#transaction-lifecycle-types">Transaction lifecycle types</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#party-and-publickey">Party and PublicKey</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#multi-signature-support">Multi-signature support</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#key-trees">Key Trees</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#composite-keys">Composite Keys</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#verification">Verification</a></li>
 </ul>
 </li>
@@ -108,13 +112,20 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -123,20 +134,21 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Flow state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Contracts</span></p>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Node API</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -145,10 +157,12 @@
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>
 
             
@@ -251,7 +265,7 @@ useful when modelling an indivisible/non-fungible thing like a specific deal, or
 split (like a rare piece of art).</dd>
 <dt><code class="docutils literal"><span class="pre">DealState</span></code></dt>
 <dd>A LinearState representing an agreement between two or more parties. Intended to simplify implementing generic
-protocols that manipulate many agreement types.</dd>
+flows that manipulate many agreement types.</dd>
 <dt><code class="docutils literal"><span class="pre">FixableDealState</span></code></dt>
 <dd>A deal state, with further functions exposed to support fixing of interest rates.</dd>
 </dl>
@@ -331,32 +345,16 @@ fleshed out.</p>
 <h2>Multi-signature support<a class="headerlink" href="#multi-signature-support" title="Permalink to this headline">¶</a></h2>
 <p>Corda supports scenarios where more than one key or party is required to authorise a state object transition, for example:
 &#8220;Either the CEO or 3 out of 5 of his assistants need to provide signatures&#8221;.</p>
-<div class="section" id="key-trees">
-<h3>Key Trees<a class="headerlink" href="#key-trees" title="Permalink to this headline">¶</a></h3>
-<p>This is achieved by public key composition, using a tree data structure <code class="docutils literal"><span class="pre">PublicKeyTree</span></code>. A <code class="docutils literal"><span class="pre">PublicKeyTree</span></code> stores the
-cryptographic public key primitives in its leaves and the composition logic in the intermediary nodes. Every intermediary
+<div class="section" id="composite-keys">
+<h3>Composite Keys<a class="headerlink" href="#composite-keys" title="Permalink to this headline">¶</a></h3>
+<p>This is achieved by public key composition, using a tree data structure <code class="docutils literal"><span class="pre">CompositeKey</span></code>. A <code class="docutils literal"><span class="pre">CompositeKey</span></code> is a tree that
+stores the cryptographic public key primitives in its leaves and the composition logic in the intermediary nodes. Every intermediary
 node specifies a <em>threshold</em> of how many child signatures it requires.</p>
-<p>An illustration of an <em>&#8220;either Alice and Bob, or Charlie&#8221;</em> public key tree:</p>
-<img alt="_images/public-key-tree.png" src="_images/public-key-tree.png" />
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">width:</th><td class="field-body">300px</td>
-</tr>
-</tbody>
-</table>
+<p>An illustration of an <em>&#8220;either Alice and Bob, or Charlie&#8221;</em> composite key:</p>
+<a class="reference internal image-reference" href="_images/composite-key.png"><img alt="_images/composite-key.png" src="_images/composite-key.png" style="width: 300px;" /></a>
 <p>To allow further flexibility, each child node can have an associated custom <em>weight</em> (the default is 1). The <em>threshold</em>
 then specifies the minimum total weight of all children required. Our previous example can also be expressed as:</p>
-<img alt="_images/public-key-tree-2.png" src="_images/public-key-tree-2.png" />
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">width:</th><td class="field-body">300px</td>
-</tr>
-</tbody>
-</table>
+<a class="reference internal image-reference" href="_images/composite-key-2.png"><img alt="_images/composite-key-2.png" src="_images/composite-key-2.png" style="width: 300px;" /></a>
 </div>
 <div class="section" id="verification">
 <h3>Verification<a class="headerlink" href="#verification" title="Permalink to this headline">¶</a></h3>
@@ -364,9 +362,9 @@ then specifies the minimum total weight of all children required. Our previous e
 <blockquote>
 <div><ol class="arabic simple">
 <li>Given a list of signatures, each signature is verified against the expected content.</li>
-<li>The public keys corresponding to the signatures are matched against the leaves of the public key tree in question,
+<li>The public keys corresponding to the signatures are matched against the leaves of the composite key tree in question,
 and the total combined weight of all children is calculated for every intermediary node. If all thresholds are satisfied,
-the public key tree requirement is considered to be met.</li>
+the composite key requirement is considered to be met.</li>
 </ol>
 </div></blockquote>
 </div>

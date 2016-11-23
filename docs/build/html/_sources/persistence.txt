@@ -21,7 +21,7 @@ Schemas
 Every ``ContractState`` can implement the ``QueryableState`` interface if it wishes to be inserted into the node's local
 database and accessible using SQL.
 
-.. literalinclude:: ../../core/src/main/kotlin/net.corda.core/schemas/PersistentTypes.kt
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/schemas/PersistentTypes.kt
     :language: kotlin
     :start-after: DOCSTART QueryableState
     :end-before: DOCEND QueryableState
@@ -34,12 +34,12 @@ cases where the schema has evolved, with each one being represented by a ``Mappe
 Nodes have an internal ``SchemaService`` which decides what to persist and what not by selecting the ``MappedSchema``
 to use.
 
-.. literalinclude:: ../../node/src/main/kotlin/net.corda.node/services/api/SchemaService.kt
+.. literalinclude:: ../../node/src/main/kotlin/net/corda/node/services/api/SchemaService.kt
     :language: kotlin
     :start-after: DOCSTART SchemaService
     :end-before: DOCEND SchemaService
 
-.. literalinclude:: ../../core/src/main/kotlin/net.corda.core/schemas/PersistentTypes.kt
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/schemas/PersistentTypes.kt
     :language: kotlin
     :start-after: DOCSTART MappedSchema
     :end-before: DOCEND MappedSchema
@@ -85,5 +85,5 @@ to initialise the ORM layer.
 Several examples of entities and mappings are provided in the codebase, including ``Cash.State`` and
 ``CommercialPaper.State``.  For example, here's the first version of the cash schema.
 
-.. literalinclude:: ../../finance/src/main/kotlin/net.corda.schemas/CashSchemaV1.kt
+.. literalinclude:: ../../finance/src/main/kotlin/net/corda/schemas/CashSchemaV1.kt
     :language: kotlin

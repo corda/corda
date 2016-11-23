@@ -11,7 +11,7 @@ see :doc:`clientrpc`.
 
 We start off by connecting to the node itself. For the purposes of the tutorial we will use the Driver to start up a notary and a node that issues/exits and moves Cash around for herself. To authenticate we will use the certificates of the nodes directly.
 
-Note how we configure the node to create a user that has permission to start the CashProtocol.
+Note how we configure the node to create a user that has permission to start the CashFlow.
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcTutorial.kt
     :language: kotlin
@@ -62,7 +62,7 @@ We utilise several RPC functions here to query things like the notaries in the n
 
 Then in a loop we generate randomly either an Issue, a Pay or an Exit transaction.
 
-The RPC we need to initiate a Cash transaction is ``startProtocolDynamic`` which may start an arbitrary protocol, given sufficient permissions to do so. We won't use this function directly, but rather a type-safe wrapper around it ``startProtocol`` that type-checks the arguments for us.
+The RPC we need to initiate a Cash transaction is ``startFlowDynamic`` which may start an arbitrary flow, given sufficient permissions to do so. We won't use this function directly, but rather a type-safe wrapper around it ``startFlow`` that type-checks the arguments for us.
 
 Finally we have everything in place: we start a couple of nodes, connect to them, and start creating transactions while listening on successfully created ones, which are dumped to the console. We just need to run it!:
 
@@ -79,3 +79,19 @@ Now let's try to visualise the transaction graph. We will use a graph drawing li
     :end-before: END 5
 
 If we run the client with ``Visualise`` we should see a simple random graph being drawn as new transactions are being created.
+
+Registering classes from your Cordapp with RPC Kryo
+---------------------------------------------------
+
+As described in :doc:`clientrpc`, you currently have to register any additional classes you add that are needed in RPC
+requests or responses with the `Kryo` instance RPC uses.  Here's an example of how you do this for an example class.
+
+.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcTutorial.kt
+    :language: kotlin
+    :start-after: START 7
+    :end-before: END 7
+
+See more on plugins in :doc:`creating-a-cordapp`.
+
+.. warning:: We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin
+    customisation point will either go away completely or change.

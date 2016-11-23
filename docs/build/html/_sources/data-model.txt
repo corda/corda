@@ -254,7 +254,7 @@ including things like the shape of the transaction. It may seem that it's an ove
 just immediately respend the big output back to yourself in order to split it? And yes, you could, until you hit
 scenarios like "the machine requesting the payment doesn't have the keys needed to spend it",
 which turn out to be very common. So it's really more effective for a recipient to be able to say to the
-sender, "here's the kind of transaction I want you to send me".  The :doc:`protocol framework <protocol-state-machines>`
+sender, "here's the kind of transaction I want you to send me".  The :doc:`flow framework <flow-state-machines>`
 may provide a vehicle to make such negotiations simpler.
 
 A further challenge is privacy. Whilst our goal of not sending transactions to nodes that don't "need to know"

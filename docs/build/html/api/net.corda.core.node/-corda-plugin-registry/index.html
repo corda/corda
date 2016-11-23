@@ -30,13 +30,13 @@ to extend a Corda node with additional application services.</p>
 <tbody>
 <tr>
 <td>
-<a href="required-protocols.html">requiredProtocols</a></td>
+<a href="required-flows.html">requiredFlows</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">requiredProtocols</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>A Map with an entry for each consumed protocol used by the webAPIs.
-The key of each map entry should contain the ProtocolLogic class name.
-The associated map values are the union of all concrete class names passed to the protocol constructor.
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">requiredFlows</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>A Map with an entry for each consumed flow used by the webAPIs.
+The key of each map entry should contain the FlowLogic class name.
+The associated map values are the union of all concrete class names passed to the flow constructor.
 Standard java.lang.* and kotlin.* types do not need to be included explicitly.
-This is used to extend the white listed protocols that can be initiated from the ServiceHub invokeProtocolAsync method.</p>
+This is used to extend the white listed flows that can be initiated from the ServiceHub invokeFlowAsync method.</p>
 </td>
 </tr>
 <tr>
@@ -46,7 +46,7 @@ This is used to extend the white listed protocols that can be initiated from the
 <code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">servicePlugins</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>List of additional long lived services to be hosted within the node.
 They are expected to have a single parameter constructor that takes a <a href="../-plugin-service-hub/index.html">PluginServiceHub</a> as input.
 The <a href="../-plugin-service-hub/index.html">PluginServiceHub</a> will be fully constructed before the plugin service is created and will
-allow access to the protocol factory and protocol initiation entry points there.</p>
+allow access to the flow factory and flow initiation entry points there.</p>
 </td>
 </tr>
 <tr>
@@ -65,6 +65,21 @@ be specified with: javaClass.getResource("&lt;folder-in-jar&gt;").toExternalForm
 <code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">webApis</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>List of JAX-RS classes inside the contract jar. They are expected to have a single parameter constructor that takes a ServiceHub as input.
 These are listed as Class&lt;*&gt;, because in the future they will be instantiated inside a ClassLoader so that
 Cordapp code can be loaded dynamically.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="register-r-p-c-kryo-types.html">registerRPCKryoTypes</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">registerRPCKryoTypes</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.CordaPluginRegistry$registerRPCKryoTypes()/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>Optionally register types with <a href="#">Kryo</a> for use over RPC, as we lock down the types that can be serialised in this
+particular use case.
+For example, if you add an RPC interface that carries some contract states back and forth, you need to register
+those classes here using the <a href="#">register</a> method on Kryo.</p>
 </td>
 </tr>
 </tbody>

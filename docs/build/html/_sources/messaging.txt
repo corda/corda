@@ -13,8 +13,8 @@ unit tests and visualisation tools.
    out for alternative implementations.
 
 There are multiple ways of interacting with the network. When writing an application you typically won't use the
-messaging subsystem directly. Instead you will build on top of the :doc:`protocol framework <protocol-state-machines>`,
-which adds a layer on top of raw messaging to manage multi-step protocols and let you think in terms of identities
+messaging subsystem directly. Instead you will build on top of the :doc:`flow framework <flow-state-machines>`,
+which adds a layer on top of raw messaging to manage multi-step flows and let you think in terms of identities
 rather than specific network endpoints.
 
 Messaging types

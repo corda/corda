@@ -1,5 +1,4 @@
 .. highlight:: kotlin
-.. raw:: html
 
 Using attachments
 =================
@@ -17,10 +16,10 @@ which returns a unique ID that can be added using ``TransactionBuilder.addAttach
 uploaded and downloaded via HTTP, to enable integration with external systems. For instructions on HTTP upload/download
 please see ":doc:`node-administration`".
 
-Normally attachments on transactions are fetched automatically via the ``ResolveTransactionsProtocol`` when verifying
+Normally attachments on transactions are fetched automatically via the ``ResolveTransactionsFlow`` when verifying
 received transactions. Attachments are needed in order to validate a transaction (they include, for example, the
-contract code), so must be fetched before the validation process can run. ``ResolveTransactionsProtocol`` calls
-``FetchTransactionsProtocol`` to perform the actual retrieval.
+contract code), so must be fetched before the validation process can run. ``ResolveTransactionsFlow`` calls
+``FetchTransactionsFlow`` to perform the actual retrieval.
 
 It is encouraged that where possible attachments are reusable data, so that nodes can meaningfully cache them.
 
@@ -28,13 +27,13 @@ Attachments demo
 ----------------
 
 There is a worked example of attachments, which relays a simple document from one node to another. The "two party
-trade protocol" also includes an attachment, however it is a significantly more complex demo, and less well suited
+trade flow" also includes an attachment, however it is a significantly more complex demo, and less well suited
 for a tutorial.
 
 The demo code is in the file "src/main/kotlin/net.corda.demos/attachment/AttachmentDemo.kt", with the core logic
 contained within the two functions ``runRecipient()`` and ``runSender()``. We'll look at the recipient function first;
 this subscribes to notifications of new validated transactions, and if it receives a transaction containing attachments,
-loads the first attachment from storage, and checks it matches the expected attachment ID. ``ResolveTransactionsProtocol``
+loads the first attachment from storage, and checks it matches the expected attachment ID. ``ResolveTransactionsFlow``
 has already fetched all attachments from the remote node, and as such the attachments are available from the node's
 storage service. Once the attachment is verified, the node shuts itself down.
 
@@ -43,10 +42,10 @@ storage service. Once the attachment is verified, the node shuts itself down.
     private fun runRecipient(node: Node) {
         val serviceHub = node.services
 
-        // Normally we would receive the transaction from a more specific protocol, but in this case we let [FinalityProtocol]
+        // Normally we would receive the transaction from a more specific flow, but in this case we let [FinalityFlow]
         // handle receiving it for us.
         serviceHub.storageService.validatedTransactions.updates.subscribe { event ->
-            // When the transaction is received, it's passed through [ResolveTransactionsProtocol], which first fetches any
+            // When the transaction is received, it's passed through [ResolveTransactionsFlow], which first fetches any
             // attachments for us, then verifies the transaction. As such, by the time it hits the validated transaction store,
             // we have a copy of the attachment.
             val tx = event.tx
@@ -62,7 +61,7 @@ storage service. Once the attachment is verified, the node shuts itself down.
         }
     }
 
-The sender correspondingly builds a transaction with the attachment, then calls ``FinalityProtocol`` to complete the
+The sender correspondingly builds a transaction with the attachment, then calls ``FinalityFlow`` to complete the
 transaction and send it to the recipient node:
 
 
@@ -88,7 +87,7 @@ transaction and send it to the recipient node:
 
         // Send the transaction to the other recipient
         val tx = ptx.toSignedTransaction()
-        serviceHub.startProtocol(LOG_SENDER, FinalityProtocol(tx, emptySet(), setOf(otherSide))).success {
+        serviceHub.startFlow(LOG_SENDER, FinalityFlow(tx, emptySet(), setOf(otherSide))).success {
             thread {
                 Thread.sleep(1000L) // Give the other side time to request the attachment
                 node.stop()

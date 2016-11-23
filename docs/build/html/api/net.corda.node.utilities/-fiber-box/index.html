@@ -20,9 +20,9 @@ re-throw a <a href="../../net.corda.core/-retryable-exception/index.html">Retrya
 </li></ul><p>The construct also supports <a href="../-mutable-clock/index.html">MutableClock</a>s so it can cope with artificial progress towards the deadline, for simulations
 or testing.</p>
 <p>Currently this is intended for use within a node as a simplified way for Oracles to implement subscriptions for changing
-data by running a protocol internally to implement the request handler (see <a href="#">NodeInterestRates.Oracle</a>), which can then
+data by running a flow internally to implement the request handler (see <a href="#">NodeInterestRates.Oracle</a>), which can then
 effectively relinquish control until the data becomes available.  This isnt the most scalable design and is intended
-to be temporary.  In addition, its enitrely possible to envisage a time when we want public <a href="#">ProtocolLogic</a>
+to be temporary.  In addition, its enitrely possible to envisage a time when we want public <a href="#">FlowLogic</a>
 implementations to be able to wait for some condition to become true outside of message send/receive.  At that point
 we may revisit this implementation and indeed the whole model for this, when we understand that requirement more fully.</p>
 <p>TODO: We should consider using a <a href="#">Semaphore</a> or <a href="#">CountDownLatch</a> here to make it a little easier to understand, but it seems

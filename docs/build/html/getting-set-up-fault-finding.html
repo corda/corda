@@ -1,0 +1,308 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Getting Set Up : Faultfinding &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+<a href="api/index.html">API reference</a>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Flow state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Getting Set Up : Faultfinding</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/getting-set-up-fault-finding.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="getting-set-up-faultfinding">
+<h1>Getting Set Up : Faultfinding<a class="headerlink" href="#getting-set-up-faultfinding" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="intellij-issues">
+<h2>IntelliJ issues<a class="headerlink" href="#intellij-issues" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="if-intellij-complains-about-lack-of-an-sdk">
+<h3>If IntelliJ complains about lack of an SDK<a class="headerlink" href="#if-intellij-complains-about-lack-of-an-sdk" title="Permalink to this headline">¶</a></h3>
+<p>If on attempting to open the project (including importing Gradle project), IntelliJ refuses because an SDK was not selected,
+you may need to fix the project structure. Do this by following  <a class="reference external" href="https://www.jetbrains.com/help/idea/2016.2/configuring-global-project-and-module-sdks.html">these instructions</a>. The correct JDK is often found at a path such as <code class="docutils literal"><span class="pre">jdk1.8.0_xx…/Contents/Home</span></code></p>
+<p>Ensure that you have the Project language level set at as 8. If you are having trouble selecting the correct JDK, the
+Jetbrains website offers the <a class="reference external" href="https://intellij-support.jetbrains.com/hc/en-us/articles/206544879-Selecting-the-JDK-version-the-IDE-will-run-under">following guidelines</a>.</p>
+</div>
+</div>
+<div class="section" id="kotlin-issues">
+<h2>Kotlin issues<a class="headerlink" href="#kotlin-issues" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="installation">
+<h3>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h3>
+<p>There are two ways to configure Kotlin from IntelliJ. One way is via the initial project opening screen in which you will
+need to use the <code class="docutils literal"><span class="pre">Configure</span> <span class="pre">&gt;</span> <span class="pre">Plugins</span></code> tab. The other way is when you are in an open project, then you will need to
+configure it via (on Mac) <code class="docutils literal"><span class="pre">IntelliJ</span> <span class="pre">-&gt;</span> <span class="pre">Preferences</span> <span class="pre">...</span></code>, whereas on PC it is <code class="docutils literal"><span class="pre">File</span> <span class="pre">-&gt;</span> <span class="pre">Settings</span></code>. Select the plugins
+bar, confirm that Kotlin is installed and up to date.</p>
+<p>If you are having trouble installing Kotlin, first try upgrading the Kotlin plugin. At the time of writing, you can
+confirm what is the latest version of the Kotlin plugin on <a class="reference external" href="https://plugins.jetbrains.com/plugin/6954">this page</a>.</p>
+</div>
+</div>
+<div class="section" id="gradle-issues">
+<h2>Gradle issues<a class="headerlink" href="#gradle-issues" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="gradle-within-intellij">
+<h3>Gradle within IntelliJ<a class="headerlink" href="#gradle-within-intellij" title="Permalink to this headline">¶</a></h3>
+<p>After you have updated your code to the latest version from git, ensure that the gradle project is imported. Although
+gradle is used via the command line, it is also integrated with IntelliJ in order for IntelliJ to determine dependencies
+and index the project correctly.</p>
+<p>When opening a project for the first time, you should see the &#8220;Unlinked Gradle project?&#8221; pop-up window in the IntelliJ top
+right corner or in a popup alert window. If you miss this, it will also appear in the &#8220;Event Log&#8221; windows which can be
+opened by clicking on &#8220;Event Log&#8221; at the bottom right of the IntelliJ window. Either way, click on &#8220;Import Gradle Project&#8221;.</p>
+<a class="reference internal image-reference" href="_images/unlinked-gradle.png"><img alt="IntelliJ Gradle Prompt" src="_images/unlinked-gradle.png" style="width: 410px; height: 50px;" /></a>
+<p>Wait for it to think and download the dependencies. After that you might have another popup titled &#8220;Unindexed remote maven repositories found.&#8221; This is a general IntelliJ question and doesn&#8217;t affect Corda, therefore you can decided to index them or not. Next click on the &#8220;green arrow&#8221; next to &#8220;All tests&#8221; pop-up on the top toolbar.</p>
+<p>The code should build, the unit tests should show as all green.</p>
+<p>If still have problems, the Jetbrains website has more information on <a class="reference external" href="https://www.jetbrains.com/help/idea/2016.2/working-with-gradle-projects.html">gradle here</a>.</p>
+</div>
+<div class="section" id="gradle-via-the-cli">
+<h3>Gradle via the CLI<a class="headerlink" href="#gradle-via-the-cli" title="Permalink to this headline">¶</a></h3>
+<p>Gradle commands can also be run in the command line - further details of command line gradle can be found in</p>
+</div>
+</div>
+<div class="section" id="doing-it-without-intellij">
+<h2>Doing it without IntelliJ<a class="headerlink" href="#doing-it-without-intellij" title="Permalink to this headline">¶</a></h2>
+<p>If you don&#8217;t want to explore or modify the code in a local IDE, you can also just use the command line and a text editor:</p>
+<ul class="simple">
+<li>First run <code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/corda/corda</span></code> to download Corda core source code</li>
+<li>Next ensure that you are in correct directory <code class="docutils literal"><span class="pre">cd</span> <span class="pre">corda</span></code></li>
+<li>Then you can run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">test</span></code> to run the unit tests.</li>
+<li>Finally remember to run <code class="docutils literal"><span class="pre">git</span> <span class="pre">pull</span></code> occasionally to upgrade the source code to the latest revision</li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

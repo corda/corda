@@ -12,6 +12,13 @@
 <tbody>
 <tr>
 <td>
+<a href="-composite-key/index.html">CompositeKey</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">CompositeKey</span></code><p>A tree data structure that enables the representation of composite public keys.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-digital-signature/index.html">DigitalSignature</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">DigitalSignature</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a></code><p>A wrapper around a digital signature. The covering field is a generic tag usable by whatever is interpreting the
@@ -52,15 +59,8 @@ Partial Merkle Tree is a minimal tree needed to check that a given set of leaves
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Party</span></code><p>The <a href="-party/index.html">Party</a> class represents an entity on the network, which is typically identified by a legal <a href="-party/name.html">name</a> and public key
 that it can sign transactions under. As parties may use multiple keys for signing and, for example, have offline backup
-keys, the "public key" of a party is represented by a composite construct – a <a href="-public-key-tree/index.html">PublicKeyTree</a>, which combines multiple
+keys, the "public key" of a party is represented by a composite construct – a <a href="-composite-key/index.html">CompositeKey</a>, which combines multiple
 cryptographic public key primitives into a tree structure.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="-public-key-tree/index.html">PublicKeyTree</a></td>
-<td>
-<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">PublicKeyTree</span></code><p>A tree data structure that enables the representation of composite public keys.</p>
 </td>
 </tr>
 <tr>
@@ -162,9 +162,9 @@ that we can delegate most of the checking to the proper Java code. We simply add
 <tbody>
 <tr>
 <td>
-<a href="-null-public-key-tree.html">NullPublicKeyTree</a></td>
+<a href="-null-composite-key.html">NullCompositeKey</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">NullPublicKeyTree</span><span class="symbol">: </span><a href="-public-key-tree/index.html"><span class="identifier">PublicKeyTree</span></a></code></td>
+<code><span class="keyword">val </span><span class="identifier">NullCompositeKey</span><span class="symbol">: </span><a href="-composite-key/index.html"><span class="identifier">CompositeKey</span></a></code></td>
 </tr>
 <tr>
 <td>

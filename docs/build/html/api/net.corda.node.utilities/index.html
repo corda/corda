@@ -14,7 +14,7 @@
 <td>
 <a href="-a-n-s-i-progress-observer/index.html">ANSIProgressObserver</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ANSIProgressObserver</span></code><p>This observes the <a href="../net.corda.node.services.statemachine/-state-machine-manager/index.html">StateMachineManager</a> and follows the progress of <a href="../net.corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a>s until they complete in the order
+<code><span class="keyword">class </span><span class="identifier">ANSIProgressObserver</span></code><p>This observes the <a href="../net.corda.node.services.statemachine/-state-machine-manager/index.html">StateMachineManager</a> and follows the progress of <a href="../net.corda.core.flows/-flow-logic/index.html">FlowLogic</a>s until they complete in the order
 they are added to the <a href="../net.corda.node.services.statemachine/-state-machine-manager/index.html">StateMachineManager</a>.</p>
 </td>
 </tr>
@@ -57,6 +57,13 @@ do not support setValue() method from <a href="#">MutableMap.MutableEntry</a>.</
 <td>
 <code><span class="keyword">interface </span><span class="identifier">AffinityExecutor</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a></code><p>An extended executor interface that supports thread affinity assertions and short circuiting. This can be useful
 for ensuring code runs on the right thread, and also for unit testing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-composite-key-column-type/index.html">CompositeKeyColumnType</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">CompositeKeyColumnType</span></code><p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="../net.corda.core.crypto/-composite-key/index.html">CompositeKey</a>.</p>
 </td>
 </tr>
 <tr>
@@ -136,13 +143,6 @@ adjusted externally.</p>
 <a href="-public-key-column-type/index.html">PublicKeyColumnType</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">PublicKeyColumnType</span></code><p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html">PublicKey</a>.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="-public-key-tree-column-type/index.html">PublicKeyTreeColumnType</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">PublicKeyTreeColumnType</span></code><p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="../net.corda.core.crypto/-public-key-tree/index.html">PublicKeyTree</a>.</p>
 </td>
 </tr>
 <tr>
@@ -228,6 +228,12 @@ our environment:</p>
 </tr>
 <tr>
 <td>
+<a href="composite-key.html">compositeKey</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">compositeKey</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$compositeKey(, kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="configure-database.html">configureDatabase</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">configureDatabase</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$configureDatabase(java.util.Properties)/props">props</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Properties.html"><span class="identifier">Properties</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/io/Closeable.html"><span class="identifier">Closeable</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&gt;</span></code></td>
@@ -286,12 +292,6 @@ our environment:</p>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">publicKey</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$publicKey(, kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p><a href="#">Table</a> column helpers for use with Exposed, as per <a href="#">varchar</a> etc.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="public-key-tree.html">publicKeyTree</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">publicKeyTree</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$publicKeyTree(, kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
 <tr>
 <td>

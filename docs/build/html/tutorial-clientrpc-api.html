@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Protocol state machines" href="protocol-state-machines.html"/>
+        <link rel="next" title="Flow state machines" href="flow-state-machines.html"/>
         <link rel="prev" title="Writing a contract test" href="tutorial-test-dsl.html"/> 
 
   
@@ -85,21 +85,32 @@
           
             
             
-                <p class="caption"><span class="caption-text">Overview</span></p>
+                <p class="caption"><span class="caption-text">Getting started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
@@ -107,21 +118,25 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Client RPC API Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Client RPC API Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#registering-classes-from-your-cordapp-with-rpc-kryo">Registering classes from your Cordapp with RPC Kryo</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Flow state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Contracts</span></p>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Node API</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -130,10 +145,12 @@
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>
 
             
@@ -186,7 +203,7 @@ the transaction graph to the standard output. We will then put some
 simple visualisation on top. For an explanation on how the RPC works
 see <a class="reference internal" href="clientrpc.html"><span class="doc">Client RPC</span></a>.</p>
 <p>We start off by connecting to the node itself. For the purposes of the tutorial we will use the Driver to start up a notary and a node that issues/exits and moves Cash around for herself. To authenticate we will use the certificates of the nodes directly.</p>
-<p>Note how we configure the node to create a user that has permission to start the CashProtocol.</p>
+<p>Note how we configure the node to create a user that has permission to start the CashFlow.</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span>enum class PrintOrVisualise {
     Print,
     Visualise
@@ -199,7 +216,7 @@ fun main(args: Array&lt;String&gt;) {
     val printOrVisualise = PrintOrVisualise.valueOf(args[0])
 
     val baseDirectory = Paths.get(&quot;build/rpc-api-tutorial&quot;)
-    val user = User(&quot;user&quot;, &quot;password&quot;, permissions = setOf(startProtocolPermission&lt;CashProtocol&gt;()))
+    val user = User(&quot;user&quot;, &quot;password&quot;, permissions = setOf(startFlowPermission&lt;CashFlow&gt;()))
 
     driver(driverDirectory = baseDirectory) {
         startNode(&quot;Notary&quot;, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
@@ -254,11 +271,11 @@ fun main(args: Array&lt;String&gt;) {
     fun networkMapUpdates(): Pair&lt;List&lt;NodeInfo&gt;, Observable&lt;NetworkMapCache.MapChange&gt;&gt;
 
     /**
-     * Start the given protocol with the given arguments, returning an [Observable] with a single observation of the
-     * result of running the protocol.
+     * Start the given flow with the given arguments, returning an [Observable] with a single observation of the
+     * result of running the flow.
      */
     @RPCReturnsObservables
-    fun &lt;T: Any&gt; startProtocolDynamic(logicType: Class&lt;out ProtocolLogic&lt;T&gt;&gt;, vararg args: Any?): ProtocolHandle&lt;T&gt;
+    fun &lt;T : Any&gt; startFlowDynamic(logicType: Class&lt;out FlowLogic&lt;T&gt;&gt;, vararg args: Any?): FlowHandle&lt;T&gt;
 
     /**
      * Returns Node&#39;s identity, assuming this will not change while the node is running.
@@ -311,14 +328,14 @@ latter.</p>
         <span class="k">val</span> <span class="py">n</span> <span class="p">=</span> <span class="n">random</span><span class="p">.</span><span class="n">nextDouble</span><span class="p">()</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">ownedQuantity</span> <span class="p">&gt;</span> <span class="m">10000</span> <span class="p">&amp;&amp;</span> <span class="n">n</span> <span class="p">&gt;</span> <span class="m">0.8</span><span class="p">)</span> <span class="p">{</span>
             <span class="k">val</span> <span class="py">quantity</span> <span class="p">=</span> <span class="n">Math</span><span class="p">.</span><span class="n">abs</span><span class="p">(</span><span class="n">random</span><span class="p">.</span><span class="n">nextLong</span><span class="p">())</span> <span class="p">%</span> <span class="m">2000</span>
-            <span class="n">proxy</span><span class="p">.</span><span class="n">startProtocol</span><span class="p">(</span><span class="o">::</span><span class="n">CashProtocol</span><span class="p">,</span> <span class="n">CashCommand</span><span class="p">.</span><span class="n">ExitCash</span><span class="p">(</span><span class="n">Amount</span><span class="p">(</span><span class="n">quantity</span><span class="p">,</span> <span class="n">USD</span><span class="p">),</span> <span class="n">issueRef</span><span class="p">))</span>
+            <span class="n">proxy</span><span class="p">.</span><span class="n">startFlow</span><span class="p">(</span><span class="o">::</span><span class="n">CashFlow</span><span class="p">,</span> <span class="n">CashCommand</span><span class="p">.</span><span class="n">ExitCash</span><span class="p">(</span><span class="n">Amount</span><span class="p">(</span><span class="n">quantity</span><span class="p">,</span> <span class="n">USD</span><span class="p">),</span> <span class="n">issueRef</span><span class="p">))</span>
             <span class="n">ownedQuantity</span> <span class="p">-=</span> <span class="n">quantity</span>
         <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">ownedQuantity</span> <span class="p">&gt;</span> <span class="m">1000</span> <span class="p">&amp;&amp;</span> <span class="n">n</span> <span class="p">&lt;</span> <span class="m">0.7</span><span class="p">)</span> <span class="p">{</span>
             <span class="k">val</span> <span class="py">quantity</span> <span class="p">=</span> <span class="n">Math</span><span class="p">.</span><span class="n">abs</span><span class="p">(</span><span class="n">random</span><span class="p">.</span><span class="n">nextLong</span><span class="p">()</span> <span class="p">%</span> <span class="n">Math</span><span class="p">.</span><span class="n">min</span><span class="p">(</span><span class="n">ownedQuantity</span><span class="p">,</span> <span class="m">2000</span><span class="p">))</span>
-            <span class="n">proxy</span><span class="p">.</span><span class="n">startProtocol</span><span class="p">(</span><span class="o">::</span><span class="n">CashProtocol</span><span class="p">,</span> <span class="n">CashCommand</span><span class="p">.</span><span class="n">PayCash</span><span class="p">(</span><span class="n">Amount</span><span class="p">(</span><span class="n">quantity</span><span class="p">,</span> <span class="n">Issued</span><span class="p">(</span><span class="n">meAndRef</span><span class="p">,</span> <span class="n">USD</span><span class="p">)),</span> <span class="n">me</span><span class="p">))</span>
+            <span class="n">proxy</span><span class="p">.</span><span class="n">startFlow</span><span class="p">(</span><span class="o">::</span><span class="n">CashFlow</span><span class="p">,</span> <span class="n">CashCommand</span><span class="p">.</span><span class="n">PayCash</span><span class="p">(</span><span class="n">Amount</span><span class="p">(</span><span class="n">quantity</span><span class="p">,</span> <span class="n">Issued</span><span class="p">(</span><span class="n">meAndRef</span><span class="p">,</span> <span class="n">USD</span><span class="p">)),</span> <span class="n">me</span><span class="p">))</span>
         <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
             <span class="k">val</span> <span class="py">quantity</span> <span class="p">=</span> <span class="n">Math</span><span class="p">.</span><span class="n">abs</span><span class="p">(</span><span class="n">random</span><span class="p">.</span><span class="n">nextLong</span><span class="p">()</span> <span class="p">%</span> <span class="m">1000</span><span class="p">)</span>
-            <span class="n">proxy</span><span class="p">.</span><span class="n">startProtocol</span><span class="p">(</span><span class="o">::</span><span class="n">CashProtocol</span><span class="p">,</span> <span class="n">CashCommand</span><span class="p">.</span><span class="n">IssueCash</span><span class="p">(</span><span class="n">Amount</span><span class="p">(</span><span class="n">quantity</span><span class="p">,</span> <span class="n">USD</span><span class="p">),</span> <span class="n">issueRef</span><span class="p">,</span> <span class="n">me</span><span class="p">,</span> <span class="n">notary</span><span class="p">))</span>
+            <span class="n">proxy</span><span class="p">.</span><span class="n">startFlow</span><span class="p">(</span><span class="o">::</span><span class="n">CashFlow</span><span class="p">,</span> <span class="n">CashCommand</span><span class="p">.</span><span class="n">IssueCash</span><span class="p">(</span><span class="n">Amount</span><span class="p">(</span><span class="n">quantity</span><span class="p">,</span> <span class="n">USD</span><span class="p">),</span> <span class="n">issueRef</span><span class="p">,</span> <span class="n">me</span><span class="p">,</span> <span class="n">notary</span><span class="p">))</span>
             <span class="n">ownedQuantity</span> <span class="p">+=</span> <span class="n">quantity</span>
         <span class="p">}</span>
     <span class="p">}</span>
@@ -327,7 +344,7 @@ latter.</p>
 </div>
 <p>We utilise several RPC functions here to query things like the notaries in the node cluster or our own vault.</p>
 <p>Then in a loop we generate randomly either an Issue, a Pay or an Exit transaction.</p>
-<p>The RPC we need to initiate a Cash transaction is <code class="docutils literal"><span class="pre">startProtocolDynamic</span></code> which may start an arbitrary protocol, given sufficient permissions to do so. We won&#8217;t use this function directly, but rather a type-safe wrapper around it <code class="docutils literal"><span class="pre">startProtocol</span></code> that type-checks the arguments for us.</p>
+<p>The RPC we need to initiate a Cash transaction is <code class="docutils literal"><span class="pre">startFlowDynamic</span></code> which may start an arbitrary flow, given sufficient permissions to do so. We won&#8217;t use this function directly, but rather a type-safe wrapper around it <code class="docutils literal"><span class="pre">startFlow</span></code> that type-checks the arguments for us.</p>
 <p>Finally we have everything in place: we start a couple of nodes, connect to them, and start creating transactions while listening on successfully created ones, which are dumped to the console. We just need to run it!:</p>
 <blockquote>
 <div># Build the example
@@ -361,6 +378,29 @@ latter.</p>
 </pre></div>
 </div>
 <p>If we run the client with <code class="docutils literal"><span class="pre">Visualise</span></code> we should see a simple random graph being drawn as new transactions are being created.</p>
+<div class="section" id="registering-classes-from-your-cordapp-with-rpc-kryo">
+<h2>Registering classes from your Cordapp with RPC Kryo<a class="headerlink" href="#registering-classes-from-your-cordapp-with-rpc-kryo" title="Permalink to this headline">¶</a></h2>
+<p>As described in <a class="reference internal" href="clientrpc.html"><span class="doc">Client RPC</span></a>, you currently have to register any additional classes you add that are needed in RPC
+requests or responses with the <cite>Kryo</cite> instance RPC uses.  Here&#8217;s an example of how you do this for an example class.</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">data</span> <span class="k">class</span> <span class="nc">ExampleRPCValue</span><span class="p">(</span><span class="k">val</span> <span class="py">foo</span><span class="p">:</span> <span class="n">String</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">ExampleRPCCordaPluginRegistry</span> <span class="p">:</span> <span class="n">CordaPluginRegistry</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">registerRPCKryoTypes</span><span class="p">(</span><span class="n">kryo</span><span class="p">:</span> <span class="n">Kryo</span><span class="p">):</span> <span class="n">Boolean</span> <span class="p">{</span>
+        <span class="c1">// Add classes like this.</span>
+        <span class="n">kryo</span><span class="p">.</span><span class="n">register</span><span class="p">(</span><span class="n">ExampleRPCValue</span><span class="o">::</span><span class="k">class</span><span class="p">.</span><span class="n">java</span><span class="p">)</span>
+        <span class="c1">// You should return true, otherwise your plugin will be ignored for registering classes with Kryo.</span>
+        <span class="k">return</span> <span class="k">true</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>See more on plugins in <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">Creating a Cordapp</span></a>.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin
+customisation point will either go away completely or change.</p>
+</div>
+</div>
 </div>
 
 
@@ -370,7 +410,7 @@ latter.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="protocol-state-machines.html" class="btn btn-neutral float-right" title="Protocol state machines" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="flow-state-machines.html" class="btn btn-neutral float-right" title="Flow state machines" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="tutorial-test-dsl.html" class="btn btn-neutral" title="Writing a contract test" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

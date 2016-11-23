@@ -70,6 +70,13 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
+<a href="../../net.corda.core.flows/-flow-logic-ref-factory/index.html">FlowLogicRefFactory</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FlowLogicRefFactory</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>A class for conversion to and from <a href="../../net.corda.core.flows/-flow-logic/index.html">FlowLogic</a> and <a href="../../net.corda.core.flows/-flow-logic-ref/index.html">FlowLogicRef</a> instances.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../../net.corda.node.services.identity/-in-memory-identity-service/index.html">InMemoryIdentityService</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">InMemoryIdentityService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../net.corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></code><p>Simple identity service which caches parties and provides functionality for efficient lookup.</p>
@@ -136,9 +143,10 @@ we add further functionality as the design for the vault and vault service matur
 </tr>
 <tr>
 <td>
-<a href="../../net.corda.core.protocols/-protocol-logic-ref-factory/index.html">ProtocolLogicRefFactory</a></td>
+<a href="../../net.corda.node.services.transactions/-raft-uniqueness-provider/index.html">RaftUniquenessProvider</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ProtocolLogicRefFactory</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>A class for conversion to and from <a href="../../net.corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a> and <a href="../../net.corda.core.protocols/-protocol-logic-ref/index.html">ProtocolLogicRef</a> instances.</p>
+<code><span class="keyword">class </span><span class="identifier">RaftUniquenessProvider</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a><span class="symbol">, </span><span class="identifier">SingletonSerializeAsToken</span></code><p>A uniqueness provider that records committed input states in a distributed collection replicated and
+persisted in a Raft cluster, using the Copycat framework (http://atomix.io/copycat/).</p>
 </td>
 </tr>
 <tr>
@@ -146,7 +154,7 @@ we add further functionality as the design for the vault and vault service matur
 <a href="../../net.corda.node.services/-notary-change/-service/index.html">Service</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>A service that monitors the network for requests for changing the notary of a state,
-and immediately runs the <a href="../../net.corda.protocols/-notary-change-protocol/index.html">NotaryChangeProtocol</a> if the auto-accept criteria are met.</p>
+and immediately runs the <a href="../../net.corda.flows/-notary-change-flow/index.html">NotaryChangeFlow</a> if the auto-accept criteria are met.</p>
 </td>
 </tr>
 <tr>

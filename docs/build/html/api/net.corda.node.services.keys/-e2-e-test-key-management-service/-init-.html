@@ -11,7 +11,7 @@
 <p>A simple in-memory KMS that doesnt bother saving keys to disk. A real implementation would:</p>
 <ul><li><p>Probably be accessed via the network layer as an internal node service i.e. via a message queue, so it can run
 on a separate/firewalled service.</p>
-</li><li><p>Use the protocol framework so requests to fetch keys can be suspended whilst a human signs off on the request.</p>
+</li><li><p>Use the flow framework so requests to fetch keys can be suspended whilst a human signs off on the request.</p>
 </li><li><p>Use deterministic key derivation.</p>
 </li><li><p>Possibly have some sort of TREZOR-like two-factor authentication ability.</p>
 </li></ul><p>etc.</p>

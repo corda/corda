@@ -17,7 +17,8 @@ proxies.</p>
 calls from many threads at once you should cache one proxy per thread and reuse them. This function itself is
 thread safe though so requires no extra synchronisation.</p>
 <p>RPC sends and receives are logged on the net.corda.rpc logger.</p>
-<p>By default there are no timeouts on calls. RPCs can survive temporary losses or changes in connectivity,
+<p>By default there are no timeouts on calls. This is deliberate, RPCs without timeouts can survive restarts,
+maintenance downtime and moves of the server. RPCs can survive temporary losses or changes in client connectivity,
 like switching between wifi networks. You can specify a timeout on the level of a proxy. If a call times
 out it will throw <a href="#">RPCException.Deadline</a>.</p>
 <p>The <a href="../../net.corda.node.services.messaging/-corda-r-p-c-ops/index.html">CordaRPCOps</a> defines what client RPCs are available. If an RPC returns an <a href="#">Observable</a> anywhere in the

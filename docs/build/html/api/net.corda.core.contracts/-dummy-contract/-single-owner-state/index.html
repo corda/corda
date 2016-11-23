@@ -17,7 +17,7 @@
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">SingleOwnerState</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.DummyContract.SingleOwnerState$<init>(kotlin.Int, net.corda.core.crypto.PublicKeyTree)/magicNumber">magicNumber</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;0<span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.DummyContract.SingleOwnerState$<init>(kotlin.Int, net.corda.core.crypto.PublicKeyTree)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-public-key-tree/index.html"><span class="identifier">PublicKeyTree</span></a><span class="symbol">)</span></code></td>
+<code><span class="identifier">SingleOwnerState</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.DummyContract.SingleOwnerState$<init>(kotlin.Int, net.corda.core.crypto.CompositeKey)/magicNumber">magicNumber</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;0<span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.DummyContract.SingleOwnerState$<init>(kotlin.Int, net.corda.core.crypto.CompositeKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -41,14 +41,14 @@
 <td>
 <a href="owner.html">owner</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">owner</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-public-key-tree/index.html"><span class="identifier">PublicKeyTree</span></a></code><p>There must be a MoveCommand signed by this key to claim the amount</p>
+<code><span class="keyword">val </span><span class="identifier">owner</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a></code><p>There must be a MoveCommand signed by this key to claim the amount</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="participants.html">participants</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">participants</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-public-key-tree/index.html"><span class="identifier">PublicKeyTree</span></a><span class="symbol">&gt;</span></code><p>A <emph>participant</emph> is any party that is able to consume this state in a valid transaction.</p>
+<code><span class="keyword">val </span><span class="identifier">participants</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span></code><p>A <emph>participant</emph> is any party that is able to consume this state in a valid transaction.</p>
 </td>
 </tr>
 </tbody>
@@ -60,7 +60,7 @@
 <td>
 <a href="with-new-owner.html">withNewOwner</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">withNewOwner</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.DummyContract.SingleOwnerState$withNewOwner(net.corda.core.crypto.PublicKeyTree)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-public-key-tree/index.html"><span class="identifier">PublicKeyTree</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone</p>
+<code><span class="keyword">fun </span><span class="identifier">withNewOwner</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.DummyContract.SingleOwnerState$withNewOwner(net.corda.core.crypto.CompositeKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone</p>
 </td>
 </tr>
 </tbody>

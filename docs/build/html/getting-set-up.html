@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Data model" href="data-model.html"/>
+        <link rel="next" title="Running the demos" href="running-the-demos.html"/>
         <link rel="prev" title="What’s included?" href="inthebox.html"/> 
 
   
@@ -85,25 +85,41 @@
           
             
             
-                <p class="caption"><span class="caption-text">Overview</span></p>
+                <p class="caption"><span class="caption-text">Getting started</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting set up</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#if-intellij-complains-about-lack-of-an-sdk">If IntelliJ complains about lack of an SDK</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#doing-it-without-intellij">Doing it without IntelliJ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-jvm">A JVM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#intellij">IntelliJ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#kotlin">Kotlin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#version-control-via-git">Version Control via Git</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#gradle">Gradle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#corda-source-code">Corda Source Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -112,20 +128,21 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Flow state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Contracts</span></p>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Node API</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -134,10 +151,12 @@
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>
 
             
@@ -184,49 +203,62 @@
             
   <div class="section" id="getting-set-up">
 <h1>Getting set up<a class="headerlink" href="#getting-set-up" title="Permalink to this headline">¶</a></h1>
-<p>Ensure that you have access to R3 git repository.</p>
-<blockquote>
-<div><a class="reference external" href="https://bitbucket.org/R3-CEV/r3prototyping.git">https://bitbucket.org/R3-CEV/r3prototyping.git</a></div></blockquote>
-<p>If you cannot access the page please contact the R3 admin team.</p>
-<p>Install the Oracle JDK 8u45 or higher. OpenJDK will probably also work, but it hasn&#8217;t been tested.</p>
-<p>Then install IntelliJ. The Community Edition is good enough:</p>
-<blockquote>
-<div><a class="reference external" href="https://www.jetbrains.com/idea/download/">https://www.jetbrains.com/idea/download/</a></div></blockquote>
-<p>Upgrade the Kotlin plugin to the latest version by clicking &#8220;Configure &gt; Plugins&#8221; in the opening screen,
-then clicking &#8220;Install JetBrains plugin&#8221;, then searching for Kotlin, then hitting &#8220;Upgrade&#8221; and then &#8220;Restart&#8221;.
-You can confirm what is the latest version of Kotlin plugin on this page:</p>
-<blockquote>
-<div><a class="reference external" href="https://plugins.jetbrains.com/plugin/6954">https://plugins.jetbrains.com/plugin/6954</a></div></blockquote>
-<p>Choose &#8220;Check out from version control&#8221; and use this git URL. Please remember to replace your_username with your
-actual bitbucket user name.</p>
-<blockquote>
-<div><a class="reference external" href="https://your_username&#64;bitbucket.org/R3-CEV/r3prototyping.git">https://your_username&#64;bitbucket.org/R3-CEV/r3prototyping.git</a></div></blockquote>
-<p>After code is cloned open the project. Please ensure that Gradle project is imported.
-You should have the &#8220;Unliked Gradle project?&#8221; pop-up window in the IntelliJ top right corner. Please click on &#8220;Import Gradle Project&#8221;. Wait for it to think and download the dependencies. After that you might have another popup titled &#8220;Unindexed remote maven repositories found.&#8221; This is general IntelliJ question and doesn&#8217;t affect Corda, therefore you can decided to index them or not.</p>
-<p>Next click on &#8220;green arrow&#8221; next to &#8220;All tests&#8221; pop-up on the top toolbar.</p>
-<p>The code should build, the unit tests should show as all green.</p>
-<p>You can catch up with the latest code by selecting &#8220;VCS -&gt; Update Project&#8221; in the menu.</p>
-<div class="section" id="if-intellij-complains-about-lack-of-an-sdk">
-<h2>If IntelliJ complains about lack of an SDK<a class="headerlink" href="#if-intellij-complains-about-lack-of-an-sdk" title="Permalink to this headline">¶</a></h2>
-<p>If on attempting to open the project (including importing Gradle project), IntelliJ refuses because SDK was not selected, do the following:</p>
-<blockquote>
-<div>Configure -&gt; Project Defaults -&gt; Project Structure</div></blockquote>
-<p>on that tab:</p>
-<blockquote>
-<div>Project Settings / Project</div></blockquote>
-<p>click on New… next to the red &lt;No SDK&gt; symbol, and select JDK.  It should then pop up and show the latest JDK it has
-found at something like</p>
-<blockquote>
-<div>jdk1.8.0_xx…/Contents/Home</div></blockquote>
-<p>Also select Project language level: as 8.  Click OK.  Open should now work.</p>
+<p>We have tried to make access to Corda as relatively simple as possible, using industry standard established tools.
+Although it is possible to replace any of the recommendations below, we will find it a lot easier to support your efforts
+if you follow our guidelines. Saying that, we are also interested in problems that arise due to different configurations.</p>
+<div class="section" id="a-jvm">
+<h2>A JVM<a class="headerlink" href="#a-jvm" title="Permalink to this headline">¶</a></h2>
+<p>Corda runs in a JVM and is written predominantly in Kotlin with some example use cases demonstrated in Java that we have
+incorporated to demonstrate that Kotlin and Java can work seemlessly together. We recommend the most recent production
+version of Java 8. The JDK can be obtained <a class="reference external" href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">from Oracle</a>.
+Other implementations of the JVM are not actively supported, but as mentioned, we are interested in finding out any issues you
+do have with them.</p>
 </div>
-<div class="section" id="doing-it-without-intellij">
-<h2>Doing it without IntelliJ<a class="headerlink" href="#doing-it-without-intellij" title="Permalink to this headline">¶</a></h2>
-<p>If you don&#8217;t want to explore or modify the code in a local IDE, you can also just use the command line and a text editor:
-* First run <code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://your_username&#64;bitbucket.org/R3-CEV/r3prototyping.git</span></code> to download Corda source code. Please remember to replace your_username with your actual bitbucket user name.
-* Next ensure that you are in r3repository <code class="docutils literal"><span class="pre">cd</span> <span class="pre">r3repository</span></code>
-* Then you can run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">test</span></code> to run the unit tests.
-* Finally remeber to run <code class="docutils literal"><span class="pre">git</span> <span class="pre">pull</span></code> to upgrade the source code.</p>
+<div class="section" id="intellij">
+<h2>IntelliJ<a class="headerlink" href="#intellij" title="Permalink to this headline">¶</a></h2>
+<p>We strongly recommend the use of IntelliJ&#8217;s Development Environment known as IDEA. Download it for free from
+<a class="reference external" href="https://www.jetbrains.com/idea/download/">JetBrains</a>. The primary reason we recommend this particular IDE is that it integrates
+very well with our choice of language for Corda, &#8220;Kotlin&#8221;, as Jetbrains also support the development of Kotlin.</p>
+</div>
+<div class="section" id="kotlin">
+<h2>Kotlin<a class="headerlink" href="#kotlin" title="Permalink to this headline">¶</a></h2>
+<p>Kotlin is available as a downloadable plugin to IntelliJ. Refer to IntelliJ&#8217;s instructions on
+<a class="reference external" href="https://kotlinlang.org/docs/tutorials/getting-started.html">getting Started with Kotlin and IntelliJ</a>. Additionally,
+if you would like to start getting to grips with the Kotlin language, then we strongly recommend you work through some
+of the tutorials (known as &#8220;koans&#8221;) as well. Also see our <a class="reference internal" href="further-notes-on-kotlin.html"><span class="doc">Further notes on Kotlin</span></a>.</p>
+</div>
+<div class="section" id="version-control-via-git">
+<h2>Version Control via Git<a class="headerlink" href="#version-control-via-git" title="Permalink to this headline">¶</a></h2>
+<p>We use git to version control Corda. The authorative place to obtain git is from the main <a class="reference external" href="https://git-scm.com/downloads">git website</a>
+but it may be the case that your operating system provides git with a supported utility (e.g. for Apple, git is provided along
+with XCode - their free development environment). If this is the case, we would recommend you obtain git via that
+supported route.</p>
+<p>You will need the command line package installed which you can then use natively (via the command line) or via IntelliJ
+(in which case you may need to configure IntelliJ to recognise where git has been installed on your system). IntelliJ and
+git configuration are quite seemless although the first time you use it, you will have to configure IntelliJ the location
+of your git command installation. More details regarding this can be found
+on the <a class="reference external" href="https://www.jetbrains.com/help/idea/2016.2/using-git-integration.html">JetBrains website</a></p>
+</div>
+<div class="section" id="gradle">
+<h2>Gradle<a class="headerlink" href="#gradle" title="Permalink to this headline">¶</a></h2>
+<p>Gradle is our primary means of building Corda and managing dependencies. IntelliJ has its own view of this and occasionally
+may need to be resynced from time to time. This can be done within IntelliJ by pressing the &#8220;gradle refresh&#8221; icon located
+on the gradle tab (generally found on the right hand side), or by following the gradle commands specific for the task you
+are performing (details expounded later). Whenever prompted about gradle, accept the defaults suggested by IntelliJ.</p>
+</div>
+<div class="section" id="corda-source-code">
+<h2>Corda Source Code<a class="headerlink" href="#corda-source-code" title="Permalink to this headline">¶</a></h2>
+<p>You can check out the Corda platform source code from this repository:</p>
+<blockquote>
+<div><a class="reference external" href="https://github.com/corda/corda.git">https://github.com/corda/corda.git</a></div></blockquote>
+<p>and a template app that you can use as a basis for experimenting with app development from:</p>
+<blockquote>
+<div><a class="reference external" href="https://github.com/corda/cordapp-template.git">https://github.com/corda/cordapp-template.git</a></div></blockquote>
+<p>You can catch up with the latest code by selecting &#8220;VCS -&gt; Update Project&#8221; in the IntelliJ menu.</p>
+</div>
+<div class="section" id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this headline">¶</a></h2>
+<p>See <a class="reference internal" href="getting-set-up-fault-finding.html"><span class="doc">Getting Set Up : Faultfinding</span></a>.</p>
 </div>
 </div>
 
@@ -237,7 +269,7 @@ found at something like</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="data-model.html" class="btn btn-neutral float-right" title="Data model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="running-the-demos.html" class="btn btn-neutral float-right" title="Running the demos" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="inthebox.html" class="btn btn-neutral" title="What’s included?" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

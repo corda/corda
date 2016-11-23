@@ -11,7 +11,7 @@
 <p>A base node implementation that can be customised either for production (with real implementations that do real
 I/O), or a mock implementation suitable for unit test environments.</p>
 <p>Marked as SingletonSerializeAsToken to prevent the invisible reference to AbstractNode in the ServiceHub accidentally
-sweeping up the Node into the Kryo checkpoint serialization via any protocols holding a reference to ServiceHub.</p>
+sweeping up the Node into the Kryo checkpoint serialization via any flows holding a reference to ServiceHub.</p>
 <br/>
 <br/>
 <br/>

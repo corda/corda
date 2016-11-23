@@ -11,7 +11,7 @@
 <p>A base node implementation that can be customised either for production (with real implementations that do real
 I/O), or a mock implementation suitable for unit test environments.</p>
 <p>Marked as SingletonSerializeAsToken to prevent the invisible reference to AbstractNode in the ServiceHub accidentally
-sweeping up the Node into the Kryo checkpoint serialization via any protocols holding a reference to ServiceHub.</p>
+sweeping up the Node into the Kryo checkpoint serialization via any flows holding a reference to ServiceHub.</p>
 <br/>
 <br/>
 <br/>
@@ -90,6 +90,12 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <a href="db-closer.html">dbCloser</a></td>
 <td>
 <code><span class="keyword">var </span><span class="identifier">dbCloser</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Runnable.html"><span class="identifier">Runnable</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="flow-logic-factory.html">flowLogicFactory</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">flowLogicFactory</span><span class="symbol">: </span><a href="../../net.corda.core.flows/-flow-logic-ref-factory/index.html"><span class="identifier">FlowLogicRefFactory</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -182,12 +188,6 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <code><span class="keyword">val </span><span class="identifier">pluginRegistries</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node/-corda-plugin-registry/index.html"><span class="identifier">CordaPluginRegistry</span></a><span class="symbol">&gt;</span></code><p>Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="protocol-logic-factory.html">protocolLogicFactory</a></td>
-<td>
-<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">protocolLogicFactory</span><span class="symbol">: </span><a href="../../net.corda.core.protocols/-protocol-logic-ref-factory/index.html"><span class="identifier">ProtocolLogicRefFactory</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -356,7 +356,7 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="make-uniqueness-provider.html">makeUniquenessProvider</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">makeUniquenessProvider</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">makeUniquenessProvider</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.internal.AbstractNode$makeUniquenessProvider(net.corda.core.node.services.ServiceType)/type">type</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a></code></td>
 </tr>
 <tr>
 <td>

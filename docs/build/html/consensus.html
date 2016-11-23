@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Networking and messaging" href="messaging.html"/>
+        <link rel="next" title="Client RPC" href="clientrpc.html"/>
         <link rel="prev" title="Transaction Tear-offs" href="merkle-trees.html"/> 
 
   
@@ -85,10 +85,14 @@
           
             
             
-                <p class="caption"><span class="caption-text">Overview</span></p>
-<ul class="current">
+                <p class="caption"><span class="caption-text">Getting started</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
@@ -104,13 +108,20 @@
 <li class="toctree-l2"><a class="reference internal" href="#obtaining-a-signature">Obtaining a signature</a></li>
 </ul>
 </li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -119,20 +130,21 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Flow state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Contracts</span></p>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Node API</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -141,10 +153,12 @@
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>
 
             
@@ -244,16 +258,16 @@ Ensuring that all input states point to the same notary is the responsibility of
 </div>
 <div class="section" id="changing-notaries">
 <h3>Changing notaries<a class="headerlink" href="#changing-notaries" title="Permalink to this headline">¶</a></h3>
-<p>To change the notary for an input state, use the <code class="docutils literal"><span class="pre">NotaryChangeProtocol</span></code>. For example:</p>
+<p>To change the notary for an input state, use the <code class="docutils literal"><span class="pre">NotaryChangeFlow</span></code>. For example:</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Suspendable</span>
 <span class="k">fun</span> <span class="nf">changeNotary</span><span class="p">(</span><span class="n">originalState</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">ContractState</span><span class="p">&gt;,</span>
                  <span class="n">newNotary</span><span class="p">:</span> <span class="n">Party</span><span class="p">):</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">ContractState</span><span class="p">&gt;</span> <span class="p">{</span>
-    <span class="k">val</span> <span class="py">protocol</span> <span class="p">=</span> <span class="n">NotaryChangeProtocol</span><span class="p">.</span><span class="n">Instigator</span><span class="p">(</span><span class="n">originalState</span><span class="p">,</span> <span class="n">newNotary</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">subProtocol</span><span class="p">(</span><span class="n">protocol</span><span class="p">)</span>
+    <span class="k">val</span> <span class="py">flow</span> <span class="p">=</span> <span class="n">NotaryChangeFlow</span><span class="p">.</span><span class="n">Instigator</span><span class="p">(</span><span class="n">originalState</span><span class="p">,</span> <span class="n">newNotary</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">subFlow</span><span class="p">(</span><span class="n">flow</span><span class="p">)</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>The protocol will:</p>
+<p>The flow will:</p>
 <ol class="arabic simple">
 <li>Construct a transaction with the old state as the input and the new state as the output</li>
 <li>Obtain signatures from all <em>participants</em> (a participant is any party that is able to consume this state in a valid transaction, as defined by the state itself)</li>
@@ -332,30 +346,30 @@ clocks at the US Naval Observatory. This time feed is extremely accurate and ava
 </div>
 <div class="section" id="obtaining-a-signature">
 <h2>Obtaining a signature<a class="headerlink" href="#obtaining-a-signature" title="Permalink to this headline">¶</a></h2>
-<p>Once a transaction is built and ready to be finalised, normally you would call <code class="docutils literal"><span class="pre">FinalityProtocol</span></code> passing in a
+<p>Once a transaction is built and ready to be finalised, normally you would call <code class="docutils literal"><span class="pre">FinalityFlow</span></code> passing in a
 <code class="docutils literal"><span class="pre">SignedTransaction</span></code> (including signatures from the participants) and a list of participants to notify. This requests a
 notary signature if needed, and then sends a copy of the notarised transaction to all participants for them to store.
-<code class="docutils literal"><span class="pre">FinalityProtocol</span></code> delegates to <code class="docutils literal"><span class="pre">NotaryProtocol.Client</span></code> followed by <code class="docutils literal"><span class="pre">BroadcastTransactionProtocol</span></code> to do the
+<code class="docutils literal"><span class="pre">FinalityFlow</span></code> delegates to <code class="docutils literal"><span class="pre">NotaryFlow.Client</span></code> followed by <code class="docutils literal"><span class="pre">BroadcastTransactionFlow</span></code> to do the
 actual work of notarising and broadcasting the transaction. For example:</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">fun</span> <span class="nf">finaliseTransaction</span><span class="p">(</span><span class="n">serviceHub</span><span class="p">:</span> <span class="n">ServiceHubInternal</span><span class="p">,</span> <span class="n">ptx</span><span class="p">:</span> <span class="n">TransactionBuilder</span><span class="p">,</span> <span class="n">participants</span><span class="p">:</span> <span class="n">Set</span><span class="p">&lt;</span><span class="n">Party</span><span class="p">&gt;)</span>
         <span class="p">:</span> <span class="n">ListenableFuture</span><span class="p">&lt;</span><span class="n">Unit</span><span class="p">&gt;</span> <span class="p">{</span>
     <span class="c1">// We conclusively cannot have all the signatures, as the notary has not signed yet</span>
     <span class="k">val</span> <span class="py">tx</span> <span class="p">=</span> <span class="n">ptx</span><span class="p">.</span><span class="n">toSignedTransaction</span><span class="p">(</span><span class="n">checkSufficientSignatures</span> <span class="p">=</span> <span class="k">false</span><span class="p">)</span>
     <span class="c1">// The empty set would be the trigger events, which are not used here</span>
-    <span class="k">val</span> <span class="py">protocol</span> <span class="p">=</span> <span class="n">FinalityProtocol</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">emptySet</span><span class="p">(),</span> <span class="n">participants</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">serviceHub</span><span class="p">.</span><span class="n">startProtocol</span><span class="p">(</span><span class="s">&quot;protocol.finalisation&quot;</span><span class="p">,</span> <span class="n">protocol</span><span class="p">)</span>
+    <span class="k">val</span> <span class="py">flow</span> <span class="p">=</span> <span class="n">FinalityFlow</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">emptySet</span><span class="p">(),</span> <span class="n">participants</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">serviceHub</span><span class="p">.</span><span class="n">startFlow</span><span class="p">(</span><span class="s">&quot;flow.finalisation&quot;</span><span class="p">,</span> <span class="n">flow</span><span class="p">)</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>To manually obtain a signature from a notary you can call <code class="docutils literal"><span class="pre">NotaryProtocol.Client</span></code> directly. The protocol will work out
+<p>To manually obtain a signature from a notary you can call <code class="docutils literal"><span class="pre">NotaryFlow.Client</span></code> directly. The flow will work out
 which notary needs to be called based on the input states and the timestamp command. For example, the following snippet
-can be used when writing a custom protocol:</p>
+can be used when writing a custom flow:</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">fun</span> <span class="nf">getNotarySignature</span><span class="p">(</span><span class="n">wtx</span><span class="p">:</span> <span class="n">WireTransaction</span><span class="p">):</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="n">subProtocol</span><span class="p">(</span><span class="n">NotaryProtocol</span><span class="p">.</span><span class="n">Client</span><span class="p">(</span><span class="n">wtx</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">subFlow</span><span class="p">(</span><span class="n">NotaryFlow</span><span class="p">.</span><span class="n">Client</span><span class="p">(</span><span class="n">wtx</span><span class="p">))</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>On conflict the <code class="docutils literal"><span class="pre">NotaryProtocol</span></code> with throw a <code class="docutils literal"><span class="pre">NotaryException</span></code> containing the conflict details:</p>
+<p>On conflict the <code class="docutils literal"><span class="pre">NotaryFlow</span></code> with throw a <code class="docutils literal"><span class="pre">NotaryException</span></code> containing the conflict details:</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="cm">/** Specifies the consuming transaction for the conflicting input state */</span>
 <span class="k">data</span> <span class="k">class</span> <span class="nc">Conflict</span><span class="p">(</span><span class="k">val</span> <span class="py">stateHistory</span><span class="p">:</span> <span class="n">Map</span><span class="p">&lt;</span><span class="n">StateRef</span><span class="p">,</span> <span class="n">ConsumingTx</span><span class="p">&gt;)</span>
 
@@ -366,7 +380,7 @@ can be used when writing a custom protocol:</p>
 <span class="k">data</span> <span class="k">class</span> <span class="nc">ConsumingTx</span><span class="p">(</span><span class="k">val</span> <span class="py">id</span><span class="p">:</span> <span class="n">SecureHash</span><span class="p">,</span> <span class="k">val</span> <span class="py">inputIndex</span><span class="p">:</span> <span class="n">Int</span><span class="p">,</span> <span class="k">val</span> <span class="py">requestingParty</span><span class="p">:</span> <span class="n">Party</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Conflict handling and resolution is currently the responsibility of the protocol author.</p>
+<p>Conflict handling and resolution is currently the responsibility of the flow author.</p>
 </div>
 </div>
 
@@ -377,7 +391,7 @@ can be used when writing a custom protocol:</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="messaging.html" class="btn btn-neutral float-right" title="Networking and messaging" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="clientrpc.html" class="btn btn-neutral float-right" title="Client RPC" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="merkle-trees.html" class="btn btn-neutral" title="Transaction Tear-offs" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

@@ -80,7 +80,7 @@ dont need a declared service type.</p>
 <a href="-state-machine-recorded-transaction-mapping-storage/index.html">StateMachineRecordedTransactionMappingStorage</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">StateMachineRecordedTransactionMappingStorage</span></code><p>This is the interface to storage storing state machine -&gt; recorded tx mappings. Any time a transaction is recorded
-during a protocol run <a href="-state-machine-recorded-transaction-mapping-storage/add-mapping.html">addMapping</a> should be called.</p>
+during a flow run <a href="-state-machine-recorded-transaction-mapping-storage/add-mapping.html">addMapping</a> should be called.</p>
 </td>
 </tr>
 <tr>
@@ -94,7 +94,7 @@ during a protocol run <a href="-state-machine-recorded-transaction-mapping-stora
 <a href="-storage-service/index.html">StorageService</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">StorageService</span></code><p>A sketch of an interface to a simple key/value storage system. Intended for persistence of simple blobs like
-transactions, serialised protocol state machines and so on. Again, this isnt intended to imply lack of SQL or
+transactions, serialised flow state machines and so on. Again, this isnt intended to imply lack of SQL or
 anything like that, this interface is only big enough to support the prototyping work.</p>
 </td>
 </tr>

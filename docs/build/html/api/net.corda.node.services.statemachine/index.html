@@ -12,15 +12,15 @@
 <tbody>
 <tr>
 <td>
-<a href="-protocol-i-o-request/index.html">ProtocolIORequest</a></td>
+<a href="-flow-i-o-request/index.html">FlowIORequest</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">ProtocolIORequest</span></code></td>
+<code><span class="keyword">interface </span><span class="identifier">FlowIORequest</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="-protocol-state-machine-impl/index.html">ProtocolStateMachineImpl</a></td>
+<a href="-flow-state-machine-impl/index.html">FlowStateMachineImpl</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ProtocolStateMachineImpl</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.protocols/-protocol-state-machine/index.html"><span class="identifier">ProtocolStateMachine</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">class </span><span class="identifier">FlowStateMachineImpl</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-state-machine/index.html"><span class="identifier">FlowStateMachine</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -32,7 +32,7 @@
 <td>
 <a href="-receive-request/index.html">ReceiveRequest</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">ReceiveRequest</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-state-machine-manager/-session-message.html"><span class="identifier">SessionMessage</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-protocol-i-o-request/index.html"><span class="identifier">ProtocolIORequest</span></a></code></td>
+<code><span class="keyword">interface </span><span class="identifier">ReceiveRequest</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-state-machine-manager/-session-message.html"><span class="identifier">SessionMessage</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-flow-i-o-request/index.html"><span class="identifier">FlowIORequest</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -50,14 +50,14 @@
 <td>
 <a href="-send-request/index.html">SendRequest</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">SendRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-protocol-i-o-request/index.html"><span class="identifier">ProtocolIORequest</span></a></code></td>
+<code><span class="keyword">interface </span><span class="identifier">SendRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-flow-i-o-request/index.html"><span class="identifier">FlowIORequest</span></a></code></td>
 </tr>
 <tr>
 <td>
 <a href="-state-machine-manager/index.html">StateMachineManager</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">StateMachineManager</span></code><p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="../net.corda.core.protocols/-protocol-state-machine/index.html">ProtocolStateMachine</a> objects.
-Each such object represents an instantiation of a (two-party) protocol that has reached a particular point.</p>
+<code><span class="keyword">class </span><span class="identifier">StateMachineManager</span></code><p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="../net.corda.core.flows/-flow-state-machine/index.html">FlowStateMachine</a> objects.
+Each such object represents an instantiation of a (two-party) flow that has reached a particular point.</p>
 </td>
 </tr>
 </tbody>

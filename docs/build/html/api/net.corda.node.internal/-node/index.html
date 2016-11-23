@@ -23,7 +23,7 @@ network map service, while bootstrapping a network.<br/>
 but nodes are not required to advertise services they run (hence subset).<br/>
 <br/>
 <a name="clock"></a>
-<code>clock</code> - The clock used within the node and by all protocols etc.<br/>
+<code>clock</code> - The clock used within the node and by all flows etc.<br/>
 <br/>
 <br/>
 <h3>Constructors</h3>
@@ -121,6 +121,12 @@ loads important data off disk and starts listening for connections.</p>
 </tr>
 <tr>
 <td>
+<a href="../-abstract-node/flow-logic-factory.html">flowLogicFactory</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">flowLogicFactory</span><span class="symbol">: </span><a href="../../net.corda.core.flows/-flow-logic-ref-factory/index.html"><span class="identifier">FlowLogicRefFactory</span></a></code></td>
+</tr>
+<tr>
+<td>
 <a href="../-abstract-node/identity.html">identity</a></td>
 <td>
 <code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">identity</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></code></td>
@@ -204,12 +210,6 @@ loads important data off disk and starts listening for connections.</p>
 <td>
 <code><span class="keyword">val </span><span class="identifier">pluginRegistries</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node/-corda-plugin-registry/index.html"><span class="identifier">CordaPluginRegistry</span></a><span class="symbol">&gt;</span></code><p>Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="../-abstract-node/protocol-logic-factory.html">protocolLogicFactory</a></td>
-<td>
-<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">protocolLogicFactory</span><span class="symbol">: </span><a href="../../net.corda.core.protocols/-protocol-logic-ref-factory/index.html"><span class="identifier">ProtocolLogicRefFactory</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -301,7 +301,7 @@ on H2 URLs and configuration see: http://www.h2database.com/html/features.html#d
 <td>
 <a href="make-uniqueness-provider.html">makeUniquenessProvider</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">makeUniquenessProvider</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.node.services.transactions/-persistent-uniqueness-provider/index.html"><span class="identifier">PersistentUniquenessProvider</span></a></code></td>
+<code><span class="keyword">fun </span><span class="identifier">makeUniquenessProvider</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.internal.Node$makeUniquenessProvider(net.corda.core.node.services.ServiceType)/type">type</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -443,18 +443,6 @@ on H2 URLs and configuration see: http://www.h2database.com/html/features.html#d
 <a href="../-abstract-node/obtain-legal-identity-key.html">obtainLegalIdentityKey</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">obtainLegalIdentityKey</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
-</tr>
-</tbody>
-</table>
-<h3>Companion Object Properties</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="-d-e-f-a-u-l-t_-p-o-r-t.html">DEFAULT_PORT</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">DEFAULT_PORT</span><span class="symbol">: </span><span class="identifier">Int</span></code><p>The port that is used by default if none is specified. As you know, 31337 is the most elite number.</p>
-</td>
 </tr>
 </tbody>
 </table>

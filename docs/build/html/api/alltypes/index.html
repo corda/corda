@@ -11,7 +11,7 @@
 <td>
 <a href="../net.corda.node.utilities/-a-n-s-i-progress-observer/index.html">net.corda.node.utilities.ANSIProgressObserver</a></td>
 <td>
-<p>This observes the <a href="../net.corda.node.services.statemachine/-state-machine-manager/index.html">StateMachineManager</a> and follows the progress of <a href="../net.corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a>s until they complete in the order
+<p>This observes the <a href="../net.corda.node.services.statemachine/-state-machine-manager/index.html">StateMachineManager</a> and follows the progress of <a href="../net.corda.core.flows/-flow-logic/index.html">FlowLogic</a>s until they complete in the order
 they are added to the <a href="../net.corda.node.services.statemachine/-state-machine-manager/index.html">StateMachineManager</a>.</p>
 </td>
 </tr>
@@ -94,11 +94,11 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-abstract-state-replacement-protocol/index.html">net.corda.protocols.AbstractStateReplacementProtocol</a></td>
+<a href="../net.corda.flows/-abstract-state-replacement-flow/index.html">net.corda.flows.AbstractStateReplacementFlow</a></td>
 <td>
-<p>Abstract protocol to be used for replacing one state with another, for example when changing the notary of a state.
+<p>Abstract flow to be used for replacing one state with another, for example when changing the notary of a state.
 Notably this requires a one to one replacement of states, states cannot be split, merged or issued as part of these
-protocols.</p>
+flows.</p>
 </td>
 </tr>
 <tr>
@@ -199,7 +199,7 @@ amount used in whatever underlying thing the amount represents.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.core.protocols/-app-context/index.html">net.corda.core.protocols.AppContext</a></td>
+<a href="../net.corda.core.flows/-app-context/index.html">net.corda.core.flows.AppContext</a></td>
 <td>
 <p>This is just some way to track what attachments need to be in the class loader, but may later include some app
 properties loaded from the attachments.  And perhaps the authenticated user for an API call?</p>
@@ -292,10 +292,10 @@ Bilateral states are used in close-out netting.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-broadcast-transaction-protocol/index.html">net.corda.protocols.BroadcastTransactionProtocol</a></td>
+<a href="../net.corda.flows/-broadcast-transaction-flow/index.html">net.corda.flows.BroadcastTransactionFlow</a></td>
 <td>
 <p>Notify all involved parties about a transaction, including storing a copy. Normally this would be called via
-<a href="../net.corda.protocols/-finality-protocol/index.html">FinalityProtocol</a>.</p>
+<a href="../net.corda.flows/-finality-flow/index.html">FinalityFlow</a>.</p>
 </td>
 </tr>
 <tr>
@@ -338,21 +338,21 @@ the same transaction.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-cash-command/index.html">net.corda.protocols.CashCommand</a></td>
+<a href="../net.corda.flows/-cash-command/index.html">net.corda.flows.CashCommand</a></td>
 <td>
-<p>A command to initiate the Cash protocol with.</p>
+<p>A command to initiate the Cash flow with.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-cash-protocol/index.html">net.corda.protocols.CashProtocol</a></td>
+<a href="../net.corda.flows/-cash-flow/index.html">net.corda.flows.CashFlow</a></td>
 <td>
-<p>Initiates a protocol that produces an Issue/Move or Exit Cash transaction.</p>
+<p>Initiates a flow that produces an Issue/Move or Exit Cash transaction.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-cash-protocol-result/index.html">net.corda.protocols.CashProtocolResult</a></td>
+<a href="../net.corda.flows/-cash-flow-result/index.html">net.corda.flows.CashFlowResult</a></td>
 <td>
 </td>
 </tr>
@@ -529,6 +529,26 @@ internal accounting by the issuer (it might be, for example, a warehouse and/or 
 </tr>
 <tr>
 <td>
+<a href="../net.corda.core.crypto/-composite-key/index.html">net.corda.core.crypto.CompositeKey</a></td>
+<td>
+<p>A tree data structure that enables the representation of composite public keys.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.utilities/-composite-key-column-type/index.html">net.corda.node.utilities.CompositeKeyColumnType</a></td>
+<td>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="../net.corda.core.crypto/-composite-key/index.html">CompositeKey</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.testing/-composite-key-generator/index.html">net.corda.core.testing.CompositeKeyGenerator</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../net.corda.client.fxutils/-concatenated-list/index.html">net.corda.client.fxutils.ConcatenatedList</a></td>
 <td>
 <p><a href="../net.corda.client.fxutils/-concatenated-list/index.html">ConcatenatedList</a> takes a list of lists and concatenates them. Any change to the underlying lists or the outer list
@@ -625,6 +645,13 @@ to extend a Corda node with additional application services.</p>
 <td>
 <p>An RPC client connects to the specified server and allows you to make calls to the server that perform various
 useful tasks. See the documentation for <a href="../net.corda.client/-corda-r-p-c-client/proxy.html">proxy</a> or review the docsite to learn more about how this API works.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.client.impl/-corda-r-p-c-client-impl/index.html">net.corda.client.impl.CordaRPCClientImpl</a></td>
+<td>
+<p>Core RPC engine implementation, to learn how to use RPC you should be looking at <a href="../net.corda.client/-corda-r-p-c-client/index.html">CordaRPCClient</a>.</p>
 </td>
 </tr>
 <tr>
@@ -733,7 +760,7 @@ in the toString lest some people get confused.</p>
 <a href="../net.corda.core.contracts/-deal-state/index.html">net.corda.core.contracts.DealState</a></td>
 <td>
 <p>Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
-implementation of general protocols that manipulate many agreement types.</p>
+implementation of general flows that manipulate many agreement types.</p>
 </td>
 </tr>
 <tr>
@@ -756,6 +783,14 @@ implementation of general protocols that manipulate many agreement types.</p>
 <p>A wrapper around a digital signature. The covering field is a generic tag usable by whatever is interpreting the
 signature. It isnt used currently, but experience from Bitcoin suggests such a feature is useful, especially when
 building partially signed transactions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.services.transactions/-distributed-immutable-map/index.html">net.corda.node.services.transactions.DistributedImmutableMap</a></td>
+<td>
+<p>A distributed map state machine that doesnt allow overriding values. The state machine is replicated
+across a Copycat Raft cluster.</p>
 </td>
 </tr>
 <tr>
@@ -898,7 +933,7 @@ TODO hook up an actual oracle</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-fetch-attachments-protocol/index.html">net.corda.protocols.FetchAttachmentsProtocol</a></td>
+<a href="../net.corda.flows/-fetch-attachments-flow/index.html">net.corda.flows.FetchAttachmentsFlow</a></td>
 <td>
 <p>Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
 attachments are saved to local storage automatically.</p>
@@ -906,14 +941,14 @@ attachments are saved to local storage automatically.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-fetch-data-protocol/index.html">net.corda.protocols.FetchDataProtocol</a></td>
+<a href="../net.corda.flows/-fetch-data-flow/index.html">net.corda.flows.FetchDataFlow</a></td>
 <td>
-<p>An abstract protocol for fetching typed data from a remote peer.</p>
+<p>An abstract flow for fetching typed data from a remote peer.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-fetch-transactions-protocol/index.html">net.corda.protocols.FetchTransactionsProtocol</a></td>
+<a href="../net.corda.flows/-fetch-transactions-flow/index.html">net.corda.flows.FetchTransactionsFlow</a></td>
 <td>
 <p>Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.</p>
 </td>
@@ -956,7 +991,7 @@ Functions are used to build a partial tree only out of some subset of original t
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-finality-protocol/index.html">net.corda.protocols.FinalityProtocol</a></td>
+<a href="../net.corda.flows/-finality-flow/index.html">net.corda.flows.FinalityFlow</a></td>
 <td>
 <p>Finalise a transaction by notarising it, then recording it locally, and then sending it to all involved parties.</p>
 </td>
@@ -995,6 +1030,93 @@ Functions are used to build a partial tree only out of some subset of original t
 <td>
 <p><a href="../net.corda.client.fxutils/-flattened-list/index.html">FlattenedList</a> flattens the passed in list of <a href="#">ObservableValue</a>s so that changes in individual updates to the values
 are reflected in the exposed list as expected.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.api/-flow-class-ref/index.html">net.corda.node.api.FlowClassRef</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.services.messaging/-flow-handle/index.html">net.corda.node.services.messaging.FlowHandle</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.services.statemachine/-flow-i-o-request/index.html">net.corda.node.services.statemachine.FlowIORequest</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.api/-flow-instance-ref/index.html">net.corda.node.api.FlowInstanceRef</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.flows/-flow-logic/index.html">net.corda.core.flows.FlowLogic</a></td>
+<td>
+<p>A sub-class of <a href="../net.corda.core.flows/-flow-logic/index.html">FlowLogic</a> implements a flow using direct, straight line blocking code. Thus you
+can write complex flow logic in an ordinary fashion, without having to think about callbacks, restarting after
+a node crash, how many instances of your flow there are running and so on.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.flows/-flow-logic-ref/index.html">net.corda.core.flows.FlowLogicRef</a></td>
+<td>
+<p>A class representing a <a href="../net.corda.core.flows/-flow-logic/index.html">FlowLogic</a> instance which would be possible to safely pass out of the contract sandbox.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.flows/-flow-logic-ref-factory/index.html">net.corda.core.flows.FlowLogicRefFactory</a></td>
+<td>
+<p>A class for conversion to and from <a href="../net.corda.core.flows/-flow-logic/index.html">FlowLogic</a> and <a href="../net.corda.core.flows/-flow-logic-ref/index.html">FlowLogicRef</a> instances.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.api/-flow-ref.html">net.corda.node.api.FlowRef</a></td>
+<td>
+<p>Encapsulates the flow to be instantiated.  e.g. TwoPartyTradeFlow.Buyer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.api/-flow-requiring-attention/index.html">net.corda.node.api.FlowRequiringAttention</a></td>
+<td>
+<p>Thinking that Instant is OK for short lived flow deadlines.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.flows/-flow-session-exception/index.html">net.corda.core.flows.FlowSessionException</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.flows/-flow-state-machine/index.html">net.corda.core.flows.FlowStateMachine</a></td>
+<td>
+<p>A FlowStateMachine instance is a suspendable fiber that delegates all actual logic to a <a href="../net.corda.core.flows/-flow-logic/index.html">FlowLogic</a> instance.
+For any given flow there is only one PSM, even if that flow invokes subflows.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.services.statemachine/-flow-state-machine-impl/index.html">net.corda.node.services.statemachine.FlowStateMachineImpl</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.client.model/-flow-status/index.html">net.corda.client.model.FlowStatus</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -1057,7 +1179,7 @@ container), shares of the same class in a specific company are fungible and coun
 <td>
 <a href="../net.corda.client.model/-gathered-transaction-data-model/index.html">net.corda.client.model.GatheredTransactionDataModel</a></td>
 <td>
-<p>This model provides an observable list of transactions and what state machines/protocols recorded them</p>
+<p>This model provides an observable list of transactions and what state machines/flows recorded them</p>
 </td>
 </tr>
 <tr>
@@ -1097,7 +1219,7 @@ service would provide.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.core.protocols/-illegal-protocol-logic-exception/index.html">net.corda.core.protocols.IllegalProtocolLogicException</a></td>
+<a href="../net.corda.core.flows/-illegal-flow-logic-exception/index.html">net.corda.core.flows.IllegalFlowLogicException</a></td>
 <td>
 </td>
 </tr>
@@ -1145,7 +1267,7 @@ set via the constructor and the class is immutable.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-input-state-ref-resolve-failed/index.html">net.corda.protocols.InputStateRefResolveFailed</a></td>
+<a href="../net.corda.flows/-input-state-ref-resolve-failed/index.html">net.corda.flows.InputStateRefResolveFailed</a></td>
 <td>
 </td>
 </tr>
@@ -1765,27 +1887,27 @@ trying to construct the set.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-notary-change-protocol/index.html">net.corda.protocols.NotaryChangeProtocol</a></td>
+<a href="../net.corda.flows/-notary-change-flow/index.html">net.corda.flows.NotaryChangeFlow</a></td>
 <td>
-<p>A protocol to be used for changing a states Notary. This is required since all input states to a transaction
+<p>A flow to be used for changing a states Notary. This is required since all input states to a transaction
 must point to the same notary.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-notary-error/index.html">net.corda.protocols.NotaryError</a></td>
+<a href="../net.corda.flows/-notary-error/index.html">net.corda.flows.NotaryError</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-notary-exception/index.html">net.corda.protocols.NotaryException</a></td>
+<a href="../net.corda.flows/-notary-exception/index.html">net.corda.flows.NotaryException</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-notary-protocol/index.html">net.corda.protocols.NotaryProtocol</a></td>
+<a href="../net.corda.flows/-notary-flow/index.html">net.corda.flows.NotaryFlow</a></td>
 <td>
 </td>
 </tr>
@@ -1878,12 +2000,6 @@ functionality to Java, but it wont arrive for a few years yet</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node/-params-spec/index.html">net.corda.node.ParamsSpec</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../net.corda.node.utilities.certsigning/-params-spec/index.html">net.corda.node.utilities.certsigning.ParamsSpec</a></td>
 <td>
 </td>
@@ -1911,7 +2027,7 @@ because of permissioning)</p>
 <td>
 <p>The <a href="../net.corda.core.crypto/-party/index.html">Party</a> class represents an entity on the network, which is typically identified by a legal <a href="../net.corda.core.crypto/-party/name.html">name</a> and public key
 that it can sign transactions under. As parties may use multiple keys for signing and, for example, have offline backup
-keys, the "public key" of a party is represented by a composite construct – a <a href="../net.corda.core.crypto/-public-key-tree/index.html">PublicKeyTree</a>, which combines multiple
+keys, the "public key" of a party is represented by a composite construct – a <a href="../net.corda.core.crypto/-composite-key/index.html">CompositeKey</a>, which combines multiple
 cryptographic public key primitives into a tree structure.</p>
 </td>
 </tr>
@@ -2053,93 +2169,6 @@ a singleton).</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.api/-protocol-class-ref/index.html">net.corda.node.api.ProtocolClassRef</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.node.services.messaging/-protocol-handle/index.html">net.corda.node.services.messaging.ProtocolHandle</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.node.services.statemachine/-protocol-i-o-request/index.html">net.corda.node.services.statemachine.ProtocolIORequest</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.node.api/-protocol-instance-ref/index.html">net.corda.node.api.ProtocolInstanceRef</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.core.protocols/-protocol-logic/index.html">net.corda.core.protocols.ProtocolLogic</a></td>
-<td>
-<p>A sub-class of <a href="../net.corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a> implements a protocol flow using direct, straight line blocking code. Thus you
-can write complex protocol logic in an ordinary fashion, without having to think about callbacks, restarting after
-a node crash, how many instances of your protocol there are running and so on.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.core.protocols/-protocol-logic-ref/index.html">net.corda.core.protocols.ProtocolLogicRef</a></td>
-<td>
-<p>A class representing a <a href="../net.corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a> instance which would be possible to safely pass out of the contract sandbox.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.core.protocols/-protocol-logic-ref-factory/index.html">net.corda.core.protocols.ProtocolLogicRefFactory</a></td>
-<td>
-<p>A class for conversion to and from <a href="../net.corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a> and <a href="../net.corda.core.protocols/-protocol-logic-ref/index.html">ProtocolLogicRef</a> instances.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.node.api/-protocol-ref.html">net.corda.node.api.ProtocolRef</a></td>
-<td>
-<p>Encapsulates the protocol to be instantiated.  e.g. TwoPartyTradeProtocol.Buyer.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.node.api/-protocol-requiring-attention/index.html">net.corda.node.api.ProtocolRequiringAttention</a></td>
-<td>
-<p>Thinking that Instant is OK for short lived protocol deadlines.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.core.protocols/-protocol-session-exception/index.html">net.corda.core.protocols.ProtocolSessionException</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.core.protocols/-protocol-state-machine/index.html">net.corda.core.protocols.ProtocolStateMachine</a></td>
-<td>
-<p>A ProtocolStateMachine instance is a suspendable fiber that delegates all actual logic to a <a href="../net.corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a> instance.
-For any given flow there is only one PSM, even if that protocol invokes subprotocols.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.node.services.statemachine/-protocol-state-machine-impl/index.html">net.corda.node.services.statemachine.ProtocolStateMachineImpl</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.client.model/-protocol-status/index.html">net.corda.client.model.ProtocolStatus</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../net.corda.core.crypto/java.security.-public-key/index.html">java.security.PublicKey</a> (extensions in package net.corda.core.crypto)</td>
 <td>
 </td>
@@ -2154,26 +2183,6 @@ For any given flow there is only one PSM, even if that protocol invokes subproto
 <tr>
 <td>
 <a href="../net.corda.core.testing/-public-key-generator/index.html">net.corda.core.testing.PublicKeyGenerator</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.core.crypto/-public-key-tree/index.html">net.corda.core.crypto.PublicKeyTree</a></td>
-<td>
-<p>A tree data structure that enables the representation of composite public keys.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.node.utilities/-public-key-tree-column-type/index.html">net.corda.node.utilities.PublicKeyTreeColumnType</a></td>
-<td>
-<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="../net.corda.core.crypto/-public-key-tree/index.html">PublicKeyTree</a>.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.core.testing/-public-key-tree-generator/index.html">net.corda.core.testing.PublicKeyTreeGenerator</a></td>
 <td>
 </td>
 </tr>
@@ -2244,6 +2253,21 @@ to. These permissions are represented as <a href="#">String</a>s to allow RPC im
 </tr>
 <tr>
 <td>
+<a href="../net.corda.node.services.transactions/-raft-uniqueness-provider/index.html">net.corda.node.services.transactions.RaftUniquenessProvider</a></td>
+<td>
+<p>A uniqueness provider that records committed input states in a distributed collection replicated and
+persisted in a Raft cluster, using the Copycat framework (http://atomix.io/copycat/).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.services.transactions/-raft-validating-notary-service/index.html">net.corda.node.services.transactions.RaftValidatingNotaryService</a></td>
+<td>
+<p>A validating notary service operated by a group of mutually trusting parties, uses the Raft algorithm to achieve consensus.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../net.corda.client.fxutils/-read-only-backed-observable-map-base/index.html">net.corda.client.fxutils.ReadOnlyBackedObservableMapBase</a></td>
 <td>
 <p><a href="../net.corda.client.fxutils/-read-only-backed-observable-map-base/index.html">ReadOnlyBackedObservableMapBase</a> is a base class implementing all abstract functions required for an <a href="#">ObservableMap</a>
@@ -2299,9 +2323,9 @@ non-backed observable</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-resolve-transactions-protocol/index.html">net.corda.protocols.ResolveTransactionsProtocol</a></td>
+<a href="../net.corda.flows/-resolve-transactions-flow/index.html">net.corda.flows.ResolveTransactionsFlow</a></td>
 <td>
-<p>This protocol is used to verify the validity of a transaction by recursively checking the validity of all the
+<p>This flow is used to verify the validity of a transaction by recursively checking the validity of all the
 dependencies. Once a transaction is checked its inserted into local storage so it can be relayed and wont be
 checked again.</p>
 </td>
@@ -2339,7 +2363,7 @@ again.</p>
 <a href="../net.corda.core.contracts/-scheduled-activity/index.html">net.corda.core.contracts.ScheduledActivity</a></td>
 <td>
 <p>This class represents the lifecycle activity that a contract state of type <a href="../net.corda.core.contracts/-linear-state/index.html">LinearState</a> would like to perform at a given point in time.
-e.g. run a fixing protocol.</p>
+e.g. run a fixing flow.</p>
 </td>
 </tr>
 <tr>
@@ -2462,7 +2486,7 @@ type safety hack.</p>
 <a href="../net.corda.core.node/-service-entry/index.html">net.corda.core.node.ServiceEntry</a></td>
 <td>
 <p>Information for an advertised service including the service specific identity information.
-The identity can be used in protocols and is distinct from the Nodes legalIdentity</p>
+The identity can be used in flows and is distinct from the Nodes legalIdentity</p>
 </td>
 </tr>
 <tr>
@@ -2489,7 +2513,7 @@ functionality and you dont want to hard-code which types in the interface.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-service-request-message/index.html">net.corda.protocols.ServiceRequestMessage</a></td>
+<a href="../net.corda.flows/-service-request-message/index.html">net.corda.flows.ServiceRequestMessage</a></td>
 <td>
 <p>Abstract superclass for request messages sent to services which expect a reply.</p>
 </td>
@@ -2597,8 +2621,8 @@ Points at which polynomial pieces connect are known as <emph>knots</emph>.</p>
 <td>
 <a href="../net.corda.node.services.statemachine/-state-machine-manager/index.html">net.corda.node.services.statemachine.StateMachineManager</a></td>
 <td>
-<p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="../net.corda.core.protocols/-protocol-state-machine/index.html">ProtocolStateMachine</a> objects.
-Each such object represents an instantiation of a (two-party) protocol that has reached a particular point.</p>
+<p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="../net.corda.core.flows/-flow-state-machine/index.html">FlowStateMachine</a> objects.
+Each such object represents an instantiation of a (two-party) flow that has reached a particular point.</p>
 </td>
 </tr>
 <tr>
@@ -2606,12 +2630,12 @@ Each such object represents an instantiation of a (two-party) protocol that has 
 <a href="../net.corda.core.node.services/-state-machine-recorded-transaction-mapping-storage/index.html">net.corda.core.node.services.StateMachineRecordedTransactionMappingStorage</a></td>
 <td>
 <p>This is the interface to storage storing state machine -&gt; recorded tx mappings. Any time a transaction is recorded
-during a protocol run <a href="../net.corda.core.node.services/-state-machine-recorded-transaction-mapping-storage/add-mapping.html">addMapping</a> should be called.</p>
+during a flow run <a href="../net.corda.core.node.services/-state-machine-recorded-transaction-mapping-storage/add-mapping.html">addMapping</a> should be called.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.core.protocols/-state-machine-run-id/index.html">net.corda.core.protocols.StateMachineRunId</a></td>
+<a href="../net.corda.core.flows/-state-machine-run-id/index.html">net.corda.core.flows.StateMachineRunId</a></td>
 <td>
 </td>
 </tr>
@@ -2655,13 +2679,13 @@ transaction defined the state and where in that transaction it was.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-state-replacement-exception/index.html">net.corda.protocols.StateReplacementException</a></td>
+<a href="../net.corda.flows/-state-replacement-exception/index.html">net.corda.flows.StateReplacementException</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-state-replacement-refused/index.html">net.corda.protocols.StateReplacementRefused</a></td>
+<a href="../net.corda.flows/-state-replacement-refused/index.html">net.corda.flows.StateReplacementRefused</a></td>
 <td>
 <p>Thrown when a participant refuses the proposed state replacement</p>
 </td>
@@ -2678,7 +2702,7 @@ transaction defined the state and where in that transaction it was.</p>
 <a href="../net.corda.core.node.services/-storage-service/index.html">net.corda.core.node.services.StorageService</a></td>
 <td>
 <p>A sketch of an interface to a simple key/value storage system. Intended for persistence of simple blobs like
-transactions, serialised protocol state machines and so on. Again, this isnt intended to imply lack of SQL or
+transactions, serialised flow state machines and so on. Again, this isnt intended to imply lack of SQL or
 anything like that, this interface is only big enough to support the prototyping work.</p>
 </td>
 </tr>
@@ -2887,16 +2911,16 @@ used to set it up. Note that the initializer will be called with the TransientPr
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-two-party-deal-protocol/index.html">net.corda.protocols.TwoPartyDealProtocol</a></td>
+<a href="../net.corda.flows/-two-party-deal-flow/index.html">net.corda.flows.TwoPartyDealFlow</a></td>
 <td>
 <p>Classes for manipulating a two party deal or agreement.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-two-party-trade-protocol/index.html">net.corda.protocols.TwoPartyTradeProtocol</a></td>
+<a href="../net.corda.flows/-two-party-trade-flow/index.html">net.corda.flows.TwoPartyTradeFlow</a></td>
 <td>
-<p>This asset trading protocol implements a "delivery vs payment" type swap. It has two parties (B and S for buyer
+<p>This asset trading flow implements a "delivery vs payment" type swap. It has two parties (B and S for buyer
 and seller) and the following steps:</p>
 </td>
 </tr>
@@ -2967,9 +2991,9 @@ first. The wrapper helps you to avoid forgetting this vital step. Things you mig
 </tr>
 <tr>
 <td>
-<a href="../net.corda.protocols/-validating-notary-protocol/index.html">net.corda.protocols.ValidatingNotaryProtocol</a></td>
+<a href="../net.corda.flows/-validating-notary-flow/index.html">net.corda.flows.ValidatingNotaryFlow</a></td>
 <td>
-<p>A notary commit protocol that makes sure a given transaction is valid before committing it. This does mean that the calling
+<p>A notary commit flow that makes sure a given transaction is valid before committing it. This does mean that the calling
 party has to reveal the whole transaction history; however, we avoid complex conflict resolution logic where a party
 has its input states "blocked" by a transaction from another party, and needs to establish whether that transaction was
 indeed valid.</p>

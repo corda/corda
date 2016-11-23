@@ -10,6 +10,9 @@
 <code><span class="keyword">interface </span><span class="identifier">UniquenessProvider</span></code><br/>
 <p>A service that records input states of the given transaction and provides conflict information
 if any of the inputs have already been used in another transaction.</p>
+<p>A uniqueness provider is expected to be used from within the context of a flow.</p>
+<br/>
+<br/>
 <br/>
 <br/>
 <h3>Types</h3>
@@ -59,6 +62,14 @@ the caller identity requesting the commit.</p>
 <a href="../../net.corda.node.services.transactions/-persistent-uniqueness-provider/index.html">PersistentUniquenessProvider</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">PersistentUniquenessProvider</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">UniquenessProvider</span><span class="symbol">, </span><a href="../../net.corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code><p>A RDBMS backed Uniqueness provider</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.node.services.transactions/-raft-uniqueness-provider/index.html">RaftUniquenessProvider</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">RaftUniquenessProvider</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">UniquenessProvider</span><span class="symbol">, </span><a href="../../net.corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code><p>A uniqueness provider that records committed input states in a distributed collection replicated and
+persisted in a Raft cluster, using the Copycat framework (http://atomix.io/copycat/).</p>
 </td>
 </tr>
 </tbody>

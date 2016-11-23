@@ -85,21 +85,32 @@
           
             
             
-                <p class="caption"><span class="caption-text">Overview</span></p>
+                <p class="caption"><span class="caption-text">Getting started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
@@ -108,7 +119,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Flow state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Using attachments</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#attachments-demo">Attachments demo</a></li>
@@ -116,15 +127,16 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Contracts</span></p>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initialmarginagreement.html">Initial Margin Agreements</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Node API</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -133,10 +145,12 @@
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>
 
             
@@ -195,29 +209,29 @@ nodes already. Examples include:</p>
 which returns a unique ID that can be added using <code class="docutils literal"><span class="pre">TransactionBuilder.addAttachment()</span></code>. Attachments can also be
 uploaded and downloaded via HTTP, to enable integration with external systems. For instructions on HTTP upload/download
 please see &#8220;<a class="reference internal" href="node-administration.html"><span class="doc">Node administration</span></a>&#8221;.</p>
-<p>Normally attachments on transactions are fetched automatically via the <code class="docutils literal"><span class="pre">ResolveTransactionsProtocol</span></code> when verifying
+<p>Normally attachments on transactions are fetched automatically via the <code class="docutils literal"><span class="pre">ResolveTransactionsFlow</span></code> when verifying
 received transactions. Attachments are needed in order to validate a transaction (they include, for example, the
-contract code), so must be fetched before the validation process can run. <code class="docutils literal"><span class="pre">ResolveTransactionsProtocol</span></code> calls
-<code class="docutils literal"><span class="pre">FetchTransactionsProtocol</span></code> to perform the actual retrieval.</p>
+contract code), so must be fetched before the validation process can run. <code class="docutils literal"><span class="pre">ResolveTransactionsFlow</span></code> calls
+<code class="docutils literal"><span class="pre">FetchTransactionsFlow</span></code> to perform the actual retrieval.</p>
 <p>It is encouraged that where possible attachments are reusable data, so that nodes can meaningfully cache them.</p>
 <div class="section" id="attachments-demo">
 <h2>Attachments demo<a class="headerlink" href="#attachments-demo" title="Permalink to this headline">¶</a></h2>
 <p>There is a worked example of attachments, which relays a simple document from one node to another. The &#8220;two party
-trade protocol&#8221; also includes an attachment, however it is a significantly more complex demo, and less well suited
+trade flow&#8221; also includes an attachment, however it is a significantly more complex demo, and less well suited
 for a tutorial.</p>
 <p>The demo code is in the file &#8220;src/main/kotlin/net.corda.demos/attachment/AttachmentDemo.kt&#8221;, with the core logic
 contained within the two functions <code class="docutils literal"><span class="pre">runRecipient()</span></code> and <code class="docutils literal"><span class="pre">runSender()</span></code>. We&#8217;ll look at the recipient function first;
 this subscribes to notifications of new validated transactions, and if it receives a transaction containing attachments,
-loads the first attachment from storage, and checks it matches the expected attachment ID. <code class="docutils literal"><span class="pre">ResolveTransactionsProtocol</span></code>
+loads the first attachment from storage, and checks it matches the expected attachment ID. <code class="docutils literal"><span class="pre">ResolveTransactionsFlow</span></code>
 has already fetched all attachments from the remote node, and as such the attachments are available from the node&#8217;s
 storage service. Once the attachment is verified, the node shuts itself down.</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">private</span> <span class="k">fun</span> <span class="nf">runRecipient</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">val</span> <span class="py">serviceHub</span> <span class="p">=</span> <span class="n">node</span><span class="p">.</span><span class="n">services</span>
 
-    <span class="c1">// Normally we would receive the transaction from a more specific protocol, but in this case we let [FinalityProtocol]</span>
+    <span class="c1">// Normally we would receive the transaction from a more specific flow, but in this case we let [FinalityFlow]</span>
     <span class="c1">// handle receiving it for us.</span>
     <span class="n">serviceHub</span><span class="p">.</span><span class="n">storageService</span><span class="p">.</span><span class="n">validatedTransactions</span><span class="p">.</span><span class="n">updates</span><span class="p">.</span><span class="n">subscribe</span> <span class="p">{</span> <span class="n">event</span> <span class="p">-&gt;</span>
-        <span class="c1">// When the transaction is received, it&#39;s passed through [ResolveTransactionsProtocol], which first fetches any</span>
+        <span class="c1">// When the transaction is received, it&#39;s passed through [ResolveTransactionsFlow], which first fetches any</span>
         <span class="c1">// attachments for us, then verifies the transaction. As such, by the time it hits the validated transaction store,</span>
         <span class="c1">// we have a copy of the attachment.</span>
         <span class="k">val</span> <span class="py">tx</span> <span class="p">=</span> <span class="n">event</span><span class="p">.</span><span class="n">tx</span>
@@ -234,7 +248,7 @@ storage service. Once the attachment is verified, the node shuts itself down.</p
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>The sender correspondingly builds a transaction with the attachment, then calls <code class="docutils literal"><span class="pre">FinalityProtocol</span></code> to complete the
+<p>The sender correspondingly builds a transaction with the attachment, then calls <code class="docutils literal"><span class="pre">FinalityFlow</span></code> to complete the
 transaction and send it to the recipient node:</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">private</span> <span class="k">fun</span> <span class="nf">runSender</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">otherSide</span><span class="p">:</span> <span class="n">Party</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">val</span> <span class="py">serviceHub</span> <span class="p">=</span> <span class="n">node</span><span class="p">.</span><span class="n">services</span>
@@ -256,7 +270,7 @@ transaction and send it to the recipient node:</p>
 
     <span class="c1">// Send the transaction to the other recipient</span>
     <span class="k">val</span> <span class="py">tx</span> <span class="p">=</span> <span class="n">ptx</span><span class="p">.</span><span class="n">toSignedTransaction</span><span class="p">()</span>
-    <span class="n">serviceHub</span><span class="p">.</span><span class="n">startProtocol</span><span class="p">(</span><span class="n">LOG_SENDER</span><span class="p">,</span> <span class="n">FinalityProtocol</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">emptySet</span><span class="p">(),</span> <span class="n">setOf</span><span class="p">(</span><span class="n">otherSide</span><span class="p">))).</span><span class="n">success</span> <span class="p">{</span>
+    <span class="n">serviceHub</span><span class="p">.</span><span class="n">startFlow</span><span class="p">(</span><span class="n">LOG_SENDER</span><span class="p">,</span> <span class="n">FinalityFlow</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">emptySet</span><span class="p">(),</span> <span class="n">setOf</span><span class="p">(</span><span class="n">otherSide</span><span class="p">))).</span><span class="n">success</span> <span class="p">{</span>
         <span class="n">thread</span> <span class="p">{</span>
             <span class="n">Thread</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="m">1000L</span><span class="p">)</span> <span class="c1">// Give the other side time to request the attachment</span>
             <span class="n">node</span><span class="p">.</span><span class="n">stop</span><span class="p">()</span>

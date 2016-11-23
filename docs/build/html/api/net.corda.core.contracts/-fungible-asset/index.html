@@ -48,7 +48,7 @@ this interface.</p>
 <td>
 <a href="exit-keys.html">exitKeys</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">exitKeys</span><span class="symbol">: </span><span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-public-key-tree/index.html"><span class="identifier">PublicKeyTree</span></a><span class="symbol">&gt;</span></code><p>There must be an ExitCommand signed by these keys to destroy the amount. While all states require their
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">exitKeys</span><span class="symbol">: </span><span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span></code><p>There must be an ExitCommand signed by these keys to destroy the amount. While all states require their
 owner to sign, some (i.e. cash) also require the issuer.</p>
 </td>
 </tr>
@@ -56,7 +56,7 @@ owner to sign, some (i.e. cash) also require the issuer.</p>
 <td>
 <a href="owner.html">owner</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">owner</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-public-key-tree/index.html"><span class="identifier">PublicKeyTree</span></a></code><p>There must be a MoveCommand signed by this key to claim the amount</p>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">owner</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a></code><p>There must be a MoveCommand signed by this key to claim the amount</p>
 </td>
 </tr>
 </tbody>
@@ -68,7 +68,7 @@ owner to sign, some (i.e. cash) also require the issuer.</p>
 <td>
 <a href="move.html">move</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">move</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.FungibleAsset$move(net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((net.corda.core.contracts.FungibleAsset.T)))), net.corda.core.crypto.PublicKeyTree)/newAmount">newAmount</span><span class="symbol">:</span>&nbsp;<a href="../-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.FungibleAsset$move(net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((net.corda.core.contracts.FungibleAsset.T)))), net.corda.core.crypto.PublicKeyTree)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-public-key-tree/index.html"><span class="identifier">PublicKeyTree</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">FungibleAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">move</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.FungibleAsset$move(net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((net.corda.core.contracts.FungibleAsset.T)))), net.corda.core.crypto.CompositeKey)/newAmount">newAmount</span><span class="symbol">:</span>&nbsp;<a href="../-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.FungibleAsset$move(net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((net.corda.core.contracts.FungibleAsset.T)))), net.corda.core.crypto.CompositeKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">FungibleAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -79,7 +79,7 @@ owner to sign, some (i.e. cash) also require the issuer.</p>
 <td>
 <a href="../-ownable-state/with-new-owner.html">withNewOwner</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">withNewOwner</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.OwnableState$withNewOwner(net.corda.core.crypto.PublicKeyTree)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-public-key-tree/index.html"><span class="identifier">PublicKeyTree</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">,</span>&nbsp;<a href="../-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span></code><p>Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone</p>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">withNewOwner</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.OwnableState$withNewOwner(net.corda.core.crypto.CompositeKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">,</span>&nbsp;<a href="../-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span></code><p>Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone</p>
 </td>
 </tr>
 </tbody>
