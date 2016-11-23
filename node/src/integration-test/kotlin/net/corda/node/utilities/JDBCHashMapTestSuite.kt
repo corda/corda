@@ -17,8 +17,10 @@ import java.util.*
 @Suite.SuiteClasses(
         JDBCHashMapTestSuite.MapLoadOnInitFalse::class,
         JDBCHashMapTestSuite.MapLoadOnInitTrue::class,
+        JDBCHashMapTestSuite.MapConstrained::class,
         JDBCHashMapTestSuite.SetLoadOnInitFalse::class,
-        JDBCHashMapTestSuite.SetLoadOnInitTrue::class)
+        JDBCHashMapTestSuite.SetLoadOnInitTrue::class,
+        JDBCHashMapTestSuite.SetConstrained::class)
 class JDBCHashMapTestSuite {
     companion object {
         lateinit var dataSource: Closeable
@@ -112,7 +114,7 @@ class JDBCHashMapTestSuite {
     /**
      * Guava test suite generator for JDBCHashMap(loadOnInit=false, constrained = true).
      */
-    class MapConstained {
+    class MapConstrained {
         companion object {
             @JvmStatic
             fun suite(): TestSuite = createMapTestSuite(false, true)
