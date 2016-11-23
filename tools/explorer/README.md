@@ -1,30 +1,30 @@
-#Node Explorer
+# Node Explorer
 
-The node explorer provide views to the node's vault and transaction data using Corda's RPC framework.
-The user can execute cash transaction commands to issue and move cash to other party on the network or exit cash using the user interface.
+The node explorer provide views of the node's vault and transaction data using Corda's RPC framework.
+The user can execute cash transaction commands to issue and move cash to other parties on the network or exit cash using the user interface.
 
-##Running the UI
+## Running the UI
 
-#####Windows:
+**Windows:**
 
     gradlew.bat tools:explorer:run
 
-#####Other:
+**Other:**
 
     ./gradlew tools:explorer:run
     
 
-##Running Demo Nodes
+## Running Demo Nodes
 
-#####Windows:
+**Windows:**
 
     gradlew.bat tools:explorer:runDemoNodes
 
-#####Other:
+**Other:**
 
     ./gradlew tools:explorer:runDemoNodes
 
-#####These Corda nodes will be created on the following port on localhost.
+**These Corda nodes will be created on the following port on localhost.**
 
     Notary -> 20002
     Alice -> 20004
@@ -32,7 +32,7 @@ The user can execute cash transaction commands to issue and move cash to other p
     Bank of Corda -> 20008
   
 
-##TODOs:
+## TODOs:
 - Shows more useful information in the dashboard.
 - Improve Network View, display other nodes in the world map and show transactions between them.
 - Add a new view showing node's state machines.
