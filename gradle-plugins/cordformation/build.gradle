@@ -54,6 +54,14 @@ publishing {
                             distribution 'repo'
                         }
                     }
+
+                    developers {
+                        developer {
+                            id 'R3'
+                            name 'R3'
+                            email 'dev@corda.net'
+                        }
+                    }
                 }
             }
         }
