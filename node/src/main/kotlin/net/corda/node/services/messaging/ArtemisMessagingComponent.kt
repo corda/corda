@@ -59,6 +59,14 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
             return addr.queueName
 
         }
+
+        /**
+         * Convert the identity, host and port of this node into the appropriate [SingleMessageRecipient].
+         *
+         * N.B. Marked as JvmStatic to allow use in the inherited classes.
+         */
+        @JvmStatic
+        protected fun toMyAddress(myIdentity: CompositeKey?, myHostPort: HostAndPort): SingleMessageRecipient = if (myIdentity != null) NodeAddress(myIdentity, myHostPort) else NetworkMapAddress(myHostPort)
     }
 
     protected interface ArtemisAddress {
