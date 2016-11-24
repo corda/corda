@@ -111,8 +111,6 @@ idea {
     }
 }
 
-quasarScan.dependsOn('classes')
-
 publishing {
     publications {
         jarAndSources(MavenPublication) {

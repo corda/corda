@@ -137,8 +137,6 @@ task installWeb(type: Copy, dependsOn: [buildWeb]) {
     into 'src/main/resources/simmvaluationweb'
 }
 
-quasarScan.dependsOn('classes')
-
 publishing {
     publications {
         simmvaluationdemo(MavenPublication) {

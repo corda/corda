@@ -27,7 +27,7 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
         classpath 'net.corda.plugins:publish-utils:0.5'
-        classpath 'net.corda.plugins:quasar-utils:0.5.1'
+        classpath 'net.corda.plugins:quasar-utils:0.5.2'
         classpath 'net.corda.plugins:cordformation:0.5.3'
 
         // Can run 'gradle dependencyUpdates' to find new versions of things.
@@ -119,7 +119,7 @@ tasks.withType(Test) {
 }
 
 // TODO: Move fat JAR building into node subproject.
-task buildCordaJAR(type: FatCapsule, dependsOn: ['quasarScan', 'buildCertSigningRequestUtilityJAR']) {
+task buildCordaJAR(type: FatCapsule, dependsOn: ['jar', 'buildCertSigningRequestUtilityJAR']) {
     applicationClass 'net.corda.node.MainKt'
     archiveName "corda-${corda_version}.jar"
     applicationSource = files(project.tasks.findByName('jar'), 'node/build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
@@ -177,8 +177,6 @@ task deployNodes(dependsOn: 'buildCordaJAR') << {
 // Aliasing the publishToMavenLocal for simplicity.
 // TODO: Verify this works for gradle plugins.
 task(install, dependsOn: 'publishToMavenLocal')
-
-quasarScan.dependsOn('classes', ':node:classes', ':core:classes', ':finance:classes')
 
 publishing {
     publications {
