@@ -1,5 +1,6 @@
 package net.corda.testing.node
 
+import kotlinx.support.jdk8.collections.putIfAbsent
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
@@ -139,9 +140,12 @@ open class MockTransactionStorage : TransactionStorage {
 
     private fun notify(transaction: SignedTransaction) = _updatesPublisher.onNext(transaction)
 
-    override fun addTransaction(transaction: SignedTransaction) {
-        txns[transaction.id] = transaction
-        notify(transaction)
+    override fun addTransaction(transaction: SignedTransaction): Boolean {
+        val recorded = txns.putIfAbsent(transaction.id, transaction) == null
+        if (recorded) {
+            notify(transaction)
+        }
+        return recorded
     }
 
     override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]

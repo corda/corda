@@ -561,11 +561,12 @@ class TwoPartyTradeFlowTests {
         override val updates: Observable<SignedTransaction>
             get() = delegate.updates
 
-        override fun addTransaction(transaction: SignedTransaction) {
+        override fun addTransaction(transaction: SignedTransaction): Boolean {
             databaseTransaction(database) {
                 records.add(TxRecord.Add(transaction))
                 delegate.addTransaction(transaction)
             }
+            return true
         }
 
         override fun getTransaction(id: SecureHash): SignedTransaction? {

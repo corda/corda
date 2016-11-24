@@ -52,15 +52,15 @@ abstract class ServiceHubInternal : PluginServiceHub {
      */
     internal fun recordTransactionsInternal(writableStorageService: TxWritableStorageService, txs: Iterable<SignedTransaction>) {
         val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
+        val recordedTransactions = txs.filter { writableStorageService.validatedTransactions.addTransaction(it) }
         if (stateMachineRunId != null) {
-            txs.forEach {
+            recordedTransactions.forEach {
                 storageService.stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
             }
         } else {
-            log.warn("Transaction recorded from outside of a state machine")
+            log.warn("Transactions recorded from outside of a state machine")
         }
-        txs.forEach { writableStorageService.validatedTransactions.addTransaction(it) }
-        vaultService.notifyAll(txs.map { it.tx })
+        vaultService.notifyAll(recordedTransactions.map { it.tx })
     }
 
     /**
