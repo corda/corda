@@ -134,11 +134,6 @@ class ClockUtilsTest {
         }
     }
 
-    /**
-     * If this test seems to hang and throw an NPE, then likely that quasar suspendables scanner has not been
-     * run on core module (in IntelliJ, open gradle side tab and run:
-     * r3prototyping -> core -> Tasks -> other -> quasarScan
-     */
     @Test
     @Suspendable
     fun `test waiting for a deadline with multiple clock advance and incomplete JDK8 future on Fibers`() {
@@ -161,11 +156,6 @@ class ClockUtilsTest {
         assertFalse(future.get(), "Should have reached deadline")
     }
 
-    /**
-     * If this test seems to hang and throw an NPE, then likely that quasar suspendables scanner has not been
-     * run on core module (in IntelliJ, open gradle side tab and run:
-     * r3prototyping -> core -> Tasks -> other -> quasarScan
-     */
     @Test
     @Suspendable
     fun `test waiting for a deadline with multiple clock advance and incomplete Guava future on Fibers`() {

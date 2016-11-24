@@ -101,5 +101,3 @@ publishing {
         }
     }
 }
-
-quasarScan.dependsOn('classes')

@@ -159,8 +159,6 @@ dependencies {
     testCompile "com.nhaarman:mockito-kotlin:0.6.1"
 }
 
-quasarScan.dependsOn('classes', ':core:classes', ':finance:classes')
-
 task integrationTest(type: Test) {
     testClassesDir = sourceSets.integrationTest.output.classesDir
     classpath = sourceSets.integrationTest.runtimeClasspath

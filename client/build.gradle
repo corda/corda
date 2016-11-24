@@ -80,8 +80,6 @@ dependencies {
     integrationTestCompile 'junit:junit:4.12'
 }
 
-quasarScan.dependsOn('classes', ':core:classes', ':finance:classes')
-
 task integrationTest(type: Test) {
     testClassesDir = sourceSets.integrationTest.output.classesDir
     classpath = sourceSets.integrationTest.runtimeClasspath
