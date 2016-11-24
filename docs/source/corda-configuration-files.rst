@@ -39,6 +39,9 @@ NetworkMapService plus Simple Notary configuration file.
     webAddress : "localhost:12346"
     extraAdvertisedServiceIds: ""
     useHTTPS : false
+    devMode = true
+    // Certificate signing service will be hosted by R3 in the near future.
+    //certificateSigningService = "https://testnet.certificate.corda.net"
 
 Configuration File Fields
 -------------------------
@@ -94,3 +97,9 @@ Configuration File Fields
         :permissions: A list of permission strings which RPC methods can use to control access
 
     If this field is absent or an empty list then RPC is effectively locked down.
+    
+:devMode:
+    This flag indicate if the node is running in development mode. On startup, if the keystore ``<workspace>/certificates/sslkeystore.jks`` does not exist, a developer keystore will be used if ``devMode`` is true. The node will exit if ``devMode`` is false and keystore does not exist.
+    
+:certificateSigningService:
+    Certificate Signing Server address. It is used by the certificate signing request utility to obtain SSL certificate. (See :doc:`permissioning` for more information.)

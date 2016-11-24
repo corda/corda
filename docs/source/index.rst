@@ -51,6 +51,8 @@ Read on to learn:
    corda-configuration-files
    corda-plugins
    node-services
+   node-explorer
+   permissioning
 
 .. toctree::
    :maxdepth: 2
@@ -78,7 +80,6 @@ Read on to learn:
    :caption: Other
 
    network-simulator
-   node-explorer
    initial-margin-agreement
 
 .. toctree::
