@@ -229,7 +229,8 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         })
     }
 
-    val observableRegistration: Registration? = if (observableSerializer != null) register(Observable::class.java, observableSerializer) else null
+    // TODO: workaround to prevent Observable registration conflict when using plugin registered kyro classes
+    val observableRegistration: Registration? = if (observableSerializer != null) register(Observable::class.java, observableSerializer, 10000) else null
 
     override fun getRegistration(type: Class<*>): Registration {
         if (Observable::class.java.isAssignableFrom(type))
