@@ -1,30 +1,13 @@
 @import "corda-dark-color-scheme.css";
 
 /* Global CSS */
-.button:selected, .button:focused,
-.list-view:selected, .list-view:focused,
-.tree-view:selected, .tree-view:focused,
-.text-field:selected, .text-field:focused,
-.table-view:selected, .table-view:focused,
-.choice-box:selected, .choice-box:focused,
-.scroll-pane:selected, .scroll-pane:focused,
-.menu-button:selected, .menu-button:focused,
-.tree-table-view:selected, .tree-table-view:focused {
-    -fx-focus-color: -color-4;
-    -fx-faint-focus-color: #d3524422;
-}
-
-.list-cell:focused, .list-cell:selected,
-.table-row-cell:focused, .table-row-cell:selected,
-.tree-table-row-cell:focused, .tree-table-row-cell:selected,
-.choice-box .menu-item:focused, .choice-box .menu-item:selected,
-.menu-button .menu-item:focused, .menu-button .menu-item:selected,
-.context-menu .menu-item:focused, .context-menu .menu-item:selected {
-    -fx-background-color: -color-5;
-}
 
 .context-menu .menu-item .label {
     -fx-text-fill: -color-0;
+}
+
+.titled-pane .content, .titled-pane .text {
+    -fx-background-color: -color-2;
 }
 
 .split-pane-divider {
@@ -55,6 +38,7 @@
 .sidebar-menu-item:hover, .sidebar-menu-item:selected {
     -fx-background-color: -color-3;
     -fx-border-color: -color-3;
+    -fx-cursor: hand;
 }
 
 .sidebar-menu-item-arrow {
@@ -178,12 +162,9 @@
     -fx-background-color: -color-0;
 }
 
-.login .text-field {
-    -fx-border-color: -color-1;
-}
-
-.login .label {
+.login .label, .login .check-box .text {
     -fx-text-fill: -color-2;
+    -fx-fill: -color-2;
     -fx-font-weight: bold;
 }
 
@@ -193,11 +174,69 @@
     -fx-border-radius: 2px;
 }
 
+.searchField .combo-box {
+    -fx-padding: -1px;
+    -fx-border-width: 0;
+    -fx-background-insets: 0px;
+}
+
 .searchField .glyph-icon {
     -fx-fill: -color-1;
     -fx-padding: 0;
 }
 
 .searchField .search-clear:hover {
+    -fx-fill: -color-4;
+}
+
+.contractStateView {
+    -fx-padding: 10;
+}
+
+.copyable-label, .copyable-label:focused {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0px;
+    -fx-padding: 0;
+}
+
+/* Network View */
+.networkView .worldMap {
+    -fx-image: url("../images/WorldMapSquare.png");
+}
+
+.networkView .map .label:hover .glyph-icon,
+.networkView .map .label:hover .text {
+    -fx-fill: -color-4;
+}
+
+.networkView .map .glyph-icon,
+.networkView .map .text {
+    -fx-fill: -color-2;
+}
+
+.networkTile .title,
+.networkTile .content,
+.networkTile .content .button,
+.networkTile .content .scroll-pane,
+.networkTile .content .scroll-pane > .viewport {
+    -fx-background-color: rgba(28, 28, 28, 0.5);
+    -fx-background: rgba(28, 28, 28, 0.5);
+    -fx-border-width: 0;
+    -fx-background-insets: 0;
+}
+
+.networkTile .content .button:hover {
+    -fx-background-color: -color-4;
+    -fx-cursor: hand;
+}
+
+.networkTile .title > .text,
+.networkTile .copyable-label > .text,
+.networkTile .text-field {
+    -fx-fill: white;
+    -fx-text-fill: white;
+}
+
+#setting-edit-label:hover .text, #setting-edit-label:hover .glyph-icon {
     -fx-fill: -color-4;
 }

@@ -1,15 +1,20 @@
 package net.corda.explorer.views
 
 import javafx.application.Platform
+import javafx.beans.value.ObservableValue
 import javafx.event.EventTarget
 import javafx.geometry.Pos
 import javafx.scene.Parent
+import javafx.scene.control.TextField
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.Priority
 import javafx.scene.text.TextAlignment
 import javafx.util.StringConverter
+import net.corda.client.model.Models
+import tornadofx.View
 import tornadofx.gridpane
 import tornadofx.label
+import tornadofx.textfield
 
 /**
  *  Helper method to reduce boiler plate code
@@ -50,6 +55,9 @@ fun runInFxApplicationThread(block: () -> Unit) {
     }
 }
 
+/**
+ * Under construction label for empty page.
+ */
 fun EventTarget.underConstruction(): Parent {
     return gridpane {
         label("Under Construction...") {
@@ -61,3 +69,15 @@ fun EventTarget.underConstruction(): Parent {
         }
     }
 }
+
+/**
+ * Copyable label component using textField, with css to hide the textfield border.
+ */
+fun EventTarget.copyableLabel(value: ObservableValue<String>? = null, op: (TextField.() -> Unit)? = null) = textfield {
+    value?.let { textProperty().bind(it) }
+    op?.invoke(this)
+    isEditable = false
+    styleClass.add("copyable-label")
+}
+
+inline fun <reified M : Any> View.getModel(): M = Models.get(M::class, this.javaClass.kotlin)

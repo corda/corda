@@ -48,7 +48,7 @@ class EventGenerator(
             }
     )
     val producedGenerator: Generator<Set<StateAndRef<ContractState>>> = Generator.frequency(
-//            0.1 to Generator.pure(setOf())
+            //            0.1 to Generator.pure(setOf())
             0.9 to Generator.impure { vault }.bind { states ->
                 Generator.replicate(2, cashStateGenerator).map {
                     vault = states + it
@@ -89,9 +89,12 @@ class EventGenerator(
                 )
             }
 
-    val clientToServiceCommandGenerator = Generator.frequency(
-            0.4 to issueCashGenerator,
-            0.5 to moveCashGenerator,
-            0.1 to exitCashGenerator
+    val clientCommandGenerator = Generator.frequency(
+            1.0 to moveCashGenerator
+    )
+
+    val bankOfCordaCommandGenerator = Generator.frequency(
+            0.6 to issueCashGenerator,
+            0.4 to exitCashGenerator
     )
 }

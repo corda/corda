@@ -14,8 +14,7 @@
                 <!-- User account menu -->
                 <MenuButton fx:id="userButton" mnemonicParsing="false" GridPane.columnIndex="3">
                     <items>
-                        <MenuItem mnemonicParsing="false" text="Sign out"/>
-                        <MenuItem mnemonicParsing="false" text="Account settings..."/>
+                        <MenuItem fx:id="exit" mnemonicParsing="false" text="Exit Corda Explorer"/>
                     </items>
                     <graphic>
                         <FontAwesomeIconView glyphName="USER" glyphSize="20"/>

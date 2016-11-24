@@ -22,14 +22,19 @@
             <center>
                 <GridPane hgap="10" prefWidth="400" vgap="10">
                     <Label text="Corda Node :" GridPane.halignment="RIGHT"/>
-                    <TextField fx:id="host" promptText="Host" GridPane.columnIndex="1"/>
-                    <TextField fx:id="port" prefWidth="100" promptText="Port" GridPane.columnIndex="2"/>
+                    <TextField fx:id="hostTextField" promptText="Host" GridPane.columnIndex="1"/>
+                    <TextField fx:id="portTextField" prefWidth="100" promptText="Port" GridPane.columnIndex="2"/>
 
                     <Label text="Username :" GridPane.rowIndex="1" GridPane.halignment="RIGHT"/>
-                    <TextField fx:id="username" promptText="Username" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="1"/>
+                    <TextField fx:id="usernameTextField" promptText="Username" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="1"/>
 
                     <Label text="Password :" GridPane.rowIndex="2" GridPane.halignment="RIGHT"/>
-                    <PasswordField fx:id="password" promptText="Password" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="2"/>
+                    <PasswordField fx:id="passwordTextField" promptText="Password" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="2"/>
+
+                    <HBox spacing="20" GridPane.columnIndex="1" GridPane.rowIndex="3" GridPane.columnSpan="2">
+                        <CheckBox fx:id="rememberMeCheckBox" text="Remember me" />
+                        <CheckBox fx:id="fullscreenCheckBox" text="Fullscreen mode"/>
+                    </HBox>
                 </GridPane>
             </center>
         </BorderPane>

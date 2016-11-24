@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+<BorderPane styleClass="networkView" stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.112-ea" xmlns:fx="http://javafx.com/fxml/1">
+    <center>
+        <StackPane>
+            <ScrollPane fx:id="mapScrollPane" hbarPolicy="ALWAYS" pannable="true" vbarPolicy="ALWAYS">
+                <Pane fx:id="mapPane" styleClass="map">
+                    <ImageView fx:id="mapImageView" styleClass="worldMap"/>
+                </Pane>
+            </ScrollPane>
+            <VBox spacing="5" StackPane.alignment="TOP_LEFT" maxWidth="-Infinity" maxHeight="-Infinity">
+                <StackPane.margin>
+                    <Insets bottom="25" left="5" right="5" top="5"/>
+                </StackPane.margin>
+                <TitledPane styleClass="networkTile" text="My Identity">
+                    <BorderPane fx:id="myIdentityPane"/>
+                </TitledPane>
+                <TitledPane styleClass="networkTile" text="Notaries">
+                    <BorderPane>
+                        <center>
+                            <ScrollPane hbarPolicy="NEVER">
+                                <VBox fx:id="notaryList" maxWidth="-Infinity"/>
+                            </ScrollPane>
+                        </center>
+                    </BorderPane>
+                </TitledPane>
+                <TitledPane styleClass="networkTile" text="Peers" VBox.vgrow="ALWAYS">
+                    <BorderPane>
+                        <center>
+                            <ScrollPane hbarPolicy="NEVER">
+                                <VBox fx:id="peerList" maxWidth="-Infinity">
+                                    <Button text="Template" prefHeight="100" prefWidth="200"/>
+                                </VBox>
+                            </ScrollPane>
+                        </center>
+                    </BorderPane>
+                </TitledPane>
+            </VBox>
+        </StackPane>
+    </center>
+</BorderPane>
