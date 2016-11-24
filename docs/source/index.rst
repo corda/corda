@@ -68,6 +68,7 @@ Read on to learn:
    tutorial-test-dsl
    tutorial-clientrpc-api
    flow-state-machines
+   flow-testing
    oracles
    tutorial-attachments
    event-scheduling

@@ -45,6 +45,7 @@ class ResolveTransactionsFlowTest {
         net.stopNodes()
     }
 
+    // DOCSTART 1
     @Test
     fun `resolve from two hashes`() {
         val (stx1, stx2) = makeTransactions()
@@ -58,6 +59,7 @@ class ResolveTransactionsFlowTest {
             assertEquals(stx2, b.storage.validatedTransactions.getTransaction(stx2.id))
         }
     }
+    // DOCEND 1
 
     @Test
     fun `dependency with an error`() {
@@ -145,6 +147,7 @@ class ResolveTransactionsFlowTest {
         assertNotNull(b.services.storageService.attachments.openAttachment(id))
     }
 
+    // DOCSTART 2
     private fun makeTransactions(signFirstTX: Boolean = true, withAttachment: SecureHash? = null): Pair<SignedTransaction, SignedTransaction> {
         // Make a chain of custody of dummy states and insert into node A.
         val dummy1: SignedTransaction = DummyContract.generateInitial(MEGA_CORP.ref(1), 0, notary).let {
@@ -165,4 +168,5 @@ class ResolveTransactionsFlowTest {
         }
         return Pair(dummy1, dummy2)
     }
+    // DOCEND 2
 }
