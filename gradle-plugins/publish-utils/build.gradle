@@ -31,6 +31,13 @@ bintray {
         name = 'publish-utils'
         userOrg = 'r3'
         licenses = ['Apache-2.0']
+
+        version {
+            gpg {
+                sign = true
+                passphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
+            }
+        }
     }
 }
 
