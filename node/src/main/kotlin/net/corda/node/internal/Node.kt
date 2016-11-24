@@ -118,15 +118,15 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
     private lateinit var userService: RPCUserService
 
     override fun makeMessagingService(): MessagingServiceInternal {
+        val legalIdentity = obtainLegalIdentity()
+        val myIdentityOrNullIfNetworkMapService = if (networkMapService != null) legalIdentity.owningKey else null
         userService = RPCUserServiceImpl(configuration.config)
         val serverAddr = with(configuration) {
             messagingServerAddress ?: {
-                messageBroker = ArtemisMessagingServer(this, artemisAddress, services.networkMapCache, userService)
+                messageBroker = ArtemisMessagingServer(this, artemisAddress, myIdentityOrNullIfNetworkMapService, services.networkMapCache, userService)
                 artemisAddress
             }()
         }
-        val legalIdentity = obtainLegalIdentity()
-        val myIdentityOrNullIfNetworkMapService = if (networkMapService != null) legalIdentity.owningKey else null
         return NodeMessagingClient(configuration, serverAddr, myIdentityOrNullIfNetworkMapService, serverThread, database, networkMapRegistrationFuture)
     }
 

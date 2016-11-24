@@ -3,6 +3,7 @@ package net.corda.node.services.messaging
 import com.google.common.net.HostAndPort
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.AddressFormatException
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.div
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.NetworkMapCache
@@ -54,6 +55,7 @@ import javax.security.auth.spi.LoginModule
 @ThreadSafe
 class ArtemisMessagingServer(override val config: NodeConfiguration,
                              val myHostPort: HostAndPort,
+                             val myIdentity: CompositeKey?,
                              val networkMapCache: NetworkMapCache,
                              val userService: RPCUserService) : ArtemisMessagingComponent() {
 
@@ -68,6 +70,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private val mutex = ThreadBox(InnerState())
     private lateinit var activeMQServer: ActiveMQServer
     private var networkChangeHandle: Subscription? = null
+    private val myQueueName = toQueueName(toMyAddress(myIdentity, myHostPort))
 
     init {
         config.basedir.expectedOnDefaultFileSystem()
@@ -148,7 +151,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             // a lazily initialised subsystem.
             registerPostQueueCreationCallback { queueName ->
                 log.debug("Queue created: $queueName")
-                if (queueName.startsWith(PEERS_PREFIX) && queueName != NETWORK_MAP_ADDRESS) {
+                if (queueName.startsWith(PEERS_PREFIX) && queueName != NETWORK_MAP_ADDRESS && queueName != myQueueName) {
                     try {
                         val identity = parseKeyFromQueueName(queueName.toString())
                         val nodeInfo = networkMapCache.getNodeByCompositeKey(identity)
