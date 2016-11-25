@@ -67,6 +67,7 @@ inline fun <reified E : Any> expect(
  * @param expectations The pieces of DSL that should run sequentially when events arrive.
  */
 fun <E> sequence(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = ExpectCompose.Sequential(listOf(*expectations))
+fun <E> sequence(expectations: List<ExpectCompose<E>>): ExpectCompose<E> = ExpectCompose.Sequential(expectations)
 
 /**
  * Tests that events arrive in unspecified order.
@@ -74,6 +75,7 @@ fun <E> sequence(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = Expe
  * @param expectations The pieces of DSL all of which should run but in an unspecified order depending on what sequence events arrive.
  */
 fun <E> parallel(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = ExpectCompose.Parallel(listOf(*expectations))
+fun <E> parallel(expectations: List<ExpectCompose<E>>): ExpectCompose<E> = ExpectCompose.Parallel(expectations)
 
 /**
  * Tests that N events of the same type arrive

@@ -68,6 +68,7 @@ Read on to learn:
    tutorial-contract
    tutorial-contract-clauses
    tutorial-test-dsl
+   tutorial-integration-testing
    tutorial-clientrpc-api
    flow-state-machines
    flow-testing
