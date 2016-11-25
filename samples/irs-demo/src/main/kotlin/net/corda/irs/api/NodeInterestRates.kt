@@ -56,6 +56,7 @@ object NodeInterestRates {
     /**
      * The Service that wraps [Oracle] and handles messages/network interaction/request scrubbing.
      */
+    // DOCSTART 2
     class Service(val services: PluginServiceHub) : AcceptsFileUpload, SingletonSerializeAsToken() {
         val oracle: Oracle by lazy {
             val myNodeInfo = services.myInfo
@@ -100,6 +101,7 @@ object NodeInterestRates {
                 send(otherParty, answers)
             }
         }
+        // DOCEND 2
 
         // File upload support
         override val dataTypePrefix = "interest-rates"
@@ -183,6 +185,7 @@ object NodeInterestRates {
         // TODO There is security problem with that. What if transaction contains several commands of the same type, but
         //      Oracle gets signing request for only some of them with a valid partial tree? We sign over a whole transaction.
         //      It will be fixed by adding partial signatures later.
+        // DOCSTART 1
         fun sign(ftx: FilteredTransaction, merkleRoot: SecureHash): DigitalSignature.LegallyIdentifiable {
             if (!ftx.verify(merkleRoot)){
                 throw MerkleTreeException("Rate Fix Oracle: Couldn't verify partial Merkle tree.")
@@ -190,8 +193,7 @@ object NodeInterestRates {
 
             // Reject if we have something different than only commands.
             val leaves = ftx.filteredLeaves
-            if (!leaves.inputs.isEmpty() || !leaves.outputs.isEmpty() || !leaves.attachments.isEmpty())
-                throw IllegalArgumentException()
+            require(leaves.inputs.isEmpty() && leaves.outputs.isEmpty() && leaves.attachments.isEmpty())
 
             val fixes: List<Fix> = ftx.filteredLeaves.commands.
                     filter { identity.owningKey in it.signers && it.value is Fix }.
@@ -220,6 +222,7 @@ object NodeInterestRates {
             // an invalid transaction the signature is worthless.
             return signingKey.signWithECDSA(merkleRoot.bytes, identity)
         }
+        // DOCEND 1
     }
 
     // TODO: can we split into two?  Fix not available (retryable/transient) and unknown (permanent)

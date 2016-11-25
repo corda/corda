@@ -71,6 +71,7 @@ object FixingFlow {
             val oracleParty = oracle.serviceIdentities(handshake.payload.oracleType).first()
 
             // TODO Could it be solved in better way, move filtering here not in RatesFixFlow?
+            // DOCSTART 1
             fun filterCommands(c: Command) = oracleParty.owningKey in c.signers && c.value is Fix
             val filterFuns = FilterFuns(filterCommands = ::filterCommands)
             val addFixing = object : RatesFixFlow(ptx, filterFuns, oracleParty, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
@@ -84,6 +85,7 @@ object FixingFlow {
                 }
             }
             subFlow(addFixing)
+            // DOCEND 1
             return Pair(ptx, arrayListOf(myOldParty.owningKey))
         }
     }
