@@ -2,7 +2,6 @@ package net.corda.plugins
 
 import com.typesafe.config.*
 import org.gradle.api.Project
-
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
@@ -29,8 +28,8 @@ class Node {
      */
     protected List<String> cordapps = []
     /**
-     * Set the configuration closure list that create the RPC users for this node. This configuration block allows
-     * arbitrary configuration. The recommended current structure is:
+     * Set the RPC users for this node. This configuration block allows arbitrary configuration.
+     * The recommended current structure is:
      * [[['user': "username_here", 'password': "password_here", 'permissions': ["permissions_here"]]]
      * The above is a list to a map of keys to values using Groovy map and list shorthands.
      *
@@ -234,7 +233,7 @@ class Node {
             throw new RuntimeException("No Corda Capsule JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-${project.corda_version}.jar\"")
         } else {
             def cordaJar = maybeCordaJAR.getSingleFile()
-            assert (cordaJar.isFile())
+            assert(cordaJar.isFile())
             return cordaJar
         }
     }
