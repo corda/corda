@@ -1,11 +1,6 @@
 apply plugin: 'kotlin'
 apply plugin: 'application'
-
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-}
+apply plugin: 'net.corda.plugins.cordformation'
 
 repositories {
     mavenLocal()
@@ -35,9 +30,9 @@ dependencies {
     compile("org.graphstream:gs-ui:1.3") {
         exclude group: "bouncycastle"
     }
-}
 
-mainClassName = "net.corda.docs.ClientRpcTutorialKt"
+    runtime "net.corda:corda:$corda_version"
+}
 
 task getClientRpcTutorial(type: CreateStartScripts) {
     dependsOn(classes)
@@ -51,4 +46,32 @@ task getClientRpcTutorial(type: CreateStartScripts) {
 applicationDistribution.into("bin") {
     from(getClientRpcTutorial)
     fileMode = 0755
+}
+
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install', 'build']) {
+    directory "./build/nodes"
+    networkMap "Notary"
+    node {
+        name "Notary"
+        dirName "notary"
+        nearestCity "London"
+        advertisedServices = ["corda.notary.validating"]
+        artemisPort 10002
+        webPort 10003
+        cordapps = []
+    }
+    node {
+        name "Alice"
+        dirName "alice"
+        nearestCity "London"
+        advertisedServices = []
+        artemisPort 10004
+        webPort 10005
+        cordapps = []
+        rpcUsers = [
+                ['user' : "user",
+                 'password' : "password",
+                 'permissions' : ["StartFlow.net.corda.flows.CashFlow"]]
+        ]
+    }
 }
