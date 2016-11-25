@@ -1,13 +1,10 @@
 package net.corda.plugins
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigRenderOptions
-import com.typesafe.config.ConfigValueFactory
+import com.typesafe.config.*
 import org.gradle.api.Project
-
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+
 /**
  * Represents a node that will be installed.
  */
@@ -30,10 +27,18 @@ class Node {
      * @note Your app will be installed by default and does not need to be included here.
      */
     protected List<String> cordapps = []
+    /**
+     * Set the RPC users for this node. This configuration block allows arbitrary configuration.
+     * The recommended current structure is:
+     * [[['user': "username_here", 'password': "password_here", 'permissions': ["permissions_here"]]]
+     * The above is a list to a map of keys to values using Groovy map and list shorthands.
+     *
+     * @note Incorrect configurations will not cause a DSL error.
+     */
+    protected List<Map<String, Object>> rpcUsers = []
 
     private String dirName
     private Config config = ConfigFactory.empty()
-    //private Map<String, Object> config = new HashMap<String, Object>()
     private File nodeDir
     private Project project
 
@@ -122,6 +127,7 @@ class Node {
      */
     void build(File baseDir) {
         nodeDir = new File(baseDir, dirName)
+        configureRpcUsers()
         installCordaJAR()
         installBuiltPlugin()
         installCordapps()
@@ -136,6 +142,13 @@ class Node {
      */
     String getArtemisAddress() {
         return config.getString("artemisAddress")
+    }
+
+    /**
+     * Write the RPC users to the config
+     */
+    private void configureRpcUsers() {
+        config = config.withValue("rpcUsers", ConfigValueFactory.fromIterable(rpcUsers))
     }
 
     /**
@@ -213,8 +226,10 @@ class Node {
      * @return A file representing the Corda JAR.
      */
     private File verifyAndGetCordaJar() {
-        def maybeCordaJAR = project.configurations.runtime.filter { it.toString().contains("corda-${project.corda_version}.jar")}
-        if(maybeCordaJAR.size() == 0) {
+        def maybeCordaJAR = project.configurations.runtime.filter {
+            it.toString().contains("corda-${project.corda_version}.jar")
+        }
+        if (maybeCordaJAR.size() == 0) {
             throw new RuntimeException("No Corda Capsule JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-${project.corda_version}.jar\"")
         } else {
             def cordaJar = maybeCordaJAR.getSingleFile()

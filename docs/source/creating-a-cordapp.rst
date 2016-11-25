@@ -144,6 +144,7 @@ To build against Corda and the plugins that cordapps use, update your build.grad
 
     buildscript {
         ext.corda_version = '<enter the corda version you build against here>'
+        ext.corda_gradle_plugins_version = '<enter the gradle plugins version here>' // This is usually the same as corda_version.
         ... your buildscript ...
 
         repositories {
@@ -153,9 +154,9 @@ To build against Corda and the plugins that cordapps use, update your build.grad
 
         dependencies {
             ... your dependencies ...
-            classpath "net.corda.plugins:cordformation:$corda_version"
-            classpath "net.corda.plugins:quasar-utils:$corda_version"
-            classpath "net.corda.plugins:publish-utils:$corda_version"
+            classpath "net.corda.plugins:cordformation:$corda_gradle_plugins_version"
+            classpath "net.corda.plugins:quasar-utils:$corda_gradle_plugins_version"
+            classpath "net.corda.plugins:publish-utils:$corda_gradle_plugins_version"
         }
     }
 

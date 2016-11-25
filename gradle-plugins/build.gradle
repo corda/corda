@@ -2,8 +2,7 @@
 // or if you are developing these plugins. See the readme for more information.
 
 buildscript {
-    // Our version: bump this on release.
-    ext.corda_version = "0.6-SNAPSHOT"
+    ext.gradle_plugins_version = "0.5.5" // Our version: bump this on release.
     ext.corda_published_version = "0.5" // Depend on our existing published publishing plugin.
 
     repositories {
@@ -19,8 +18,8 @@ buildscript {
 apply plugin: 'maven-publish'
 
 allprojects {
+    version "$gradle_plugins_version"
     group 'net.corda'
-    version "$corda_version"
 }
 
 subprojects {
