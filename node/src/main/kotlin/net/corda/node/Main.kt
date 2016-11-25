@@ -123,7 +123,7 @@ private fun printPluginsAndServices(node: Node) {
 private fun messageOfTheDay(): Pair<String, String> {
     val messages = arrayListOf(
             "The only distributed ledger that pays\nhomage to Pac Man in its logo.",
-            "The officially approved platform of the\nglobal capitalist lizard conspiracy™ ${Emoji.bagOfCash}",
+            "You know, I was a banker once ...\nbut I lost interest. ${Emoji.bagOfCash}",
             "It's not who you know, it's who you know\nknows what you know you know.",
             "It runs on the JVM because QuickBasic\nis apparently not 'professional' enough.",
             "\"It's OK computer, I go to sleep after\ntwenty minutes of inactivity too!\"",
