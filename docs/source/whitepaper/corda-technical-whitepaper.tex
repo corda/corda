@@ -235,8 +235,10 @@ either reliably stored the message or processed it completely. Connections betwe
 needed: there is no assumption of constant connectivity. An ideal network would be entirely flat with high quality
 connectivity between all nodes, but Corda recognises that this is not always compatible with common network
 setups and thus the message routing component of a node can be separated from the rest and run outside the firewall.
-In this way nodes that do not have duplex connectivity can still take part in the network as first class citizens.
-Additionally a single node may have multiple advertised IP addresses.
+Being outside the firewall or in the firewall's `de-militarised zone' (DMZ) is required to ensure that nodes can
+connect to anyone on the network, and be connected to in turn. In this way a node can be split into multiple
+sub-services that do not have duplex connectivity yet can still take part in the network as first class citizens.
+Additionally, a single node may have multiple advertised IP addresses.
 
 The reference implementation provides this functionality using the Apache Artemis message broker, through which it
 obtains journalling, load balancing, flow control, high availability clustering, streaming of messages too large to fit
@@ -284,7 +286,7 @@ Bitcoin's BIP 70\cite{BIP70}.
 In Corda transaction data is not globally broadcast. Instead it is transmitted to the relevant parties only when they
 need to see it. Moreover even quite simple use cases - like sending cash - may involve a multi-step negotiation between
 counterparties and the involvement of a third party such as a notary. Additional information that isn't put into the
-ledger is considered essential, as opposed to nice-to-have. Thus unlike traditional blockchain systems in which the primary
+ledger is considered essential, as opposed to nice-to-have. Thus unlike traditional block chain systems in which the primary
 form of communication is global broadcast, in Corda \emph{all} communication takes the form of small multi-party sub-protocols
 called flows.
 
@@ -331,6 +333,11 @@ a payment is not considered acceptable.
 Flows are named using reverse DNS notation and several are defined by the base protocol. Note that the framework is
 not required to implement the wire protocols, it is just a development aid.
 
+\begin{figure}[H]
+\includegraphics[scale=0.16, center]{trading-flow}
+\caption{A diagram showing the two party trading flow with notarisation}
+\end{figure}
+
 \subsection{Data visibility and dependency resolution}
 
 When a transaction is presented to a node as part of a flow it may need to be checked. Simply sending you
@@ -352,9 +359,9 @@ involve many round-trips and thus take some time to fully complete. How quickly 
 is thus difficult to characterise: it depends heavily on usage and distance between nodes. Whilst nodes could
 pre-push transactions in anticipation of them being fetched anyway, such optimisations are left for future work.
 
-A more important consequence is that in the absence of additional privacy measures it is difficult to reason
-about who may get to see transaction data. We can say it's definitely better than a system that uses global
-broadcast, but how much better is hard to characterise. This uncertainty is mitigated by several factors.
+Whilst this system is simpler than creating rigid data partitions and clearly provides better privacy than global
+broadcast, in the absence of additional privacy measures it is nonetheless still difficult to reason about who
+may get to see transaction data. This uncertainty is mitigated by several factors.
 
 \paragraph{Small-subgraph transactions.}Some uses of the ledger do not involve widely circulated asset states.
 For example, two institutions that wish to keep their view of a particular deal synchronised but who are making
@@ -377,6 +384,11 @@ be an issue.
 \section{Data model}
 
 \subsection{Transaction structure}
+
+States are the atomic unit of information in Corda. They are never altered: they are either current (`unspent') or
+consumed (`spent') and hence no longer valid.  Transactions consume zero or more states (inputs) and create zero or more
+new states (outputs). Because states cannot exist outside of the transactions that created them, any state whether consumed
+or not can be identified by the identifier of the creating transaction and the index of the state in the outputs list.
 
 Transactions consist of the following components:
 
@@ -415,6 +427,11 @@ the transaction will not be valid unless every key listed in every command has a
 structures are themselves opaque. In this way algorithmic agility is retained: new signature algorithms can be deployed
 without adjusting the code of the smart contracts themselves.
 
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{cash}
+\caption{An example of a cash issuance transaction}
+\end{figure}
+
 \subsection{Composite keys}\label{sec:composite-keys}
 
 The term ``public key'' in the description above actually refers to a \emph{composite key}. Composite keys are trees in
@@ -423,6 +440,10 @@ both the weights of each child and a threshold weight that must be met. The vali
 determined by walking the tree bottom-up, summing the weights of the keys that have a valid signature and comparing
 against the threshold. By using weights and thresholds a variety of conditions can be encoded, including boolean
 formulas with AND and OR.
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{composite-keys}
+\end{figure}
 
 Composite keys are useful in multiple scenarios. For example, assets can be placed under the control of a 2-of-2
 composite key where one leaf key is owned by a user, and the other by an independent risk analysis system. The
@@ -461,7 +482,7 @@ way to Bitcoin's \texttt{nLockTime} transaction field, which specifies a \emph{h
 Timestamps are checked and enforced by notary services. As the participants in a notary service will themselves
 not have precisely aligned clocks, whether a transaction is considered valid or not at the moment it is submitted
 to a notary may be unpredictable if submission occurs right on a boundary of the given window. However, from the
-perspective of all other observers the notaries signature is decisive: if the signature is present, the transaction
+perspective of all other observers the notary's signature is decisive: if the signature is present, the transaction
 is assumed to have occurred within that time.
 
 \paragraph{Reference clocks.}In order to allow for relatively tight time windows to be used when transactions are fully
@@ -530,7 +551,7 @@ or by requiring the data to be signed by some trusted third party.
 
 Decentralised ledger systems often differ in their underlying political ideology as well as their technical
 choices. The Ethereum project originally promised ``unstoppable apps'' which would implement ``code as law''. After
-a prominent smart contract was hacked, an argument took place over whether what had occurred could be described
+a prominent smart contract was hacked\cite{TheDAOHack}, an argument took place over whether what had occurred could be described
 as a hack at all given the lack of any non-code specification of what the program was meant to do. The disagreement
 eventually led to a split in the community.
 
@@ -641,6 +662,15 @@ counterparty needs to be convinced that some third party has already signed the 
 straightforward. Typically an oracle will be presented with the Merkle branches for the command or state that
 contains the data, and the timestamp field, and nothing else. The resulting signature contains flag bits indicating which
 parts of the structure were presented for signing to avoid a single signature covering more than expected.
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{tearoffs1}
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{tearoffs2}
+\end{figure}
+
 
 % TODO: The flag bits are unused in the current reference implementation.
 
@@ -784,6 +814,11 @@ can be rewritten. If a group of trading institutions wish to implement a checked
 can use an encumbrance (see \cref{sec:encumbrances}) to prevent an obligation being changed during certain hours,
 as determined by the clocks of the notaries (see \cref{sec:timestamps}).
 
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{state-class-hierarchy}
+\caption{Class hierarchy diagram showing the relationships between different state types}
+\end{figure}
+
 \subsection{Market infrastructure}
 
 Trade is the lifeblood of the economy. A distributed ledger needs to provide a vibrant platform on which trading may
@@ -822,7 +857,7 @@ future distributed ledger services contemplated by CCPs and CSDs.
 \section{Notaries and consensus}\label{sec:notaries}
 
 Corda does not organise time into blocks. This is sometimes considered strange, given that it can be described as a
-blockchain system or `blockchain inspired'. Instead a Corda network has one or more notary services which provide
+block chain system or `block chain inspired'. Instead a Corda network has one or more notary services which provide
 transaction ordering and timestamping services, thus abstracting the role miners play in other systems into a pluggable
 component.
 
@@ -850,7 +885,7 @@ a reward of newly issued bitcoins, an unrecognised block represents a loss and a
 a profit.
 
 Bitcoin uses proof-of-work because it has a design goal of allowing an unlimited number of identityless parties to join
-and leave the network at will, whilst simultaneously making it hard to execute sybil attacks (attacks in which one party
+and leave the network at will, whilst simultaneously making it hard to execute Sybil attacks (attacks in which one party
 creates multiple identities to gain undue influence over the network). This is an appropriate design to use for a peer to
 peer network formed of volunteers who can't/won't commit to any long term relationships up front, and in which identity
 verification is not done. Using proof-of-work then leads naturally to a requirement to quantise the timeline into chunks,
@@ -867,14 +902,14 @@ its multiple unfortunate downsides:
 
 \begin{itemize}
 \item Energy consumption is excessively high for such a simple task, being comparable at the time of writing to the
-consumption of an entire town. At a time when humanity needs to use less energy rather than more this is ecologically
-undesirable.
+electricity consumption of an entire city\cite{BitcoinEnergy}. At a time when humanity needs to use less energy
+rather than more this is ecologically undesirable.
 \item High energy consumption forces concentration of mining power in regions with cheap or free electricity. This results
 in unpredictable geopolitical complexities that many users would rather do without.
 \item Identityless participants mean all transactions must be broadcast to all network nodes, as there's no reliable
 way to know who the miners are. This worsens privacy.
 \item The algorithm does not provide finality, only a probabilistic approximation, which is a poor fit for existing
-business and legal assumptions.
+business and legal assumptions.\cite{Swanson}
 \item It is theoretically possible for large numbers of miners or even all miners to drop out simultaneously without
 any protocol commitments being violated.
 \end{itemize}
@@ -1002,7 +1037,7 @@ and thus does not know who is involved with the operation (assuming source IP ad
 
 \section{The vault}\label{sec:vault}
 
-In any blockchain based system most nodes have a wallet, or as we call it, a vault.
+In any block chain based system most nodes have a wallet, or as we call it, a vault.
 
 The vault contains data extracted from the ledger that is considered \emph{relevant} to the node's owner, stored in a form
 that can be easily queried and worked with. It also contains private key material that is needed to sign transactions
@@ -1123,7 +1158,7 @@ interprets them.
 Domain specific languages for the expression of financial contracts are a popular area of research. A seminal work
 is `Composing contracts' by Peyton-Jones, Seward and Eber [PJSE2000\cite{PeytonJones:2000:CCA:357766.351267}] in which
 financial contracts are modelled with a small library of Haskell combinators. These models can then be used for
-valuation of the underlying deals. Blockchain systems use the term `contract' in a slightly different sense to
+valuation of the underlying deals. Block chain systems use the term `contract' in a slightly different sense to
 how PJSE do but the underlying concepts can be adapted to our context as well. The platform provides an
 experimental \emph{universal contract} that builds on the language extension features of the Kotlin programming
 language. To avoid linguistic confusion it refers to the combined code/data bundle as an `arrangement' rather
@@ -1186,7 +1221,7 @@ smart contract logic may be appreciated by the users.
 
 \subsection{Background}
 
-A common feature of digital financial systems and blockchain-type systems in particular is the use of secure client-side
+A common feature of digital financial systems and block chain-type systems in particular is the use of secure client-side
 hardware to hold private keys and perform signing operations with them. Combined with a zero tolerance approach to
 transaction rollbacks, this is one of the ways they reduce overheads: by attempting to ensure that transaction
 authorisation is robust and secure, and thus that signatures are reliable.
@@ -1365,7 +1400,7 @@ human consumption at all.
 
 Once a group is created other nodes can be invited to join it by using an invitation flow. Membership can be either
 read only or read/write. To add a node as read-only, the certificate i.e. pubkey alone is sent. To add a node as
-read/write the cert and private key are sent. A future elaboration on the design may support giving each member a
+read/write the certificate and private key are sent. A future elaboration on the design may support giving each member a
 separate private key which would allow tracing who added transactions to a group, but this is left for future work.
 In either case the node records in its local database which other nodes it has invited to the group once they accept
 the invitation.
@@ -1506,8 +1541,8 @@ opcode-at-a-time accounting turns out to be insufficient.
 A further complexity comes from the need to constrain memory usage. The sandbox imposes a quota on bytes \emph{allocated}
 rather than bytes \emph{retained} in order to simplify the implementation. This strategy is unnecessarily harsh on smart
 contracts that churn large quantities of garbage yet have relatively small peak heap sizes and, again, it may be that
-in practice a more sophisticated strategy that integrates with the GC is required in order to set quotas to a usefully
-generic level.
+in practice a more sophisticated strategy that integrates with the garbage collector is required in order to set
+quotas to a usefully generic level.
 
 Control over \texttt{Object.hashCode()} takes the form of new JNI calls that allow the JVM's thread local random number
 generator to be reseeded before execution begins. The seed is derived from the hash of the transaction being verified.
@@ -1517,7 +1552,7 @@ reach. In particular this means that the `shadow JDK' is also instrumented and s
 
 \section{Scalability}
 
-Scalability of blockchains and blockchain inspired systems has been a constant topic of discussion since Nakamoto
+Scalability of block chains and block chain inspired systems has been a constant topic of discussion since Nakamoto
 first proposed the technology in 2008. We make a variety of choices and tradeoffs that affect and
 ensure scalability. As most of the initial intended use cases do not involve very high levels of traffic, the
 reference implementation is not heavily optimised. However, the architecture allows for much greater levels of
@@ -1585,7 +1620,7 @@ any NoSQL database (such as Cassandra), at the cost of a more complex backup str
 
 Due to partial visibility nodes check transaction graphs `just in time' rather than as a steady stream of
 announcements by other participants. This complicates the question of how to measure the scalability of a Corda
-node. Other blockchain systems quote performance as a constant rate of transactions per unit time.
+node. Other block chain systems quote performance as a constant rate of transactions per unit time.
 However, our `unit time' is not evenly distributed: being able to check 1000 transactions/sec is not
 necessarily good enough if on presentation of a valuable asset you need to check a transation graph that consists
 of many more transactions and the user is expecting the transaction to show up instantly. Future versions of
