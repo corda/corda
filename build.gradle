@@ -2,6 +2,7 @@ buildscript {
     // Our version: bump this on release.
     ext.corda_version = "0.6-SNAPSHOT"
 
+    ext.gradle_plugins_version = "0.5.5"
     ext.kotlin_version = '1.0.5'
     ext.quasar_version = '0.7.6'
     ext.asm_version = '0.5.3'
@@ -26,9 +27,9 @@ buildscript {
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
-        classpath 'net.corda.plugins:publish-utils:0.5'
-        classpath 'net.corda.plugins:quasar-utils:0.5.2'
-        classpath 'net.corda.plugins:cordformation:0.5.4'
+        classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
+        classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
+        classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
 
         // Can run 'gradle dependencyUpdates' to find new versions of things.
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'
