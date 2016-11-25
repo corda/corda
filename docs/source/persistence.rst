@@ -68,7 +68,7 @@ which allow the configuration of a database schema or table name prefixes to avo
    This will change in due course.  Similarly, it does not currently support configuring ``SchemaOptions`` but will do so in
    the future.
 
-Object Relational Mapping
+Object relational mapping
 -------------------------
 
 The persisted representation of a ``QueryableState`` should be an instance of a ``PersistentState`` subclass, constructed

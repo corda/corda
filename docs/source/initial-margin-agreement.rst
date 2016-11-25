@@ -1,10 +1,10 @@
-Initial Margin Agreements
+Initial margin agreements
 =========================
 
 This app is a demonstration of how Corda can be used for the real world requirement of initial margin calculation and
 agreement; featuring the integration of complex and industry proven third party libraries into Corda nodes.
 
-SIMM Introduction
+SIMM introduction
 -----------------
 
 SIMM is an acronym for "Standard Initial Margin Model". It is effectively the calculation of a "margin" that is paid

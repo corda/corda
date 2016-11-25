@@ -80,7 +80,7 @@ Wire protocol
 The client RPC wire protocol is not currently documented. To use it you must use the client library provided.
 This is likely to change in a future release.
 
-Registering Classes With RPC Kryo
+Registering classes with RPC Kryo
 ---------------------------------
 
 In the present implementation of the node we use Kryo to generate the *on the wire* representation of contracts states

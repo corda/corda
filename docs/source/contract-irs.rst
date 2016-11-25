@@ -1,4 +1,4 @@
-Interest Rate Swaps
+Interest rate swaps
 ===================
 
 
@@ -68,7 +68,7 @@ event.
 Currently, there are no matured, termination or dispute operations.
 
 
-Technical Details
+Technical details
 -----------------
 
 The contract itself comprises of 4 data state classes, ``FixedLeg``, ``FloatingLeg``, ``Common`` and ``Calculation``.

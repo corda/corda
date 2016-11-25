@@ -1,4 +1,4 @@
-Network Permissioning
+Network permissioning
 =====================
 
 The keystore located in ``<workspace>/certificates/sslkeystore.jks`` is required to connect to the Corda network securely. 
@@ -9,7 +9,7 @@ However this is not secure for the real network. This documentation will explain
 
 .. warning:: The TestNet has not been setup yet as of Milestone 6 release. You will not be able to connect to the certificate signing server. 
 
-Certificate Signing Request Utility
+Certificate signing request utility
 -----------------------------------
 
 The utility creates certificate signing request based on node information obtained from the node configuration. 
@@ -32,7 +32,7 @@ Once the request has been approved and the certificates downloaded from the serv
 
 This process only needs to be done once when the node connects to the network for the first time, or when the certificate expires.
 
-Building the Utility
+Building the utility
 --------------------
 The utility will be created as part of the main build ``buildCordaJAR``.
 You can also build the utility JAR by run the following command from the Corda project root directory.
@@ -48,7 +48,7 @@ You can also build the utility JAR by run the following command from the Corda p
 The utility JAR will be created in ``<Project Root Dir>/build/libs/certSigningRequestUtility.jar``
 
 
-Running the Utility
+Running the utility
 -------------------
 
 You will need to specify the working directory of your Corda node using ``--base-dir`` flag. This is defaulted to current directory if left blank.

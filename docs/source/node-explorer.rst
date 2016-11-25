@@ -15,7 +15,7 @@ Running the UI
     ./gradlew tools:explorer:run
     
 
-Running Demo Nodes
+Running demo nodes
 ------------------
 **Windows**::
 

@@ -134,7 +134,7 @@ The ``Move`` clause for the commercial paper contract is relatively simple, so w
             }
         }
 
-Group Clause
+Group clause
 ------------
 
 We need to wrap the move clause (as well as the issue and redeem clauses - see the relevant contract code for their

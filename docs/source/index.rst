@@ -48,7 +48,7 @@ Read on to learn:
    messaging
    persistence
    node-administration
-   corda-configuration-files
+   corda-configuration-file
    corda-plugins
    node-services
    node-explorer

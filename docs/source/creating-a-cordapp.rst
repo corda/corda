@@ -1,10 +1,10 @@
-Creating a Cordapp
+Creating a CorDapp
 ==================
 
 A Cordapp is an application that runs on the Corda platform using the platform APIs and plugin system. They are self
 contained in separate JARs from the node server JAR that are created and distributed.
 
-App Plugins
+App plugins
 -----------
 
 .. note:: Currently apps are only supported for JVM languages.
@@ -27,7 +27,7 @@ message handlers and more. The service does not run in a separate thread, so the
 construction, where message handlers should be registered and threads started.
 
 
-Starting Nodes
+Starting nodes
 --------------
 
 To use an app you must also have a node server. To create a node server run the ``gradle deployNodes`` task.
@@ -46,7 +46,7 @@ using ``--base-directory=<workspace>``.
    temporary folder. It is therefore suggested that the CAPSULE_CACHE_DIR environment variable be set before
    starting the process to control this location.
 
-Installing Apps
+Installing apps
 ---------------
 
 Once you have created your app JAR you can install it to a node by adding it to ``<node_dir>/plugins/``. In this
@@ -54,7 +54,7 @@ case the ``node_dir`` is the location where your node server's JAR and configura
 
 .. note:: If the directory does not exist you can create it manually.
 
-Starting your Node
+Starting your node
 ------------------
 
 Now you have a node server with your app installed, you can run it by navigating to ``<node_dir>`` and running
@@ -71,7 +71,7 @@ The configuration file and workspace paths can be overidden on the command line 
 
 Otherwise the workspace folder for the node is created based upon the ``basedir`` property in the ``node.conf`` file and if this is relative it is applied relative to the current working path.
 
-Debugging your Node
+Debugging your node
 -------------------
 
 To enable remote debugging of the corda process use a command line such as:
@@ -80,7 +80,7 @@ To enable remote debugging of the corda process use a command line such as:
 
 This command line will start the debugger on port 5005 and pause the process awaiting debugger attachment.
 
-Viewing persisted state of your Node
+Viewing persisted state of your node
 ------------------------------------
 
 To make examining the persisted contract states of your node or the internal node database tables easier, and providing you are
@@ -96,7 +96,7 @@ at the present time, and should certainly be treated as read-only.
 .. _ServiceHubInternal: api/net.corda.node.services.api/-service-hub-internal/index.html
 .. _ServiceHub: api/net.corda.node.services.api/-service-hub/index.html
 
-Building Against Corda
+Building against Corda
 ----------------------
 
 .. warning:: This feature is subject to rapid change
@@ -111,13 +111,13 @@ root directory of Corda
 This will publish corda-$version.jar, finance-$version.jar, core-$version.jar and node-$version.jar to the
 group net.corda. You can now depend on these as you normally would a Maven dependency.
 
-Gradle Plugins for Cordapps
+Gradle plugins for CorDapps
 ===========================
 
 There are several Gradle plugins that reduce your build.gradle boilerplate and make development of Cordapps easier.
 The available plugins are in the gradle-plugins directory of the Corda repository.
 
-Building Gradle Plugins
+Building Gradle plugins
 -----------------------
 
 To install to your local Maven repository the plugins that Cordapp gradle files require, run the following from the
@@ -129,7 +129,7 @@ root of the Corda project:
 
 The plugins will now be installed to your local Maven repository in ~/.m2 on Unix and %HOMEPATH%\.m2 on Windows.
 
-Using Gradle Plugins
+Using Gradle plugins
 --------------------
 
 To use the plugins, if you are not already using the Cordapp template project, you must modify your build.gradle. Add

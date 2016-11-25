@@ -29,7 +29,7 @@ if you would like to start getting to grips with the Kotlin language, then we st
 of the tutorials (known as "koans") as well. Also see our :doc:`further-notes-on-kotlin`.
 
 
-Version Control via Git
+Version control via Git
 -----------------------
 
 We use git to version control Corda. The authorative place to obtain git is from the main `git website <https://git-scm.com/downloads>`_
@@ -52,7 +52,7 @@ on the gradle tab (generally found on the right hand side), or by following the 
 are performing (details expounded later). Whenever prompted about gradle, accept the defaults suggested by IntelliJ.
 
 
-Corda Source Code
+Corda source code
 -----------------
 
 You can check out the Corda platform source code from this repository:

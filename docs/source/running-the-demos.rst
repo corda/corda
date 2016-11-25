@@ -104,7 +104,7 @@ Or you can run them from inside IntelliJ, but when done this way, all the node o
 In the "Attachment Demo: Run Nodes" window you should see some log lines scroll past, and within a few seconds the
 message "File received - we're happy!" should be printed.
 
-SIMM and Portfolio Demo
+SIMM and Portfolio demo
 -----------------------
 
 .. note:: Read more about this demo at :doc:`initial-margin-agreement`.

@@ -1,6 +1,6 @@
 .. _graphstream: http://graphstream-project.org/
 
-Client RPC API Tutorial
+Client RPC API tutorial
 =======================
 
 In this tutorial we will build a simple command line utility that
@@ -82,7 +82,7 @@ Now let's try to visualise the transaction graph. We will use a graph drawing li
 
 If we run the client with ``Visualise`` we should see a simple random graph being drawn as new transactions are being created.
 
-Registering classes from your Cordapp with RPC Kryo
+Registering classes from your CorDapp with RPC Kryo
 ---------------------------------------------------
 
 As described in :doc:`clientrpc`, you currently have to register any additional classes you add that are needed in RPC
