@@ -6,6 +6,7 @@
  *
  * Please see distribution for license.
  */
+
 package net.corda.vega.analytics.example
 
 import com.google.common.collect.ImmutableList
@@ -52,7 +53,7 @@ import java.time.LocalDate
 
 fun main(args: Array<String>) {
     val swapPricingExample = SwapPricingExample()
-    swapPricingExample.main(args)
+    swapPricingExample.main()
 }
 
 /**
@@ -64,13 +65,10 @@ fun testOGTradeContract() {
 }
 
 class SwapPricingExample {
-
     /**
      * Runs the example, pricing the instruments, producing the output as an ASCII table.
-
-     * @param args  ignored
      */
-    fun main(args: Array<String>) {
+    fun main() {
         // setup calculation runner component, which needs life-cycle management
         // a typical application might use dependency injection to obtain the instance
         val runner = CalculationRunner.ofMultiThreaded()

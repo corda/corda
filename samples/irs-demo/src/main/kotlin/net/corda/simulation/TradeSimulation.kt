@@ -50,6 +50,7 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
 
         val amount = 1000.DOLLARS
 
+        @Suppress("UNCHECKED_CAST")
         val buyerFuture = buyer.initiateSingleShotFlow(Seller::class) {
             Buyer(it, notary.info.notaryIdentity, amount, CommercialPaper.State::class.java)
         }.flatMap { (it.fsm as FlowStateMachine<SignedTransaction>).resultFuture }

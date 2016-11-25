@@ -5,8 +5,8 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Party
-import net.corda.core.sum
 import net.corda.core.node.ServiceHub
+import net.corda.core.sum
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.SwapData
 import java.time.LocalDate
@@ -34,6 +34,8 @@ fun List<StateAndRef<IRSState>>.toPortfolio(): Portfolio {
     return Portfolio(this)
 }
 
+// TODO: This should probably have its generics fixed and moved into the core platform API.
+@Suppress("UNCHECKED_CAST")
 fun <T : ContractState> List<StateRef>.toStateAndRef(services: ServiceHub): List<StateAndRef<T>> {
     return services.vaultService.statesForRefs(this).map {
         StateAndRef(it.value as TransactionState<T>, it.key)
