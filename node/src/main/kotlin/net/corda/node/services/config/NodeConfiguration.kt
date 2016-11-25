@@ -7,6 +7,7 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.internal.Node
 import net.corda.node.serialization.NodeClock
+import net.corda.node.services.User
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.TestClock
@@ -51,6 +52,15 @@ class FullNodeConfiguration(val config: Config) : NodeConfiguration {
     val useTestClock: Boolean by config.getOrElse { false }
     val notaryNodeAddress: HostAndPort? by config.getOrElse { null }
     val notaryClusterAddresses: List<HostAndPort> = config.getListOrElse<String>("notaryClusterAddresses") { emptyList<String>() }.map { HostAndPort.fromString(it) }
+    val rpcUsers: List<User> =
+            config.getListOrElse<Config>("rpcUsers") { emptyList() }
+            .map {
+                val username = it.getString("user")
+                require(username.matches("\\w+".toRegex())) { "Username $username contains invalid characters" }
+                val password = it.getString("password")
+                val permissions = it.getListOrElse<String>("permissions") { emptyList() }.toSet()
+                User(username, password, permissions)
+            }
 
     fun createNode(): Node {
         // This is a sanity feature do not remove.

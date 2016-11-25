@@ -66,6 +66,8 @@ The RPC we need to initiate a Cash transaction is ``startFlowDynamic`` which may
 
 Finally we have everything in place: we start a couple of nodes, connect to them, and start creating transactions while listening on successfully created ones, which are dumped to the console. We just need to run it!:
 
+.. sourcecode:: bash
+
     # Build the example
     ./gradlew docs/source/example-code:installDist
     # Start it

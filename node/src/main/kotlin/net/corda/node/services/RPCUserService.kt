@@ -1,8 +1,7 @@
 package net.corda.node.services
 
-import com.typesafe.config.Config
 import net.corda.core.flows.FlowLogic
-import net.corda.node.services.config.getListOrElse
+import net.corda.node.services.config.FullNodeConfiguration
 
 /**
  * Service for retrieving [User] objects representing RPC users who are authorised to use the RPC system. A [User]
@@ -16,21 +15,9 @@ interface RPCUserService {
 
 // TODO Store passwords as salted hashes
 // TODO Or ditch this and consider something like Apache Shiro
-class RPCUserServiceImpl(config: Config) : RPCUserService {
+class RPCUserServiceImpl(config: FullNodeConfiguration) : RPCUserService {
 
-    private val _users: Map<String, User>
-
-    init {
-        _users = config.getListOrElse<Config>("rpcUsers") { emptyList() }
-                .map {
-                    val username = it.getString("user")
-                    require(username.matches("\\w+".toRegex())) { "Username $username contains invalid characters" }
-                    val password = it.getString("password")
-                    val permissions = it.getListOrElse<String>("permissions") { emptyList() }.toSet()
-                    User(username, password, permissions)
-                }
-                .associateBy(User::username)
-    }
+    private val _users = config.rpcUsers.associateBy(User::username)
 
     override fun getUser(username: String): User? = _users[username]
 
