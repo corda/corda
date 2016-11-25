@@ -30,7 +30,7 @@ value of the commercial paper.
 
 This lifecycle for commercial paper is illustrated in the diagram below:
 
-.. image:: tutorial-contract-cp.png
+.. image:: contract-cp.png
 
 Where to put your code
 ----------------------
@@ -46,8 +46,8 @@ Starting the commercial paper class
 
 A smart contract is a class that implements the ``Contract`` interface. This can be either implemented directly, as done
 here, or by subclassing an abstract contract such as ``OnLedgerAsset``. The heart of any contract in Corda is the
-``verify()'' function, which determined whether any given transaction is valid. This example shows how to write a
-``verify()'' function from scratch. A later tutorial will introduce "clauses", which are reusable chunks of verification
+``verify()`` function, which determined whether any given transaction is valid. This example shows how to write a
+``verify()`` function from scratch. A later tutorial will introduce "clauses", which are reusable chunks of verification
 logic, but first it's worth understanding how a contract is built without them.
 
 You can see the full Kotlin version of this contract in the code as ``CommercialPaperLegacy``. The code in this
@@ -97,7 +97,7 @@ States
 
 A state is a class that stores data that is checked by the contract. A commercial paper state is structured as below:
 
-.. image:: tutorial-contract-cp-state.png
+.. image:: contract-cp-state.png
 
 
 .. container:: codeset
