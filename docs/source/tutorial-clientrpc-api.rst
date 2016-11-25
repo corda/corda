@@ -72,8 +72,11 @@ Finally we have everything in place: we start a couple of nodes, connect to them
 .. sourcecode:: bash
 
     # Build the example
+
     ./gradlew docs/source/example-code:installDist
+
     # Start it
+
     ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Print
 
 Now let's try to visualise the transaction graph. We will use a graph drawing library called graphstream_
