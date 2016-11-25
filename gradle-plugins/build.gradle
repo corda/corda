@@ -20,7 +20,6 @@ apply plugin: 'maven-publish'
 
 allprojects {
     group 'net.corda'
-    version "$corda_version"
 }
 
 subprojects {

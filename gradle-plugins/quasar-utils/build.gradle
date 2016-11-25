@@ -3,6 +3,8 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.bintray'
 apply plugin: 'maven-publish'
 
+version = "0.5.2" // Increment appropriately before publishing locally
+
 dependencies {
     compile gradleApi()
     compile localGroovy()
