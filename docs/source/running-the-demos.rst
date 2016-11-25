@@ -117,6 +117,8 @@ To run the demo run:
 Now open http://localhost:10005/web/simmvaluationdemo and http://localhost:10007/web/simmvaluationdemo to view the two nodes that this
 will have started respectively. You can now use the demo by creating trades and agreeing the valuations.
 
+.. _notary-demo:
+
 Distributed Notary demo
 -----------------------
 
