@@ -32,9 +32,13 @@ We start generating transactions in a different thread (``generateTransactions``
     :start-after: interface CordaRPCOps
     :end-before: }
 
+.. warning:: This API is evolving and will continue to grow as new functionality and features added to Corda are made
+available to RPC clients.
+
 The one we need in order to dump the transaction graph is ``verifiedTransactions``. The type signature tells us that the
 RPC will return a list of transactions and an Observable stream. This is a general pattern, we query some data and the
-node will return the current snapshot and future updates done to it.
+node will return the current snapshot and future updates done to it. Observables are described in further detail in
+:doc:`clientrpc`
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcTutorial.kt
     :language: kotlin
@@ -69,8 +73,11 @@ Finally we have everything in place: we start a couple of nodes, connect to them
 .. sourcecode:: bash
 
     # Build the example
+
     ./gradlew docs/source/example-code:installDist
+
     # Start it
+
     ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Print
 
 Now let's try to visualise the transaction graph. We will use a graph drawing library called graphstream_
@@ -97,3 +104,47 @@ See more on plugins in :doc:`creating-a-cordapp`.
 
 .. warning:: We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin
     customisation point will either go away completely or change.
+
+Security
+--------
+RPC credentials associated with a Client must match the permission set configured on the server Node.
+This refers to both authentication (username and password) and role-based authorisation (the set of flows an
+authenticated user is entitled to run).
+
+In the instructions above the server node permissions are configured programmatically in the driver code:
+
+.. code-block:: text
+
+        driver(driverDirectory = baseDirectory) {
+            val user = User("user", "password", permissions = setOf(startProtocolPermission<CashProtocol>()))
+            val node = startNode("Alice", rpcUsers = listOf(user)).get()
+
+When starting a standalone node using a configuration file we must supply the RPC credentials as follows:
+
+.. code-block:: text
+
+    rpcUsers : [
+        { user=user, password=password, permissions=[ StartFlow.net.corda.flows.CashFlow ] }
+    ]
+
+When using the gradle Cordformation plugin to configure and deploy a node you must supply the RPC credentials in a similar manner:
+
+.. code-block:: text
+
+        rpcUsers = [
+                ['user' : "user",
+                 'password' : "password",
+                 'permissions' : ["StartFlow.net.corda.flows.CashFlow"]]
+        ]
+
+You can then deploy and launch the nodes (Notary and Alice) as follows:
+
+1. Run ``./gradlew docs/source/example-code:deployNodes`` to create a set of configs and installs under ``docs/source/example-code/build/nodes``
+2. Run ``./docs/source/example-code/build/nodes/runnodes`` (or ``runnodes.bat`` on Windows) to open up two new terminals with the two nodes.
+
+followed by the same commands as before:
+3. ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Print
+4. ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Visualise
+
+See more on security in :doc:`secure-coding-guidelines`,  node configuration in :doc:`corda-configuration-files` and
+Cordformation in doc:`creating-a-cordapp`
