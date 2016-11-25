@@ -78,5 +78,5 @@ crashlytics-build.properties
 # docs related
 docs/virtualenv/
 /logs/
-
+node/logs/
 samples/*/logs/
