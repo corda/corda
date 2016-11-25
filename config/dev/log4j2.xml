@@ -47,7 +47,7 @@
     </Appenders>
 
     <Loggers>
-        <Root>
+        <Root level="info">
             <AppenderRef ref="Console-Appender" level="${sys:consoleLogLevel}"/>
             <AppenderRef ref="RollingFile-Appender" level="info"/>
         </Root>
