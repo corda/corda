@@ -49,6 +49,7 @@ Read on to learn:
    persistence
    node-administration
    corda-configuration-files
+   corda-plugins
    node-services
 
 .. toctree::
@@ -67,6 +68,7 @@ Read on to learn:
    tutorial-test-dsl
    tutorial-clientrpc-api
    flow-state-machines
+   flow-testing
    oracles
    tutorial-attachments
    event-scheduling

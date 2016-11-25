@@ -105,6 +105,7 @@
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda Plugin Framework</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
@@ -122,7 +123,8 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Flow state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
@@ -228,7 +230,7 @@ in Java and Kotlin. The file should define your state classes and your contract 
 allowable state transitions. You can learn how these are constructed by reading the &#8220;<a class="reference internal" href="tutorial-contract.html"><span class="doc">Writing a contract</span></a>&#8221; tutorial.</li>
 <li>It isn&#8217;t enough to just define static data and logic that controls what&#8217;s allowed. You must also orchestrate the
 business process. This is the job of the flow framework. You can learn how to author these by reading
-&#8220;<a class="reference internal" href="flow-state-machines.html"><span class="doc">Flow state machines</span></a>&#8221;.</li>
+&#8220;<a class="reference internal" href="flow-state-machines.html"><span class="doc">Writing flows</span></a>&#8221;.</li>
 <li>Once you have created your states, transactions and flows, you need a way to demonstrate them (outside of the
 unit tests, of course). This topic is covered below.</li>
 </ol>

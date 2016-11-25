@@ -4,10 +4,10 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-Flow state machines
-===================
+Writing flows
+=============
 
-This article explains our experimental approach to modelling financial flows in code. It explains how the
+This article explains our approach to modelling financial flows in code. It explains how the
 platform's state machine framework is used, and takes you through the code for a simple 2-party asset trading flow
 which is included in the source.
 
@@ -91,7 +91,7 @@ Our flow has two parties (B and S for buyer and seller) and will proceed as foll
    it lacks a signature from S authorising movement of the asset.
 3. S signs it and hands the now finalised ``SignedTransaction`` back to B.
 
-You can find the implementation of this flow in the file ``finance/src/main/kotlin/net.corda.flows/TwoPartyTradeFlow.kt``.
+You can find the implementation of this flow in the file ``finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt``.
 
 Assuming no malicious termination, they both end the flow being in posession of a valid, signed transaction that
 represents an atomic asset swap.
@@ -120,13 +120,13 @@ each side.
           data class SellerTradeInfo(
                   val assetForSale: StateAndRef<OwnableState>,
                   val price: Amount<Currency>,
-                  val sellerOwnerKey: PublicKey
+                  val sellerOwnerKey: CompositeKey
           )
 
           data class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
                                           val notarySig: DigitalSignature.LegallyIdentifiable)
 
-          open class Seller(val otherSide: Party,
+          open class Seller(val otherParty: Party,
                             val notaryNode: NodeInfo,
                             val assetToSell: StateAndRef<OwnableState>,
                             val price: Amount<Currency>,
@@ -138,7 +138,7 @@ each side.
               }
           }
 
-          open class Buyer(val otherSide: Party,
+          open class Buyer(val otherParty: Party,
                            val notary: Party,
                            val acceptablePrice: Amount<Currency>,
                            val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
@@ -154,7 +154,7 @@ simply flow messages or exceptions. The other two represent the buyer and seller
 
 Going through the data needed to become a seller, we have:
 
-- ``otherSide: Party`` - the party with which you are trading.
+- ``otherParty: Party`` - the party with which you are trading.
 - ``notaryNode: NodeInfo`` - the entry in the network map for the chosen notary. See ":doc:`consensus`" for more
   information on notaries.
 - ``assetToSell: StateAndRef<OwnableState>`` - a pointer to the ledger entry that represents the thing being sold.
@@ -197,20 +197,23 @@ when messages arrive. It provides the send/receive/sendAndReceive calls that let
 interaction and it will save/restore serialised versions of the fiber at the right times.
 
 Flows can be invoked in several ways. For instance, they can be triggered by scheduled events,
-see ":doc:`event-scheduling`" to learn more about this. Or they can be triggered via the HTTP API. Or they can
-be triggered directly via the Java-level node APIs from your app code.
+see ":doc:`event-scheduling`" to learn more about this. Or they can be triggered directly via the Java-level node RPC
+APIs from your app code.
 
-You request a flow to be invoked by using the ``ServiceHub.invokeFlowAsync`` method. This takes a
+You request a flow to be invoked by using the ``CordaRPCOps.startFlowDynamic`` method. This takes a
 Java reflection ``Class`` object that describes the flow class to use (in this case, either ``Buyer`` or ``Seller``).
 It also takes a set of arguments to pass to the constructor. Because it's possible for flow invocations to
 be requested by untrusted code (e.g. a state that you have been sent), the types that can be passed into the
-flow are checked against a whitelist, which can be extended by apps themselves at load time.
+flow are checked against a whitelist, which can be extended by apps themselves at load time.  There are also a series
+of inlined extension functions of the form ``CordaRPCOps.startFlow`` which help with invoking flows in a type
+safe manner.
 
-The process of starting a flow returns a ``ListenableFuture`` that you can use to either block waiting for
-the result, or register a callback that will be invoked when the result is ready.
+The process of starting a flow returns a ``FlowHandle`` that you can use to either observe
+the result, observe its progress and which also contains a permanent identifier for the invoked flow in the form
+of the ``StateMachineRunId``.
 
-In a two party flow only one side is to be manually started using ``ServiceHub.invokeFlowAsync``. The other side
-has to be registered by its node to respond to the initiating flow via ``ServiceHubInternal.registerFlowInitiator``.
+In a two party flow only one side is to be manually started using ``CordaRPCOps.startFlow``. The other side
+has to be registered by its node to respond to the initiating flow via ``PluginServiceHub.registerFlowInitiator``.
 In our example it doesn't matter which flow is the initiator and which is the initiated. For example, if we are to
 take the seller as the initiator then we would register the buyer as such:
 
@@ -218,8 +221,7 @@ take the seller as the initiator then we would register the buyer as such:
 
    .. sourcecode:: kotlin
 
-      val services: ServiceHubInternal = TODO()
-
+      val services: PluginServiceHub = TODO()
       services.registerFlowInitiator(Seller::class) { otherParty ->
         val notary = services.networkMapCache.notaryNodes[0]
         val acceptablePrice = TODO()
@@ -266,25 +268,21 @@ Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
       @Suspendable
       private fun receiveAndCheckProposedTransaction(): SignedTransaction {
           // Make the first message we'll send to kick off the flow.
-          val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public)
+          val myPublicKey = myKeyPair.public.composite
+          val hello = SellerTradeInfo(assetToSell, price, myPublicKey)
 
           val maybeSTX = sendAndReceive<SignedTransaction>(otherSide, hello)
 
           maybeSTX.unwrap {
               // Check that the tx proposed by the buyer is valid.
-              val missingSigs: Set<PublicKey> = it.verifySignatures(throwIfSignaturesAreMissing = false)
-              val expected = setOf(myKeyPair.public, notaryNode.identity.owningKey)
-              if (missingSigs != expected)
-                  throw SignatureException("The set of missing signatures is not as expected: ${missingSigs.toStringsShort()} vs ${expected.toStringsShort()}")
-
-              val wtx: WireTransaction = it.tx
+              val wtx: WireTransaction = it.verifySignatures(myPublicKey, notaryNode.notaryIdentity.owningKey)
               logger.trace { "Received partially signed transaction: ${it.id}" }
 
               // Download and check all the things that this transaction depends on and verify it is contract-valid,
               // even though it is missing signatures.
-              subFlow(ResolveTransactionsFlow(wtx, otherSide))
+              subFlow(ResolveTransactionsFlow(wtx, otherParty))
 
-              if (wtx.outputs.map { it.data }.sumCashBy(myKeyPair.public).withoutIssuer() != price)
+              if (wtx.outputs.map { it.data }.sumCashBy(myPublicKey).withoutIssuer() != price)
                   throw IllegalArgumentException("Transaction is not sending us the right amount of cash")
 
               return it
@@ -306,7 +304,9 @@ needs human interaction!
 
 .. note:: There are a couple of rules you need to bear in mind when writing a class that will be used as a continuation.
    The first is that anything on the stack when the function is suspended will be stored into the heap and kept alive by
-   the garbage collector. So try to avoid keeping enormous data structures alive unless you really have to.
+   the garbage collector. So try to avoid keeping enormous data structures alive unless you really have to.  You can
+   always use private methods to keep the stack uncluttered with temporary variables, or to avoid objects that
+   Kryo is not able to serialise correctly.
 
    The second is that as well as being kept on the heap, objects reachable from the stack will be serialised. The state
    of the function call may be resurrected much later! Kryo doesn't require objects be marked as serialisable, but even so,
@@ -372,18 +372,18 @@ Here's the rest of the code:
 
    .. sourcecode:: kotlin
 
-      open fun computeOurSignature(partialTX: SignedTransaction) = myKeyPair.signWithECDSA(partialTX.txBits)
+      open fun calculateOurSignature(partialTX: SignedTransaction) = myKeyPair.signWithECDSA(partialTX.id)
 
       @Suspendable
       private fun sendSignatures(allPartySignedTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
-                                 notarySignature: DigitalSignature.LegallyIdentifiable): SignedTransaction {
+                                 notarySignature: DigitalSignature.WithKey): SignedTransaction {
           val fullySigned = allPartySignedTX + notarySignature
           logger.trace { "Built finished transaction, sending back to secondary!" }
           send(otherSide, SignaturesFromSeller(ourSignature, notarySignature))
           return fullySigned
       }
 
-It's all pretty straightforward from now on. Here ``txBits`` is the raw byte array representing the serialised
+It's all pretty straightforward from now on. Here ``id`` is the secure hash representing the serialised
 transaction, and we just use our private key to calculate a signature over it. As a reminder, in Corda signatures do
 not cover other signatures: just the core of the transaction data.
 
@@ -405,98 +405,15 @@ Implementing the buyer
 
 OK, let's do the same for the buyer side:
 
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-      @Suspendable
-      override fun call(): SignedTransaction {
-          val tradeRequest = receiveAndValidateTradeRequest()
-          val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
-          val stx = signWithOurKeys(cashSigningPubKeys, ptx)
-
-          val signatures = swapSignaturesWithSeller(stx)
-
-          logger.trace { "Got signatures from seller, verifying ... " }
-
-          val fullySigned = stx + signatures.sellerSig + signatures.notarySig
-          fullySigned.verifySignatures()
-
-          logger.trace { "Signatures received are valid. Trade complete! :-)" }
-          return fullySigned
-      }
-
-      @Suspendable
-      private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
-          // Wait for a trade request to come in from the other side
-          val maybeTradeRequest = receive<SellerTradeInfo>(otherParty)
-          maybeTradeRequest.unwrap {
-              // What is the seller trying to sell us?
-              val asset = it.assetForSale.state.data
-              val assetTypeName = asset.javaClass.name
-              logger.trace { "Got trade request for a $assetTypeName: ${it.assetForSale}" }
-
-              if (it.price > acceptablePrice)
-                  throw UnacceptablePriceException(it.price)
-              if (!typeToBuy.isInstance(asset))
-                  throw AssetMismatchException(typeToBuy.name, assetTypeName)
-
-              // Check the transaction that contains the state which is being resolved.
-              // We only have a hash here, so if we don't know it already, we have to ask for it.
-              subFlow(ResolveTransactionsFlow(setOf(it.assetForSale.ref.txhash), otherSide))
-
-              return it
-          }
-      }
-
-      @Suspendable
-      private fun swapSignaturesWithSeller(stx: SignedTransaction): SignaturesFromSeller {
-          progressTracker.currentStep = SWAPPING_SIGNATURES
-          logger.trace { "Sending partially signed transaction to seller" }
-
-          // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
-
-          return sendAndReceive<SignaturesFromSeller>(otherSide, stx).unwrap { it }
-      }
-
-      private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
-          // Now sign the transaction with whatever keys we need to move the cash.
-          for (k in cashSigningPubKeys) {
-              val priv = serviceHub.keyManagementService.toPrivate(k)
-              ptx.signWith(KeyPair(k, priv))
-          }
-
-          return ptx.toSignedTransaction(checkSufficientSignatures = false)
-      }
-
-      private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
-          val ptx = TransactionType.General.Builder(notary)
-          // Add input and output states for the movement of cash, by using the Cash contract to generate the states.
-          val wallet = serviceHub.walletService.currentWallet
-          val cashStates = wallet.statesOfType<Cash.State>()
-          val cashSigningPubKeys = Cash().generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey, cashStates)
-          // Add inputs/outputs/a command for the movement of the asset.
-          ptx.addInputState(tradeRequest.assetForSale)
-          // Just pick some new public key for now. This won't be linked with our identity in any way, which is what
-          // we want for privacy reasons: the key is here ONLY to manage and control ownership, it is not intended to
-          // reveal who the owner actually is. The key management service is expected to derive a unique key from some
-          // initial seed in order to provide privacy protection.
-          val freshKey = serviceHub.keyManagementService.freshKey()
-          val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public)
-          ptx.addOutputState(state, tradeRequest.assetForSale.state.notary)
-          ptx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
-
-          // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
-          // to have one.
-          val currentTime = serviceHub.clock.instant()
-          ptx.setTime(currentTime, 30.seconds)
-          return Pair(ptx, cashSigningPubKeys)
-      }
+.. literalinclude:: ../../finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt
+    :language: kotlin
+    :start-after: DOCSTART 1
+    :end-before: DOCEND 1
 
 This code is longer but no more complicated. Here are some things to pay attention to:
 
 1. We do some sanity checking on the received message to ensure we're being offered what we expected to be offered.
-2. We create a cash spend in the normal way, by using ``Cash().generateSpend``. See the contracts tutorial if this
+2. We create a cash spend in the normal way, by using ``VaultService.generateSpend``. See the vault documentation if this
    part isn't clear.
 3. We access the *service hub* when we need it to access things that are transient and may change or be recreated
    whilst a flow is suspended, things like the wallet or the network map.
@@ -559,108 +476,6 @@ and linked ahead of time.
 In future, the progress tracking framework will become a vital part of how exceptions, errors, and other faults are
 surfaced to human operators for investigation and resolution.
 
-Unit testing
-------------
-
-A flow can be a fairly complex thing that interacts with many services and other parties over the network. That
-means unit testing one requires some infrastructure to provide lightweight mock implementations. The MockNetwork
-provides this testing infrastructure layer; you can find this class in the node module
-
-A good example to examine for learning how to unit test flows is the ``ResolveTransactionsFlow`` tests. This
-flow takes care of downloading and verifying transaction graphs, with all the needed dependencies. We start
-with this basic skeleton:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-      class ResolveTransactionsFlowTest {
-          lateinit var net: MockNetwork
-          lateinit var a: MockNetwork.MockNode
-          lateinit var b: MockNetwork.MockNode
-          lateinit var notary: Party
-
-          @Before
-          fun setup() {
-              net = MockNetwork()
-              val nodes = net.createSomeNodes()
-              a = nodes.partyNodes[0]
-              b = nodes.partyNodes[1]
-              notary = nodes.notaryNode.info.identity
-              net.runNetwork()
-          }
-
-          @After
-          fun tearDown() {
-              net.stopNodes()
-          }
-      }
-
-We create a mock network in our ``@Before`` setup method and create a couple of nodes. We also record the identity
-of the notary in our test network, which will come in handy later. We also tidy up when we're done.
-
-Next, we write a test case:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-      @Test
-      fun resolveFromTwoHashes() {
-          val (stx1, stx2) = makeTransactions()
-          val p = ResolveTransactionsFlow(setOf(stx2.id), a.info.identity)
-          val future = b.services.startFlow("resolve", p)
-          net.runNetwork()
-          val results = future.get()
-          assertEquals(listOf(stx1.id, stx2.id), results.map { it.id })
-          assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
-          assertEquals(stx2, b.storage.validatedTransactions.getTransaction(stx2.id))
-      }
-
-We'll take a look at the ``makeTransactions`` function in a moment. For now, it's enough to know that it returns two
-``SignedTransaction`` objects, the second of which spends the first. Both transactions are known by node A
-but not node B.
-
-The test logic is simple enough: we create the flow, giving it node A's identity as the target to talk to.
-Then we start it on node B and use the ``net.runNetwork()`` method to bounce messages around until things have
-settled (i.e. there are no more messages waiting to be delivered). All this is done using an in memory message
-routing implementation that is fast to initialise and use. Finally, we obtain the result of the flow and do
-some tests on it. We also check the contents of node B's database to see that the flow had the intended effect
-on the node's persistent state.
-
-Here's what ``makeTransactions`` looks like:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-      private fun makeTransactions(): Pair<SignedTransaction, SignedTransaction> {
-          // Make a chain of custody of dummy states and insert into node A.
-          val dummy1: SignedTransaction = DummyContract.generateInitial(MEGA_CORP.ref(1), 0, notary).let {
-              it.signWith(MEGA_CORP_KEY)
-              it.signWith(DUMMY_NOTARY_KEY)
-              it.toSignedTransaction(false)
-          }
-          val dummy2: SignedTransaction = DummyContract.move(dummy1.tx.outRef(0), MINI_CORP_PUBKEY).let {
-              it.signWith(MEGA_CORP_KEY)
-              it.signWith(DUMMY_NOTARY_KEY)
-              it.toSignedTransaction()
-          }
-          a.services.recordTransactions(dummy1, dummy2)
-          return Pair(dummy1, dummy2)
-      }
-
-We're using the ``DummyContract``, a simple test smart contract which stores a single number in its states, along
-with ownership and issuer information. You can issue such states, exit them and re-assign ownership (move them).
-It doesn't do anything else. This code simply creates a transaction that issues a dummy state (the issuer is
-``MEGA_CORP``, a pre-defined unit test identity), signs it with the test notary and MegaCorp keys and then
-converts the builder to the final ``SignedTransaction``. It then does so again, but this time instead of issuing
-it re-assigns ownership instead. The chain of two transactions is finally committed to node A by sending them
-directly to the ``a.services.recordTransaction`` method (note that this method doesn't check the transactions are
-valid).
-
-And that's it: you can explore the documentation for the `MockNode API <api/net.corda.node.internal.testing/-mock-network/index.html>`_ here.
-
 Versioning
 ----------
 
@@ -684,10 +499,9 @@ The flow framework is a key part of the platform and will be extended in major w
 the features we have planned:
 
 * Identity based addressing
-* Exposing progress trackers to local (inside the firewall) clients using message queues and/or WebSockets
 * Exception propagation and management, with a "flow hospital" tool to manually provide solutions to unavoidable
   problems (e.g. the other side doesn't know the trade)
-* Being able to interact with internal apps and tools via HTTP and similar
+* Being able to interact with internal apps and tools via RPC
 * Being able to interact with people, either via some sort of external ticketing system, or email, or a custom UI.
   For example to implement human transaction authorisations.
 * A standard library of flows that can be easily sub-classed by local developers in order to integrate internal

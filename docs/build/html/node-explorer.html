@@ -105,6 +105,7 @@
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda Plugin Framework</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
@@ -119,7 +120,8 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Flow state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
@@ -236,18 +238,19 @@ The user can execute cash transaction commands to issue and move cash to other p
 <h2>Interface<a class="headerlink" href="#interface" title="Permalink to this headline">¶</a></h2>
 <dl class="docutils">
 <dt>Login</dt>
-<dd>User can login to any Corda node using the explorer, alternately, <cite>gradlew explorer:runDemoNodes</cite> can be used to start up demo nodes for testing.
+<dd>User can login to any Corda node using the explorer. Alternatively, <code class="docutils literal"><span class="pre">gradlew</span> <span class="pre">explorer:runDemoNodes</span></code> can be used to start up demo nodes for testing.
 Corda node address, username and password are required for login, the address is defaulted to localhost:0 if leave blank.
-Username and password can be configured in node&#8217;s configuration file; for demo nodes, it is defaulted to <code class="docutils literal"><span class="pre">user1</span></code> and <code class="docutils literal"><span class="pre">test</span></code>.</dd>
+Username and password can be configured via the <code class="docutils literal"><span class="pre">rpcUsers</span></code> field in node&#8217;s configuration file; for demo nodes, it is defaulted to <code class="docutils literal"><span class="pre">user1</span></code> and <code class="docutils literal"><span class="pre">test</span></code>.</dd>
 </dl>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">If you are connecting to the demo nodes, only Alice and Bob (20004, 20006) are accessible using user1 credential, you won&#8217;t be able to connect to the notary.</p>
 </div>
-<a class="reference internal image-reference" href="_images/login.png"><img alt="_images/login.png" class="align-center" src="_images/login.png" style="width: 502.0px; height: 224.0px;" /></a>
+<a class="reference internal image-reference" href="_images/login.png"><img alt="_images/login.png" class="align-center" src="_images/login.png" style="width: 520.0px; height: 599.0px;" /></a>
 <dl class="docutils">
-<dt>Home</dt>
-<dd>Home view shows the top level state of node and vault; currently, it shows your cash balance and the numbers of transaction executed.
+<dt>Dashboard</dt>
+<dd>The dashboard shows the top level state of node and vault.
+Currently, it shows your cash balance and the numbers of transaction executed.
 The dashboard is intended to house widgets from different CordApp&#8217;s and provide useful information to system admin at a glance.</dd>
 </dl>
 <img alt="_images/dashboard.png" src="_images/dashboard.png" />
@@ -258,6 +261,13 @@ Individual cash transactions can be viewed by clicking on the table row. The use
 </dl>
 <img alt="_images/vault.png" src="_images/vault.png" />
 <dl class="docutils">
+<dt>New cash transaction</dt>
+<dd>This is where you can create new cash transactions.
+The user can choose from three transaction types (issue, pay and exit) and any party visible on the network.
+The result of the transaction will be visible in the transaction screen when executed.</dd>
+</dl>
+<img alt="_images/newTransaction.png" src="_images/newTransaction.png" />
+<dl class="docutils">
 <dt>Transactions</dt>
 <dd>The transaction view contains all transactions handled by the node in a table view. It shows basic information on the table e.g. Transaction ID,
 command type, USD equivalence value etc. User can expand the row by double clicking to view the inputs,
@@ -265,12 +275,21 @@ outputs and the signatures details for that transaction.</dd>
 </dl>
 <img alt="_images/transactionView.png" src="_images/transactionView.png" />
 <dl class="docutils">
-<dt>New Transaction</dt>
-<dd>This is where you can create new transaction; currently only the cash contract is supported.
-The user can choose from three transaction types (issue, move and exit) and any party visible on the network.
-The result of the transaction will be visible in the transaction screen when executed.</dd>
+<dt>Network</dt>
+<dd>The network view shows the network information on the world map. Currently only the user&#8217;s node is rendered on the map.
+This will be extended to other peers in a future release.
+The map provides a intuitive way of visualizing the Corda network and the participants.</dd>
 </dl>
-<img alt="_images/newTransaction.png" src="_images/newTransaction.png" />
+<img alt="_images/network.png" src="_images/network.png" />
+<dl class="docutils">
+<dt>Settings</dt>
+<dd>User can configure the client preference in this view.</dd>
+</dl>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Although the reporting currency is configurable, FX conversion won&#8217;t be applied to the values as we don&#8217;t have an FX service yet.</p>
+</div>
+<img alt="_images/settings.png" src="_images/settings.png" />
 </div>
 </div>
 

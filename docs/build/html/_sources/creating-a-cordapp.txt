@@ -178,9 +178,6 @@ To build against Corda and the plugins that cordapps use, update your build.grad
 
     ... your tasks ...
 
-    // Sets the classes for Quasar to scan. Loaded by the the quasar-utils plugin.
-    quasarScan.dependsOn('classes', ... your dependent subprojects...)
-
     // Standard way to publish Cordapps to maven local with the maven-publish and publish-utils plugin.
     publishing {
         publications {
