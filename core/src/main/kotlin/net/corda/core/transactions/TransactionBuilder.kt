@@ -36,10 +36,6 @@ open class TransactionBuilder(
 
     val time: Timestamp? get() = timestamp
 
-    init {
-        notary?.let { signers.add(it.owningKey) }
-    }
-
     /**
      * Creates a copy of the builder.
      */
@@ -72,6 +68,7 @@ open class TransactionBuilder(
 
     fun setTime(newTimestamp: Timestamp) {
         check(notary != null) { "Only notarised transactions can have a timestamp" }
+        signers.add(notary!!.owningKey)
         check(currentSigs.isEmpty()) { "Cannot change timestamp after signing" }
         this.timestamp = newTimestamp
     }
