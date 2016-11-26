@@ -14,22 +14,22 @@ class FXSwap {
         actions {
             (acmeCorp or highStreetBank).may {
                 "execute".givenThat(after("2017-09-01")) {
-                    highStreetBank.gives(acmeCorp, 1200.K, USD)
-                    acmeCorp.gives(highStreetBank, 1.M, EUR)
+                    highStreetBank.owes(acmeCorp, 1200.K, USD)
+                    acmeCorp.owes(highStreetBank, 1.M, EUR)
                 }
             }
         }
     }
 
-    val transfer1 = arrange { highStreetBank.gives(acmeCorp, 1200.K, USD) }
-    val transfer2 = arrange { acmeCorp.gives(highStreetBank, 1.M, EUR) }
+    val transfer1 = arrange { highStreetBank.owes(acmeCorp, 1200.K, USD) }
+    val transfer2 = arrange { acmeCorp.owes(highStreetBank, 1.M, EUR) }
 
     val outState1 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transfer1)
     val outState2 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transfer2)
 
-    val transferBad1 = arrange { highStreetBank.gives(acmeCorp, 1200.K, GBP) } // wrong currency
-    val transferBad2 = arrange { acmeCorp.gives(highStreetBank, 900.K, EUR) } // wrong amount
-    val transferBad3 = arrange { highStreetBank.gives(highStreetBank, 1.M, EUR) } // wrong party
+    val transferBad1 = arrange { highStreetBank.owes(acmeCorp, 1200.K, GBP) } // wrong currency
+    val transferBad2 = arrange { acmeCorp.owes(highStreetBank, 900.K, EUR) } // wrong amount
+    val transferBad3 = arrange { highStreetBank.owes(highStreetBank, 1.M, EUR) } // wrong party
 
     val outStateBad1 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transferBad1)
     val outStateBad2 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transferBad2)

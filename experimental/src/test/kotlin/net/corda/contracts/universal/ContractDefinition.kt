@@ -27,7 +27,7 @@ class ContractDefinition {
         actions {
             acmeCorp.may {
                 "payout".givenThat(acmeCorporationHasDefaulted and before("2017-09-01")) {
-                    highStreetBank.gives(acmeCorp, 1.M, USD)
+                    highStreetBank.owes(acmeCorp, 1.M, USD)
                 }
             }
             highStreetBank.may {
@@ -43,8 +43,8 @@ class ContractDefinition {
         actions {
             acmeCorp.may {
                 "exercise".anytime {
-                    highStreetBank.gives(acmeCorp, 1.M, EUR)
-                    acmeCorp.gives(highStreetBank, 1200.K, USD)
+                    highStreetBank.owes(acmeCorp, 1.M, EUR)
+                    acmeCorp.owes(highStreetBank, 1200.K, USD)
                 }
             }
             highStreetBank.may {
@@ -63,8 +63,8 @@ class ContractDefinition {
                     actions {
                         (acmeCorp or highStreetBank).may {
                             "execute".givenThat(after("2017-09-01")) {
-                                highStreetBank.gives(acmeCorp, 1.M, EUR)
-                                acmeCorp.gives(highStreetBank, 1200.K, USD)
+                                highStreetBank.owes(acmeCorp, 1.M, EUR)
+                                acmeCorp.owes(highStreetBank, 1200.K, USD)
                             }
                         }
                     }
@@ -111,7 +111,7 @@ class ContractDefinition {
                         actions {
                             acmeCorp.may {
                                 "problem".anytime {
-                                    highStreetBank.gives(acmeCorp, 1.M, USD)
+                                    highStreetBank.owes(acmeCorp, 1.M, USD)
                                 }
                             }
                         }

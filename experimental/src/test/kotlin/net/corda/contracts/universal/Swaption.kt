@@ -11,13 +11,13 @@ class Swaption {
         actions {
             (highStreetBank or acmeCorp).may {
                 "proceed".givenThat(after("01/07/2015")) {
-                    highStreetBank.gives(acmeCorp, libor(notional, "01/04/2015", "01/07/2015"), currency)
-                    acmeCorp.gives(highStreetBank, interest(notional, "act/365", coupon, "01/04/2015", "01/07/2015"), currency)
+                    highStreetBank.owes(acmeCorp, libor(notional, "01/04/2015", "01/07/2015"), currency)
+                    acmeCorp.owes(highStreetBank, interest(notional, "act/365", coupon, "01/04/2015", "01/07/2015"), currency)
                     actions {
                         (highStreetBank or acmeCorp).may {
                             "proceed".givenThat(after("01/10/2015")) {
-                                highStreetBank.gives(acmeCorp, libor(notional, "01/07/2015", "01/10/2015"), currency)
-                                acmeCorp.gives(highStreetBank, interest(notional, "act/365", coupon, "01/07/2015", "01/10/2015"), currency)
+                                highStreetBank.owes(acmeCorp, libor(notional, "01/07/2015", "01/10/2015"), currency)
+                                acmeCorp.owes(highStreetBank, interest(notional, "act/365", coupon, "01/07/2015", "01/10/2015"), currency)
 
                                 actions {
                                     (highStreetBank or acmeCorp).may {
@@ -31,7 +31,7 @@ class Swaption {
                     actions {
                         acmeCorp.may {
                             "cancel".anytime {
-                                acmeCorp.gives(highStreetBank, 10.K, USD)
+                                acmeCorp.owes(highStreetBank, 10.K, USD)
                             }
                         }
                     }
@@ -39,7 +39,7 @@ class Swaption {
             }
             acmeCorp.may {
                 "cancel".anytime {
-                    acmeCorp.gives(highStreetBank, 10.K, USD)
+                    acmeCorp.owes(highStreetBank, 10.K, USD)
                 }
             }
         }
@@ -51,14 +51,14 @@ class Swaption {
             actions {
                 (highStreetBank or acmeCorp).may {
                     "proceed".givenThat(after(start)) {
-                        highStreetBank.gives(acmeCorp, libor(notional, start, end), currency)
-                        acmeCorp.gives(highStreetBank, interest(notional, "act/365", coupon, start, end), currency)
+                        highStreetBank.owes(acmeCorp, libor(notional, start, end), currency)
+                        acmeCorp.owes(highStreetBank, interest(notional, "act/365", coupon, start, end), currency)
                         next()
                     }
                 }
                 acmeCorp.may {
                     "cancel".anytime {
-                        acmeCorp.gives(highStreetBank, 10.K, currency)
+                        acmeCorp.owes(highStreetBank, 10.K, currency)
                     }
                 }
             }
@@ -79,7 +79,7 @@ class Swaption {
                         actions {
                             (acmeCorp or highStreetBank).may {
                                 "proceed".givenThat(after(end)) {
-                                    highStreetBank.gives(acmeCorp, payout, USD)
+                                    highStreetBank.owes(acmeCorp, payout, USD)
                                     next(vars.cap to vars.cap - payout)
                                 }
                             }
@@ -107,7 +107,7 @@ class Swaption {
                         actions {
                             (acmeCorp or highStreetBank).may {
                                 "proceed".givenThat(after(end)) {
-                                    highStreetBank.gives(acmeCorp, payout, currency)
+                                    highStreetBank.owes(acmeCorp, payout, currency)
                                     next(vars.uses to vars.uses - 1)
                                 }
                             }

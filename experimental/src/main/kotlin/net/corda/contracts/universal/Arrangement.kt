@@ -24,7 +24,7 @@ class Zero() : Arrangement {
 //
 // TODO: should be replaced with something that uses Corda assets and/or cash?
 // TODO: should only be allowed to transfer non-negative amounts
-data class Transfer(val amount: Perceivable<BigDecimal>, val currency: Currency, val from: Party, val to: Party) : Arrangement
+data class Obligation(val amount: Perceivable<BigDecimal>, val currency: Currency, val from: Party, val to: Party) : Arrangement
 
 // A combinator over a list of arrangements. Each arrangement in list will create a separate independent arrangement state.
 // The ``And`` combinator cannot be root in a arrangement.
@@ -38,6 +38,8 @@ data class Action(val name: String, val condition: Perceivable<Boolean>,
 data class Actions(val actions: Set<Action>) : Arrangement
 
 // Roll out of arrangement
+// TODO: fixing offset
+// TODO: think about payment offset (ie. settlement) - probably it doesn't belong on a distributed ledger
 data class RollOut(val startDate: LocalDate, val endDate: LocalDate, val frequency: Frequency, val template: Arrangement) : Arrangement
 
 // Continuation of roll out

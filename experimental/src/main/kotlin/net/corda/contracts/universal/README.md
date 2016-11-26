@@ -2,15 +2,14 @@
  
 This is a demonstration of how to build a universal contract or higher order contracts on top of Corda. Think of the universal contract as a generalized Ricardian contract where a meta language is used as contract parameter making it possible for a single smart contract type to span a very large family of contracts.
 
-This experimental module is maintained by Sofus Mortensen of Nordea Bank.
+This experimental module is maintained by Sofus Mortensen (sofus.mortensen@nordea.com) of Nordea.
 
 ## Overview
 
 ### Motivation and Layers of smart contracts
 Currently, in Corda, when discussing smart contracts we have two levels of contracts. At the lowest layer we have the _Corda smart contracts_ represented by JVM bytecode. At the highest level we have Ricardian contract like the _Smart Contract Templates_ where a contract is created by picking an existing template and filling in the required parameters. The latter kind are suitable for non-developer end users.
 
-At the highest level in order to support a new kind of contract, a novel new contract type might be required to be developed at the lowest level.
-Currently a lot of work is needed to write a smart contract at this level, which obviously takes time to write but more importantly takes considerable time to review and verify (which contract participant should do). There is a significant operation risk associated with contract types. Having re-usable components will arguably reduce development time and associated risk.
+At the highest level in order to support a new kind of contract, a novel new contract type might be required to be developed at the lowest level. Currently a lot of work is needed to write a smart contract at this level, which obviously takes time to write but more importantly takes considerable time to review and verify (which contract participant should do). There is a significant operation risk associated with contract types. Having re-usable components will arguably reduce development time and associated risk.
 
 What is proposed here is an intermediate layer in between by creating a highly customizable smart contract covering a large family of OTC contracts by having a simple yet expressive representation of contract semantics in the contract state. The objectives are:
 
@@ -42,8 +41,8 @@ Simple expressions on perceivables can be formed. For example ``EURUSD > 1.2``is
 #### ``Zero``
 A base contract with no rights and no obligations. Contract cancellation/termination is a transition to ``Zero``.
 
-#### ``Transfer amount, currency, fromParty, toParty``
-A base contract representing immediate transfer of Cash - X amount of currency CCY from party A to party B. X is an observable of type BigDecimal.
+#### ``Obligation amount, currency, fromParty, toParty``
+A base contract representing debt of X amount of currency CCY from party A to party B. X is an observable of type BigDecimal. 
 
 #### ``And contract1 ... contractN``
 A combinator over a list of contracts. Each contract in list will create a separate independent contract state. The ``And`` combinator cannot be root in a contract.
@@ -90,7 +89,7 @@ Tag represensation of above:
             <after date="01/09/2017"/>
         </condition>
         <contract>
-            <transfer>
+            <obligation>
                 <from><party ref="wile e coyote"/></from>
                 <to><party ref="road runner"/></to>
                 <asset>
@@ -99,7 +98,7 @@ Tag represensation of above:
                         <currency>USD</currency>
                     </cash>
                 </asset>
-            </transfer>
+            </obligation>
         </contract>
     </action>
 ```
