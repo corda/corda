@@ -333,10 +333,11 @@ a payment is not considered acceptable.
 Flows are named using reverse DNS notation and several are defined by the base protocol. Note that the framework is
 not required to implement the wire protocols, it is just a development aid.
 
-\begin{figure}[H]
-\includegraphics[scale=0.16, center]{trading-flow}
-\caption{A diagram showing the two party trading flow with notarisation}
-\end{figure}
+% TODO: Revisit this diagram once it matches the text more closely.
+%\begin{figure}[H]
+%\includegraphics[scale=0.16, center]{trading-flow}
+%\caption{A diagram showing the two party trading flow with notarisation}
+%\end{figure}
 
 \subsection{Data visibility and dependency resolution}
 
@@ -432,6 +433,23 @@ without adjusting the code of the smart contracts themselves.
 \caption{An example of a cash issuance transaction}
 \end{figure}
 
+\paragraph{Example.}In the diagram above, we see an example of a cash issuance transaction. The transaction (shown lower
+left) contains zero inputs and one output, a newly issued cash state. The cash state (shown expanded top right) contains
+several important pieces of information: 1) details about the cash that has been issued - amount, currency, issuer,
+owner and so forth, 2) the contract code whose verify() function will be responsible for verifying this issuance
+transaction and also any transaction which seeks to consume this state in the future, 3) a hash of a document which may
+contain overarching legal prose to ground the behaviour of this state and its contract code in a governing legal
+context.
+
+The transaction also contains a command, which specifies that the intent of this transaction is to issue cash and the
+command specifies a public key. The cash state's verify function is responsible for checking that the public key(s)
+specified on the command(s) are those of the parties whose signatures would be required to make this transaction valid.
+In this case, it means that the verify() function must check that the command has specified a key corresponding to the
+identity of the issuer of the cash state. The Corda framework is responsible for checking that the transaction has been
+signed by all keys listed by all commands in the transaction. In this way, a verify() function only needs to ensure that
+all parties who need to sign the transaction are specified in Commands, with the framework responsible for ensuring that
+the transaction has been signed by all parties listed in all commands.
+
 \subsection{Composite keys}\label{sec:composite-keys}
 
 The term ``public key'' in the description above actually refers to a \emph{composite key}. Composite keys are trees in
@@ -443,6 +461,7 @@ formulas with AND and OR.
 
 \begin{figure}[H]
 \includegraphics[width=\textwidth]{composite-keys}
+\caption{Examples of composite keys}
 \end{figure}
 
 Composite keys are useful in multiple scenarios. For example, assets can be placed under the control of a 2-of-2
@@ -657,7 +676,7 @@ in a transaction (in a state or command). We take a different approach in which 
 and data the oracle doesn't need to see is ``torn off'' before the transaction is sent. This is done by structuring
 the transaction as a Merkle hash tree so that the hash used for the signing operation is the root. By presenting a
 counterparty with the data elements that are needed along with the Merkle branches linking them to the root hash,
-that counterparty can sign the entire transaction whilst only being able to see some of it. Additionally, if the
+as seen in the diagrams below,  that counterparty can sign the entire transaction whilst only being able to see some of it. Additionally, if the
 counterparty needs to be convinced that some third party has already signed the transaction, that is also
 straightforward. Typically an oracle will be presented with the Merkle branches for the command or state that
 contains the data, and the timestamp field, and nothing else. The resulting signature contains flag bits indicating which
@@ -665,12 +684,13 @@ parts of the structure were presented for signing to avoid a single signature co
 
 \begin{figure}[H]
 \includegraphics[width=\textwidth]{tearoffs1}
+\caption{How the transaction's identifier hash is calculated}
 \end{figure}
 
 \begin{figure}[H]
 \includegraphics[width=\textwidth]{tearoffs2}
+\caption{Construction of a Merkle branch}
 \end{figure}
-
 
 % TODO: The flag bits are unused in the current reference implementation.
 
@@ -1162,7 +1182,7 @@ valuation of the underlying deals. Block chain systems use the term `contract' i
 how PJSE do but the underlying concepts can be adapted to our context as well. The platform provides an
 experimental \emph{universal contract} that builds on the language extension features of the Kotlin programming
 language. To avoid linguistic confusion it refers to the combined code/data bundle as an `arrangement' rather
-than a contract. A European FX option expressed in this language looks like this:
+than a contract. A European FX call option expressed in this language looks like this:
 
 \begin{kotlincode}
     val european_fx_option = arrange {
