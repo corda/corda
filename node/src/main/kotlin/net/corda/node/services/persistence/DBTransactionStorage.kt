@@ -7,6 +7,7 @@ import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.utilities.*
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.exposedLogger
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -34,11 +35,21 @@ class DBTransactionStorage : TransactionStorage {
 
     private val txStorage = synchronizedMap(TransactionsMap())
 
-    override fun addTransaction(transaction: SignedTransaction) {
-        synchronized(txStorage) {
-            txStorage.put(transaction.id, transaction)
-            updatesPublisher.onNext(transaction)
+    override fun addTransaction(transaction: SignedTransaction): Boolean {
+        val recorded = synchronized(txStorage) {
+            val old = txStorage.get(transaction.id)
+            if (old == null) {
+                txStorage.put(transaction.id, transaction)
+                updatesPublisher.onNext(transaction)
+                true
+            } else {
+                false
+            }
         }
+        if (!recorded) {
+            exposedLogger.warn("Duplicate recording of transaction ${transaction.id}")
+        }
+        return recorded
     }
 
     override fun getTransaction(id: SecureHash): SignedTransaction? {
