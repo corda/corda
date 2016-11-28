@@ -6,8 +6,8 @@ import java.util.*
 
 fun swap(partyA: Party, amountA: BigDecimal, currencyA: Currency, partyB: Party, amountB: BigDecimal, currencyB: Currency) =
         arrange {
-            partyA.gives(partyB, amountA, currencyA)
-            partyB.gives(partyA, amountB, currencyB)
+            partyA.owes(partyB, amountA, currencyA)
+            partyB.owes(partyA, amountB, currencyB)
         }
 
 fun fx_swap(expiry: String, notional: BigDecimal, strike: BigDecimal,

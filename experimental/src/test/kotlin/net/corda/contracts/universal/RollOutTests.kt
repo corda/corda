@@ -17,7 +17,7 @@ class RollOutTests {
             actions {
                 (acmeCorp or highStreetBank).may {
                     "transfer".givenThat(after(end)) {
-                        highStreetBank.gives(acmeCorp, 10.K, USD)
+                        highStreetBank.owes(acmeCorp, 10.K, USD)
                         next()
                     }
                 }
@@ -31,7 +31,7 @@ class RollOutTests {
             actions {
                 (acmeCorp or highStreetBank).may {
                     "transfer".givenThat(after(end)) {
-                        highStreetBank.gives(acmeCorp, 10.K, USD)
+                        highStreetBank.owes(acmeCorp, 10.K, USD)
                         next()
                     }
                 }
@@ -45,7 +45,7 @@ class RollOutTests {
             actions {
                 (acmeCorp or highStreetBank).may {
                     "transfer".givenThat(after(end)) {
-                        highStreetBank.gives(acmeCorp, 10.K, USD)
+                        highStreetBank.owes(acmeCorp, 10.K, USD)
                         next()
                     }
                 }
@@ -54,23 +54,23 @@ class RollOutTests {
     }
 
     val contractStep1b = arrange {
-        highStreetBank.gives(acmeCorp, 10.K, USD)
+        highStreetBank.owes(acmeCorp, 10.K, USD)
     }
 
     val stateStep1a = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractStep1a)
     val stateStep1b = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractStep1b)
 
     val contract_transfer1 = arrange {
-        highStreetBank.gives(acmeCorp, 10.K, USD)
+        highStreetBank.owes(acmeCorp, 10.K, USD)
     }
     val contract_transfer2 = arrange {
-        highStreetBank.gives(acmeCorp, 10.K, USD)
+        highStreetBank.owes(acmeCorp, 10.K, USD)
     }
     val contract_action1 = arrange {
         actions {
             highStreetBank.may {
                 "do it".anytime {
-                    highStreetBank.gives(acmeCorp, 10.K, USD)
+                    highStreetBank.owes(acmeCorp, 10.K, USD)
                 }
             }
         }
@@ -79,7 +79,7 @@ class RollOutTests {
         actions {
             highStreetBank.may {
                 "do it".anytime {
-                    highStreetBank.gives(acmeCorp, 10.K, USD)
+                    highStreetBank.owes(acmeCorp, 10.K, USD)
                 }
             }
         }
@@ -88,14 +88,14 @@ class RollOutTests {
         actions {
             highStreetBank.may {
                 "do it".anytime {
-                    highStreetBank.gives(acmeCorp, 10.K, USD)
+                    highStreetBank.owes(acmeCorp, 10.K, USD)
                 }
             }
         }
         actions {
             acmeCorp.may {
                 "do it".anytime {
-                    acmeCorp.gives(momAndPop, 10.K, USD)
+                    acmeCorp.owes(momAndPop, 10.K, USD)
                 }
             }
         }
@@ -106,14 +106,14 @@ class RollOutTests {
         actions {
             highStreetBank.may {
                 "do it".anytime {
-                    highStreetBank.gives(acmeCorp, 10.K, USD)
+                    highStreetBank.owes(acmeCorp, 10.K, USD)
                 }
             }
         }
         actions {
             acmeCorp.may {
                 "do it".anytime {
-                    acmeCorp.gives(momAndPop, 10.K, USD)
+                    acmeCorp.owes(momAndPop, 10.K, USD)
                 }
             }
         }

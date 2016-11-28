@@ -8,7 +8,7 @@ val cds_contract = arrange {
     actions {
         acmeCorp may {
             "claim".givenThat(acmeCorporationHasDefaulted and before("2017-09-01")) {
-                highStreetBank.gives(acmeCorp, 1.M, USD)
+                highStreetBank.owes(acmeCorp, 1.M, USD)
             }
         }
     }
@@ -20,8 +20,8 @@ val an_fx_swap = arrange {
     actions {
         (acmeCorp or highStreetBank) may {
             "execute".givenThat(after("2017-09-01")) {
-                highStreetBank.gives(acmeCorp, 1200.K, USD)
-                acmeCorp.gives(highStreetBank, 1.M, EUR)
+                highStreetBank.owes(acmeCorp, 1200.K, USD)
+                acmeCorp.owes(highStreetBank, 1.M, EUR)
             }
         }
     }
@@ -31,8 +31,8 @@ val american_fx_option = arrange {
     actions {
         acmeCorp may {
             "exercise".givenThat(before("2017-09-01")) {
-                highStreetBank.gives(acmeCorp, 1200.K, USD)
-                acmeCorp.gives(highStreetBank, 1.M, EUR)
+                highStreetBank.owes(acmeCorp, 1200.K, USD)
+                acmeCorp.owes(highStreetBank, 1.M, EUR)
             }
         }
     }
@@ -57,7 +57,7 @@ val contractZeroCouponBond = arrange {
     actions {
         acmeCorp may {
             "execute".givenThat(after("2017-11-01")) {
-                highStreetBank.gives(acmeCorp, 1.M, USD)
+                highStreetBank.owes(acmeCorp, 1.M, USD)
             }
         }
     }
@@ -68,7 +68,7 @@ val zero_coupon_bond_2 = arrange {
     actions {
         (acmeCorp or highStreetBank) may {
             "execute".givenThat(after("2017-09-01")) {
-                highStreetBank.gives(acmeCorp, 1.M, USD)
+                highStreetBank.owes(acmeCorp, 1.M, USD)
             }
         }
     }
@@ -87,7 +87,7 @@ val no_touch = arrange {
     actions {
         (acmeCorp or highStreetBank) may {
             "execute".givenThat(after("2017-09-01")) {
-                highStreetBank.gives(acmeCorp, 1.M, USD)
+                highStreetBank.owes(acmeCorp, 1.M, USD)
             }
         }
         highStreetBank may {
@@ -107,7 +107,7 @@ val one_touch = arrange {
         }
         acmeCorp may {
             "knock in".givenThat(EUR / USD gt 1.3) {
-                highStreetBank.gives(acmeCorp, 1.M, USD)
+                highStreetBank.owes(acmeCorp, 1.M, USD)
             }
         }
     }

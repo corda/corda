@@ -23,7 +23,7 @@ class Caplet {
                 "exercise".anytime() {
                     val floating = interest(notional, "act/365", fix("LIBOR", tradeDate, Tenor("6M")), "2016-04-01", "2016-10-01")
                     val fixed = interest(notional, "act/365", 0.5.bd, "2016-04-01", "2016-10-01")
-                    highStreetBank.gives(acmeCorp, (floating - fixed).plus(), currency)
+                    highStreetBank.owes(acmeCorp, (floating - fixed).plus(), currency)
                 }
             }
         }
@@ -35,13 +35,13 @@ class Caplet {
                 "exercise".anytime() {
                     val floating = interest(notional, "act/365", 1.0.bd, "2016-04-01", "2016-10-01")
                     val fixed = interest(notional, "act/365", 0.5.bd, "2016-04-01", "2016-10-01")
-                    highStreetBank.gives(acmeCorp, (floating - fixed).plus(), currency)
+                    highStreetBank.owes(acmeCorp, (floating - fixed).plus(), currency)
                 }
             }
         }
     }
 
-    val contractFinal = arrange { highStreetBank.gives(acmeCorp, 250.K, EUR) }
+    val contractFinal = arrange { highStreetBank.owes(acmeCorp, 250.K, EUR) }
 
     val stateStart = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contract)
 

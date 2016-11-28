@@ -15,7 +15,7 @@ fun LocalDate.toInstant(): Instant = Instant.ofEpochSecond(this.toEpochDay() * 6
 private fun liablePartiesVisitor(arrangement: Arrangement): ImmutableSet<CompositeKey> =
         when (arrangement) {
             is Zero -> ImmutableSet.of<CompositeKey>()
-            is Transfer -> ImmutableSet.of(arrangement.from.owningKey)
+            is Obligation -> ImmutableSet.of(arrangement.from.owningKey)
             is And ->
                 arrangement.arrangements.fold(ImmutableSet.builder<CompositeKey>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
             is Actions ->
@@ -40,7 +40,7 @@ private fun involvedPartiesVisitor(action: Action): Set<CompositeKey> =
 private fun involvedPartiesVisitor(arrangement: Arrangement): ImmutableSet<CompositeKey> =
         when (arrangement) {
             is Zero -> ImmutableSet.of<CompositeKey>()
-            is Transfer -> ImmutableSet.of(arrangement.from.owningKey)
+            is Obligation -> ImmutableSet.of(arrangement.from.owningKey)
             is And ->
                 arrangement.arrangements.fold(ImmutableSet.builder<CompositeKey>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
             is Actions ->
@@ -59,7 +59,7 @@ fun replaceParty(action: Action, from: Party, to: Party): Action =
 
 fun replaceParty(arrangement: Arrangement, from: Party, to: Party): Arrangement = when (arrangement) {
     is Zero -> arrangement
-    is Transfer -> Transfer(arrangement.amount, arrangement.currency,
+    is Obligation -> Obligation(arrangement.amount, arrangement.currency,
             if (arrangement.from == from) to else arrangement.from,
             if (arrangement.to == from) to else arrangement.to)
     is And -> And(arrangement.arrangements.map { replaceParty(it, from, to) }.toSet())
@@ -82,7 +82,7 @@ fun extractRemainder(arrangement: Arrangement, action: Action): Arrangement = wh
 
 fun actions(arrangement: Arrangement): Map<String, Action> = when (arrangement) {
     is Zero -> mapOf()
-    is Transfer -> mapOf()
+    is Obligation -> mapOf()
     is Actions -> arrangement.actions.map { it.name to it }.toMap()
     is And -> arrangement.arrangements.map { actions(it) }.fold(mutableMapOf()) { m, x ->
         x.forEach { entry ->
@@ -162,8 +162,8 @@ fun debugCompare(arrLeft: Arrangement, arrRight: Arrangement) {
     if (arrLeft == arrRight) return
 
     when (arrLeft) {
-        is Transfer -> {
-            if (arrRight is Transfer) {
+        is Obligation -> {
+            if (arrRight is Obligation) {
 
                 debugCompare(arrLeft.amount, arrRight.amount)
                 debugCompare(arrLeft.from, arrRight.from)

@@ -26,7 +26,7 @@ class Cap {
                     "exercise".anytime {
                         val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                         val fixed = interest(notional, "act/365", 0.5.bd, start, end)
-                        highStreetBank.gives(acmeCorp, floating - fixed, currency)
+                        highStreetBank.owes(acmeCorp, floating - fixed, currency)
                         next()
                     }
                 }
@@ -45,14 +45,14 @@ class Cap {
                 "exercise".anytime() {
                     val floating1 = interest(notional, "act/365", 1.0.bd, "2016-09-01", "2017-03-01")
                     val fixed1 = interest(notional, "act/365", 0.5.bd, "2016-09-01", "2017-03-01")
-                    highStreetBank.gives(acmeCorp, floating1 - fixed1, currency)
+                    highStreetBank.owes(acmeCorp, floating1 - fixed1, currency)
                     rollOut("2017-03-01".ld, "2017-09-01".ld, Frequency.SemiAnnual) {
                         actions {
                             (acmeCorp or highStreetBank).may {
                                 "exercise".anytime {
                                     val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                                     val fixed = interest(notional, "act/365", 0.5.bd, start, end)
-                                    highStreetBank.gives(acmeCorp, floating - fixed, currency)
+                                    highStreetBank.owes(acmeCorp, floating - fixed, currency)
                                     next()
                                 }
                             }
@@ -73,7 +73,7 @@ class Cap {
                                 "exercise".anytime {
                                     val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                                     val fixed = interest(notional, "act/365", 0.5.bd, start, end)
-                                    highStreetBank.gives(acmeCorp, floating - fixed, currency)
+                                    highStreetBank.owes(acmeCorp, floating - fixed, currency)
                                     next()
                                 }
                             }
@@ -95,7 +95,7 @@ class Cap {
                 "exercise".anytime() {
                     val floating1 = interest(notional, "act/365", 1.0.bd, "2017-03-01", "2017-09-01")
                     val fixed1 = interest(notional, "act/365", 0.5.bd, "2017-03-01", "2017-09-01")
-                    highStreetBank.gives(acmeCorp, floating1 - fixed1, currency)
+                    highStreetBank.owes(acmeCorp, floating1 - fixed1, currency)
                 }
             }
             acmeCorp.may {
@@ -112,7 +112,7 @@ class Cap {
                     "exercise".anytime {
                         val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                         val fixed = interest(notional, "act/365", 0.5.bd, start, end)
-                        highStreetBank.gives(acmeCorp, floating - fixed, currency)
+                        highStreetBank.owes(acmeCorp, floating - fixed, currency)
                         next()
                     }
                 }
@@ -125,8 +125,8 @@ class Cap {
         }
     }
 
-    val paymentFirst = arrange { highStreetBank.gives(acmeCorp, 250.K, EUR) }
-    val paymentFinal = arrange { highStreetBank.gives(acmeCorp, 250.K, EUR) }
+    val paymentFirst = arrange { highStreetBank.owes(acmeCorp, 250.K, EUR) }
+    val paymentFinal = arrange { highStreetBank.owes(acmeCorp, 250.K, EUR) }
 
 
     val stateInitial = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractInitial)
@@ -149,7 +149,7 @@ class Cap {
                         val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                         val fixed = interest(notional, "act/365", 0.5.bd, start, end)
                         val payout = min(floating - fixed)
-                        highStreetBank.gives(acmeCorp, payout, currency)
+                        highStreetBank.owes(acmeCorp, payout, currency)
                         next(vars.limit to vars.limit - payout)
                     }
                 }

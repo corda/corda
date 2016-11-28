@@ -88,10 +88,10 @@ class UniversalContract : Contract {
             }
 
     fun validateImmediateTransfers(tx: TransactionForContract, arrangement: Arrangement): Arrangement = when (arrangement) {
-        is Transfer -> {
+        is Obligation -> {
             val amount = eval(tx, arrangement.amount)
             requireThat { "transferred quantity is non-negative" by (amount >= BigDecimal.ZERO) }
-            Transfer(const(amount), arrangement.currency, arrangement.from, arrangement.to)
+            Obligation(const(amount), arrangement.currency, arrangement.from, arrangement.to)
         }
         is And -> And(arrangement.arrangements.map { validateImmediateTransfers(tx, it) }.toSet())
         else -> arrangement
@@ -137,7 +137,7 @@ class UniversalContract : Contract {
             when (arrangement) {
                 is And -> And(arrangement.arrangements.map { replaceStartEnd(it, start, end) }.toSet())
                 is Zero -> arrangement
-                is Transfer -> Transfer(replaceStartEnd(arrangement.amount, start, end), arrangement.currency, arrangement.from, arrangement.to)
+                is Obligation -> Obligation(replaceStartEnd(arrangement.amount, start, end), arrangement.currency, arrangement.from, arrangement.to)
                 is Actions -> Actions(arrangement.actions.map { Action(it.name, replaceStartEnd(it.condition, start, end), it.actors, replaceStartEnd(it.arrangement, start, end)) }.toSet())
                 is Continuation -> arrangement
                 else -> throw NotImplementedError("replaceStartEnd " + arrangement.javaClass.name)
@@ -147,7 +147,7 @@ class UniversalContract : Contract {
             when (arrangement) {
                 is Actions -> Actions(arrangement.actions.map { Action(it.name, it.condition, it.actors, replaceNext(it.arrangement, nextReplacement)) }.toSet())
                 is And -> And(arrangement.arrangements.map { replaceNext(it, nextReplacement) }.toSet())
-                is Transfer -> arrangement
+                is Obligation -> arrangement
                 is Zero -> arrangement
                 is Continuation -> nextReplacement
                 else -> throw NotImplementedError("replaceNext " + arrangement.javaClass.name)
@@ -163,7 +163,7 @@ class UniversalContract : Contract {
                     else
                         a.single()
                 }
-                is Transfer -> arrangement
+                is Obligation -> arrangement
                 is Zero -> arrangement
                 is Continuation -> zero
                 else -> throw NotImplementedError("replaceNext " + arrangement.javaClass.name)
@@ -298,7 +298,7 @@ class UniversalContract : Contract {
             when (arr) {
                 is Zero -> arr
                 is And -> And(arr.arrangements.map { replaceFixing(tx, it, fixings, unusedFixings) }.toSet())
-                is Transfer -> Transfer(replaceFixing(tx, arr.amount, fixings, unusedFixings), arr.currency, arr.from, arr.to)
+                is Obligation -> Obligation(replaceFixing(tx, arr.amount, fixings, unusedFixings), arr.currency, arr.from, arr.to)
                 is Actions -> Actions(arr.actions.map { Action(it.name, it.condition, it.actors, replaceFixing(tx, it.arrangement, fixings, unusedFixings)) }.toSet())
                 is RollOut -> RollOut(arr.startDate, arr.endDate, arr.frequency, replaceFixing(tx, arr.template, fixings, unusedFixings))
                 is Continuation -> arr

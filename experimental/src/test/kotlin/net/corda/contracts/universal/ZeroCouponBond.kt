@@ -11,7 +11,7 @@ class ZeroCouponBond {
         actions {
             (acmeCorp or highStreetBank).may {
                 "execute".givenThat(after("2017-09-01")) {
-                    highStreetBank.gives(acmeCorp, 100.K, GBP)
+                    highStreetBank.owes(acmeCorp, 100.K, GBP)
                 }
             }
         }
@@ -21,7 +21,7 @@ class ZeroCouponBond {
         actions {
             (momAndPop or highStreetBank).may {
                 "execute".givenThat(after("2017-09-01")) {
-                    highStreetBank.gives(momAndPop, 100.K, GBP)
+                    highStreetBank.owes(momAndPop, 100.K, GBP)
                 }
             }
         }
@@ -29,8 +29,8 @@ class ZeroCouponBond {
 
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
 
-    val transfer = arrange { highStreetBank.gives(acmeCorp, 100.K, GBP) }
-    val transferWrong = arrange { highStreetBank.gives(acmeCorp, 80.K, GBP) }
+    val transfer = arrange { highStreetBank.owes(acmeCorp, 100.K, GBP) }
+    val transferWrong = arrange { highStreetBank.owes(acmeCorp, 80.K, GBP) }
 
     val inState = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contract)
 
