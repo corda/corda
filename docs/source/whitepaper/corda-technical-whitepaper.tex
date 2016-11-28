@@ -183,7 +183,7 @@ Oracles and notaries are covered in later sections.
 \subsection{Identity and the permissioning service}
 
 Unlike Bitcoin and Ethereum, Corda is designed for semi-private networks in which admission requires obtaining an
-identity signed by a root authority. This assumption is pervasive - the flow API provides messaging in terms of identities,
+identity signed by a root authority. This assumption is pervasive -- the flow API provides messaging in terms of identities,
 with routing and delivery to underlying nodes being handled automatically. There is no global broadcast at any point.
 
 This `identity' does not have to be a legal or true identity. In the same way that an email address is a globally
@@ -216,7 +216,7 @@ provide. On receiving a connection, nodes check that the connecting node is in t
 The network map abstracts the underlying IP addresses of the nodes from more useful business concepts like identities
 and services. Each participant on the network, called a \emph{party}, publishes one or more IP addresses in the
 network map. Equivalent domain names may be helpful for debugging but are not required. User interfaces and APIs
-always work in terms of identities - there is thus no equivalent to Bitcoin's notion of an address (hashed public key),
+always work in terms of identities -- there is thus no equivalent to Bitcoin's notion of an address (hashed public key),
 and user-facing applications rely on auto-completion and search rather than QRcodes to identify a logical recipient.
 
 It is possible to subscribe to network map changes and registering with the map is the first thing a node does at
@@ -279,12 +279,12 @@ this can become quite involved. The implementation of Bitcoin payment channels i
 
 As another example, the core Bitcoin protocol only allows you to append transactions to the ledger. Transmitting other
 information that might be useful such as a text message, refund address, identity information and so on is not supported
-and must be handled in some other way - typically by wrapping the raw ledger transaction bytes in a larger message that
+and must be handled in some other way -- typically by wrapping the raw ledger transaction bytes in a larger message that
 adds the desired metadata and giving responsibility for broadcasting the embedded transaction to the recipient, as in
 Bitcoin's BIP 70\cite{BIP70}.
 
 In Corda transaction data is not globally broadcast. Instead it is transmitted to the relevant parties only when they
-need to see it. Moreover even quite simple use cases - like sending cash - may involve a multi-step negotiation between
+need to see it. Moreover even quite simple use cases -- like sending cash -- may involve a multi-step negotiation between
 counterparties and the involvement of a third party such as a notary. Additional information that isn't put into the
 ledger is considered essential, as opposed to nice-to-have. Thus unlike traditional block chain systems in which the primary
 form of communication is global broadcast, in Corda \emph{all} communication takes the form of small multi-party sub-protocols
@@ -435,7 +435,7 @@ without adjusting the code of the smart contracts themselves.
 
 \paragraph{Example.}In the diagram above, we see an example of a cash issuance transaction. The transaction (shown lower
 left) contains zero inputs and one output, a newly issued cash state. The cash state (shown expanded top right) contains
-several important pieces of information: 1) details about the cash that has been issued - amount, currency, issuer,
+several important pieces of information: 1) details about the cash that has been issued -- amount, currency, issuer,
 owner and so forth, 2) the contract code whose verify() function will be responsible for verifying this issuance
 transaction and also any transaction which seeks to consume this state in the future, 3) a hash of a document which may
 contain overarching legal prose to ground the behaviour of this state and its contract code in a governing legal
@@ -561,7 +561,7 @@ states place constraints on the data they're willing to accept. Attachments \emp
 there must be a constraints mechanism to prevent that from happening. This is rooted at the contract constraints
 encoded in the states themselves: a state can not only name a class that implements the \texttt{Contract}
 interface but also place constraints on the zip/jar file that provides it. That constraint can in turn be used to
-ensure that the contract checks the authenticity of the data - either by checking the hash of the data directly,
+ensure that the contract checks the authenticity of the data -- either by checking the hash of the data directly,
 or by requiring the data to be signed by some trusted third party.
 
 % TODO: The code doesn't match this description yet.
@@ -713,7 +713,7 @@ share the signature itself (because it covers a one-time-use structure by defini
 
 Each state in a transaction specifies a contract (boolean function) that is invoked with the entire transaction as input. All contracts must accept
 in order for the transaction to be considered valid. Sometimes we would like to compose the behaviours of multiple
-different contracts. Consider the notion of a ``time lock'' - a restriction on a state that prevents it being
+different contracts. Consider the notion of a ``time lock'' -- a restriction on a state that prevents it being
 modified (i.e. sold) until a certain time. This is a general piece of logic that could apply to many kinds of
 assets. Whilst such logic could be implemented in a library and then called from every contract that might want
 to benefit from it, that requires all contract authors to think ahead and include the functionality. It would be
@@ -791,8 +791,8 @@ kilograms of bananas, units of a stock and so on.
 When cash is represented on a digital ledger an additional complication can arise: for national ``fiat'' currencies
 the ledger merely records an entity that has a liability which may be redeemed for some other form (physical currency,
 a wire transfer via some other ledger system, etc). This means that two ledger entries of \pounds1000 may \emph{not}
-be entirely fungible because all the entries really represent is a claim on an issuer, which - if it is not a central
-bank - may go bankrupt. Even assuming defaults never happen, the data representing where an asset may be redeemed
+be entirely fungible because all the entries really represent is a claim on an issuer, which -- if it is not a central
+bank -- may go bankrupt. Even assuming defaults never happen, the data representing where an asset may be redeemed
 must be tracked through the chain of custody, so `exiting' the asset from the ledger and thus claiming physical
 ownership can be done.
 
@@ -801,7 +801,7 @@ quantity of some token. This type does not support fractional quantities so when
 currencies the quantity must be measured in pennies, with sub-penny amount requiring the use of some other type.
 The token can be represented by any type. A common token type to use is \texttt{Issued<T>}, which defines a token
 issued by some party. It encapsulates what the asset is, who issued it, and an opaque reference field that is not
-parsed by the platform - it is intended to help the issuer keep track of e.g. an account number, the location where
+parsed by the platform -- it is intended to help the issuer keep track of e.g. an account number, the location where
 the asset can be found in storage, etc.
 
 \subsection{Obligations}
@@ -850,7 +850,7 @@ from a central meeting point.
 The Corda data model allows for integration of the ledger with existing markets and exchanges. A sell order for
 an asset that exists on-ledger can have a \emph{partially signed transaction} attached to it. A partial
 signature is a signature that allows the signed data to be changed in controlled ways after signing. Partial signatures
-are directly equivalent to Bitcoin's \texttt{SIGHASH} flags and work in the same way - signatures contain metadata
+are directly equivalent to Bitcoin's \texttt{SIGHASH} flags and work in the same way -- signatures contain metadata
 describing which parts of the transaction are covered. Normally all of a transaction would be covered, but using this
 metadata it is possible to create a signature that only covers some inputs and outputs, whilst allowing more to be
 added later.
@@ -1275,7 +1275,7 @@ node not having any ability to sign for transactions itself:
 \item If the node is hacked by a malicious intruder or bad insider they cannot steal assets, modify agreements,
 or do anything else that requires human approval, because they don't have access to the signing keys. There is no single
 point of failure from a key management perspective.
-\item It's more clear who signed off on a particular action - the signatures prove which devices were used to sign off
+\item It's more clear who signed off on a particular action -- the signatures prove which devices were used to sign off
 on an action. There can't be any back doors or administrator tools which can create transactions on behalf of someone else.
 \item Devices that integrate fingerprint readers and other biometric authentication could further increase trust by
 making it harder for employees to share/swap devices. A smartphone or tablet could be also used as a transaction authenticator.
@@ -1285,7 +1285,7 @@ making it harder for employees to share/swap devices. A smartphone or tablet cou
 
 The biggest problem facing anyone wanting to integrate smart signing devices into a distributed ledger system is how the
 device processes transactions. For Bitcoin it's straightforward for devices to process transactions directly because
-their format is very small and simple (in theory - in practice a fixable quirk of the Bitcoin protocol actually
+their format is very small and simple (in theory -- in practice a fixable quirk of the Bitcoin protocol actually
 significantly complicates how these devices must work). Thus turning a Bitcoin transaction into a human meaningful
 confirmation screen is quite easy:
 
@@ -1447,7 +1447,7 @@ any nodes that have recently sent us this transaction and then kicks off a \text
 with each of them.  The other side of this flow checks if the transaction is already known, if not requests it, checks
 that it is indeed signed by the group in question, resolves it and then assuming success, sends it to the vault. In this
 way a transaction added by any member of the group propagates up and down the membership tree until all the members have
-seen it. Propagation is idempotent - if the vault has already seen a transaction before then it isn't processed again.
+seen it. Propagation is idempotent -- if the vault has already seen a transaction before then it isn't processed again.
 
 The structure we have so far has some advantages and one big disadvantage. The advantages are:
 
