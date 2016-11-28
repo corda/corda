@@ -65,7 +65,7 @@ allprojects {
     targetCompatibility = 1.8
 
     tasks.withType(JavaCompile) {
-        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options"
     }
 
     group 'net.corda'
