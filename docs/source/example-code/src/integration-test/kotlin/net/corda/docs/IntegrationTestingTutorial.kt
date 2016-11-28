@@ -23,6 +23,7 @@ import net.corda.testing.parallel
 import net.corda.testing.sequence
 import org.junit.Test
 import kotlin.concurrent.thread
+import kotlin.test.assertEquals
 
 class IntegrationTestingTutorial {
 
@@ -33,7 +34,7 @@ class IntegrationTestingTutorial {
             val testUser = User("testUser", "testPassword", permissions = setOf(startFlowPermission<CashFlow>()))
             val aliceFuture = startNode("Alice", rpcUsers = listOf(testUser))
             val bobFuture = startNode("Bob", rpcUsers = listOf(testUser))
-            val notaryFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.Companion.type)))
+            val notaryFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
             val alice = aliceFuture.get()
             val bob = bobFuture.get()
             val notary = notaryFuture.get()
@@ -41,13 +42,13 @@ class IntegrationTestingTutorial {
 
             // START 2
             val aliceClient = CordaRPCClient(
-                    host = ArtemisMessagingComponent.Companion.toHostAndPort(alice.nodeInfo.address),
+                    host = ArtemisMessagingComponent.toHostAndPort(alice.nodeInfo.address),
                     config = configureTestSSL()
             )
             aliceClient.start("testUser", "testPassword")
             val aliceProxy = aliceClient.proxy()
             val bobClient = CordaRPCClient(
-                    host = ArtemisMessagingComponent.Companion.toHostAndPort(bob.nodeInfo.address),
+                    host = ArtemisMessagingComponent.toHostAndPort(bob.nodeInfo.address),
                     config = configureTestSSL()
             )
             bobClient.start("testUser", "testPassword")
@@ -60,7 +61,7 @@ class IntegrationTestingTutorial {
             // END 3
 
             // START 4
-            val issueRef = OpaqueBytes.Companion.of(0)
+            val issueRef = OpaqueBytes.of(0)
             for (i in 1 .. 10) {
                 thread {
                     aliceProxy.startFlow(::CashFlow, CashCommand.IssueCash(
@@ -93,7 +94,7 @@ class IntegrationTestingTutorial {
                         amount = i.DOLLARS.issuedBy(alice.nodeInfo.legalIdentity.ref(issueRef)),
                         recipient = alice.nodeInfo.legalIdentity
                 ))
-                require(flowHandle.returnValue.toBlocking().first() is CashFlowResult.Success)
+                assert(flowHandle.returnValue.toBlocking().first() is CashFlowResult.Success)
             }
 
             aliceVaultUpdates.expectEvents {
@@ -101,7 +102,7 @@ class IntegrationTestingTutorial {
                         (1 .. 10).map { i ->
                             expect { update: Vault.Update ->
                                 println("Alice got vault update of $update")
-                                require((update.produced.first().state.data as Cash.State).amount.quantity == i * 100L)
+                                assertEquals((update.produced.first().state.data as Cash.State).amount.quantity, i * 100L)
                             }
                         }
                 )
