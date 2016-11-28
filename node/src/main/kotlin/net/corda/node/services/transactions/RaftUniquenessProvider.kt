@@ -2,9 +2,9 @@ package net.corda.node.services.transactions
 
 import com.google.common.net.HostAndPort
 import io.atomix.catalyst.transport.Address
-import io.atomix.catalyst.transport.NettyTransport
-import io.atomix.catalyst.transport.SslProtocol
 import io.atomix.catalyst.transport.Transport
+import io.atomix.catalyst.transport.netty.NettyTransport
+import io.atomix.catalyst.transport.netty.SslProtocol
 import io.atomix.copycat.client.CopycatClient
 import io.atomix.copycat.server.CopycatServer
 import io.atomix.copycat.server.storage.Storage
@@ -78,7 +78,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
         }
 
         val client = CopycatClient.builder(address)
-                .withTransport(transport)
+                .withTransport(transport) // TODO: use local transport for client-server communications
                 .build()
         _clientFuture = serverFuture.thenCompose { client.connect(address) }
     }
