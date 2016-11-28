@@ -116,6 +116,7 @@ which notary needs to be called based on the input states (and the timestamp com
    containing the conflict details:
 
    .. sourcecode:: kotlin
+
         /** Specifies the consuming transaction for the conflicting input state */
         data class Conflict(val stateHistory: Map<StateRef, ConsumingTx>)
 
