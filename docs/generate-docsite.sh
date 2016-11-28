@@ -36,7 +36,12 @@ fi
 echo
 echo "Generating API docs ..."
 echo
-java -jar lib/dokka.jar -output docs/build/html/api core/src/main/kotlin finance/src/main/kotlin node/src/main/kotlin client/src/main/kotlin  | grep -v "No documentation for"
+
+SOURCES=$(find . \( -wholename  "*src/main/kotlin" -or -wholename "*src/main/java" \) -and -not -wholename "./samples/*")
+TARGET=docs/build/html/api
+java -jar lib/dokka.jar -output $TARGET $SOURCES | grep -v "No documentation for"
+
+echo "Generated documentation to $TARGET"
 
 echo
 echo "Writing robots.txt"
