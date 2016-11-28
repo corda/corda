@@ -95,6 +95,7 @@ Read on to learn:
    :caption: Appendix
 
    loadtesting
+   setting-up-a-corda-network
    secure-coding-guidelines
    release-process
    release-notes
