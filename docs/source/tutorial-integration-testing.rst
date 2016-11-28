@@ -5,6 +5,8 @@ Integration testing involves bringing up nodes locally and testing invariants ab
 
 In this tutorial we will bring up three nodes Alice, Bob and a Notary. Alice will issue Cash to Bob, then Bob will send this Cash back to Alice. We will see how to test some simple deterministic and nondeterministic invariants in the meantime.
 
+(Note that this example where Alice is self-issuing Cash is purely for demonstration purposes, in reality Cash would be issued by a bank and subsequently passed around.)
+
 In order to spawn nodes we will use the Driver DSL. This DSL allows one to start up node processes from code. It manages a network map service and safe shutting down of nodes in the background.
 
 .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/IntegrationTestingTutorial.kt
