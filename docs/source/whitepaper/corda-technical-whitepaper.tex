@@ -1130,41 +1130,27 @@ language. To avoid linguistic confusion it refers to the combined code/data bund
 than a contract. A European FX option expressed in this language looks like this:
 
 \begin{kotlincode}
-fun fx_swap(expiry: String, notional: BigDecimal,
-            strike: BigDecimal, foreignCurrency: Currency,
-            domesticCurrency: Currency,
-            partyA: Party, partyB: Party) =
-
-        arrange {
-            actions {
-                (partyA or partyB) may {
-                    "execute".givenThat(after(expiry)) {
-                        swap(
-                            partyA, notional * strike,
-                            domesticCurrency, partyB,
-                            notional, foreignCurrency
-                        )
+    val european_fx_option = arrange {
+        actions {
+            acmeCorp.may {
+                "exercise".anytime {
+                    actions {
+                        (acmeCorp or highStreetBank).may {
+                            "execute".givenThat(after("2017-09-01")) {
+                                highStreetBank.owes(acmeCorp, 1.M, EUR)
+                                acmeCorp.owes(highStreetBank, 1200.K, USD)
+                            }
+                        }
                     }
                 }
             }
-        }
-
-arrange {
-    actions {
-        acmeCorp may {
-            "exercise".givenThat(before("2017-09-01")) {
-                fx_swap("2017-09-01", 1.M, 1.2.bd, EUR, USD,
-                        acmeCorp, highStreetBank)
-            }
-        }
-
-        (acmeCorp or highStreetBank) may {
-            "expire".anytime {
-                zero
+            highStreetBank.may {
+                "expire".givenThat(after("2017-09-01")) {
+                    zero
+                }
             }
         }
     }
-}
 \end{kotlincode}
 
 The programmer may define arbitrary `actions' along with constraints on when the actions may be invoked. The
