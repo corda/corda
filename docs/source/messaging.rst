@@ -26,6 +26,8 @@ messaging service via the ``ServiceHub`` object that is provided to your app. En
 identified at the lowest level using ``SingleMessageRecipient`` which may be e.g. an IP address, or in future
 versions perhaps a routing path through the network.
 
+.. _network-map-service:
+
 Network Map Service
 -------------------
 

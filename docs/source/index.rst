@@ -71,6 +71,8 @@ Read on to learn:
    tutorial-clientrpc-api
    flow-state-machines
    flow-testing
+   running-a-notary
+   using-a-notary
    oracles
    tutorial-attachments
    event-scheduling
