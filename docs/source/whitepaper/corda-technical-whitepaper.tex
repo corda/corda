@@ -11,7 +11,8 @@
     breaklines,%
     autogobble,%
     frame=lines,%
-    framesep=2\fboxsep%
+    framesep=2\fboxsep,%
+    fontsize=\footnotesize%
 }
 \usepackage{color}
 \usepackage{epigraph}
@@ -1184,13 +1185,15 @@ experimental \emph{universal contract} that builds on the language extension fea
 language. To avoid linguistic confusion it refers to the combined code/data bundle as an `arrangement' rather
 than a contract. A European FX call option expressed in this language looks like this:
 
+\newpage
+
 \begin{kotlincode}
     val european_fx_option = arrange {
         actions {
-            acmeCorp.may {
-                "exercise".anytime {
+            acmeCorp may {
+                "exercise" anytime {
                     actions {
-                        (acmeCorp or highStreetBank).may {
+                        (acmeCorp or highStreetBank) may {
                             "execute".givenThat(after("2017-09-01")) {
                                 highStreetBank.owes(acmeCorp, 1.M, EUR)
                                 acmeCorp.owes(highStreetBank, 1200.K, USD)
@@ -1199,7 +1202,7 @@ than a contract. A European FX call option expressed in this language looks like
                     }
                 }
             }
-            highStreetBank.may {
+            highStreetBank may {
                 "expire".givenThat(after("2017-09-01")) {
                     zero
                 }

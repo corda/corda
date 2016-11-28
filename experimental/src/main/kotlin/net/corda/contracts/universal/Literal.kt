@@ -158,7 +158,7 @@ class ActionBuilder(val actors: Set<Party>) {
         }
     }
 
-    fun String.anytime(init: ContractBuilder.() -> Unit): Action {
+    infix fun String.anytime(init: ContractBuilder.() -> Unit): Action {
         val b = ContractBuilder()
         b.init()
         val a = Action(this, const(true), actors, b.final())
