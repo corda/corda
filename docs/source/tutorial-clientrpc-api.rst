@@ -32,8 +32,7 @@ We start generating transactions in a different thread (``generateTransactions``
     :start-after: interface CordaRPCOps
     :end-before: }
 
-.. warning:: This API is evolving and will continue to grow as new functionality and features added to Corda are made
-available to RPC clients.
+.. warning:: This API is evolving and will continue to grow as new functionality and features added to Corda are made available to RPC clients.
 
 The one we need in order to dump the transaction graph is ``verifiedTransactions``. The type signature tells us that the
 RPC will return a list of transactions and an Observable stream. This is a general pattern, we query some data and the
@@ -70,14 +69,11 @@ The RPC we need to initiate a Cash transaction is ``startFlowDynamic`` which may
 
 Finally we have everything in place: we start a couple of nodes, connect to them, and start creating transactions while listening on successfully created ones, which are dumped to the console. We just need to run it!:
 
-.. sourcecode:: bash
+.. code-block:: text
 
     # Build the example
-
     ./gradlew docs/source/example-code:installDist
-
     # Start it
-
     ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Print
 
 Now let's try to visualise the transaction graph. We will use a graph drawing library called graphstream_
@@ -139,12 +135,15 @@ When using the gradle Cordformation plugin to configure and deploy a node you mu
 
 You can then deploy and launch the nodes (Notary and Alice) as follows:
 
-1. Run ``./gradlew docs/source/example-code:deployNodes`` to create a set of configs and installs under ``docs/source/example-code/build/nodes``
-2. Run ``./docs/source/example-code/build/nodes/runnodes`` (or ``runnodes.bat`` on Windows) to open up two new terminals with the two nodes.
+.. code-block:: text
 
-followed by the same commands as before:
-3. ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Print
-4. ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Visualise
+    # to create a set of configs and installs under ``docs/source/example-code/build/nodes`` run
+    ./gradlew docs/source/example-code:deployNodes
+    # to open up two new terminals with the two nodes run
+    ./docs/source/example-code/build/nodes/runnodes
+    # followed by the same commands as before:
+    ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Print
+    ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Visualise
 
 See more on security in :doc:`secure-coding-guidelines`,  node configuration in :doc:`corda-configuration-files` and
-Cordformation in doc:`creating-a-cordapp`
+Cordformation in :doc:`creating-a-cordapp`
