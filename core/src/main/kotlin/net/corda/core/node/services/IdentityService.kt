@@ -10,6 +10,11 @@ import net.corda.core.crypto.Party
  */
 interface IdentityService {
     fun registerIdentity(party: Party)
+    /**
+     * Get all identities known to the service. This is expensive, and [partyFromKey] or [partyFromName] should be
+     * used in preference where possible.
+     */
+    fun getAllIdentities(): Iterable<Party>
 
     // There is no method for removing identities, as once we are made aware of a Party we want to keep track of them
     // indefinitely. It may be that in the long term we need to drop or archive very old Party information for space,
