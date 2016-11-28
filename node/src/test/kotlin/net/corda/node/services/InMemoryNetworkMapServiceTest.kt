@@ -1,6 +1,7 @@
 package net.corda.node.services
 
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.getOrThrow
 import net.corda.core.map
 import net.corda.core.messaging.send
 import net.corda.core.node.services.DEFAULT_SESSION_ID
@@ -83,25 +84,25 @@ abstract class AbstractNetworkMapServiceTest {
 
         // Confirm all nodes have registered themselves
         network.runNetwork()
-        var fetchPsm = registerNode.fetchMap(mapServiceNode, false)
+        var fetchResult = registerNode.fetchMap(mapServiceNode, false)
         network.runNetwork()
-        assertEquals(2, fetchPsm.get()?.count())
+        assertEquals(2, fetchResult.getOrThrow()?.count())
 
         // Forcibly deregister the second node
         val nodeKey = registerNode.services.legalIdentityKey
         val instant = Instant.now()
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(registerNode.info, instant.toEpochMilli()+1, AddOrRemove.REMOVE, expires)
-        val registerPsm = registerNode.registration(mapServiceNode, reg, nodeKey.private)
+        val registerResult = registerNode.registration(mapServiceNode, reg, nodeKey.private)
         network.runNetwork()
-        assertTrue(registerPsm.get().success)
+        assertTrue(registerResult.getOrThrow().success)
 
         swizzle()
 
         // Now only map service node should be registered
-        fetchPsm = registerNode.fetchMap(mapServiceNode, false)
+        fetchResult = registerNode.fetchMap(mapServiceNode, false)
         network.runNetwork()
-        assertEquals(mapServiceNode.info, fetchPsm.get()?.filter { it.type == AddOrRemove.ADD }?.map { it.node }?.single())
+        assertEquals(mapServiceNode.info, fetchResult.getOrThrow()?.filter { it.type == AddOrRemove.ADD }?.map { it.node }?.single())
     }
 
     protected fun `subscribe with network`(network: MockNetwork,
@@ -114,9 +115,9 @@ abstract class AbstractNetworkMapServiceTest {
 
         // Test subscribing to updates
         network.runNetwork()
-        val subscribePsm = registerNode.subscribe(mapServiceNode, true)
+        val subscribeResult = registerNode.subscribe(mapServiceNode, true)
         network.runNetwork()
-        subscribePsm.get()
+        subscribeResult.getOrThrow()
 
         swizzle()
 

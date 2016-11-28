@@ -1,10 +1,10 @@
 package net.corda.node.utilities
 
-
 import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.RetryableException
+import net.corda.core.getOrThrow
 import net.corda.testing.node.TestClock
 import org.junit.After
 import org.junit.Before
@@ -12,7 +12,6 @@ import org.junit.Test
 import java.time.Clock
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.test.assertEquals
@@ -120,11 +119,7 @@ class FiberBoxTest {
                 testClock.advanceBy(Duration.ofMinutes(10))
             }).start()
         }
-        try {
-            assertEquals(2, future.get())
-        } catch(e: ExecutionException) {
-            throw e.cause!!
-        }
+        assertEquals(2, future.getOrThrow())
     }
 
     /**
@@ -155,11 +150,7 @@ class FiberBoxTest {
             }
             mutex.write { integer = 1 }
         }).start()
-        try {
-            assertEquals(1, future.get())
-        } catch(e: ExecutionException) {
-            throw e.cause!!
-        }
+        assertEquals(1, future.getOrThrow())
     }
 
     private fun backgroundWrite() {

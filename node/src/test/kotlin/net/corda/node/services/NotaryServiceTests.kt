@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.DigitalSignature
+import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
@@ -19,14 +20,13 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.MINI_CORP_KEY
 import net.corda.testing.node.MockNetwork
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.util.*
-import java.util.concurrent.ExecutionException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 class NotaryServiceTests {
     lateinit var net: MockNetwork
@@ -53,7 +53,7 @@ class NotaryServiceTests {
         }
 
         val future = runNotaryClient(stx)
-        val signature = future.get()
+        val signature = future.getOrThrow()
         signature.verifyWithECDSA(stx.id)
     }
 
@@ -66,7 +66,7 @@ class NotaryServiceTests {
         }
 
         val future = runNotaryClient(stx)
-        val signature = future.get()
+        val signature = future.getOrThrow()
         signature.verifyWithECDSA(stx.id)
     }
 
@@ -81,9 +81,8 @@ class NotaryServiceTests {
 
         val future = runNotaryClient(stx)
 
-        val ex = assertFailsWith(ExecutionException::class) { future.get() }
-        val error = (ex.cause as NotaryException).error
-        assertTrue(error is NotaryError.TimestampInvalid)
+        val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
+        assertThat(ex.error).isInstanceOf(NotaryError.TimestampInvalid::class.java)
     }
 
     @Test fun `should report conflict for a duplicate transaction`() {
@@ -101,8 +100,8 @@ class NotaryServiceTests {
 
         net.runNetwork()
 
-        val ex = assertFailsWith(ExecutionException::class) { future.resultFuture.get() }
-        val notaryError = (ex.cause as NotaryException).error as NotaryError.Conflict
+        val ex = assertFailsWith(NotaryException::class) { future.resultFuture.getOrThrow() }
+        val notaryError = ex.error as NotaryError.Conflict
         assertEquals(notaryError.tx, stx.tx)
         notaryError.conflict.verified()
     }

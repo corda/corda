@@ -3,6 +3,7 @@ package net.corda.node.services
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -14,14 +15,13 @@ import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.node.MockNetwork
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.util.*
-import java.util.concurrent.ExecutionException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 class NotaryChangeTests {
     lateinit var net: MockNetwork
@@ -53,7 +53,7 @@ class NotaryChangeTests {
 
         net.runNetwork()
 
-        val newState = future.resultFuture.get()
+        val newState = future.resultFuture.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
     }
 
@@ -66,7 +66,7 @@ class NotaryChangeTests {
 
         net.runNetwork()
 
-        val newState = future.resultFuture.get()
+        val newState = future.resultFuture.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
         val loadedStateA = clientNodeA.services.loadState(newState.ref)
         val loadedStateB = clientNodeB.services.loadState(newState.ref)
@@ -82,9 +82,8 @@ class NotaryChangeTests {
 
         net.runNetwork()
 
-        val ex = assertFailsWith(ExecutionException::class) { future.resultFuture.get() }
-        val error = (ex.cause as StateReplacementException).error
-        assertTrue(error is StateReplacementRefused)
+        val ex = assertFailsWith(StateReplacementException::class) { future.resultFuture.getOrThrow() }
+        assertThat(ex.error).isInstanceOf(StateReplacementRefused::class.java)
     }
 
     // TODO: Add more test cases once we have a general flow/service exception handling mechanism:

@@ -3,6 +3,7 @@ package net.corda.node.messaging
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.write
@@ -13,7 +14,6 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.rootCauseExceptions
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -53,7 +53,7 @@ class AttachmentTests {
         network.runNetwork()
         val f1 = n1.services.startFlow(FetchAttachmentsFlow(setOf(id), n0.info.legalIdentity))
         network.runNetwork()
-        assertEquals(0, f1.resultFuture.get().fromDisk.size)
+        assertEquals(0, f1.resultFuture.getOrThrow().fromDisk.size)
 
         // Verify it was inserted into node one's store.
         val attachment = n1.storage.attachments.openAttachment(id)!!
@@ -62,7 +62,7 @@ class AttachmentTests {
         // Shut down node zero and ensure node one can still resolve the attachment.
         n0.stop()
 
-        val response: FetchDataFlow.Result<Attachment> = n1.services.startFlow(FetchAttachmentsFlow(setOf(id), n0.info.legalIdentity)).resultFuture.get()
+        val response: FetchDataFlow.Result<Attachment> = n1.services.startFlow(FetchAttachmentsFlow(setOf(id), n0.info.legalIdentity)).resultFuture.getOrThrow()
         assertEquals(attachment, response.fromDisk[0])
     }
 
@@ -75,7 +75,7 @@ class AttachmentTests {
         network.runNetwork()
         val f1 = n1.services.startFlow(FetchAttachmentsFlow(setOf(hash), n0.info.legalIdentity))
         network.runNetwork()
-        val e = assertFailsWith<FetchDataFlow.HashNotFound> { rootCauseExceptions { f1.resultFuture.get() } }
+        val e = assertFailsWith<FetchDataFlow.HashNotFound> { f1.resultFuture.getOrThrow() }
         assertEquals(hash, e.requested)
     }
 
@@ -106,8 +106,6 @@ class AttachmentTests {
         network.runNetwork()
         val f1 = n1.services.startFlow(FetchAttachmentsFlow(setOf(id), n0.info.legalIdentity))
         network.runNetwork()
-        assertFailsWith<FetchDataFlow.DownloadedVsRequestedDataMismatch> {
-            rootCauseExceptions { f1.resultFuture.get() }
-        }
+        assertFailsWith<FetchDataFlow.DownloadedVsRequestedDataMismatch> { f1.resultFuture.getOrThrow() }
     }
 }

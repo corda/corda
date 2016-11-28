@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.ThreadBox
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.*
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.trace
@@ -176,7 +177,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
                 messageSent.set(Unit)
             }
             if (block) {
-                messageSent.get()
+                messageSent.getOrThrow()
             }
         } else {
             pumpSendInternal(transfer)

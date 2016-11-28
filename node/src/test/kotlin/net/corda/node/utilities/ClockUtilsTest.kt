@@ -5,6 +5,7 @@ import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.getOrThrow
 import net.corda.testing.node.TestClock
 import org.junit.After
 import org.junit.Before
@@ -153,7 +154,7 @@ class ClockUtilsTest {
                 testClock.advanceBy(Duration.ofMinutes(10))
             }).start()
         }
-        assertFalse(future.get(), "Should have reached deadline")
+        assertFalse(future.getOrThrow(), "Should have reached deadline")
     }
 
     @Test
@@ -175,7 +176,7 @@ class ClockUtilsTest {
                 testClock.advanceBy(Duration.ofMinutes(10))
             }).start()
         }
-        assertFalse(future.get(), "Should have reached deadline")
+        assertFalse(future.getOrThrow(), "Should have reached deadline")
     }
 
     @Suspendable

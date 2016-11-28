@@ -1,6 +1,7 @@
 package net.corda.client
 
 import net.corda.core.contracts.DOLLARS
+import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.OpaqueBytes
@@ -35,7 +36,7 @@ class CordaRPCClientTest {
         val driverStarted = CountDownLatch(1)
         driverThread = thread {
             driver(isDebug = true) {
-                driverInfo = startNode(rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).get()
+                driverInfo = startNode(rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
                 client = CordaRPCClient(toHostAndPort(driverInfo.nodeInfo.address), configureTestSSL())
                 driverStarted.countDown()
                 stopDriver.await()

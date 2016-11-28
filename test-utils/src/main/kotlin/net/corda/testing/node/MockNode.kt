@@ -3,14 +3,11 @@ package net.corda.testing.node
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
-import net.corda.core.createDirectories
-import net.corda.core.createDirectory
+import net.corda.core.*
 import net.corda.core.crypto.Party
-import net.corda.core.div
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.PhysicalLocation
 import net.corda.core.node.services.*
-import net.corda.core.random63BitValue
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.AbstractNode
@@ -120,7 +117,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // through the java.nio API which we are already mocking via Jimfs.
         override fun makeMessagingService(): MessagingServiceInternal {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
-            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, serverThread, configuration.myLegalName, database).start().get()
+            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, serverThread, configuration.myLegalName, database).start().getOrThrow()
         }
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
@@ -203,7 +200,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         if (start) {
             node.setup().start()
             if (threadPerNode && networkMapAddress != null)
-                node.networkMapRegistrationFuture.get()   // Block and wait for the node to register in the net map.
+                node.networkMapRegistrationFuture.getOrThrow()   // Block and wait for the node to register in the net map.
         }
         _nodes.add(node)
         return node

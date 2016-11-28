@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executor
 import java.util.concurrent.Future
 import java.util.concurrent.locks.ReentrantLock
+import java.util.function.BiConsumer
 import java.util.stream.Stream
 import java.util.zip.ZipInputStream
 import kotlin.concurrent.withLock
@@ -60,8 +61,22 @@ infix fun Long.checkedAdd(b: Long) = Math.addExact(this, b)
  */
 fun random63BitValue(): Long = Math.abs(newSecureRandom().nextLong())
 
-// TODO Convert the CompletableFuture into a ListenableFuture
-fun <T> future(block: () -> T): Future<T> = CompletableFuture.supplyAsync(block)
+/** Same as [Future.get] but with a more descriptive name, and doesn't throw [ExecutionException], instead throwing its cause */
+fun <T> Future<T>.getOrThrow(): T {
+    try {
+        return get()
+    } catch (e: ExecutionException) {
+        throw e.cause!!
+    }
+}
+
+fun <T> future(block: () -> T): ListenableFuture<T> = CompletableToListenable(CompletableFuture.supplyAsync(block))
+
+private class CompletableToListenable<T>(private val base: CompletableFuture<T>) : Future<T> by base, ListenableFuture<T> {
+    override fun addListener(listener: Runnable, executor: Executor) {
+        base.whenCompleteAsync(BiConsumer { result, exception -> listener.run() }, executor)
+    }
+}
 
 // Some utilities for working with Guava listenable futures.
 fun <T> ListenableFuture<T>.then(executor: Executor, body: () -> Unit) = addListener(Runnable(body), executor)
@@ -77,9 +92,7 @@ fun <T> ListenableFuture<T>.success(executor: Executor, body: (T) -> Unit) = the
 
 fun <T> ListenableFuture<T>.failure(executor: Executor, body: (Throwable) -> Unit) = then(executor) {
     try {
-        get()
-    } catch (e: ExecutionException) {
-        body(e.cause!!)
+        getOrThrow()
     } catch (t: Throwable) {
         body(t)
     }
@@ -101,15 +114,11 @@ inline fun <T> SettableFuture<T>.catch(block: () -> T) {
 
 fun <A> ListenableFuture<A>.toObservable(): Observable<A> {
     return Observable.create { subscriber ->
-        then {
-            try {
-                subscriber.onNext(get())
-                subscriber.onCompleted()
-            } catch (e: ExecutionException) {
-                subscriber.onError(e.cause!!)
-            } catch (t: Throwable) {
-                subscriber.onError(t)
-            }
+        success {
+            subscriber.onNext(it)
+            subscriber.onCompleted()
+        } failure {
+            subscriber.onError(it)
         }
     }
 }
@@ -186,7 +195,7 @@ fun <T> List<T>.randomOrNull(): T? {
 fun <T> List<T>.randomOrNull(predicate: (T) -> Boolean) = filter(predicate).randomOrNull()
 
 // An alias that can sometimes make code clearer to read.
-val RunOnCallerThread = MoreExecutors.directExecutor()
+val RunOnCallerThread: Executor = MoreExecutors.directExecutor()
 
 // TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
 // returns in the IRSSimulationTest. If not, commit the inline back.
@@ -342,6 +351,4 @@ fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
 }
 
 /** Allows summing big decimals that are in iterable collections */
-fun Iterable<BigDecimal>.sum(): BigDecimal {
-    return this.fold(BigDecimal.valueOf(0)) { a: BigDecimal, b: BigDecimal -> a + b }
-}
+fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a + b }

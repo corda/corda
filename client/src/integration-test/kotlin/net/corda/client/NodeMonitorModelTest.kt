@@ -8,6 +8,7 @@ import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.getOrThrow
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceInfo
@@ -60,9 +61,9 @@ class NodeMonitorModelTest {
                 val aliceNodeFuture = startNode("Alice", rpcUsers = listOf(cashUser))
                 val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
 
-                aliceNode = aliceNodeFuture.get().nodeInfo
-                notaryNode = notaryNodeFuture.get().nodeInfo
-                newNode = { nodeName -> startNode(nodeName).get().nodeInfo }
+                aliceNode = aliceNodeFuture.getOrThrow().nodeInfo
+                notaryNode = notaryNodeFuture.getOrThrow().nodeInfo
+                newNode = { nodeName -> startNode(nodeName).getOrThrow().nodeInfo }
                 val monitor = NodeMonitorModel()
 
                 stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()

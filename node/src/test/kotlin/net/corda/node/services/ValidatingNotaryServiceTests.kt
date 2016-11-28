@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.composite
+import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -21,7 +22,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
 import java.util.*
-import java.util.concurrent.ExecutionException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -51,9 +51,8 @@ class ValidatingNotaryServiceTests {
 
         val future = runClient(stx)
 
-        val ex = assertFailsWith(ExecutionException::class) { future.get() }
-        val notaryError = (ex.cause as NotaryException).error
-        assertThat(notaryError).isInstanceOf(NotaryError.TransactionInvalid::class.java)
+        val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
+        assertThat(ex.error).isInstanceOf(NotaryError.TransactionInvalid::class.java)
     }
 
     @Test fun `should report error for missing signatures`() {
@@ -67,11 +66,11 @@ class ValidatingNotaryServiceTests {
             tx.toSignedTransaction(false)
         }
 
-        val ex = assertFailsWith(ExecutionException::class) {
+        val ex = assertFailsWith(NotaryException::class) {
             val future = runClient(stx)
-            future.get()
+            future.getOrThrow()
         }
-        val notaryError = (ex.cause as NotaryException).error
+        val notaryError = ex.error
         assertThat(notaryError).isInstanceOf(NotaryError.SignaturesMissing::class.java)
 
         val missingKeys = (notaryError as NotaryError.SignaturesMissing).missingSigners

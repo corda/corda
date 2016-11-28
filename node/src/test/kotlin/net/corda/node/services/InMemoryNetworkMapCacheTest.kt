@@ -2,29 +2,23 @@ package net.corda.node.services
 
 import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.expect
 import net.corda.testing.node.MockNetwork
-import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class InMemoryNetworkMapCacheTest {
-    lateinit var network: MockNetwork
-
-    @Before
-    fun setup() {
-        network = MockNetwork()
-    }
+    private val network = MockNetwork()
 
     @Test
     fun registerWithNetwork() {
         val (n0, n1) = network.createTwoNodes()
-
         val future = n1.services.networkMapCache.addMapService(n1.net, n0.info.address, false, null)
         network.runNetwork()
-        future.get()
+        future.getOrThrow()
     }
 
     @Test

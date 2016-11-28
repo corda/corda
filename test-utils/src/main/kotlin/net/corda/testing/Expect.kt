@@ -1,6 +1,7 @@
 package net.corda.testing
 
 import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.getOrThrow
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Observable
@@ -175,7 +176,7 @@ fun <S, E : Any> S.genericExpectEvents(
             }
         }
     }
-    finishFuture.get()
+    finishFuture.getOrThrow()
 }
 
 sealed class ExpectCompose<out E> {

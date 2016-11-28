@@ -4,6 +4,7 @@ import net.corda.core.contracts.DummyContract
 import net.corda.core.crypto.NullSignature
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.getOrThrow
 import net.corda.core.node.recordTransactions
 import net.corda.core.serialization.opaque
 import net.corda.core.transactions.SignedTransaction
@@ -14,7 +15,6 @@ import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.MINI_CORP_PUBKEY
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.rootCauseExceptions
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -52,7 +52,7 @@ class ResolveTransactionsFlowTest {
         val p = ResolveTransactionsFlow(setOf(stx2.id), a.info.legalIdentity)
         val future = b.services.startFlow(p).resultFuture
         net.runNetwork()
-        val results = future.get()
+        val results = future.getOrThrow()
         assertEquals(listOf(stx1.id, stx2.id), results.map { it.id })
         databaseTransaction(b.database) {
             assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
@@ -67,9 +67,7 @@ class ResolveTransactionsFlowTest {
         val p = ResolveTransactionsFlow(setOf(stx.id), a.info.legalIdentity)
         val future = b.services.startFlow(p).resultFuture
         net.runNetwork()
-        assertFailsWith(SignatureException::class) {
-            rootCauseExceptions { future.get() }
-        }
+        assertFailsWith(SignatureException::class) { future.getOrThrow() }
     }
 
     @Test
@@ -78,7 +76,7 @@ class ResolveTransactionsFlowTest {
         val p = ResolveTransactionsFlow(stx2, a.info.legalIdentity)
         val future = b.services.startFlow(p).resultFuture
         net.runNetwork()
-        future.get()
+        future.getOrThrow()
         databaseTransaction(b.database) {
             assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
             // But stx2 wasn't inserted, just stx1.
@@ -105,9 +103,7 @@ class ResolveTransactionsFlowTest {
         p.transactionCountLimit = 40
         val future = b.services.startFlow(p).resultFuture
         net.runNetwork()
-        assertFailsWith<ResolveTransactionsFlow.ExcessivelyLargeTransactionGraph> {
-            rootCauseExceptions { future.get() }
-        }
+        assertFailsWith<ResolveTransactionsFlow.ExcessivelyLargeTransactionGraph> { future.getOrThrow() }
     }
 
     @Test
@@ -133,7 +129,7 @@ class ResolveTransactionsFlowTest {
         val p = ResolveTransactionsFlow(setOf(stx3.id), a.info.legalIdentity)
         val future = b.services.startFlow(p).resultFuture
         net.runNetwork()
-        future.get()
+        future.getOrThrow()
     }
 
     @Test
@@ -143,7 +139,7 @@ class ResolveTransactionsFlowTest {
         val p = ResolveTransactionsFlow(stx2, a.info.legalIdentity)
         val future = b.services.startFlow(p).resultFuture
         net.runNetwork()
-        future.get()
+        future.getOrThrow()
         assertNotNull(b.services.storageService.attachments.openAttachment(id))
     }
 

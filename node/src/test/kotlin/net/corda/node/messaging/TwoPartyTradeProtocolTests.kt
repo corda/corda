@@ -11,9 +11,11 @@ import net.corda.core.crypto.composite
 import net.corda.core.days
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.getOrThrow
 import net.corda.core.map
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.*
+import net.corda.core.rootCause
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -43,13 +45,11 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.security.KeyPair
 import java.util.*
-import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -102,11 +102,11 @@ class TwoPartyTradeFlowTests {
 
             insertFakeTransactions(alicesFakePaper, aliceNode, aliceKey, notaryKey)
 
-            val (bobPsm, aliceResult) = runBuyerAndSeller("alice's paper".outputStateAndRef())
+            val (bobStateMachine, aliceResult) = runBuyerAndSeller("alice's paper".outputStateAndRef())
 
             // TODO: Verify that the result was inserted into the transaction database.
             // assertEquals(bobResult.get(), aliceNode.storage.validatedTransactions[aliceResult.get().id])
-            assertEquals(aliceResult.get(), bobPsm.get().resultFuture.get())
+            assertEquals(aliceResult.getOrThrow(), bobStateMachine.getOrThrow().resultFuture.getOrThrow())
 
             aliceNode.stop()
             bobNode.stop()
@@ -192,7 +192,7 @@ class TwoPartyTradeFlowTests {
             net.runNetwork()
 
             // Bob is now finished and has the same transaction as Alice.
-            assertThat(bobFuture.get()).isEqualTo(aliceFuture.get())
+            assertThat(bobFuture.getOrThrow()).isEqualTo(aliceFuture.getOrThrow())
 
             assertThat(bobNode.smm.findStateMachines(Buyer::class.java)).isEmpty()
             databaseTransaction(bobNode.database) {
@@ -443,23 +443,18 @@ class TwoPartyTradeFlowTests {
 
         net.runNetwork() // Clear network map registration messages
 
-        val (bobPsm, aliceResult) = runBuyerAndSeller("alice's paper".outputStateAndRef())
+        val (bobStateMachine, aliceResult) = runBuyerAndSeller("alice's paper".outputStateAndRef())
 
         net.runNetwork()
 
-        val e = assertFailsWith<ExecutionException> {
+        val e = assertFailsWith<TransactionVerificationException> {
             if (bobError)
-                aliceResult.get()
+                aliceResult.getOrThrow()
             else
-                bobPsm.get().resultFuture.get()
+                bobStateMachine.getOrThrow().resultFuture.getOrThrow()
         }
-        assertTrue(e.cause is TransactionVerificationException)
-        assertNotNull(e.cause!!.cause)
-        assertNotNull(e.cause!!.cause!!.message)
-        val underlyingMessage = e.cause!!.cause!!.message!!
-        if (underlyingMessage.contains(expectedMessageSubstring)) {
-            assertTrue(underlyingMessage.contains(expectedMessageSubstring))
-        } else {
+        val underlyingMessage = e.rootCause.message!!
+        if (expectedMessageSubstring !in underlyingMessage) {
             assertEquals(expectedMessageSubstring, underlyingMessage)
         }
     }

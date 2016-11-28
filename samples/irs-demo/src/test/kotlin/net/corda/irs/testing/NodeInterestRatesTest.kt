@@ -9,6 +9,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.FilterFuns
 import net.corda.core.transactions.FilteredTransaction
@@ -206,7 +207,7 @@ class NodeInterestRatesTest {
         net.runNetwork()
         val future = n1.services.startFlow(flow).resultFuture
         net.runNetwork()
-        future.get()
+        future.getOrThrow()
         // We should now have a valid signature over our tx from the oracle.
         val fix = tx.toSignedTransaction(true).tx.commands.map { it.value as Fix }.first()
         assertEquals(fixOf, fix.of)

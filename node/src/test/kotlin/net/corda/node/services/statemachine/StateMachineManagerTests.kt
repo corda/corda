@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSessionException
+import net.corda.core.getOrThrow
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.deserialize
 import net.corda.node.services.persistence.checkpoints
@@ -162,7 +163,7 @@ class StateMachineManagerTests {
         // Run the network which will also fire up the second flow. First message should get deduped. So message data stays in sync.
         net.runNetwork()
         node2b.smm.executor.flush()
-        fut1.get()
+        fut1.getOrThrow()
 
         val receivedCount = sessionTransfers.count { it.isPayloadTransfer }
         // Check flows completed cleanly and didn't get out of phase
@@ -177,8 +178,8 @@ class StateMachineManagerTests {
         }
         assertEquals(payload2, firstAgain.receivedPayload, "Received payload does not match the first value on Node 3")
         assertEquals(payload2 + 1, firstAgain.receivedPayload2, "Received payload does not match the expected second value on Node 3")
-        assertEquals(payload, secondFlow.get().receivedPayload, "Received payload does not match the (restarted) first value on Node 2")
-        assertEquals(payload + 1, secondFlow.get().receivedPayload2, "Received payload does not match the expected second value on Node 2")
+        assertEquals(payload, secondFlow.getOrThrow().receivedPayload, "Received payload does not match the (restarted) first value on Node 2")
+        assertEquals(payload + 1, secondFlow.getOrThrow().receivedPayload2, "Received payload does not match the expected second value on Node 2")
     }
 
     @Test
@@ -264,7 +265,7 @@ class StateMachineManagerTests {
         node2.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { ExceptionFlow }
         val future = node1.smm.add(ReceiveThenSuspendFlow(node2.info.legalIdentity)).resultFuture
         net.runNetwork()
-        assertThatThrownBy { future.get() }.hasCauseInstanceOf(FlowSessionException::class.java)
+        assertThatThrownBy { future.getOrThrow() }.isInstanceOf(FlowSessionException::class.java)
         assertSessionTransfers(
                 node1 sent sessionInit(node1, ReceiveThenSuspendFlow::class) to node2,
                 node2 sent sessionConfirm() to node1,

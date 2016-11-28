@@ -2,7 +2,6 @@
 @file:JvmName("CoreTestUtils")
 package net.corda.testing
 
-import com.google.common.base.Throwables
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
@@ -73,15 +72,6 @@ val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, AL
 val MOCK_IDENTITY_SERVICE: MockIdentityService get() = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
-
-/** If an exception is thrown by the body, rethrows the root cause exception. */
-inline fun <R> rootCauseExceptions(body: () -> R): R {
-    try {
-        return body()
-    } catch(e: Exception) {
-        throw Throwables.getRootCause(e)
-    }
-}
 
 /**
  * Returns a free port.

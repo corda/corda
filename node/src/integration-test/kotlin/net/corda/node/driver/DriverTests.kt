@@ -1,7 +1,7 @@
 package net.corda.node.driver
 
+import net.corda.core.getOrThrow
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.services.api.RegulatorService
 import net.corda.node.services.messaging.ArtemisMessagingComponent
@@ -30,9 +30,9 @@ class DriverTests {
             val notary = startNode("TestNotary", setOf(ServiceInfo(SimpleNotaryService.type)))
             val regulator = startNode("Regulator", setOf(ServiceInfo(RegulatorService.type)))
 
-            nodeMustBeUp(notary.get().nodeInfo, "TestNotary")
-            nodeMustBeUp(regulator.get().nodeInfo, "Regulator")
-            Pair(notary.get(), regulator.get())
+            nodeMustBeUp(notary.getOrThrow().nodeInfo, "TestNotary")
+            nodeMustBeUp(regulator.getOrThrow().nodeInfo, "Regulator")
+            Pair(notary.getOrThrow(), regulator.getOrThrow())
         }
         nodeMustBeDown(notary.nodeInfo)
         nodeMustBeDown(regulator.nodeInfo)
@@ -42,8 +42,8 @@ class DriverTests {
     fun startingNodeWithNoServicesWorks() {
         val noService = driver {
             val noService = startNode("NoService")
-            nodeMustBeUp(noService.get().nodeInfo, "NoService")
-            noService.get()
+            nodeMustBeUp(noService.getOrThrow().nodeInfo, "NoService")
+            noService.getOrThrow()
         }
         nodeMustBeDown(noService.nodeInfo)
     }
@@ -52,8 +52,8 @@ class DriverTests {
     fun randomFreePortAllocationWorks() {
         val nodeInfo = driver(portAllocation = PortAllocation.RandomFree()) {
             val nodeInfo = startNode("NoService")
-            nodeMustBeUp(nodeInfo.get().nodeInfo, "NoService")
-            nodeInfo.get()
+            nodeMustBeUp(nodeInfo.getOrThrow().nodeInfo, "NoService")
+            nodeInfo.getOrThrow()
         }
         nodeMustBeDown(nodeInfo.nodeInfo)
     }

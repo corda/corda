@@ -9,6 +9,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.random63BitValue
@@ -34,7 +35,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.util.*
-import java.util.concurrent.ExecutionException
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -79,12 +79,12 @@ class DistributedNotaryTests {
         val buildFlow = { NotaryFlow.Client(stx) }
 
         val firstSpend = alice.services.startFlow(buildFlow())
-        firstSpend.resultFuture.get()
+        firstSpend.resultFuture.getOrThrow()
 
         val secondSpend = alice.services.startFlow(buildFlow())
 
-        val ex = assertFailsWith(ExecutionException::class) { secondSpend.resultFuture.get() }
-        val error = (ex.cause as NotaryException).error as NotaryError.Conflict
+        val ex = assertFailsWith(NotaryException::class) { secondSpend.resultFuture.getOrThrow() }
+        val error = ex.error as NotaryError.Conflict
         assertEquals(error.tx, stx.tx)
     }
 
@@ -133,7 +133,7 @@ class DistributedNotaryTests {
 
         notaryNode.setup().start()
         thread { notaryNode.run() }
-        notaryNode.networkMapRegistrationFuture.get()
+        notaryNode.networkMapRegistrationFuture.getOrThrow()
         return notaryNode
     }
 
@@ -145,7 +145,7 @@ class DistributedNotaryTests {
                 networkMapAddress = networkMapAddress)
         alice.setup().start()
         thread { alice.run() }
-        alice.networkMapRegistrationFuture.get()
+        alice.networkMapRegistrationFuture.getOrThrow()
         return alice
     }
 

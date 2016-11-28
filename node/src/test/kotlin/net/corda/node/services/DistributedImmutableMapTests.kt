@@ -6,6 +6,7 @@ import io.atomix.copycat.client.CopycatClient
 import io.atomix.copycat.server.CopycatServer
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
+import net.corda.core.getOrThrow
 import net.corda.core.utilities.LogHelper
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.DistributedImmutableMap
@@ -57,14 +58,14 @@ class DistributedImmutableMapTests {
 
         val entries = mapOf("key1" to "value1", "key2" to "value2")
 
-        val conflict = client.submit(DistributedImmutableMap.Commands.PutAll(entries)).get()
+        val conflict = client.submit(DistributedImmutableMap.Commands.PutAll(entries)).getOrThrow()
         assertTrue { conflict.isEmpty() }
 
         val value1 = client.submit(DistributedImmutableMap.Commands.Get<String, String>("key1"))
         val value2 = client.submit(DistributedImmutableMap.Commands.Get<String, String>("key2"))
 
-        assertEquals(value1.get(), "value1")
-        assertEquals(value2.get(), "value2")
+        assertEquals(value1.getOrThrow(), "value1")
+        assertEquals(value2.getOrThrow(), "value2")
     }
 
     @Test
@@ -73,9 +74,9 @@ class DistributedImmutableMapTests {
 
         val entries = mapOf("key1" to "value1", "key2" to "value2")
 
-        var conflict = client.submit(DistributedImmutableMap.Commands.PutAll(entries)).get()
+        var conflict = client.submit(DistributedImmutableMap.Commands.PutAll(entries)).getOrThrow()
         assertTrue { conflict.isEmpty() }
-        conflict = client.submit(DistributedImmutableMap.Commands.PutAll(entries)).get()
+        conflict = client.submit(DistributedImmutableMap.Commands.PutAll(entries)).getOrThrow()
         assertTrue { conflict == entries }
     }
 
@@ -83,7 +84,7 @@ class DistributedImmutableMapTests {
         val clusterAddress = freeLocalHostAndPort()
         val cluster = mutableListOf(createReplica(clusterAddress))
         for (i in 1..nodeCount) cluster.add(createReplica(freeLocalHostAndPort(), clusterAddress))
-        return cluster.map { it.get() }
+        return cluster.map { it.getOrThrow() }
     }
 
     private fun createReplica(myAddress: HostAndPort, clusterAddress: HostAndPort? = null): CompletableFuture<Member> {

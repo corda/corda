@@ -1,6 +1,6 @@
 package net.corda.irs.testing
 
-import com.google.common.base.Throwables
+import net.corda.core.getOrThrow
 import net.corda.core.utilities.LogHelper
 import net.corda.simulation.IRSSimulation
 import org.junit.Test
@@ -13,10 +13,6 @@ class IRSSimulationTest {
         val sim = IRSSimulation(false, false, null)
         val future = sim.start()
         while (!future.isDone) sim.iterate()
-        try {
-            future.get()
-        } catch(e: Throwable) {
-            throw Throwables.getRootCause(e)
-        }
+        future.getOrThrow()
     }
 }
