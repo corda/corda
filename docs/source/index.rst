@@ -31,6 +31,7 @@ Read on to learn:
    getting-set-up
    running-the-demos
    building-cordapps
+   CLI-vs-IDE
 
 .. toctree::
    :maxdepth: 2
