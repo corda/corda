@@ -227,8 +227,8 @@ see all available Gradle tasks.
 * For the Corda repo there will be many project listed, the root project ``corda`` and associated sub-projects: ``core``,
   ``finance``, ``node``, etc.
 
-.. nate:: It's worth noting that when you change branch in the CorDapp template, the ``corda_version`` will change to
-  reflect the version of the branch you are working from.
+.. note:: It's worth noting that when you change branch in the CorDapp template, the ``corda_version`` will change to
+   reflect the version of the branch you are working from.
 
 To execute a task, double click it. The output will be shown in a console window.
 
@@ -246,11 +246,11 @@ Unix/Mac OSX: ``./gradlew deployNodes``
 Windows: ``gradlew.bat deployNodes``
 
 Building straight away will build the example CorDapp defined the the CorDapp template source. For more information on the example
-CorDapp see, `the Example CorDapp`_ section, below. Gradle will then grab all the dependencies for you and build the
+CorDapp see "The Example CorDapp" section below. Gradle will then grab all the dependencies for you and build the
 example CorDapp.
 
 The ``deployNodes`` Gradle task allows you easily create a formation of Corda nodes. In the case of the example CorDapp
-we are creating `four` nodes.
+we are creating ``four`` nodes.
 
 After the building process has finished to see the newly built nodes, you can navigate to the ``/build/nodes`` folder
 located in the ``cordapp-template`` root directory. You can ignore the other folders in ``/build`` for now. The ``nodes``
@@ -286,7 +286,7 @@ There will be one folder generated for each node you build (more on later when w
 ``deployNodes`` Gradle task) and a ``runnodes`` shell script (batch file on Widnows).
 
 Each node folder contains the Corda JAR, a folder for dependencies and a folder for plugins (or CorDapps). There is also
-a node.conf file. See :doc:`Corda configuration files <corda-configuration-files>`.
+a node.conf file. See :doc:`Corda configuration files <corda-configuration-file>`.
 
 **Building from IntelliJ**
 
@@ -802,10 +802,10 @@ Re-Deploying Your Nodes Locally
 -------------------------------
 
 If you need to create any additional nodes you can do it via the ``build.gradle`` file as discussed above in
-``the build.gradle file``_ and in more detail in the :ref:`cordFormation <cord-formation>` section.
+``the build.gradle file`` and in more detail in the "cordFormation" section.
 
 You may also wish to edit the ``/build/nodes/<node name>/node.conf`` files for your nodes. For more information on
-doing this, see the :doc:`Corda configuration file <corda-configuration-files>` page.
+doing this, see the :doc:`Corda configuration file <corda-configuration-file>` page.
 
 Once you have made some changes to your CorDapp you can redeploy it with the following command:
 

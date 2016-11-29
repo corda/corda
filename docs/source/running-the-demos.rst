@@ -244,6 +244,6 @@ Then (for both)
     6. On the "Agree Valuations" tab, click the "Start Calculations" button.
 
 
-Additionally, you can confirm that these trades are not visible from `Bank C's node<http://localhost:10009/web/simmvaluationdemo/>`_.
+Additionally, you can confirm that these trades are not visible from `Bank C's node <http://localhost:10009/web/simmvaluationdemo/>`_.
 
 Please note that any URL text after `simmvaluationdemo` should not be bookmarked or navigated directly to as they are only for aesthetics.
