@@ -63,14 +63,16 @@ We will start with defining helper function that returns a ``CommercialPaper`` s
 
     .. sourcecode:: java
 
+        private final OpaqueBytes defaultRef = new OpaqueBytes(new byte[]{123});
+
         private ICommercialPaperState getPaper() {
-                return new JavaCommercialPaper.State(
-                        getMEGA_CORP().ref(defaultRef),
-                        getMEGA_CORP_PUBKEY(),
-                        issuedBy(DOLLARS(1000), getMEGA_CORP().ref((byte) 1, (byte) 1)),
-                        getTEST_TX_TIME().plus(7, ChronoUnit.DAYS)
-                );
-            }
+            return new JavaCommercialPaper.State(
+                getMEGA_CORP().ref(defaultRef),
+                getMEGA_CORP_PUBKEY(),
+                issuedBy(DOLLARS(1000), getMEGA_CORP().ref(defaultRef)),
+                getTEST_TX_TIME().plus(7, ChronoUnit.DAYS)
+            );
+        }
 
 It's a ``CommercialPaper`` issued by ``MEGA_CORP`` with face value of $1000 and maturity date in 7 days.
 
@@ -411,7 +413,7 @@ Now that we know how to define a single transaction, let's look at how to define
             ledger(l -> {
                 l.unverifiedTransaction(tx -> {
                             tx.output("alice's $900",
-                                    new Cash.State(issuedBy(DOLLARS(1000), issuer), getALICE_PUBKEY(), null));
+                                    new Cash.State(issuedBy(DOLLARS(900), issuer), getALICE_PUBKEY(), null));
                             return Unit.INSTANCE;
                         });
 
@@ -426,7 +428,7 @@ Now that we know how to define a single transaction, let's look at how to define
                 l.transaction("Trade", tx -> {
                     tx.input("paper");
                     tx.input("alice's $900");
-                    tx.output("borrowed $900", new Cash.State(issuedBy(DOLLARS(1000), issuer), getMEGA_CORP_PUBKEY(), null));
+                    tx.output("borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP_PUBKEY(), null));
                     JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
                     tx.output("alice's paper", inputPaper.withOwner(getALICE_PUBKEY()));
                     tx.command(getALICE_PUBKEY(), new Cash.Commands.Move());
