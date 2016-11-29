@@ -16,15 +16,26 @@ so far. We have:
 
 .. note:: If any demos don't work please jump on our mailing list and let us know.
 
+
+Important : Common Instructions for all demos
+---------------------------------------------
+
 The demos can be run either from the command line, or from inside IntelliJ. Running from the command line is
 recommended if you are just wanting to see them run, using IntelliJ can be helpful if you want to debug or
 develop the demos themselves. For more details about running via the command line or within IntelliJ - see :doc:`CLI-vs-IDE`.
+
+*For all demos:* The ``install`` gradle task is automatically ran if required; this no longer needs to be run independently.
+
+In the IntelliJ IDE
+    Open the Corda project in IntelliJ and run the "Install" configuration from the gradle menu (located in corda-project (root), Run Configurations).
+Command Line
+    This is a gradle task that can be run as just ``gradle install``
 
 Trader demo
 -----------
 
 This demo brings up three nodes: Bank A, Bank B and a notary/network map node that they both use. Bank A will
-be the buyer, and self-issues some cash in order to acquire the commercial paper from Bank B, the seller.
+be the buyer, and self-issues some cash in order to acquire commercial paper from Bank B, the seller.
 
 To run from the command line:
 
@@ -104,19 +115,6 @@ Or you can run them from inside IntelliJ, but when done this way, all the node o
 In the "Attachment Demo: Run Nodes" window you should see some log lines scroll past, and within a few seconds the
 message "File received - we're happy!" should be printed.
 
-SIMM and Portfolio demo
------------------------
-
-.. note:: Read more about this demo at :doc:`initial-margin-agreement`.
-
-To run the demo run:
-
-1. Open the Corda project in IntelliJ and run the "Install" configuration
-2. Open the Corda samples project in IntelliJ and run the "Simm Valuation Demo" configuration
-
-Now open http://localhost:10005/web/simmvaluationdemo and http://localhost:10007/web/simmvaluationdemo to view the two nodes that this
-will have started respectively. You can now use the demo by creating trades and agreeing the valuations.
-
 .. _notary-demo:
 
 Distributed Notary demo
@@ -162,3 +160,97 @@ by using the H2 web console:
   You will be presented with a web application that enumerates all the available tables and provides an interface for you to query them using SQL.
 - The committed states are stored in the ``NOTARY_COMMITTED_STATES`` table. Note that the raw data is not human-readable,
   but we're only interested in the row count for this demo.
+
+
+
+SIMM and Portfolio Demo - aka the Initial Margin Agreement Demo
+---------------------------------------------------------------
+
+Background and SIMM Introduction
+********************************
+
+This app is a demonstration of how Corda can be used for the real world requirement of initial margin calculation and
+agreement; featuring the integration of complex and industry proven third party libraries into Corda nodes.
+
+SIMM is an acronym for "Standard Initial Margin Model". It is effectively the calculation of a "margin" that is paid
+by one party to another when they agree a trade on certain types of transaction. This margin is
+paid such that, in the event of one of the counterparties suffering a credit event
+(a financial term and a polite way to say defaulting, not paying the debts that are due, or potentially even bankruptcy),
+then the party that is owed any sum already has some of the amount that it should have been paid. This payment to the
+receiving party is a preventative measure in order to reduce the risk of a potentially catastrophic default domino
+effect that caused the `Great Financial Crisis <https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%932008>`_,
+as it means that they can be assured that if they need to pay another party, they will have a proportion of the funds
+that they have been relying on.
+
+To enact this, in September 2016, the ISDA committee - with full backing from various governing bodies -
+`issued a ruling on what is known as the ISDA SIMM ™ model <http://www2.isda.org/news/isda-simm-deployed-today-new-industry-standard-for-calculating-initial-margin-widely-adopted-by-market-participants>`_,
+a way of fairly and consistently calculating this margin. Any parties wishing to trade a financial product that is
+covered under this ruling would, independently, use this model and calculate their margin payment requirement,
+agree it with their trading counterparty and then pay (or receive, depending on the results of this calculation)
+this amount. In the case of disagreement that is not resolved in a timely fashion, this payment would increase
+and so therefore it is in the parties' interest to reach agreement in as short as time frame as possible.
+
+To be more accurate, the SIMM calculation is not performed on just one trade - it is calculated on an aggregate of
+intermediary values (which in this model are sensitivities to risk factors) from a portfolio of trades; therefore
+the input to a SIMM is actually this data, not the individual trades themselves.
+
+Also note that implementations of the SIMM are actually protected and subject to license restrictions by ISDA
+(this is due to the model itself being protected). We were fortunate enough to technically partner with
+`OpenGamma <http://www.opengamma.com>`_  who allowed us to demonstrate the SIMM process using their proprietary model.
+In the source code released, we have replaced their analytics engine with very simple stub functions that allow
+the process to run without actually calculating correct values, and can easily be swapped out in place for their real libraries.
+
+
+Open the Corda samples project in IntelliJ and run the "Simm Valuation Demo" configuration
+
+Now open http://localhost:10005/web/simmvaluationdemo and http://localhost:10007/web/simmvaluationdemo to view the two
+nodes that this will have started respectively. You can now use the demo by creating trades and agreeing the valuations.
+Also see the README located in samples/simm-valuation-demo.
+
+
+What happens in the demo (notionally)
+*************************************
+
+Preliminaries
+    - Ensure that there are a number of live trades with another party financial products that are covered under the
+      ISDA SIMM agreement (if none, then use the demo to enter some simple trades as described below).
+
+Initial Margin Agreement Process
+    - Agree that one will be performing the margining calculation against a portfolio of trades with another party, and agree the trades in that portfolio. In practice, one node will start the flow but it does not matter which node does.
+    - Individually (at the node level), identify the data (static, reference etc) one will need in order to be able to calculate the metrics on those trades
+    - Confirm with the other counterparty the dataset from the above set
+    - Calculate any intermediary steps and values needed for the margin calculation (ie sensitivities to risk factors)
+    - Agree on the results of these steps
+    - Calculate the initial margin
+    - Agree on the calculation of the above with the other party
+    - In practice, pay (or receive) this margin (omitted for the sake of complexity for this example)
+
+
+Demo execution (step by step)
+*****************************
+
+The demonstration can be run in two ways - via IntelliJ (which will allow you to add breakpoints, debug, etc), or via gradle and the command line.
+
+Run with IntelliJ
+
+    1. Open the ``corda`` project with IntelliJ
+    2. Run the shared run configuration "SIMM Valuation Demo"
+
+Run via CLI
+
+    1. Navigate to the ``samples/simm-valuation-demo`` directory in your shell
+    2. Run the gradle target ``deployNodes`` (ie; ``./gradlew deployNodes`` for Unix or ``gradlew.bat`` on Windows)
+
+        a. Unix: ``cd simm-valuation-demo/build/nodes && ./runnodes``
+        b. Windows: ``cd simm-valuation-demo/build/nodes & runnodes.bat``
+
+Then (for both)
+    3. Browse to http://localhost:10005/web/simmvaluationdemo
+    4. Select the other counterparty (ie Bank B)
+    5. Enter at least 3 trades - via the "Create New Trade" tab.
+    6. On the "Agree Valuations" tab, click the "Start Calculations" button.
+
+
+Additionally, you can confirm that these trades are not visible from `Bank C's node<http://localhost:10009/web/simmvaluationdemo/>`_.
+
+Please note that any URL text after `simmvaluationdemo` should not be bookmarked or navigated directly to as they are only for aesthetics.
