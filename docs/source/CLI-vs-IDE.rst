@@ -25,8 +25,8 @@ Windows vs Mac / Unix
 *********************
 
 Due to the nature of their respective command interfaces, gradle is typically ran in windows with the command ``gradle.bat``
- (or ``gradlew.bat`` if using the wrapper) and in Mac / Unix environments it is ran via ``./gradlew``. For brevity, the
- simple windows syntax ``gradle`` is used for the majority of the documentation.
+(or ``gradlew.bat`` if using the wrapper) and in Mac / Unix environments it is ran via ``./gradlew``. For brevity, the
+simple windows syntax ``gradle`` is used for the majority of the documentation.
 
 As well as including the most significant run and build configurations in the IDE, we also provide gradle tasks to build, install
 and run significant parts of Corda demos and tools. Gradle is highly extensible and we use it for downloading required resources,
