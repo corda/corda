@@ -72,6 +72,7 @@ Read on to learn:
    tutorial-test-dsl
    tutorial-integration-testing
    tutorial-clientrpc-api
+   tutorial-building-transactions
    flow-state-machines
    flow-testing
    running-a-notary
