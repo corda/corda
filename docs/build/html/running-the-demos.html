@@ -31,8 +31,8 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Data model" href="data-model.html"/>
-        <link rel="prev" title="Getting set up" href="getting-set-up.html"/> 
+        <link rel="next" title="CLI vs IDE" href="CLI-vs-IDE.html"/>
+        <link rel="prev" title="Getting Set Up : Faultfinding" href="getting-set-up-fault-finding.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -89,14 +89,22 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting Set Up : Faultfinding</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Running the demos</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#important-common-instructions-for-all-demos">Important : Common Instructions for all demos</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#trader-demo">Trader demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#irs-demo">IRS demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#attachment-demo">Attachment demo</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#simm-and-portfolio-demo">SIMM and Portfolio demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#distributed-notary-demo">Distributed Notary demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#simm-and-portfolio-demo-aka-the-initial-margin-agreement-demo">SIMM and Portfolio Demo - aka the Initial Margin Agreement Demo</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#background-and-simm-introduction">Background and SIMM Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#what-happens-in-the-demo-notionally">What happens in the demo (notionally)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#demo-execution-step-by-step">Demo execution (step by step)</a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Key concepts</span></p>
 <ul>
@@ -104,6 +112,16 @@
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -117,23 +135,21 @@
 <li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
-<p class="caption"><span class="caption-text">CorDapps</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
-</ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
@@ -150,6 +166,8 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
@@ -223,13 +241,17 @@ using the Standard Initial Margin Model.</li>
 <p class="first admonition-title">Note</p>
 <p class="last">If any demos don&#8217;t work please jump on our mailing list and let us know.</p>
 </div>
+<div class="section" id="important-common-instructions-for-all-demos">
+<h2>Important : Common Instructions for all demos<a class="headerlink" href="#important-common-instructions-for-all-demos" title="Permalink to this headline">¶</a></h2>
 <p>The demos can be run either from the command line, or from inside IntelliJ. Running from the command line is
 recommended if you are just wanting to see them run, using IntelliJ can be helpful if you want to debug or
-develop the demos themselves.</p>
+develop the demos themselves. For more details about running via the command line or within IntelliJ - see <a class="reference internal" href="CLI-vs-IDE.html"><span class="doc">CLI vs IDE</span></a>.</p>
+<p><em>For all demos:</em> The <code class="docutils literal"><span class="pre">install</span></code> gradle task is automatically ran if required; this no longer needs to be run independently.</p>
+</div>
 <div class="section" id="trader-demo">
 <h2>Trader demo<a class="headerlink" href="#trader-demo" title="Permalink to this headline">¶</a></h2>
 <p>This demo brings up three nodes: Bank A, Bank B and a notary/network map node that they both use. Bank A will
-be the buyer, and self-issues some cash in order to acquire the commercial paper from Bank B, the seller.</p>
+be the buyer, and self-issues some cash in order to acquire commercial paper from Bank B, the seller.</p>
 <p>To run from the command line:</p>
 <ol class="arabic simple">
 <li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:trader-demo:deployNodes</span></code> to create a set of configs and installs under <code class="docutils literal"><span class="pre">samples/trader-demo/build/nodes</span></code></li>
@@ -256,7 +278,7 @@ oracle together. The two banks agree on an interest rate swap, and then do regul
 on a simulated clock passes.</p>
 <p>To run from the command line:</p>
 <ol class="arabic simple">
-<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:irs-demo:deployNodes</span> <span class="pre">samples:irs-demo:installDist</span></code> to install configs and a command line tool under <code class="docutils literal"><span class="pre">samples/irs-demo/build</span></code>.</li>
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:irs-demo:deployNodes</span></code> to install configs and a command line tool under <code class="docutils literal"><span class="pre">samples/irs-demo/build</span></code>.</li>
 <li>Change to the <code class="docutils literal"><span class="pre">samples/irs-demo/build</span></code> directory.</li>
 <li>Run <code class="docutils literal"><span class="pre">./nodes/runnodes</span></code> (or <code class="docutils literal"><span class="pre">runnodes.bat</span></code> on Windows) to open up three new terminals with the three nodes.</li>
 <li>Run <code class="docutils literal"><span class="pre">./install/irs-demo/bin/irs-demo</span> <span class="pre">--role</span> <span class="pre">UploadRates</span></code> (or use <code class="docutils literal"><span class="pre">irs-demo.bat</span></code> on Windows). You should see a
@@ -303,20 +325,6 @@ Now look at the other windows to see the output of the demo.</li>
 <p>In the &#8220;Attachment Demo: Run Nodes&#8221; window you should see some log lines scroll past, and within a few seconds the
 message &#8220;File received - we&#8217;re happy!&#8221; should be printed.</p>
 </div>
-<div class="section" id="simm-and-portfolio-demo">
-<h2>SIMM and Portfolio demo<a class="headerlink" href="#simm-and-portfolio-demo" title="Permalink to this headline">¶</a></h2>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Read more about this demo at <a class="reference internal" href="initial-margin-agreement.html"><span class="doc">Initial margin agreements</span></a>.</p>
-</div>
-<p>To run the demo run:</p>
-<ol class="arabic simple">
-<li>Open the Corda project in IntelliJ and run the &#8220;Install&#8221; configuration</li>
-<li>Open the Corda samples project in IntelliJ and run the &#8220;Simm Valuation Demo&#8221; configuration</li>
-</ol>
-<p>Now open <a class="reference external" href="http://localhost:10005/web/simmvaluationdemo">http://localhost:10005/web/simmvaluationdemo</a> and <a class="reference external" href="http://localhost:10007/web/simmvaluationdemo">http://localhost:10007/web/simmvaluationdemo</a> to view the two nodes that this
-will have started respectively. You can now use the demo by creating trades and agreeing the valuations.</p>
-</div>
 <div class="section" id="distributed-notary-demo">
 <span id="notary-demo"></span><h2>Distributed Notary demo<a class="headerlink" href="#distributed-notary-demo" title="Permalink to this headline">¶</a></h2>
 <p>This is a simple demonstration showing a party getting transactions notarised by a distributed <a class="reference external" href="https://raft.github.io/">Raft</a>-based notary service.
@@ -359,6 +367,103 @@ but we&#8217;re only interested in the row count for this demo.</p>
 </li>
 </ul>
 </div>
+<div class="section" id="simm-and-portfolio-demo-aka-the-initial-margin-agreement-demo">
+<h2>SIMM and Portfolio Demo - aka the Initial Margin Agreement Demo<a class="headerlink" href="#simm-and-portfolio-demo-aka-the-initial-margin-agreement-demo" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="background-and-simm-introduction">
+<h3>Background and SIMM Introduction<a class="headerlink" href="#background-and-simm-introduction" title="Permalink to this headline">¶</a></h3>
+<p>This app is a demonstration of how Corda can be used for the real world requirement of initial margin calculation and
+agreement; featuring the integration of complex and industry proven third party libraries into Corda nodes.</p>
+<p>SIMM is an acronym for &#8220;Standard Initial Margin Model&#8221;. It is effectively the calculation of a &#8220;margin&#8221; that is paid
+by one party to another when they agree a trade on certain types of transaction. This margin is
+paid such that, in the event of one of the counterparties suffering a credit event
+(a financial term and a polite way to say defaulting, not paying the debts that are due, or potentially even bankruptcy),
+then the party that is owed any sum already has some of the amount that it should have been paid. This payment to the
+receiving party is a preventative measure in order to reduce the risk of a potentially catastrophic default domino
+effect that caused the <a class="reference external" href="https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%932008">Great Financial Crisis</a>,
+as it means that they can be assured that if they need to pay another party, they will have a proportion of the funds
+that they have been relying on.</p>
+<p>To enact this, in September 2016, the ISDA committee - with full backing from various governing bodies -
+<a class="reference external" href="http://www2.isda.org/news/isda-simm-deployed-today-new-industry-standard-for-calculating-initial-margin-widely-adopted-by-market-participants">issued a ruling on what is known as the ISDA SIMM ™ model</a>,
+a way of fairly and consistently calculating this margin. Any parties wishing to trade a financial product that is
+covered under this ruling would, independently, use this model and calculate their margin payment requirement,
+agree it with their trading counterparty and then pay (or receive, depending on the results of this calculation)
+this amount. In the case of disagreement that is not resolved in a timely fashion, this payment would increase
+and so therefore it is in the parties&#8217; interest to reach agreement in as short as time frame as possible.</p>
+<p>To be more accurate, the SIMM calculation is not performed on just one trade - it is calculated on an aggregate of
+intermediary values (which in this model are sensitivities to risk factors) from a portfolio of trades; therefore
+the input to a SIMM is actually this data, not the individual trades themselves.</p>
+<p>Also note that implementations of the SIMM are actually protected and subject to license restrictions by ISDA
+(this is due to the model itself being protected). We were fortunate enough to technically partner with
+<a class="reference external" href="http://www.opengamma.com">OpenGamma</a>  who allowed us to demonstrate the SIMM process using their proprietary model.
+In the source code released, we have replaced their analytics engine with very simple stub functions that allow
+the process to run without actually calculating correct values, and can easily be swapped out in place for their real libraries.</p>
+<p>Open the Corda samples project in IntelliJ and run the &#8220;Simm Valuation Demo&#8221; configuration</p>
+<p>Now open <a class="reference external" href="http://localhost:10005/web/simmvaluationdemo">http://localhost:10005/web/simmvaluationdemo</a> and <a class="reference external" href="http://localhost:10007/web/simmvaluationdemo">http://localhost:10007/web/simmvaluationdemo</a> to view the two
+nodes that this will have started respectively. You can now use the demo by creating trades and agreeing the valuations.
+Also see the README located in samples/simm-valuation-demo.</p>
+</div>
+<div class="section" id="what-happens-in-the-demo-notionally">
+<h3>What happens in the demo (notionally)<a class="headerlink" href="#what-happens-in-the-demo-notionally" title="Permalink to this headline">¶</a></h3>
+<dl class="docutils">
+<dt>Preliminaries</dt>
+<dd><ul class="first last simple">
+<li>Ensure that there are a number of live trades with another party financial products that are covered under the
+ISDA SIMM agreement (if none, then use the demo to enter some simple trades as described below).</li>
+</ul>
+</dd>
+<dt>Initial Margin Agreement Process</dt>
+<dd><ul class="first last simple">
+<li>Agree that one will be performing the margining calculation against a portfolio of trades with another party, and agree the trades in that portfolio. In practice, one node will start the flow but it does not matter which node does.</li>
+<li>Individually (at the node level), identify the data (static, reference etc) one will need in order to be able to calculate the metrics on those trades</li>
+<li>Confirm with the other counterparty the dataset from the above set</li>
+<li>Calculate any intermediary steps and values needed for the margin calculation (ie sensitivities to risk factors)</li>
+<li>Agree on the results of these steps</li>
+<li>Calculate the initial margin</li>
+<li>Agree on the calculation of the above with the other party</li>
+<li>In practice, pay (or receive) this margin (omitted for the sake of complexity for this example)</li>
+</ul>
+</dd>
+</dl>
+</div>
+<div class="section" id="demo-execution-step-by-step">
+<h3>Demo execution (step by step)<a class="headerlink" href="#demo-execution-step-by-step" title="Permalink to this headline">¶</a></h3>
+<p>The demonstration can be run in two ways - via IntelliJ (which will allow you to add breakpoints, debug, etc), or via gradle and the command line.</p>
+<p>Run with IntelliJ</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>Open the <code class="docutils literal"><span class="pre">corda</span></code> project with IntelliJ</li>
+<li>Run the shared run configuration &#8220;SIMM Valuation Demo&#8221;</li>
+</ol>
+</div></blockquote>
+<p>Run via CLI</p>
+<blockquote>
+<div><ol class="arabic">
+<li><p class="first">Navigate to the <code class="docutils literal"><span class="pre">samples/simm-valuation-demo</span></code> directory in your shell</p>
+</li>
+<li><p class="first">Run the gradle target <code class="docutils literal"><span class="pre">deployNodes</span></code> (ie; <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">deployNodes</span></code> for Unix or <code class="docutils literal"><span class="pre">gradlew.bat</span></code> on Windows)</p>
+<blockquote>
+<div><ol class="loweralpha simple">
+<li>Unix: <code class="docutils literal"><span class="pre">cd</span> <span class="pre">simm-valuation-demo/build/nodes</span> <span class="pre">&amp;&amp;</span> <span class="pre">./runnodes</span></code></li>
+<li>Windows: <code class="docutils literal"><span class="pre">cd</span> <span class="pre">simm-valuation-demo/build/nodes</span> <span class="pre">&amp;</span> <span class="pre">runnodes.bat</span></code></li>
+</ol>
+</div></blockquote>
+</li>
+</ol>
+</div></blockquote>
+<dl class="docutils">
+<dt>Then (for both)</dt>
+<dd><ol class="first last arabic simple" start="3">
+<li>Browse to <a class="reference external" href="http://localhost:10005/web/simmvaluationdemo">http://localhost:10005/web/simmvaluationdemo</a></li>
+<li>Select the other counterparty (ie Bank B)</li>
+<li>Enter at least 3 trades - via the &#8220;Create New Trade&#8221; tab.</li>
+<li>On the &#8220;Agree Valuations&#8221; tab, click the &#8220;Start Calculations&#8221; button.</li>
+</ol>
+</dd>
+</dl>
+<p>Additionally, you can confirm that these trades are not visible from <a class="reference external" href="http://localhost:10009/web/simmvaluationdemo/">Bank C&#8217;s node</a>.</p>
+<p>Please note that any URL text after <cite>simmvaluationdemo</cite> should not be bookmarked or navigated directly to as they are only for aesthetics.</p>
+</div>
+</div>
 </div>
 
 
@@ -368,10 +473,10 @@ but we&#8217;re only interested in the row count for this demo.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="data-model.html" class="btn btn-neutral float-right" title="Data model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="CLI-vs-IDE.html" class="btn btn-neutral float-right" title="CLI vs IDE" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="getting-set-up.html" class="btn btn-neutral" title="Getting set up" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="getting-set-up-fault-finding.html" class="btn btn-neutral" title="Getting Set Up : Faultfinding" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -380,7 +485,7 @@ but we&#8217;re only interested in the row count for this demo.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+        &copy; Copyright 2016, R3 Limited.
 
     </p>
   </div>

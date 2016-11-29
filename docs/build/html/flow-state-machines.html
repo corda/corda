@@ -32,7 +32,7 @@
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Writing flow tests" href="flow-testing.html"/>
-        <link rel="prev" title="Client RPC API tutorial" href="tutorial-clientrpc-api.html"/> 
+        <link rel="prev" title="Building Transactions" href="tutorial-building-transactions.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -89,7 +89,9 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting Set Up : Faultfinding</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Key concepts</span></p>
 <ul>
@@ -97,6 +99,16 @@
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -110,18 +122,14 @@
 <li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
-<p class="caption"><span class="caption-text">CorDapps</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
-</ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Writing flows</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#theory">Theory</a></li>
@@ -140,6 +148,8 @@
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
@@ -156,6 +166,8 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
@@ -767,7 +779,7 @@ reporting logic, or anything else that might be required as part of a communicat
         <a href="flow-testing.html" class="btn btn-neutral float-right" title="Writing flow tests" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="tutorial-clientrpc-api.html" class="btn btn-neutral" title="Client RPC API tutorial" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="tutorial-building-transactions.html" class="btn btn-neutral" title="Building Transactions" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -776,7 +788,7 @@ reporting logic, or anything else that might be required as part of a communicat
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+        &copy; Copyright 2016, R3 Limited.
 
     </p>
   </div>

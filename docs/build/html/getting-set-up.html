@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Running the demos" href="running-the-demos.html"/>
+        <link rel="next" title="Getting Set Up : Faultfinding" href="getting-set-up-fault-finding.html"/>
         <link rel="prev" title="What’s included?" href="inthebox.html"/> 
 
   
@@ -98,7 +98,9 @@
 <li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting Set Up : Faultfinding</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Key concepts</span></p>
 <ul>
@@ -106,6 +108,16 @@
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -119,23 +131,21 @@
 <li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
-<p class="caption"><span class="caption-text">CorDapps</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
-</ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
@@ -152,6 +162,8 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
@@ -224,6 +236,14 @@ do have with them.</p>
 <p>We strongly recommend the use of IntelliJ&#8217;s Development Environment known as IDEA. Download it for free from
 <a class="reference external" href="https://www.jetbrains.com/idea/download/">JetBrains</a>. The primary reason we recommend this particular IDE is that it integrates
 very well with our choice of language for Corda, &#8220;Kotlin&#8221;, as Jetbrains also support the development of Kotlin.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">When opening the Corda project for the first time from the IntelliJ splash screen, please use &#8220;Open&#8221;
+and then agree to import the Gradle project from the popup bubble. Don&#8217;t pick &#8220;Import&#8221; on the splash screen,
+because a bug in IntelliJ will cause the pre-packaged run configurations to be erased. If you see this warning
+too late, it&#8217;s no problem, just use <code class="docutils literal"><span class="pre">git</span> <span class="pre">checkout</span> <span class="pre">.idea/runConfiguration</span></code> or the version control tab in IntelliJ
+to undelete the files.</p>
+</div>
 </div>
 <div class="section" id="kotlin">
 <h2>Kotlin<a class="headerlink" href="#kotlin" title="Permalink to this headline">¶</a></h2>
@@ -274,7 +294,7 @@ are performing (details expounded later). Whenever prompted about gradle, accept
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="running-the-demos.html" class="btn btn-neutral float-right" title="Running the demos" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="getting-set-up-fault-finding.html" class="btn btn-neutral float-right" title="Getting Set Up : Faultfinding" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="inthebox.html" class="btn btn-neutral" title="What’s included?" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -286,7 +306,7 @@ are performing (details expounded later). Whenever prompted about gradle, accept
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+        &copy; Copyright 2016, R3 Limited.
 
     </p>
   </div>

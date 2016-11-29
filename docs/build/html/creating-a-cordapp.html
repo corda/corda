@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Creating a CorDapp &mdash; R3 Corda latest documentation</title>
+  <title>CorDapps Background &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -31,8 +31,8 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Where to start" href="where-to-start.html"/>
-        <link rel="prev" title="Network permissioning" href="permissioning.html"/> 
+        <link rel="next" title="The CorDapp Template" href="tutorial-cordapp.html"/>
+        <link rel="prev" title="Clauses key concepts" href="clauses.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -89,7 +89,9 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting Set Up : Faultfinding</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Key concepts</span></p>
 <ul>
@@ -97,22 +99,11 @@
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
-</ul>
-<p class="caption"><span class="caption-text">The Corda node</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
-<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
-<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Creating a CorDapp</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">CorDapps Background</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#app-plugins">App plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#services">Services</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#starting-nodes">Starting nodes</a></li>
@@ -130,19 +121,38 @@
 <li class="toctree-l2"><a class="reference internal" href="#cordformation">Cordformation</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
@@ -159,6 +169,8 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
@@ -199,7 +211,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>Creating a CorDapp</li>
+    <li>CorDapps Background</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -213,8 +225,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="creating-a-cordapp">
-<h1>Creating a CorDapp<a class="headerlink" href="#creating-a-cordapp" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="cordapps-background">
+<h1>CorDapps Background<a class="headerlink" href="#cordapps-background" title="Permalink to this headline">¶</a></h1>
 <p>A Cordapp is an application that runs on the Corda platform using the platform APIs and plugin system. They are self
 contained in separate JARs from the node server JAR that are created and distributed.</p>
 <div class="section" id="app-plugins">
@@ -235,8 +247,8 @@ specific details of the implementation, but you can extend the server in the fol
 </div>
 <div class="section" id="services">
 <h2>Services<a class="headerlink" href="#services" title="Permalink to this headline">¶</a></h2>
-<p>Services are classes which are constructed after the node has started. It is provided a <a class="reference external" href="api/net.corda.node.services.api/-service-hub-internal/index.html">ServiceHubInternal</a> which
-allows a richer API than the <a class="reference external" href="api/net.corda.node.services.api/-service-hub/index.html">ServiceHub</a> exposed to contracts. It enables adding flows, registering
+<p>Services are classes which are constructed after the node has started. It is provided a <a class="reference external" href="api/net.corda.core.node/-plugin-service-hub/index.html">PluginServiceHub</a> which
+allows a richer API than the <a class="reference external" href="api/net.corda.core.node/-service-hub/index.html">ServiceHub</a> exposed to contracts. It enables adding flows, registering
 message handlers and more. The service does not run in a separate thread, so the only entry point to the service is during
 construction, where message handlers should be registered and threads started.</p>
 </div>
@@ -445,10 +457,10 @@ one node per window.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="where-to-start.html" class="btn btn-neutral float-right" title="Where to start" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="tutorial-cordapp.html" class="btn btn-neutral float-right" title="The CorDapp Template" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="permissioning.html" class="btn btn-neutral" title="Network permissioning" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="clauses.html" class="btn btn-neutral" title="Clauses key concepts" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -457,7 +469,7 @@ one node per window.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+        &copy; Copyright 2016, R3 Limited.
 
     </p>
   </div>

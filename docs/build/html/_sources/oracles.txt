@@ -75,8 +75,6 @@ Here's a quick way to decide which approach makes more sense for your data sourc
 Asserting continuously varying data
 -----------------------------------
 
-.. note:: A future version of the platform will include a complete tutorial on implementing this type of oracle.
-
 Let's look at the interest rates oracle that can be found in the ``NodeInterestRates`` file. This is an example of
 an oracle that uses a command because the current interest rate fix is a constantly changing fact.
 
@@ -93,15 +91,15 @@ So the way we actually implement it is like this:
 1. The creator of the transaction that depends on the interest rate asks for the current rate. They can abort at this point
    if they want to.
 2. They insert a command with that rate and the time it was obtained into the transaction.
-3. They then send it to the oracle for signing, along with everyone else in parallel. The oracle checks that the command
-   has correct data for the asserted time, and signs if so.
+3. They then send it to the oracle for signing, along with everyone else, potentially in parallel. The oracle checks that
+   the command has the correct data for the asserted time, and signs if so.
 
 This same technique can be adapted to other types of oracle.
 
 The oracle consists of a core class that implements the query/sign operations (for easy unit testing), and then a separate
 class that binds it to the network layer.
 
-Here is an extract from the ``NodeService.Oracle`` class and supporting types:
+Here is an extract from the ``NodeInterestRates.Oracle`` class and supporting types:
 
 .. sourcecode:: kotlin
 
@@ -112,13 +110,31 @@ Here is an extract from the ``NodeService.Oracle`` class and supporting types:
    data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
 
    class Oracle {
-       fun query(queries: List<FixOf>): List<Fix>
+       fun query(queries: List<FixOf>, deadline: Instant): List<Fix>
 
-       fun sign(wtx: WireTransaction): DigitalSignature.LegallyIdentifiable
+       fun sign(ftx: FilteredTransaction, merkleRoot: SecureHash): DigitalSignature.LegallyIdentifiable
    }
 
-Because the fix contains a timestamp (the ``forDay`` field), there can be an arbitrary delay between a fix being
-requested via ``query`` and the signature being requested via ``sign``.
+Because the fix contains a timestamp (the ``forDay`` field), that identifies the version of the data being requested,
+there can be an arbitrary delay between a fix being requested via ``query`` and the signature being requested via ``sign``
+as the Oracle can know which, potentially historical, value it is being asked to sign for.  This is an important
+technique for continously varying data.
+
+The ``query`` method takes a deadline, which is a point in time the requester is willing to wait until for the necessary
+data to be available.  Not every oracle will need this.  This can be useful where data is expected to be available on a
+particular schedule and we use scheduling functionality to automatically launch the processing associated with it.
+We can schedule for the expected announcement (or publish) time and give a suitable deadline at which the lack of the
+information being available and the delay to processing becomes significant and may need to be escalated.
+
+Hiding transaction data from the oracle
+---------------------------------------
+
+Because the transaction is sent to the oracle for signing, ordinarily the oracle would be able to see the entire contents
+of that transaction including the inputs, output contract states and all the commands, not just the one (in this case)
+relevant command.  This is an obvious privacy leak for the other participants.  We currently solve this with
+``FilteredTransaction``-s and the use of Merkle Trees.  These reveal only the necessary parts of the transaction to the
+oracle but still allow it to sign it by providing the Merkle hashes for the remaining parts.  See :doc:`merkle-trees` for
+more details.
 
 Pay-per-play oracles
 --------------------
@@ -132,3 +148,124 @@ contract could in theory include a transaction parsing and signature checking li
 would be conclusive evidence of intent to disobey the rules of the service (*res ipsa loquitur*). In an environment
 where parties are legally identifiable, usage of such a contract would by itself be sufficient to trigger some sort of
 punishment.
+
+Implementing an oracle with continuously varying data
+=====================================================
+
+Implement the core classes
+--------------------------
+
+The key is to implement your oracle in a similar way to the ``NodeInterestRates.Oracle`` outline we gave above with
+both ``query`` and ``sign`` methods.  Typically you would want one class that encapsulates the parameters to the ``query``
+method (``FixOf`` above), and a ``CommandData`` implementation (``Fix`` above) that encapsulates both an instance of
+that parameter class and an instance of whatever the result of the ``query`` is (``BigDecimal`` above).
+
+The ``NodeInterestRates.Oracle`` allows querying for multiple ``Fix``-es but that is not necessary and is
+provided for the convenience of callers who might need multiple and can do it all in one query request.  Likewise
+the *deadline* functionality is optional and can be avoided initially.
+
+Let's see what parameters we pass to the constructor of this oracle.
+
+.. sourcecode:: kotlin
+
+   class Oracle(val identity: Party, private val signingKey: KeyPair, val clock: Clock) = TODO()
+
+Here we see the oracle needs to have its own identity, so it can check which transaction commands it is expected to
+sign for, and also needs a pair of signing keys with which it signs transactions.  The clock is used for the deadline
+functionality which we will not discuss further here.
+
+Assuming you have a data source and can query it, it should be very easy to implement your ``query`` method and the
+parameter and ``CommandData`` classes.
+
+Let's see how the ``sign`` method for ``NodeInterestRates.Oracle`` is written:
+
+.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
+   :language: kotlin
+   :start-after: DOCSTART 1
+   :end-before: DOCEND 1
+
+Here we can see that there are several steps:
+
+1. Ensure that the transaction we have been sent is indeed valid and passes verification, even though we cannot see all
+   of it.
+2. Check that we only received commands as expected, and each of those commands expects us to sign for them and is of
+   the expected type (``Fix`` here).
+3. Iterate over each of the commands we identified in the last step and check that the data they represent matches
+   exactly our data source.  The final step, assuming we have got this far, is to generate a signature for the
+   transaction and return it.
+
+Binding to the network via CorDapp plugin
+-----------------------------------------
+
+.. note:: Before reading any further, we advise that you understand the concept of flows and how to write them and use
+   them. See :doc:`flow-state-machines`.  Likewise some understanding of Cordapps, plugins and services will be helpful.
+   See :doc:`creating-a-cordapp`.
+
+The first step is to create a service to host the oracle on the network.  Let's see how that's implemented:
+
+.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
+   :language: kotlin
+   :start-after: DOCSTART 2
+   :end-before: DOCEND 2
+
+This may look complicated, but really it's made up of some relatively simple elements (in the order they appear in the code):
+
+1. Accept a ``PluginServiceHub`` in the constructor.  This is your interface to the Corda node.
+2. Ensure you extend the abstract class ``SingletonSerializeAsToken`` (see :doc:`corda-plugins`).
+3. Create an instance of your core oracle class that has the ``query`` and ``sign`` methods as discussed above.
+4. Register your client sub-flows (in this case both in ``RatesFixFlow``.  See the next section) for querying and
+   signing as initiating your service flows that actually do the querying and signing using your core oracle class instance.
+5. Implement your service flows that call your core oracle class instance.
+
+The final step is to register your service with the node via the plugin mechanism. Do this by
+implementing a plugin.  Don't forget the resources file to register it with the ``ServiceLoader`` framework
+(see :doc:`corda-plugins`).
+
+.. sourcecode:: kotlin
+
+   class Plugin : CordaPluginRegistry() {
+        override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
+   }
+
+Providing client sub-flows for querying and signing
+---------------------------------------------------
+
+We mentioned the client sub-flow briefly above.  They are the mechanism that clients, in the form of other flows, will
+interact with your oracle.  Typically there will be one for querying and one for signing.  Let's take a look at
+those for ``NodeInterestRates.Oracle``.
+
+.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/flows/RatesFixFlow.kt
+   :language: kotlin
+   :start-after: DOCSTART 1
+   :end-before: DOCEND 1
+
+You'll note that the ``FixSignFlow`` requires a ``FilterFuns`` instance with the appropriate filter to include only
+the ``Fix`` commands.  You can find a further explanation of this in :doc:`merkle-trees`.
+
+Using an oracle
+===============
+
+The oracle is invoked through sub-flows to query for values, add them to the transaction as commands and then get
+the transaction signed by the the oracle.  Following on from the above examples, this is all encapsulated in a sub-flow
+called ``RatesFixFlow``.  Here's the ``call`` method of that flow.
+
+.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/flows/RatesFixFlow.kt
+   :language: kotlin
+   :start-after: DOCSTART 2
+   :end-before: DOCEND 2
+
+As you can see, this:
+
+1. Queries the oracle for the fact using the client sub-flow for querying from above.
+2. Does some quick validation.
+3. Adds the command to the transaction containing the fact to be signed for by the oracle.
+4. Calls an extension point that allows clients to generate output states based on the fact from the oracle.
+5. Requests the signature from the oracle using the client sub-flow for signing from above.
+6. Adds the signature returned from the oracle.
+
+Here's an example of it in action from ``FixingFlow.Fixer``.
+
+.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/flows/FixingFlow.kt
+   :language: kotlin
+   :start-after: DOCSTART 1
+   :end-before: DOCEND 1
