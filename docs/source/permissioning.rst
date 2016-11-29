@@ -2,7 +2,7 @@ Network permissioning
 =====================
 
 The keystore located in ``<workspace>/certificates/sslkeystore.jks`` is required to connect to the Corda network securely. 
-In development mode (when ``devMode = true``, see :doc:`corda-configuration-files` for more information) a pre-configured keystore will be used if the keystore does not exist. 
+In development mode (when ``devMode = true``, see :doc:`corda-configuration-file` for more information) a pre-configured keystore will be used if the keystore does not exist.
 This is to ensure developers can get the nodes working as quickly as possible.
 
 However this is not secure for the real network. This documentation will explain the procedure of obtaining a signed certificate for TestNet. 

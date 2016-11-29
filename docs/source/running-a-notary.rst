@@ -11,7 +11,7 @@ At present we have several prototype notary implementations:
    we are using the `Copycat <http://atomix.io/copycat/>`_ framework.
 
 To have a node run a notary service, you need to set appropriate configuration values before starting it
-(see :doc:`corda-configuration-files` for reference).
+(see :doc:`corda-configuration-file` for reference).
 
 For ``SimpleNotaryService``, simply add the following service id to the list of advertised services:
 

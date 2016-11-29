@@ -24,7 +24,7 @@ The JDBC URL is printed during node startup to the log and will typically look l
 
      ``jdbc:h2:tcp://192.168.0.31:31339/node``
 
-The username and password can be altered in the :doc:`corda-configuration-files` but default to username "sa" and a blank
+The username and password can be altered in the :doc:`corda-configuration-file` but default to username "sa" and a blank
 password.
 
 Any database browsing tool that supports JDBC can be used, but if you have IntelliJ Ultimate edition then there is

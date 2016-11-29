@@ -1,11 +1,13 @@
 .. _log4j2: http://logging.apache.org/log4j/2.x/
 
 Introduction - What is a corda network?
-========================================================
+=======================================
 
-A Corda network consists of a number of machines running nodes, including a single node operating as the network map service. These nodes communicate using persistent protocols in order to create and validate transactions.
+A Corda network consists of a number of machines running nodes, including a single node operating as the network map
+service. These nodes communicate using persistent protocols in order to create and validate transactions.
 
-There are four broader categories of functionality one such node may have. These pieces of functionality are provided as services, and one node may run several of them.
+There are four broader categories of functionality one such node may have. These pieces of functionality are provided as
+services, and one node may run several of them.
 
 * Network map: The node running the network map provides a way to resolve identities to physical node addresses and associated public keys.
 * Notary: Nodes running a notary service witness state spends and have the final say in whether a transaction is a double-spend or not.
@@ -36,7 +38,7 @@ certificate with a fixed test root:
 Configuration
 -------------
 
-A node can be configured by adding/editing ``node.conf`` in the node's directory. For details see :doc:`corda-configuration-files`
+A node can be configured by adding/editing ``node.conf`` in the node's directory. For details see :doc:`corda-configuration-file`.
 
 An example configuration:
 
@@ -45,9 +47,12 @@ An example configuration:
 
 The most important fields regarding network configuration are:
 
-* ``artemisAddress``: This specifies a host and port. Note that the address bound will **NOT** be ``my-corda-node``, but rather ``::`` (all addresses on all interfaces). The hostname specified is the hostname *that must be externally resolvable by other nodes in the network*. In the above configuration this is the resolvable name of a machine in a vpn.
+* ``artemisAddress``: This specifies a host and port. Note that the address bound will **NOT** be ``my-corda-node``,
+  but rather ``::`` (all addresses on all interfaces). The hostname specified is the hostname *that must be externally
+  resolvable by other nodes in the network*. In the above configuration this is the resolvable name of a machine in a vpn.
 * ``webAddress``: The address the webserver should bind. Note that the port should be distinct from that of ``artemisAddress``.
-* ``networkMapAddress``: The resolvable name and artemis port of the network map node. Note that if this node itself is to be the network map this field should not be specified.
+* ``networkMapAddress``: The resolvable name and artemis port of the network map node. Note that if this node itself
+  is to be the network map this field should not be specified.
 
 Starting the nodes
 ------------------
@@ -56,8 +61,7 @@ You may now start the nodes in any order. Note that the node is not fully starte
 
 You should see a banner, some log lines and eventually ``Node started up and registered``, indicating that the node is fully started.
 
-.. TODO: Add a better way of polling for startup
-A programmatic way of determining whether a node is up is to check whether it's ``webAddress`` is bound.
+.. TODO: Add a better way of polling for startup. A programmatic way of determining whether a node is up is to check whether it's ``webAddress`` is bound.
 
 In terms of process management there is no prescribed method. You may start the jars by hand or perhaps use systemd and friends.
 
@@ -74,7 +78,8 @@ are by default redirected to files in ``NODE_DIRECTORY/logs/``.
 Connecting to the nodes
 -----------------------
 
-Once a node has started up successfully you may connect to it as a client to initiate protocols/query state etc. Depending on your network setup you may need to tunnel to do this remotely.
+Once a node has started up successfully you may connect to it as a client to initiate protocols/query state etc.
+Depending on your network setup you may need to tunnel to do this remotely.
 
 See the :doc:`tutorial-clientrpc-api` on how to establish an RPC link.
 

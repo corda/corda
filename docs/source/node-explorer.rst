@@ -81,6 +81,7 @@ Network
 
 Settings
   User can configure the client preference in this view.
+
 .. note:: Although the reporting currency is configurable, FX conversion won't be applied to the values as we don't have an FX service yet.
 
 
