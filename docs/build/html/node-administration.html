@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="The Corda Configuration File" href="corda-configuration-files.html"/>
+        <link rel="next" title="Node configuration" href="corda-configuration-file.html"/>
         <link rel="prev" title="Persistence" href="persistence.html"/> 
 
   
@@ -95,7 +95,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
@@ -111,14 +111,16 @@
 <li class="toctree-l2"><a class="reference internal" href="#uploading-interest-rate-fixes">Uploading interest rate fixes</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda Plugin Framework</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -126,9 +128,11 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
@@ -136,13 +140,12 @@
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -221,7 +224,7 @@ Also, available in <code class="docutils literal"><span class="pre">net.corda.co
 The JDBC URL is printed during node startup to the log and will typically look like this:</p>
 <blockquote>
 <div><code class="docutils literal"><span class="pre">jdbc:h2:tcp://192.168.0.31:31339/node</span></code></div></blockquote>
-<p>The username and password can be altered in the <a class="reference internal" href="corda-configuration-files.html"><span class="doc">The Corda Configuration File</span></a> but default to username &#8220;sa&#8221; and a blank
+<p>The username and password can be altered in the <a class="reference internal" href="corda-configuration-file.html"><span class="doc">Node configuration</span></a> but default to username &#8220;sa&#8221; and a blank
 password.</p>
 <p>Any database browsing tool that supports JDBC can be used, but if you have IntelliJ Ultimate edition then there is
 a tool integrated with your IDE. Just open the database window and add an H2 data source with the above details.
@@ -308,7 +311,7 @@ EURIBOR 2016-03-15 2M = 0.111
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="corda-configuration-files.html" class="btn btn-neutral float-right" title="The Corda Configuration File" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="corda-configuration-file.html" class="btn btn-neutral float-right" title="Node configuration" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="persistence.html" class="btn btn-neutral" title="Persistence" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

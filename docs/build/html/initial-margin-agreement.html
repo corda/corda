@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Initial Margin Agreements &mdash; R3 Corda latest documentation</title>
+  <title>Initial margin agreements &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -32,7 +32,7 @@
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Contract catalogue" href="contract-catalogue.html"/>
-        <link rel="prev" title="Node Explorer" href="node-explorer.html"/> 
+        <link rel="prev" title="Network Simulator" href="network-simulator.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -95,7 +95,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
@@ -104,14 +104,16 @@
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda Plugin Framework</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -119,9 +121,11 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
@@ -129,9 +133,8 @@
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Initial Margin Agreements</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#simm-introduction">SIMM Introduction</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Initial margin agreements</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#simm-introduction">SIMM introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#process-steps">Process steps</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#running-the-app">Running the app</a></li>
 </ul>
@@ -140,7 +143,7 @@
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -185,7 +188,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>Initial Margin Agreements</li>
+    <li>Initial margin agreements</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -200,11 +203,11 @@
            <div itemprop="articleBody">
             
   <div class="section" id="initial-margin-agreements">
-<h1>Initial Margin Agreements<a class="headerlink" href="#initial-margin-agreements" title="Permalink to this headline">¶</a></h1>
+<h1>Initial margin agreements<a class="headerlink" href="#initial-margin-agreements" title="Permalink to this headline">¶</a></h1>
 <p>This app is a demonstration of how Corda can be used for the real world requirement of initial margin calculation and
 agreement; featuring the integration of complex and industry proven third party libraries into Corda nodes.</p>
 <div class="section" id="simm-introduction">
-<h2>SIMM Introduction<a class="headerlink" href="#simm-introduction" title="Permalink to this headline">¶</a></h2>
+<h2>SIMM introduction<a class="headerlink" href="#simm-introduction" title="Permalink to this headline">¶</a></h2>
 <p>SIMM is an acronym for &#8220;Standard Initial Margin Model&#8221;. It is effectively the calculation of a &#8220;margin&#8221; that is paid
 by one party to another when they agree a trade on certain types of transaction. This margin is
 paid such that, in the event of one of the counterparties suffering a credit event
@@ -283,7 +286,7 @@ ISDA SIMM agreement (if none, then use the demo to enter some simple trades as d
         <a href="contract-catalogue.html" class="btn btn-neutral float-right" title="Contract catalogue" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="node-explorer.html" class="btn btn-neutral" title="Node Explorer" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="network-simulator.html" class="btn btn-neutral" title="Network Simulator" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

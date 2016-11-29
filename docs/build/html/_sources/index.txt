@@ -48,9 +48,11 @@ Read on to learn:
    messaging
    persistence
    node-administration
-   corda-configuration-files
+   corda-configuration-file
    corda-plugins
    node-services
+   node-explorer
+   permissioning
 
 .. toctree::
    :maxdepth: 2
@@ -69,6 +71,8 @@ Read on to learn:
    tutorial-clientrpc-api
    flow-state-machines
    flow-testing
+   running-a-notary
+   using-a-notary
    oracles
    tutorial-attachments
    event-scheduling
@@ -78,7 +82,6 @@ Read on to learn:
    :caption: Other
 
    network-simulator
-   node-explorer
    initial-margin-agreement
 
 .. toctree::

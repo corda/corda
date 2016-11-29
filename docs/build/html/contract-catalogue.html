@@ -31,8 +31,8 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Interest Rate Swaps" href="contract-irs.html"/>
-        <link rel="prev" title="Initial Margin Agreements" href="initial-margin-agreement.html"/> 
+        <link rel="next" title="Interest rate swaps" href="contract-irs.html"/>
+        <link rel="prev" title="Initial margin agreements" href="initial-margin-agreement.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -95,7 +95,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
@@ -104,13 +104,16 @@
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -118,8 +121,11 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Flow state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
@@ -127,20 +133,19 @@
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Contract catalogue</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#cash">Cash</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#commodity">Commodity</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#commercial-paper">Commercial Paper</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#interest-rate-swap">Interest Rate Swap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#commercial-paper">Commercial paper</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interest-rate-swap">Interest rate swap</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#obligation">Obligation</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -224,7 +229,7 @@ behaviour.</p>
 interface. This is used as a proof of concept for non-cash obligations.</p>
 </div>
 <div class="section" id="commercial-paper">
-<h2>Commercial Paper<a class="headerlink" href="#commercial-paper" title="Permalink to this headline">¶</a></h2>
+<h2>Commercial paper<a class="headerlink" href="#commercial-paper" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal"><span class="pre">CommercialPaper</span></code> is a very simple obligation to pay an amount of cash at some future point in time (the maturity
 date), and exists primarily as a simplified contract for use in tutorials. Commercial paper supports issuing, moving
 and redeeming (settling) states. Unlike the full obligation contract it does not support locking the state so it cannot
@@ -232,12 +237,12 @@ be settled if the obligor defaults on payment, or netting of state objects. All 
 commercial paper commands. Use the <code class="docutils literal"><span class="pre">Obligation</span></code> contract for more advanced functionality.</p>
 </div>
 <div class="section" id="interest-rate-swap">
-<h2>Interest Rate Swap<a class="headerlink" href="#interest-rate-swap" title="Permalink to this headline">¶</a></h2>
+<h2>Interest rate swap<a class="headerlink" href="#interest-rate-swap" title="Permalink to this headline">¶</a></h2>
 <p>The Interest Rate Swap (IRS) contract is a bilateral contract to implement a vanilla fixed / floating same currency
 interest rate swap. In general, an IRS allows two counterparties to modify their exposure from changes in the underlying
 interest rate. They are often used as a hedging instrument, convert a fixed rate loan to a floating rate loan, vice
 versa etc.</p>
-<p>See &#8220;<a class="reference internal" href="contract-irs.html"><span class="doc">Interest Rate Swaps</span></a>&#8221; for full details on the IRS contract.</p>
+<p>See &#8220;<a class="reference internal" href="contract-irs.html"><span class="doc">Interest rate swaps</span></a>&#8221; for full details on the IRS contract.</p>
 </div>
 <div class="section" id="obligation">
 <h2>Obligation<a class="headerlink" href="#obligation" title="Permalink to this headline">¶</a></h2>
@@ -269,10 +274,10 @@ multilateral netting).</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="contract-irs.html" class="btn btn-neutral float-right" title="Interest Rate Swaps" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="contract-irs.html" class="btn btn-neutral float-right" title="Interest rate swaps" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="initial-margin-agreement.html" class="btn btn-neutral" title="Initial Margin Agreements" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="initial-margin-agreement.html" class="btn btn-neutral" title="Initial margin agreements" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

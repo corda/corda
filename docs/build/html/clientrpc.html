@@ -95,7 +95,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
@@ -107,20 +107,22 @@
 <li class="toctree-l2"><a class="reference internal" href="#thread-safety">Thread safety</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#error-handling">Error handling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#wire-protocol">Wire protocol</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#registering-classes-with-rpc-kryo">Registering Classes With RPC Kryo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#registering-classes-with-rpc-kryo">Registering classes with RPC Kryo</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda Plugin Framework</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -128,9 +130,11 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
@@ -138,13 +142,12 @@
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -219,7 +222,7 @@ detail on how to use this is provided in the docs for the proxy method.</p>
 resources. When you&#8217;re done with it, cast it to <code class="docutils literal"><span class="pre">Closeable</span></code> or <code class="docutils literal"><span class="pre">AutoCloseable</span></code> and close it. Don&#8217;t create
 one for every call you make - create a proxy and reuse it.</p>
 </div>
-<p>For a brief tutorial on how one can use the RPC API see <a class="reference internal" href="tutorial-clientrpc-api.html"><span class="doc">Client RPC API Tutorial</span></a>.</p>
+<p>For a brief tutorial on how one can use the RPC API see <a class="reference internal" href="tutorial-clientrpc-api.html"><span class="doc">Client RPC API tutorial</span></a>.</p>
 <div class="section" id="security">
 <h2>Security<a class="headerlink" href="#security" title="Permalink to this headline">¶</a></h2>
 <p>Users wanting to use the RPC library are first required to authenticate themselves with the node using a valid username
@@ -277,12 +280,12 @@ side as if it was thrown from inside the called RPC method. These exceptions can
 This is likely to change in a future release.</p>
 </div>
 <div class="section" id="registering-classes-with-rpc-kryo">
-<h2>Registering Classes With RPC Kryo<a class="headerlink" href="#registering-classes-with-rpc-kryo" title="Permalink to this headline">¶</a></h2>
+<h2>Registering classes with RPC Kryo<a class="headerlink" href="#registering-classes-with-rpc-kryo" title="Permalink to this headline">¶</a></h2>
 <p>In the present implementation of the node we use Kryo to generate the <em>on the wire</em> representation of contracts states
 or any other classes that form part of the RPC arguments or response.  To avoid the RPC interface being wide open to all
 classes on the classpath, Cordapps will currently have to register any classes or custom serialisers they require with Kryo
-if they are not one of those registered by default in <code class="docutils literal"><span class="pre">RPCKryo</span></code> via the plugin architecture.  See <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">Creating a Cordapp</span></a>.
-This will require some familiarity with Kryo.  An example is shown in <a class="reference internal" href="tutorial-clientrpc-api.html"><span class="doc">Client RPC API Tutorial</span></a>.</p>
+if they are not one of those registered by default in <code class="docutils literal"><span class="pre">RPCKryo</span></code> via the plugin architecture.  See <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">Creating a CorDapp</span></a>.
+This will require some familiarity with Kryo.  An example is shown in <a class="reference internal" href="tutorial-clientrpc-api.html"><span class="doc">Client RPC API tutorial</span></a>.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin

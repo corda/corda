@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Client RPC API Tutorial &mdash; R3 Corda latest documentation</title>
+  <title>Client RPC API tutorial &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -95,7 +95,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
@@ -104,14 +104,16 @@
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda Plugin Framework</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
@@ -119,12 +121,14 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Client RPC API Tutorial</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#registering-classes-from-your-cordapp-with-rpc-kryo">Registering classes from your Cordapp with RPC Kryo</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Client RPC API tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#registering-classes-from-your-cordapp-with-rpc-kryo">Registering classes from your CorDapp with RPC Kryo</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
@@ -132,13 +136,12 @@
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -183,7 +186,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>Client RPC API Tutorial</li>
+    <li>Client RPC API tutorial</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -198,7 +201,7 @@
            <div itemprop="articleBody">
             
   <div class="section" id="client-rpc-api-tutorial">
-<h1>Client RPC API Tutorial<a class="headerlink" href="#client-rpc-api-tutorial" title="Permalink to this headline">¶</a></h1>
+<h1>Client RPC API tutorial<a class="headerlink" href="#client-rpc-api-tutorial" title="Permalink to this headline">¶</a></h1>
 <p>In this tutorial we will build a simple command line utility that
 connects to a node, creates some Cash transactions and meanwhile dumps
 the transaction graph to the standard output. We will then put some
@@ -348,11 +351,12 @@ latter.</p>
 <p>Then in a loop we generate randomly either an Issue, a Pay or an Exit transaction.</p>
 <p>The RPC we need to initiate a Cash transaction is <code class="docutils literal"><span class="pre">startFlowDynamic</span></code> which may start an arbitrary flow, given sufficient permissions to do so. We won&#8217;t use this function directly, but rather a type-safe wrapper around it <code class="docutils literal"><span class="pre">startFlow</span></code> that type-checks the arguments for us.</p>
 <p>Finally we have everything in place: we start a couple of nodes, connect to them, and start creating transactions while listening on successfully created ones, which are dumped to the console. We just need to run it!:</p>
-<blockquote>
-<div># Build the example
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="c1"># Build the example</span>
 ./gradlew docs/source/example-code:installDist
-# Start it
-./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Print</div></blockquote>
+<span class="c1"># Start it</span>
+./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Print
+</pre></div>
+</div>
 <p>Now let&#8217;s try to visualise the transaction graph. We will use a graph drawing library called <a class="reference external" href="http://graphstream-project.org/">graphstream</a></p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span>            <span class="n">PrintOrVisualise</span><span class="p">.</span><span class="n">Visualise</span> <span class="p">-&gt;</span> <span class="p">{</span>
                 <span class="k">val</span> <span class="py">graph</span> <span class="p">=</span> <span class="n">MultiGraph</span><span class="p">(</span><span class="s">&quot;transactions&quot;</span><span class="p">)</span>
@@ -381,7 +385,7 @@ latter.</p>
 </div>
 <p>If we run the client with <code class="docutils literal"><span class="pre">Visualise</span></code> we should see a simple random graph being drawn as new transactions are being created.</p>
 <div class="section" id="registering-classes-from-your-cordapp-with-rpc-kryo">
-<h2>Registering classes from your Cordapp with RPC Kryo<a class="headerlink" href="#registering-classes-from-your-cordapp-with-rpc-kryo" title="Permalink to this headline">¶</a></h2>
+<h2>Registering classes from your CorDapp with RPC Kryo<a class="headerlink" href="#registering-classes-from-your-cordapp-with-rpc-kryo" title="Permalink to this headline">¶</a></h2>
 <p>As described in <a class="reference internal" href="clientrpc.html"><span class="doc">Client RPC</span></a>, you currently have to register any additional classes you add that are needed in RPC
 requests or responses with the <cite>Kryo</cite> instance RPC uses.  Here&#8217;s an example of how you do this for an example class.</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">data</span> <span class="k">class</span> <span class="nc">ExampleRPCValue</span><span class="p">(</span><span class="k">val</span> <span class="py">foo</span><span class="p">:</span> <span class="n">String</span><span class="p">)</span>
@@ -396,7 +400,7 @@ requests or responses with the <cite>Kryo</cite> instance RPC uses.  Here&#8217;
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>See more on plugins in <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">Creating a Cordapp</span></a>.</p>
+<p>See more on plugins in <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">Creating a CorDapp</span></a>.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin

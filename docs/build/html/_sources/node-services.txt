@@ -1,5 +1,5 @@
-A Brief Introduction To The Node Services
-=========================================
+Brief introduction to the node services
+=======================================
 
 This document is intended as a very brief introduction to the current 
 service components inside the node. Whilst not at all exhaustive it is 
@@ -7,7 +7,7 @@ hoped that this will give some context when writing applications and
 code that use these services, or which are operated upon by the internal 
 components of Corda. 
 
-Services Within The Node
+Services within the node
 ------------------------
 
 The node services represent the various sub functions of the Corda node. 
@@ -41,7 +41,7 @@ to allow unit testing of flows and service functions.
 
 The roles of the individual services are described below. 
 
-Key Management and Identity Services
+Key management and identity services
 ------------------------------------
 
 InMemoryIdentityService
@@ -81,7 +81,7 @@ is a simple implementation of the ``KeyManagementService`` that is used
 to track our ``KeyPairs`` for use in unit testing when no database is 
 available. 
 
-Messaging and Network Management Services
+Messaging and network management services
 -----------------------------------------
 
 ArtemisMessagingServer
@@ -167,7 +167,7 @@ The ``NetworkMapService`` should not be used by any flows, or
 contracts. Instead they should access the NetworkMapCache service to 
 access this data. 
 
-Storage and Persistence Related Services
+Storage and persistence related services
 ----------------------------------------
 
 StorageServiceImpl
@@ -219,7 +219,7 @@ inside the attachments subfolder of the node workspace. The service is
 also interfaced to by the web server, which allows files to be uploaded 
 via an HTTP post request. 
 
-Flow Framework And Event Scheduling Services
+Flow framework and event scheduling services
 --------------------------------------------
 
 StateMachineManager
@@ -280,7 +280,7 @@ occurs in all nodes holding the state in their Vault, it may therefore
 be required for the flow to exit early if the current node is not 
 the intended initiator. 
 
-Notary Flow Implementation Services
+Notary flow implementation services
 -----------------------------------
 
 PersistentUniquenessProvider, InMemoryUniquenessProvider and RaftUniquenessProvider
@@ -317,7 +317,7 @@ against a cluster of nodes running shared consensus state across the
 RAFT protocol (note this requires the additional configuration of the 
 ``notaryClusterAddresses`` property). 
 
-Vault Related Services
+Vault related services
 ----------------------
 
 NodeVaultService

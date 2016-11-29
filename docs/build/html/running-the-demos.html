@@ -93,7 +93,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#trader-demo">Trader demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#irs-demo">IRS demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#attachment-demo">Attachment demo</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#simm-and-portfolio-demo">SIMM and Portfolio Demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#simm-and-portfolio-demo">SIMM and Portfolio demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#distributed-notary-demo">Distributed Notary demo</a></li>
 </ul>
 </li>
 </ul>
@@ -101,7 +102,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
@@ -110,14 +111,16 @@
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda Plugin Framework</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -125,9 +128,11 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
@@ -135,13 +140,12 @@
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -213,6 +217,7 @@ rates oracle, all driven via the HTTP API.</li>
 <li>The attachment demo, which demonstrates uploading attachments to nodes.</li>
 <li>The SIMM valuation demo, a large demo which shows two nodes agreeing on a portfolio and valuing the initial margin
 using the Standard Initial Margin Model.</li>
+<li>The distributed notary demo, which demonstrates a single node getting multiple transactions notarised by a distributed (Raft-based) notary.</li>
 </ol>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
@@ -299,10 +304,10 @@ Now look at the other windows to see the output of the demo.</li>
 message &#8220;File received - we&#8217;re happy!&#8221; should be printed.</p>
 </div>
 <div class="section" id="simm-and-portfolio-demo">
-<h2>SIMM and Portfolio Demo<a class="headerlink" href="#simm-and-portfolio-demo" title="Permalink to this headline">¶</a></h2>
+<h2>SIMM and Portfolio demo<a class="headerlink" href="#simm-and-portfolio-demo" title="Permalink to this headline">¶</a></h2>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">Read more about this demo at <a class="reference internal" href="initial-margin-agreement.html"><span class="doc">Initial Margin Agreements</span></a>.</p>
+<p class="last">Read more about this demo at <a class="reference internal" href="initial-margin-agreement.html"><span class="doc">Initial margin agreements</span></a>.</p>
 </div>
 <p>To run the demo run:</p>
 <ol class="arabic simple">
@@ -311,6 +316,48 @@ message &#8220;File received - we&#8217;re happy!&#8221; should be printed.</p>
 </ol>
 <p>Now open <a class="reference external" href="http://localhost:10005/web/simmvaluationdemo">http://localhost:10005/web/simmvaluationdemo</a> and <a class="reference external" href="http://localhost:10007/web/simmvaluationdemo">http://localhost:10007/web/simmvaluationdemo</a> to view the two nodes that this
 will have started respectively. You can now use the demo by creating trades and agreeing the valuations.</p>
+</div>
+<div class="section" id="distributed-notary-demo">
+<span id="notary-demo"></span><h2>Distributed Notary demo<a class="headerlink" href="#distributed-notary-demo" title="Permalink to this headline">¶</a></h2>
+<p>This is a simple demonstration showing a party getting transactions notarised by a distributed <a class="reference external" href="https://raft.github.io/">Raft</a>-based notary service.
+The demo will start three distributed notary nodes, and two counterparty nodes. One of the parties will generate transactions
+that move a self-issued asset to the other party, and submit them for notarisation.</p>
+<p>The output will display a list of notarised transaction ids and corresponding signer public keys. In the Raft distributed notary
+every node in the cluster services client requests, and one signature is sufficient to satisfy the notary composite key requirement.
+You will notice that subsequent transactions get signed by different members of the cluster (usually allocated in a random order).</p>
+<p>To run from IntelliJ:</p>
+<ol class="arabic simple">
+<li>Open the Corda samples project in IntelliJ and run the <code class="docutils literal"><span class="pre">Notary</span> <span class="pre">Demo:</span> <span class="pre">Run</span> <span class="pre">Nodes</span></code> configuration to start the nodes.
+Once all nodes are started you will see several &#8220;Node started up and registered in ...&#8221; messages.</li>
+<li>Run <code class="docutils literal"><span class="pre">Notary</span> <span class="pre">Demo:</span> <span class="pre">Run</span> <span class="pre">Notarisation</span></code> to make a call to the &#8220;Party&#8221; node to initiate notarisation requests.
+In a few seconds you will see a message &#8220;Notarised 10 transactions&#8221; with a list of transaction ids and the signer public keys.</li>
+</ol>
+<p>To run from the command line:</p>
+<ol class="arabic simple">
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:raft-notary-demo:deployNodes</span></code>, which will create node directories with configs under <code class="docutils literal"><span class="pre">samples/raft-notary-demo/build/nodes</span></code>.</li>
+<li>Run <code class="docutils literal"><span class="pre">./samples/raft-notary-demo/build/nodes/runnodes</span></code>, which will start the nodes in separate terminal windows/tabs.
+Wait until a &#8220;Node started up and registered in ...&#8221; appears on each of the terminals.</li>
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:raft-notary-demo:notarise</span></code> to make a call to the &#8220;Party&#8221; node to initiate notarisation requests.
+In a few seconds you will see a message &#8220;Notarised 10 transactions&#8221; with a list of transaction ids and the signer public keys.</li>
+</ol>
+<p>Notary nodes store consumed states in a replicated commit log, which is backed by a H2 database on each node.
+To ascertain that the commit log is synchronised across the cluster you access and compare each of the nodes&#8217; backing stores
+by using the H2 web console:</p>
+<ul>
+<li><p class="first">Firstly, download <a class="reference external" href="http://www.h2database.com/html/download.html">H2 web console</a> (download the &#8220;platform-independent zip&#8221;),
+and start it using a script in the extracted folder: <code class="docutils literal"><span class="pre">h2/bin/h2.sh</span></code> (or <code class="docutils literal"><span class="pre">h2.bat</span></code> for Windows)</p>
+</li>
+<li><p class="first">The H2 web console should start up in a web browser tab. To connect we first need to obtain a JDBC connection string.
+Each node outputs its connection string in the terminal window as it starts up. In a terminal window where a node is running,
+look for the following string:</p>
+<p><code class="docutils literal"><span class="pre">Database</span> <span class="pre">connection</span> <span class="pre">url</span> <span class="pre">is</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="pre">:</span> <span class="pre">jdbc:h2:tcp://10.18.0.150:56736/node</span></code></p>
+<p>You can use the string on the right to connect to the h2 database: just paste it in to the <cite>JDBC URL</cite> field and click <em>Connect</em>.
+You will be presented with a web application that enumerates all the available tables and provides an interface for you to query them using SQL.</p>
+</li>
+<li><p class="first">The committed states are stored in the <code class="docutils literal"><span class="pre">NOTARY_COMMITTED_STATES</span></code> table. Note that the raw data is not human-readable,
+but we&#8217;re only interested in the row count for this demo.</p>
+</li>
+</ul>
 </div>
 </div>
 

@@ -1,4 +1,4 @@
-The Corda Plugin Framework
+The Corda plugin framework
 ==========================
 
 The intention is that Corda is a common platform, which will be extended 

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>A Brief Introduction To The Node Services &mdash; R3 Corda latest documentation</title>
+  <title>Brief introduction to the node services &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -31,8 +31,8 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Creating a Cordapp" href="creating-a-cordapp.html"/>
-        <link rel="prev" title="The Corda Plugin Framework" href="corda-plugins.html"/> 
+        <link rel="next" title="Node Explorer" href="node-explorer.html"/>
+        <link rel="prev" title="The Corda plugin framework" href="corda-plugins.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -95,7 +95,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
@@ -104,23 +104,23 @@
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda Plugin Framework</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">A Brief Introduction To The Node Services</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#services-within-the-node">Services Within The Node</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#key-management-and-identity-services">Key Management and Identity Services</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Brief introduction to the node services</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#services-within-the-node">Services within the node</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#key-management-and-identity-services">Key management and identity services</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#inmemoryidentityservice">InMemoryIdentityService</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#persistentkeymanagementservice-and-e2etestkeymanagementservice">PersistentKeyManagementService and E2ETestKeyManagementService</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#messaging-and-network-management-services">Messaging and Network Management Services</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#messaging-and-network-management-services">Messaging and network management services</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#artemismessagingserver">ArtemisMessagingServer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#nodemessagingclient">NodeMessagingClient</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#inmemorynetworkmapcache">InMemoryNetworkMapCache</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#persistentnetworkmapservice-and-networkmapservice">PersistentNetworkMapService and NetworkMapService</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#storage-and-persistence-related-services">Storage and Persistence Related Services</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#storage-and-persistence-related-services">Storage and persistence related services</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#storageserviceimpl">StorageServiceImpl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#dbcheckpointstorage">DBCheckpointStorage</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#dbtransactionmappingstorage-and-inmemorystatemachinerecordedtransactionmappingstorage">DBTransactionMappingStorage and InMemoryStateMachineRecordedTransactionMappingStorage</a></li>
@@ -128,28 +128,30 @@
 <li class="toctree-l3"><a class="reference internal" href="#nodeattachmentservice">NodeAttachmentService</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#flow-framework-and-event-scheduling-services">Flow Framework And Event Scheduling Services</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#flow-framework-and-event-scheduling-services">Flow framework and event scheduling services</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#statemachinemanager">StateMachineManager</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#nodeschedulerservice">NodeSchedulerService</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#notary-flow-implementation-services">Notary Flow Implementation Services</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#notary-flow-implementation-services">Notary flow implementation services</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#persistentuniquenessprovider-inmemoryuniquenessprovider-and-raftuniquenessprovider">PersistentUniquenessProvider, InMemoryUniquenessProvider and RaftUniquenessProvider</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#notaryservice-simplenotaryservice-validatingnotaryservice-raftvalidatingnotaryservice">NotaryService (SimpleNotaryService, ValidatingNotaryService, RaftValidatingNotaryService)</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#vault-related-services">Vault Related Services</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#vault-related-services">Vault related services</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#nodevaultservice">NodeVaultService</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#nodeschemaservice-and-hibernateobserver">NodeSchemaService and HibernateObserver</a></li>
 </ul>
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -157,9 +159,11 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
@@ -167,13 +171,12 @@
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -218,7 +221,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>A Brief Introduction To The Node Services</li>
+    <li>Brief introduction to the node services</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -232,15 +235,15 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="a-brief-introduction-to-the-node-services">
-<h1>A Brief Introduction To The Node Services<a class="headerlink" href="#a-brief-introduction-to-the-node-services" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="brief-introduction-to-the-node-services">
+<h1>Brief introduction to the node services<a class="headerlink" href="#brief-introduction-to-the-node-services" title="Permalink to this headline">¶</a></h1>
 <p>This document is intended as a very brief introduction to the current
 service components inside the node. Whilst not at all exhaustive it is
 hoped that this will give some context when writing applications and
 code that use these services, or which are operated upon by the internal
 components of Corda.</p>
 <div class="section" id="services-within-the-node">
-<h2>Services Within The Node<a class="headerlink" href="#services-within-the-node" title="Permalink to this headline">¶</a></h2>
+<h2>Services within the node<a class="headerlink" href="#services-within-the-node" title="Permalink to this headline">¶</a></h2>
 <p>The node services represent the various sub functions of the Corda node.
 Some are directly accessible to contracts and flows through the
 <code class="docutils literal"><span class="pre">ServiceHub</span></code>, whilst others are the framework internals used to host
@@ -269,7 +272,7 @@ to allow unit testing of flows and service functions.</p>
 <p>The roles of the individual services are described below.</p>
 </div>
 <div class="section" id="key-management-and-identity-services">
-<h2>Key Management and Identity Services<a class="headerlink" href="#key-management-and-identity-services" title="Permalink to this headline">¶</a></h2>
+<h2>Key management and identity services<a class="headerlink" href="#key-management-and-identity-services" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="inmemoryidentityservice">
 <h3>InMemoryIdentityService<a class="headerlink" href="#inmemoryidentityservice" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal"><span class="pre">InMemoryIdentityService</span></code> implements the <code class="docutils literal"><span class="pre">IdentityService</span></code>
@@ -306,7 +309,7 @@ available.</p>
 </div>
 </div>
 <div class="section" id="messaging-and-network-management-services">
-<h2>Messaging and Network Management Services<a class="headerlink" href="#messaging-and-network-management-services" title="Permalink to this headline">¶</a></h2>
+<h2>Messaging and network management services<a class="headerlink" href="#messaging-and-network-management-services" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="artemismessagingserver">
 <h3>ArtemisMessagingServer<a class="headerlink" href="#artemismessagingserver" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal"><span class="pre">ArtemisMessagingServer</span></code> service is run internally by the Corda
@@ -386,7 +389,7 @@ access this data.</p>
 </div>
 </div>
 <div class="section" id="storage-and-persistence-related-services">
-<h2>Storage and Persistence Related Services<a class="headerlink" href="#storage-and-persistence-related-services" title="Permalink to this headline">¶</a></h2>
+<h2>Storage and persistence related services<a class="headerlink" href="#storage-and-persistence-related-services" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="storageserviceimpl">
 <h3>StorageServiceImpl<a class="headerlink" href="#storageserviceimpl" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal"><span class="pre">StorageServiceImpl</span></code> service simply hold references to the various
@@ -433,7 +436,7 @@ via an HTTP post request.</p>
 </div>
 </div>
 <div class="section" id="flow-framework-and-event-scheduling-services">
-<h2>Flow Framework And Event Scheduling Services<a class="headerlink" href="#flow-framework-and-event-scheduling-services" title="Permalink to this headline">¶</a></h2>
+<h2>Flow framework and event scheduling services<a class="headerlink" href="#flow-framework-and-event-scheduling-services" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="statemachinemanager">
 <h3>StateMachineManager<a class="headerlink" href="#statemachinemanager" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal"><span class="pre">StateMachineManager</span></code> is the service that runs the active
@@ -490,7 +493,7 @@ the intended initiator.</p>
 </div>
 </div>
 <div class="section" id="notary-flow-implementation-services">
-<h2>Notary Flow Implementation Services<a class="headerlink" href="#notary-flow-implementation-services" title="Permalink to this headline">¶</a></h2>
+<h2>Notary flow implementation services<a class="headerlink" href="#notary-flow-implementation-services" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="persistentuniquenessprovider-inmemoryuniquenessprovider-and-raftuniquenessprovider">
 <h3>PersistentUniquenessProvider, InMemoryUniquenessProvider and RaftUniquenessProvider<a class="headerlink" href="#persistentuniquenessprovider-inmemoryuniquenessprovider-and-raftuniquenessprovider" title="Permalink to this headline">¶</a></h3>
 <p>These variants of <code class="docutils literal"><span class="pre">UniquenessProvider</span></code> service are used by the notary
@@ -525,7 +528,7 @@ RAFT protocol (note this requires the additional configuration of the
 </div>
 </div>
 <div class="section" id="vault-related-services">
-<h2>Vault Related Services<a class="headerlink" href="#vault-related-services" title="Permalink to this headline">¶</a></h2>
+<h2>Vault related services<a class="headerlink" href="#vault-related-services" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="nodevaultservice">
 <h3>NodeVaultService<a class="headerlink" href="#nodevaultservice" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal"><span class="pre">NodeVaultService</span></code> implements the <code class="docutils literal"><span class="pre">VaultService</span></code> interface to
@@ -560,10 +563,10 @@ tables. To enable these features the contract state must implement the
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="creating-a-cordapp.html" class="btn btn-neutral float-right" title="Creating a Cordapp" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="node-explorer.html" class="btn btn-neutral float-right" title="Node Explorer" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="corda-plugins.html" class="btn btn-neutral" title="The Corda Plugin Framework" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="corda-plugins.html" class="btn btn-neutral" title="The Corda plugin framework" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

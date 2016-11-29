@@ -1,5 +1,5 @@
-Transaction Tear-offs
-======================
+Transaction tear-offs
+=====================
 
 One of the basic data structures in our platform is a transaction. It can be passed around to be signed and verified,
 also by third parties. The construction of transactions assumes that they form a whole entity with input and output states,
@@ -13,7 +13,7 @@ Merkle trees are widely used in peer-to-peer networks, blockchain systems and gi
 You can read more on the concept `here <https://en.wikipedia.org/wiki/Merkle_tree>`_.
 
 Merkle trees in Corda
-----------------------
+---------------------
 
 Transactions are split into leaves, each of them contains either input, output, command or attachment. Other fields like
 timestamp or signers are not used in the calculation.
@@ -44,7 +44,7 @@ Tree, dotted ones are not included. Having the command that should be in a red n
 root of this tree and compare it with original transaction identifier - we have a proof that this command belongs to this transaction.
 
 Example of usage
------------------
+----------------
 
 Let’s focus on a code example. We want to construct a transaction with commands containing interest rate fix data as in:
 :doc:`oracles`.

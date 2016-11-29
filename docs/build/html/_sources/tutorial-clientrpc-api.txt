@@ -1,6 +1,6 @@
 .. _graphstream: http://graphstream-project.org/
 
-Client RPC API Tutorial
+Client RPC API tutorial
 =======================
 
 In this tutorial we will build a simple command line utility that
@@ -66,6 +66,8 @@ The RPC we need to initiate a Cash transaction is ``startFlowDynamic`` which may
 
 Finally we have everything in place: we start a couple of nodes, connect to them, and start creating transactions while listening on successfully created ones, which are dumped to the console. We just need to run it!:
 
+.. sourcecode:: bash
+
     # Build the example
     ./gradlew docs/source/example-code:installDist
     # Start it
@@ -80,7 +82,7 @@ Now let's try to visualise the transaction graph. We will use a graph drawing li
 
 If we run the client with ``Visualise`` we should see a simple random graph being drawn as new transactions are being created.
 
-Registering classes from your Cordapp with RPC Kryo
+Registering classes from your CorDapp with RPC Kryo
 ---------------------------------------------------
 
 As described in :doc:`clientrpc`, you currently have to register any additional classes you add that are needed in RPC

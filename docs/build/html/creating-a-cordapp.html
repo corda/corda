@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Creating a Cordapp &mdash; R3 Corda latest documentation</title>
+  <title>Creating a CorDapp &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -32,7 +32,7 @@
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Where to start" href="where-to-start.html"/>
-        <link rel="prev" title="A Brief Introduction To The Node Services" href="node-services.html"/> 
+        <link rel="prev" title="Network permissioning" href="permissioning.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -95,7 +95,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
@@ -104,26 +104,28 @@
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda Plugin Framework</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Creating a Cordapp</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#app-plugins">App Plugins</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Creating a CorDapp</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#app-plugins">App plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#services">Services</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#starting-nodes">Starting Nodes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#installing-apps">Installing Apps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#starting-your-node">Starting your Node</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#debugging-your-node">Debugging your Node</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#viewing-persisted-state-of-your-node">Viewing persisted state of your Node</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#building-against-corda">Building Against Corda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#starting-nodes">Starting nodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installing-apps">Installing apps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#starting-your-node">Starting your node</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#debugging-your-node">Debugging your node</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#viewing-persisted-state-of-your-node">Viewing persisted state of your node</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#building-against-corda">Building against Corda</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#building-gradle-plugins">Building Gradle Plugins</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#using-gradle-plugins">Using Gradle Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#building-gradle-plugins">Building Gradle plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-gradle-plugins">Using Gradle plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#template-build-gradle">Template build.gradle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#cordformation">Cordformation</a></li>
 </ul>
@@ -135,9 +137,11 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
@@ -145,13 +149,12 @@
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -196,7 +199,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>Creating a Cordapp</li>
+    <li>Creating a CorDapp</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -211,11 +214,11 @@
            <div itemprop="articleBody">
             
   <div class="section" id="creating-a-cordapp">
-<h1>Creating a Cordapp<a class="headerlink" href="#creating-a-cordapp" title="Permalink to this headline">¶</a></h1>
+<h1>Creating a CorDapp<a class="headerlink" href="#creating-a-cordapp" title="Permalink to this headline">¶</a></h1>
 <p>A Cordapp is an application that runs on the Corda platform using the platform APIs and plugin system. They are self
 contained in separate JARs from the node server JAR that are created and distributed.</p>
 <div class="section" id="app-plugins">
-<h2>App Plugins<a class="headerlink" href="#app-plugins" title="Permalink to this headline">¶</a></h2>
+<h2>App plugins<a class="headerlink" href="#app-plugins" title="Permalink to this headline">¶</a></h2>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">Currently apps are only supported for JVM languages.</p>
@@ -238,7 +241,7 @@ message handlers and more. The service does not run in a separate thread, so the
 construction, where message handlers should be registered and threads started.</p>
 </div>
 <div class="section" id="starting-nodes">
-<h2>Starting Nodes<a class="headerlink" href="#starting-nodes" title="Permalink to this headline">¶</a></h2>
+<h2>Starting nodes<a class="headerlink" href="#starting-nodes" title="Permalink to this headline">¶</a></h2>
 <p>To use an app you must also have a node server. To create a node server run the <code class="docutils literal"><span class="pre">gradle</span> <span class="pre">deployNodes</span></code> task.</p>
 <p>This will output the node JAR to <code class="docutils literal"><span class="pre">build/libs/corda.jar</span></code> and several sample/standard
 node setups to <code class="docutils literal"><span class="pre">build/nodes</span></code>. For now you can use the <code class="docutils literal"><span class="pre">build/nodes/nodea</span></code> configuration as a template.</p>
@@ -258,7 +261,7 @@ starting the process to control this location.</p>
 </div>
 </div>
 <div class="section" id="installing-apps">
-<h2>Installing Apps<a class="headerlink" href="#installing-apps" title="Permalink to this headline">¶</a></h2>
+<h2>Installing apps<a class="headerlink" href="#installing-apps" title="Permalink to this headline">¶</a></h2>
 <p>Once you have created your app JAR you can install it to a node by adding it to <code class="docutils literal"><span class="pre">&lt;node_dir&gt;/plugins/</span></code>. In this
 case the <code class="docutils literal"><span class="pre">node_dir</span></code> is the location where your node server&#8217;s JAR and configuration file is.</p>
 <div class="admonition note">
@@ -267,7 +270,7 @@ case the <code class="docutils literal"><span class="pre">node_dir</span></code>
 </div>
 </div>
 <div class="section" id="starting-your-node">
-<h2>Starting your Node<a class="headerlink" href="#starting-your-node" title="Permalink to this headline">¶</a></h2>
+<h2>Starting your node<a class="headerlink" href="#starting-your-node" title="Permalink to this headline">¶</a></h2>
 <p>Now you have a node server with your app installed, you can run it by navigating to <code class="docutils literal"><span class="pre">&lt;node_dir&gt;</span></code> and running</p>
 <blockquote>
 <div>java -jar corda.jar</div></blockquote>
@@ -281,13 +284,13 @@ case the <code class="docutils literal"><span class="pre">node_dir</span></code>
 <p>Otherwise the workspace folder for the node is created based upon the <code class="docutils literal"><span class="pre">basedir</span></code> property in the <code class="docutils literal"><span class="pre">node.conf</span></code> file and if this is relative it is applied relative to the current working path.</p>
 </div>
 <div class="section" id="debugging-your-node">
-<h2>Debugging your Node<a class="headerlink" href="#debugging-your-node" title="Permalink to this headline">¶</a></h2>
+<h2>Debugging your node<a class="headerlink" href="#debugging-your-node" title="Permalink to this headline">¶</a></h2>
 <p>To enable remote debugging of the corda process use a command line such as:</p>
 <p><code class="docutils literal"><span class="pre">java</span> <span class="pre">-Dcapsule.jvm.args=&quot;-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005&quot;</span> <span class="pre">-jar</span> <span class="pre">corda.jar</span></code></p>
 <p>This command line will start the debugger on port 5005 and pause the process awaiting debugger attachment.</p>
 </div>
 <div class="section" id="viewing-persisted-state-of-your-node">
-<h2>Viewing persisted state of your Node<a class="headerlink" href="#viewing-persisted-state-of-your-node" title="Permalink to this headline">¶</a></h2>
+<h2>Viewing persisted state of your node<a class="headerlink" href="#viewing-persisted-state-of-your-node" title="Permalink to this headline">¶</a></h2>
 <p>To make examining the persisted contract states of your node or the internal node database tables easier, and providing you are
 using the default database configuration used for demos, you should be able to connect to the internal node database over
 a JDBC connection at the URL that is output to the logs at node start up.  That URL will be of the form <code class="docutils literal"><span class="pre">jdbc:h2:tcp://&lt;host&gt;:&lt;port&gt;/node</span></code>.</p>
@@ -296,7 +299,7 @@ a JDBC connection at the URL that is output to the logs at node start up.  That 
 at the present time, and should certainly be treated as read-only.</p>
 </div>
 <div class="section" id="building-against-corda">
-<h2>Building Against Corda<a class="headerlink" href="#building-against-corda" title="Permalink to this headline">¶</a></h2>
+<h2>Building against Corda<a class="headerlink" href="#building-against-corda" title="Permalink to this headline">¶</a></h2>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">This feature is subject to rapid change</p>
@@ -311,11 +314,11 @@ group net.corda. You can now depend on these as you normally would a Maven depen
 </div>
 </div>
 <div class="section" id="gradle-plugins-for-cordapps">
-<h1>Gradle Plugins for Cordapps<a class="headerlink" href="#gradle-plugins-for-cordapps" title="Permalink to this headline">¶</a></h1>
+<h1>Gradle plugins for CorDapps<a class="headerlink" href="#gradle-plugins-for-cordapps" title="Permalink to this headline">¶</a></h1>
 <p>There are several Gradle plugins that reduce your build.gradle boilerplate and make development of Cordapps easier.
 The available plugins are in the gradle-plugins directory of the Corda repository.</p>
 <div class="section" id="building-gradle-plugins">
-<h2>Building Gradle Plugins<a class="headerlink" href="#building-gradle-plugins" title="Permalink to this headline">¶</a></h2>
+<h2>Building Gradle plugins<a class="headerlink" href="#building-gradle-plugins" title="Permalink to this headline">¶</a></h2>
 <p>To install to your local Maven repository the plugins that Cordapp gradle files require, run the following from the
 root of the Corda project:</p>
 <div class="highlight-text"><div class="highlight"><pre><span></span>./gradlew install
@@ -324,7 +327,7 @@ root of the Corda project:</p>
 <p>The plugins will now be installed to your local Maven repository in ~/.m2 on Unix and %HOMEPATH%.m2 on Windows.</p>
 </div>
 <div class="section" id="using-gradle-plugins">
-<h2>Using Gradle Plugins<a class="headerlink" href="#using-gradle-plugins" title="Permalink to this headline">¶</a></h2>
+<h2>Using Gradle plugins<a class="headerlink" href="#using-gradle-plugins" title="Permalink to this headline">¶</a></h2>
 <p>To use the plugins, if you are not already using the Cordapp template project, you must modify your build.gradle. Add
 the following segments to the relevant part of your build.gradle.</p>
 </div>
@@ -333,6 +336,7 @@ the following segments to the relevant part of your build.gradle.</p>
 <p>To build against Corda and the plugins that cordapps use, update your build.gradle to contain the following:</p>
 <div class="highlight-groovy"><div class="highlight"><pre><span></span><span class="n">buildscript</span> <span class="o">{</span>
     <span class="n">ext</span><span class="o">.</span><span class="na">corda_version</span> <span class="o">=</span> <span class="s1">&#39;&lt;enter the corda version you build against here&gt;&#39;</span>
+    <span class="n">ext</span><span class="o">.</span><span class="na">corda_gradle_plugins_version</span> <span class="o">=</span> <span class="s1">&#39;&lt;enter the gradle plugins version here&gt;&#39;</span> <span class="c1">// This is usually the same as corda_version.</span>
     <span class="o">...</span> <span class="n">your</span> <span class="n">buildscript</span> <span class="o">...</span>
 
     <span class="n">repositories</span> <span class="o">{</span>
@@ -342,9 +346,9 @@ the following segments to the relevant part of your build.gradle.</p>
 
     <span class="n">dependencies</span> <span class="o">{</span>
         <span class="o">...</span> <span class="n">your</span> <span class="n">dependencies</span> <span class="o">...</span>
-        <span class="n">classpath</span> <span class="s2">&quot;net.corda.plugins:cordformation:$corda_version&quot;</span>
-        <span class="n">classpath</span> <span class="s2">&quot;net.corda.plugins:quasar-utils:$corda_version&quot;</span>
-        <span class="n">classpath</span> <span class="s2">&quot;net.corda.plugins:publish-utils:$corda_version&quot;</span>
+        <span class="n">classpath</span> <span class="s2">&quot;net.corda.plugins:cordformation:$corda_gradle_plugins_version&quot;</span>
+        <span class="n">classpath</span> <span class="s2">&quot;net.corda.plugins:quasar-utils:$corda_gradle_plugins_version&quot;</span>
+        <span class="n">classpath</span> <span class="s2">&quot;net.corda.plugins:publish-utils:$corda_gradle_plugins_version&quot;</span>
     <span class="o">}</span>
 <span class="o">}</span>
 
@@ -444,7 +448,7 @@ one node per window.</p>
         <a href="where-to-start.html" class="btn btn-neutral float-right" title="Where to start" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="node-services.html" class="btn btn-neutral" title="A Brief Introduction To The Node Services" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="permissioning.html" class="btn btn-neutral" title="Network permissioning" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

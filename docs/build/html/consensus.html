@@ -32,7 +32,7 @@
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Client RPC" href="clientrpc.html"/>
-        <link rel="prev" title="Transaction Tear-offs" href="merkle-trees.html"/> 
+        <link rel="prev" title="Transaction tear-offs" href="merkle-trees.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -95,7 +95,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction Tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Consensus model</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#notary">Notary</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#multiple-notaries">Multiple notaries</a></li>
@@ -104,8 +104,6 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#validation">Validation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#timestamping">Timestamping</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#running-a-notary-service">Running a notary service</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#obtaining-a-signature">Obtaining a signature</a></li>
 </ul>
 </li>
 </ul>
@@ -115,14 +113,16 @@
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda Plugin Framework</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-services.html">A Brief Introduction To The Node Services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -130,9 +130,11 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
@@ -140,13 +142,12 @@
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial Margin Agreements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -294,7 +295,7 @@ This is an obvious privacy leak.</p>
 <p class="last">In the non-validating model the &#8220;denial of state&#8221; attack is partially alleviated by requiring the calling
 party to authenticate and storing its identity for the request. The conflict information returned by the notary
 specifies the consuming transaction ID along with the identity of the party that had requested the commit. If the
-conflicting transaction is valid, the current one gets aborted; if not – a dispute can be raised and the input states
+conflicting transaction is valid, the current one gets aborted; if not - a dispute can be raised and the input states
 of the conflicting invalid transaction are &#8220;un-committed&#8221; (to be covered by legal process).</p>
 </div>
 <div class="admonition note">
@@ -321,7 +322,7 @@ time observed in step 1.</p>
 <p>For this reason, times in transactions are specified as time <em>windows</em>, not absolute times. Time windows can be
 open-ended, i.e. specify only one of &#8220;before&#8221; and &#8220;after&#8221; or they can be fully bounded. If a time window needs to
 be converted to an absolute time for e.g. display purposes, there is a utility method on <code class="docutils literal"><span class="pre">Timestamp</span></code> to
-calculate the mid point - but in a distributed system there can never be &#8220;true time&#8221;, only an approximation of it.</p>
+calculate the mid point &#8211; but in a distributed system there can never be &#8220;true time&#8221;, only an approximation of it.</p>
 <p>In this way we express that the <em>true value</em> of the fact &#8220;the current time&#8221; is actually unknowable. Even when both before and
 after times are included, the transaction could have occurred at any point between those two timestamps. Here
 &#8220;occurrence&#8221; could mean the execution date, the value date, the trade date etc ... the notary doesn&#8217;t care what precise
@@ -338,52 +339,6 @@ meaning the timestamp has to the contract.</p>
 clocks at the US Naval Observatory. This time feed is extremely accurate and available globally for free.</p>
 </div>
 </div>
-<div class="section" id="running-a-notary-service">
-<h2>Running a notary service<a class="headerlink" href="#running-a-notary-service" title="Permalink to this headline">¶</a></h2>
-<p>At present we have two basic implementations that store committed input states in memory:</p>
-<ul class="simple">
-<li><code class="docutils literal"><span class="pre">SimpleNotaryService</span></code> &#8211; commits the provided transaction without any validation</li>
-<li><code class="docutils literal"><span class="pre">ValidatingNotaryService</span></code> &#8211; retrieves and validates the whole transaction history (including the given transaction) before committing</li>
-</ul>
-</div>
-<div class="section" id="obtaining-a-signature">
-<h2>Obtaining a signature<a class="headerlink" href="#obtaining-a-signature" title="Permalink to this headline">¶</a></h2>
-<p>Once a transaction is built and ready to be finalised, normally you would call <code class="docutils literal"><span class="pre">FinalityFlow</span></code> passing in a
-<code class="docutils literal"><span class="pre">SignedTransaction</span></code> (including signatures from the participants) and a list of participants to notify. This requests a
-notary signature if needed, and then sends a copy of the notarised transaction to all participants for them to store.
-<code class="docutils literal"><span class="pre">FinalityFlow</span></code> delegates to <code class="docutils literal"><span class="pre">NotaryFlow.Client</span></code> followed by <code class="docutils literal"><span class="pre">BroadcastTransactionFlow</span></code> to do the
-actual work of notarising and broadcasting the transaction. For example:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">fun</span> <span class="nf">finaliseTransaction</span><span class="p">(</span><span class="n">serviceHub</span><span class="p">:</span> <span class="n">ServiceHubInternal</span><span class="p">,</span> <span class="n">ptx</span><span class="p">:</span> <span class="n">TransactionBuilder</span><span class="p">,</span> <span class="n">participants</span><span class="p">:</span> <span class="n">Set</span><span class="p">&lt;</span><span class="n">Party</span><span class="p">&gt;)</span>
-        <span class="p">:</span> <span class="n">ListenableFuture</span><span class="p">&lt;</span><span class="n">Unit</span><span class="p">&gt;</span> <span class="p">{</span>
-    <span class="c1">// We conclusively cannot have all the signatures, as the notary has not signed yet</span>
-    <span class="k">val</span> <span class="py">tx</span> <span class="p">=</span> <span class="n">ptx</span><span class="p">.</span><span class="n">toSignedTransaction</span><span class="p">(</span><span class="n">checkSufficientSignatures</span> <span class="p">=</span> <span class="k">false</span><span class="p">)</span>
-    <span class="c1">// The empty set would be the trigger events, which are not used here</span>
-    <span class="k">val</span> <span class="py">flow</span> <span class="p">=</span> <span class="n">FinalityFlow</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">emptySet</span><span class="p">(),</span> <span class="n">participants</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">serviceHub</span><span class="p">.</span><span class="n">startFlow</span><span class="p">(</span><span class="s">&quot;flow.finalisation&quot;</span><span class="p">,</span> <span class="n">flow</span><span class="p">)</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>To manually obtain a signature from a notary you can call <code class="docutils literal"><span class="pre">NotaryFlow.Client</span></code> directly. The flow will work out
-which notary needs to be called based on the input states and the timestamp command. For example, the following snippet
-can be used when writing a custom flow:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">fun</span> <span class="nf">getNotarySignature</span><span class="p">(</span><span class="n">wtx</span><span class="p">:</span> <span class="n">WireTransaction</span><span class="p">):</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="n">subFlow</span><span class="p">(</span><span class="n">NotaryFlow</span><span class="p">.</span><span class="n">Client</span><span class="p">(</span><span class="n">wtx</span><span class="p">))</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>On conflict the <code class="docutils literal"><span class="pre">NotaryFlow</span></code> with throw a <code class="docutils literal"><span class="pre">NotaryException</span></code> containing the conflict details:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="cm">/** Specifies the consuming transaction for the conflicting input state */</span>
-<span class="k">data</span> <span class="k">class</span> <span class="nc">Conflict</span><span class="p">(</span><span class="k">val</span> <span class="py">stateHistory</span><span class="p">:</span> <span class="n">Map</span><span class="p">&lt;</span><span class="n">StateRef</span><span class="p">,</span> <span class="n">ConsumingTx</span><span class="p">&gt;)</span>
-
-<span class="cm">/**</span>
-<span class="cm"> * Specifies the transaction id, the position of the consumed state in the inputs, and</span>
-<span class="cm"> * the caller identity requesting the commit</span>
-<span class="cm"> */</span>
-<span class="k">data</span> <span class="k">class</span> <span class="nc">ConsumingTx</span><span class="p">(</span><span class="k">val</span> <span class="py">id</span><span class="p">:</span> <span class="n">SecureHash</span><span class="p">,</span> <span class="k">val</span> <span class="py">inputIndex</span><span class="p">:</span> <span class="n">Int</span><span class="p">,</span> <span class="k">val</span> <span class="py">requestingParty</span><span class="p">:</span> <span class="n">Party</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Conflict handling and resolution is currently the responsibility of the flow author.</p>
-</div>
 </div>
 
 
@@ -396,7 +351,7 @@ can be used when writing a custom flow:</p>
         <a href="clientrpc.html" class="btn btn-neutral float-right" title="Client RPC" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="merkle-trees.html" class="btn btn-neutral" title="Transaction Tear-offs" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="merkle-trees.html" class="btn btn-neutral" title="Transaction tear-offs" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
