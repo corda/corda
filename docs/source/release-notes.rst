@@ -3,6 +3,55 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
+Milestone 6
+-----------
+
+* Major documentation restructuring and new content:
+
+    * New tutorials on how to run and use a notary service.
+
+* Client RPC
+
+    * Kryo plugin functionality: RP
+
+* Node explorer app: PK
+
+    * New branding
+
+* Developer experience:
+
+    * Demo refactoring?
+    * Node console output now displays concise startup information, such as startup time or web address. All logging to
+      the console is suppressed apart from errors and flow progress tracker steps. It can be re-enabled by passing
+      ``--log-to-console`` command line parameter. Note that the log file remains unchanged an will still contain all
+      log entries.
+
+* Data model:
+
+    * A party is now identified by a composite key (formerly known as a "public key tree") instead of a single public key.
+      Read more in :ref:`composite-keys`.
+
+* Decentralised consensus:
+
+    * A prototype RAFT based notary composed of multiple nodes has been added.
+
+* Configuration changes:
+
+    * It is now possible to specify a custom legal name for any of the node's advertised services.
+
+* Persistence
+
+    * LRU JDBCHashMap
+
+* Load testing
+
+* JVM sandbox
+
+API changes:
+
+* The op level package has been renamed from ``com.r3corda`` to ``net.corda``.
+* Protocols have been renamed to "flows".
+
 Milestone 5
 -----------
 
