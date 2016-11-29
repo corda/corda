@@ -206,7 +206,10 @@ class Node {
         def cordaJar = verifyAndGetCordaJar()
         def cordappDeps = getCordappList()
         def depsDir = new File(nodeDir, "dependencies")
-        def appDeps = project.configurations.runtime.filter { it != cordaJar && !cordappDeps.contains(it) }
+        def coreDeps = project.zipTree(cordaJar).getFiles().collect { it.getName() }
+        def appDeps = project.configurations.runtime.filter {
+            it != cordaJar && !cordappDeps.contains(it) && !coreDeps.contains(it.getName())
+        }
         project.copy {
             from appDeps
             into depsDir
