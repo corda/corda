@@ -11,7 +11,7 @@ This code was written by Ben Evans.
 
 # Roadmap
 
-* Thorough code and security review.
+* Thorough testing, code and security review.
 * Possibly, a conversion to Kotlin.
 * Make the instrumentation ahead of time only.
 * Finalise the chosen subset of the Java platform to expose to contract code.
