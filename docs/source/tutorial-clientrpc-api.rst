@@ -148,5 +148,5 @@ You can then deploy and launch the nodes (Notary and Alice) as follows:
     ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Print
     ./docs/source/example-code/build/install/docs/source/example-code/bin/client-rpc-tutorial Visualise
 
-See more on security in :doc:`secure-coding-guidelines`,  node configuration in :doc:`corda-configuration-files` and
+See more on security in :doc:`secure-coding-guidelines`,  node configuration in :doc:`corda-configuration-file` and
 Cordformation in :doc:`creating-a-cordapp`
