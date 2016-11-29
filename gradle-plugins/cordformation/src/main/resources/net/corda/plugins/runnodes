@@ -27,11 +27,13 @@ if which osascript >/dev/null; then
 end tell"
     osascript -e "$script"
 else
-    # Some other UNIX, probably Linux
+    # Some other UNIX, probably Linux (does not support msys or cygwin)
+    # TODO: msys and cygwin support
     #
-    # This next line is safe even if JAVA_HOME is unset. If it is set, it means that java overrides the
-    # default system java, which is what we want.
-    export PATH=$JAVA_HOME/bin:$PATH
+    # If it is set, it means that java overrides the default system java, which is what we want.
+    if [ -n "${JAVA_HOME-}" ]; then
+	export PATH="$JAVA_HOME/bin:$PATH"
+    fi
     for dir in `ls`; do
         if [ -d $dir ]; then
             pushd $dir >/dev/null
