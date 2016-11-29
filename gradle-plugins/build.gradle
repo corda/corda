@@ -2,7 +2,7 @@
 // or if you are developing these plugins. See the readme for more information.
 
 buildscript {
-    ext.gradle_plugins_version = "0.5.8" // Our version: bump this on release.
+    ext.gradle_plugins_version = "0.5.7" // Our version: bump this on release.
     ext.corda_published_version = "0.5" // Depend on our existing published publishing plugin.
 
     repositories {
