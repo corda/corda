@@ -88,11 +88,9 @@ ledger (that won't be verified) which outputs the specified state, and reference
 
 The above code however doesn't compile:
 
-.. container:: codeset
+.. code-block:: bash
 
-    .. sourcecode:: kotlin
-
-        Error:(29, 17) Kotlin: Type mismatch: inferred type is Unit but EnforceVerifyOrFail was expected
+    Error:(29, 17) Kotlin: Type mismatch: inferred type is Unit but EnforceVerifyOrFail was expected
 
 This is deliberate: The DSL forces us to specify either ``this.verifies()`` or ``this `fails with` "some text"`` on the
 last line of ``transaction``:
@@ -132,11 +130,9 @@ Let's take a look at a transaction that fails.
 
 When run, that code produces the following error:
 
-.. container:: codeset
+.. code-block:: bash
 
-    .. sourcecode:: kotlin
-
-        net.corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalArgumentException: Failed requirement: the state is propagated
+    net.corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalArgumentException: Failed requirement: the state is propagated
 
 The transaction verification failed, because we wanted to move paper but didn't specify an output - but the state should be propagated.
 However we can specify that this is an intended behaviour by changing ``this.verifies()`` to ``this `fails with` "the state is propagated"``:
@@ -208,8 +204,8 @@ What should we do if we wanted to test what happens when the wrong party signs t
         }
 
 
-``tweak`` creates a local copy of the transaction. This makes possible to locally "ruin" the transaction allowing testing
-of different error conditions.
+``tweak`` creates a local copy of the transaction. This makes possible to locally "ruin" the transaction while not
+modifying the original one, allowing testing of different error conditions.
 
 We now have a neat little test that tests a single transaction. This is already useful, and in fact testing of a single
 transaction in this way is very common. There is even a shorthand top-level ``transaction`` primitive that creates a
@@ -273,7 +269,7 @@ Now that we know how to define a single transaction, let's look at how to define
             }
         }
 
-In this example we declare that ``ALICE`` has a 900 dollars but we don't care where from. For this we can use
+In this example we declare that ``ALICE`` has a $900 but we don't care where from. For this we can use
 ``unverifiedTransaction``. Note how we don't need to specify ``this.verifies()``.
 
 Notice that we labelled output with ``"alice's $900"``, also in transaction named ``"Issuance"``
@@ -285,4 +281,4 @@ $100 less than the face value at 10% interest after only 7 days.
 
 We can also test whole ledger calling ``this.verifies()`` and ``this `fails with` "some message"`` on te ledger level.
 
-.. TODO I didn't include it, because it doesn't work and seems that it didn't work since some time.
+.. TODO Include sourcecode for double spend example and global ledger verification (after fix)
