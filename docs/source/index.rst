@@ -1,9 +1,6 @@
 Welcome to the Corda documentation!
 ===================================
 
-.. warning:: This build of the docs is from the *master branch*, not a milestone release. It may not reflect the
-   current state of the code.
-
 This is the developer guide for Corda, a proposed architecture for distributed ledgers. Here are the sources
 of documentation you may find useful, from highest level to lowest:
 
