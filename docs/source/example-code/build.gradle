@@ -48,6 +48,8 @@ dependencies {
     runtime "net.corda:corda:$corda_version"
 }
 
+mainClassName = "net.corda.docs.ClientRpcTutorialKt"
+
 task getClientRpcTutorial(type: CreateStartScripts) {
     dependsOn(classes)
     mainClassName = "net.corda.docs.ClientRpcTutorialKt"
