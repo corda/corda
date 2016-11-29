@@ -10,7 +10,7 @@
 Writing a contract test
 =======================
 
-This tutorial will take you through the steps required to write a contract test using Kotlin.
+This tutorial will take you through the steps required to write a contract test using Kotlin and Java.
 
 The testing DSL allows one to define a piece of the ledger with transactions referring to each other, and ways of
 verifying their correctness.
@@ -61,6 +61,17 @@ We will start with defining helper function that returns a ``CommercialPaper`` s
             maturityDate = TEST_TX_TIME + 7.days
         )
 
+    .. sourcecode:: java
+
+        private ICommercialPaperState getPaper() {
+                return new JavaCommercialPaper.State(
+                        getMEGA_CORP().ref(defaultRef),
+                        getMEGA_CORP_PUBKEY(),
+                        issuedBy(DOLLARS(1000), getMEGA_CORP().ref((byte) 1, (byte) 1)),
+                        getTEST_TX_TIME().plus(7, ChronoUnit.DAYS)
+                );
+            }
+
 It's a ``CommercialPaper`` issued by ``MEGA_CORP`` with face value of $1000 and maturity date in 7 days.
 
 Let's add a ``CommercialPaper`` transaction:
@@ -79,6 +90,19 @@ Let's add a ``CommercialPaper`` transaction:
             }
         }
 
+    .. sourcecode:: java
+
+        @Test
+        public void simpleCPDoesntCompile() {
+            ICommercialPaperState inState = getPaper();
+            ledger(l -> {
+                l.transaction(tx -> {
+                    tx.input(inState);
+                });
+                return Unit.INSTANCE;
+            });
+        }
+
 We can add a transaction to the ledger using the ``transaction`` primitive. The transaction in turn may be defined by
 specifying ``input``-s, ``output``-s, ``command``-s and ``attachment``-s.
 
@@ -88,9 +112,15 @@ ledger (that won't be verified) which outputs the specified state, and reference
 
 The above code however doesn't compile:
 
-.. code-block:: bash
+.. container:: codeset
 
-    Error:(29, 17) Kotlin: Type mismatch: inferred type is Unit but EnforceVerifyOrFail was expected
+    .. sourcecode:: kotlin
+
+        Error:(29, 17) Kotlin: Type mismatch: inferred type is Unit but EnforceVerifyOrFail was expected
+
+    .. sourcecode:: java
+
+        Error:(35, 27) java: incompatible types: bad return type in lambda expression missing return value
 
 This is deliberate: The DSL forces us to specify either ``this.verifies()`` or ``this `fails with` "some text"`` on the
 last line of ``transaction``:
@@ -108,6 +138,20 @@ last line of ``transaction``:
                     this.verifies()
                 }
             }
+        }
+
+    .. sourcecode:: java
+
+        @Test
+        public void simpleCP() {
+            ICommercialPaperState inState = getPaper();
+            ledger(l -> {
+                l.transaction(tx -> {
+                    tx.input(inState);
+                    return tx.verifies();
+                });
+                return Unit.INSTANCE;
+            });
         }
 
 Let's take a look at a transaction that fails.
@@ -128,11 +172,32 @@ Let's take a look at a transaction that fails.
             }
         }
 
+    .. sourcecode:: java
+
+        @Test
+        public void simpleCPMove() {
+            ICommercialPaperState inState = getPaper();
+            ledger(l -> {
+                l.transaction(tx -> {
+                    tx.input(inState);
+                    tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
+                    return tx.verifies();
+                });
+                return Unit.INSTANCE;
+            });
+        }
+
 When run, that code produces the following error:
 
-.. code-block:: bash
+.. container:: codeset
 
-    net.corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalArgumentException: Failed requirement: the state is propagated
+    .. sourcecode:: kotlin
+
+        net.corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalArgumentException: Failed requirement: the state is propagated
+
+    .. sourcecode:: java
+
+        net.corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalStateException: the state is propagated
 
 The transaction verification failed, because we wanted to move paper but didn't specify an output - but the state should be propagated.
 However we can specify that this is an intended behaviour by changing ``this.verifies()`` to ``this `fails with` "the state is propagated"``:
@@ -153,6 +218,21 @@ However we can specify that this is an intended behaviour by changing ``this.ver
             }
         }
 
+    .. sourcecode:: java
+
+        @Test
+        public void simpleCPMoveFails() {
+            ICommercialPaperState inState = getPaper();
+            ledger(l -> {
+                l.transaction(tx -> {
+                    tx.input(inState);
+                    tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
+                    return tx.failsWith("the state is propagated");
+                });
+                return Unit.INSTANCE;
+            });
+        }
+
 We can continue to build the transaction until it ``verifies``:
 
 .. container:: codeset
@@ -160,7 +240,7 @@ We can continue to build the transaction until it ``verifies``:
     .. sourcecode:: kotlin
 
         @Test
-        fun simpleCPMove() {
+        fun simpleCPMoveSuccess() {
             val inState = getPaper()
             ledger {
                 transaction {
@@ -171,6 +251,23 @@ We can continue to build the transaction until it ``verifies``:
                     this.verifies()
                 }
             }
+        }
+
+    .. sourcecode:: java
+
+        @Test
+        public void simpleCPMoveSuccess() {
+            ICommercialPaperState inState = getPaper();
+            ledger(l -> {
+                l.transaction(tx -> {
+                    tx.input(inState);
+                    tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
+                    tx.failsWith("the state is propagated");
+                    tx.output("alice's paper", inState.withOwner(getALICE_PUBKEY()));
+                    return tx.verifies();
+                });
+                return Unit.INSTANCE;
+            });
         }
 
 ``output`` specifies that we want the input state to be transferred to ``ALICE`` and ``command`` adds the
@@ -203,6 +300,26 @@ What should we do if we wanted to test what happens when the wrong party signs t
             }
         }
 
+    .. sourcecode:: java
+
+        @Test
+        public void simpleIssuanceWithTweak() {
+            ledger(l -> {
+                l.transaction(tx -> {
+                    tx.output("paper", getPaper()); // Some CP is issued onto the ledger by MegaCorp.
+                    tx.tweak(tw -> {
+                        tw.command(getDUMMY_PUBKEY_1(), new JavaCommercialPaper.Commands.Issue());
+                        tw.timestamp(getTEST_TX_TIME());
+                        return tw.failsWith("output states are issued by a command signer");
+                    });
+                    tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Issue());
+                    tx.timestamp(getTEST_TX_TIME());
+                    return tx.verifies();
+                });
+                return Unit.INSTANCE;
+            });
+        }
+
 
 ``tweak`` creates a local copy of the transaction. This makes possible to locally "ruin" the transaction while not
 modifying the original one, allowing testing of different error conditions.
@@ -228,6 +345,23 @@ ledger with a single transaction:
                 timestamp(TEST_TX_TIME)
                 this.verifies()
             }
+        }
+
+    .. sourcecode:: java
+
+        @Test
+        public void simpleIssuanceWithTweakTopLevelTx() {
+            transaction(tx -> {
+                tx.output("paper", getPaper()); // Some CP is issued onto the ledger by MegaCorp.
+                tx.tweak(tw -> {
+                    tw.command(getDUMMY_PUBKEY_1(), new JavaCommercialPaper.Commands.Issue());
+                    tw.timestamp(getTEST_TX_TIME());
+                    return tw.failsWith("output states are issued by a command signer");
+                });
+                tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Issue());
+                tx.timestamp(getTEST_TX_TIME());
+                return tx.verifies();
+            });
         }
 
 Chaining transactions
@@ -268,6 +402,41 @@ Now that we know how to define a single transaction, let's look at how to define
                 }
             }
         }
+
+    .. sourcecode:: java
+
+        @Test
+        public void chainCommercialPaper() {
+            PartyAndReference issuer = getMEGA_CORP().ref(defaultRef);
+            ledger(l -> {
+                l.unverifiedTransaction(tx -> {
+                            tx.output("alice's $900",
+                                    new Cash.State(issuedBy(DOLLARS(1000), issuer), getALICE_PUBKEY(), null));
+                            return Unit.INSTANCE;
+                        });
+
+                // Some CP is issued onto the ledger by MegaCorp.
+                l.transaction("Issuance", tx -> {
+                    tx.output("paper", getPaper());
+                    tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Issue());
+                    tx.timestamp(getTEST_TX_TIME());
+                    return tx.verifies();
+                });
+
+                l.transaction("Trade", tx -> {
+                    tx.input("paper");
+                    tx.input("alice's $900");
+                    tx.output("borrowed $900", new Cash.State(issuedBy(DOLLARS(1000), issuer), getMEGA_CORP_PUBKEY(), null));
+                    JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
+                    tx.output("alice's paper", inputPaper.withOwner(getALICE_PUBKEY()));
+                    tx.command(getALICE_PUBKEY(), new Cash.Commands.Move());
+                    tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
+                    return tx.verifies();
+                });
+                return Unit.INSTANCE;
+            });
+        }
+
 
 In this example we declare that ``ALICE`` has a $900 but we don't care where from. For this we can use
 ``unverifiedTransaction``. Note how we don't need to specify ``this.verifies()``.
