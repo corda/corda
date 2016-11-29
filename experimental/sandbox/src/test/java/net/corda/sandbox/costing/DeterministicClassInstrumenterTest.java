@@ -1,15 +1,14 @@
 package net.corda.sandbox.costing;
 
-import net.corda.sandbox.TestUtils;
-import net.corda.sandbox.WhitelistClassLoader;
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.net.URISyntaxException;
-import java.util.HashSet;
-import org.junit.AfterClass;
+import net.corda.sandbox.*;
+import org.junit.*;
+
+import java.io.*;
+import java.lang.reflect.*;
+import java.net.*;
+import java.util.*;
+
 import static org.junit.Assert.*;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 /**
  *
@@ -29,7 +28,7 @@ public class DeterministicClassInstrumenterTest {
 
     @Test
     public void when_given_simple_code_it_executes() throws Exception {
-        final Class<?> clz = TestUtils.transformClass("resource/CallObjectMethods.class", 525, 723);
+        final Class<?> clz = TestUtils.transformClass("resource/CallObjectMethods.class", 525, 731);
         final Object o = clz.newInstance();
         final Method allocObj = clz.getMethod("callBasicMethodsOnObject");
         final Object ret = allocObj.invoke(o);
@@ -41,13 +40,13 @@ public class DeterministicClassInstrumenterTest {
 
     @Test
     public void when_monitors_are_present_then_they_are_removed() throws Exception {
-        Class<?> clz = TestUtils.transformClass("resource/SynchronizedBlock.class", 522, 712);
+        Class<?> clz = TestUtils.transformClass("resource/SynchronizedBlock.class", 522, 720);
         Object o = clz.newInstance();
         Method allocObj = clz.getMethod("exampleBlockSynchronized");
         Object ret = allocObj.invoke(o);
         assertEquals("Synched", ret);
 
-        clz = TestUtils.transformClass("resource/SynchronizedMethod.class", 420, 585);
+        clz = TestUtils.transformClass("resource/SynchronizedMethod.class", 420, 593);
         o = clz.newInstance();
         allocObj = clz.getMethod("exampleSynchronized");
         ret = allocObj.invoke(o);
