@@ -91,6 +91,7 @@ Read on to learn:
 
    contract-catalogue
    contract-irs
+   clauses
 
 .. toctree::
    :maxdepth: 2

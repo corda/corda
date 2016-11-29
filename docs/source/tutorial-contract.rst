@@ -321,6 +321,8 @@ The second line does what the code suggests: it searches for a command object th
 ``CommercialPaper.Commands`` supertype, and either returns it, or throws an exception if there's zero or more than one
 such command.
 
+.. _state_ref:
+
 Using state groups
 ------------------
 
