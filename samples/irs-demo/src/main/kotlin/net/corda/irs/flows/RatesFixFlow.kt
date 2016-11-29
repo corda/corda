@@ -49,6 +49,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     data class QueryRequest(val queries: List<FixOf>, val deadline: Instant)
     data class SignRequest(val rootHash: SecureHash, val ftx: FilteredTransaction)
 
+    // DOCSTART 2
     @Suspendable
     override fun call() {
         progressTracker.currentStep = progressTracker.steps[1]
@@ -61,6 +62,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         val signature = subFlow(FixSignFlow(tx, oracle, filterFuns))
         tx.addSignatureUnchecked(signature)
     }
+    // DOCEND 2
 
     /**
      * You can override this to perform any additional work needed after the fix is added to the transaction but
@@ -78,7 +80,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         }
     }
 
-
+    // DOCSTART 1
     class FixQueryFlow(val fixOf: FixOf, val oracle: Party) : FlowLogic<Fix>() {
         @Suspendable
         override fun call(): Fix {
@@ -110,5 +112,5 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
             }
         }
     }
-
+    // DOCEND 1
 }

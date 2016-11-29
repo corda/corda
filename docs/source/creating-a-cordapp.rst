@@ -21,7 +21,7 @@ specific details of the implementation, but you can extend the server in the fol
 Services
 --------
 
-Services are classes which are constructed after the node has started. It is provided a `ServiceHubInternal`_ which
+Services are classes which are constructed after the node has started. It is provided a `PluginServiceHub`_ which
 allows a richer API than the `ServiceHub`_ exposed to contracts. It enables adding flows, registering
 message handlers and more. The service does not run in a separate thread, so the only entry point to the service is during
 construction, where message handlers should be registered and threads started.
@@ -93,8 +93,8 @@ The name and column layout of the internal node tables is in a state of flux and
 at the present time, and should certainly be treated as read-only.
 
 .. _CordaPluginRegistry: api/net.corda.core.node/-corda-plugin-registry/index.html
-.. _ServiceHubInternal: api/net.corda.node.services.api/-service-hub-internal/index.html
-.. _ServiceHub: api/net.corda.node.services.api/-service-hub/index.html
+.. _PluginServiceHub: api/net.corda.core.node/-plugin-service-hub/index.html
+.. _ServiceHub: api/net.corda.core.node/-service-hub/index.html
 
 Building against Corda
 ----------------------
