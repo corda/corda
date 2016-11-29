@@ -60,7 +60,7 @@ on a simulated clock passes.
 
 To run from the command line:
 
-1. Run ``./gradlew samples:irs-demo:deployNodes samples:irs-demo:installDist`` to install configs and a command line tool under ``samples/irs-demo/build``.
+1. Run ``./gradlew samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples/irs-demo/build``.
 2. Change to the ``samples/irs-demo/build`` directory.
 3. Run ``./nodes/runnodes`` (or ``runnodes.bat`` on Windows) to open up three new terminals with the three nodes.
 4. Run ``./install/irs-demo/bin/irs-demo --role UploadRates`` (or use ``irs-demo.bat`` on Windows). You should see a
