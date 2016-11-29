@@ -104,15 +104,18 @@ See more on plugins in :doc:`creating-a-cordapp`.
 Security
 --------
 RPC credentials associated with a Client must match the permission set configured on the server Node.
-This refers to both authentication (username and password) and role-based authorisation (the set of flows an
+This refers to both authentication (username and password) and role-based authorisation (a permissioned set of RPC operations an
 authenticated user is entitled to run).
+
+.. note:: Permissions are represented as *String's* to allow RPC implementations to add their own permissioning.
+     Currently the only permission type defined is *StartFlow*, which defines a list of whitelisted flows an authenticated use may execute.
 
 In the instructions above the server node permissions are configured programmatically in the driver code:
 
 .. code-block:: text
 
         driver(driverDirectory = baseDirectory) {
-            val user = User("user", "password", permissions = setOf(startProtocolPermission<CashProtocol>()))
+            val user = User("user", "password", permissions = setOf(startFlowPermission<CashFlow>()))
             val node = startNode("Alice", rpcUsers = listOf(user)).get()
 
 When starting a standalone node using a configuration file we must supply the RPC credentials as follows:
