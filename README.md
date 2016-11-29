@@ -1,5 +1,3 @@
-![Corda](https://todo-add-corda-logo-location)
-
 # Corda
 
 Corda is a decentralised database system in which nodes trust each other as little as possible.
