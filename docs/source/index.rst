@@ -29,8 +29,8 @@ Read on to learn:
 
    inthebox
    getting-set-up
+   getting-set-up-fault-finding
    running-the-demos
-   building-cordapps
    CLI-vs-IDE
 
 .. toctree::
@@ -41,6 +41,14 @@ Read on to learn:
    transaction-data-types
    merkle-trees
    consensus
+   clauses
+
+.. toctree::
+   :maxdepth: 2
+   :caption: CorDapps
+
+   creating-a-cordapp
+   tutorial-cordapp
 
 .. toctree::
    :maxdepth: 2
@@ -58,16 +66,8 @@ Read on to learn:
 
 .. toctree::
    :maxdepth: 2
-   :caption: CorDapps
-
-   creating-a-cordapp
-   tutorial-cordapp
-
-.. toctree::
-   :maxdepth: 2
    :caption: Tutorials
 
-   where-to-start
    tutorial-contract
    tutorial-contract-clauses
    tutorial-test-dsl
@@ -95,7 +95,6 @@ Read on to learn:
 
    contract-catalogue
    contract-irs
-   clauses
 
 .. toctree::
    :maxdepth: 2
