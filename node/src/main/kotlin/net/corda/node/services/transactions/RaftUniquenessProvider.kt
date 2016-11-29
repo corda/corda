@@ -5,6 +5,7 @@ import io.atomix.catalyst.transport.Address
 import io.atomix.catalyst.transport.Transport
 import io.atomix.catalyst.transport.netty.NettyTransport
 import io.atomix.catalyst.transport.netty.SslProtocol
+import io.atomix.copycat.client.ConnectionStrategies
 import io.atomix.copycat.client.CopycatClient
 import io.atomix.copycat.server.CopycatServer
 import io.atomix.copycat.server.storage.Storage
@@ -79,6 +80,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
 
         val client = CopycatClient.builder(address)
                 .withTransport(transport) // TODO: use local transport for client-server communications
+                .withConnectionStrategy(ConnectionStrategies.EXPONENTIAL_BACKOFF)
                 .build()
         _clientFuture = serverFuture.thenCompose { client.connect(address) }
     }
