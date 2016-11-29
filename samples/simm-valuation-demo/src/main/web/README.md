@@ -1,22 +1,20 @@
-# Vega
+# Simm Valuation Demo Web UI
 
 This project was generated with [angular-cli](https://github.com/angular/angular-cli) version 1.0.0-beta.10.
 
 ## How to build for production
 `npm install -g angular-cli@1.0.0-beta.10`
 `npm install`
-in src/app/index.html replace `<base href="/">` with `<base href="/web/vega/">` (TODO: fix this)
-in src/app/system-config.ts uncomment `//baseURL: "/web/vega",` (TODO: fix this)
 `ng build -prod`
 the dist build will be generated in `dist` folder
 
 ## Troubleshooting
 On a mac, when doing ng serve you may get an error like:
 `The Broccoli Plugin: [BroccoliMergeTrees] failed with:
-Error: Merge error: file .DS_Store exists in /Users/Paolo/Dropbox/Code/R3/vega-main/vega/src/main/web/tmp/broccoli_merge_trees-input_base_path-0r7SyUJT.tmp/0 and /Users/Paolo/Dropbox/Code/R3/vega-main/vega/src/main/web/tmp/broccoli_merge_trees-input_base_path-0r7SyUJT.tmp/1
+Error: Merge error: file .DS_Store exists in ... and ...
 Pass option { overwrite: true } to mergeTrees in order to have the latter file win.
-at BroccoliMergeTrees._mergeRelativePath (/Users/Paolo/Dropbox/Code/R3/vega-main/vega/src/main/web/node_modules/angular-cli/node_modules/broccoli-merge-trees/index.js:266:17)
-at BroccoliMergeTrees.build (/Users/Paolo/Dropbox/Code/R3/vega-main/vega/src/main/web/node_modules/angular-cli/node_modules/broccoli-merge-trees/index.js:70:24)
+at BroccoliMergeTrees._mergeRelativePath (...)
+at BroccoliMergeTrees.build (...)
 ...`
 
 [see here](http://stackoverflow.com/questions/38549080/broccoli-mergeerror-for-ds-store-file-in-angular-cli)
