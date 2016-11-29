@@ -1,6 +1,14 @@
 # Attachment Demo 
 
-Please see docs/build/html/running-the-demos.html and docs/build/html/tutorial-attachments.html
+This code demonstrates sending a transaction with an attachment from one to node to another, and the receiving node accessing the attachment.
 
-This program is a simple demonstration of sending a transaction with an attachment from one node to another, and
-then accessing the attachment on the remote node.
+Please see the either the [online documentation](https://docs.corda.net/running-the-demos.html#attachment-demo) for more info on the attachment demo, or the [included offline version](../../docs/build/html/running-the-demos.html#attachment-demo).
+
+From the root directory of the repository, run the following commands (on mac / unix, replace `gradle` with `./gradlew`)
+
+    gradle samples:attachment-demo:deployNodes 
+
+    ./samples/attachment-demo/build/nodes/runnodes
+
+    gradle samples:attachment-demo:runRecipient  # (in one window)
+    gradle samples:attachment-demo:runSender  # (in another window)

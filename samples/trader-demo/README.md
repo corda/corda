@@ -1,5 +1,5 @@
 # Trader Demo 
 
-This demo shows a couple of nodes doing an atomic asset swap: cash for commercial paper.
+This code demonstrates two nodes exchanging cash for a commercial paper.
 
-Please see docs/build/html/running-the-demos.html to learn how to use this demo.
+Please see the either the [online documentation](https://docs.corda.net/running-the-demos.html#trader-demo) for more info on the attachment demo, or the [included offline version](../../docs/build/html/running-the-demos.html#trader-demo).
