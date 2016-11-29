@@ -4,8 +4,8 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-Using the CorDapp Template
-==========================
+The CorDapp Template
+====================
 
 This guide covers how to get started with the `cordapp-template`. Please note there are two Corda repositories:
 
@@ -13,7 +13,14 @@ This guide covers how to get started with the `cordapp-template`. Please note th
 * ``cordapp-template`` which contains a template CorDapp you can use to bootstrap your own CorDapps. It is the subject
   of this tutorial and should help you understand the basics of building a CorDapp.
 
-We recommend you read the non-technical white paper and technical white paper before you get started with Corda.
+We recommend you read the non-technical white paper and technical white paper before you get started with Corda:
+
+1. `The Introductory white paper <https://docs.corda.r3cev.com/_static/corda-introductory-whitepaper.pdf>`_ describes the
+   motivating vision and background of the project. It is the kind of document your boss should read. It describes why the
+   project exists and briefly compares it to alternative systems on the market.
+2. `The Technical white paper <https://docs.corda.r3cev.com/_static/corda-technical-whitepaper.pdf>`_ describes the entire
+   intended design from beginning to end. It is the kind of document that you should read, or at least, read parts of. Note
+   that because the technical white paper describes the intended end state, it does not always align with the implementation.
 
 Getting started
 ---------------
@@ -360,7 +367,7 @@ Running CorDapps on separate machines
 
 Corda nodes can be run on separate machines with little additional configuration to the above instructions.
 
-When you have successfully ran the ``deployNodes`` gradle task, choose which nodes you would like to run on separate
+When you have successfully run the ``deployNodes`` gradle task, choose which nodes you would like to run on separate
 machines. Copy the folders for those nodes from ``build/nodes`` to the other machines. Make sure that you set the
 ``networkMapAddress`` property in ``node.conf`` to the correct hostname:port where the network map service node is
 hosted.
@@ -429,18 +436,18 @@ list purchase orders and add purchase orders.
 The nodes can be found using the following port numbers, defined in build.gradle and the respective node.conf file for
 each node found in `build/nodes/NodeX`` etc:
 
-* ``Controller: localhost:10003``
-* ``NodeA:      localhost:10005``
-* ``NodeB:      localhost:10007``
-* ``NodeC:      localhost:10009``
+* Controller: ``localhost:10003``
+* NodeA:      ``localhost:10005``
+* NodeB:      ``localhost:10007``
+* NodeC:      ``localhost:10009``
 
 Note that the ``deployNodes`` Gradle task is used to generate the ``node.conf`` files for each node.
 
 As the nodes start-up they should tell you which host and port the embedded web server is running on. The API endpoints
 served are as follows:
 
-* ``/api/example/who-am-i``
-* ``/api/example/get-peers``
+* ``/api/example/me``
+* ``/api/example/peers``
 * ``/api/example/purchase-orders``
 * ``/api/example/{COUNTERPARTY}/create-purchase-order``
 
@@ -475,7 +482,7 @@ Navigate to the "create purchase order" button at the top left of the page, ente
   Delivery Date: 2018-09-15
   City:          London
   Country Code:  UK
-  Item name:     Things
+  Item name:     Wow such item
   Item amount:   5
 
 and click submit (note you can add additional item types and amounts). Upon pressing submit, the modal dialogue should close.

@@ -30,6 +30,7 @@ Read on to learn:
    inthebox
    getting-set-up
    running-the-demos
+   building-cordapps
 
 .. toctree::
    :maxdepth: 2
