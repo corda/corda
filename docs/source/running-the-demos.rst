@@ -26,11 +26,6 @@ develop the demos themselves. For more details about running via the command lin
 
 *For all demos:* The ``install`` gradle task is automatically ran if required; this no longer needs to be run independently.
 
-In the IntelliJ IDE
-    Open the Corda project in IntelliJ and run the "Install" configuration from the gradle menu (located in corda-project (root), Run Configurations).
-Command Line
-    This is a gradle task that can be run as just ``gradle install``
-
 Trader demo
 -----------
 
@@ -160,8 +155,6 @@ by using the H2 web console:
   You will be presented with a web application that enumerates all the available tables and provides an interface for you to query them using SQL.
 - The committed states are stored in the ``NOTARY_COMMITTED_STATES`` table. Note that the raw data is not human-readable,
   but we're only interested in the row count for this demo.
-
-
 
 SIMM and Portfolio Demo - aka the Initial Margin Agreement Demo
 ---------------------------------------------------------------
