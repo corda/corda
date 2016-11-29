@@ -145,6 +145,8 @@ that has been signed by a set of parties.
 .. note:: These types are provisional and will change significantly in future as the identity framework becomes more
    fleshed out.
 
+.. _composite-keys:
+
 Multi-signature support
 -----------------------
 
