@@ -1,5 +1,5 @@
-Getting Set Up : Faultfinding
-=============================
+Getting set up: troubleshooting
+===============================
 
 IntelliJ issues
 ---------------
