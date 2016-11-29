@@ -65,8 +65,14 @@ extensions to be created, or registered at startup. In particular:
     d. The ``servicePlugins`` property returns a list of classes which will 
     be instantiated once during the ``AbstractNode.start`` call. These 
     classes must provide a single argument constructor which will receive a 
-    ``PluginServiceHub`` reference. These singleton instances are regarded 
-    as trusted components and can be used for a number of purposes.
+    ``PluginServiceHub`` reference. They must also extend the abstract class
+    ``SingletonSerializeAsToken`` which ensures that if any reference to your
+    service is captured in a flow checkpoint (i.e. serialized by Kryo as
+    part of Quasar checkpoints, either on the stack or by reference within
+    your flows) it is stored as a simple token representing your service.
+    When checkpoints are restored, after a node restart for example,
+    the latest instance of the service will be substituted back in place of
+    the token stored in the checkpoint.
 
         i. Firstly, they can call ``PluginServiceHub.registerFlowInitiator`` and 
         register flows that will be initiated locally in response to remote flow 
@@ -79,7 +85,7 @@ extensions to be created, or registered at startup. In particular:
         to the service plugin when initiated (as defined by the 
         ``registerFlowInitiator`` call). The flow can then call into functions 
         on the plugin service singleton. Note, care should be taken to not allow 
-        flows to hold references to plugin services, or fields which are not 
+        flows to hold references to fields which are not
         also ``SingletonSerializeAsToken``, otherwise Quasar suspension in the 
         ``StateMachineManager`` will fail with exceptions. An example oracle can 
         be seen in ``NodeInterestRates.kt`` in the irs-demo sample. 

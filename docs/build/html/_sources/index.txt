@@ -1,8 +1,5 @@
-Welcome to the Corda!
-=====================
-
-.. warning:: This build of the docs is from the *master branch*, not a milestone release. It may not reflect the
-   current state of the code.
+Welcome to the Corda documentation!
+===================================
 
 This is the developer guide for Corda, a proposed architecture for distributed ledgers. Here are the sources
 of documentation you may find useful, from highest level to lowest:
@@ -29,7 +26,9 @@ Read on to learn:
 
    inthebox
    getting-set-up
+   getting-set-up-fault-finding
    running-the-demos
+   CLI-vs-IDE
 
 .. toctree::
    :maxdepth: 2
@@ -39,6 +38,14 @@ Read on to learn:
    transaction-data-types
    merkle-trees
    consensus
+   clauses
+
+.. toctree::
+   :maxdepth: 2
+   :caption: CorDapps
+
+   creating-a-cordapp
+   tutorial-cordapp
 
 .. toctree::
    :maxdepth: 2
@@ -56,19 +63,14 @@ Read on to learn:
 
 .. toctree::
    :maxdepth: 2
-   :caption: CorDapps
-
-   creating-a-cordapp
-
-.. toctree::
-   :maxdepth: 2
    :caption: Tutorials
 
-   where-to-start
    tutorial-contract
    tutorial-contract-clauses
    tutorial-test-dsl
+   tutorial-integration-testing
    tutorial-clientrpc-api
+   tutorial-building-transactions
    flow-state-machines
    flow-testing
    running-a-notary
@@ -96,6 +98,7 @@ Read on to learn:
    :caption: Appendix
 
    loadtesting
+   setting-up-a-corda-network
    secure-coding-guidelines
    release-process
    release-notes

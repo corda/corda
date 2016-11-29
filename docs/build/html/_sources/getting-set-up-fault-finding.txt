@@ -1,8 +1,19 @@
-Getting Set Up : Faultfinding
-=============================
+Getting set up: troubleshooting
+===============================
 
 IntelliJ issues
 ---------------
+
+Run configurations are missing
+******************************
+
+If you opened the Corda project using "Import" from the IntelliJ splash screen rather than using "Open" and then
+importing the Gradle build system from the popup bubble, then a bug in IntelliJ will cause it to wipe and recreate
+the ``.idea`` directory where the run configurations are stored. The fix is simple and doesn't require you to
+re-import the project: just undelete the files! You can do that by either:
+
+1. Running ``git checkout .idea/runConfigurations`` to restore that part of the tree to its normal state.
+2. Using the "Version Control" pane in IntelliJ to undelete the files via the GUI.
 
 If IntelliJ complains about lack of an SDK
 ******************************************

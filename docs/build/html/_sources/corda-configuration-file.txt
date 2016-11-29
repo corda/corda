@@ -78,7 +78,7 @@ Fields
 
     .. note:: If HTTPS is enabled then the browser security checks will require that the accessing url host name is one of either the machine name, fully qualified machine name, or server IP address to line up with the Subject Alternative Names contained within the development certificates. This is addition to requiring the ``/config/dev/corda_dev_ca.cer`` root certificate be installed as a Trusted CA.
 
-:extraAdvertisedServiceIds: A list of ServiceType id strings to be advertised to the NetworkMapService and thus be available when other nodes query the NetworkMapCache for supporting nodes. This can also include plugin services loaded from .jar files in the plugins folder.
+:extraAdvertisedServiceIds: A list of ServiceType id strings to be advertised to the NetworkMapService and thus be available when other nodes query the NetworkMapCache for supporting nodes. This can also include plugin services loaded from .jar files in the plugins folder. Optionally, a custom advertised service name can be provided by appending it to the service type id: ``"corda.notary.validating|Notary A"``
 
 :notaryNodeAddress: The host and port to which to bind the embedded Raft server. Required only when running a distributed notary service. A group of Corda nodes can run a distributed notary service by each running an embedded Raft server and joining them to the same cluster to replicate the committed state log. Note that the Raft cluster uses a separate transport layer for communication that does not integrate with ArtemisMQ messaging services.
 

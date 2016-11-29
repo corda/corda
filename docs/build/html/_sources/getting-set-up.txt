@@ -20,6 +20,12 @@ We strongly recommend the use of IntelliJ's Development Environment known as IDE
 `JetBrains <https://www.jetbrains.com/idea/download/>`_. The primary reason we recommend this particular IDE is that it integrates
 very well with our choice of language for Corda, "Kotlin", as Jetbrains also support the development of Kotlin.
 
+.. warning:: When opening the Corda project for the first time from the IntelliJ splash screen, please use "Open"
+   and then agree to import the Gradle project from the popup bubble. Don't pick "Import" on the splash screen,
+   because a bug in IntelliJ will cause the pre-packaged run configurations to be erased. If you see this warning
+   too late, it's no problem, just use ``git checkout .idea/runConfiguration`` or the version control tab in IntelliJ
+   to undelete the files.
+
 
 Kotlin
 ------
