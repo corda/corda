@@ -18,7 +18,7 @@ so far. We have:
 
 The demos can be run either from the command line, or from inside IntelliJ. Running from the command line is
 recommended if you are just wanting to see them run, using IntelliJ can be helpful if you want to debug or
-develop the demos themselves.
+develop the demos themselves. For more details about running via the command line or within IntelliJ - see :doc:`CLI-vs-IDE`.
 
 Trader demo
 -----------
