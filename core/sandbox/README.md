@@ -7,7 +7,9 @@ is not designed as a anti-DoS mitigation.
 
 To learn more about the sandbox design please consult the Corda technical white paper.
 
-This code was written by Ben Evans.
+This code was written by Ben Evans. 
+
+The sandbox has been briefly reviewed but not yet tested or thoroughly reviewed. It should NOT be used or relied upon in any production setting until this warning is removed.
 
 # Roadmap
 
