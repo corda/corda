@@ -15,10 +15,24 @@ Corda is a decentralised database system in which nodes trust each other as litt
  
 Read our full and planned feature list [here](https://docs.corda.net/inthebox.html).
 
+## Getting started
+
+Firstly, read the [Getting started](https://docs.corda.net/getting-set-up.html) documentation. 
+
+To build your own CorDapps:
+
+1. Clone the [CorDapp Template repository](https://github.com/corda/cordapp-template)
+2. Read the [README](https://github.com/corda/cordapp-template/blob/master/README.md) (**IMPORTANT!**)
+3. Read the [Writing a CorDapp](https://docs.corda.net/tutorial-cordapp.html) documentation
+
+To look at the Corda source and run some sample applications:
+
+1. Clone this repository
+2. To run some sample CorDapps, read the [running the demos documentation](https://docs.corda.r3cev.com/running-the-demos.html)
+3. Start hacking and [contribute](./CONTRIBUTING.md)!
+
 ## Useful links
 
-* [Getting started](https://docs.corda.net/getting-set-up.html)
-* [Writing a CorDapp](https://docs.corda.net/tutorial-cordapp.html)
 * [Project website](https://corda.net)
 * [Documentation](https://docs.corda.net)
 * [Forum](https://discourse.corda.net)
