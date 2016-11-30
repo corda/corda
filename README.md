@@ -41,4 +41,4 @@ Please read [here](./CONTRIBUTING.md).
 
 ## License
 
-[Apache 2.0](./LICENSE.md)
+[Apache 2.0](./LICENCE)
