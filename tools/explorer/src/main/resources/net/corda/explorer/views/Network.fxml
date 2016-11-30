@@ -8,10 +8,11 @@
             xmlns:fx="http://javafx.com/fxml/1">
     <center>
         <StackPane>
-            <ScrollPane fx:id="mapScrollPane" hbarPolicy="ALWAYS" pannable="true" vbarPolicy="ALWAYS">
-                <Pane fx:id="mapPane" styleClass="map">
+            <ScrollPane fx:id="mapScrollPane" hbarPolicy="NEVER" pannable="true" vbarPolicy="NEVER">
+                <StackPane>
                     <ImageView fx:id="mapImageView" styleClass="worldMap"/>
-                </Pane>
+                    <Pane fx:id="mapPane" styleClass="map"/>
+                </StackPane>
             </ScrollPane>
             <VBox spacing="5" StackPane.alignment="TOP_LEFT" maxWidth="-Infinity" maxHeight="-Infinity">
                 <StackPane.margin>
