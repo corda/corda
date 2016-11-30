@@ -34,18 +34,18 @@ This process only needs to be done once when the node connects to the network fo
 
 Building the utility
 --------------------
-The utility will be created as part of the main build ``buildCordaJAR``.
+The utility will be created as part of the gradle ``:node`` module ``buildCordaJAR`` task.
 You can also build the utility JAR by run the following command from the Corda project root directory.
 
 **Windows**::
 
-    gradlew.bat buildCertSigningRequestUtilityJAR
+    gradlew.bat :node:buildCertSigningRequestUtilityJAR
 
 **Other**::
 
-    ./gradlew buildCertSigningRequestUtilityJAR
+    ./gradlew :node:buildCertSigningRequestUtilityJAR
 
-The utility JAR will be created in ``<Project Root Dir>/build/libs/certSigningRequestUtility.jar``
+The utility JAR will be created in ``<Project Root Dir>/node/build/libs/certSigningRequestUtility.jar``
 
 
 Running the utility

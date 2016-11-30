@@ -45,7 +45,7 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
     // Corda integration dependencies
-    compile "net.corda:corda:$corda_version"   // TODO
+    runtime project(path: ":node", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':client')
     compile project(':node')
@@ -81,7 +81,7 @@ task generateNotaryIdentity(type: JavaExec) {
     args = [nodeDirs, notaryType, notaryName]
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install', 'build', 'generateNotaryIdentity']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generateNotaryIdentity']) {
     directory deployTo
     networkMap "Notary 1"
     node {

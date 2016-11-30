@@ -21,12 +21,12 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
     // Corda integration dependencies
-    compile "net.corda:corda:$corda_version"   // TODO
+    runtime project(path: ":node", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':client')
     compile project(':node')
     compile project(':finance')
-    compile project(':test-utils')
+    testCompile project(':test-utils')
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
