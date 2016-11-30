@@ -1,6 +1,8 @@
 apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
 
 repositories {
     mavenLocal()
@@ -38,18 +40,6 @@ sourceSets {
     }
 }
 
-publishing {
-    publications {
-        client(MavenPublication) {
-            from components.java
-            artifactId 'client'
-
-            artifact sourceJar
-            artifact javadocJar
-        }
-    }
-}
-
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
@@ -83,4 +73,64 @@ dependencies {
 task integrationTest(type: Test) {
     testClassesDir = sourceSets.integrationTest.output.classesDir
     classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+bintray {
+    user = System.getenv('CORDA_BINTRAY_USER')
+    key = System.getenv('CORDA_BINTRAY_KEY')
+    publications = ['client']
+    dryRun = false
+    pkg {
+        repo = 'corda'
+        name = 'client'
+        userOrg = 'r3'
+        licenses = ['Apache-2.0']
+
+        version {
+            gpg {
+                sign = true
+                passphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
+            }
+        }
+    }
+}
+
+publishing {
+    publications {
+        client(MavenPublication) {
+            from components.java
+            artifactId 'client'
+
+            artifact sourceJar
+            artifact javadocJar
+
+            pom.withXml {
+                asNode().children().last() + {
+                    resolveStrategy = Closure.DELEGATE_FIRST
+                    name 'client'
+                    description 'Corda client modules'
+                    url 'https://github.com/corda/corda'
+                    scm {
+                        url 'https://github.com/corda/corda'
+                    }
+
+                    licenses {
+                        license {
+                            name 'Apache-2.0'
+                            url 'https://www.apache.org/licenses/LICENSE-2.0'
+                            distribution 'repo'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id 'R3'
+                            name 'R3'
+                            email 'dev@corda.net'
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
