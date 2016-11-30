@@ -2,7 +2,6 @@ buildscript {
     // Our version: bump this on release.
     ext.corda_version = "0.7-SNAPSHOT"
     ext.gradle_plugins_version = "0.6.1"
-
     ext.kotlin_version = '1.0.5'
     ext.quasar_version = '0.7.6'
     ext.asm_version = '0.5.3'
