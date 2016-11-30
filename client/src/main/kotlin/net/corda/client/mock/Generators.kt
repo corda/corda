@@ -9,7 +9,7 @@ fun generateCurrency(): Generator<Currency> {
 }
 
 fun <T : Any> generateAmount(min: Long, max: Long, tokenGenerator: Generator<T>): Generator<Amount<T>> {
-    return Generator.longRange(min, max).combine(tokenGenerator) { quantity, token -> Amount(quantity, token)  }
+    return Generator.longRange(min, max).combine(tokenGenerator) { quantity, token -> Amount(quantity, token) }
 }
 
 fun generateCurrencyAmount(min: Long, max: Long): Generator<Amount<Currency>> {

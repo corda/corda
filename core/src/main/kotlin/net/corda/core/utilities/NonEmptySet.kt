@@ -109,7 +109,9 @@ object NonEmptySetSerializer : Serializer<NonEmptySet<Any>>() {
         // Read the first item and use it to construct the NonEmptySet
         val set = NonEmptySet(first)
         // Read in the rest of the set
-        for (i in 2..size) { set.add(kryo.readClassAndObject(input)) }
+        for (i in 2..size) {
+            set.add(kryo.readClassAndObject(input))
+        }
         return set
     }
 }

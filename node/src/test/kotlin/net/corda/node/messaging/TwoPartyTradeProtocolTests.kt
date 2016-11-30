@@ -305,9 +305,9 @@ class TwoPartyTradeFlowTests {
                             // Bob answers with the transactions that are now all verifiable, as Alice bottomed out.
                             // Bob's transactions are valid, so she commits to the database
                             expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[0].id]!!)),
-                            expect(TxRecord.Get(bobsFakeCash[0].id)),   // Verify
+                            expect(TxRecord.Get(bobsFakeCash[0].id)), // Verify
                             expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[2].id]!!)),
-                            expect(TxRecord.Get(bobsFakeCash[0].id)),   // Verify
+                            expect(TxRecord.Get(bobsFakeCash[0].id)), // Verify
                             expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[1].id]!!)),
                             // Now she verifies the transaction is contract-valid (not signature valid) which means
                             // looking up the states again.
@@ -413,7 +413,7 @@ class TwoPartyTradeFlowTests {
             val sellerId: StateMachineRunId
     )
 
-    private fun runBuyerAndSeller(assetToSell: StateAndRef<OwnableState>) : RunResult {
+    private fun runBuyerAndSeller(assetToSell: StateAndRef<OwnableState>): RunResult {
         val buyerFuture = bobNode.initiateSingleShotFlow(Seller::class) { otherParty ->
             Buyer(otherParty, notaryNode.info.notaryIdentity, 1000.DOLLARS, CommercialPaper.State::class.java)
         }.map { it.fsm }
@@ -485,11 +485,12 @@ class TwoPartyTradeFlowTests {
             // Issued money to itself.
             output("elbonian money 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
             output("elbonian money 2", notary = notary) { 1000.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
-            if (!withError)
+            if (!withError) {
                 command(DUMMY_CASH_ISSUER_KEY.public.composite) { Cash.Commands.Issue() }
-            else
+            } else {
                 // Put a broken command on so at least a signature is created
                 command(DUMMY_CASH_ISSUER_KEY.public.composite) { Cash.Commands.Move() }
+            }
             timestamp(TEST_TX_TIME)
             if (withError) {
                 this.fails()

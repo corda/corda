@@ -33,7 +33,7 @@ data class SelfIssueState(
 }
 
 val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
-// DOCS END 1
+        // DOCS END 1
         "Self issuing cash randomly",
 
         generate = { state, parallelism ->

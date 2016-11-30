@@ -5,7 +5,7 @@ import net.corda.core.transactions.hashConcat
 import java.util.*
 
 
-class MerkleTreeException(val reason: String): Exception() {
+class MerkleTreeException(val reason: String) : Exception() {
     override fun toString() = "Partial Merkle Tree exception. Reason: $reason"
 }
 
@@ -55,9 +55,9 @@ class PartialMerkleTree(val root: PartialTree) {
      * it's easier to extract hashes used as a base for this tree.
      */
     sealed class PartialTree() {
-        class IncludedLeaf(val hash: SecureHash): PartialTree()
-        class Leaf(val hash: SecureHash): PartialTree()
-        class Node(val left: PartialTree, val right: PartialTree): PartialTree()
+        class IncludedLeaf(val hash: SecureHash) : PartialTree()
+        class Leaf(val hash: SecureHash) : PartialTree()
+        class Node(val left: PartialTree, val right: PartialTree) : PartialTree()
     }
 
     companion object {
@@ -70,7 +70,7 @@ class PartialMerkleTree(val root: PartialTree) {
             val usedHashes = ArrayList<SecureHash>()
             val tree = buildPartialTree(merkleRoot, includeHashes, usedHashes)
             //Too much included hashes or different ones.
-            if(includeHashes.size != usedHashes.size)
+            if (includeHashes.size != usedHashes.size)
                 throw MerkleTreeException("Some of the provided hashes are not in the tree.")
             return PartialMerkleTree(tree.second)
         }

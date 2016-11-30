@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.TableView?>
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.VBox?>
-<BorderPane stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<BorderPane stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.76-ea"
+            xmlns:fx="http://javafx.com/fxml/1">
     <padding>
         <Insets top="5" left="5" right="5" bottom="5"/>
     </padding>

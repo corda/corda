@@ -442,7 +442,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     interface SessionMessage
 
-    interface ExistingSessionMessage: SessionMessage {
+    interface ExistingSessionMessage : SessionMessage {
         val recipientSessionId: Long
     }
 

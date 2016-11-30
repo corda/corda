@@ -13,7 +13,7 @@ import net.corda.core.contracts.clauses.Clause
  * @param sumOrZero function to convert a list of states into an amount of the token, and returns zero if there are
  * no states in the list. Takes in an instance of the token definition for constructing the zero amount if needed.
  */
-abstract class AbstractIssue<in S: ContractState, C: CommandData, T: Any>(
+abstract class AbstractIssue<in S : ContractState, C : CommandData, T : Any>(
         val sum: List<S>.() -> Amount<Issued<T>>,
         val sumOrZero: List<S>.(token: Issued<T>) -> Amount<Issued<T>>
 ) : Clause<S, C, Issued<T>>() {

@@ -34,7 +34,9 @@ class WireTransaction(
         type: TransactionType,
         timestamp: Timestamp?
 ) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp) {
-    init { checkInvariants() }
+    init {
+        checkInvariants()
+    }
 
     // Cache the serialised form of the transaction and its hash to give us fast access to it.
     @Volatile @Transient private var cachedBytes: SerializedBytes<WireTransaction>? = null

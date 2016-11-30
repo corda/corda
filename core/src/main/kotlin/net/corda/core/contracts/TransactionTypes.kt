@@ -58,8 +58,7 @@ sealed class TransactionType {
             // are any inputs, all outputs must have the same notary.
             // TODO: Is that the correct set of restrictions? May need to come back to this, see if we can be more
             //       flexible on output notaries.
-            if (tx.notary != null
-                && tx.inputs.isNotEmpty()) {
+            if (tx.notary != null && tx.inputs.isNotEmpty()) {
                 tx.outputs.forEach {
                     if (it.notary != tx.notary) {
                         throw TransactionVerificationException.NotaryChangeInWrongTransactionType(tx, it.notary)
@@ -80,10 +79,11 @@ sealed class TransactionType {
             }
 
             // Validate that all encumbrances exist within the set of input states.
-            tx.inputs.filter { it.state.data.encumbrance != null }.forEach {
-                encumberedInput ->
-                if (tx.inputs.none { it.ref.txhash == encumberedInput.ref.txhash &&
-                        it.ref.index == encumberedInput.state.data.encumbrance }) {
+            tx.inputs.filter { it.state.data.encumbrance != null }.forEach { encumberedInput ->
+                val isMissing = tx.inputs.none {
+                    it.ref.txhash == encumberedInput.ref.txhash && it.ref.index == encumberedInput.state.data.encumbrance
+                }
+                if (isMissing) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
                             tx, encumberedInput.state.data.encumbrance!!,
                             TransactionVerificationException.Direction.INPUT
@@ -93,7 +93,7 @@ sealed class TransactionType {
 
             // Check that, in the outputs, an encumbered state does not refer to itself as the encumbrance,
             // and that the number of outputs can contain the encumbrance.
-            for ((i, output) in tx.outputs.withIndex() ) {
+            for ((i, output) in tx.outputs.withIndex()) {
                 val encumbranceIndex = output.data.encumbrance ?: continue
                 if (encumbranceIndex == i || encumbranceIndex >= tx.outputs.size) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(

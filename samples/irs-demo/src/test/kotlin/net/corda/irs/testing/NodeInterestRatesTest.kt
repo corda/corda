@@ -56,8 +56,8 @@ class NodeInterestRatesTest {
     @Before
     fun setUp() {
         val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-        dataSource=dataSourceAndDatabase.first
-        database=dataSourceAndDatabase.second
+        dataSource = dataSourceAndDatabase.first
+        database = dataSourceAndDatabase.second
         databaseTransaction(database) {
             oracle = NodeInterestRates.Oracle(MEGA_CORP, MEGA_CORP_KEY, clock).apply { knownFixes = TEST_DATA }
         }
@@ -120,7 +120,7 @@ class NodeInterestRatesTest {
         databaseTransaction(database) {
             val tx = makeTX()
             val wtx1 = tx.toWireTransaction()
-            val ftx1 = FilteredTransaction.buildMerkleTransaction(wtx1, FilterFuns(filterOutputs = {true}))
+            val ftx1 = FilteredTransaction.buildMerkleTransaction(wtx1, FilterFuns(filterOutputs = { true }))
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx1, wtx1.id) }
             tx.addCommand(Cash.Commands.Move(), ALICE_PUBKEY)
             val wtx2 = tx.toWireTransaction()

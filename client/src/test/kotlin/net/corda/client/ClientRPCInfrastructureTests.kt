@@ -81,6 +81,7 @@ class ClientRPCInfrastructureTests {
                 }
                 producer.send(toAddress, msg)
             }
+
             override fun getUser(message: ClientMessage): User = authenticatedUser
         }
         serverThread = AffinityExecutor.ServiceAffinityExecutor("unit-tests-rpc-dispatch-thread", 1)
@@ -139,7 +140,8 @@ class ClientRPCInfrastructureTests {
 
         override fun barf(): Unit = throw IllegalArgumentException("Barf!")
 
-        override fun void() { }
+        override fun void() {
+        }
 
         override fun someCalculation(str: String, num: Int) = "$str $num"
 

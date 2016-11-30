@@ -17,12 +17,15 @@ class ReportingCurrencyModel {
     private val exchangeRate: ObservableValue<ExchangeRate> by observableValue(ExchangeRateModel::exchangeRate)
     val reportingCurrency by observableValue(SettingsModel::reportingCurrencyProperty)
     val supportedCurrencies = setOf(USD, GBP, CHF).toList().observable()
+
     /**
      * This stream provides a stream of exchange() functions that updates when either the reporting currency or the
      * exchange rates change
      */
     val reportingExchange: ObservableValue<Pair<Currency, (Amount<Currency>) -> Amount<Currency>>> =
-            EasyBind.map(AmountBindings.exchange(reportingCurrency, exchangeRate)) { Pair(it.first) { amount: Amount<Currency> ->
-                Amount(it.second(amount), it.first)
-            }}
+            EasyBind.map(AmountBindings.exchange(reportingCurrency, exchangeRate)) {
+                Pair(it.first) { amount: Amount<Currency> ->
+                    Amount(it.second(amount), it.first)
+                }
+            }
 }

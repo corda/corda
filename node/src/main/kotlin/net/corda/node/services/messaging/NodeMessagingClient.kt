@@ -104,13 +104,13 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     }
 
     private val processedMessages: MutableSet<UUID> = Collections.synchronizedSet(
-        object : AbstractJDBCHashSet<UUID, Table>(Table, loadOnInit = true) {
-            override fun elementFromRow(row: ResultRow): UUID = row[table.uuid]
+            object : AbstractJDBCHashSet<UUID, Table>(Table, loadOnInit = true) {
+                override fun elementFromRow(row: ResultRow): UUID = row[table.uuid]
 
-            override fun addElementToInsert(insert: InsertStatement, entry: UUID, finalizables: MutableList<() -> Unit>) {
-                insert[table.uuid] = entry
-            }
-        })
+                override fun addElementToInsert(insert: InsertStatement, entry: UUID, finalizables: MutableList<() -> Unit>) {
+                    insert[table.uuid] = entry
+                }
+            })
 
     fun start(rpcOps: RPCOps, userService: RPCUserService) {
         state.locked {

@@ -34,7 +34,7 @@ object NotaryChangeFlow : AbstractStateReplacementFlow<Party>() {
         : AbstractStateReplacementFlow.Instigator<T, Party>(originalState, newNotary, progressTracker) {
 
         override fun assembleProposal(stateRef: StateRef, modification: Party, stx: SignedTransaction): AbstractStateReplacementFlow.Proposal<Party>
-            = Proposal(stateRef, modification, stx)
+                = Proposal(stateRef, modification, stx)
 
         override fun assembleTx(): Pair<SignedTransaction, List<CompositeKey>> {
             val state = originalState.state

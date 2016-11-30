@@ -23,7 +23,7 @@ import net.corda.core.transactions.TransactionBuilder
  * At the same time, other contracts that just want assets and don't care much who is currently holding it can ignore
  * the issuer/depositRefs and just examine the amount fields.
  */
-abstract class OnLedgerAsset<T : Any, C: CommandData, S : FungibleAsset<T>> : Contract {
+abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : Contract {
     abstract fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): Collection<AuthenticatedObject<C>>
     abstract val conserveClause: AbstractConserveAmount<S, C, T>
 
@@ -40,7 +40,7 @@ abstract class OnLedgerAsset<T : Any, C: CommandData, S : FungibleAsset<T>> : Co
      */
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
                      assetStates: List<StateAndRef<S>>): CompositeKey
-        = conserveClause.generateExit(tx, amountIssued, assetStates,
+            = conserveClause.generateExit(tx, amountIssued, assetStates,
             deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
             generateMoveCommand = { -> generateMoveCommand() },
             generateExitCommand = { amount -> generateExitCommand(amount) }

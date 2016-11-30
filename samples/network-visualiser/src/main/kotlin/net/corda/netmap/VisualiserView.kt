@@ -62,7 +62,7 @@ internal class VisualiserView() {
         NetworkMapVisualiser::class.java.getResourceAsStream("SourceSansPro-Regular.otf").use {
             Font.loadFont(it, 120.0)
         }
-        if(displayStyle == Style.MAP) {
+        if (displayStyle == Style.MAP) {
             mapImage.onZoom = EventHandler<javafx.scene.input.ZoomEvent> { event ->
                 event.consume()
                 mapImage.fitWidth = mapImage.fitWidth * event.zoomFactor
@@ -169,7 +169,7 @@ internal class VisualiserView() {
         hideButton.translateXProperty().unbind()
         hideButton.translateXProperty().bind(splitter.dividers[0].positionProperty().multiply(splitter.widthProperty()).subtract(hideButton.widthProperty()))
     }
-    
+
     fun scaleMap(displayStyle: Style) {
         when (displayStyle) {
             Style.MAP -> {

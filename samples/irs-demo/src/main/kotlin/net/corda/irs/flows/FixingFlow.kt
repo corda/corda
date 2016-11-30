@@ -73,6 +73,7 @@ object FixingFlow {
             // TODO Could it be solved in better way, move filtering here not in RatesFixFlow?
             // DOCSTART 1
             fun filterCommands(c: Command) = oracleParty.owningKey in c.signers && c.value is Fix
+
             val filterFuns = FilterFuns(filterCommands = ::filterCommands)
             val addFixing = object : RatesFixFlow(ptx, filterFuns, oracleParty, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
                 @Suspendable

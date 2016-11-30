@@ -1,5 +1,6 @@
 package net.corda.node.utilities.certsigning
 
+import joptsimple.OptionParser
 import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
@@ -12,7 +13,6 @@ import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.getValue
-import joptsimple.OptionParser
 import java.net.URL
 import java.nio.file.Paths
 import java.security.KeyPair
@@ -107,7 +107,7 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
             requestIdStore.writeLines(listOf(requestId))
             requestId
         } else {
-            requestIdStore.readLines { it.findFirst().get()  }
+            requestIdStore.readLines { it.findFirst().get() }
         }
     }
 }

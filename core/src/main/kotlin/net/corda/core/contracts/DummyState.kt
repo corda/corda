@@ -1,6 +1,7 @@
 package net.corda.core.contracts
 
 import net.corda.core.crypto.CompositeKey
+
 /**
  * Dummy state for use in testing. Not part of any contract, not even the [DummyContract].
  */

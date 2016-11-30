@@ -48,18 +48,22 @@ fun <A, B> ObservableList<out A>.map(cached: Boolean = true, function: (A) -> B)
  * val aliceHeightPlus2 = ::sumHeight.lift(aliceHeight, 2L.lift())
  */
 fun <A> A.lift(): ObservableValue<A> = ReadOnlyObjectWrapper(this)
+
 fun <A, R> ((A) -> R).lift(
         arg0: ObservableValue<A>
 ): ObservableValue<R> = EasyBind.map(arg0, this)
+
 fun <A, B, R> ((A, B) -> R).lift(
         arg0: ObservableValue<A>,
         arg1: ObservableValue<B>
 ): ObservableValue<R> = EasyBind.combine(arg0, arg1, this)
+
 fun <A, B, C, R> ((A, B, C) -> R).lift(
         arg0: ObservableValue<A>,
         arg1: ObservableValue<B>,
         arg2: ObservableValue<C>
 ): ObservableValue<R> = EasyBind.combine(arg0, arg1, arg2, this)
+
 fun <A, B, C, D, R> ((A, B, C, D) -> R).lift(
         arg0: ObservableValue<A>,
         arg1: ObservableValue<B>,
@@ -74,6 +78,7 @@ fun <A, B, C, D, R> ((A, B, C, D) -> R).lift(
  */
 fun <A, B> ObservableValue<out A>.bind(function: (A) -> ObservableValue<B>): ObservableValue<B> =
         EasyBind.monadic(this).flatMap(function)
+
 /**
  * A variant of [bind] that has out variance on the output type. This is sometimes useful when kotlin is too eager to
  * propagate variance constraints and type inference fails.
@@ -264,9 +269,11 @@ fun <A : Any, B : Any, K : Any> ObservableList<A>.leftOuterJoin(
 fun <A> ObservableList<A>.getValueAt(index: Int): ObservableValue<A?> {
     return Bindings.valueAt(this, index)
 }
+
 fun <A> ObservableList<A>.first(): ObservableValue<A?> {
     return getValueAt(0)
 }
+
 fun <A> ObservableList<A>.last(): ObservableValue<A?> {
     return Bindings.createObjectBinding({
         if (size > 0) {

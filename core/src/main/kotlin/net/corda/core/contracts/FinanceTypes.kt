@@ -61,7 +61,7 @@ data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
     operator fun times(other: Long): Amount<T> = Amount(Math.multiplyExact(quantity, other), token)
     operator fun div(other: Int): Amount<T> = Amount(quantity / other, token)
     operator fun times(other: Int): Amount<T> = Amount(Math.multiplyExact(quantity, other.toLong()), token)
-    
+
     override fun toString(): String = (BigDecimal(quantity).divide(BigDecimal(100))).setScale(2).toPlainString() + " " + token
 
     override fun compareTo(other: Amount<T>): Int {
@@ -267,7 +267,7 @@ enum class Frequency(val annualCompoundCount: Int) {
 }
 
 
-@Suppress("unused")     // This utility may be useful in future. TODO: Review before API stability guarantees in place.
+@Suppress("unused") // This utility may be useful in future. TODO: Review before API stability guarantees in place.
 fun LocalDate.isWorkingDay(accordingToCalendar: BusinessCalendar): Boolean = accordingToCalendar.isWorkingDay(this)
 
 // TODO: Make Calendar data come from an oracle
@@ -379,7 +379,7 @@ open class BusinessCalendar private constructor(val holidayDates: List<LocalDate
      */
     fun moveBusinessDays(date: LocalDate, direction: DateRollDirection, i: Int): LocalDate {
         require(i >= 0)
-        if ( i == 0 ) return date
+        if (i == 0) return date
         var retDate = date
         var ctr = 0
         while (ctr < i) {
@@ -442,6 +442,7 @@ data class Commodity(val commodityCode: String,
                 // Simple example commodity, as in http://www.investopedia.com/university/commodities/commodities14.asp
                 Pair("FCOJ", Commodity("FCOJ", "Frozen concentrated orange juice"))
         )
+
         fun getInstance(commodityCode: String): Commodity?
                 = registry[commodityCode]
     }
@@ -461,13 +462,11 @@ data class Commodity(val commodityCode: String,
  */
 data class UniqueIdentifier(val externalId: String? = null, val id: UUID = UUID.randomUUID()) : Comparable<UniqueIdentifier> {
     override fun toString(): String = if (externalId != null) "${externalId}_$id" else id.toString()
+
     companion object {
-        /**
-         * Helper function for unit tests where the UUID needs to be manually initialised for consistency.
-         */
+        /** Helper function for unit tests where the UUID needs to be manually initialised for consistency. */
         @VisibleForTesting
-        fun fromString(name: String) : UniqueIdentifier
-            = UniqueIdentifier(null, UUID.fromString(name))
+        fun fromString(name: String): UniqueIdentifier = UniqueIdentifier(null, UUID.fromString(name))
     }
 
     override fun compareTo(other: UniqueIdentifier): Int = id.compareTo(other.id)

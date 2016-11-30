@@ -31,7 +31,9 @@ class LedgerTransaction(
         timestamp: Timestamp?,
         type: TransactionType
 ) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp) {
-    init { checkInvariants() }
+    init {
+        checkInvariants()
+    }
 
     @Suppress("UNCHECKED_CAST")
     fun <T : ContractState> outRef(index: Int) = StateAndRef(outputs[index] as TransactionState<T>, StateRef(id, index))

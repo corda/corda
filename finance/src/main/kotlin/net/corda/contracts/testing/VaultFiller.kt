@@ -1,4 +1,5 @@
 @file:JvmName("VaultFiller")
+
 package net.corda.contracts.testing
 
 import net.corda.contracts.asset.Cash

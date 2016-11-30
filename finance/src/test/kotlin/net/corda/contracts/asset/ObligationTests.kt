@@ -665,6 +665,7 @@ class ObligationTests {
         }
 
     }
+
     @Test
     fun `exit multiple product obligations`() {
         // Multi-product case.

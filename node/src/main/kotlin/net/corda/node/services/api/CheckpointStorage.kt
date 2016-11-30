@@ -25,7 +25,7 @@ interface CheckpointStorage {
      * The checkpoints are only valid during the lifetime of a single call to the block, to allow memory management.
      * Return false from the block to terminate further iteration.
      */
-    fun forEach(block: (Checkpoint)->Boolean)
+    fun forEach(block: (Checkpoint) -> Boolean)
 
 }
 

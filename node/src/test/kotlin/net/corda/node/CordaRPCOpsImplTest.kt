@@ -58,7 +58,7 @@ class CordaRPCOpsImplTest {
     @Test
     fun `cash issue accepted`() {
         val quantity = 1000L
-        val ref = OpaqueBytes(ByteArray(1) {1})
+        val ref = OpaqueBytes(ByteArray(1) { 1 })
 
         // Check the monitoring service wallet is empty
         databaseTransaction(aliceNode.database) {

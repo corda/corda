@@ -13,8 +13,8 @@ val Positivity.sign: String get() = when (this) {
 }
 
 data class AmountDiff<T>(
-     val positivity: Positivity,
-     val amount: Amount<T>
+        val positivity: Positivity,
+        val amount: Amount<T>
 ) {
     companion object {
         fun <T> fromLong(quantity: Long, token: T) =

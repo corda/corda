@@ -21,7 +21,7 @@ data class PortfolioState(val portfolio: List<StateRef>,
                           val valuationDate: LocalDate,
                           val valuation: PortfolioValuation? = null,
                           override val linearId: UniqueIdentifier = UniqueIdentifier())
-: RevisionedState<PortfolioState.Update>, SchedulableState, DealState {
+    : RevisionedState<PortfolioState.Update>, SchedulableState, DealState {
     data class Update(val portfolio: List<StateRef>? = null, val valuation: PortfolioValuation? = null)
 
     override val parties: List<Party> get() = _parties.toList()

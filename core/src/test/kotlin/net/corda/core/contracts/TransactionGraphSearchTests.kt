@@ -13,7 +13,7 @@ import java.security.KeyPair
 import kotlin.test.assertEquals
 
 class TransactionGraphSearchTests {
-    class GraphTransactionStorage(val originTx: SignedTransaction, val inputTx: SignedTransaction): MockTransactionStorage() {
+    class GraphTransactionStorage(val originTx: SignedTransaction, val inputTx: SignedTransaction) : MockTransactionStorage() {
         init {
             addTransaction(originTx)
             addTransaction(inputTx)

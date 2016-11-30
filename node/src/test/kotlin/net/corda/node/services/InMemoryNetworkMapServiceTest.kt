@@ -63,7 +63,7 @@ abstract class AbstractNetworkMapServiceTest {
         assertEquals(1, service().nodes.count())
 
         // Confirm that de-registering the node succeeds and drops it from the node lists
-        val removeChange = NodeRegistration(registerNode.info, instant.toEpochMilli()+1, AddOrRemove.REMOVE, expires)
+        val removeChange = NodeRegistration(registerNode.info, instant.toEpochMilli() + 1, AddOrRemove.REMOVE, expires)
         val removeWireChange = removeChange.toWire(nodeKey.private)
         assert(service().processRegistrationChangeRequest(RegistrationRequest(removeWireChange, mapServiceNode.info.address, Long.MIN_VALUE)).success)
         swizzle()
@@ -92,7 +92,7 @@ abstract class AbstractNetworkMapServiceTest {
         val nodeKey = registerNode.services.legalIdentityKey
         val instant = Instant.now()
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
-        val reg = NodeRegistration(registerNode.info, instant.toEpochMilli()+1, AddOrRemove.REMOVE, expires)
+        val reg = NodeRegistration(registerNode.info, instant.toEpochMilli() + 1, AddOrRemove.REMOVE, expires)
         val registerResult = registerNode.registration(mapServiceNode, reg, nodeKey.private)
         network.runNetwork()
         assertTrue(registerResult.getOrThrow().success)

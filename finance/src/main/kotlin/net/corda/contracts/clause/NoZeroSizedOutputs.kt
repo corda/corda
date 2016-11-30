@@ -1,6 +1,5 @@
 package net.corda.contracts.clause
 
-import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.Clause
 

@@ -47,7 +47,7 @@ class NodeSchedulerService(private val database: Database,
                            private val services: ServiceHubInternal,
                            private val flowLogicRefFactory: FlowLogicRefFactory,
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor())
-: SchedulerService, SingletonSerializeAsToken() {
+    : SchedulerService, SingletonSerializeAsToken() {
 
     private val log = loggerFor<NodeSchedulerService>()
 
@@ -170,7 +170,7 @@ class NodeSchedulerService(private val database: Database,
 
             // Ensure we are still scheduled.
             val scheduledLogic: FlowLogic<*>? = getScheduledLogic()
-            if(scheduledLogic != null) {
+            if (scheduledLogic != null) {
                 subFlow(scheduledLogic)
             }
         }

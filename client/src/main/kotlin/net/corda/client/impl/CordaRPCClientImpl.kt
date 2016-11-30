@@ -324,8 +324,8 @@ class CordaRPCClientImpl(private val session: ClientSession,
             val c = synchronized(this) { consumer }
             if (c != null) {
                 rpcLog.warn("A hot observable returned from an RPC ($rpcName) was never subscribed to or explicitly closed. " +
-                         "This wastes server-side resources because it was queueing observations for retrieval. " +
-                         "It is being closed now, but please adjust your code to cast the observable to AutoCloseable and then close it explicitly.", rpcLocation)
+                        "This wastes server-side resources because it was queueing observations for retrieval. " +
+                        "It is being closed now, but please adjust your code to cast the observable to AutoCloseable and then close it explicitly.", rpcLocation)
                 c.close()
             }
         }

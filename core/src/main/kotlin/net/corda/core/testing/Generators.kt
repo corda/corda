@@ -27,13 +27,13 @@ fun <A> Generator<A>.generateList(random: SourceOfRandomness, status: Generation
     return arrayGenerator.generate(random, status) as List<A>
 }
 
-class PrivateKeyGenerator: Generator<PrivateKey>(PrivateKey::class.java) {
+class PrivateKeyGenerator : Generator<PrivateKey>(PrivateKey::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): PrivateKey {
         return entropyToKeyPair(random.nextBigInteger(32)).private
     }
 }
 
-class PublicKeyGenerator: Generator<PublicKey>(PublicKey::class.java) {
+class PublicKeyGenerator : Generator<PublicKey>(PublicKey::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): PublicKey {
         return entropyToKeyPair(random.nextBigInteger(32)).public
     }
@@ -45,25 +45,25 @@ class CompositeKeyGenerator : Generator<CompositeKey>(CompositeKey::class.java) 
     }
 }
 
-class PartyGenerator: Generator<Party>(Party::class.java) {
+class PartyGenerator : Generator<Party>(Party::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Party {
         return Party(StringGenerator().generate(random, status), CompositeKeyGenerator().generate(random, status))
     }
 }
 
-class PartyAndReferenceGenerator: Generator<PartyAndReference>(PartyAndReference::class.java) {
+class PartyAndReferenceGenerator : Generator<PartyAndReference>(PartyAndReference::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): PartyAndReference {
         return PartyAndReference(PartyGenerator().generate(random, status), OpaqueBytes(random.nextBytes(16)))
     }
 }
 
-class SecureHashGenerator: Generator<SecureHash>(SecureHash::class.java) {
+class SecureHashGenerator : Generator<SecureHash>(SecureHash::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): SecureHash {
         return SecureHash.Companion.sha256(random.nextBytes(16))
     }
 }
 
-class StateRefGenerator: Generator<StateRef>(StateRef::class.java) {
+class StateRefGenerator : Generator<StateRef>(StateRef::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): StateRef {
         return StateRef(SecureHash.Companion.sha256(random.nextBytes(16)), random.nextInt(0, 10))
     }
@@ -94,6 +94,7 @@ class CurrencyGenerator() : Generator<Currency>(Currency::class.java) {
     companion object {
         val currencies = Currency.getAvailableCurrencies().toList()
     }
+
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Currency {
         return currencies[random.nextInt(0, currencies.size - 1)]
     }

@@ -22,7 +22,7 @@ import javafx.collections.ObservableListBase
  */
 class ChosenList<E>(
         private val chosenListObservable: ObservableValue<out ObservableList<out E>>
-): ObservableListBase<E>() {
+) : ObservableListBase<E>() {
 
     private var currentList = chosenListObservable.value
 

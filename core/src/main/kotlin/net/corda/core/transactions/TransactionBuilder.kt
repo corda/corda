@@ -63,8 +63,7 @@ open class TransactionBuilder(
      * collaborating parties may therefore require a higher time tolerance than a transaction being built by a single
      * node.
      */
-    fun setTime(time: Instant, timeTolerance: Duration)
-        = setTime(Timestamp(time, timeTolerance))
+    fun setTime(time: Instant, timeTolerance: Duration) = setTime(Timestamp(time, timeTolerance))
 
     fun setTime(newTimestamp: Timestamp) {
         check(notary != null) { "Only notarised transactions can have a timestamp" }

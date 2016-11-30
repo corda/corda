@@ -20,7 +20,7 @@ object UpdateBusinessDayFlow {
     // resolve itself when the flow session stuff is done.
     data class UpdateBusinessDayMessage(val date: LocalDate)
 
-    class Plugin: CordaPluginRegistry() {
+    class Plugin : CordaPluginRegistry() {
         override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
     }
 

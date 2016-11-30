@@ -2,6 +2,7 @@
     -fx-font-family: "Source Sans Pro", sans-serif;
     -fx-font-size: 12pt;
 }
+
 .node-bank {
     -base-fill: #9e7bff;
 }
@@ -124,6 +125,7 @@
     -fx-base: lightblue;
     -fx-text-fill: darkslategrey;
 }
+
 .blue-button:disabled {
     -fx-text-fill: white;
 }
@@ -132,6 +134,7 @@
     -fx-base: #62c462;
     -fx-text-fill: darkslategrey;
 }
+
 .green-button:disabled {
     -fx-text-fill: white;
 }
@@ -173,10 +176,12 @@
 .date-label {
     -fx-font-size: 30;
 }
+
 .splitter {
     -fx-padding: 0;
     -fx-background-color: #464646;
 }
+
 .splitter > .split-pane-divider {
     -fx-background-color: linear-gradient(to left, #1c1c1c, transparent);
     -fx-border-color: black;
@@ -201,6 +206,7 @@
     -fx-background-color: #666666;
     -fx-padding: 5px;
 }
+
 .sidebar > VBox > StackPane > Label {
     -fx-text-fill: white;
 }
@@ -209,6 +215,7 @@
     -fx-spacing: 5;
     -fx-fill-width: true;
 }
+
 .progress-tracker-widget-steps > StackPane {
     -fx-background-color: #5a5a5a;
     -fx-padding: 7px;
@@ -216,6 +223,7 @@
     -fx-max-height: 35px;
     -fx-min-height: 35px;
 }
+
 .progress-tracker-widget-steps > StackPane > Label {
     -fx-text-fill: white;
 }

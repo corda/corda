@@ -31,7 +31,7 @@ fun setupJSchWithSshAgent(): JSch {
     require(identities.isNotEmpty()) { "No SSH identities found, please add one to the agent" }
     require(identities.size == 1) { "Multiple SSH identities found, don't know which one to pick" }
     val identity = identities[0]
-    log.info("Using SSH identity ${String(identity.comment) }")
+    log.info("Using SSH identity ${String(identity.comment)}")
 
     return JSch().apply {
         identityRepository = object : IdentityRepository {
@@ -42,10 +42,13 @@ fun setupJSchWithSshAgent(): JSch {
                     return IdentityRepository.UNAVAILABLE
                 }
             }
+
             override fun getName() = connector.name
             override fun getIdentities(): Vector<Identity> = Vector(listOf(
                     object : Identity {
-                        override fun clear() {}
+                        override fun clear() {
+                        }
+
                         override fun getAlgName() = String(Buffer(identity.blob).string)
                         override fun getName() = String(identity.comment)
                         override fun isEncrypted() = false
@@ -55,6 +58,7 @@ fun setupJSchWithSshAgent(): JSch {
                         override fun setPassphrase(passphrase: ByteArray?) = true
                     }
             ))
+
             override fun remove(blob: ByteArray?) = throw UnsupportedOperationException()
             override fun removeAll() = throw UnsupportedOperationException()
             override fun add(identity: ByteArray?) = throw UnsupportedOperationException()
@@ -148,7 +152,7 @@ class NodeConnection(
         private val jSchSession: Session,
         private val localTunnelAddress: HostAndPort,
         private val certificatesDirectory: Path
-): Closeable {
+) : Closeable {
 
     private val sslConfig = object : NodeSSLConfiguration {
         override val certificatesPath = certificatesDirectory

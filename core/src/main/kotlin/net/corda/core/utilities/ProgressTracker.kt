@@ -80,7 +80,9 @@ class ProgressTracker(vararg steps: Step) {
 
     // This field won't be serialized.
     private val _changes by TransientProperty { PublishSubject.create<Change>() }
+
     private data class Child(val tracker: ProgressTracker, @Transient val subscription: Subscription?)
+
     private val childProgressTrackers = HashMap<Step, Child>()
 
     init {
@@ -151,8 +153,8 @@ class ProgressTracker(vararg steps: Step) {
     var parent: ProgressTracker? = null
         private set
 
-    @Suppress("unused")   // TODO: Review by EOY2016 if this property is useful anywhere.
     /** Walks up the tree to find the top level tracker. If this is the top level tracker, returns 'this' */
+    @Suppress("unused") // TODO: Review by EOY2016 if this property is useful anywhere.
     val topLevelTracker: ProgressTracker
         get() {
             var cursor: ProgressTracker = this

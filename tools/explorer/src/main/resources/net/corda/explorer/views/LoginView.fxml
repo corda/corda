@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
-<DialogPane styleClass="login" stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.112-ea" xmlns:fx="http://javafx.com/fxml/1">
+<DialogPane styleClass="login" stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.112-ea"
+            xmlns:fx="http://javafx.com/fxml/1">
     <padding>
         <Insets bottom="30" left="50" right="50" top="10"/>
     </padding>
@@ -26,13 +27,15 @@
                     <TextField fx:id="portTextField" prefWidth="100" promptText="Port" GridPane.columnIndex="2"/>
 
                     <Label text="Username :" GridPane.rowIndex="1" GridPane.halignment="RIGHT"/>
-                    <TextField fx:id="usernameTextField" promptText="Username" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="1"/>
+                    <TextField fx:id="usernameTextField" promptText="Username" GridPane.columnIndex="1"
+                               GridPane.columnSpan="2" GridPane.rowIndex="1"/>
 
                     <Label text="Password :" GridPane.rowIndex="2" GridPane.halignment="RIGHT"/>
-                    <PasswordField fx:id="passwordTextField" promptText="Password" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="2"/>
+                    <PasswordField fx:id="passwordTextField" promptText="Password" GridPane.columnIndex="1"
+                                   GridPane.columnSpan="2" GridPane.rowIndex="2"/>
 
                     <HBox spacing="20" GridPane.columnIndex="1" GridPane.rowIndex="3" GridPane.columnSpan="2">
-                        <CheckBox fx:id="rememberMeCheckBox" text="Remember me" />
+                        <CheckBox fx:id="rememberMeCheckBox" text="Remember me"/>
                         <CheckBox fx:id="fullscreenCheckBox" text="Fullscreen mode"/>
                     </HBox>
                 </GridPane>

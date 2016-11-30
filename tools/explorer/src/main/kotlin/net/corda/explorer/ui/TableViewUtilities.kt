@@ -1,6 +1,5 @@
 package net.corda.explorer.ui
 
-import net.corda.explorer.formatters.Formatter
 import javafx.beans.binding.Bindings
 import javafx.beans.value.ObservableValue
 import javafx.scene.Node
@@ -8,6 +7,7 @@ import javafx.scene.control.TableCell
 import javafx.scene.control.TableColumn
 import javafx.scene.control.TableView
 import javafx.util.Callback
+import net.corda.explorer.formatters.Formatter
 import org.fxmisc.easybind.EasyBind
 
 fun <S> TableView<S>.setColumnPrefWidthPolicy(
@@ -62,6 +62,7 @@ fun <S, T> TableColumn<S, T>.setCustomCellFactory(toNode: (T) -> Node) {
             init {
                 text = null
             }
+
             override fun updateItem(value: T?, empty: Boolean) {
                 super.updateItem(value, empty)
                 graphic = if (value != null && !empty) {

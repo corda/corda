@@ -41,6 +41,7 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
     internal val indexMap = HashMap<WrappedObservableList<out A>, Pair<Int, ListChangeListener<A>>>()
     @VisibleForTesting
     internal val nestedIndexOffsets = ArrayList<Int>(sourceList.size)
+
     init {
         var offset = 0
         sourceList.forEachIndexed { index, observableList ->
@@ -78,7 +79,7 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
                         permutation[i] = i
                     }
                     // Then the permuted ones.
-                    for (i in firstTouched .. startingOffset + change.to - 1) {
+                    for (i in firstTouched..startingOffset + change.to - 1) {
                         permutation[startingOffset + i] = change.getPermutation(i)
                     }
                     nextPermutation(firstTouched, startingOffset + change.to, permutation)
@@ -144,7 +145,7 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
                 val newSubNestedIndexOffsets = IntArray(change.to - change.from)
                 val firstTouched = if (change.from == 0) 0 else nestedIndexOffsets[change.from - 1]
                 var currentOffset = firstTouched
-                for (i in 0 .. change.to - change.from - 1) {
+                for (i in 0..change.to - change.from - 1) {
                     currentOffset += source[change.from + i].size
                     newSubNestedIndexOffsets[i] = currentOffset
                 }
@@ -152,24 +153,24 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
                 val concatenatedPermutation = IntArray(newSubNestedIndexOffsets.last())
                 // Set the non-permuted part
                 var offset = 0
-                for (i in 0 .. change.from - 1) {
+                for (i in 0..change.from - 1) {
                     val nestedList = source[i]
-                    for (j in offset .. offset + nestedList.size - 1) {
+                    for (j in offset..offset + nestedList.size - 1) {
                         concatenatedPermutation[j] = j
                     }
                     offset += nestedList.size
                 }
                 // Now the permuted part
-                for (i in 0 .. newSubNestedIndexOffsets.size - 1) {
+                for (i in 0..newSubNestedIndexOffsets.size - 1) {
                     val startingOffset = startingOffsetOf(change.from + i)
                     val permutedListIndex = change.getPermutation(change.from + i)
                     val permutedOffset = (if (permutedListIndex == 0) 0 else newSubNestedIndexOffsets[permutedListIndex - 1])
-                    for (j in 0 .. source[permutedListIndex].size - 1) {
+                    for (j in 0..source[permutedListIndex].size - 1) {
                         concatenatedPermutation[startingOffset + j] = permutedOffset + j
                     }
                 }
                 // Record permuted offsets
-                for (i in 0 .. newSubNestedIndexOffsets.size - 1) {
+                for (i in 0..newSubNestedIndexOffsets.size - 1) {
                     nestedIndexOffsets[change.from + i] = newSubNestedIndexOffsets[i]
                 }
                 nextPermutation(firstTouched, newSubNestedIndexOffsets.last(), concatenatedPermutation)
@@ -229,6 +230,7 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
 
     // Tracks the first position where the *nested* offset is invalid
     private var firstInvalidatedPosition = sourceList.size
+
     private fun invalidateOffsets(index: Int) {
         firstInvalidatedPosition = Math.min(firstInvalidatedPosition, index)
     }
@@ -237,7 +239,7 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
         if (firstInvalidatedPosition < source.size) {
             val firstInvalid = firstInvalidatedPosition
             var offset = if (firstInvalid == 0) 0 else nestedIndexOffsets[firstInvalid - 1]
-            for (i in firstInvalid .. source.size - 1) {
+            for (i in firstInvalid..source.size - 1) {
                 offset += source[i].size
                 if (i < nestedIndexOffsets.size) {
                     nestedIndexOffsets[i] = offset

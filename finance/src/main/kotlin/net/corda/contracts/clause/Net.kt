@@ -42,7 +42,7 @@ data class MultilateralNetState<P>(
  * Clause for netting contract states. Currently only supports obligation contract.
  */
 // TODO: Make this usable for any nettable contract states
-open class NetClause<C: CommandData, P> : Clause<ContractState, C, Unit>() {
+open class NetClause<C : CommandData, P> : Clause<ContractState, C, Unit>() {
     override val requiredCommands: Set<Class<out CommandData>> = setOf(Obligation.Commands.Net::class.java)
 
     @Suppress("ConvertLambdaToReference")

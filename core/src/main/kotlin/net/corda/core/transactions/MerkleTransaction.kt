@@ -32,7 +32,7 @@ fun WireTransaction.calculateLeavesHashes(): List<SecureHash> {
 
 fun SecureHash.hashConcat(other: SecureHash) = (this.bytes + other.bytes).sha256()
 
-fun <T: Any> serializedHash(x: T): SecureHash {
+fun <T : Any> serializedHash(x: T): SecureHash {
     val kryo = extendKryoHash(createKryo()) //Dealing with HashMaps inside states.
     return x.serialize(kryo).hash
 }
@@ -47,12 +47,12 @@ fun <T: Any> serializedHash(x: T): SecureHash {
  * If a row in a tree has an odd number of elements - the final hash is hashed with itself.
  */
 sealed class MerkleTree(val hash: SecureHash) {
-    class Leaf(val value: SecureHash): MerkleTree(value)
-    class Node(val value: SecureHash, val left: MerkleTree, val right: MerkleTree): MerkleTree(value)
+    class Leaf(val value: SecureHash) : MerkleTree(value)
+    class Node(val value: SecureHash, val left: MerkleTree, val right: MerkleTree) : MerkleTree(value)
     //DuplicatedLeaf is storing a hash of the rightmost node that had to be duplicated to obtain the tree.
     //That duplication can cause problems while building and verifying partial tree (especially for trees with duplicate
     //attachments or commands).
-    class DuplicatedLeaf(val value: SecureHash): MerkleTree(value)
+    class DuplicatedLeaf(val value: SecureHash) : MerkleTree(value)
 
     fun hashNodes(right: MerkleTree): MerkleTree {
         val newHash = this.hash.hashConcat(right.hash)
@@ -84,15 +84,15 @@ sealed class MerkleTree(val hash: SecureHash) {
                 while (i < lastNodesList.size) {
                     val left = lastNodesList[i]
                     val n = lastNodesList.size
+                    // If there is an odd number of elements at this level,
+                    // the last element is hashed with itself and stored as a Leaf.
                     val right = when {
-                    //If there is an odd number of elements at this level,
-                    //the last element is hashed with itself and stored as a Leaf.
-                        i + 1 > n - 1 -> MerkleTree.DuplicatedLeaf(lastNodesList[n-1].hash)
-                        else -> lastNodesList[i+1]
+                        i + 1 > n - 1 -> MerkleTree.DuplicatedLeaf(lastNodesList[n - 1].hash)
+                        else -> lastNodesList[i + 1]
                     }
                     val combined = left.hashNodes(right)
                     newLevelHashes.add(combined)
-                    i+=2
+                    i += 2
                 }
                 return buildMerkleTree(newLevelHashes)
             }
@@ -109,7 +109,7 @@ class FilteredLeaves(
         val attachments: List<SecureHash>,
         val commands: List<Command>
 ) {
-    fun getFilteredHashes(): List<SecureHash>{
+    fun getFilteredHashes(): List<SecureHash> {
         val resultHashes = ArrayList<SecureHash>()
         val entries = listOf(inputs, outputs, attachments, commands)
         entries.forEach { it.mapTo(resultHashes, { x -> serializedHash(x) }) }
@@ -127,7 +127,7 @@ class FilterFuns(
         val filterAttachments: (SecureHash) -> Boolean = { false },
         val filterCommands: (Command) -> Boolean = { false }
 ) {
-    fun <T: Any> genericFilter(elem: T): Boolean {
+    fun <T : Any> genericFilter(elem: T): Boolean {
         return when (elem) {
             is StateRef -> filterInputs(elem)
             is TransactionState<*> -> filterOutputs(elem)

@@ -19,7 +19,7 @@ object ExitServerFlow {
     // resolve itself when the flow session stuff is done.
     data class ExitMessage(val exitCode: Int)
 
-    class Plugin: CordaPluginRegistry() {
+    class Plugin : CordaPluginRegistry() {
         override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
     }
 

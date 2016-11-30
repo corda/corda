@@ -215,7 +215,7 @@ abstract class AbstractStateReplacementFlow<T> {
 
 /** Thrown when a participant refuses the proposed state replacement */
 class StateReplacementRefused(val identity: Party, val state: StateRef, val detail: String?) {
-    override fun toString()  = "A participant $identity refused to change state $state: " + (detail ?: "no reason provided")
+    override fun toString() = "A participant $identity refused to change state $state: " + (detail ?: "no reason provided")
 }
 
-class StateReplacementException(val error: StateReplacementRefused)  : Exception("State change failed - $error")
+class StateReplacementException(val error: StateReplacementRefused) : Exception("State change failed - $error")

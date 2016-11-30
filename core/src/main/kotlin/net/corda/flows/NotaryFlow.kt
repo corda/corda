@@ -150,7 +150,7 @@ object NotaryFlow {
     data class SignRequest(val tx: SignedTransaction, val callerIdentity: Party)
 
     sealed class Result {
-        class Error(val error: NotaryError): Result()
+        class Error(val error: NotaryError) : Result()
         class Success(val sig: DigitalSignature.WithKey) : Result()
     }
 

@@ -139,6 +139,7 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
 
 // Composite columns for use with below Exposed helpers.
 data class PartyColumns(val name: Column<String>, val owningKey: Column<CompositeKey>)
+
 data class StateRefColumns(val txId: Column<SecureHash>, val index: Column<Int>)
 data class TxnNoteColumns(val txId: Column<SecureHash>, val note: Column<String>)
 

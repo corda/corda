@@ -1,7 +1,7 @@
 package net.corda.node.utilities
 
-import net.corda.testing.node.makeTestDataSourceProperties
 import junit.framework.TestSuite
+import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
@@ -136,7 +136,7 @@ class JDBCHashMapTestSuite {
      */
     class JDBCHashMapTestGenerator(val loadOnInit: Boolean, val constrained: Boolean) : com.google.common.collect.testing.TestStringMapGenerator() {
         override fun create(elements: Array<Map.Entry<String, String>>): Map<String, String> {
-            val map = if (loadOnInit) loadOnInitTrueMap else if(constrained) memoryConstrainedMap else loadOnInitFalseMap
+            val map = if (loadOnInit) loadOnInitTrueMap else if (constrained) memoryConstrainedMap else loadOnInitFalseMap
             map.clear()
             map.putAll(elements.associate { Pair(it.key, it.value) })
             return map
@@ -178,7 +178,7 @@ class JDBCHashMapTestSuite {
      */
     class JDBCHashSetTestGenerator(val loadOnInit: Boolean, val constrained: Boolean) : com.google.common.collect.testing.TestStringSetGenerator() {
         override fun create(elements: Array<String>): Set<String> {
-            val set = if (loadOnInit) loadOnInitTrueSet else if(constrained) memoryConstrainedSet else loadOnInitFalseSet
+            val set = if (loadOnInit) loadOnInitTrueSet else if (constrained) memoryConstrainedSet else loadOnInitFalseSet
             set.clear()
             set.addAll(elements)
             return set

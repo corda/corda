@@ -25,7 +25,7 @@ class ReplayedList<A>(sourceList: ObservableList<A>) : TransformationList<A, A>(
                 val permutation = IntArray(to, { c.getPermutation(it) })
                 val permutedSubList = ArrayList<A?>(to - from)
                 permutedSubList.addAll(Collections.nCopies(to - from, null))
-                for (i in 0 .. (to - from - 1)) {
+                for (i in 0..(to - from - 1)) {
                     permutedSubList[permutation[from + i]] = replayedList[from + i]
                 }
                 permutedSubList.forEachIndexed { i, element ->
@@ -33,14 +33,14 @@ class ReplayedList<A>(sourceList: ObservableList<A>) : TransformationList<A, A>(
                 }
                 nextPermutation(from, to, permutation)
             } else if (c.wasUpdated()) {
-                for (i in c.from .. c.to - 1) {
+                for (i in c.from..c.to - 1) {
                     replayedList[i] = c.list[i]
                     nextUpdate(i)
                 }
             } else {
                 if (c.wasRemoved()) {
                     val removePosition = c.from
-                    for (i in 0 .. c.removedSize - 1) {
+                    for (i in 0..c.removedSize - 1) {
                         replayedList.removeAt(removePosition)
                     }
                     nextRemove(c.from, c.removed)
@@ -48,7 +48,7 @@ class ReplayedList<A>(sourceList: ObservableList<A>) : TransformationList<A, A>(
                 if (c.wasAdded()) {
                     val addStart = c.from
                     val addEnd = c.to
-                    for (i in addStart .. addEnd - 1) {
+                    for (i in addStart..addEnd - 1) {
                         replayedList.add(i, c.list[i])
                     }
                     nextAdd(addStart, addEnd)

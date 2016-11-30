@@ -86,7 +86,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             override val encumbrance: Int? = null
     ) : FungibleAsset<Currency>, QueryableState {
         constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: CompositeKey)
-        : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
+                : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
         override val exitKeys = setOf(owner, amount.token.issuer.party.owningKey)
         override val contract = CASH_PROGRAM_ID
@@ -160,13 +160,14 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     }
 
     override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Currency>>, owner: CompositeKey)
-        = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
+            = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
+
     override fun generateExitCommand(amount: Amount<Issued<Currency>>) = Commands.Exit(amount)
     override fun generateIssueCommand() = Commands.Issue()
     override fun generateMoveCommand() = Commands.Move()
 
     override fun verify(tx: TransactionForContract)
-        = verifyClause(tx, Clauses.Group(), extractCommands(tx.commands))
+            = verifyClause(tx, Clauses.Group(), extractCommands(tx.commands))
 }
 
 // Small DSL extensions.

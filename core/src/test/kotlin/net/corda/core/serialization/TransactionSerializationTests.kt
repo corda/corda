@@ -35,6 +35,7 @@ class TransactionSerializationTests {
 
             override fun withNewOwner(newOwner: CompositeKey) = Pair(Commands.Move(), copy(owner = newOwner))
         }
+
         interface Commands : CommandData {
             class Move() : TypeOnlyCommandData(), Commands
         }
