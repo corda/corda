@@ -29,5 +29,5 @@ dependencies {
     compile project(':finance')
 
     testCompile 'junit:junit:4.12'
-    compile project(':test-utils')
+    testCompile project(':test-utils')
 }

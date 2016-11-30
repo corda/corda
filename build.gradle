@@ -47,6 +47,7 @@ apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'maven-publish'
 apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordformation'
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
@@ -92,6 +93,7 @@ repositories {
 dependencies {
     compile project(':node')
     compile "com.google.guava:guava:19.0"
+    runtime project(path: ":node", configuration: 'runtimeArtifacts')
 }
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
@@ -119,74 +121,37 @@ tasks.withType(Test) {
     reports.html.destination = file("${reporting.baseDir}/${name}")
 }
 
-// TODO: Move fat JAR building into node subproject.
-task buildCordaJAR(type: FatCapsule, dependsOn: ['jar', 'buildCertSigningRequestUtilityJAR']) {
-    applicationClass 'net.corda.node.MainKt'
-    archiveName "corda-${corda_version}.jar"
-    applicationSource = files(project.tasks.findByName('jar'), 'node/build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
-
-    capsuleManifest {
-        appClassPath = ["jolokia-agent-war-${project.ext.jolokia_version}.war"]
-        javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
-        minJavaVersion = '1.8.0'
-        caplets = ['CordaCaplet']
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+    directory "./build/nodes"
+    networkMap "Controller"
+    node {
+        name "Controller"
+        dirName "controller"
+        nearestCity "London"
+        advertisedServices = ["corda.notary.validating"]
+        artemisPort 10002
+        webPort 10003
+        cordapps = []
     }
-}
-
-task buildCertSigningRequestUtilityJAR(type: FatCapsule, dependsOn: project.jar) {
-    applicationClass 'net.corda.node.utilities.certsigning.CertificateSignerKt'
-    archiveName 'certSigningRequestUtility.jar'
-    capsuleManifest {
-        systemProperties['log4j.configuration'] = 'log4j2.xml'
-        minJavaVersion = '1.8.0'
+    node {
+        name "Bank A"
+        dirName "nodea"
+        nearestCity "London"
+        advertisedServices = []
+        artemisPort 10004
+        webPort 10005
+        cordapps = []
     }
-}
-
-// TODO: Use the Cordformation plugin.
-task deployNodes(dependsOn: 'buildCordaJAR') << {
-    copy {
-        from buildCordaJAR.outputs.getFiles()
-        from 'config/dev/nameservernode.conf'
-        into "${buildDir}/nodes/nameserver"
-        rename 'nameservernode.conf', 'node.conf'
-    }
-
-    copy {
-        from buildCordaJAR.outputs.getFiles()
-        from 'config/dev/generalnodea.conf'
-        into "${buildDir}/nodes/nodea"
-        rename 'generalnodea.conf', 'node.conf'
-    }
-
-    copy {
-        from buildCordaJAR.outputs.getFiles()
-        from 'config/dev/generalnodeb.conf'
-        into "${buildDir}/nodes/nodeb"
-        rename 'generalnodeb.conf', 'node.conf'
-    }
-
-    delete("${buildDir}/nodes/runnodes")
-    def jarName = buildCordaJAR.outputs.getFiles().getSingleFile().getName()
-    copy {
-        from "buildSrc/scripts/runnodes"
-        filter { String line -> line.replace("JAR_NAME", jarName) }
-        filter(org.apache.tools.ant.filters.FixCrLfFilter.class, eol: org.apache.tools.ant.filters.FixCrLfFilter.CrLf.newInstance("lf"))
-        into "${buildDir}/nodes"
+    node {
+        name "Bank B"
+        dirName "nodeb"
+        nearestCity "New York"
+        advertisedServices = []
+        artemisPort 10006
+        webPort 10007
+        cordapps = []
     }
 }
 
 // Aliasing the publishToMavenLocal for simplicity.
-// TODO: Verify this works for gradle plugins.
 task(install, dependsOn: 'publishToMavenLocal')
-
-publishing {
-    publications {
-        corda(MavenPublication) {
-            artifactId 'corda'
-
-            artifact buildCordaJAR {
-                classifier ""
-            }
-        }
-    }
-}

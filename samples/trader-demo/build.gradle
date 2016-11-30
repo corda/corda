@@ -45,7 +45,7 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
     // Corda integration dependencies
-    compile "net.corda:corda:$corda_version"   // TODO
+    runtime project(path: ":node", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':client')
     compile project(':node')
@@ -65,7 +65,7 @@ dependencies {
     // Specify your cordapp's dependencies below, including dependent cordapps
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install', 'build']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     directory "./build/nodes"
     // This name "Notary" is hard-coded into TraderDemoClientApi so if you change it here, change it there too.
     // In this demo the node that runs a standalone notary also acts as the network map server.
