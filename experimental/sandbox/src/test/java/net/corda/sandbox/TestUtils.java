@@ -14,26 +14,30 @@ import static org.junit.Assert.*;
 
 public class TestUtils {
 
+    private static ArrayList<FileSystem> tmpFileSystems = new ArrayList<>();
     private static Path jarFSDir = null;
     private static Path tmpdir;
 
     public static void setPathToTmpJar(final String resourcePathToJar) throws IOException {
         // Copy resource jar to tmp dir
-        tmpdir = Files.createTempDirectory(Paths.get("/tmp"), "wlcl-tmp-test");
-        final InputStream in = TestUtils.class.getResourceAsStream(resourcePathToJar);
+        tmpdir = Files.createTempDirectory("wlcl-tmp-test");
         Path copiedJar = tmpdir.resolve("tmp-resource.jar");
-        Files.copy(in, copiedJar, StandardCopyOption.REPLACE_EXISTING);
-
+        try(final InputStream in = TestUtils.class.getResourceAsStream(resourcePathToJar)) {
+            Files.copy(in, copiedJar, StandardCopyOption.REPLACE_EXISTING);
+        }
         final FileSystem fs = FileSystems.newFileSystem(copiedJar, null);
+        tmpFileSystems.add(fs);
         jarFSDir = fs.getRootDirectories().iterator().next();
     }
 
     public static Path copySandboxJarToTmpDir(final String resourcePathToJar) throws IOException {
-        final InputStream in = TestUtils.class.getResourceAsStream(resourcePathToJar);
+
         Path sandboxJar = tmpdir.resolve("tmp-sandbox.jar");
-        Files.copy(in, sandboxJar, StandardCopyOption.REPLACE_EXISTING);
+        try(final InputStream in = TestUtils.class.getResourceAsStream(resourcePathToJar)) {
+            Files.copy(in, sandboxJar, StandardCopyOption.REPLACE_EXISTING);
+        }
         final FileSystem sandboxFs = FileSystems.newFileSystem(sandboxJar, null);
-        
+        tmpFileSystems.add(sandboxFs);
         return sandboxFs.getRootDirectories().iterator().next();
     }
     
@@ -42,7 +46,13 @@ public class TestUtils {
     }
 
     public static void cleanupTmpJar() throws IOException {
+        for (FileSystem fs: tmpFileSystems) {
+            fs.close();
+        }
+        tmpFileSystems.clear();
+        jarFSDir = null;
         Files.walkFileTree(tmpdir, new Reaper());
+        tmpdir = null;
     }
 
     public static void checkAllCosts(final int allocCost, final int jumpCost, final int invokeCost, final int throwCost) {
@@ -56,7 +66,7 @@ public class TestUtils {
         byte[] basic = getBytes(classFName);
         assertEquals(originalLength, basic.length);
         final byte[] tfmd = instrumentWithCosts(basic, new HashSet<>());
-        final Path testdir = Files.createTempDirectory(Paths.get("/tmp"), "greymalkin-test-");
+        final Path testdir = Files.createTempDirectory("greymalkin-test-");
         final Path out = testdir.resolve(classFName);
         Files.createDirectories(out.getParent());
         Files.write(out, tfmd);
