@@ -124,9 +124,8 @@ sealed class CompositeKey {
          * Builds the [CompositeKey.Node]. If [threshold] is not specified, it will default to
          * the size of the children, effectively generating an "N of N" requirement.
          */
-        fun build(threshold: Int? = null): CompositeKey {
-            return if (children.size == 1) children.first()
-            else Node(threshold ?: children.size, children.toList(), weights.toList())
+        fun build(threshold: Int? = null): CompositeKey.Node {
+            return Node(threshold ?: children.size, children.toList(), weights.toList())
         }
     }
 
