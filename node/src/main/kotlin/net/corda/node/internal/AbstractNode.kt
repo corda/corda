@@ -247,7 +247,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
 
             // TODO: this model might change but for now it provides some de-coupling
             // Add vault observers
-            CashBalanceAsMetricsObserver(services)
+            CashBalanceAsMetricsObserver(services, database)
             ScheduledActivityObserver(services)
             HibernateObserver(services)
 

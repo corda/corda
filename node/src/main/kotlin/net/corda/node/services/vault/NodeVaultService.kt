@@ -12,6 +12,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.tee
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
@@ -80,6 +81,9 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         }
 
         val _updatesPublisher = PublishSubject.create<Vault.Update>()
+        val _rawUpdatesPublisher = PublishSubject.create<Vault.Update>()
+        // For use during publishing only.
+        val updatesPublisher: rx.Observer<Vault.Update> get() = _updatesPublisher.bufferUntilDatabaseCommit().tee(_rawUpdatesPublisher)
 
         fun allUnconsumedStates(): Iterable<StateAndRef<ContractState>> {
             // Order by txhash for if and when transaction storage has some caching.
@@ -104,6 +108,9 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
 
     override val currentVault: Vault get() = mutex.locked { Vault(allUnconsumedStates()) }
 
+    override val rawUpdates: Observable<Vault.Update>
+        get() = mutex.locked { _rawUpdatesPublisher }
+
     override val updates: Observable<Vault.Update>
         get() = mutex.locked { _updatesPublisher }
 
@@ -127,7 +134,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         if (netDelta != Vault.NoUpdate) {
             mutex.locked {
                 recordUpdate(netDelta)
-                _updatesPublisher.onNext(netDelta)
+                updatesPublisher.onNext(netDelta)
             }
         }
         return currentVault
