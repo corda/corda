@@ -1,3 +1,5 @@
+![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
+
 # Corda
 
 Corda is a decentralised database system in which nodes trust each other as little as possible.
