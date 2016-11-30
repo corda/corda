@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView?>
-<?import javafx.geometry.Insets?>
+<?import de.jensd.fx.glyphs.fontawesome.*?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<ScrollPane fitToWidth="true" stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.112-ea" xmlns:fx="http://javafx.com/fxml/1">
+<ScrollPane fitToWidth="true" stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.112-ea"
+            xmlns:fx="http://javafx.com/fxml/1">
     <VBox alignment="CENTER">
         <padding>
             <Insets bottom="10" left="10" right="10" top="10"/>
@@ -19,10 +20,12 @@
                     <ComboBox fx:id="reportingCurrenciesComboBox" GridPane.columnIndex="1"/>
 
                     <Label text="Fullscreen :" GridPane.rowIndex="1"/>
-                    <CheckBox fx:id="fullscreenCheckBox" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="1"/>
+                    <CheckBox fx:id="fullscreenCheckBox" GridPane.columnIndex="1" GridPane.halignment="CENTER"
+                              GridPane.rowIndex="1"/>
 
                     <Label text="Remember me :" GridPane.rowIndex="2"/>
-                    <CheckBox fx:id="rememberMeCheckBox" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2"/>
+                    <CheckBox fx:id="rememberMeCheckBox" GridPane.columnIndex="1" GridPane.halignment="CENTER"
+                              GridPane.rowIndex="2"/>
 
                     <Label text="Corda Node :" GridPane.rowIndex="3" GridPane.valignment="TOP"/>
 

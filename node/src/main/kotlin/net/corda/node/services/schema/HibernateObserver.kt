@@ -1,5 +1,6 @@
 package net.corda.node.services.schema
 
+import kotlinx.support.jdk7.use
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -9,7 +10,6 @@ import net.corda.core.schemas.QueryableState
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.ServiceHubInternal
-import kotlinx.support.jdk7.use
 import org.hibernate.SessionFactory
 import org.hibernate.boot.model.naming.Identifier
 import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl

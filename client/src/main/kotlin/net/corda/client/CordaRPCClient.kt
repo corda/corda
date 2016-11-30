@@ -34,6 +34,7 @@ class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfigur
         lateinit var session: ClientSession
         lateinit var clientImpl: CordaRPCClientImpl
     }
+
     private val state = ThreadBox(State())
 
     /** Opens the connection to the server and registers a JVM shutdown hook to cleanly disconnect. */

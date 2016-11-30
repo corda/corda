@@ -53,14 +53,14 @@ class FullNodeConfiguration(val config: Config) : NodeConfiguration {
     val notaryNodeAddress: HostAndPort? by config.getOrElse { null }
     val notaryClusterAddresses: List<HostAndPort> = config.getListOrElse<String>("notaryClusterAddresses") { emptyList<String>() }.map { HostAndPort.fromString(it) }
     val rpcUsers: List<User> =
-            config.getListOrElse<Config>("rpcUsers") { emptyList() }
-            .map {
-                val username = it.getString("user")
-                require(username.matches("\\w+".toRegex())) { "Username $username contains invalid characters" }
-                val password = it.getString("password")
-                val permissions = it.getListOrElse<String>("permissions") { emptyList() }.toSet()
-                User(username, password, permissions)
-            }
+              config.getListOrElse<Config>("rpcUsers") { emptyList() }
+                    .map {
+                        val username = it.getString("user")
+                        require(username.matches("\\w+".toRegex())) { "Username $username contains invalid characters" }
+                        val password = it.getString("password")
+                        val permissions = it.getListOrElse<String>("permissions") { emptyList() }.toSet()
+                        User(username, password, permissions)
+                    }
 
     fun createNode(): Node {
         // This is a sanity feature do not remove.
@@ -74,7 +74,7 @@ class FullNodeConfiguration(val config: Config) : NodeConfiguration {
         }
         if (networkMapAddress == null) advertisedServices.add(ServiceInfo(NetworkMapService.type))
         val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else NodeMessagingClient.makeNetworkMapAddress(networkMapAddress!!)
-        return Node(this, networkMapMessageAddress, advertisedServices, if(useTestClock == true) TestClock() else NodeClock())
+        return Node(this, networkMapMessageAddress, advertisedServices, if (useTestClock == true) TestClock() else NodeClock())
     }
 }
 

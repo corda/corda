@@ -9,21 +9,21 @@ import java.util.concurrent.TimeUnit
  */
 private val client by lazy {
     OkHttpClient.Builder()
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS).build()
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS).build()
 }
 
-fun putJson(url: URL, data: String) : Boolean {
+fun putJson(url: URL, data: String): Boolean {
     val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
     return makeRequest(Request.Builder().url(url).put(body).build())
 }
 
-fun postJson(url: URL, data: String) : Boolean {
+fun postJson(url: URL, data: String): Boolean {
     val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
     return makeRequest(Request.Builder().url(url).post(body).build())
 }
 
-fun uploadFile(url: URL, file: String) : Boolean {
+fun uploadFile(url: URL, file: String): Boolean {
     val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("rates", "example.rates.txt", RequestBody.create(MediaType.parse("text/plain"), file))

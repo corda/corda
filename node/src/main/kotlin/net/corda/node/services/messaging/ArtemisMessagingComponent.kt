@@ -84,7 +84,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      * For instance it may contain onion routing data.
      */
     data class NodeAddress(val identity: CompositeKey, override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
-        override val queueName: SimpleString by lazy { SimpleString(PEERS_PREFIX+identity.toBase58String()) }
+        override val queueName: SimpleString by lazy { SimpleString(PEERS_PREFIX + identity.toBase58String()) }
         override fun toString(): String = "${javaClass.simpleName}(identity = $queueName, $hostAndPort)"
     }
 
@@ -117,10 +117,10 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      */
     fun checkStorePasswords() {
         config.keyStorePath.read {
-           KeyStore.getInstance("JKS").load(it, config.keyStorePassword.toCharArray())
+            KeyStore.getInstance("JKS").load(it, config.keyStorePassword.toCharArray())
         }
         config.trustStorePath.read {
-           KeyStore.getInstance("JKS").load(it, config.trustStorePassword.toCharArray())
+            KeyStore.getInstance("JKS").load(it, config.trustStorePassword.toCharArray())
         }
     }
 

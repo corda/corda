@@ -75,6 +75,7 @@ interface ServiceHub {
     val notaryIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.notaryIdentity.owningKey.keys)
 
 }
+
 /**
  * Given some [SignedTransaction]s, writes them to the local storage for validated transactions and then
  * sends them to the vault for further processing.

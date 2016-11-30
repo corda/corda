@@ -145,6 +145,7 @@ object NodeInterestRates {
             }
             var container: FixContainer = FixContainer(fixes)
         }
+
         private val mutex = FiberBox(InnerState())
 
         var knownFixes: FixContainer
@@ -187,7 +188,7 @@ object NodeInterestRates {
         //      It will be fixed by adding partial signatures later.
         // DOCSTART 1
         fun sign(ftx: FilteredTransaction, merkleRoot: SecureHash): DigitalSignature.LegallyIdentifiable {
-            if (!ftx.verify(merkleRoot)){
+            if (!ftx.verify(merkleRoot)) {
                 throw MerkleTreeException("Rate Fix Oracle: Couldn't verify partial Merkle tree.")
             }
 

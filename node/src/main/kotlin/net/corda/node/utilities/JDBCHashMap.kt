@@ -58,7 +58,7 @@ fun bytesToBlob(value: SerializedBytes<*>, finalizables: MutableList<() -> Unit>
 
 fun serializeToBlob(value: Any, finalizables: MutableList<() -> Unit>): Blob = bytesToBlob(value.serialize(), finalizables)
 
-fun <T: Any> bytesFromBlob(blob: Blob): SerializedBytes<T> {
+fun <T : Any> bytesFromBlob(blob: Blob): SerializedBytes<T> {
     try {
         return SerializedBytes(blob.getBytes(0, blob.length().toInt()))
     } finally {
@@ -194,10 +194,10 @@ abstract class AbstractJDBCHashSet<K : Any, out T : JDBCHashedTable>(protected v
  */
 abstract class AbstractJDBCHashMap<K : Any, V : Any, out T : JDBCHashedTable>(val table: T,
                                                                               val loadOnInit: Boolean = false,
-                                                                              val maxBuckets: Int = 256) : MutableMap<K, V>, AbstractMap<K,V>() {
+                                                                              val maxBuckets: Int = 256) : MutableMap<K, V>, AbstractMap<K, V>() {
 
     companion object {
-        protected val log = loggerFor<AbstractJDBCHashMap<*,*,*>>()
+        protected val log = loggerFor<AbstractJDBCHashMap<*, *, *>>()
 
         private const val INITIAL_CAPACITY: Int = 16
         private const val LOAD_FACTOR: Float = 0.75f

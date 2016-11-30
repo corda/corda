@@ -81,7 +81,7 @@ class Obligation<P> : Contract {
         /**
          * Clause for supporting netting of obligations.
          */
-        class Net<C: CommandData, P> : NetClause<C, P>() {
+        class Net<C : CommandData, P> : NetClause<C, P>() {
             val lifecycleClause = Clauses.VerifyLifecycle<ContractState, C, Unit, P>()
             override fun toString(): String = "Net obligations"
 
@@ -203,15 +203,16 @@ class Obligation<P> : Contract {
          * any lifecycle change clause, which is the only clause that involve
          * non-standard lifecycle states on input/output.
          */
-        class VerifyLifecycle<S: ContractState, C: CommandData, T: Any, P> : Clause<S, C, T>() {
+        class VerifyLifecycle<S : ContractState, C : CommandData, T : Any, P> : Clause<S, C, T>() {
             override fun verify(tx: TransactionForContract,
                                 inputs: List<S>,
                                 outputs: List<S>,
                                 commands: List<AuthenticatedObject<C>>,
                                 groupingKey: T?): Set<C>
-                = verify(inputs.filterIsInstance<State<P>>(), outputs.filterIsInstance<State<P>>())
+                    = verify(inputs.filterIsInstance<State<P>>(), outputs.filterIsInstance<State<P>>())
+
             private fun verify(inputs: List<State<P>>,
-                                outputs: List<State<P>>): Set<C> {
+                               outputs: List<State<P>>): Set<C> {
                 requireThat {
                     "all inputs are in the normal state " by inputs.all { it.lifecycle == Lifecycle.NORMAL }
                     "all outputs are in the normal state " by outputs.all { it.lifecycle == Lifecycle.NORMAL }
@@ -373,9 +374,9 @@ class Obligation<P> : Contract {
      */
     @VisibleForTesting
     private fun verifySetLifecycleCommand(inputs: List<FungibleAsset<Terms<P>>>,
-                                            outputs: List<FungibleAsset<Terms<P>>>,
-                                            tx: TransactionForContract,
-                                            setLifecycleCommand: AuthenticatedObject<Commands.SetLifecycle>) {
+                                          outputs: List<FungibleAsset<Terms<P>>>,
+                                          tx: TransactionForContract,
+                                          setLifecycleCommand: AuthenticatedObject<Commands.SetLifecycle>) {
         // Default must not change anything except lifecycle, so number of inputs and outputs must match
         // exactly.
         require(inputs.size == outputs.size) { "Number of inputs and outputs must match" }
@@ -704,6 +705,7 @@ infix fun <T> Obligation.State<T>.`owned by`(owner: CompositeKey) = copy(benefic
 infix fun <T> Obligation.State<T>.`issued by`(party: Party) = copy(obligor = party)
 // For Java users:
 @Suppress("unused") fun <T> Obligation.State<T>.ownedBy(owner: CompositeKey) = copy(beneficiary = owner)
+
 @Suppress("unused") fun <T> Obligation.State<T>.issuedBy(party: Party) = copy(obligor = party)
 
 /** A randomly generated key. */

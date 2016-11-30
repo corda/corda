@@ -48,7 +48,7 @@ object SimmFlow {
     class Requester(val otherParty: Party,
                     val valuationDate: LocalDate,
                     val existing: StateAndRef<PortfolioState>? = null)
-    : FlowLogic<RevisionedState<PortfolioState.Update>>() {
+        : FlowLogic<RevisionedState<PortfolioState.Update>>() {
         lateinit var myIdentity: Party
         lateinit var notary: Party
 

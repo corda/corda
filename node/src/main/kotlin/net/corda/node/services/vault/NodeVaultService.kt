@@ -74,7 +74,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             }
 
             // TODO: caching (2nd tier db cache) and db results filtering (max records, date, other)
-            fun select(txnId: SecureHash) : Iterable<String> {
+            fun select(txnId: SecureHash): Iterable<String> {
                 return table.select { table.txnId.eq(txnId) }.map { row -> row[table.note] }.toSet().asIterable()
             }
         }

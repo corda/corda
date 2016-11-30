@@ -1,7 +1,11 @@
 @file:JvmName("ClauseVerifier")
+
 package net.corda.core.contracts.clauses
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.AuthenticatedObject
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.TransactionForContract
 
 /**
  * Verify a transaction against the given list of clauses.
@@ -11,9 +15,9 @@ import net.corda.core.contracts.*
  * @param commands commands extracted from the transaction, which are relevant to the
  * clauses.
  */
-fun <C: CommandData> verifyClause(tx: TransactionForContract,
-                 clause: Clause<ContractState, C, Unit>,
-                 commands: List<AuthenticatedObject<C>>) {
+fun <C : CommandData> verifyClause(tx: TransactionForContract,
+                                   clause: Clause<ContractState, C, Unit>,
+                                   commands: List<AuthenticatedObject<C>>) {
     if (Clause.log.isTraceEnabled) {
         clause.getExecutionPath(commands).forEach {
             Clause.log.trace("Tx ${tx.origHash} clause: ${clause}")

@@ -2,12 +2,9 @@
 // must also be in the default package. When using Kotlin there are a whole host of exceptions
 // trying to construct this from Capsule, so it is written in Java.
 
-import org.apache.commons.io.FilenameUtils;
-
-import java.io.File;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
 
 public class CordaCaplet extends Capsule {
 
@@ -23,7 +20,7 @@ public class CordaCaplet extends Capsule {
     protected <T> T attribute(Map.Entry<String, T> attr) {
         // Equality is used here because Capsule never instantiates these attributes but instead reuses the ones
         // defined as public static final fields on the Capsule class, therefore referential equality is safe.
-        if(ATTR_APP_CLASS_PATH == attr) {
+        if (ATTR_APP_CLASS_PATH == attr) {
             T cp = super.attribute(attr);
             List<Path> classpath = augmentClasspath((List<Path>) cp, "plugins");
             return (T) augmentClasspath(classpath, "dependencies");
@@ -35,7 +32,7 @@ public class CordaCaplet extends Capsule {
     // TODO: Add working directory variable to capsules string replacement variables.
     private List<Path> augmentClasspath(List<Path> classpath, String dirName) {
         File dir = new File(dirName);
-        if(!dir.exists()) {
+        if (!dir.exists()) {
             dir.mkdir();
         }
 

@@ -41,6 +41,7 @@ class CordaRPCOpsImpl(
             Pair(vault.states.toList(), updates)
         }
     }
+
     override fun verifiedTransactions(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
         return databaseTransaction(database) {
             services.storageService.validatedTransactions.track()
@@ -67,7 +68,7 @@ class CordaRPCOpsImpl(
 
     override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
         return databaseTransaction(database) {
-           services.vaultService.addNoteToTransaction(txnId, txnNote)
+            services.vaultService.addNoteToTransaction(txnId, txnNote)
         }
     }
 

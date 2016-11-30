@@ -1,12 +1,12 @@
 package net.corda.explorer.ui
 
-import net.corda.explorer.formatters.Formatter
 import javafx.beans.binding.Bindings
 import javafx.beans.value.ObservableValue
 import javafx.scene.control.TreeTableCell
 import javafx.scene.control.TreeTableColumn
 import javafx.scene.control.TreeTableView
 import javafx.util.Callback
+import net.corda.explorer.formatters.Formatter
 import org.fxmisc.easybind.EasyBind
 
 

@@ -46,7 +46,9 @@ interface FungibleAsset<T> : OwnableState {
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
          * in some other way.
          */
-        interface Exit<T> : Commands { val amount: Amount<Issued<T>> }
+        interface Exit<T> : Commands {
+            val amount: Amount<Issued<T>>
+        }
     }
 }
 

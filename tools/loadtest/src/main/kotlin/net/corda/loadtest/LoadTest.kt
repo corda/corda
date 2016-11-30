@@ -2,7 +2,6 @@ package net.corda.loadtest
 
 import kotlinx.support.jdk8.collections.parallelStream
 import net.corda.client.mock.Generator
-import net.corda.core.crypto.toBase58String
 import net.corda.core.div
 import net.corda.node.driver.PortAllocation
 import net.corda.node.services.network.NetworkMapService
@@ -95,7 +94,7 @@ data class LoadTest<T, S>(
                     val newState = commands.fold(state, interpret)
                     // Execute commands
                     val queue = ConcurrentLinkedQueue(commands)
-                    (1 .. parameters.parallelism).toList().parallelStream().forEach {
+                    (1..parameters.parallelism).toList().parallelStream().forEach {
                         var next = queue.poll()
                         while (next != null) {
                             log.info("Executing $next")

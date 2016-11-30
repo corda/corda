@@ -1,12 +1,10 @@
 package net.corda.client.fxutils
 
-import javafx.beans.InvalidationListener
 import javafx.beans.value.ChangeListener
 import javafx.beans.value.ObservableValue
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import javafx.collections.transformation.TransformationList
-import org.eclipse.jetty.server.Authentication
 import java.util.*
 import kotlin.test.assertEquals
 
@@ -30,7 +28,9 @@ class FlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>
     class WrappedObservableValue<A>(
             val observableValue: ObservableValue<A>
     )
+
     val indexMap = HashMap<WrappedObservableValue<out A>, Pair<Int, ChangeListener<A>>>()
+
     init {
         sourceList.forEachIndexed { index, observableValue ->
             val wrappedObservableValue = WrappedObservableValue(observableValue)

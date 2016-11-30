@@ -8,7 +8,8 @@
     -color-5: rgb(255, 191, 198); /* Corda logo highlight */
     -color-6: rgba(219, 0, 23, 0.2); /* Corda logo highlight */
 }
-.root{
+
+.root {
     -fx-background: #f4f4f4;
     -fx-control-inner-background: white;
     -fx-dark-text-color: black;

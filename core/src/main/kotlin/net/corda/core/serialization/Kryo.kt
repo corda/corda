@@ -201,13 +201,12 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
     }
 }
 
-inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T) : T {
+inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T): T {
     val tmp = this.classLoader ?: ClassLoader.getSystemClassLoader()
     this.classLoader = cl
     try {
         return body()
-    }
-    finally {
+    } finally {
         this.classLoader = tmp
     }
 }
@@ -333,6 +332,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         register(Kryo::class.java, object : Serializer<Kryo>() {
             override fun write(kryo: Kryo, output: Output, obj: Kryo) {
             }
+
             override fun read(kryo: Kryo, input: Input, type: Class<Kryo>): Kryo {
                 return createKryo((Fiber.getFiberSerializer() as KryoSerializer).kryo)
             }
@@ -412,8 +412,7 @@ object ReferencesAwareJavaSerializer : JavaSerializer() {
     override fun write(kryo: Kryo, output: Output, obj: Any) {
         if (kryo.references) {
             super.write(kryo, output, obj)
-        }
-        else {
+        } else {
             ObjectOutputStream(output).use {
                 it.writeObject(obj)
             }
@@ -423,8 +422,7 @@ object ReferencesAwareJavaSerializer : JavaSerializer() {
     override fun read(kryo: Kryo, input: Input, type: Class<Any>): Any {
         return if (kryo.references) {
             super.read(kryo, input, type)
-        }
-        else {
+        } else {
             ObjectInputStream(input).use(ObjectInputStream::readObject)
         }
     }
@@ -455,7 +453,7 @@ object OrderedSerializer : Serializer<HashMap<Any, Any>>() {
         val linkedMap = LinkedHashMap<Any, Any>()
         val sorted = obj.toList().sortedBy { it.first.hashCode() }
         for ((k, v) in sorted) {
-            linkedMap.put(k,v)
+            linkedMap.put(k, v)
         }
         kryo.writeClassAndObject(output, linkedMap)
     }

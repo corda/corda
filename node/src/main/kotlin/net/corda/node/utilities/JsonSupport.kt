@@ -164,10 +164,10 @@ object JsonSupport {
     }
 
     object PublicKeySerializer : JsonSerializer<EdDSAPublicKey>() {
-       override fun serialize(obj: EdDSAPublicKey, generator: JsonGenerator, provider: SerializerProvider) {
-           check(obj.params == ed25519Curve)
-           generator.writeString(obj.toBase58String())
-       }
+        override fun serialize(obj: EdDSAPublicKey, generator: JsonGenerator, provider: SerializerProvider) {
+            check(obj.params == ed25519Curve)
+            generator.writeString(obj.toBase58String())
+        }
     }
 
     object PublicKeyDeserializer : JsonDeserializer<EdDSAPublicKey>() {

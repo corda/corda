@@ -1,9 +1,8 @@
 package net.corda.attachmentdemo
 
 import com.google.common.net.HostAndPort
-import net.corda.core.utilities.loggerFor
-import net.corda.testing.http.HttpUtils
 import joptsimple.OptionParser
+import net.corda.core.utilities.loggerFor
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {

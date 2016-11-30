@@ -10,7 +10,6 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.messaging.StateMachineUpdate
 import org.fxmisc.easybind.EasyBind
@@ -29,6 +28,7 @@ data class PartiallyResolvedTransaction(
         val transaction: SignedTransaction,
         val inputs: List<ObservableValue<InputResolution>>) {
     val id = transaction.id
+
     sealed class InputResolution(val stateRef: StateRef) {
         class Unresolved(stateRef: StateRef) : InputResolution(stateRef)
         class Resolved(val stateAndRef: StateAndRef<ContractState>) : InputResolution(stateAndRef.ref)
@@ -56,6 +56,7 @@ data class PartiallyResolvedTransaction(
 sealed class TransactionCreateStatus(val message: String?) {
     class Started(message: String?) : TransactionCreateStatus(message)
     class Failed(message: String?) : TransactionCreateStatus(message)
+
     override fun toString(): String = message ?: javaClass.simpleName
 }
 
@@ -64,8 +65,9 @@ data class FlowStatus(
 )
 
 sealed class StateMachineStatus(val stateMachineName: String) {
-    class Added(stateMachineName: String): StateMachineStatus(stateMachineName)
-    class Removed(stateMachineName: String): StateMachineStatus(stateMachineName)
+    class Added(stateMachineName: String) : StateMachineStatus(stateMachineName)
+    class Removed(stateMachineName: String) : StateMachineStatus(stateMachineName)
+
     override fun toString(): String = "${javaClass.simpleName}($stateMachineName)"
 }
 

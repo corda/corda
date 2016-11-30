@@ -1,4 +1,5 @@
 @file:JvmName("ContractsDSL")
+
 package net.corda.core.contracts
 
 import net.corda.core.crypto.CompositeKey
@@ -19,6 +20,7 @@ import java.util.*
 //// Currencies ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 fun currency(code: String) = Currency.getInstance(code)!!
+
 fun commodity(code: String) = Commodity.getInstance(code)!!
 
 @JvmField val USD = currency("USD")
@@ -63,17 +65,17 @@ inline fun <R> requireThat(body: Requirements.() -> R) = Requirements.body()
 inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signer: CompositeKey? = null,
                                                                                          party: Party? = null) =
         filter { it.value is T }.
-        filter { if (signer == null) true else signer in it.signers }.
-        filter { if (party == null) true else party in it.signingParties }.
-        map { AuthenticatedObject(it.signers, it.signingParties, it.value as T) }
+                filter { if (signer == null) true else signer in it.signers }.
+                filter { if (party == null) true else party in it.signingParties }.
+                map { AuthenticatedObject(it.signers, it.signingParties, it.value as T) }
 
 /** Filters the command list by type, parties and public keys all at once. */
 inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signers: Collection<CompositeKey>?,
                                                                                          parties: Collection<Party>?) =
         filter { it.value is T }.
-        filter { if (signers == null) true else it.signers.containsAll(signers)}.
-        filter { if (parties == null) true else it.signingParties.containsAll(parties) }.
-        map { AuthenticatedObject(it.signers, it.signingParties, it.value as T) }
+                filter { if (signers == null) true else it.signers.containsAll(signers) }.
+                filter { if (parties == null) true else it.signingParties.containsAll(parties) }.
+                map { AuthenticatedObject(it.signers, it.signingParties, it.value as T) }
 
 inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingleCommand() = try {
     select<T>().single()

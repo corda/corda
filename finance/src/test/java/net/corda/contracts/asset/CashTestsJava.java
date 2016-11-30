@@ -1,8 +1,8 @@
 package net.corda.contracts.asset;
 
+import kotlin.*;
 import net.corda.core.contracts.*;
 import net.corda.core.serialization.*;
-import kotlin.*;
 import org.junit.*;
 
 import static net.corda.core.contracts.ContractsDSL.*;

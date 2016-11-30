@@ -21,6 +21,7 @@ class ProgressTrackerTest {
 
         fun tracker() = ProgressTracker(ONE, TWO, THREE, FOUR)
     }
+
     object ChildSteps {
         object AYY : ProgressTracker.Step("ayy")
         object BEE : ProgressTracker.Step("bee")
@@ -104,6 +105,7 @@ class ProgressTrackerTest {
                 println("bar")
             }
         }
+
         val kryo = createKryo().apply {
             // This is required to make sure Kryo walks through the auto-generated members for the lambda below.
             fieldSerializerConfig.isIgnoreSyntheticFields = false
@@ -111,6 +113,7 @@ class ProgressTrackerTest {
         pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
         class Tmp {
             val unserializable = Unserializable()
+
             init {
                 pt2.changes.subscribe { unserializable.foo() }
             }

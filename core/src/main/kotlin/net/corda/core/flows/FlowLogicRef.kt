@@ -52,7 +52,7 @@ class FlowLogicRefFactory(private val flowWhitelist: Map<String, Set<String>>) :
     fun createKotlin(flowLogicClassName: String, args: Map<String, Any?>, attachments: List<SecureHash> = emptyList()): FlowLogicRef {
         val context = AppContext(attachments)
         validateFlowClassName(flowLogicClassName, context)
-        for(arg in args.values.filterNotNull()) {
+        for (arg in args.values.filterNotNull()) {
             validateArgClassName(flowLogicClassName, arg.javaClass.name, context)
         }
         val clazz = Class.forName(flowLogicClassName)

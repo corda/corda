@@ -72,21 +72,25 @@ interface NetworkMapService {
                           val ifChangedSinceVersion: Int?,
                           override val replyTo: SingleMessageRecipient,
                           override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
+
     data class FetchMapResponse(val nodes: Collection<NodeRegistration>?, val version: Int)
 
     class QueryIdentityRequest(val identity: Party,
                                override val replyTo: SingleMessageRecipient,
                                override val sessionID: Long) : ServiceRequestMessage
+
     data class QueryIdentityResponse(val node: NodeInfo?)
 
     class RegistrationRequest(val wireReg: WireNodeRegistration,
                               override val replyTo: SingleMessageRecipient,
                               override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
+
     data class RegistrationResponse(val success: Boolean)
 
     class SubscribeRequest(val subscribe: Boolean,
                            override val replyTo: SingleMessageRecipient,
                            override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
+
     data class SubscribeResponse(val confirmed: Boolean)
 
     data class Update(val wireReg: WireNodeRegistration, val mapVersion: Int, val replyTo: MessageRecipients)
@@ -338,7 +342,7 @@ class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddOrRemo
         return WireNodeRegistration(regSerialized, regSig)
     }
 
-    override fun toString() : String = "$node #$serial ($type)"
+    override fun toString(): String = "$node #$serial ($type)"
 }
 
 /**

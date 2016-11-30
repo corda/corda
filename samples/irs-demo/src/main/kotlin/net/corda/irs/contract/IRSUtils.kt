@@ -52,6 +52,7 @@ open class Rate(val ratioUnit: RatioUnit? = null) {
      * for equality.
      */
     override fun hashCode() = ratioUnit?.hashCode() ?: 0
+
     override fun toString() = ratioUnit.toString()
 }
 

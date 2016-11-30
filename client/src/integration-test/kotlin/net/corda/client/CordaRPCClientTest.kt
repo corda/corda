@@ -84,4 +84,4 @@ class CordaRPCClientTest {
         }
         println("Result: ${flowHandle.returnValue.toBlocking().first()}")
     }
- }
+}

@@ -4,7 +4,6 @@ import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import org.junit.Before
 import org.junit.Test
-import java.util.*
 import kotlin.test.assertEquals
 
 class LeftOuterJoinedMapTest {
@@ -23,7 +22,7 @@ class LeftOuterJoinedMapTest {
         dogs = FXCollections.observableArrayList<Dog>(Dog("Scruffy", owner = "Bob"))
         joinedList = people.leftOuterJoin(dogs, Person::name, Dog::owner) { person, dogs -> Pair(person, dogs) }
         // We replay the nested observable as well
-        replayedList = ReplayedList(joinedList.map { Pair(it.first, ReplayedList(it.second))  })
+        replayedList = ReplayedList(joinedList.map { Pair(it.first, ReplayedList(it.second)) })
     }
 
     // TODO perhaps these are too brittle because they test indices that are not stable. Use Expect dsl?

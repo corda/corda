@@ -26,7 +26,7 @@ interface NamedByHash {
 /**
  * Interface for state objects that support being netted with other state objects.
  */
-interface BilateralNettableState<N: BilateralNettableState<N>> {
+interface BilateralNettableState<N : BilateralNettableState<N>> {
     /**
      * Returns an object used to determine if two states can be subject to close-out netting. If two states return
      * equal objects, they can be close out netted together.
@@ -43,7 +43,7 @@ interface BilateralNettableState<N: BilateralNettableState<N>> {
 /**
  * Interface for state objects that support being netted with other state objects.
  */
-interface MultilateralNettableState<out T: Any> {
+interface MultilateralNettableState<out T : Any> {
     /**
      * Returns an object used to determine if two states can be subject to close-out netting. If two states return
      * equal objects, they can be close out netted together.
@@ -51,7 +51,7 @@ interface MultilateralNettableState<out T: Any> {
     val multilateralNetState: T
 }
 
-interface NettableState<N: BilateralNettableState<N>, T: Any>: BilateralNettableState<N>,
+interface NettableState<N : BilateralNettableState<N>, T : Any> : BilateralNettableState<N>,
         MultilateralNettableState<T>
 
 /**
@@ -154,6 +154,7 @@ data class TransactionState<out T : ContractState>(
 
 /** Wraps the [ContractState] in a [TransactionState] object */
 infix fun <T : ContractState> T.`with notary`(newNotary: Party) = withNotary(newNotary)
+
 infix fun <T : ContractState> T.withNotary(newNotary: Party) = TransactionState(this, newNotary)
 
 /**
@@ -222,7 +223,7 @@ data class ScheduledActivity(val logicRef: FlowLogicRef, override val scheduledA
  *
  * This simplifies the job of tracking the current version of certain types of state in e.g. a vault.
  */
-interface LinearState: ContractState {
+interface LinearState : ContractState {
     /**
      * Unique id shared by all LinearState states throughout history within the vaults of all parties.
      * Verify methods should check that one input and one output share the id in a transaction,
@@ -465,11 +466,11 @@ interface Attachment : NamedByHash {
      * @throws FileNotFoundException if the given path doesn't exist in the attachment.
      */
     fun extractFile(path: String, outputTo: OutputStream) {
-        val p = path.toLowerCase().split('\\','/')
+        val p = path.toLowerCase().split('\\', '/')
         openAsJAR().use { jar ->
             while (true) {
                 val e = jar.nextJarEntry ?: break
-                if (e.name.toLowerCase().split('\\','/') == p) {
+                if (e.name.toLowerCase().split('\\', '/') == p) {
                     jar.copyTo(outputTo)
                     return
                 }

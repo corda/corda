@@ -1,8 +1,5 @@
 package net.corda.netmap
 
-import net.corda.core.utilities.ProgressTracker
-import net.corda.simulation.IRSSimulation
-import net.corda.testing.node.MockNetwork
 import javafx.animation.*
 import javafx.geometry.Pos
 import javafx.scene.control.Label
@@ -10,6 +7,9 @@ import javafx.scene.layout.StackPane
 import javafx.scene.shape.Circle
 import javafx.scene.shape.Line
 import javafx.util.Duration
+import net.corda.core.utilities.ProgressTracker
+import net.corda.simulation.IRSSimulation
+import net.corda.testing.node.MockNetwork
 import java.util.*
 
 class VisualiserViewModel {
@@ -20,7 +20,7 @@ class VisualiserViewModel {
             return name.toLowerCase().capitalize()
         }
     }
-    
+
     inner class NodeWidget(val node: MockNetwork.MockNode, val innerDot: Circle, val outerDot: Circle, val longPulseDot: Circle,
                            val pulseAnim: Animation, val longPulseAnim: Animation,
                            val nameLabel: Label, val statusLabel: Label) {
@@ -89,11 +89,11 @@ class VisualiserViewModel {
     }
 
     fun nodeCircleCoords(type: NetworkMapVisualiser.NodeType, index: Int): Pair<Double, Double> {
-        val stepRad: Double = when(type) {
+        val stepRad: Double = when (type) {
             NetworkMapVisualiser.NodeType.BANK -> 2 * Math.PI / bankCount
             NetworkMapVisualiser.NodeType.SERVICE -> (2 * Math.PI / serviceCount)
         }
-        val tangentRad: Double = stepRad * index + when(type) {
+        val tangentRad: Double = stepRad * index + when (type) {
             NetworkMapVisualiser.NodeType.BANK -> 0.0
             NetworkMapVisualiser.NodeType.SERVICE -> Math.PI / 2
         }
@@ -170,7 +170,7 @@ class VisualiserViewModel {
 
         val widget = NodeWidget(forNode, innerDot, outerDot, longPulseOuterDot, pulseAnim, longPulseAnim, nameLabel, statusLabel)
         when (displayStyle) {
-            Style.CIRCLE -> widget.position(index, { node, index -> nodeCircleCoords(nodeType, index) } )
+            Style.CIRCLE -> widget.position(index, { node, index -> nodeCircleCoords(nodeType, index) })
             Style.MAP -> widget.position(index, { node, index -> nodeMapCoords(node) })
         }
         return widget

@@ -1,11 +1,8 @@
 package net.corda.core.flows;
 
-import org.junit.Test;
+import org.junit.*;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class FlowLogicRefFromJavaTest {
 

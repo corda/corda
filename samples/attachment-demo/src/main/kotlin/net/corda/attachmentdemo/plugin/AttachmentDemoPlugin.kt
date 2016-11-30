@@ -10,7 +10,7 @@ class AttachmentDemoPlugin : CordaPluginRegistry() {
     override val webApis: List<Class<*>> = listOf(AttachmentDemoApi::class.java)
     // A list of flows that are required for this cordapp
     override val requiredFlows: Map<String, Set<String>> = mapOf(
-        FinalityFlow::class.java.name to setOf(SignedTransaction::class.java.name, setOf(Unit).javaClass.name, setOf(Unit).javaClass.name)
+            FinalityFlow::class.java.name to setOf(SignedTransaction::class.java.name, setOf(Unit).javaClass.name, setOf(Unit).javaClass.name)
     )
     override val servicePlugins: List<Class<*>> = listOf()
 }

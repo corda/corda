@@ -1,15 +1,17 @@
 package net.corda.core.crypto
 
+
 import com.esotericsoftware.kryo.serializers.MapSerializer
-import net.corda.contracts.asset.*
+import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.`issued by`
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
 import net.corda.core.utilities.DUMMY_PUBKEY_1
-import net.corda.testing.*
-
-
+import net.corda.testing.ALICE_PUBKEY
+import net.corda.testing.MEGA_CORP
+import net.corda.testing.MEGA_CORP_PUBKEY
+import net.corda.testing.ledger
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
@@ -114,7 +116,7 @@ class PartialMerkleTreeTest {
         val leaves = "aaa"
         val hashes = leaves.map { it.serialize().hash }
         val mt = MerkleTree.getMerkleTree(hashes)
-        assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(mt, hashes.subList(0,1)) }
+        assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(mt, hashes.subList(0, 1)) }
     }
 
     @Test
@@ -135,7 +137,7 @@ class PartialMerkleTreeTest {
 
     @Test
     fun `verify Partial Merkle Tree - duplicate leaves failure`() {
-        val mt = MerkleTree.getMerkleTree(hashed.subList(0,5)) //Odd number of leaves. Last one is duplicated.
+        val mt = MerkleTree.getMerkleTree(hashed.subList(0, 5)) //Odd number of leaves. Last one is duplicated.
         val inclHashes = arrayListOf(hashed[3], hashed[4])
         val pmt = PartialMerkleTree.build(mt, inclHashes)
         inclHashes.add(hashed[4])
@@ -158,7 +160,7 @@ class PartialMerkleTreeTest {
     }
 
     @Test
-    fun `hash map serialization`(){
+    fun `hash map serialization`() {
         val hm1 = hashMapOf("a" to 1, "b" to 2, "c" to 3, "e" to 4)
         assert(serializedHash(hm1) == serializedHash(hm1.serialize().deserialize())) //It internally uses the ordered HashMap extension.
         val kryo = extendKryoHash(createKryo())

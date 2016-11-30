@@ -95,7 +95,8 @@ sealed class PortAllocation {
         val portCounter = AtomicInteger(startingPort)
         override fun nextPort() = portCounter.andIncrement
     }
-    class RandomFree(): PortAllocation() {
+
+    class RandomFree() : PortAllocation() {
         override fun nextPort(): Int {
             return ServerSocket().use {
                 it.bind(InetSocketAddress(0))
@@ -128,7 +129,7 @@ sealed class PortAllocation {
  * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
-  */
+ */
 fun <A> driver(
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
@@ -233,6 +234,7 @@ open class DriverDSL(
         val clients = LinkedList<NodeMessagingClient>()
         var localServer: ArtemisMessagingServer? = null
     }
+
     private val state = ThreadBox(State())
 
     //TODO: remove this once we can bundle quasar properly.
@@ -394,6 +396,7 @@ open class DriverDSL(
                 "Bob",
                 "Bank"
         )
+
         fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]
 
         private fun startNode(
@@ -409,7 +412,7 @@ open class DriverDSL(
             val classpath = System.getProperty("java.class.path")
             val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
 
-            val debugPortArg = if(debugPort != null)
+            val debugPortArg = if (debugPort != null)
                 listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
             else
                 emptyList()

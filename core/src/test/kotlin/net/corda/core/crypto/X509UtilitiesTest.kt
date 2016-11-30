@@ -67,10 +67,10 @@ class X509UtilitiesTest {
         for (entry in serverCert.subjectAlternativeNames) {
             val typeId = entry[0] as Int
             val value = entry[1] as String
-            if(typeId == GeneralName.iPAddress) {
+            if (typeId == GeneralName.iPAddress) {
                 assertEquals("10.0.0.54", value)
-            } else if(typeId == GeneralName.dNSName) {
-                if(value == "Server Cert") {
+            } else if (typeId == GeneralName.dNSName) {
+                if (value == "Server Cert") {
                     foundMainDnsName = true
                 } else if (value == "alias name") {
                     foundAliasDnsName = true

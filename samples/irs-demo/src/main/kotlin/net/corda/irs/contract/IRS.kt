@@ -505,8 +505,8 @@ class InterestRateSwap() : Contract {
 
         class Group : GroupClauseVerifier<State, Commands, UniqueIdentifier>(AnyComposition(Agree(), Fix(), Pay(), Mature())) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, UniqueIdentifier>>
-                // Group by Trade ID for in / out states
-                = tx.groupStates() { state -> state.linearId }
+                    // Group by Trade ID for in / out states
+                    = tx.groupStates() { state -> state.linearId }
         }
 
         class Timestamped : Clause<ContractState, Commands, Unit>() {

@@ -51,8 +51,8 @@ class CommercialPaper : Contract {
     override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
 
     data class Terms(
-        val asset: Issued<Currency>,
-        val maturityDate: Instant
+            val asset: Issued<Currency>,
+            val maturityDate: Instant
     )
 
     override fun verify(tx: TransactionForContract) = verifyClause(tx, Clauses.Group(), tx.commands.select<Commands>())
@@ -103,10 +103,10 @@ class CommercialPaper : Contract {
 
     interface Clauses {
         class Group : GroupClauseVerifier<State, Commands, Issued<Terms>>(
-            AnyComposition(
-                Redeem(),
-                Move(),
-                Issue())) {
+                AnyComposition(
+                        Redeem(),
+                        Move(),
+                        Issue())) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Terms>>>
                     = tx.groupStates<State, Issued<Terms>> { it.token }
         }
@@ -132,7 +132,7 @@ class CommercialPaper : Contract {
             }
         }
 
-        class Move: Clause<State, Commands, Issued<Terms>>() {
+        class Move : Clause<State, Commands, Issued<Terms>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Move::class.java)
 
             override fun verify(tx: TransactionForContract,
@@ -152,7 +152,7 @@ class CommercialPaper : Contract {
             }
         }
 
-        class Redeem(): Clause<State, Commands, Issued<Terms>>() {
+        class Redeem() : Clause<State, Commands, Issued<Terms>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Redeem::class.java)
 
             override fun verify(tx: TransactionForContract,

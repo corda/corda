@@ -1,9 +1,9 @@
 package net.corda.traderdemo
 
 import com.google.common.net.HostAndPort
+import joptsimple.OptionParser
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.utilities.loggerFor
-import joptsimple.OptionParser
 import org.slf4j.Logger
 import kotlin.system.exitProcess
 

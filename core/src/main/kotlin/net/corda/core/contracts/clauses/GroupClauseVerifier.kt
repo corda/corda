@@ -10,7 +10,7 @@ abstract class GroupClauseVerifier<S : ContractState, C : CommandData, K : Any>(
     abstract fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<S, K>>
 
     override fun getExecutionPath(commands: List<AuthenticatedObject<C>>): List<Clause<*, *, *>>
-        = clause.getExecutionPath(commands)
+            = clause.getExecutionPath(commands)
 
     override fun verify(tx: TransactionForContract,
                         inputs: List<ContractState>,

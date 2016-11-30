@@ -28,7 +28,7 @@ import java.util.*
  * @throws FixOutOfRange if the returned fix was further away from the expected rate by the given amount.
  */
 open class RatesFixFlow(protected val tx: TransactionBuilder,
-                            // Filtering functions over transaction, used to build partial transaction presented to oracle.
+                        /** Filtering functions over transaction, used to build partial transaction presented to oracle. */
                         private val filterFuns: FilterFuns,
                         private val oracle: Party,
                         private val fixOf: FixOf,

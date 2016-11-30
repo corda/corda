@@ -24,7 +24,7 @@ class ConcatenatedListTest {
     fun <A> ConcatenatedList<A>.checkInvariants() {
         assertEquals(nestedIndexOffsets.size, source.size)
         var currentOffset = 0
-        for (i in 0 .. source.size - 1) {
+        for (i in 0..source.size - 1) {
             currentOffset += source[i].size
             assertEquals(nestedIndexOffsets[i], currentOffset)
         }

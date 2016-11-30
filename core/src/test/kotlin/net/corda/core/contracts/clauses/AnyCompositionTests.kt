@@ -2,13 +2,11 @@ package net.corda.core.contracts.clauses
 
 import net.corda.core.contracts.AuthenticatedObject
 import net.corda.core.contracts.CommandData
-import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionForContract
 import net.corda.core.crypto.SecureHash
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 class AnyCompositionTests {
     @Test

@@ -65,7 +65,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     indexTenor = Tenor("3M")
             )
 
-            val calculation = InterestRateSwap.Calculation (
+            val calculation = InterestRateSwap.Calculation(
 
                     // TODO: this seems to fail quite dramatically
                     //expression = "fixedLeg.notional * fixedLeg.fixedRate",
@@ -155,7 +155,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     indexTenor = Tenor("3M")
             )
 
-            val calculation = InterestRateSwap.Calculation (
+            val calculation = InterestRateSwap.Calculation(
 
                     // TODO: this seems to fail quite dramatically
                     //expression = "fixedLeg.notional * fixedLeg.fixedRate",

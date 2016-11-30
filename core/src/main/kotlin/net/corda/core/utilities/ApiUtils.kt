@@ -19,7 +19,7 @@ class ApiUtils(val services: ServiceHub) {
         return try {
             val partyKey = CompositeKey.parseFromBase58(partyKeyStr)
             val party = services.identityService.partyFromKey(partyKey)
-            if(party == null) notFound("Unknown party") else found(party)
+            if (party == null) notFound("Unknown party") else found(party)
         } catch (e: IllegalArgumentException) {
             notFound("Invalid base58 key passed for party key")
         }

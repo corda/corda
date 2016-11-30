@@ -49,8 +49,8 @@ class NetworkMapVisualiser : Application() {
     }
 
     sealed class RunningPausedState {
-        class Running(val tickTimer: TimerTask): RunningPausedState()
-        class Paused(): RunningPausedState()
+        class Running(val tickTimer: TimerTask) : RunningPausedState()
+        class Paused() : RunningPausedState()
 
         val buttonLabel: RunPauseButtonLabel
             get() {
@@ -71,7 +71,11 @@ class NetworkMapVisualiser : Application() {
         viewModel.view = view
         viewModel.presentationMode = "--presentation-mode" in parameters.raw
         buildScene(stage)
-        viewModel.displayStyle = if ("--circle" in parameters.raw) { Style.CIRCLE } else { viewModel.displayStyle }
+        viewModel.displayStyle = if ("--circle" in parameters.raw) {
+            Style.CIRCLE
+        } else {
+            viewModel.displayStyle
+        }
 
         val simulation = viewModel.simulation
         // Update the white-backgrounded label indicating what flow step it's up to.
@@ -159,7 +163,7 @@ class NetworkMapVisualiser : Application() {
     }
 
     private fun bindTopbar() {
-        view.resetButton.setOnAction({reset()})
+        view.resetButton.setOnAction({ reset() })
         view.nextButton.setOnAction {
             if (!view.simulateInitialisationCheckbox.isSelected && !viewModel.simulation.networkInitialisationFinished.isDone) {
                 skipNetworkInitialisation()

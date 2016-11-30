@@ -1,34 +1,22 @@
 package net.corda.contracts;
 
-import com.google.common.collect.ImmutableList;
-import kotlin.Pair;
-import kotlin.Unit;
-import net.corda.contracts.asset.CashKt;
+import com.google.common.collect.*;
+import kotlin.*;
+import net.corda.contracts.asset.*;
 import net.corda.core.contracts.*;
-import net.corda.core.contracts.TransactionForContract.InOutGroup;
-import net.corda.core.contracts.clauses.AnyComposition;
-import net.corda.core.contracts.clauses.Clause;
-import net.corda.core.contracts.clauses.ClauseVerifier;
-import net.corda.core.contracts.clauses.GroupClauseVerifier;
-import net.corda.core.crypto.CompositeKey;
-import net.corda.core.crypto.CryptoUtilitiesKt;
-import net.corda.core.crypto.Party;
-import net.corda.core.crypto.SecureHash;
-import net.corda.core.node.services.VaultService;
-import net.corda.core.transactions.TransactionBuilder;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import net.corda.core.contracts.TransactionForContract.*;
+import net.corda.core.contracts.clauses.*;
+import net.corda.core.crypto.*;
+import net.corda.core.node.services.*;
+import net.corda.core.transactions.*;
+import org.jetbrains.annotations.*;
 
-import java.time.Instant;
-import java.util.Collections;
-import java.util.Currency;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.time.*;
+import java.util.*;
+import java.util.stream.*;
 
-import static kotlin.collections.CollectionsKt.single;
-import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
-import static net.corda.core.contracts.ContractsDSL.requireThat;
+import static kotlin.collections.CollectionsKt.*;
+import static net.corda.core.contracts.ContractsDSL.*;
 
 
 /**
@@ -173,10 +161,10 @@ public class JavaCommercialPaper implements Contract {
             @NotNull
             @Override
             public Set<Commands> verify(@NotNull TransactionForContract tx,
-                                           @NotNull List<? extends State> inputs,
-                                           @NotNull List<? extends State> outputs,
-                                           @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
-                                           @NotNull State groupingKey) {
+                                        @NotNull List<? extends State> inputs,
+                                        @NotNull List<? extends State> outputs,
+                                        @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
+                                        @NotNull State groupingKey) {
                 AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
                 // There should be only a single input due to aggregation above
                 State input = single(inputs);
@@ -204,10 +192,10 @@ public class JavaCommercialPaper implements Contract {
             @NotNull
             @Override
             public Set<Commands> verify(@NotNull TransactionForContract tx,
-                                           @NotNull List<? extends State> inputs,
-                                           @NotNull List<? extends State> outputs,
-                                           @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
-                                           @NotNull State groupingKey) {
+                                        @NotNull List<? extends State> inputs,
+                                        @NotNull List<? extends State> outputs,
+                                        @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
+                                        @NotNull State groupingKey) {
                 AuthenticatedObject<Commands.Redeem> cmd = requireSingleCommand(tx.getCommands(), Commands.Redeem.class);
 
                 // There should be only a single input due to aggregation above
@@ -246,10 +234,10 @@ public class JavaCommercialPaper implements Contract {
             @NotNull
             @Override
             public Set<Commands> verify(@NotNull TransactionForContract tx,
-                                           @NotNull List<? extends State> inputs,
-                                           @NotNull List<? extends State> outputs,
-                                           @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
-                                           @NotNull State groupingKey) {
+                                        @NotNull List<? extends State> inputs,
+                                        @NotNull List<? extends State> outputs,
+                                        @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
+                                        @NotNull State groupingKey) {
                 AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
                 State output = single(outputs);
                 Timestamp timestampCommand = tx.getTimestamp();
@@ -274,17 +262,23 @@ public class JavaCommercialPaper implements Contract {
     public interface Commands extends CommandData {
         class Move implements Commands {
             @Override
-            public boolean equals(Object obj) { return obj instanceof Move; }
+            public boolean equals(Object obj) {
+                return obj instanceof Move;
+            }
         }
 
         class Redeem implements Commands {
             @Override
-            public boolean equals(Object obj) { return obj instanceof Redeem; }
+            public boolean equals(Object obj) {
+                return obj instanceof Redeem;
+            }
         }
 
         class Issue implements Commands {
             @Override
-            public boolean equals(Object obj) { return obj instanceof Issue; }
+            public boolean equals(Object obj) {
+                return obj instanceof Issue;
+            }
         }
     }
 

@@ -29,13 +29,13 @@ import com.opengamma.strata.product.common.BuySell
 import com.opengamma.strata.product.swap.ResolvedSwapTrade
 import com.opengamma.strata.product.swap.SwapTrade
 import com.opengamma.strata.product.swap.type.FixedIborSwapConventions
+import kotlinx.support.jdk8.collections.stream
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.vega.analytics.BimmAnalysisUtils
 import net.corda.vega.analytics.IsdaConfiguration
 import net.corda.vega.analytics.PortfolioNormalizer
 import net.corda.vega.analytics.RwamBimmNotProductClassesCalculator
-import kotlinx.support.jdk8.collections.stream
 import java.nio.file.Paths
 import java.time.LocalDate
 import java.util.stream.Collectors.toList
@@ -58,7 +58,7 @@ class SwapExample {
         val curveGroupDefinition = loadCurveGroup()
         val marketData = loadMarketData()
         val trades = ImmutableList.of(createVanillaFixedVsLibor3mSwap(), createVanillaFixedVsLibor6mSwap())
-        val calibrator = CurveCalibrator.of( 1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
+        val calibrator = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
         val ratesProvider = calibrator.calibrate(curveGroupDefinition, marketData, ReferenceData.standard())
         val fxRateProvider = MarketDataFxRateProvider.of(marketData)
         val combinedRatesProvider = ImmutableRatesProvider.combined(fxRateProvider, ratesProvider)
@@ -108,8 +108,8 @@ class SwapExample {
         val trades2 = ImmutableList.of(createVanillaFixedVsLibor3mSwap(), createVanillaFixedVsLibor6mSwap())
         assert(trades1 == trades2)
 
-        val calibrator1 = CurveCalibrator.of( 1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
-        val calibrator2 = CurveCalibrator.of( 1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
+        val calibrator1 = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
+        val calibrator2 = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
         assert(calibrator1 == calibrator2)
 
         val ratesProvider1 = calibrator1.calibrate(curveGroupDefinition1, marketData1, ReferenceData.standard())

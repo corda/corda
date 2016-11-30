@@ -275,7 +275,7 @@ object TwoPartyDealFlow {
                           override val progressTracker: ProgressTracker = Primary.tracker()) : Primary() {
 
         override val notaryNode: NodeInfo get() =
-            serviceHub.networkMapCache.notaryNodes.filter { it.notaryIdentity == payload.notary }.single()
+        serviceHub.networkMapCache.notaryNodes.filter { it.notaryIdentity == payload.notary }.single()
     }
 
     /**

@@ -95,7 +95,7 @@ class AttachmentClassLoaderTests {
         return bs.toByteArray()
     }
 
-    fun readAttachment(attachment: Attachment, filepath: String) : ByteArray {
+    fun readAttachment(attachment: Attachment, filepath: String): ByteArray {
         ByteArrayOutputStream().use {
             attachment.extractFile(filepath, it)
             return it.toByteArray()

@@ -34,7 +34,7 @@ import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
 
 val Int.days: Duration get() = Duration.ofDays(this.toLong())
-@Suppress("unused")   // It's here for completeness
+@Suppress("unused") // It's here for completeness
 val Int.hours: Duration get() = Duration.ofHours(this.toLong())
 val Int.minutes: Duration get() = Duration.ofMinutes(this.toLong())
 val Int.seconds: Duration get() = Duration.ofSeconds(this.toLong())
@@ -51,6 +51,7 @@ fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else
 
 /** Like the + operator but throws an exception in case of integer overflow. */
 infix fun Int.checkedAdd(b: Int) = Math.addExact(this, b)
+
 /** Like the + operator but throws an exception in case of integer overflow. */
 @Suppress("unused")
 infix fun Long.checkedAdd(b: Long) = Math.addExact(this, b)
@@ -125,6 +126,7 @@ fun <A> ListenableFuture<A>.toObservable(): Observable<A> {
 
 /** Allows you to write code like: Paths.get("someDir") / "subdir" / "filename" but using the Paths API to avoid platform separator problems. */
 operator fun Path.div(other: String): Path = resolve(other)
+
 fun Path.createDirectory(vararg attrs: FileAttribute<*>): Path = Files.createDirectory(this, *attrs)
 fun Path.createDirectories(vararg attrs: FileAttribute<*>): Path = Files.createDirectories(this, *attrs)
 fun Path.exists(vararg options: LinkOption): Boolean = Files.exists(this, *options)
@@ -142,6 +144,7 @@ inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = 
     }
     Files.newOutputStream(this, *options).use(block)
 }
+
 inline fun <R> Path.readLines(charset: Charset = UTF_8, block: (Stream<String>) -> R): R = Files.lines(this, charset).use(block)
 fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, vararg options: OpenOption): Path = Files.write(this, lines, charset, *options)
 
@@ -233,6 +236,7 @@ class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()
         check(lock.isHeldByCurrentThread, { "Expected $lock to already be locked." })
         return body(content)
     }
+
     fun checkNotLocked() = check(!lock.isHeldByCurrentThread)
 }
 
@@ -300,7 +304,12 @@ data class ErrorOr<out A> private constructor(val value: A?, val error: Throwabl
 
     companion object {
         /** Runs the given lambda and wraps the result. */
-        inline fun <T : Any> catch(body: () -> T): ErrorOr<T> = try { ErrorOr(body()) } catch (t: Throwable) { ErrorOr.of(t) }
+        inline fun <T : Any> catch(body: () -> T): ErrorOr<T> = try {
+            ErrorOr(body())
+        } catch (t: Throwable) {
+            ErrorOr.of(t)
+        }
+
         fun of(t: Throwable) = ErrorOr(null, t)
     }
 

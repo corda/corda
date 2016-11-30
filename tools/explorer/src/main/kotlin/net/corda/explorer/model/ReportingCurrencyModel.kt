@@ -22,7 +22,9 @@ class ReportingCurrencyModel {
      * exchange rates change
      */
     val reportingExchange: ObservableValue<Pair<Currency, (Amount<Currency>) -> Amount<Currency>>> =
-            EasyBind.map(AmountBindings.exchange(reportingCurrency, exchangeRate)) { Pair(it.first) { amount: Amount<Currency> ->
-                Amount(it.second(amount), it.first)
-            }}
+            EasyBind.map(AmountBindings.exchange(reportingCurrency, exchangeRate)) {
+                Pair(it.first) { amount: Amount<Currency> ->
+                    Amount(it.second(amount), it.first)
+                }
+            }
 }

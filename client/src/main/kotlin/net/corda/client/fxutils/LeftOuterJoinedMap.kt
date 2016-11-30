@@ -2,7 +2,8 @@ package net.corda.client.fxutils
 
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
-import javafx.collections.*
+import javafx.collections.MapChangeListener
+import javafx.collections.ObservableMap
 
 /**
  * [LeftOuterJoinedMap] implements a special case of a left outer join where we're matching on primary keys of both

@@ -110,11 +110,13 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
 
     /** Returns the same transaction but with an additional (unchecked) signature. */
     fun withAdditionalSignature(sig: DigitalSignature.WithKey) = copy(sigs = sigs + sig)
+
     /** Returns the same transaction but with an additional (unchecked) signatures. */
     fun withAdditionalSignatures(sigList: Iterable<DigitalSignature.WithKey>) = copy(sigs = sigs + sigList)
 
     /** Alias for [withAdditionalSignature] to let you use Kotlin operator overloading. */
     operator fun plus(sig: DigitalSignature.WithKey) = withAdditionalSignature(sig)
+
     /** Alias for [withAdditionalSignatures] to let you use Kotlin operator overloading. */
     operator fun plus(sigList: Collection<DigitalSignature.WithKey>) = withAdditionalSignatures(sigList)
 

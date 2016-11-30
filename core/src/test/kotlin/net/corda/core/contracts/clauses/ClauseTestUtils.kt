@@ -18,7 +18,7 @@ internal fun matchedClause(counter: AtomicInteger? = null) = object : Clause<Con
 
 /** A clause that can never be matched */
 internal fun unmatchedClause(counter: AtomicInteger? = null) = object : Clause<ContractState, CommandData, Unit>() {
-    override val requiredCommands: Set<Class<out CommandData>> = setOf(object: CommandData {}.javaClass)
+    override val requiredCommands: Set<Class<out CommandData>> = setOf(object : CommandData {}.javaClass)
     override fun verify(tx: TransactionForContract,
                         inputs: List<ContractState>,
                         outputs: List<ContractState>,

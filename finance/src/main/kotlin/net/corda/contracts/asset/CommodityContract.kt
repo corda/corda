@@ -21,7 +21,6 @@ import java.util.*
 
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
 val COMMODITY_PROGRAM_ID = CommodityContract()
-    //SecureHash.sha256("commodity")
 
 /**
  * A commodity contract represents an amount of some commodity, tracked on a distributed ledger. The design of this
@@ -98,14 +97,14 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
             override val owner: CompositeKey
     ) : FungibleAsset<Commodity> {
         constructor(deposit: PartyAndReference, amount: Amount<Commodity>, owner: CompositeKey)
-            : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
+                : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
         override val contract = COMMODITY_PROGRAM_ID
         override val exitKeys = Collections.singleton(owner)
         override val participants = listOf(owner)
 
         override fun move(newAmount: Amount<Issued<Commodity>>, newOwner: CompositeKey): FungibleAsset<Commodity>
-            = copy(amount = amount.copy(newAmount.quantity, amount.token), owner = newOwner)
+                = copy(amount = amount.copy(newAmount.quantity, amount.token), owner = newOwner)
 
         override fun toString() = "Commodity($amount at ${amount.token.issuer} owned by $owner)"
 
@@ -135,8 +134,10 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
          */
         data class Exit(override val amount: Amount<Issued<Commodity>>) : Commands, FungibleAsset.Commands.Exit<Commodity>
     }
+
     override fun verify(tx: TransactionForContract)
             = verifyClause(tx, Clauses.Group(), extractCommands(tx.commands))
+
     override fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): List<AuthenticatedObject<Commands>>
             = commands.select<CommodityContract.Commands>()
 
@@ -160,6 +161,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
 
     override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Commodity>>, owner: CompositeKey)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
+
     override fun generateExitCommand(amount: Amount<Issued<Commodity>>) = Commands.Exit(amount)
     override fun generateIssueCommand() = Commands.Issue()
     override fun generateMoveCommand() = Commands.Move()

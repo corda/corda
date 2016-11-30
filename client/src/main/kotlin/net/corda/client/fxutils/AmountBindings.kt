@@ -1,11 +1,11 @@
 package net.corda.client.fxutils
 
-import net.corda.client.model.ExchangeRate
-import net.corda.core.contracts.Amount
 import javafx.beans.binding.Bindings
 import javafx.beans.value.ObservableValue
 import javafx.collections.ObservableList
 import kotlinx.support.jdk8.collections.stream
+import net.corda.client.model.ExchangeRate
+import net.corda.core.contracts.Amount
 import org.fxmisc.easybind.EasyBind
 import java.util.*
 import java.util.stream.Collectors
@@ -44,7 +44,7 @@ object AmountBindings {
             EasyBind.map(
                     Bindings.createLongBinding({
                         amounts.stream().collect(Collectors.summingLong { exchange(it) })
-                    } , arrayOf(amounts))
+                    }, arrayOf(amounts))
             ) { Amount(it.toLong(), currencyValue) }
         }
     }

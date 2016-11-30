@@ -63,7 +63,7 @@ class CommandGenerator : Generator<Command>(Command::class.java) {
     }
 }
 
-class WiredTransactionGenerator: Generator<WireTransaction>(WireTransaction::class.java) {
+class WiredTransactionGenerator : Generator<WireTransaction>(WireTransaction::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): WireTransaction {
         val commands = CommandGenerator().generateList(random, status) + listOf(CommandGenerator().generate(random, status))
         return WireTransaction(
@@ -79,7 +79,7 @@ class WiredTransactionGenerator: Generator<WireTransaction>(WireTransaction::cla
     }
 }
 
-class SignedTransactionGenerator: Generator<SignedTransaction>(SignedTransaction::class.java) {
+class SignedTransactionGenerator : Generator<SignedTransaction>(SignedTransaction::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): SignedTransaction {
         val wireTransaction = WiredTransactionGenerator().generate(random, status)
         return SignedTransaction(
