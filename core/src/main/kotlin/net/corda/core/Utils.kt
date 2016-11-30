@@ -304,10 +304,12 @@ data class ErrorOr<out A> private constructor(val value: A?, val error: Throwabl
 
     companion object {
         /** Runs the given lambda and wraps the result. */
-        inline fun <T : Any> catch(body: () -> T): ErrorOr<T> = try {
-            ErrorOr(body())
-        } catch (t: Throwable) {
-            ErrorOr.of(t)
+        inline fun <T : Any> catch(body: () -> T): ErrorOr<T> {
+            return try {
+                ErrorOr(body())
+            } catch (t: Throwable) {
+                ErrorOr.of(t)
+            }
         }
 
         fun of(t: Throwable) = ErrorOr(null, t)

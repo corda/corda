@@ -79,12 +79,11 @@ sealed class TransactionType {
             }
 
             // Validate that all encumbrances exist within the set of input states.
-            tx.inputs.filter { it.state.data.encumbrance != null }.forEach {
-                encumberedInput ->
-                if (tx.inputs.none {
-                    it.ref.txhash == encumberedInput.ref.txhash &&
-                            it.ref.index == encumberedInput.state.data.encumbrance
-                }) {
+            tx.inputs.filter { it.state.data.encumbrance != null }.forEach { encumberedInput ->
+                val isMissing = tx.inputs.none {
+                    it.ref.txhash == encumberedInput.ref.txhash && it.ref.index == encumberedInput.state.data.encumbrance
+                }
+                if (isMissing) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
                             tx, encumberedInput.state.data.encumbrance!!,
                             TransactionVerificationException.Direction.INPUT

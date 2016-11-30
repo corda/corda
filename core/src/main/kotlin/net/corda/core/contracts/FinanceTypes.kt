@@ -464,12 +464,9 @@ data class UniqueIdentifier(val externalId: String? = null, val id: UUID = UUID.
     override fun toString(): String = if (externalId != null) "${externalId}_$id" else id.toString()
 
     companion object {
-        /**
-         * Helper function for unit tests where the UUID needs to be manually initialised for consistency.
-         */
+        /** Helper function for unit tests where the UUID needs to be manually initialised for consistency. */
         @VisibleForTesting
-        fun fromString(name: String): UniqueIdentifier
-                = UniqueIdentifier(null, UUID.fromString(name))
+        fun fromString(name: String): UniqueIdentifier = UniqueIdentifier(null, UUID.fromString(name))
     }
 
     override fun compareTo(other: UniqueIdentifier): Int = id.compareTo(other.id)
