@@ -207,6 +207,7 @@
 .networkView .map .label:hover .glyph-icon,
 .networkView .map .label:hover .text {
     -fx-fill: -color-4;
+    -fx-cursor: hand;
 }
 
 .networkView .map .glyph-icon,
