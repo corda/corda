@@ -1,3 +1,5 @@
+@file:JvmName("Utils")
+
 package net.corda.core
 
 import com.google.common.base.Function
