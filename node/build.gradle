@@ -2,7 +2,6 @@ apply plugin: 'kotlin'
 apply plugin: 'java'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
 
@@ -26,17 +25,7 @@ configurations {
 
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
-
-    runtimeArtifacts.extendsFrom runtime
 }
-
-// Force the Caplet to target Java 6. This ensures that running 'java -jar corda.jar' on any Java 6 VM upwards
-// will get as far as the Capsule version checks, meaning that if your JVM is too old, you will at least get
-// a sensible error message telling you what to do rather than a bytecode version exception that doesn't.
-// If we introduce .java files into this module that need Java 8+ then we will have to push the caplet into
-// its own module so its target can be controlled individually, but for now this suffices.
-sourceCompatibility = 1.6
-targetCompatibility = 1.6
 
 sourceSets {
     integrationTest {
@@ -172,33 +161,6 @@ task integrationTest(type: Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
-task buildCordaJAR(type: FatCapsule, dependsOn: ['jar', 'buildCertSigningRequestUtilityJAR']) {
-    applicationClass 'net.corda.node.MainKt'
-    archiveName "corda-${corda_version}.jar"
-    applicationSource = files(project.tasks.findByName('jar'), 'build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
-
-    capsuleManifest {
-        appClassPath = ["jolokia-agent-war-${project.rootProject.ext.jolokia_version}.war"]
-        javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
-        minJavaVersion = '1.8.0'
-        caplets = ['CordaCaplet']
-    }
-}
-
-task buildCertSigningRequestUtilityJAR(type: FatCapsule, dependsOn: project.jar) {
-    applicationClass 'net.corda.node.utilities.certsigning.CertificateSignerKt'
-    archiveName 'certSigningRequestUtility.jar'
-    capsuleManifest {
-        systemProperties['log4j.configuration'] = 'log4j2.xml'
-        minJavaVersion = '1.8.0'
-    }
-}
-
-artifacts {
-    runtimeArtifacts buildCordaJAR
-}
-
-
 bintray {
     user = System.getenv('CORDA_BINTRAY_USER')
     key = System.getenv('CORDA_BINTRAY_KEY')
@@ -207,26 +169,6 @@ bintray {
     pkg {
         repo = 'corda'
         name = 'node'
-        userOrg = 'r3'
-        licenses = ['Apache-2.0']
-
-        version {
-            gpg {
-                sign = true
-                passphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-            }
-        }
-    }
-}
-
-bintray {
-    user = System.getenv('CORDA_BINTRAY_USER')
-    key = System.getenv('CORDA_BINTRAY_KEY')
-    publications = ['corda']
-    dryRun = false
-    pkg {
-        repo = 'corda'
-        name = 'corda'
         userOrg = 'r3'
         licenses = ['Apache-2.0']
 
@@ -253,42 +195,6 @@ publishing {
                     resolveStrategy = Closure.DELEGATE_FIRST
                     name 'node'
                     description 'Corda node modules'
-                    url 'https://github.com/corda/corda'
-                    scm {
-                        url 'https://github.com/corda/corda'
-                    }
-
-                    licenses {
-                        license {
-                            name 'Apache-2.0'
-                            url 'https://www.apache.org/licenses/LICENSE-2.0'
-                            distribution 'repo'
-                        }
-                    }
-
-                    developers {
-                        developer {
-                            id 'R3'
-                            name 'R3'
-                            email 'dev@corda.net'
-                        }
-                    }
-                }
-            }
-        }
-
-        corda(MavenPublication) {
-            artifactId 'corda'
-
-            artifact buildCordaJAR {
-                classifier ""
-            }
-
-            pom.withXml {
-                asNode().children().last() + {
-                    resolveStrategy = Closure.DELEGATE_FIRST
-                    name 'corda'
-                    description 'Corda standalone node'
                     url 'https://github.com/corda/corda'
                     scm {
                         url 'https://github.com/corda/corda'

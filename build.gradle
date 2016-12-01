@@ -92,7 +92,7 @@ repositories {
 dependencies {
     compile project(':node')
     compile "com.google.guava:guava:19.0"
-    runtime project(path: ":node", configuration: 'runtimeArtifacts')
+    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 }
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {

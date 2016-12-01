@@ -41,7 +41,7 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
     // Corda integration dependencies
-    runtime project(path: ":node", configuration: 'runtimeArtifacts')
+    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':client')
     compile project(':node')
