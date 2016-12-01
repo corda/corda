@@ -79,6 +79,7 @@ sealed class EnforceVerifyOrFail {
 }
 
 class DuplicateOutputLabel(label: String) : Exception("Output label '$label' already used")
+class DoubleSpentInputs(ids: List<SecureHash>) : Exception("Transactions spend the same input. Conflicting transactions ids: '$ids'")
 class AttachmentResolutionException(attachmentId: SecureHash) : Exception("Attachment with id $attachmentId not found")
 
 /**
@@ -156,7 +157,6 @@ data class TestTransactionDSLInterpreter private constructor(
 data class TestLedgerDSLInterpreter private constructor (
         val services: ServiceHub,
         internal val labelToOutputStateAndRefs: HashMap<String, StateAndRef<ContractState>> = HashMap(),
-        internal val usedInputs: MutableSet<TransactionState<ContractState>> = mutableSetOf(),
         private val transactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = LinkedHashMap(),
         private val nonVerifiedTransactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = HashMap()
 ) : LedgerDSLInterpreter<TestTransactionDSLInterpreter> {
@@ -194,7 +194,6 @@ data class TestLedgerDSLInterpreter private constructor (
             TestLedgerDSLInterpreter(
                     services,
                     labelToOutputStateAndRefs = HashMap(labelToOutputStateAndRefs),
-                    usedInputs = HashSet(usedInputs),
                     transactionWithLocations = HashMap(transactionWithLocations),
                     nonVerifiedTransactionWithLocations = HashMap(nonVerifiedTransactionWithLocations)
             )
@@ -282,16 +281,19 @@ data class TestLedgerDSLInterpreter private constructor (
 
     override fun verifies(): EnforceVerifyOrFail {
         try {
+            val usedInputs = mutableSetOf<StateRef>()
             services.recordTransactions(transactionsUnverified.map { SignedTransaction(it.serialized, listOf(NullSignature), it.id) })
             for ((key, value) in transactionWithLocations) {
                 val wtx = value.transaction
                 val ltx = wtx.toLedgerTransaction(services)
                 ltx.verify()
-                val txInps: List<TransactionState<ContractState>> = wtx.inputs.map { resolveStateRef<ContractState>(it)}
-                if (!txInps.intersect(usedInputs).isEmpty()) {
-                    throw TransactionVerificationException.TestDoubleSpentInputs(ltx)
+                val doubleSpend = wtx.inputs.intersect(usedInputs)
+                if (!doubleSpend.isEmpty()) {
+                    val txIds = mutableListOf(wtx.id)
+                    doubleSpend.mapTo(txIds) { it.txhash }
+                    throw DoubleSpentInputs(txIds)
                 }
-                usedInputs.addAll(txInps)
+                usedInputs.addAll(wtx.inputs)
                 services.recordTransactions(SignedTransaction(wtx.serialized, listOf(NullSignature), wtx.id))
             }
             return EnforceVerifyOrFail.Token
