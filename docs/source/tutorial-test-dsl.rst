@@ -450,6 +450,187 @@ by ``input("alice's $900")`` or ``"paper".output<ICommercialPaperState>()``.
 The last transaction named ``"Trade"`` exemplifies simple fact of selling the ``CommercialPaper`` to Alice for her $900,
 $100 less than the face value at 10% interest after only 7 days.
 
-We can also test whole ledger calling ``this.verifies()`` and ``this `fails with` "some message"`` on te ledger level.
+We can also test whole ledger calling ``this.verifies()`` and ``this.fails()`` on te ledger level.
+To do so let's create a simple example that uses the same input twice:
 
-.. TODO Include sourcecode for double spend example and global ledger verification (after fix)
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        @Test
+        fun `chain commercial paper double spend`() {
+            val issuer = MEGA_CORP.ref(123)
+            ledger {
+                unverifiedTransaction {
+                    output("alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY)
+                }
+
+                // Some CP is issued onto the ledger by MegaCorp.
+                transaction("Issuance") {
+                    output("paper") { getPaper() }
+                    command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                    timestamp(TEST_TX_TIME)
+                    this.verifies()
+                }
+
+                transaction("Trade") {
+                    input("paper")
+                    input("alice's $900")
+                    output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
+                    output("alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE_PUBKEY }
+                    command(ALICE_PUBKEY) { Cash.Commands.Move() }
+                    command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+                    this.verifies()
+                }
+
+                transaction {
+                    input("paper")
+                    // We moved a paper to another pubkey.
+                    output("bob's paper") { "paper".output<ICommercialPaperState>() `owned by` BOB_PUBKEY }
+                    command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+                    this.verifies()
+                }
+
+                this.fails()
+            }
+        }
+
+    .. sourcecode:: java
+
+        @Test
+        public void chainCommercialPaperDoubleSpend() {
+            PartyAndReference issuer = getMEGA_CORP().ref(defaultRef);
+            ledger(l -> {
+                l.unverifiedTransaction(tx -> {
+                    tx.output("alice's $900",
+                            new Cash.State(issuedBy(DOLLARS(900), issuer), getALICE_PUBKEY(), null));
+                    return Unit.INSTANCE;
+                });
+
+                // Some CP is issued onto the ledger by MegaCorp.
+                l.transaction("Issuance", tx -> {
+                    tx.output("paper", getPaper());
+                    tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Issue());
+                    tx.timestamp(getTEST_TX_TIME());
+                    return tx.verifies();
+                });
+
+                l.transaction("Trade", tx -> {
+                    tx.input("paper");
+                    tx.input("alice's $900");
+                    tx.output("borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP_PUBKEY(), null));
+                    JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
+                    tx.output("alice's paper", inputPaper.withOwner(getALICE_PUBKEY()));
+                    tx.command(getALICE_PUBKEY(), new Cash.Commands.Move());
+                    tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
+                    return tx.verifies();
+                });
+
+                l.transaction(tx -> {
+                    tx.input("paper");
+                    JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
+                    // We moved a paper to other pubkey.
+                    tx.output("bob's paper", inputPaper.withOwner(getBOB_PUBKEY()));
+                    tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
+                    return tx.verifies();
+                });
+                l.fails();
+                return Unit.INSTANCE;
+            });
+        }
+
+The transactions ``verifies()`` individually, however the state was spent twice! That's why we need the global ledger
+verification (``this.fails()`` at the end). As in previous examples we can use ``tweak`` to create a local copy of the whole ledger:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        @Test
+        fun `chain commercial tweak`() {
+            val issuer = MEGA_CORP.ref(123)
+            ledger {
+                unverifiedTransaction {
+                    output("alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY)
+                }
+
+                // Some CP is issued onto the ledger by MegaCorp.
+                transaction("Issuance") {
+                    output("paper") { getPaper() }
+                    command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                    timestamp(TEST_TX_TIME)
+                    this.verifies()
+                }
+
+                transaction("Trade") {
+                    input("paper")
+                    input("alice's $900")
+                    output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
+                    output("alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE_PUBKEY }
+                    command(ALICE_PUBKEY) { Cash.Commands.Move() }
+                    command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+                    this.verifies()
+                }
+
+                tweak {
+                    transaction {
+                        input("paper")
+                        // We moved a paper to another pubkey.
+                        output("bob's paper") { "paper".output<ICommercialPaperState>() `owned by` BOB_PUBKEY }
+                        command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+                        this.verifies()
+                    }
+                    this.fails()
+                }
+
+                this.verifies()
+            }
+        }
+
+    .. sourcecode:: java
+
+        @Test
+        public void chainCommercialPaperTweak() {
+            PartyAndReference issuer = getMEGA_CORP().ref(defaultRef);
+            ledger(l -> {
+                l.unverifiedTransaction(tx -> {
+                    tx.output("alice's $900",
+                            new Cash.State(issuedBy(DOLLARS(900), issuer), getALICE_PUBKEY(), null));
+                    return Unit.INSTANCE;
+                });
+
+                // Some CP is issued onto the ledger by MegaCorp.
+                l.transaction("Issuance", tx -> {
+                    tx.output("paper", getPaper());
+                    tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Issue());
+                    tx.timestamp(getTEST_TX_TIME());
+                    return tx.verifies();
+                });
+
+                l.transaction("Trade", tx -> {
+                    tx.input("paper");
+                    tx.input("alice's $900");
+                    tx.output("borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP_PUBKEY(), null));
+                    JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
+                    tx.output("alice's paper", inputPaper.withOwner(getALICE_PUBKEY()));
+                    tx.command(getALICE_PUBKEY(), new Cash.Commands.Move());
+                    tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
+                    return tx.verifies();
+                });
+
+                l.tweak(lw -> {
+                    lw.transaction(tx -> {
+                        tx.input("paper");
+                        JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
+                        // We moved a paper to another pubkey.
+                        tx.output("bob's paper", inputPaper.withOwner(getBOB_PUBKEY()));
+                        tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
+                        return tx.verifies();
+                    });
+                    lw.fails();
+                    return Unit.INSTANCE;
+                });
+                l.verifies();
+                return Unit.INSTANCE;
+            });
+        }
