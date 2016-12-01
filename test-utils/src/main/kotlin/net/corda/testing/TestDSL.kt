@@ -156,6 +156,7 @@ data class TestTransactionDSLInterpreter private constructor(
 data class TestLedgerDSLInterpreter private constructor (
         val services: ServiceHub,
         internal val labelToOutputStateAndRefs: HashMap<String, StateAndRef<ContractState>> = HashMap(),
+        internal val usedInputs: MutableSet<TransactionState<ContractState>> = mutableSetOf(),
         private val transactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = LinkedHashMap(),
         private val nonVerifiedTransactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = HashMap()
 ) : LedgerDSLInterpreter<TestTransactionDSLInterpreter> {
@@ -167,7 +168,7 @@ data class TestLedgerDSLInterpreter private constructor (
     companion object {
         private fun getCallerLocation(): String? {
             val stackTrace = Thread.currentThread().stackTrace
-            for (i in 1 .. stackTrace.size) {
+            for (i in 1..stackTrace.size) {
                 val stackTraceElement = stackTrace[i]
                 if (!stackTraceElement.fileName.contains("DSL")) {
                     return stackTraceElement.toString()
@@ -182,8 +183,10 @@ data class TestLedgerDSLInterpreter private constructor (
             val transaction: WireTransaction,
             val location: String?
     )
+
     class VerifiesFailed(transactionName: String, cause: Throwable) :
             Exception("Transaction ($transactionName) didn't verify: $cause", cause)
+
     class TypeMismatch(requested: Class<*>, actual: Class<*>) :
             Exception("Actual type $actual is not a subtype of requested type $requested")
 
@@ -191,6 +194,7 @@ data class TestLedgerDSLInterpreter private constructor (
             TestLedgerDSLInterpreter(
                     services,
                     labelToOutputStateAndRefs = HashMap(labelToOutputStateAndRefs),
+                    usedInputs = HashSet(usedInputs),
                     transactionWithLocations = HashMap(transactionWithLocations),
                     nonVerifiedTransactionWithLocations = HashMap(nonVerifiedTransactionWithLocations)
             )
@@ -249,7 +253,6 @@ data class TestLedgerDSLInterpreter private constructor (
             }
             labelToOutputStateAndRefs[label] = wireTransaction.outRef(index)
         }
-
         transactionMap[wireTransaction.id] =
                 WireTransactionWithLocation(transactionLabel, wireTransaction, transactionLocation)
 
@@ -281,8 +284,15 @@ data class TestLedgerDSLInterpreter private constructor (
         try {
             services.recordTransactions(transactionsUnverified.map { SignedTransaction(it.serialized, listOf(NullSignature), it.id) })
             for ((key, value) in transactionWithLocations) {
-                value.transaction.toLedgerTransaction(services).verify()
-                services.recordTransactions(SignedTransaction(value.transaction.serialized, listOf(NullSignature), value.transaction.id))
+                val wtx = value.transaction
+                val ltx = wtx.toLedgerTransaction(services)
+                ltx.verify()
+                val txInps: List<TransactionState<ContractState>> = wtx.inputs.map { resolveStateRef<ContractState>(it)}
+                if (!txInps.intersect(usedInputs).isEmpty()) {
+                    throw TransactionVerificationException.TestDoubleSpentInputs(ltx)
+                }
+                usedInputs.addAll(txInps)
+                services.recordTransactions(SignedTransaction(wtx.serialized, listOf(NullSignature), wtx.id))
             }
             return EnforceVerifyOrFail.Token
         } catch (exception: TransactionVerificationException) {

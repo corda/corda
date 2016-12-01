@@ -107,7 +107,7 @@ sealed class TransactionVerificationException(val tx: LedgerTransaction, cause: 
         override val message: String?
             get() = "Missing required encumbrance ${missing} in ${inOut}"
     }
-
+    class TestDoubleSpentInputs(tx: LedgerTransaction) : TransactionVerificationException(tx, null)
     enum class Direction {
         INPUT,
         OUTPUT
