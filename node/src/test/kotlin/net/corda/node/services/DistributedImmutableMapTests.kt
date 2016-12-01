@@ -2,6 +2,7 @@ package net.corda.node.services
 
 import com.google.common.net.HostAndPort
 import io.atomix.catalyst.transport.Address
+import io.atomix.copycat.client.ConnectionStrategies
 import io.atomix.copycat.client.CopycatClient
 import io.atomix.copycat.server.CopycatServer
 import io.atomix.copycat.server.storage.Storage
@@ -105,7 +106,9 @@ class DistributedImmutableMapTests {
             server.bootstrap()
         }
 
-        val client = CopycatClient.builder(address).build()
+        val client = CopycatClient.builder(address)
+                .withConnectionStrategy(ConnectionStrategies.EXPONENTIAL_BACKOFF)
+                .build()
         return serverInitFuture.thenCompose { client.connect(address) }.thenApply { Member(it, server) }
     }
 }
