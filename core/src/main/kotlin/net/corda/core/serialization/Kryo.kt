@@ -31,6 +31,7 @@ import java.io.ObjectOutputStream
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
@@ -302,6 +303,41 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
     }
 }
 
+/** For serialising composite keys */
+@ThreadSafe
+object CompositeKeyLeafSerializer : Serializer<CompositeKey.Leaf>() {
+    override fun write(kryo: Kryo, output: Output, obj: CompositeKey.Leaf) {
+        val key = obj.publicKey
+        kryo.writeClassAndObject(output, key)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey.Leaf>): CompositeKey.Leaf {
+        val key = kryo.readClassAndObject(input) as PublicKey
+        return CompositeKey.Leaf(key)
+    }
+}
+
+@ThreadSafe
+object CompositeKeyNodeSerializer : Serializer<CompositeKey.Node>() {
+    override fun write(kryo: Kryo, output: Output, obj: CompositeKey.Node) {
+        output.writeInt(obj.threshold)
+        output.writeInt(obj.children.size)
+        obj.children.forEach { kryo.writeClassAndObject(output, it) }
+        output.writeInts(obj.weights.toIntArray())
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey.Node>): CompositeKey.Node {
+        val threshold = input.readInt()
+        val childCount = input.readInt()
+        val children = (1..childCount).map { kryo.readClassAndObject(input) as CompositeKey }
+        val weights = input.readInts(childCount)
+
+        val builder = CompositeKey.Builder()
+        weights.zip(children).forEach { builder.addKey(it.second, it.first)  }
+        return builder.build(threshold)
+    }
+}
+
 /** Marker interface for kotlin object definitions so that they are deserialized as the singleton instance. */
 interface DeserializeAsKotlinObjectDef
 
@@ -343,6 +379,10 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         register(keyPair.public.javaClass, Ed25519PublicKeySerializer)
         register(keyPair.private.javaClass, Ed25519PrivateKeySerializer)
         register(Instant::class.java, ReferencesAwareJavaSerializer)
+
+        // Using a custom serializer for compactness
+        register(CompositeKey.Node::class.java, CompositeKeyNodeSerializer)
+        register(CompositeKey.Leaf::class.java, CompositeKeyLeafSerializer)
 
         // Some classes have to be handled with the ImmutableClassSerializer because they need to have their
         // constructors be invoked (typically for lazy members).
