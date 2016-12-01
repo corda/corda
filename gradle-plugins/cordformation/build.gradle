@@ -1,7 +1,6 @@
 apply plugin: 'groovy'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'maven-publish'
-apply plugin: 'com.jfrog.bintray'
 
 dependencies {
     compile gradleApi()
@@ -14,24 +13,10 @@ repositories {
     mavenCentral()
 }
 
-bintray {
-    user = System.getenv('CORDA_BINTRAY_USER')
-    key = System.getenv('CORDA_BINTRAY_KEY')
+bintrayPublish {
+    name = 'cordformation'
     publications = ['cordformation']
     dryRun = false
-    pkg {
-        repo = 'corda'
-        name = 'cordformation'
-        userOrg = 'r3'
-        licenses = ['Apache-2.0']
-
-        version {
-            gpg {
-                sign = true
-                passphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-            }
-        }
-    }
 }
 
 publishing {

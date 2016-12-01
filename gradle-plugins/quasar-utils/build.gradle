@@ -1,6 +1,5 @@
 apply plugin: 'groovy'
 apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'com.jfrog.bintray'
 apply plugin: 'maven-publish'
 
 dependencies {
@@ -12,24 +11,10 @@ repositories {
     mavenCentral()
 }
 
-bintray {
-    user = System.getenv('CORDA_BINTRAY_USER')
-    key = System.getenv('CORDA_BINTRAY_KEY')
+bintrayPublish {
+    name = 'quasar-utils'
     publications = ['quasarUtils']
     dryRun = false
-    pkg {
-        repo = 'corda'
-        name = 'quasar-utils'
-        userOrg = 'r3'
-        licenses = ['Apache-2.0']
-
-        version {
-            gpg {
-                sign = true
-                passphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-            }
-        }
-    }
 }
 
 publishing {

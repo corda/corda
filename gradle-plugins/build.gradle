@@ -2,10 +2,11 @@
 // or if you are developing these plugins. See the readme for more information.
 
 buildscript {
-    ext.gradle_plugins_version = "0.6.1" // Our version: bump this on release.
-    ext.corda_published_version = "0.5" // Depend on our existing published publishing plugin.
+    ext.gradle_plugins_version = "0.6.2" // Our version: bump this on release.
+    ext.corda_published_version = "0.6.2" // Depend on our existing published publishing plugin.
 
     repositories {
+        mavenLocal()
         jcenter()
     }
 
@@ -16,6 +17,7 @@ buildscript {
 }
 
 apply plugin: 'maven-publish'
+apply plugin: 'net.corda.plugins.publish-utils'
 
 allprojects {
     version "$gradle_plugins_version"
@@ -24,6 +26,16 @@ allprojects {
 
 subprojects {
 	task(install, dependsOn: 'publishToMavenLocal')
+}
+
+bintrayConfig {
+    user = System.getenv('CORDA_BINTRAY_USER')
+    key = System.getenv('CORDA_BINTRAY_KEY')
+    repo = 'corda'
+    org = 'r3'
+    licenses = ['Apache-2.0']
+    gpgSign = true
+    gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
 }
 
 // Aliasing the publishToMavenLocal for simplicity.

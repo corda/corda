@@ -1,4 +1,4 @@
 rootProject.name = 'corda-gradle-plugins'
-include 'quasar-utils'
 include 'publish-utils'
+include 'quasar-utils'
 include 'cordformation'
