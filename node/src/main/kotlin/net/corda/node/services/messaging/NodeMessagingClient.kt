@@ -67,8 +67,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         const val TOPIC_PROPERTY = "platform-topic"
         const val SESSION_ID_PROPERTY = "session-id"
 
-        const val RPC_QUEUE_REMOVALS_QUEUE = "rpc.qremovals"
-
         /**
          * This should be the only way to generate an ArtemisAddress and that only of the remote NetworkMapService node.
          * All other addresses come from the NetworkMapCache, or myAddress below.
@@ -136,7 +134,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             producer = session.createProducer()
 
             // Create a queue, consumer and producer for handling P2P network messages.
-            createQueueIfAbsent(SimpleString(P2P_QUEUE))
             p2pConsumer = makeP2PConsumer(session, true)
             networkMapRegistrationFuture.success {
                 state.locked {
@@ -150,13 +147,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                 }
             }
 
-            // Create an RPC queue and consumer: this will service locally connected clients only (not via a
-            // bridge) and those clients must have authenticated. We could use a single consumer for everything
-            // and perhaps we should, but these queues are not worth persisting.
-            session.createTemporaryQueue(RPC_REQUESTS_QUEUE, RPC_REQUESTS_QUEUE)
-            // The custom name for the queue is intentional - we may wish other things to subscribe to the
-            // NOTIFICATIONS_ADDRESS with different filters in future
-            session.createTemporaryQueue(NOTIFICATIONS_ADDRESS, RPC_QUEUE_REMOVALS_QUEUE, "_AMQ_NotifType = 1")
             rpcConsumer = session.createConsumer(RPC_REQUESTS_QUEUE)
             rpcNotificationConsumer = session.createConsumer(RPC_QUEUE_REMOVALS_QUEUE)
             rpcDispatcher = createRPCDispatcher(rpcOps, userService, config.myLegalName)
