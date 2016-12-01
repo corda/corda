@@ -8,7 +8,15 @@ apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
 
 repositories {
+    mavenLocal()
     mavenCentral()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
+    jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
 }
 
 configurations {
@@ -91,6 +99,8 @@ publishing {
         corda(MavenPublication) {
             artifactId 'corda'
 
+            artifact sourceJar
+            artifact javadocJar
             artifact buildCordaJAR {
                 classifier ""
             }
