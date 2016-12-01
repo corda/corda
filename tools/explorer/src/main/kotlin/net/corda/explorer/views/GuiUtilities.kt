@@ -81,3 +81,6 @@ fun EventTarget.copyableLabel(value: ObservableValue<String>? = null, op: (TextF
 }
 
 inline fun <reified M : Any> View.getModel(): M = Models.get(M::class, this.javaClass.kotlin)
+
+// Cartesian product of 2 collections.
+infix fun <A, B> Collection<A>.x(other: Collection<B>) = this.map { a -> other.map { b -> a to b } }.flatten()

@@ -241,3 +241,19 @@
 #setting-edit-label:hover .text, #setting-edit-label:hover .glyph-icon {
     -fx-fill: -color-4;
 }
+
+.bullet {
+    -fx-fill: black;
+}
+
+.connection-bank-to-bank {
+    -fx-fill: white;
+}
+
+.message-line {
+    -fx-stroke: white;
+}
+
+.connection-bank-to-regulator {
+    -fx-stroke: red;
+}

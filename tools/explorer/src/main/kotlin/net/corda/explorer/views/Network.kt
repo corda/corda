@@ -2,8 +2,9 @@ package net.corda.explorer.views
 
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView
+import javafx.animation.FadeTransition
+import javafx.animation.TranslateTransition
 import javafx.beans.binding.Bindings
-import javafx.beans.property.SimpleDoubleProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
 import javafx.geometry.Bounds
@@ -17,13 +18,17 @@ import javafx.scene.image.ImageView
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
+import javafx.scene.shape.Circle
+import javafx.scene.shape.Line
 import javafx.scene.text.Font
 import javafx.scene.text.FontWeight
+import javafx.util.Duration
 import net.corda.client.fxutils.*
 import net.corda.client.model.*
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.Party
 import net.corda.core.node.NodeInfo
 import net.corda.explorer.model.CordaView
 import tornadofx.*
@@ -47,9 +52,10 @@ class Network : CordaView() {
     private val mapScrollPane by fxid<ScrollPane>()
     private val mapPane by fxid<Pane>()
     private val mapImageView by fxid<ImageView>()
-    private val mapOriginalHeight = SimpleDoubleProperty()
     private val zoomInButton by fxid<Button>()
     private val zoomOutButton by fxid<Button>()
+
+    private val mapOriginalHeight = 2000.0
 
     // Node observables, declare here to create a strong ref to prevent GC, which removes listener from observables.
     private val notaryComponents = notaries.map { it.render() }
@@ -61,9 +67,29 @@ class Network : CordaView() {
     private val myButton = myComponent.map { it?.button }
     private val myMapLabel = myComponent.map { it?.label }
 
+    private val allComponents = FXCollections.observableArrayList(notaryComponents, peerComponents).concatenate()
+    private val allComponentMap = allComponents.associateBy { it.nodeInfo.legalIdentity }
+    private val mapLabels = allComponents.map { it.label }
+
     private data class MapViewComponents(val nodeInfo: NodeInfo, val button: Button, val label: Label)
 
-    private val nodesOnMap = FXCollections.observableArrayList(notaryComponents.map { it.label }, peerComponents.map { it.label }).concatenate()
+    private val stepDuration = Duration.millis(500.0)
+
+    private val lastTransactions = transactions.map {
+        val inputParties = it.inputs.sequence()
+                .map { it as? PartiallyResolvedTransaction.InputResolution.Resolved }
+                .filterNotNull()
+                .map { it.stateAndRef }.getParties()
+        val outputParties = it.transaction.tx.outputs
+                .mapIndexed { index, transactionState ->
+                    val stateRef = StateRef(it.id, index)
+                    StateAndRef(transactionState, stateRef)
+                }.observable().getParties()
+        val signingParties = it.transaction.sigs.map { getModel<NetworkIdentityModel>().lookup(it.by) }
+        // Input parties fire a bullets to all output parties, and to the signing parties. !! This is a rough guess of how the message moves in the network.
+        // TODO : Expose artemis queue to get real message information.
+        (inputParties x outputParties) + (inputParties x signingParties)
+    }.last()
 
     private fun NodeInfo.render(): MapViewComponents {
         val node = this
@@ -82,28 +108,18 @@ class Network : CordaView() {
 
         val button = button {
             graphic = vbox {
-                label(this@render.legalIdentity.name) {
+                label(node.legalIdentity.name) {
                     font = Font.font(font.family, FontWeight.BOLD, 15.0)
                 }
                 gridpane {
                     hgap = 5.0
                     vgap = 5.0
-                    row("Pub Key :") {
-                        copyableLabel(SimpleObjectProperty(this@render.legalIdentity.owningKey.toBase58String()))
-                    }
-                    row("Services :") {
-                        label(this@render.advertisedServices.map { it.info }.joinToString(", "))
-                    }
-                    this@render.physicalLocation?.apply {
-                        row("Location :") {
-                            label(this@apply.description)
-                        }
-                    }
+                    row("Pub Key :") { copyableLabel(SimpleObjectProperty(node.legalIdentity.owningKey.toBase58String())) }
+                    row("Services :") { label(node.advertisedServices.map { it.info }.joinToString(", ")) }
+                    node.physicalLocation?.apply { row("Location :") { label(this@apply.description) } }
                 }
             }
-            setOnMouseClicked {
-                mapScrollPane.centerLabel(mapLabel)
-            }
+            setOnMouseClicked { mapScrollPane.centerLabel(mapLabel) }
         }
         return MapViewComponents(this, button, mapLabel)
     }
@@ -112,51 +128,45 @@ class Network : CordaView() {
         myIdentityPane.centerProperty().bind(myButton)
         Bindings.bindContent(notaryList.children, notaryButtons)
         Bindings.bindContent(peerList.children, peerButtons)
-        Bindings.bindContent(mapPane.children, nodesOnMap)
-
-        val transactions = transactions.map {
-            val inputParties = it.inputs.sequence()
-                    .map { it as? PartiallyResolvedTransaction.InputResolution.Resolved }
-                    .filterNotNull()
-                    .map { it.stateAndRef }.getParties()
-            val outputParties = it.transaction.tx.outputs
-                    .mapIndexed { index, transactionState ->
-                        val stateRef = StateRef(it.id, index)
-                        StateAndRef(transactionState, stateRef)
-                    }.observable().getParties()
-            val signingParties = it.transaction.sigs.map { getModel<NetworkIdentityModel>().lookup(it.by) }
-            (inputParties + outputParties + signingParties).map { it.value }.filterNotNull().toSet()
-        }.last()
-
-        // Run once when the screen is layout.
+        Bindings.bindContent(mapPane.children, mapLabels)
+        // Run once when the screen is ready.
+        // TODO : Find a better way to do this.
         mapPane.heightProperty().addListener { _o, old, _new ->
             if (old == 0.0) {
-                mapOriginalHeight.value = mapImageView.prefHeight(-1.0)
                 myMapLabel.value?.let { mapScrollPane.centerLabel(it) }
             }
         }
-
-        mapPane.setOnZoom {
-            zoom(it.zoomFactor, Point2D(it.x, it.y))
-        }
+        mapPane.setOnZoom { zoom(it.zoomFactor, Point2D(it.x, it.y)) }
 
         zoomInButton.setOnAction { zoom(1.2) }
         zoomOutButton.setOnAction { zoom(0.8) }
+
+        lastTransactions.addListener { observableValue, old, new ->
+            new?.forEach {
+                it.first.value?.let { a ->
+                    it.second.value?.let { b ->
+                        fireBulletBetweenNodes(a.legalIdentity, b.legalIdentity, "bank", "bank")
+                    }
+                }
+            }
+        }
     }
 
     private fun ScrollPane.centerLabel(label: Label) {
         this.hvalue = (label.boundsInParent.width / 2 + label.boundsInParent.minX) / mapImageView.layoutBounds.width
-        this.vvalue = (label.boundsInParent.height / 2 +label.boundsInParent.minY) / mapImageView.layoutBounds.height
+        this.vvalue = (label.boundsInParent.height / 2 + label.boundsInParent.minY) / mapImageView.layoutBounds.height
     }
 
-    private fun zoom(zoomFactor: Double, mousePoint: Point2D = mapScrollPane.viewportBounds.getCenterPoint()) {
+    private fun zoom(zoomFactor: Double, mousePoint: Point2D = mapScrollPane.viewportBounds.center()) {
+        // Work out scroll bar position.
         val valX = mapScrollPane.hvalue * (mapImageView.layoutBounds.width - mapScrollPane.viewportBounds.width)
         val valY = mapScrollPane.vvalue * (mapImageView.layoutBounds.height - mapScrollPane.viewportBounds.height)
-        // calculate adjustment of scroll position.
-        // Set zoom scale bound from 1x to 10x.
-        val newHeight = Math.min(Math.max(mapImageView.prefHeight(-1.0) * zoomFactor, mapOriginalHeight.value), mapOriginalHeight.value * 10)
+        // Set zoom scale limit to minimum 1x and maximum 10x.
+        val newHeight = Math.min(Math.max(mapImageView.prefHeight(-1.0) * zoomFactor, mapOriginalHeight), mapOriginalHeight * 10)
         val newZoomFactor = newHeight / mapImageView.prefHeight(-1.0)
+        // calculate adjustment of scroll position based on mouse location.
         val adjustment = mousePoint.multiply(newZoomFactor - 1)
+        // Change the map size.
         mapImageView.fitHeight = newHeight
         mapScrollPane.layout()
         // Adjust scroll.
@@ -164,11 +174,54 @@ class Network : CordaView() {
         mapScrollPane.vvalue = (valY + adjustment.y) / (mapImageView.layoutBounds.height - mapScrollPane.viewportBounds.height)
     }
 
-    private fun Bounds.getCenterPoint(): Point2D {
+    private fun Bounds.center(): Point2D {
         val x = this.width / 2 - this.minX
         val y = this.height / 2 - this.minY
         return Point2D(x, y)
     }
 
     private fun List<StateAndRef<ContractState>>.getParties() = map { it.state.data.participants.map { getModel<NetworkIdentityModel>().lookup(it) } }.flatten()
+
+    private fun fireBulletBetweenNodes(senderNode: Party, destNode: Party, startType: String, endType: String) {
+        allComponentMap[senderNode]?.let { senderNode ->
+            allComponentMap[destNode]?.let { destNode ->
+                val sender = senderNode.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2 + it.minY) }
+                val receiver = destNode.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2 + it.minY) }
+                val bullet = Circle(3.0)
+                bullet.styleClass += "bullet"
+                bullet.styleClass += "connection-$startType-to-$endType"
+                with(TranslateTransition(stepDuration, bullet)) {
+                    fromXProperty().bind(sender.map { it.x })
+                    fromYProperty().bind(sender.map { it.y })
+                    toXProperty().bind(receiver.map { it.x })
+                    toYProperty().bind(receiver.map { it.y })
+                    setOnFinished { mapPane.children.remove(bullet) }
+                    play()
+                }
+                val line = Line().apply {
+                    styleClass += "message-line"
+                    startXProperty().bind(sender.map { it.x })
+                    startYProperty().bind(sender.map { it.y })
+                    endXProperty().bind(receiver.map { it.x })
+                    endYProperty().bind(receiver.map { it.y })
+                }
+                // Fade in quick, then fade out slow.
+                with(FadeTransition(stepDuration.divide(5.0), line)) {
+                    fromValue = 0.0
+                    toValue = 1.0
+                    play()
+                    setOnFinished {
+                        with(FadeTransition(stepDuration.multiply(6.0), line)) {
+                            fromValue = 1.0
+                            toValue = 0.0
+                            play()
+                            setOnFinished { mapPane.children.remove(line) }
+                        }
+                    }
+                }
+                mapPane.children.add(1, line)
+                mapPane.children.add(bullet)
+            }
+        }
+    }
 }

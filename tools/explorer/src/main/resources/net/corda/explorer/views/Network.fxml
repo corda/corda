@@ -10,7 +10,7 @@
         <StackPane>
             <ScrollPane fx:id="mapScrollPane" hbarPolicy="NEVER" pannable="true" vbarPolicy="NEVER">
                 <StackPane>
-                    <ImageView fx:id="mapImageView" styleClass="worldMap" preserveRatio="true"/>
+                    <ImageView fx:id="mapImageView" styleClass="worldMap" preserveRatio="true" fitHeight="2000"/>
                     <Pane fx:id="mapPane" styleClass="map"/>
                 </StackPane>
             </ScrollPane>
