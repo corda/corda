@@ -75,6 +75,5 @@ You can catch up with the latest code by selecting "VCS -> Update Project" in th
 Troubleshooting
 ---------------
 
-See :doc:`getting-set-up-fault-finding`.
-
+See :doc:`getting-set-up-fault-finding`, or get in touch with us either on the `forums <https://discourse.corda.net/>`_ or via `slack <http://slack.corda.net/>`_.
 
