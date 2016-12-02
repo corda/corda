@@ -10,7 +10,7 @@ buildscript {
     ext.jackson_version = '2.8.0.rc2'
     ext.jetty_version = '9.3.9.v20160517'
     ext.jersey_version = '2.23.1'
-	ext.jolokia_version = '2.0.0-M1'
+    ext.jolokia_version = '2.0.0-M1'
     ext.assertj_version = '3.5.1'
     ext.log4j_version = '2.6.2'
     ext.bouncycastle_version = '1.54'
