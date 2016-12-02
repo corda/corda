@@ -26,26 +26,20 @@ import javafx.util.Duration
 import net.corda.client.fxutils.*
 import net.corda.client.model.*
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Party
 import net.corda.core.node.NodeInfo
 import net.corda.explorer.model.CordaView
 import tornadofx.*
 
-// TODO : Construct a node map using node info and display them on a world map.
-// TODO : Allow user to see transactions between nodes on a world map.
 class Network : CordaView() {
     override val root by fxml<Parent>()
     override val icon = FontAwesomeIcon.GLOBE
-
     // Inject data.
     val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
     val notaries by observableList(NetworkIdentityModel::notaries)
     val peers by observableList(NetworkIdentityModel::parties)
     val transactions by observableList(GatheredTransactionDataModel::partiallyResolvedTransactions)
-
-    // Components
+    // UI components
     private val myIdentityPane by fxid<BorderPane>()
     private val notaryList by fxid<VBox>()
     private val peerList by fxid<VBox>()
@@ -57,16 +51,14 @@ class Network : CordaView() {
 
     private val mapOriginalHeight = 2000.0
 
-    // Node observables, declare here to create a strong ref to prevent GC, which removes listener from observables.
+    // UI node observables, declare here to create a strong ref to prevent GC, which removes listener from observables.
     private val notaryComponents = notaries.map { it.render() }
     private val notaryButtons = notaryComponents.map { it.button }
     private val peerComponents = peers.map { it.render() }
     private val peerButtons = peerComponents.filtered { it.nodeInfo != myIdentity.value }.map { it.button }
-
     private val myComponent = myIdentity.map { it?.render() }
     private val myButton = myComponent.map { it?.button }
     private val myMapLabel = myComponent.map { it?.label }
-
     private val allComponents = FXCollections.observableArrayList(notaryComponents, peerComponents).concatenate()
     private val allComponentMap = allComponents.associateBy { it.nodeInfo.legalIdentity }
     private val mapLabels = allComponents.map { it.label }
@@ -75,42 +67,37 @@ class Network : CordaView() {
 
     private val stepDuration = Duration.millis(500.0)
 
-    private val lastTransactions = transactions.map {
-        val inputParties = it.inputs.sequence()
-                .map { it as? PartiallyResolvedTransaction.InputResolution.Resolved }
-                .filterNotNull()
-                .map { it.stateAndRef }.getParties()
-        val outputParties = it.transaction.tx.outputs
-                .mapIndexed { index, transactionState ->
-                    val stateRef = StateRef(it.id, index)
-                    StateAndRef(transactionState, stateRef)
-                }.observable().getParties()
-        val signingParties = it.transaction.sigs.map { getModel<NetworkIdentityModel>().lookup(it.by) }
-        // Input parties fire a bullets to all output parties, and to the signing parties. !! This is a rough guess of how the message moves in the network.
-        // TODO : Expose artemis queue to get real message information.
-        (inputParties x outputParties) + (inputParties x signingParties)
-    }.last()
+    private val lastTransactions = transactions.last().map {
+        it?.let {
+            val inputParties = it.inputs.sequence()
+                    .map { it as? PartiallyResolvedTransaction.InputResolution.Resolved }
+                    .filterNotNull()
+                    .map { it.stateAndRef.state.data }.getParties()
+            val outputParties = it.transaction.tx.outputs.map { it.data }.observable().getParties()
+            val signingParties = it.transaction.sigs.map { getModel<NetworkIdentityModel>().lookup(it.by) }
+            // Input parties fire a bullets to all output parties, and to the signing parties. !! This is a rough guess of how the message moves in the network.
+            // TODO : Expose artemis queue to get real message information.
+            (inputParties x outputParties) + (inputParties x signingParties)
+        }
+    }
 
     private fun NodeInfo.render(): MapViewComponents {
         val node = this
-        val mapLabel = label {
+        val mapLabel = label(node.legalIdentity.name) {
             graphic = FontAwesomeIconView(FontAwesomeIcon.DOT_CIRCLE_ALT)
             contentDisplay = ContentDisplay.TOP
-            text = node.legalIdentity.name
             val coordinate = Bindings.createObjectBinding({
-                node.physicalLocation?.coordinate?.project(mapPane.width, mapPane.height, 85.0511, -85.0511, -180.0, 180.0)?.let {
-                    Pair(it.first, it.second)
-                } ?: Pair(0.0, 0.0)
+                // These coordinates are obtained when we generate the map using TileMill.
+                node.physicalLocation?.coordinate?.project(mapPane.width, mapPane.height, 85.0511, -85.0511, -180.0, 180.0) ?: Pair(0.0, 0.0)
             }, arrayOf(mapPane.widthProperty(), mapPane.heightProperty()))
+            // Center point of the label.
             layoutXProperty().bind(coordinate.map { it.first - width / 2 })
             layoutYProperty().bind(coordinate.map { it.second - height / 4 })
         }
 
         val button = button {
             graphic = vbox {
-                label(node.legalIdentity.name) {
-                    font = Font.font(font.family, FontWeight.BOLD, 15.0)
-                }
+                label(node.legalIdentity.name) { font = Font.font(font.family, FontWeight.BOLD, 15.0) }
                 gridpane {
                     hgap = 5.0
                     vgap = 5.0
@@ -132,12 +119,12 @@ class Network : CordaView() {
         // Run once when the screen is ready.
         // TODO : Find a better way to do this.
         mapPane.heightProperty().addListener { _o, old, _new ->
-            if (old == 0.0) {
-                myMapLabel.value?.let { mapScrollPane.centerLabel(it) }
-            }
+            if (old == 0.0) myMapLabel.value?.let { mapScrollPane.centerLabel(it) }
         }
+        // Listen on zooming gesture, if device has gesture support.
         mapPane.setOnZoom { zoom(it.zoomFactor, Point2D(it.x, it.y)) }
 
+        // Zoom controls for the map.
         zoomInButton.setOnAction { zoom(1.2) }
         zoomOutButton.setOnAction { zoom(0.8) }
 
@@ -180,13 +167,13 @@ class Network : CordaView() {
         return Point2D(x, y)
     }
 
-    private fun List<StateAndRef<ContractState>>.getParties() = map { it.state.data.participants.map { getModel<NetworkIdentityModel>().lookup(it) } }.flatten()
+    private fun List<ContractState>.getParties() = map { it.participants.map { getModel<NetworkIdentityModel>().lookup(it) } }.flatten()
 
     private fun fireBulletBetweenNodes(senderNode: Party, destNode: Party, startType: String, endType: String) {
         allComponentMap[senderNode]?.let { senderNode ->
             allComponentMap[destNode]?.let { destNode ->
-                val sender = senderNode.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2 + it.minY) }
-                val receiver = destNode.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2 + it.minY) }
+                val sender = senderNode.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2.5 + it.minY) }
+                val receiver = destNode.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2.5 + it.minY) }
                 val bullet = Circle(3.0)
                 bullet.styleClass += "bullet"
                 bullet.styleClass += "connection-$startType-to-$endType"

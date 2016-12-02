@@ -241,7 +241,7 @@
 #setting-edit-label:hover .text, #setting-edit-label:hover .glyph-icon {
     -fx-fill: -color-4;
 }
-
+/* Styles for firing bullets between nodes in Network view. */
 .bullet {
     -fx-fill: black;
 }
