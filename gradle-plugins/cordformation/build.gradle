@@ -13,12 +13,6 @@ repositories {
     mavenCentral()
 }
 
-bintrayPublish {
-    name = 'cordformation'
-    publications = ['cordformation']
-    dryRun = false
-}
-
 publishing {
     publications {
         cordformation(MavenPublication) {

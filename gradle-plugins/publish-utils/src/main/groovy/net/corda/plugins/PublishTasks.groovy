@@ -27,33 +27,22 @@ class PublishTasks implements Plugin<Project> {
         }
 
         project.extensions.create("bintrayConfig", BintrayConfigExtension)
-        project.extensions.create("bintrayPublish", BintrayPublishExtension)
 
-        def bintrayValues = project.extensions.findByName("bintrayPublish")
         def bintrayConfig = project.rootProject.extensions.findByName('bintrayConfig')
-        if((bintrayConfig != null) && (bintrayValues != null)) {
-            // TODO AM:
-            // Problem 1. Bootstrapping - do not want root to depend on this project
-            // Problem 2. This project's extension is not available here
-            // Problem 3. Bintray's extension is already configured after evaluation
-            // Possible solutions:
-            // name: project.name
-            // publications: project.name (make it a forced convention)
-            // dryRun: move to root.
-            // Problem 4: Root project therefore cannot be published
-            // Solution: Why use this plugin if you only have a root project?
+        if((bintrayConfig != null) && (bintrayConfig.publications)) {
             project.configure(project) {
                 apply plugin: 'com.jfrog.bintray'
             }
             def bintray = project.extensions.findByName("bintray")
+            println(bintrayConfig.publications.findAll { it == project.name })
 
             project.logger.info("Configuring bintray for ${project.name}")
             bintray.user = bintrayConfig.user
             bintray.key = bintrayConfig.key
-            bintray.publications = bintrayValues.publications
-            bintray.dryRun = bintrayValues.dryRun ?: false
+            bintray.publications = bintrayConfig.publications.findAll { it == project.name }
+            bintray.dryRun = bintrayConfig.dryRun ?: false
             bintray.pkg.repo = bintrayConfig.repo
-            bintray.pkg.name = bintrayValues.name ?: project.name
+            bintray.pkg.name = project.name
             bintray.pkg.userOrg = bintrayConfig.org
             bintray.pkg.licenses = bintrayConfig.licenses
             bintray.pkg.version.gpg.sign = bintrayConfig.gpgSign ?: false

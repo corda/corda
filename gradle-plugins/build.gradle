@@ -36,6 +36,7 @@ bintrayConfig {
     licenses = ['Apache-2.0']
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
+    publications = ['cordformation', 'quasar-utils']
 }
 
 // Aliasing the publishToMavenLocal for simplicity.

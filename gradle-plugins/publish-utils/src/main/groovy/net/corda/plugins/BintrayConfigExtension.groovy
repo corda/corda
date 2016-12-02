@@ -8,4 +8,6 @@ class BintrayConfigExtension {
     String[] licenses
     Boolean gpgSign
     String gpgPassphrase
+    String[] publications
+    Boolean dryRun
 }

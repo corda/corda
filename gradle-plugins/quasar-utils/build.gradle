@@ -11,12 +11,6 @@ repositories {
     mavenCentral()
 }
 
-bintrayPublish {
-    name = 'quasar-utils'
-    publications = ['quasarUtils']
-    dryRun = false
-}
-
 publishing {
     publications {
         quasarUtils(MavenPublication) {
