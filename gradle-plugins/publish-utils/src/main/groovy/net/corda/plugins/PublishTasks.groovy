@@ -9,6 +9,9 @@ import org.gradle.api.Project
  * A utility plugin that when applied will automatically create source and javadoc publishing tasks
  * To apply this plugin you must also add 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4' to your
  * buildscript's classpath dependencies.
+ *
+ * To use this plugin you can add a new configuration block (extension) to your root build.gradle. See the fields
+ * in BintrayConfigExtension.
  */
 class PublishTasks implements Plugin<Project> {
     void apply(Project project) {
