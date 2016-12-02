@@ -19,6 +19,8 @@ local.properties
 
 lib/dokka.jar
 
+**/logs/*
+
 ### JetBrains template
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio
 
@@ -77,6 +79,3 @@ crashlytics-build.properties
 
 # docs related
 docs/virtualenv/
-/logs/
-node/logs/
-samples/*/logs/

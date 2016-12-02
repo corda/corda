@@ -67,7 +67,7 @@ object FixingFlow {
 
             val ptx = TransactionType.General.Builder(txState.notary)
 
-            val oracle = serviceHub.networkMapCache.get(handshake.payload.oracleType).first()
+            val oracle = serviceHub.networkMapCache.getNodesWithService(handshake.payload.oracleType).first()
             val oracleParty = oracle.serviceIdentities(handshake.payload.oracleType).first()
 
             // TODO Could it be solved in better way, move filtering here not in RatesFixFlow?

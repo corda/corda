@@ -4,8 +4,6 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.bufferUntilSubscribed
-import net.corda.core.contracts.Contract
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.map
 import net.corda.core.messaging.MessagingService
@@ -17,11 +15,10 @@ import net.corda.core.node.services.NetworkCacheError
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.NetworkMapCache.MapChangeType
-import net.corda.core.node.services.ServiceType
-import net.corda.core.randomOrNull
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.loggerFor
 import net.corda.flows.sendRequest
 import net.corda.node.services.network.NetworkMapService.Companion.FETCH_FLOW_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_FLOW_TOPIC
@@ -36,71 +33,28 @@ import javax.annotation.concurrent.ThreadSafe
 
 /**
  * Extremely simple in-memory cache of the network map.
- *
- * TODO: some method implementations can be moved up to [NetworkMapCache]
  */
 @ThreadSafe
 open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCache {
-    override val networkMapNodes: List<NodeInfo>
-        get() = get(NetworkMapService.type)
-    override val regulators: List<NodeInfo>
-        get() = get(ServiceType.regulator)
-    override val notaryNodes: List<NodeInfo>
-        get() = get(ServiceType.notary)
-    override val partyNodes: List<NodeInfo>
-        get() = registeredNodes.map { it.value }
+    companion object {
+        val logger = loggerFor<InMemoryNetworkMapCache>()
+    }
+
+    override val partyNodes: List<NodeInfo> get() = registeredNodes.map { it.value }
+    override val networkMapNodes: List<NodeInfo> get() = getNodesWithService(NetworkMapService.type)
     private val _changed = PublishSubject.create<MapChange>()
     override val changed: Observable<MapChange> = _changed
     private val _registrationFuture = SettableFuture.create<Unit>()
-    override val mapServiceRegistered: ListenableFuture<Unit>
-        get() = _registrationFuture
+    override val mapServiceRegistered: ListenableFuture<Unit> get() = _registrationFuture
 
     private var registeredForPush = false
-    protected var registeredNodes = Collections.synchronizedMap(HashMap<Party, NodeInfo>())
+    protected var registeredNodes: MutableMap<Party, NodeInfo> = Collections.synchronizedMap(HashMap<Party, NodeInfo>())
 
     override fun track(): Pair<List<NodeInfo>, Observable<MapChange>> {
         synchronized(_changed) {
             return Pair(partyNodes, _changed.bufferUntilSubscribed())
         }
     }
-
-    override fun get() = registeredNodes.map { it.value }
-    override fun get(serviceType: ServiceType) = registeredNodes.filterValues { it.advertisedServices.any { it.info.type.isSubTypeOf(serviceType) } }.map { it.value }
-    override fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo? = get(type).firstOrNull()
-    override fun getNodeByLegalName(name: String) = get().singleOrNull { it.legalIdentity.name == name }
-    override fun getNodeByCompositeKey(compositeKey: CompositeKey): NodeInfo? {
-        // Although we should never have more than one match, it is theoretically possible. Report an error if it happens.
-        val candidates = get().filter {
-            (it.legalIdentity.owningKey == compositeKey)
-                    || it.advertisedServices.any { it.identity.owningKey == compositeKey }
-        }
-        if (candidates.size > 1) {
-            throw IllegalStateException("Found more than one match for key $compositeKey")
-        }
-        return candidates.singleOrNull()
-    }
-
-    override fun getRepresentativeNode(party: Party): NodeInfo? {
-        return partyNodes.randomOrNull { it.legalIdentity == party || it.advertisedServices.any { it.identity == party } }
-    }
-
-    override fun getNotary(name: String): Party? {
-        val notaryNode = notaryNodes.randomOrNull { it.advertisedServices.any { it.info.type.isSubTypeOf(ServiceType.notary) && it.info.name == name } }
-        return notaryNode?.notaryIdentity
-    }
-
-    override fun getAnyNotary(type: ServiceType?): Party? {
-        val nodes = if (type == null) {
-            notaryNodes
-        } else {
-            require(type != ServiceType.notary && type.isSubTypeOf(ServiceType.notary)) { "The provided type must be a specific notary sub-type" }
-            notaryNodes.filter { it.advertisedServices.any { it.info.type == type } }
-        }
-
-        return nodes.randomOrNull()?.notaryIdentity
-    }
-
-    override fun isNotary(party: Party) = notaryNodes.any { it.notaryIdentity == party }
 
     override fun addMapService(net: MessagingService, networkMapAddress: SingleMessageRecipient, subscribe: Boolean,
                                ifChangedSinceVer: Int?): ListenableFuture<Unit> {
@@ -114,9 +68,9 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
                     net.send(ackMessage, req.replyTo)
                     processUpdatePush(req)
                 } catch(e: NodeMapError) {
-                    NetworkMapCache.logger.warn("Failure during node map update due to bad update: ${e.javaClass.name}")
+                    logger.warn("Failure during node map update due to bad update: ${e.javaClass.name}")
                 } catch(e: Exception) {
-                    NetworkMapCache.logger.error("Exception processing update from network map service", e)
+                    logger.error("Exception processing update from network map service", e)
                 }
             }
             registeredForPush = true
@@ -136,14 +90,13 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
     override fun addNode(node: NodeInfo) {
         synchronized(_changed) {
-            val oldValue = registeredNodes.put(node.legalIdentity, node)
-            if (oldValue == null) {
-                _changed.onNext(MapChange(node, oldValue, MapChangeType.Added))
-            } else if (oldValue != node) {
-                _changed.onNext(MapChange(node, oldValue, MapChangeType.Modified))
+            val previousNode = registeredNodes.put(node.legalIdentity, node)
+            if (previousNode == null) {
+                _changed.onNext(MapChange(node, previousNode, MapChangeType.Added))
+            } else if (previousNode != node) {
+                _changed.onNext(MapChange(node, previousNode, MapChangeType.Modified))
             }
         }
-
     }
 
     override fun removeNode(node: NodeInfo) {
@@ -155,7 +108,6 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
     /**
      * Unsubscribes from updates from the given map service.
-     *
      * @param service the network map service to listen to updates from.
      */
     override fun deregisterForUpdates(net: MessagingService, service: NodeInfo): ListenableFuture<Unit> {

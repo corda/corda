@@ -75,7 +75,7 @@ object TwoPartyDealFlow {
         abstract val myKeyPair: KeyPair
 
         override fun getCounterpartyMarker(party: Party): Class<*> {
-            return if (serviceHub.networkMapCache.regulators.any { it.legalIdentity == party }) {
+            return if (serviceHub.networkMapCache.regulatorNodes.any { it.legalIdentity == party }) {
                 MarkerForBogusRegulatorFlow::class.java
             } else {
                 super.getCounterpartyMarker(party)
@@ -149,7 +149,7 @@ object TwoPartyDealFlow {
             logger.trace { "Deal stored" }
 
             progressTracker.currentStep = COPYING_TO_REGULATOR
-            val regulators = serviceHub.networkMapCache.regulators
+            val regulators = serviceHub.networkMapCache.regulatorNodes
             if (regulators.isNotEmpty()) {
                 // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
                 // just for demo purposes.
