@@ -1,8 +1,9 @@
 package net.corda.client.model
 
+import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import kotlinx.support.jdk8.collections.removeIf
-import net.corda.client.fxutils.foldToObservableList
+import net.corda.client.fxutils.fold
 import net.corda.client.fxutils.map
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.ContractState
@@ -29,11 +30,11 @@ class ContractStateModel {
         // We can't filter removed hashes here as we don't have type info
         Diff(it.added.filterCashStateAndRefs(), it.removed)
     }
-    val cashStates: ObservableList<StateAndRef<Cash.State>> =
-            cashStatesDiff.foldToObservableList(Unit) { statesDiff, _accumulator, observableList ->
-                observableList.removeIf { it.ref in statesDiff.removed }
-                observableList.addAll(statesDiff.added)
-            }
+    val cashStates: ObservableList<StateAndRef<Cash.State>> = cashStatesDiff.fold(FXCollections.observableArrayList()) { list, statesDiff ->
+        list.removeIf { it.ref in statesDiff.removed }
+        list.addAll(statesDiff.added)
+        list
+    }
 
     val cash = cashStates.map { it.state.data.amount }
 

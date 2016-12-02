@@ -44,7 +44,7 @@ class TransactionViewer : CordaView("Transactions") {
     private val transactionViewTable by fxid<TableView<Transaction>>()
     private val matchingTransactionsLabel by fxid<Label>()
     // Inject data
-    private val transactions  by observableListReadOnly(GatheredTransactionDataModel::partiallyResolvedTransactions)
+    private val transactions  by observableListReadOnly(TransactionDataModel::partiallyResolvedTransactions)
     private val reportingExchange by observableValue(ReportingCurrencyModel::reportingExchange)
     private val reportingCurrency by observableValue(ReportingCurrencyModel::reportingCurrency)
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
@@ -155,7 +155,7 @@ class TransactionViewer : CordaView("Transactions") {
     private fun ObservableList<StateAndRef<ContractState>>.toText() = map { it.contract().javaClass.simpleName }.groupBy { it }.map { "${it.key} (${it.value.size})" }.joinToString()
 
     private class TransactionWidget() : BorderPane() {
-        private val partiallyResolvedTransactions  by observableListReadOnly(GatheredTransactionDataModel::partiallyResolvedTransactions)
+        private val partiallyResolvedTransactions  by observableListReadOnly(TransactionDataModel::partiallyResolvedTransactions)
 
         // TODO : Add a scrolling table to show latest transaction.
         // TODO : Add a chart to show types of transactions.
