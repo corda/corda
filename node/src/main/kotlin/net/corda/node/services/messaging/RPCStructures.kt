@@ -186,8 +186,9 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(ServiceEntry::class.java)
         register(NodeInfo::class.java)
         register(PhysicalLocation::class.java)
-        register(NetworkMapCache.MapChange::class.java)
-        register(NetworkMapCache.MapChangeType::class.java)
+        register(NetworkMapCache.MapChange.Added::class.java)
+        register(NetworkMapCache.MapChange.Removed::class.java)
+        register(NetworkMapCache.MapChange.Modified::class.java)
         register(ArtemisMessagingComponent.NodeAddress::class.java,
                 read = { kryo, input ->
                     ArtemisMessagingComponent.NodeAddress(

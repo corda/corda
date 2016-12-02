@@ -4,7 +4,7 @@ import com.google.common.net.HostAndPort
 import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.CordaRPCClient
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.transactions.SignedTransaction
@@ -39,14 +39,14 @@ class NodeMonitorModel {
     private val transactionsSubject = PublishSubject.create<SignedTransaction>()
     private val stateMachineTransactionMappingSubject = PublishSubject.create<StateMachineTransactionMapping>()
     private val progressTrackingSubject = PublishSubject.create<ProgressTrackingEvent>()
-    private val networkMapSubject = PublishSubject.create<NetworkMapCache.MapChange>()
+    private val networkMapSubject = PublishSubject.create<MapChange>()
 
     val stateMachineUpdates: Observable<StateMachineUpdate> = stateMachineUpdatesSubject
     val vaultUpdates: Observable<Vault.Update> = vaultUpdatesSubject
     val transactions: Observable<SignedTransaction> = transactionsSubject
     val stateMachineTransactionMapping: Observable<StateMachineTransactionMapping> = stateMachineTransactionMappingSubject
     val progressTracking: Observable<ProgressTrackingEvent> = progressTrackingSubject
-    val networkMap: Observable<NetworkMapCache.MapChange> = networkMapSubject
+    val networkMap: Observable<MapChange> = networkMapSubject
 
     private val clientToServiceSource = PublishSubject.create<CashCommand>()
     val clientToService: PublishSubject<CashCommand> = clientToServiceSource
@@ -96,7 +96,7 @@ class NodeMonitorModel {
 
         // Parties on network
         val (parties, futurePartyUpdate) = proxy.networkMapUpdates()
-        futurePartyUpdate.startWith(parties.map { NetworkMapCache.MapChange(it, null, NetworkMapCache.MapChangeType.Added) }).subscribe(networkMapSubject)
+        futurePartyUpdate.startWith(parties.map { MapChange.Added(it) }).subscribe(networkMapSubject)
 
         // Client -> Service
         clientToServiceSource.subscribe {

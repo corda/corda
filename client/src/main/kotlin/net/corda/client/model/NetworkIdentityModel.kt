@@ -9,7 +9,7 @@ import net.corda.client.fxutils.foldToObservableList
 import net.corda.client.fxutils.map
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.node.services.network.NetworkMapService
 import java.security.PublicKey
 
@@ -19,9 +19,9 @@ class NetworkIdentityModel {
     val networkIdentities: ObservableList<NodeInfo> =
             networkIdentityObservable.foldToObservableList(Unit) { update, _accumulator, observableList ->
                 observableList.removeIf {
-                    when (update.type) {
-                        NetworkMapCache.MapChangeType.Removed -> it == update.node
-                        NetworkMapCache.MapChangeType.Modified -> it == update.prevNodeInfo
+                    when (update) {
+                        is MapChange.Removed -> it == update.node
+                        is MapChange.Modified -> it == update.previousNode
                         else -> false
                     }
                 }

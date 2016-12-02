@@ -19,8 +19,11 @@ import rx.Observable
  */
 interface NetworkMapCache {
 
-    enum class MapChangeType { Added, Removed, Modified }
-    data class MapChange(val node: NodeInfo, val prevNodeInfo: NodeInfo?, val type: MapChangeType)
+    sealed class MapChange(val node: NodeInfo) {
+        class Added(node: NodeInfo) : MapChange(node)
+        class Removed(node: NodeInfo) : MapChange(node)
+        class Modified(node: NodeInfo, val previousNode: NodeInfo) : MapChange(node)
+    }
 
     /** A list of all nodes the cache is aware of */
     val partyNodes: List<NodeInfo>

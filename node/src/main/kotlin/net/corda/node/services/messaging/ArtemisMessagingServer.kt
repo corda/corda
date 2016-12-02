@@ -10,7 +10,7 @@ import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.div
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.node.services.NetworkMapCache.MapChangeType
+import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.printBasicNodeInfo
@@ -108,23 +108,13 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         maybeDeployBridgeForAddress(networkMapService)
     }
 
-    private fun destroyPossibleStaleBridge(change: NetworkMapCache.MapChange) {
-        fun removePreviousBridge() {
-            (change.prevNodeInfo?.address as? ArtemisAddress)?.let {
-                maybeDestroyBridge(it.queueName)
-            }
+    private fun destroyPossibleStaleBridge(change: MapChange) {
+        val staleNodeInfo = when (change) {
+            is MapChange.Modified -> change.previousNode
+            is MapChange.Removed -> change.node
+            is MapChange.Added -> return
         }
-
-        if (change.type == MapChangeType.Modified) {
-            removePreviousBridge()
-        } else if (change.type == MapChangeType.Removed) {
-            removePreviousBridge()
-            // TODO Fix the network map change data classes so that the remove event doesn't have two NodeInfo fields
-            val address = change.node.address
-            if (address is ArtemisAddress) {
-                maybeDestroyBridge(address.queueName)
-            }
-        }
+        (staleNodeInfo.address as? ArtemisAddress)?.let { maybeDestroyBridge(it.queueName) }
     }
 
     private fun configureAndStartServer() {

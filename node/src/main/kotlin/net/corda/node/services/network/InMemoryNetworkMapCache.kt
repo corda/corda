@@ -14,7 +14,6 @@ import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.NetworkCacheError
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
-import net.corda.core.node.services.NetworkMapCache.MapChangeType
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -92,17 +91,17 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         synchronized(_changed) {
             val previousNode = registeredNodes.put(node.legalIdentity, node)
             if (previousNode == null) {
-                _changed.onNext(MapChange(node, previousNode, MapChangeType.Added))
+                _changed.onNext(MapChange.Added(node))
             } else if (previousNode != node) {
-                _changed.onNext(MapChange(node, previousNode, MapChangeType.Modified))
+                _changed.onNext(MapChange.Modified(node, previousNode))
             }
         }
     }
 
     override fun removeNode(node: NodeInfo) {
         synchronized(_changed) {
-            val oldValue = registeredNodes.remove(node.legalIdentity)
-            _changed.onNext(MapChange(node, oldValue, MapChangeType.Removed))
+            registeredNodes.remove(node.legalIdentity)
+            _changed.onNext(MapChange.Removed(node))
         }
     }
 

@@ -14,7 +14,7 @@ import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.*
 import net.corda.core.node.services.*
-import net.corda.core.node.services.NetworkMapCache.MapChangeType
+import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -433,18 +433,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
 
     protected open fun makeIdentityService(): IdentityService {
         val service = InMemoryIdentityService()
-
         service.registerIdentity(info.legalIdentity)
-
         services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.legalIdentity) }
-
         netMapCache.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
-            if (mapChange.type == MapChangeType.Added) {
+            if (mapChange is MapChange.Added) {
                 service.registerIdentity(mapChange.node.legalIdentity)
             }
         }
-
         return service
     }
 
