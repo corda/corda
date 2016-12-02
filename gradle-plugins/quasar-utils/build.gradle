@@ -13,7 +13,7 @@ repositories {
 
 publishing {
     publications {
-        quasarUtils(MavenPublication) {
+        "quasar-utils"(MavenPublication) {
             from components.java
             groupId  'net.corda.plugins'
             artifactId 'quasar-utils'
