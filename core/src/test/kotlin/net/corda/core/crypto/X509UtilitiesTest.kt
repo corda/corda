@@ -61,23 +61,17 @@ class X509UtilitiesTest {
         serverCert.verify(caCertAndKey.keyPair.public) // throws on verification problems
         assertFalse { serverCert.keyUsage[5] } // Bit 5 == keyCertSign according to ASN.1 spec (see full comment on KeyUsage property)
         assertTrue { serverCert.basicConstraints === -1 } // This returns the signing path length should be -1 for non-CA certificate
-        assertEquals(3, serverCert.subjectAlternativeNames.size)
-        var foundMainDnsName = false
+        assertEquals(2, serverCert.subjectAlternativeNames.size)
         var foundAliasDnsName = false
         for (entry in serverCert.subjectAlternativeNames) {
             val typeId = entry[0] as Int
             val value = entry[1] as String
             if (typeId == GeneralName.iPAddress) {
                 assertEquals("10.0.0.54", value)
-            } else if (typeId == GeneralName.dNSName) {
-                if (value == "Server Cert") {
-                    foundMainDnsName = true
-                } else if (value == "alias name") {
+            } else if (value == "alias name") {
                     foundAliasDnsName = true
-                }
             }
         }
-        assertTrue(foundMainDnsName)
         assertTrue(foundAliasDnsName)
     }
 

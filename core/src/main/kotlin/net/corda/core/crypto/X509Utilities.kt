@@ -380,7 +380,6 @@ object X509Utilities {
                 DERSequence(purposes))
 
         val subjectAlternativeNames = ArrayList<ASN1Encodable>()
-        subjectAlternativeNames.add(GeneralName(GeneralName.dNSName, subject.getRDNs(BCStyle.CN).first().first.value))
 
         for (subjectAlternativeNameDomain in subjectAlternativeNameDomains) {
             subjectAlternativeNames.add(GeneralName(GeneralName.dNSName, subjectAlternativeNameDomain))
@@ -591,7 +590,7 @@ object X509Utilities {
                 getDevX509Name(commonName),
                 serverKey.public,
                 intermediateCA,
-                if (host.canonicalHostName == host.hostName) listOf() else listOf(host.hostName),
+                listOf(host.hostName),
                 listOf(host.hostAddress))
 
         val keyPass = keyPassword.toCharArray()
