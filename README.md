@@ -23,11 +23,11 @@ Watching the following webinars will give you a great introduction to Corda:
 
 ### Webinar 1 – [Introduction to Corda](https://vimeo.com/192757743/c2ec39c1e1)
  
-Richard Brown, R3 Chief Technology Officer, explains Corda's unique architecture, the only distributed ledger platform designed by and for the financial industry's unique requirements. You may want to read the [Corda non-technical whitepaper](www.r3cev.com/s/corda-introductory-whitepaper-final.pdf) as pre-reading for this session.
+Richard Brown, R3 Chief Technology Officer, explains Corda's unique architecture, the only distributed ledger platform designed by and for the financial industry's unique requirements. You may want to read the [Corda non-technical whitepaper](https://www.r3.com/s/corda-introductory-whitepaper-final.pdf) as pre-reading for this session.
  
 ### Webinar 2 – [Corda Developers’ Tutorial](https://vimeo.com/192797322/aab499b152)
  
-Roger Willis, R3 Developer Relations Lead, provides an overview of Corda from a developer’s perspective and guidance on how to start building CorDapps. You may want to view [Webinar 1 - Introduction to Corda](www.vimeo.com/192757743/c2ec39c1e1) as preparation for this session. **NB. This was recorded for the M5 release.**
+Roger Willis, R3 Developer Relations Lead, provides an overview of Corda from a developer’s perspective and guidance on how to start building CorDapps. You may want to view [Webinar 1 - Introduction to Corda](https://vimeo.com/192757743/c2ec39c1e1) as preparation for this session. **NB. This was recorded for the M5 release.**
 
 To build your own CorDapps:
 
