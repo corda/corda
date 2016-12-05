@@ -115,7 +115,7 @@ public class JavaCommercialPaper implements Contract {
         }
 
         public State withoutOwner() {
-            return new State(issuance, CryptoUtilitiesKt.getNullCompositeKey(), faceValue, maturityDate);
+            return new State(issuance, CryptoUtilities.getNullCompositeKey(), faceValue, maturityDate);
         }
 
         @NotNull

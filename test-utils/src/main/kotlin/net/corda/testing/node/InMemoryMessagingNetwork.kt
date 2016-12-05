@@ -15,6 +15,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JDBCHashSet
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.node.InMemoryMessagingNetwork.InMemoryMessaging
+import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.LoggerFactory
@@ -65,6 +66,8 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
     // The corresponding stream reflects when a message was pumpReceive'd
     private val messageReceiveQueues = HashMap<Handle, LinkedBlockingQueue<MessageTransfer>>()
     private val _receivedMessages = PublishSubject.create<MessageTransfer>()
+
+    val messagesInFlight = ReusableLatch()
 
     @Suppress("unused") // Used by the visualiser tool.
     /** A stream of (sender, message, recipients) triples */
@@ -119,6 +122,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
 
     @Synchronized
     private fun msgSend(from: InMemoryMessaging, message: Message, recipients: MessageRecipients) {
+        messagesInFlight.countUp()
         messageSendQueue += MessageTransfer(from.myAddress, message, recipients)
     }
 
@@ -359,6 +363,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
                         }
                         _receivedMessages.onNext(transfer)
                         processedMessages += transfer.message.uniqueMessageId
+                        messagesInFlight.countDown()
                     }
                 }
             } else {

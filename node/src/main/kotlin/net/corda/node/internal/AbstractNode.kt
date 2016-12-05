@@ -176,7 +176,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         get() = _networkMapRegistrationFuture
 
     /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
-    val pluginRegistries: List<CordaPluginRegistry> by lazy {
+    open val pluginRegistries: List<CordaPluginRegistry> by lazy {
         ServiceLoader.load(CordaPluginRegistry::class.java).toList()
     }
 
