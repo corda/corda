@@ -47,26 +47,26 @@ Message queues
 The node makes use of various queues for its operation. The more important ones are described below. Others are used
 for maintenance and other minor purposes.
 
-:``p2p.inbound``
+:``p2p.inbound``:
     The node listens for messages sent from other peer nodes on this queue. Only clients who are authenticated to be
     nodes on the same network are given permission to send. Messages which are routed internally are also sent to this
     queue (e.g. two flows on the same node communicating with each other).
 
-:``internal.peers.$identity``
+:``internal.peers.$identity``:
      These are a set of private queues only available to the node which it uses to route messages destined to other peers.
      The queue name ends in the base 58 encoding of the peer's identity key. There is at most one queue per peer. The broker
      creates a bridge from this queue to the peer's ``p2p.inbound`` queue, using the network map service to lookup the
      peer's network address.
 
-:``internal.networkmap``
+:``internal.networkmap``:
     This is another private queue just for the node which functions in a similar manner to the ``p2p.peers.*`` queues
     except this is used to form a connection to the network map node. The node running the network map service is treated
     differently as it provides information about the rest of the network.
 
-:``rpc.requests``
+:``rpc.requests``:
      RPC clients send their requests here, and it's only open for sending by clients authenticated as RPC users.
 
-:``clients.$user.rpc.$random``
+:``clients.$user.rpc.$random``:
      RPC clients are given permission to create a temporary queue incorporating their username (``$user``) and sole
      permission to receive messages from it. RPC requests are required to include a random number (``$random``) from
      which the node is able to construct the queue the user is listening on and send the response to that. This mechanism
@@ -98,7 +98,7 @@ the peer. This allows the flow framework to authentically determine the ``Party`
 the validated user is the username itself and the RPC framework uses this to determine what permissions the user has.
 
 .. note:: ``Party`` lookup is currently done by the legal name which isn't guaranteed to be unique. A future version will
-use the full X.500 name as it can provide additional structures for uniqueness.
+   use the full X.500 name as it can provide additional structures for uniqueness.
 
 Messaging types
 ---------------
