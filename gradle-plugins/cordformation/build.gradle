@@ -1,6 +1,12 @@
 apply plugin: 'groovy'
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'maven-publish'
+apply plugin: 'net.corda.plugins.publish-utils'
+
+description 'A small gradle plugin for adding some basic Quasar tasks and configurations to reduce build.gradle bloat.'
+
+repositories {
+    mavenCentral()
+}
 
 dependencies {
     compile gradleApi()
@@ -9,47 +15,3 @@ dependencies {
     compile "com.typesafe:config:1.3.0"
 }
 
-repositories {
-    mavenCentral()
-}
-
-publishing {
-    publications {
-        cordformation(MavenPublication) {
-            from components.java
-            groupId  'net.corda.plugins'
-            artifactId 'cordformation'
-
-            artifact sourceJar
-            artifact javadocJar
-
-            pom.withXml {
-                asNode().children().last() + {
-                    resolveStrategy = Closure.DELEGATE_FIRST
-                    name 'cordformation'
-                    description 'A small gradle plugin for adding some basic Quasar tasks and configurations to reduce build.gradle bloat.'
-                    url 'https://github.com/corda/corda'
-                    scm {
-                        url 'https://github.com/corda/corda'
-                    }
-
-                    licenses {
-                        license {
-                            name 'Apache-2.0'
-                            url 'https://www.apache.org/licenses/LICENSE-2.0'
-                            distribution 'repo'
-                        }
-                    }
-
-                    developers {
-                        developer {
-                            id 'R3'
-                            name 'R3'
-                            email 'dev@corda.net'
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
