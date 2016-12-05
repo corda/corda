@@ -6055,8 +6055,6 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
                                                GcNoSuchMethodError::Type));
   PROTECT(t, bootstrap);
 
-  assertT(t, bootstrap->parameterCount() == 2 + bootstrapArray->length());
-
   GcLookup* lookup
       = makeLookup(t, c, ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED | ACC_STATIC);
   PROTECT(t, lookup);
@@ -6078,14 +6076,47 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
   array->setBodyElement(t, argument++, name);
   array->setBodyElement(t, argument++, type);
 
-  MethodSpecIterator it(
-      t, reinterpret_cast<const char*>(bootstrap->spec()->body().begin()));
+  const char* spec;
+  GcArray* argArray = array;
+  PROTECT(t, argArray);
+
+  if (::strcmp(reinterpret_cast<char*>(bootstrap->spec()->body().begin()),
+               "(Ljava/lang/invoke/MethodHandles$Lookup;"
+               "Ljava/lang/String;"
+               "Ljava/lang/invoke/MethodType;"
+               "[Ljava/lang/Object;)"
+               "Ljava/lang/invoke/CallSite;") == 0) {
+    // LambdaMetaFactory.altMetafactory
+    array = makeArray(t, bootstrapArray->length() - 1);
+    spec = "(Ljava/lang/invoke/MethodHandles$Lookup;"
+      "Ljava/lang/String;"
+      "Ljava/lang/invoke/MethodType;"
+      "Ljava/lang/invoke/MethodType;"
+      "Ljava/lang/invoke/MethodHandle;"
+      "Ljava/lang/invoke/MethodType;"
+      "I"
+      "I"
+      "[Ljava/lang/Class;"
+      "I"
+      "[Ljava/lang/invoke/MethodType;"
+      ")Ljava/lang/invoke/CallSite;";
+  } else if (bootstrap->parameterCount() == 2 + bootstrapArray->length()) {
+    spec = reinterpret_cast<char*>(bootstrap->spec()->body().begin());
+  } else {
+    abort(t);
+  }
+
+  MethodSpecIterator it(t, spec);
 
   for (unsigned i = 0; i < argument; ++i)
     it.next();
 
+  if (argArray != array) {
+    argument = 0;
+  }
+
   unsigned i = 0;
-  while (it.hasNext()) {
+  while (i + 1 < bootstrapArray->length() && it.hasNext()) {
     const char* p = it.next();
     switch (*p) {
     case 'L': {
@@ -6162,8 +6193,12 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
             ? 0
             : makeMethodHandle(t, REF_invokeSpecial, c->loader(), bootstrap, 0);
 
+  if (argArray != array) {
+    argArray->setBodyElement(t, 3, array);
+  }
+
   return cast<GcCallSite>(
-      t, t->m->processor->invokeArray(t, bootstrap, handle, array));
+      t, t->m->processor->invokeArray(t, bootstrap, handle, argArray));
 }
 
 void noop()

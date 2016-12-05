@@ -14,7 +14,7 @@ public final class MethodType implements java.io.Serializable {
   private static final char[] Primitives = new char[] {
     'V', 'Z', 'B', 'C', 'S', 'I', 'F', 'J', 'D'
   };
-  
+
   final ClassLoader loader;
   final byte[] spec;
   private volatile List<Parameter> parameters;
@@ -31,11 +31,11 @@ public final class MethodType implements java.io.Serializable {
     this.spec = new byte[spec.length() + 1];
     spec.getBytes(0, spec.length(), this.spec, 0);
   }
-  
+
   public String toMethodDescriptorString() {
     return Classes.makeString(spec, 0, spec.length - 1);
   }
-  
+
   private static String spec(Class c) {
     if (c.isPrimitive()) {
       VMClass vmc = Classes.toVMClass(c);
@@ -56,7 +56,7 @@ public final class MethodType implements java.io.Serializable {
                      Class ... ptypes)
   {
     loader = rtype.getClassLoader();
-    
+
     StringBuilder sb = new StringBuilder();
     sb.append('(');
     parameters = new ArrayList(ptypes.length);
@@ -66,7 +66,7 @@ public final class MethodType implements java.io.Serializable {
       sb.append(spec);
 
       Type type = type(spec);
-      
+
       parameters.add(new Parameter(i,
                                    position,
                                    spec,
@@ -86,7 +86,7 @@ public final class MethodType implements java.io.Serializable {
 
     this.spec = sb.toString().getBytes();
   }
-  
+
   public static MethodType methodType(Class rtype,
                                       Class ptype0,
                                       Class ... ptypes)
@@ -129,7 +129,7 @@ public final class MethodType implements java.io.Serializable {
 
     return array;
   }
-  
+
   public Iterable<Parameter> parameters() {
     if (parameters == null) {
       List<Parameter> list = new ArrayList();
@@ -147,7 +147,7 @@ public final class MethodType implements java.io.Serializable {
         case '[': {
           ++ i;
           while (spec[i] == '[') ++ i;
-        
+
           switch (spec[i]) {
           case 'L':
             ++ i;
@@ -174,7 +174,7 @@ public final class MethodType implements java.io.Serializable {
 
         String paramSpec = Classes.makeString(spec, start, (i - start) + 1);
         Type type = type(paramSpec);
-        
+
         list.add(new Parameter
                  (index,
                   position,
@@ -192,14 +192,14 @@ public final class MethodType implements java.io.Serializable {
 
       String paramSpec = Classes.makeString(spec, i, spec.length - i - 1);
       Type type = type(paramSpec);
-      
+
       result = new Result(paramSpec,
                           Classes.forCanonicalName(loader, paramSpec),
                           type.return_);
-      
+
       parameters = list;
     }
-    
+
     return parameters;
   }
 
@@ -234,18 +234,18 @@ public final class MethodType implements java.io.Serializable {
     case 'V':
       return Type.VoidType;
 
-    default: throw new AssertionError();        
-    }    
+    default: throw new AssertionError();
+    }
   }
 
   private static enum Type {
     ObjectType(aload, areturn, 1),
     IntegerType(iload, ireturn, 1),
     FloatType(fload, freturn, 1),
-    LongType(lload, lreturn, 1),
-    DoubleType(dload, dreturn, 1),
+    LongType(lload, lreturn, 2),
+    DoubleType(dload, dreturn, 2),
     VoidType(-1, Assembler.return_, -1);
-    
+
     public final int load;
     public final int return_;
     public final int size;
@@ -256,7 +256,7 @@ public final class MethodType implements java.io.Serializable {
       this.size = size;
     }
   }
-  
+
   public static class Parameter {
     private final int index;
     private final int position;
