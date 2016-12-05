@@ -12,7 +12,7 @@ class FXSwap {
 
     val contract = arrange {
         actions {
-            (acmeCorp or highStreetBank).may {
+            (acmeCorp or highStreetBank) may {
                 "execute".givenThat(after("2017-09-01")) {
                     highStreetBank.owes(acmeCorp, 1200.K, USD)
                     acmeCorp.owes(highStreetBank, 1.M, EUR)

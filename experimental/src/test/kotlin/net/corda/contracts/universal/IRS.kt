@@ -130,11 +130,6 @@ class IRS {
 
 
     @Test
-    fun ser1() {
-
-    }
-
-    @Test
     fun issue() {
         transaction {
             output { stateInitial }

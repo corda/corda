@@ -81,6 +81,8 @@ fun before(expiry: Perceivable<Instant>) = TimePerceivable(Comparison.LTE, expir
 fun after(expiry: Perceivable<Instant>) = TimePerceivable(Comparison.GTE, expiry)
 fun before(expiry: Instant) = TimePerceivable(Comparison.LTE, const(expiry))
 fun after(expiry: Instant) = TimePerceivable(Comparison.GTE, const(expiry))
+fun before(expiry: LocalDate) = TimePerceivable(Comparison.LTE, const(expiry.toInstant()))
+fun after(expiry: LocalDate) = TimePerceivable(Comparison.GTE, const(expiry.toInstant()))
 fun before(expiry: String) = TimePerceivable(Comparison.LTE, const(parseDate(expiry).toInstant()))
 fun after(expiry: String) = TimePerceivable(Comparison.GTE, const(parseDate(expiry).toInstant()))
 

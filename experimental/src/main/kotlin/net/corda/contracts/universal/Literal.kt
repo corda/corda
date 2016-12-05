@@ -46,6 +46,11 @@ class ActionsBuilder {
 open class ContractBuilder {
     private val contracts = mutableListOf<Arrangement>()
 
+    operator fun Arrangement.unaryPlus() : Arrangement {
+        contracts.add(this)
+        return this
+    }
+
     fun actions(init: ActionsBuilder.() -> Action): Arrangement {
         val b = ActionsBuilder()
         b.init()
