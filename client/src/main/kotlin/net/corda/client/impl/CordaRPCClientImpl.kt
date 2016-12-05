@@ -219,7 +219,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
                 val msg: ClientMessage = createMessage(method)
                 val kryo = if (returnsObservables) maybePrepareForObservables(location, method, msg) else null
                 val serializedArgs = try {
-                    (args ?: emptyArray<Any?>()).serialize()
+                    (args ?: emptyArray<Any?>()).serialize(createRPCKryo())
                 } catch (e: KryoException) {
                     throw RPCException("Could not serialize RPC arguments", e)
                 }
