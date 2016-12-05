@@ -14,6 +14,10 @@ version of Java 8. The JDK can be obtained `from Oracle <http://www.oracle.com/t
 Other implementations of the JVM are not actively supported, but as mentioned, we are interested in finding out any issues you
 do have with them.
 
+.. note:: If you are using a JVM implementation other than Oracle's you may get errors similiar to ``Unresolved reference: javafx``.
+   This means JavaFX is not bundled with the JVM and you will need to install it separately (e.g. OpenJFX is needed
+   with OpenJDK).
+
 IntelliJ
 --------
 We strongly recommend the use of IntelliJ's Development Environment known as IDEA. Download it for free from
