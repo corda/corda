@@ -523,6 +523,9 @@ class MyClasspath : public Classpath {
     GcJobject* blockerLock = makeJobject(t);
     thread->setBlockerLock(t, blockerLock);
 
+#if HAVE_ThreadName_Ljava_lang_String_
+    GcString* name = vm::makeString(t, "Thread-%p", thread);
+#else
     const unsigned BufferSize = 256;
     char buffer[BufferSize];
     unsigned length = vm::snprintf(buffer, BufferSize, "Thread-%p", thread);
@@ -530,6 +533,7 @@ class MyClasspath : public Classpath {
     for (unsigned i = 0; i < length; ++i) {
       name->body()[i] = buffer[i];
     }
+#endif
     thread->setName(t, name);
 
     return thread;
