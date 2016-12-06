@@ -19,6 +19,7 @@
 #include <vector>
 #include <set>
 #include <sstream>
+#include <algorithm>
 
 #include "avian/constants.h"
 #include "avian/finder.h"
@@ -908,8 +909,6 @@ std::string cppFieldType(Module& module, Field* f)
 
 void writeAccessor(Output* out, Class* cl, Field* f)
 {
-  std::string typeName = f->typeName;
-
   out->write("const unsigned ");
   out->write(capitalize(cl->name));
   out->write(capitalize(f->name));
@@ -920,7 +919,22 @@ void writeAccessor(Output* out, Class* cl, Field* f)
   out->write("#define HAVE_");
   out->write(capitalize(cl->name));
   out->write(capitalize(f->name));
-  out->write(" 1\n\n");
+  out->write(" 1\n");
+
+  if (! f->javaSpec.empty()) {
+    std::string s = f->javaSpec;
+    std::replace(s.begin(), s.end(), '/', '_');
+    std::replace(s.begin(), s.end(), '$', '_');
+    std::replace(s.begin(), s.end(), ';', '_');
+    std::replace(s.begin(), s.end(), '[', '_');
+
+    out->write("#define HAVE_");
+    out->write(capitalize(cl->name));
+    out->write(capitalize(f->name));
+    out->write("_");
+    out->write(s);
+    out->write(" 1\n\n");
+  }
 }
 
 void writeAccessors(Output* out, Module& module)

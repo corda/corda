@@ -27,4 +27,6 @@ public class ClassAddendum extends Addendum {
   public Pair enclosingMethod;
 
   public VMMethod[] bootstrapMethodTable;
+
+  public VMMethod[] bootstrapLambdaTable;
 }

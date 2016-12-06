@@ -1,3 +1,13 @@
+/* Copyright (c) 2008-2016, Avian Contributors
+
+   Permission to use, copy, modify, and/or distribute this software
+   for any purpose with or without fee is hereby granted, provided
+   that the above copyright notice and this permission notice appear
+   in all copies.
+
+   There is NO WARRANTY for this software.  See license.txt for
+   details. */
+
 package java.lang.invoke;
 
 import static avian.Stream.write1;
@@ -25,17 +35,17 @@ import avian.SystemClassLoader;
 
 public class LambdaMetafactory {
   private static int nextNumber = 0;
-  
+
   private static Class resolveReturnInterface(MethodType type) {
     int index = 1;
     byte[] s = type.spec;
-    
+
     while (s[index] != ')') ++ index;
-    
+
     if (s[++ index] != 'L') throw new AssertionError();
-    
+
     ++ index;
-    
+
     int end = index + 1;
     while (s[end] != ';') ++ end;
 
@@ -52,11 +62,11 @@ public class LambdaMetafactory {
     while (array[i] != c) ++i;
     return i;
   }
-  
+
   private static String constructorSpec(MethodType type) {
     return Classes.makeString(type.spec, 0, indexOf(')', type.spec) + 1) + "V";
   }
-  
+
   private static byte[] makeFactoryCode(List<PoolEntry> pool,
                                         String className,
                                         String constructorSpec,
@@ -89,7 +99,7 @@ public class LambdaMetafactory {
     byte[] result = out.toByteArray();
     set4(result, 4, result.length - 12);
 
-    return result;    
+    return result;
   }
 
   private static byte[] makeConstructorCode(List<PoolEntry> pool,
@@ -124,7 +134,7 @@ public class LambdaMetafactory {
     byte[] result = out.toByteArray();
     set4(result, 4, result.length - 12);
 
-    return result;    
+    return result;
   }
 
   private static byte[] makeInvocationCode(List<PoolEntry> pool,
@@ -167,7 +177,7 @@ public class LambdaMetafactory {
     default: throw new AssertionError
         ("todo: implement per http://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.4.3.5");
     }
-    
+
     write2(out, ConstantPool.addMethodRef
            (pool,
             Classes.makeString(implementation.method.class_.name, 0,
@@ -233,7 +243,7 @@ public class LambdaMetafactory {
     }
 
     String constructorSpec = constructorSpec(invokedType);
-    
+
     List<MethodData> methodTable = new ArrayList();
 
     try {
@@ -261,9 +271,9 @@ public class LambdaMetafactory {
     } catch (IOException e) {
       AssertionError error = new AssertionError();
       error.initCause(e);
-      throw error;      
+      throw error;
     }
-      
+
     int nameIndex = ConstantPool.addClass(pool, className);
     int superIndex = ConstantPool.addClass(pool, "java/lang/Object");
 
@@ -276,12 +286,12 @@ public class LambdaMetafactory {
     } catch (IOException e) {
       AssertionError error = new AssertionError();
       error.initCause(e);
-      throw error;      
+      throw error;
     }
 
     return out.toByteArray();
   }
-  
+
   public static CallSite metafactory(MethodHandles.Lookup caller,
                                      String invokedName,
                                      MethodType invokedType,
@@ -291,7 +301,7 @@ public class LambdaMetafactory {
     throws LambdaConversionException
   {
     byte[] classData = makeLambda(invokedName, invokedType, methodType, methodImplementation);
-    
+
     try {
       return new CallSite
         (new MethodHandle
@@ -305,5 +315,15 @@ public class LambdaMetafactory {
       error.initCause(e);
       throw error;
     }
+  }
+
+  public static CallSite altMetafactory(MethodHandles.Lookup caller,
+                                        String invokedName,
+                                        MethodType invokedType,
+                                        Object... args)
+    throws LambdaConversionException
+  {
+    // todo: handle flags
+    return metafactory(caller, invokedName, invokedType, (MethodType) args[0], (MethodHandle) args[1], (MethodType) args[2]);
   }
 }
