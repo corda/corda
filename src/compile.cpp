@@ -4040,15 +4040,26 @@ bool isLambda(Thread* t,
   return vm::strcmp(reinterpret_cast<const int8_t*>(
                         "java/lang/invoke/LambdaMetafactory"),
                     bootstrap->class_()->name()->body().begin()) == 0
-         and vm::strcmp(reinterpret_cast<const int8_t*>("metafactory"),
-                        bootstrap->name()->body().begin()) == 0
-         and vm::strcmp(
-                 reinterpret_cast<const int8_t*>(
-                     "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/"
-                     "String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/"
-                     "MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/"
-                     "invoke/MethodType;)Ljava/lang/invoke/CallSite;"),
-                 bootstrap->spec()->body().begin()) == 0;
+         and ((vm::strcmp(reinterpret_cast<const int8_t*>("metafactory"),
+                          bootstrap->name()->body().begin()) == 0
+               and vm::strcmp(
+                       reinterpret_cast<const int8_t*>(
+                           "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/"
+                           "String;Ljava/lang/invoke/MethodType;Ljava/lang/"
+                           "invoke/"
+                           "MethodType;Ljava/lang/invoke/MethodHandle;Ljava/"
+                           "lang/"
+                           "invoke/MethodType;)Ljava/lang/invoke/CallSite;"),
+                       bootstrap->spec()->body().begin()) == 0)
+              or (vm::strcmp(reinterpret_cast<const int8_t*>("altMetafactory"),
+                             bootstrap->name()->body().begin()) == 0
+                  and vm::strcmp(
+                          reinterpret_cast<const int8_t*>(
+                              "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/"
+                              "lang/"
+                              "String;Ljava/lang/invoke/MethodType;[Ljava/lang/"
+                              "Object;)Ljava/lang/invoke/CallSite;"),
+                          bootstrap->spec()->body().begin()) == 0));
 }
 
 void compile(MyThread* t,
@@ -5133,120 +5144,147 @@ loop:
         GcClass* c = context->method->class_();
         PROTECT(t, c);
 
-        GcCharArray* bootstrapArray = cast<GcCharArray>(
-            t,
-            cast<GcArray>(t, c->addendum()->bootstrapMethodTable())
-                ->body()[invocation->bootstrap()]);
-        PROTECT(t, bootstrapArray);
+        GcMethod* target
+            = c->addendum()->bootstrapLambdaTable()
+                  ? cast<GcMethod>(
+                        t,
+                        cast<GcArray>(t, c->addendum()->bootstrapLambdaTable())
+                            ->body()[invocation->bootstrap()])
+                  : nullptr;
+        PROTECT(t, target);
 
-        if (isLambda(t, c->loader(), bootstrapArray, invocation)) {
-          if (bc->hostVM == 0) {
+        if (target == nullptr) {
+          GcCharArray* bootstrapArray = cast<GcCharArray>(
+              t,
+              cast<GcArray>(t, c->addendum()->bootstrapMethodTable())
+                  ->body()[invocation->bootstrap()]);
+          PROTECT(t, bootstrapArray);
+
+          if (isLambda(t, c->loader(), bootstrapArray, invocation)) {
+            if (bc->hostVM == 0) {
+              throwNew(
+                  t,
+                  GcVirtualMachineError::Type,
+                  "lambda expression encountered, but host VM is not "
+                  "available; use -hostvm option to bootimage-generator to "
+                  "fix this");
+            }
+
+            JNIEnv* e;
+            if (bc->hostVM->vtable->AttachCurrentThread(bc->hostVM, &e, 0)
+                == 0) {
+              e->vtable->PushLocalFrame(e, 256);
+
+              jclass lmfClass = e->vtable->FindClass(
+                  e, "java/lang/invoke/LambdaMetafactory");
+              jmethodID makeLambda = e->vtable->GetStaticMethodID(
+                  e,
+                  lmfClass,
+                  "makeLambda",
+                  "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/"
+                  "String;Ljava/"
+                  "lang/String;Ljava/lang/String;Ljava/lang/String;I)[B");
+
+              GcReference* reference = cast<GcReference>(
+                  t,
+                  singletonObject(
+                      t, invocation->pool(), bootstrapArray->body()[2]));
+              int kind = reference->kind();
+
+              GcMethod* method
+                  = cast<GcMethod>(t,
+                                   resolve(t,
+                                           c->loader(),
+                                           invocation->pool(),
+                                           bootstrapArray->body()[2],
+                                           findMethodInClass,
+                                           GcNoSuchMethodError::Type));
+
+              jarray lambda = e->vtable->CallStaticObjectMethod(
+                  e,
+                  lmfClass,
+                  makeLambda,
+                  e->vtable->NewStringUTF(
+                      e,
+                      reinterpret_cast<const char*>(
+                          invocation->template_()->name()->body().begin())),
+                  e->vtable->NewStringUTF(
+                      e,
+                      reinterpret_cast<const char*>(
+                          invocation->template_()->spec()->body().begin())),
+                  e->vtable->NewStringUTF(
+                      e,
+                      reinterpret_cast<const char*>(
+                          cast<GcByteArray>(
+                              t,
+                              singletonObject(t,
+                                              invocation->pool(),
+                                              bootstrapArray->body()[1]))
+                              ->body()
+                              .begin())),
+                  e->vtable->NewStringUTF(
+                      e,
+                      reinterpret_cast<const char*>(
+                          method->class_()->name()->body().begin())),
+                  e->vtable->NewStringUTF(e,
+                                          reinterpret_cast<const char*>(
+                                              method->name()->body().begin())),
+                  e->vtable->NewStringUTF(e,
+                                          reinterpret_cast<const char*>(
+                                              method->spec()->body().begin())),
+                  kind);
+
+              uint8_t* bytes = reinterpret_cast<uint8_t*>(
+                  e->vtable->GetPrimitiveArrayCritical(e, lambda, 0));
+
+              GcClass* lambdaClass
+                  = defineClass(t,
+                                roots(t)->appLoader(),
+                                bytes,
+                                e->vtable->GetArrayLength(e, lambda));
+
+              bc->resolver->addClass(
+                  t, lambdaClass, bytes, e->vtable->GetArrayLength(e, lambda));
+
+              e->vtable->ReleasePrimitiveArrayCritical(e, lambda, bytes, 0);
+
+              e->vtable->PopLocalFrame(e, 0);
+
+              THREAD_RUNTIME_ARRAY(
+                  t, char, spec, invocation->template_()->spec()->length());
+              memcpy(RUNTIME_ARRAY_BODY(spec),
+                     invocation->template_()->spec()->body().begin(),
+                     invocation->template_()->spec()->length());
+
+              target = resolveMethod(
+                  t, lambdaClass, "make", RUNTIME_ARRAY_BODY(spec));
+
+              GcArray* table
+                  = cast<GcArray>(t, c->addendum()->bootstrapLambdaTable());
+              if (table == nullptr) {
+                table = makeArray(
+                    t,
+                    cast<GcArray>(t, c->addendum()->bootstrapMethodTable())
+                        ->length());
+                c->addendum()->setBootstrapLambdaTable(t, table);
+              }
+
+              table->setBodyElement(t, invocation->bootstrap(), target);
+            } else {
+              throwNew(t,
+                       GcVirtualMachineError::Type,
+                       "unable to attach to host VM");
+            }
+          } else {
             throwNew(t,
                      GcVirtualMachineError::Type,
-                     "lambda expression encountered, but host VM is not "
-                     "available; use -hostvm option to bootimage-generator to "
-                     "fix this");
+                     "invokedynamic not supported for AOT-compiled code except "
+                     "in the case of lambda expressions");
           }
-
-          JNIEnv* e;
-          if (bc->hostVM->vtable->AttachCurrentThread(bc->hostVM, &e, 0) == 0) {
-            e->vtable->PushLocalFrame(e, 256);
-
-            jclass lmfClass
-                = e->vtable->FindClass(e, "java/lang/invoke/LambdaMetafactory");
-            jmethodID makeLambda = e->vtable->GetStaticMethodID(
-                e,
-                lmfClass,
-                "makeLambda",
-                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/"
-                "lang/String;Ljava/lang/String;Ljava/lang/String;I)[B");
-
-            GcReference* reference = cast<GcReference>(
-                t,
-                singletonObject(
-                    t, invocation->pool(), bootstrapArray->body()[2]));
-            int kind = reference->kind();
-
-            GcMethod* method
-                = cast<GcMethod>(t,
-                                 resolve(t,
-                                         c->loader(),
-                                         invocation->pool(),
-                                         bootstrapArray->body()[2],
-                                         findMethodInClass,
-                                         GcNoSuchMethodError::Type));
-
-            jarray lambda = e->vtable->CallStaticObjectMethod(
-                e,
-                lmfClass,
-                makeLambda,
-                e->vtable->NewStringUTF(
-                    e,
-                    reinterpret_cast<const char*>(
-                        invocation->template_()->name()->body().begin())),
-                e->vtable->NewStringUTF(
-                    e,
-                    reinterpret_cast<const char*>(
-                        invocation->template_()->spec()->body().begin())),
-                e->vtable->NewStringUTF(
-                    e,
-                    reinterpret_cast<const char*>(
-                        cast<GcByteArray>(
-                            t,
-                            singletonObject(t,
-                                            invocation->pool(),
-                                            bootstrapArray->body()[1]))
-                            ->body()
-                            .begin())),
-                e->vtable->NewStringUTF(
-                    e,
-                    reinterpret_cast<const char*>(
-                        method->class_()->name()->body().begin())),
-                e->vtable->NewStringUTF(e,
-                                        reinterpret_cast<const char*>(
-                                            method->name()->body().begin())),
-                e->vtable->NewStringUTF(e,
-                                        reinterpret_cast<const char*>(
-                                            method->spec()->body().begin())),
-                kind);
-
-            uint8_t* bytes = reinterpret_cast<uint8_t*>(
-                e->vtable->GetPrimitiveArrayCritical(e, lambda, 0));
-
-            GcClass* lambdaClass
-                = defineClass(t,
-                              roots(t)->appLoader(),
-                              bytes,
-                              e->vtable->GetArrayLength(e, lambda));
-
-            bc->resolver->addClass(
-                t, lambdaClass, bytes, e->vtable->GetArrayLength(e, lambda));
-
-            e->vtable->ReleasePrimitiveArrayCritical(e, lambda, bytes, 0);
-
-            e->vtable->PopLocalFrame(e, 0);
-
-            THREAD_RUNTIME_ARRAY(
-                t, char, spec, invocation->template_()->spec()->length());
-            memcpy(RUNTIME_ARRAY_BODY(spec),
-                   invocation->template_()->spec()->body().begin(),
-                   invocation->template_()->spec()->length());
-
-            GcMethod* target = resolveMethod(
-                t, lambdaClass, "make", RUNTIME_ARRAY_BODY(spec));
-
-            bool tailCall = isTailCall(t, code, ip, context->method, target);
-            compileDirectInvoke(t, frame, target, tailCall);
-          } else {
-            throwNew(
-                t, GcVirtualMachineError::Type, "unable to attach to host VM");
-          }
-        } else {
-          throwNew(t,
-                   GcVirtualMachineError::Type,
-                   "invokedynamic not supported for AOT-compiled code except "
-                   "in the case of lambda expressions");
         }
+
+        bool tailCall = isTailCall(t, code, ip, context->method, target);
+        compileDirectInvoke(t, frame, target, tailCall);
       } else {
         unsigned index = addDynamic(t, invocation);
 

@@ -1220,7 +1220,7 @@ GcClassAddendum* getClassAddendum(Thread* t, GcClass* class_, GcSingleton* pool)
   if (addendum == 0) {
     PROTECT(t, class_);
 
-    addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, -1, 0, 0, 0);
+    addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, -1, 0, 0, 0, 0);
     setField(t, class_, ClassAddendum, addendum);
   }
   return addendum;
