@@ -76,6 +76,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
+
+        val defaultFlowWhiteList: Map<Class<out FlowLogic<*>>, Set<Class<*>>> = mapOf(
+                CashFlow::class.java to setOf(
+                        CashCommand.IssueCash::class.java,
+                        CashCommand.PayCash::class.java,
+                        CashCommand.ExitCash::class.java
+                )
+        )
     }
 
     // TODO: Persist this, as well as whether the node is registered.
@@ -308,14 +316,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             throw DatabaseConfigurationException("There must be a database configured.")
         }
     }
-
-    private val defaultFlowWhiteList: Map<Class<out FlowLogic<*>>, Set<Class<*>>> = mapOf(
-            CashFlow::class.java to setOf(
-                    CashCommand.IssueCash::class.java,
-                    CashCommand.PayCash::class.java,
-                    CashCommand.ExitCash::class.java
-            )
-    )
 
     private fun initialiseFlowLogicFactory(): FlowLogicRefFactory {
         val flowWhitelist = HashMap<String, Set<String>>()

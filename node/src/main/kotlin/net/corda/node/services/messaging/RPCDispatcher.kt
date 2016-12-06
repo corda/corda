@@ -70,13 +70,14 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService) {
 
     fun dispatch(msg: ClientRPCRequestMessage) {
         val (argsBytes, replyTo, observationsTo, methodName) = msg
+        val kryo = createRPCKryo(observableSerializer = if (observationsTo != null) ObservableSerializer(observationsTo) else null)
 
         val response: ErrorOr<Any> = ErrorOr.catch {
             val method = methodTable[methodName] ?: throw RPCException("Received RPC for unknown method $methodName - possible client/server version skew?")
             if (method.isAnnotationPresent(RPCReturnsObservables::class.java) && observationsTo == null)
                 throw RPCException("Received RPC without any destination for observations, but the RPC returns observables")
 
-            val args = argsBytes.deserialize()
+            val args = argsBytes.deserialize(kryo)
 
             rpcLog.debug { "-> RPC -> $methodName(${args.joinToString()})    [reply to $replyTo]" }
 
@@ -88,7 +89,6 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService) {
         }
         rpcLog.debug { "<- RPC <- $methodName = $response " }
 
-        val kryo = createRPCKryo(observableSerializer = if (observationsTo != null) ObservableSerializer(observationsTo) else null)
 
         // Serialise, or send back a simple serialised ErrorOr structure if we couldn't do it.
         val responseBits = try {
