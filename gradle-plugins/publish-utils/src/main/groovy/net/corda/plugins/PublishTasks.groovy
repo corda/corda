@@ -24,6 +24,7 @@ class PublishTasks implements Plugin<Project> {
 
         createTasks()
         createExtensions()
+        createConfigurations()
         checkAndConfigurePublishing()
     }
 
@@ -52,6 +53,11 @@ class PublishTasks implements Plugin<Project> {
 
             artifact project.tasks.sourceJar
             artifact project.tasks.javadocJar
+
+            project.configurations.publish.artifacts.each {
+                println("Adding artifact: $it")
+                delegate.artifact it
+            }
 
             extendPomForMavenCentral(pom, bintrayConfig)
         }
@@ -124,5 +130,9 @@ class PublishTasks implements Plugin<Project> {
         if(project == project.rootProject) {
             project.extensions.create("bintrayConfig", BintrayConfigExtension)
         }
+    }
+
+    void createConfigurations() {
+        project.configurations.create("publish")
     }
 }

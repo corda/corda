@@ -36,7 +36,7 @@ sourceSets {
     }
 }
 
-compileTestJava.dependsOn tasks.getByPath(':node:capsule:buildCordaJAR')
+compileTestJava.dependsOn tasks.getByPath(':node:corda:buildCordaJAR')
 
 dependencies {
     compile project(':core')
@@ -48,7 +48,7 @@ dependencies {
         exclude group: "bouncycastle"
     }
 
-    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    runtime project(path: ":node:corda", configuration: 'runtimeArtifacts')
 }
 
 mainClassName = "net.corda.docs.ClientRpcTutorialKt"

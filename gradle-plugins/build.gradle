@@ -16,16 +16,11 @@ buildscript {
     }
 }
 
-apply plugin: 'maven-publish'
 apply plugin: 'net.corda.plugins.publish-utils'
 
 allprojects {
     version "$gradle_plugins_version"
     group 'net.corda.plugins'
-}
-
-subprojects {
-	task(install, dependsOn: 'publishToMavenLocal')
 }
 
 bintrayConfig {
@@ -50,7 +45,3 @@ bintrayConfig {
         email = 'dev@corda.net'
     }
 }
-
-// Aliasing the publishToMavenLocal for simplicity.
-task(install, dependsOn: 'publishToMavenLocal')
-

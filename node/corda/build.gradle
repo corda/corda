@@ -5,9 +5,7 @@
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'maven-publish'
-apply plugin: 'com.jfrog.bintray'
 
-//name 'corda'
 description 'Corda standalone node'
 
 repositories {
@@ -37,12 +35,12 @@ targetCompatibility = 1.6
 sourceSets {
     test {
         resources {
-            srcDir "../config/test"
+            srcDir "../../config/test"
         }
     }
     main {
         resources {
-            srcDir "../config/dev"
+            srcDir "../../config/dev"
         }
     }
 }
@@ -75,4 +73,7 @@ task buildCertSigningRequestUtilityJAR(type: FatCapsule, dependsOn: project.jar)
 
 artifacts {
     runtimeArtifacts buildCordaJAR
+    publish buildCordaJAR {
+        classifier ""
+    }
 }
