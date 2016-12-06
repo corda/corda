@@ -1,21 +1,17 @@
 package net.corda.bank
 
-import net.corda.bank.api.BOC_ISSUER_PARTY_REF
-import net.corda.bank.flow.IssuerFlow.IssuanceRequester
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.SignedTransaction
+import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
-import net.corda.testing.getHostAndPort
-import net.corda.testing.sequence
+import net.corda.testing.*
 import org.junit.Test
 import kotlin.test.assertTrue
 
@@ -47,7 +43,7 @@ class BankOfCordaRPCClientTest {
             val vaultUpdatesBigCorp = bigCorpProxy.vaultAndUpdates().second
 
             // Kick-off actual Issuer Flow
-            val result = bocProxy.startFlow(::IssuanceRequester, 1000.DOLLARS, bigCorporationParty, BOC_ISSUER_PARTY_REF, bankOfCordaParty).returnValue.toBlocking().first()
+            val result = bocProxy.startFlow(::IssuanceRequester, 1000.DOLLARS, bigCorporationParty, BOC_PARTY_REF, bankOfCordaParty).returnValue.toBlocking().first()
             assertTrue { result is SignedTransaction }
 
             // Check Bank of Corda Vault Updates

@@ -1,6 +1,7 @@
-package net.corda.bank.flow
+package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.ThreadBox
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
@@ -34,7 +35,14 @@ object IssuerFlow {
         @Suspendable
         override fun call(): SignedTransaction {
             val issueRequest = IssuanceRequestState(amount, issueToParty, issueToPartyRef)
-            return sendAndReceive<SignedTransaction>(issuerBankParty, issueRequest).unwrap { it }
+            try {
+                return sendAndReceive<SignedTransaction>(issuerBankParty, issueRequest).unwrap { it }
+            // catch and report exception before throwing back to caller
+            } catch (e: Exception) {
+                logger.error("IssuanceRequesterException: request failed: [${issueRequest}]")
+                // TODO: awaiting exception handling strategy (what action should be taken here?)
+                throw e
+            }
         }
     }
 
@@ -43,7 +51,7 @@ object IssuerFlow {
      * Returns the generated transaction representing the transfer of the [Issued] [FungibleAsset] to the issue requester.
      */
     class Issuer(val otherParty: Party): FlowLogic<SignedTransaction>() {
-        override val progressTracker: ProgressTracker = Issuer.tracker()
+        override val progressTracker: ProgressTracker = tracker()
         companion object {
             object AWAITING_REQUEST : ProgressTracker.Step("Awaiting issuance request")
             object ISSUING : ProgressTracker.Step("Self issuing asset")
@@ -67,35 +75,49 @@ object IssuerFlow {
             return txn
         }
 
+        // TODO: resolve race conditions caused by the 2 separate Cashflow commands (Issue and Pay) not reusing the same
+        //       state references (thus causing Notarisation double spend exceptions).
         @Suspendable
         private fun issueCashTo(amount: Amount<Currency>,
                                 issueTo: Party, issuerPartyRef: OpaqueBytes): SignedTransaction {
+            // TODO: pass notary in as request parameter
             val notaryParty = serviceHub.networkMapCache.notaryNodes[0].notaryIdentity
             // invoke Cash subflow to issue Asset
             progressTracker.currentStep = ISSUING
             val bankOfCordaParty = serviceHub.myInfo.legalIdentity
-            val issueCashFlow = CashFlow(CashCommand.IssueCash(amount, issuerPartyRef, bankOfCordaParty, notaryParty))
-            val resultIssue = subFlow(issueCashFlow)
-            // NOTE: issueCashFlow performs a Broadcast (which stores a local copy of the txn to the ledger)
-            if (resultIssue is CashFlowResult.Failed) {
-                logger.error("Problem issuing cash: ${resultIssue.message}")
-                throw Exception(resultIssue.message)
+            try {
+                val issueCashFlow = CashFlow(CashCommand.IssueCash(amount, issuerPartyRef, bankOfCordaParty, notaryParty))
+                val resultIssue = subFlow(issueCashFlow)
+                // NOTE: issueCashFlow performs a Broadcast (which stores a local copy of the txn to the ledger)
+                if (resultIssue is CashFlowResult.Failed) {
+                    logger.error("Problem issuing cash: ${resultIssue.message}")
+                    throw Exception(resultIssue.message)
+                }
+                // short-circuit when issuing to self
+                if (issueTo.equals(serviceHub.myInfo.legalIdentity))
+                    return (resultIssue as CashFlowResult.Success).transaction!!
+                // now invoke Cash subflow to Move issued assetType to issue requester
+                progressTracker.currentStep = TRANSFERRING
+                val moveCashFlow = CashFlow(CashCommand.PayCash(amount.issuedBy(bankOfCordaParty.ref(issuerPartyRef)), issueTo))
+                val resultMove = subFlow(moveCashFlow)
+                // NOTE: CashFlow PayCash calls FinalityFlow which performs a Broadcast (which stores a local copy of the txn to the ledger)
+                if (resultMove is CashFlowResult.Failed) {
+                    logger.error("Problem transferring cash: ${resultMove.message}")
+                    throw Exception(resultMove.message)
+                }
+                val txn = (resultMove as CashFlowResult.Success).transaction
+                txn?.let {
+                    return txn
+                }
+                // NOTE: CashFlowResult.Success should always return a signedTransaction
+                throw Exception("Missing CashFlow transaction [${(resultMove)}]")
             }
-            // now invoke Cash subflow to Move issued assetType to issue requester
-            progressTracker.currentStep = TRANSFERRING
-            val moveCashFlow = CashFlow(CashCommand.PayCash(amount.issuedBy(bankOfCordaParty.ref(issuerPartyRef)), issueTo))
-            val resultMove = subFlow(moveCashFlow)
-            // NOTE: CashFlow PayCash calls FinalityFlow which performs a Broadcast (which stores a local copy of the txn to the ledger)
-            if (resultMove is CashFlowResult.Failed) {
-                logger.error("Problem transferring cash: ${resultMove.message}")
-                throw Exception(resultMove.message)
+            // catch and report exception before throwing back to caller flow
+            catch (e: Exception) {
+                logger.error("Issuer Exception: failed for amount ${amount} issuedTo ${issueTo} with issuerPartyRef ${issuerPartyRef}")
+                // TODO: awaiting exception handling strategy (what action should be taken here?)
+                throw e
             }
-            val txn = (resultMove as CashFlowResult.Success).transaction
-            txn?.let {
-                return txn
-            }
-            // NOTE: CashFlowResult.Success should always return a signedTransaction
-            throw Exception("Missing CashFlow transaction [${(resultMove)}]")
         }
 
         class Service(services: PluginServiceHub) {

@@ -4,9 +4,11 @@ import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
 import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
-import net.corda.bank.flow.IssuerFlow
+import net.corda.flows.IssuerFlow
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.ServiceType
 import net.corda.core.transactions.SignedTransaction
+import net.corda.flows.CashFlow
 import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.startFlowPermission
@@ -46,10 +48,10 @@ private class BankOfCordaDriver {
         val role = options.valueOf(roleArg)!!
         if (role == Role.ISSUER) {
             driver(dsl = {
-                val user = User("user1", "test", permissions = setOf(startFlowPermission<IssuerFlow.IssuanceRequester>()))
+                val user = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>(), startFlowPermission<IssuerFlow.IssuanceRequester>()))
                 startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.type)))
-                startNode("BankOfCorda", rpcUsers = listOf(user))
-                startNode("BigCorporation")
+                startNode("BankOfCorda", rpcUsers = listOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer"))))
+                startNode("BigCorporation", rpcUsers = listOf(user))
                 waitForAllNodesToFinish()
             }, isDebug = true)
         }

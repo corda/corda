@@ -78,10 +78,11 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         artemisPort 10004
         webPort 10005
         cordapps = []
-// TODO: task needs to parse this item when generating node.conf
-//        rpcUsers : [
-//                { user=user1, password=test, permissions=[ StartFlow.net.corda.bank.flow.IssuerFlow$IssuanceRequester ] }
-//        ]
+        rpcUsers = [
+                ['user' : "user1",
+                 'password' : "test",
+                 'permissions' : ["StartFlow.net.corda.flows.CashFlow"]]
+        ]
     }
     node {
         name "BigCorporation"

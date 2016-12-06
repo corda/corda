@@ -11,10 +11,7 @@ import javafx.scene.layout.Priority
 import javafx.scene.text.TextAlignment
 import javafx.util.StringConverter
 import net.corda.client.model.Models
-import tornadofx.View
-import tornadofx.gridpane
-import tornadofx.label
-import tornadofx.textfield
+import tornadofx.*
 
 /**
  *  Helper method to reduce boiler plate code
@@ -80,7 +77,7 @@ fun EventTarget.copyableLabel(value: ObservableValue<String>? = null, op: (TextF
     styleClass.add("copyable-label")
 }
 
-inline fun <reified M : Any> View.getModel(): M = Models.get(M::class, this.javaClass.kotlin)
+inline fun <reified M : Any> UIComponent.getModel(): M = Models.get(M::class, this.javaClass.kotlin)
 
 // Cartesian product of 2 collections.
 fun <A, B> Collection<A>.cross(other: Collection<B>) = this.flatMap { a -> other.map { b -> a to b } }

@@ -31,15 +31,15 @@ develop the demos themselves. For more details about running via the command lin
 Trader demo
 -----------
 
-This demo brings up three nodes: Bank A, Bank B and a notary/network map node that they both use. Bank A will
-be the buyer, and self-issues some cash in order to acquire commercial paper from Bank B, the seller.
+This demo brings up four nodes: Bank A, Bank B, Bank Of Corda and a notary/network map node that they both use. Bank A will
+be the buyer, and requests some cash from the Bank of Corda in order to acquire commercial paper from Bank B, the seller.
 
 To run from the command line:
 
 1. Run ``./gradlew samples:trader-demo:deployNodes`` to create a set of configs and installs under ``samples/trader-demo/build/nodes``
-2. Run ``./samples/trader-demo/build/nodes/runnodes`` (or ``runnodes.bat`` on Windows) to open up three new terminals with the three nodes.
-3. Run ``./gradlew samples:trader-demo:runBuyer`` to set up the buyer node with some self-issued cash. This step
-   is not expected to print much.
+2. Run ``./samples/trader-demo/build/nodes/runnodes`` (or ``runnodes.bat`` on Windows) to open up four new terminals with the four nodes.
+3. Run ``./gradlew samples:trader-demo:runBuyer`` to instruct the buyer node to request issuance of some cash from the Bank of Corda node.
+   This step will display progress information related to the cash issuance process (in the bank of corda node log output).
 4. Run ``./gradlew samples:trader-demo:runSeller`` to trigger the transaction. You can see both sides of the
    trade print their progress and final transaction state in the bank node tabs/windows.
 
@@ -176,6 +176,11 @@ To run from the command line (recommended for Mac/UNIX users!):
 
 .. note:: to verify the Bank of Corda node is alive and running navigate to the following URL
           http://localhost:10005/api/bank/date
+
+.. note:: the Bank of Corda node explicitly advertises with a node service type as follows:
+          ``advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer"))))``
+          This allows for 3rd party applications to perform actions based on Node Type.
+          For example, the Explorer tool only allows nodes of this type to issue and exit cash.
 
 3. Run ``./gradlew samples:bank-of-corda-demo:runRPCCashIssue`` in another terminal window to trigger a cash issuance request
 4. Run ``./gradlew samples:bank-of-corda-demo:runWebCashIssue`` in another terminal window to trigger another cash issuance request
