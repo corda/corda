@@ -161,7 +161,7 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
     }
 
     // TODO remove this User once webserver doesn't need it
-    val nodeUser = User(NODE_USER, NODE_USER, setOf())
+    private val nodeUser = User(NODE_USER, NODE_USER, setOf())
     @VisibleForTesting
     protected open fun getUser(message: ClientMessage): User {
         val validatedUser = message.requiredString(Message.HDR_VALIDATED_USER.toString())

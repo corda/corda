@@ -202,12 +202,12 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
 
 // TODO This is a temporary inefficient serialiser for sending InputStreams through RPC. This may be done much more
 // efficiently using Artemis's large message feature.
-class InputStreamSerializer : Serializer<InputStream>() {
+object InputStreamSerializer : Serializer<InputStream>() {
     override fun write(kryo: Kryo, output: Output, stream: InputStream) {
         val buffer = ByteArray(4096)
         while (true) {
             val numberOfBytesRead = stream.read(buffer)
-            if (numberOfBytesRead > 0) {
+            if (numberOfBytesRead != -1) {
                 output.writeInt(numberOfBytesRead, true)
                 output.writeBytes(buffer, 0, numberOfBytesRead)
             } else {
@@ -227,24 +227,13 @@ class InputStreamSerializer : Serializer<InputStream>() {
                 chunks.add(chunk)
             }
         }
-
-        return object : InputStream() {
-            var offset = 0
-            override fun read(): Int {
-                while (!chunks.isEmpty()) {
-                    val chunk = chunks[0]
-                    if (offset >= chunk.size) {
-                        offset = 0
-                        chunks.removeAt(0)
-                    } else {
-                        val byte = chunk[offset]
-                        offset++
-                        return byte.toInt() and 0xFF
-                    }
-                }
-                return -1
-            }
+        val flattened = ByteArray(chunks.sumBy { it.size })
+        var offset = 0
+        for (chunk in chunks) {
+            System.arraycopy(chunk, 0, flattened, offset, chunk.size)
+            offset += chunk.size
         }
+        return ByteArrayInputStream(flattened)
     }
 
 }
@@ -452,7 +441,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         /** This ensures any kotlin objects that implement [DeserializeAsKotlinObjectDef] are read back in as singletons. */
         addDefaultSerializer(DeserializeAsKotlinObjectDef::class.java, KotlinObjectSerializer)
 
-        addDefaultSerializer(InputStream::class.java, InputStreamSerializer())
+        addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
 
         ImmutableListSerializer.registerSerializers(k)
         ImmutableSetSerializer.registerSerializers(k)

@@ -5,6 +5,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.StateMachineInfo
@@ -64,8 +65,8 @@ class CordaRPCOpsImpl(
     override fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>> {
         val (allStateMachines, changes) = smm.track()
         return Pair(
-                allStateMachines.map { stateMachineInfoFromFlowStateMachineImpl(it) },
-                changes.map { stateMachineUpdateFromStateMachineChange(it) }
+                allStateMachines.map { stateMachineInfoFromFlowLogic(it.id, it.logic) },
+                changes.map {  stateMachineUpdateFromStateMachineChange(it) }
         )
     }
 
@@ -110,27 +111,14 @@ class CordaRPCOpsImpl(
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)
 
     companion object {
-        fun stateMachineInfoFromFlowStateMachineImpl(stateMachine: FlowStateMachineImpl<*>): StateMachineInfo {
-            return StateMachineInfo(
-                    id = stateMachine.id,
-                    flowLogicClassName = stateMachine.logic.javaClass.name,
-                    progressTrackerStepAndUpdates = stateMachine.logic.track()
-            )
+        private fun stateMachineInfoFromFlowLogic(id: StateMachineRunId, flowLogic: FlowLogic<*>): StateMachineInfo {
+            return StateMachineInfo(id, flowLogic.javaClass.name, flowLogic.track())
         }
 
-        fun stateMachineUpdateFromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {
+        private fun stateMachineUpdateFromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {
             return when (change.addOrRemove) {
-                AddOrRemove.ADD -> {
-                    val stateMachineInfo = StateMachineInfo(
-                            id = change.id,
-                            flowLogicClassName = change.logic.javaClass.name,
-                            progressTrackerStepAndUpdates = change.logic.track()
-                    )
-                    StateMachineUpdate.Added(stateMachineInfo)
-                }
-                AddOrRemove.REMOVE -> {
-                    StateMachineUpdate.Removed(change.id)
-                }
+                AddOrRemove.ADD -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.id, change.logic))
+                AddOrRemove.REMOVE -> StateMachineUpdate.Removed(change.id)
             }
         }
     }
