@@ -2,6 +2,21 @@ apply plugin: 'groovy'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
 
+// Used for bootstrapping project
+buildscript {
+    ext.gradle_plugins_version = "0.6.2" // Our version: bump this on release.
+
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
+    }
+}
+
+version "$gradle_plugins_version"
+
 dependencies {
     compile gradleApi()
     compile localGroovy()
