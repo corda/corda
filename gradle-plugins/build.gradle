@@ -2,8 +2,12 @@
 // or if you are developing these plugins. See the readme for more information.
 
 buildscript {
-    ext.gradle_plugins_version = "0.6.2" // Our version: bump this on release.
-    ext.corda_published_version = "0.6.2" // Depend on our existing published publishing plugin.
+    // For sharing constants between builds
+    Properties props = new Properties()
+    file("../publish.properties").withInputStream { props.load(it) }
+
+    ext.gradle_plugins_version = props.getProperty("gradlePluginsVersion") // Our version: bump this on release.
+    ext.corda_published_version = "0.6.2" // Only needs to be bumped when the publishing plugin is changed.
 
     repositories {
         mavenLocal()
