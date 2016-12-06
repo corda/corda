@@ -18,6 +18,8 @@ import net.corda.plugins.bintray.*
  */
 class PublishTasks implements Plugin<Project> {
     Project project
+    String publishName
+    ProjectPublishExtension publishConfig
 
     void apply(Project project) {
         this.project = project
@@ -25,37 +27,50 @@ class PublishTasks implements Plugin<Project> {
         createTasks()
         createExtensions()
         createConfigurations()
-        checkAndConfigurePublishing()
+
+        project.afterEvaluate {
+            configurePublishingName()
+            checkAndConfigurePublishing()
+        }
+    }
+
+    void configurePublishingName() {
+        if(publishConfig.name != null) {
+            project.logger.info("Changing publishing name for ${project.name} to ${publishConfig.name}")
+            publishName = publishConfig.name
+        } else {
+            publishName = project.name
+        }
     }
 
     void checkAndConfigurePublishing() {
-        project.logger.info("Checking whether to publish ${project.name}")
+        project.logger.info("Checking whether to publish $publishName")
         def bintrayConfig = project.rootProject.extensions.findByType(BintrayConfigExtension.class)
-        if((bintrayConfig != null) && (bintrayConfig.publications) && (bintrayConfig.publications.findAll { it == project.name }.size() > 0)) {
+        if((bintrayConfig != null) && (bintrayConfig.publications) && (bintrayConfig.publications.findAll { it == publishName }.size() > 0)) {
             configurePublishing(bintrayConfig)
         }
     }
 
     void configurePublishing(BintrayConfigExtension bintrayConfig) {
-        project.afterEvaluate {
-            project.logger.info("Configuring bintray for ${project.name}")
-            configureMavenPublish(bintrayConfig)
-            configureBintray(bintrayConfig)
-        }
+        project.logger.info("Configuring bintray for ${publishName}")
+        configureMavenPublish(bintrayConfig)
+        configureBintray(bintrayConfig)
     }
 
     void configureMavenPublish(BintrayConfigExtension bintrayConfig) {
         project.apply([plugin: 'maven-publish'])
-        project.publishing.publications.create(project.name, MavenPublication) {
-            from project.components.java
+        project.publishing.publications.create(publishName, MavenPublication) {
+            if(!publishConfig.disableDefaultJar) {
+                from project.components.java
+            }
             groupId project.group
-            artifactId project.name
+            artifactId publishName
 
             artifact project.tasks.sourceJar
             artifact project.tasks.javadocJar
 
             project.configurations.publish.artifacts.each {
-                println("Adding artifact: $it")
+                project.logger.debug("Adding artifact: $it")
                 delegate.artifact it
             }
 
@@ -69,7 +84,7 @@ class PublishTasks implements Plugin<Project> {
         pom.withXml {
             asNode().children().last() + {
                 resolveStrategy = Closure.DELEGATE_FIRST
-                name project.name
+                name publishName
                 description project.description
                 url config.projectUrl
                 scm {
@@ -100,10 +115,10 @@ class PublishTasks implements Plugin<Project> {
         def bintray = project.extensions.findByName("bintray")
         bintray.user = bintrayConfig.user
         bintray.key = bintrayConfig.key
-        bintray.publications = [ project.name ]
+        bintray.publications = [ publishName ]
         bintray.dryRun = bintrayConfig.dryRun ?: false
         bintray.pkg.repo = bintrayConfig.repo
-        bintray.pkg.name = project.name
+        bintray.pkg.name = publishName
         bintray.pkg.userOrg = bintrayConfig.org
         bintray.pkg.licenses = bintrayConfig.licenses
         bintray.pkg.version.gpg.sign = bintrayConfig.gpgSign ?: false
@@ -130,6 +145,7 @@ class PublishTasks implements Plugin<Project> {
         if(project == project.rootProject) {
             project.extensions.create("bintrayConfig", BintrayConfigExtension)
         }
+        publishConfig = project.extensions.create("publish", ProjectPublishExtension)
     }
 
     void createConfigurations() {
