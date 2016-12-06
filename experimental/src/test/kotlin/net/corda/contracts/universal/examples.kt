@@ -20,8 +20,8 @@ val an_fx_swap = arrange {
     actions {
         (acmeCorp or highStreetBank) may {
             "execute".givenThat(after("2017-09-01")) {
-                highStreetBank.owes(acmeCorp, 1200.K, USD)
-                acmeCorp.owes(highStreetBank, 1.M, EUR)
+                highStreetBank.owes(acmeCorp, 1070.K, EUR)
+                acmeCorp.owes(highStreetBank, 1.M, USD)
             }
         }
     }
@@ -31,8 +31,8 @@ val american_fx_option = arrange {
     actions {
         acmeCorp may {
             "exercise".givenThat(before("2017-09-01")) {
-                highStreetBank.owes(acmeCorp, 1200.K, USD)
-                acmeCorp.owes(highStreetBank, 1.M, EUR)
+                highStreetBank.owes(acmeCorp, 1070.K, EUR)
+                acmeCorp.owes(highStreetBank, 1.M, USD)
             }
         }
     }
@@ -46,7 +46,7 @@ val european_fx_option = arrange {
             }
         }
         (acmeCorp or highStreetBank) may {
-            "expire".anytime {
+            "expire" anytime {
                 zero
             }
         }

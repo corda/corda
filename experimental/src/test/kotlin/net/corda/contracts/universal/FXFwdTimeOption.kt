@@ -11,7 +11,7 @@ class FXFwdTimeOption
     val initialContract = arrange {
 
         val swap = arrange {
-            highStreetBank.owes(acmeCorp, 1200.K, EUR)
+            highStreetBank.owes(acmeCorp, 1070.K, EUR)
             acmeCorp.owes(highStreetBank, 1.M, USD)
         }
         val maturity = "2018-06-01".ld

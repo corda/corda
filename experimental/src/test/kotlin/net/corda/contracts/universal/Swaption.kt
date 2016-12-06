@@ -9,19 +9,19 @@ class Swaption {
 
     val dreary_contract = arrange {
         actions {
-            (highStreetBank or acmeCorp).may {
+            (highStreetBank or acmeCorp) may {
                 "proceed".givenThat(after("01/07/2015")) {
                     highStreetBank.owes(acmeCorp, libor(notional, "01/04/2015", "01/07/2015"), currency)
                     acmeCorp.owes(highStreetBank, interest(notional, "act/365", coupon, "01/04/2015", "01/07/2015"), currency)
                     actions {
-                        (highStreetBank or acmeCorp).may {
+                        (highStreetBank or acmeCorp) may {
                             "proceed".givenThat(after("01/10/2015")) {
                                 highStreetBank.owes(acmeCorp, libor(notional, "01/07/2015", "01/10/2015"), currency)
                                 acmeCorp.owes(highStreetBank, interest(notional, "act/365", coupon, "01/07/2015", "01/10/2015"), currency)
 
                                 actions {
-                                    (highStreetBank or acmeCorp).may {
-                                        "dummy".anytime { zero }
+                                    (highStreetBank or acmeCorp) may {
+                                        "dummy" anytime { zero }
                                         // etc ...
                                     }
                                 }
@@ -29,16 +29,16 @@ class Swaption {
                         }
                     }
                     actions {
-                        acmeCorp.may {
-                            "cancel".anytime {
+                        acmeCorp may {
+                            "cancel" anytime {
                                 acmeCorp.owes(highStreetBank, 10.K, USD)
                             }
                         }
                     }
                 }
             }
-            acmeCorp.may {
-                "cancel".anytime {
+            acmeCorp may {
+                "cancel" anytime {
                     acmeCorp.owes(highStreetBank, 10.K, USD)
                 }
             }
@@ -49,15 +49,15 @@ class Swaption {
     val elegant_contract = arrange {
         rollOut("01/04/2015".ld, "01/04/2025".ld, Frequency.Quarterly) {
             actions {
-                (highStreetBank or acmeCorp).may {
+                (highStreetBank or acmeCorp) may {
                     "proceed".givenThat(after(start)) {
                         highStreetBank.owes(acmeCorp, libor(notional, start, end), currency)
                         acmeCorp.owes(highStreetBank, interest(notional, "act/365", coupon, start, end), currency)
                         next()
                     }
                 }
-                acmeCorp.may {
-                    "cancel".anytime {
+                acmeCorp may {
+                    "cancel" anytime {
                         acmeCorp.owes(highStreetBank, 10.K, currency)
                     }
                 }
@@ -72,12 +72,12 @@ class Swaption {
             val cap = variable(150.K)
         }) {
             actions {
-                acmeCorp.may {
+                acmeCorp may {
                     "exercise".givenThat(before(end)) {
                         val payout = (EUR / USD - strike).plus() * notional
 
                         actions {
-                            (acmeCorp or highStreetBank).may {
+                            (acmeCorp or highStreetBank) may {
                                 "proceed".givenThat(after(end)) {
                                     highStreetBank.owes(acmeCorp, payout, USD)
                                     next(vars.cap to vars.cap - payout)
@@ -86,7 +86,7 @@ class Swaption {
                         }
                     }
                 }
-                (acmeCorp or highStreetBank).may {
+                (acmeCorp or highStreetBank) may {
                     "proceedWithoutExercise".givenThat(after(end)) {
                         next()
                     }
@@ -100,12 +100,12 @@ class Swaption {
             val uses = variable(4)
         }) {
             actions {
-                acmeCorp.may {
+                acmeCorp may {
                     "exercise".givenThat(before(end)) {
                         val payout = (EUR / USD - strike).plus() * notional
 
                         actions {
-                            (acmeCorp or highStreetBank).may {
+                            (acmeCorp or highStreetBank) may {
                                 "proceed".givenThat(after(end)) {
                                     highStreetBank.owes(acmeCorp, payout, currency)
                                     next(vars.uses to vars.uses - 1)
@@ -114,7 +114,7 @@ class Swaption {
                         }
                     }
                 }
-                (acmeCorp or highStreetBank).may {
+                (acmeCorp or highStreetBank) may {
                     "proceedWithoutExercise".givenThat(after(end)) {
                         next()
                     }

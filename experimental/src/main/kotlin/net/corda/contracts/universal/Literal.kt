@@ -150,7 +150,7 @@ class ActionBuilder(val actors: Set<Party>) {
     fun String.givenThat(condition: Perceivable<Boolean>, init: ContractBuilder.() -> Arrangement): Action {
         val b = ContractBuilder()
         b.init()
-        val a = Action(this, condition, actors, b.final())
+        val a = Action(this, condition and signedByOneOf(actors), b.final())
         actions.add(a)
         return a
     }
@@ -159,7 +159,7 @@ class ActionBuilder(val actors: Set<Party>) {
         val This = this
         return object : GivenThatResolve {
             override fun resolve(contract: Arrangement) {
-                actions.add(Action(This, condition, actors, contract))
+                actions.add(Action(This, condition and signedByOneOf(actors), contract))
             }
         }
     }
@@ -167,7 +167,7 @@ class ActionBuilder(val actors: Set<Party>) {
     infix fun String.anytime(init: ContractBuilder.() -> Unit): Action {
         val b = ContractBuilder()
         b.init()
-        val a = Action(this, const(true), actors, b.final())
+        val a = Action(this, signedByOneOf(actors), b.final())
         actions.add(a)
         return a
     }

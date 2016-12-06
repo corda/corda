@@ -25,12 +25,12 @@ class ContractDefinition {
 
     val cds_contract = arrange {
         actions {
-            acmeCorp.may {
+            acmeCorp may {
                 "payout".givenThat(acmeCorporationHasDefaulted and before("2017-09-01")) {
                     highStreetBank.owes(acmeCorp, 1.M, USD)
                 }
             }
-            highStreetBank.may {
+            highStreetBank may {
                 "expire".givenThat(after("2017-09-01")) {
                     zero
                 }
@@ -41,13 +41,13 @@ class ContractDefinition {
 
     val american_fx_option = arrange {
         actions {
-            acmeCorp.may {
-                "exercise".anytime {
-                    highStreetBank.owes(acmeCorp, 1.M, EUR)
-                    acmeCorp.owes(highStreetBank, 1200.K, USD)
+            acmeCorp may {
+                "exercise" anytime {
+                    highStreetBank.owes(acmeCorp, 1.M, USD)
+                    acmeCorp.owes(highStreetBank, 1070.K, EUR)
                 }
             }
-            highStreetBank.may {
+            highStreetBank may {
                 "expire".givenThat(after("2017-09-01")) {
                     zero
                 }
@@ -58,19 +58,19 @@ class ContractDefinition {
 
     val european_fx_option = arrange {
         actions {
-            acmeCorp.may {
-                "exercise".anytime {
+            acmeCorp may {
+                "exercise" anytime {
                     actions {
-                        (acmeCorp or highStreetBank).may {
+                        (acmeCorp or highStreetBank) may {
                             "execute".givenThat(after("2017-09-01")) {
-                                highStreetBank.owes(acmeCorp, 1.M, EUR)
-                                acmeCorp.owes(highStreetBank, 1200.K, USD)
+                                highStreetBank.owes(acmeCorp, 1.M, USD)
+                                acmeCorp.owes(highStreetBank, 1070.K, EUR)
                             }
                         }
                     }
                 }
             }
-            highStreetBank.may {
+            highStreetBank may {
                 "expire".givenThat(after("2017-09-01")) {
                     zero
                 }
@@ -83,10 +83,10 @@ class ContractDefinition {
        fun `builder problem - should not compile`() {
            val arr = arrange {
                actions {
-                   acmeCorp.may {
-                       "execute".anytime {
-                           acmeCorp.may {
-                               "problem".anytime {
+                   acmeCorp may {
+                       "execute" anytime {
+                           acmeCorp may {
+                               "problem" anytime {
                                    highStreetBank.gives(acmeCorp, 1.M, USD)
                                }
                            }
@@ -106,11 +106,11 @@ class ContractDefinition {
     fun `builder problem - legal`() {
         val arr = arrange {
             actions {
-                acmeCorp.may {
-                    "execute".anytime {
+                acmeCorp may {
+                    "execute" anytime {
                         actions {
-                            acmeCorp.may {
-                                "problem".anytime {
+                            acmeCorp may {
+                                "problem" anytime {
                                     highStreetBank.owes(acmeCorp, 1.M, USD)
                                 }
                             }

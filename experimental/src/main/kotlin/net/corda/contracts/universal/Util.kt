@@ -2,6 +2,7 @@ package net.corda.contracts.universal
 
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Sets
+import com.sun.tools.corba.se.idl.InvalidArgument
 import net.corda.core.contracts.Frequency
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
@@ -11,6 +12,15 @@ import java.time.LocalDate
 fun Instant.toLocalDate(): LocalDate = LocalDate.ofEpochDay(this.epochSecond / 60 / 60 / 24)
 
 fun LocalDate.toInstant(): Instant = Instant.ofEpochSecond(this.toEpochDay() * 60 * 60 * 24)
+
+private fun signingParties(perceivable: Perceivable<Boolean>) : ImmutableSet<CompositeKey> =
+    when (perceivable) {
+        is ActorPerceivable -> ImmutableSet.of( perceivable.actor.owningKey )
+        is PerceivableAnd -> Sets.union( signingParties( perceivable.left ), signingParties(perceivable.right) ).immutableCopy()
+        is PerceivableOr -> Sets.union( signingParties( perceivable.left ), signingParties(perceivable.right) ).immutableCopy()
+        is TimePerceivable -> ImmutableSet.of<CompositeKey>()
+        else -> throw IllegalArgumentException("signingParties " + perceivable)
+    }
 
 private fun liablePartiesVisitor(arrangement: Arrangement): ImmutableSet<CompositeKey> =
         when (arrangement) {
@@ -25,17 +35,19 @@ private fun liablePartiesVisitor(arrangement: Arrangement): ImmutableSet<Composi
             else -> throw IllegalArgumentException("liableParties " + arrangement)
         }
 
-private fun liablePartiesVisitor(action: Action): ImmutableSet<CompositeKey> =
-        if (action.actors.size != 1)
-            liablePartiesVisitor(action.arrangement)
-        else
-            Sets.difference(liablePartiesVisitor(action.arrangement), ImmutableSet.of(action.actors.single())).immutableCopy()
+private fun liablePartiesVisitor(action: Action): ImmutableSet<CompositeKey> {
+    val actors = signingParties(action.condition)
+    return if (actors.size != 1)
+        liablePartiesVisitor(action.arrangement)
+    else
+        Sets.difference(liablePartiesVisitor(action.arrangement), ImmutableSet.of(actors.single())).immutableCopy()
+}
 
 /** Returns list of potentially liable parties for a given contract */
 fun liableParties(contract: Arrangement): Set<CompositeKey> = liablePartiesVisitor(contract)
 
 private fun involvedPartiesVisitor(action: Action): Set<CompositeKey> =
-        Sets.union(involvedPartiesVisitor(action.arrangement), action.actors.map { it.owningKey }.toSet()).immutableCopy()
+    Sets.union(involvedPartiesVisitor(action.arrangement), signingParties(action.condition)).immutableCopy()
 
 private fun involvedPartiesVisitor(arrangement: Arrangement): ImmutableSet<CompositeKey> =
         when (arrangement) {
@@ -51,11 +63,25 @@ private fun involvedPartiesVisitor(arrangement: Arrangement): ImmutableSet<Compo
 /** returns list of involved parties for a given contract */
 fun involvedParties(arrangement: Arrangement): Set<CompositeKey> = involvedPartiesVisitor(arrangement)
 
+fun replaceParty(perceivable: Perceivable<Boolean>, from: Party, to: Party): Perceivable<Boolean> =
+        when (perceivable) {
+            is ActorPerceivable ->
+                if (perceivable.actor == from)
+                    signedBy(to)
+                else
+                    perceivable
+            is PerceivableAnd -> replaceParty(perceivable.left, from, to) and replaceParty(perceivable.right, from, to)
+            is PerceivableOr -> replaceParty(perceivable.left, from, to) or replaceParty(perceivable.right, from, to)
+            is TimePerceivable -> perceivable
+            else -> throw InvalidArgument("replaceParty " + perceivable)
+        }
+
 fun replaceParty(action: Action, from: Party, to: Party): Action =
-        if (action.actors.contains(from)) {
-            Action(action.name, action.condition, action.actors - from + to, replaceParty(action.arrangement, from, to))
-        } else
-            Action(action.name, action.condition, action.actors, replaceParty(action.arrangement, from, to))
+        Action(action.name, replaceParty(action.condition, from, to), replaceParty(action.arrangement, from, to))
+        //if (action.actors.contains(from)) {
+        //    Action(action.name, action.condition, action.actors - from + to, replaceParty(action.arrangement, from, to))
+        //} else
+        //    Action(action.name, action.condition, replaceParty(action.arrangement, from, to))
 
 fun replaceParty(arrangement: Arrangement, from: Party, to: Party): Arrangement = when (arrangement) {
     is Zero -> arrangement
@@ -184,7 +210,6 @@ fun debugCompare(arrLeft: Arrangement, arrRight: Arrangement) {
                 arrLeft.actions.zip(arrRight.actions).forEach {
                     debugCompare(it.first.arrangement, it.second.arrangement)
                     debugCompare(it.first.condition, it.second.condition)
-                    debugCompare(it.first.actors, it.second.actors)
                     debugCompare(it.first.name, it.second.name)
                     return
                 }

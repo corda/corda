@@ -22,16 +22,16 @@ class Cap {
     val contractInitial = arrange {
         rollOut("2016-09-01".ld, "2017-09-01".ld, Frequency.SemiAnnual) {
             actions {
-                (acmeCorp or highStreetBank).may {
-                    "exercise".anytime {
+                (acmeCorp or highStreetBank) may {
+                    "exercise" anytime {
                         val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                         val fixed = interest(notional, "act/365", 0.5.bd, start, end)
                         highStreetBank.owes(acmeCorp, floating - fixed, currency)
                         next()
                     }
                 }
-                acmeCorp.may {
-                    "skip".anytime {
+                acmeCorp may {
+                    "skip" anytime {
                         next()
                     }
                 }
@@ -41,23 +41,23 @@ class Cap {
 
     val contractAfterFixingFirst = arrange {
         actions {
-            (acmeCorp or highStreetBank).may {
-                "exercise".anytime() {
+            (acmeCorp or highStreetBank) may {
+                "exercise" anytime {
                     val floating1 = interest(notional, "act/365", 1.0.bd, "2016-09-01", "2017-03-01")
                     val fixed1 = interest(notional, "act/365", 0.5.bd, "2016-09-01", "2017-03-01")
                     highStreetBank.owes(acmeCorp, floating1 - fixed1, currency)
                     rollOut("2017-03-01".ld, "2017-09-01".ld, Frequency.SemiAnnual) {
                         actions {
-                            (acmeCorp or highStreetBank).may {
-                                "exercise".anytime {
+                            (acmeCorp or highStreetBank) may {
+                                "exercise" anytime {
                                     val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                                     val fixed = interest(notional, "act/365", 0.5.bd, start, end)
                                     highStreetBank.owes(acmeCorp, floating - fixed, currency)
                                     next()
                                 }
                             }
-                            acmeCorp.may {
-                                "skip".anytime {
+                            acmeCorp may {
+                                "skip" anytime {
                                     next()
                                 }
                             }
@@ -65,20 +65,20 @@ class Cap {
                     }
                 }
             }
-            acmeCorp.may {
-                "skip".anytime {
+            acmeCorp may {
+                "skip" anytime {
                     rollOut("2017-03-01".ld, "2017-09-01".ld, Frequency.SemiAnnual) {
                         actions {
-                            (acmeCorp or highStreetBank).may {
-                                "exercise".anytime {
+                            (acmeCorp or highStreetBank) may {
+                                "exercise" anytime {
                                     val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                                     val fixed = interest(notional, "act/365", 0.5.bd, start, end)
                                     highStreetBank.owes(acmeCorp, floating - fixed, currency)
                                     next()
                                 }
                             }
-                            acmeCorp.may {
-                                "skip".anytime {
+                            acmeCorp may {
+                                "skip" anytime {
                                     next()
                                 }
                             }
@@ -91,15 +91,15 @@ class Cap {
 
     val contractAfterFixingFinal = arrange {
         actions {
-            (acmeCorp or highStreetBank).may {
-                "exercise".anytime() {
+            (acmeCorp or highStreetBank) may {
+                "exercise" anytime {
                     val floating1 = interest(notional, "act/365", 1.0.bd, "2017-03-01", "2017-09-01")
                     val fixed1 = interest(notional, "act/365", 0.5.bd, "2017-03-01", "2017-09-01")
                     highStreetBank.owes(acmeCorp, floating1 - fixed1, currency)
                 }
             }
-            acmeCorp.may {
-                "skip".anytime {
+            acmeCorp may {
+                "skip" anytime {
                 }
             }
         }
@@ -108,16 +108,16 @@ class Cap {
     val contractAfterExecutionFirst = arrange {
         rollOut("2017-03-01".ld, "2017-09-01".ld, Frequency.SemiAnnual) {
             actions {
-                (acmeCorp or highStreetBank).may {
-                    "exercise".anytime {
+                (acmeCorp or highStreetBank) may {
+                    "exercise" anytime {
                         val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                         val fixed = interest(notional, "act/365", 0.5.bd, start, end)
                         highStreetBank.owes(acmeCorp, floating - fixed, currency)
                         next()
                     }
                 }
-                acmeCorp.may {
-                    "skip".anytime {
+                acmeCorp may {
+                    "skip" anytime {
                         next()
                     }
                 }
@@ -144,8 +144,8 @@ class Cap {
             val limit = variable(150.K)
         }) {
             actions {
-                (acmeCorp or highStreetBank).may {
-                    "exercise".anytime {
+                (acmeCorp or highStreetBank) may {
+                    "exercise" anytime {
                         val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                         val fixed = interest(notional, "act/365", 0.5.bd, start, end)
                         val payout = min(floating - fixed)
@@ -153,8 +153,8 @@ class Cap {
                         next(vars.limit to vars.limit - payout)
                     }
                 }
-                acmeCorp.may {
-                    "skip".anytime {
+                acmeCorp may {
+                    "skip" anytime {
                         next()
                     }
                 }

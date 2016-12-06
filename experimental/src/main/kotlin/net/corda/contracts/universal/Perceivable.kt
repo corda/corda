@@ -2,6 +2,7 @@ package net.corda.contracts.universal
 
 import net.corda.core.contracts.BusinessCalendar
 import net.corda.core.contracts.Tenor
+import net.corda.core.crypto.Party
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
@@ -40,7 +41,9 @@ data class Const<T>(val value: T) : Perceivable<T> {
                 value!!.hashCode()
 }
 
-fun <T> const(k: T) = Const(k)
+fun <T> const(k: T) : Perceivable<T> = Const(k)
+
+// fun const(b: Boolean) : Perceivable<Boolean> = Const(b)
 
 data class Max(val args: Set<Perceivable<BigDecimal>>) : Perceivable<BigDecimal>
 
@@ -69,6 +72,18 @@ class EndDate : Perceivable<Instant> {
         return other is EndDate
     }
 }
+
+data class ActorPerceivable(val actor: Party) : Perceivable<Boolean>
+fun signedBy(actor: Party) : Perceivable<Boolean> = ActorPerceivable(actor)
+
+fun signedByOneOf(actors: Collection<Party>): Perceivable<Boolean> =
+        if (actors.size == 0)
+            const(true)
+        else
+            actors.drop(1).fold(signedBy(actors.first())) { total, next -> total or signedBy(next) }
+
+
+
 
 /**
  * Perceivable based on time
