@@ -5,6 +5,8 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
 
+description 'Corda finance modules'
+
 repositories {
     mavenLocal()
     mavenCentral()
@@ -28,66 +30,6 @@ sourceSets {
     test {
         resources {
             srcDir "../config/test"
-        }
-    }
-}
-
-bintray {
-    user = System.getenv('CORDA_BINTRAY_USER')
-    key = System.getenv('CORDA_BINTRAY_KEY')
-    publications = ['finance']
-    dryRun = false
-    pkg {
-        repo = 'corda'
-        name = 'finance'
-        userOrg = 'r3'
-        licenses = ['Apache-2.0']
-
-        version {
-            gpg {
-                sign = true
-                passphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-            }
-        }
-    }
-}
-
-publishing {
-    publications {
-        finance(MavenPublication) {
-            from components.java
-            artifactId 'finance'
-
-            artifact sourceJar
-            artifact javadocJar
-
-            pom.withXml {
-                asNode().children().last() + {
-                    resolveStrategy = Closure.DELEGATE_FIRST
-                    name 'finance'
-                    description 'Corda finance modules'
-                    url 'https://github.com/corda/corda'
-                    scm {
-                        url 'https://github.com/corda/corda'
-                    }
-
-                    licenses {
-                        license {
-                            name 'Apache-2.0'
-                            url 'https://www.apache.org/licenses/LICENSE-2.0'
-                            distribution 'repo'
-                        }
-                    }
-
-                    developers {
-                        developer {
-                            id 'R3'
-                            name 'R3'
-                            email 'dev@corda.net'
-                        }
-                    }
-                }
-            }
         }
     }
 }

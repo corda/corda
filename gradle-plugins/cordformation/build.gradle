@@ -1,5 +1,4 @@
 apply plugin: 'groovy'
-apply plugin: 'maven-publish'
 apply plugin: 'net.corda.plugins.publish-utils'
 
 description 'A small gradle plugin for adding some basic Quasar tasks and configurations to reduce build.gradle bloat.'

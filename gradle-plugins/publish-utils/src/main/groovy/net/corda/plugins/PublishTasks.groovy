@@ -24,27 +24,34 @@ class PublishTasks implements Plugin<Project> {
 
         createTasks()
         createExtensions()
+        checkAndApplyPublishing()
+    }
 
+    void checkAndApplyPublishing() {
         def bintrayConfig = project.rootProject.extensions.findByType(BintrayConfigExtension.class)
-        if((bintrayConfig != null) && (bintrayConfig.publications)) {
-            def publications = bintrayConfig.publications.findAll { it == project.name }
-            if(publications.size > 0) {
-                project.logger.info("Configuring bintray for ${project.name}")
-                project.configure(project) {
-                    apply plugin: 'com.jfrog.bintray'
-                }
-                def bintray = project.extensions.findByName("bintray")
-                configureBintray(bintray, bintrayConfig)
-                project.publishing.publications.create(project.name, MavenPublication) {
-                    from project.components.java
-                    groupId  project.group
-                    artifactId project.name
+        if((bintrayConfig != null) && (bintrayConfig.publications) && (bintrayConfig.publications.findAll { it == project.name }.size() > 0)) {
+            applyPublishing(bintrayConfig)
+        }
+    }
 
-                    artifact project.tasks.sourceJar
-                    artifact project.tasks.javadocJar
+    void applyPublishing(BintrayConfigExtension bintrayConfig) {
+        project.afterEvaluate {
+            project.logger.info("Configuring bintray for ${project.name}")
+            project.configure(project) {
+                apply plugin: 'maven-publish'
+                apply plugin: 'com.jfrog.bintray'
+            }
+            def bintray = project.extensions.findByName("bintray")
+            configureBintray(bintray, bintrayConfig)
+            project.publishing.publications.create(project.name, MavenPublication) {
+                from project.components.java
+                groupId project.group
+                artifactId project.name
 
-                    extendPomForMavenCentral(pom, bintrayConfig)
-                }
+                artifact project.tasks.sourceJar
+                artifact project.tasks.javadocJar
+
+                extendPomForMavenCentral(pom, bintrayConfig)
             }
         }
     }

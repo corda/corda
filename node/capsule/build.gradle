@@ -7,6 +7,9 @@ apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
 
+//name 'corda'
+description 'Corda standalone node'
+
 repositories {
     mavenLocal()
     mavenCentral()
@@ -72,66 +75,4 @@ task buildCertSigningRequestUtilityJAR(type: FatCapsule, dependsOn: project.jar)
 
 artifacts {
     runtimeArtifacts buildCordaJAR
-}
-
-bintray {
-    user = System.getenv('CORDA_BINTRAY_USER')
-    key = System.getenv('CORDA_BINTRAY_KEY')
-    publications = ['corda']
-    dryRun = false
-    pkg {
-        repo = 'corda'
-        name = 'corda'
-        userOrg = 'r3'
-        licenses = ['Apache-2.0']
-
-        version {
-            gpg {
-                sign = true
-                passphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-            }
-        }
-    }
-}
-
-publishing {
-    publications {
-        corda(MavenPublication) {
-            artifactId 'corda'
-
-            artifact sourceJar
-            artifact javadocJar
-            artifact buildCordaJAR {
-                classifier ""
-            }
-
-            pom.withXml {
-                asNode().children().last() + {
-                    resolveStrategy = Closure.DELEGATE_FIRST
-                    name 'corda'
-                    description 'Corda standalone node'
-                    url 'https://github.com/corda/corda'
-                    scm {
-                        url 'https://github.com/corda/corda'
-                    }
-
-                    licenses {
-                        license {
-                            name 'Apache-2.0'
-                            url 'https://www.apache.org/licenses/LICENSE-2.0'
-                            distribution 'repo'
-                        }
-                    }
-
-                    developers {
-                        developer {
-                            id 'R3'
-                            name 'R3'
-                            email 'dev@corda.net'
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
