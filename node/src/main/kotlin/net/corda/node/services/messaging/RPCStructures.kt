@@ -26,6 +26,7 @@ import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.flows.CashFlowResult
+import net.corda.node.internal.AbstractNode
 import net.corda.node.services.User
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -106,6 +107,17 @@ open class RPCException(msg: String, cause: Throwable?) : RuntimeException(msg, 
     class DeadlineExceeded(rpcName: String) : RPCException("Deadline exceeded on call to $rpcName")
 }
 
+object ClassSerializer : Serializer<Class<*>>() {
+    override fun read(kryo: Kryo, input: Input, type: Class<Class<*>>): Class<*> {
+        val className = input.readString()
+        return Class.forName(className)
+    }
+
+    override fun write(kryo: Kryo, output: Output, clazz: Class<*>) {
+        output.writeString(clazz.name)
+    }
+}
+
 class PermissionException(msg: String) : RuntimeException(msg)
 
 // The Kryo used for the RPC wire protocol. Every type in the wire protocol is listed here explicitly.
@@ -133,7 +145,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(SerializedBytes::class.java, SerializedBytesSerializer)
         register(Party::class.java)
         register(Array<Any>(0,{}).javaClass)
-        register(Class::class.java)
+        register(Class::class.java, ClassSerializer)
 
         ImmutableListSerializer.registerSerializers(this)
         ImmutableSetSerializer.registerSerializers(this)
@@ -224,6 +236,11 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(FlowHandle::class.java)
         register(KryoException::class.java)
         register(StringBuffer::class.java)
+        for ((_flow, argumentTypes) in AbstractNode.defaultFlowWhiteList) {
+            for (type in argumentTypes) {
+                register(type)
+            }
+        }
         pluginRegistries.forEach { it.registerRPCKryoTypes(this) }
     }
 
