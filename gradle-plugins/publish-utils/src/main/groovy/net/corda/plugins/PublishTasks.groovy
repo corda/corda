@@ -112,17 +112,25 @@ class PublishTasks implements Plugin<Project> {
 
     void configureBintray(BintrayConfigExtension bintrayConfig) {
         project.apply([plugin: 'com.jfrog.bintray'])
-        def bintray = project.extensions.findByName("bintray")
-        bintray.user = bintrayConfig.user
-        bintray.key = bintrayConfig.key
-        bintray.publications = [ publishName ]
-        bintray.dryRun = bintrayConfig.dryRun ?: false
-        bintray.pkg.repo = bintrayConfig.repo
-        bintray.pkg.name = publishName
-        bintray.pkg.userOrg = bintrayConfig.org
-        bintray.pkg.licenses = bintrayConfig.licenses
-        bintray.pkg.version.gpg.sign = bintrayConfig.gpgSign ?: false
-        bintray.pkg.version.gpg.passphrase = bintrayConfig.gpgPassphrase
+        project.bintray {
+            user = bintrayConfig.user
+            key = bintrayConfig.key
+            publications = [ publishName ]
+            dryRun = bintrayConfig.dryRun ?: false
+            pkg {
+                repo = bintrayConfig.repo
+                name = publishName
+                userOrg = bintrayConfig.org
+                licenses = bintrayConfig.licenses
+
+                version {
+                    gpg {
+                        sign = bintrayConfig.gpgSign ?: false
+                        passphrase = bintrayConfig.gpgPassphrase
+                    }
+                }
+            }
+        }
     }
 
     void createTasks() {
