@@ -48,48 +48,48 @@ The node makes use of various queues for its operation. The more important ones 
 for maintenance and other minor purposes.
 
 :``p2p.inbound``:
-    The node listens for messages sent from other peer nodes on this queue. Only clients who are authenticated to be
-    nodes on the same network are given permission to send. Messages which are routed internally are also sent to this
-    queue (e.g. two flows on the same node communicating with each other).
+   The node listens for messages sent from other peer nodes on this queue. Only clients who are authenticated to be
+   nodes on the same network are given permission to send. Messages which are routed internally are also sent to this
+   queue (e.g. two flows on the same node communicating with each other).
 
 :``internal.peers.$identity``:
-     These are a set of private queues only available to the node which it uses to route messages destined to other peers.
-     The queue name ends in the base 58 encoding of the peer's identity key. There is at most one queue per peer. The broker
-     creates a bridge from this queue to the peer's ``p2p.inbound`` queue, using the network map service to lookup the
-     peer's network address.
+   These are a set of private queues only available to the node which it uses to route messages destined to other peers.
+   The queue name ends in the base 58 encoding of the peer's identity key. There is at most one queue per peer. The broker
+   creates a bridge from this queue to the peer's ``p2p.inbound`` queue, using the network map service to lookup the
+   peer's network address.
 
 :``internal.networkmap``:
-    This is another private queue just for the node which functions in a similar manner to the ``p2p.peers.*`` queues
-    except this is used to form a connection to the network map node. The node running the network map service is treated
-    differently as it provides information about the rest of the network.
+   This is another private queue just for the node which functions in a similar manner to the ``internal.peers.*`` queues
+   except this is used to form a connection to the network map node. The node running the network map service is treated
+   differently as it provides information about the rest of the network.
 
 :``rpc.requests``:
-     RPC clients send their requests here, and it's only open for sending by clients authenticated as RPC users.
+   RPC clients send their requests here, and it's only open for sending by clients authenticated as RPC users.
 
 :``clients.$user.rpc.$random``:
-     RPC clients are given permission to create a temporary queue incorporating their username (``$user``) and sole
-     permission to receive messages from it. RPC requests are required to include a random number (``$random``) from
-     which the node is able to construct the queue the user is listening on and send the response to that. This mechanism
-     prevents other users from being able listen in on the responses.
+   RPC clients are given permission to create a temporary queue incorporating their username (``$user``) and sole
+   permission to receive messages from it. RPC requests are required to include a random number (``$random``) from
+   which the node is able to construct the queue the user is listening on and send the response to that. This mechanism
+   prevents other users from being able listen in on the responses.
 
 Security
 --------
 
 Clients attempting to connect to the node's broker fall in one of four groups:
 
-# Anyone connecting with the username ``SystemUsers/Node`` is treated as the node hosting the broker, or a logical
-component of the node. The TLS certificate they provide must match the one broker has for the node. If that's the case
-they are given full access to all valid queues, otherwise they are rejected.
+#. Anyone connecting with the username ``SystemUsers/Node`` is treated as the node hosting the broker, or a logical
+   component of the node. The TLS certificate they provide must match the one broker has for the node. If that's the case
+   they are given full access to all valid queues, otherwise they are rejected.
 
-# Anyone connecting with the username ``SystemUsers/Peer`` is treated as a peer on the same Corda network as the node. Their
-TLS root CA must be the same as the node's root CA - the root CA is the doorman of the network and having the same root CA
-implies we've been let in by the same doorman. If they are part of the same network then they are only given permission
-to send to our ``p2p.inbound`` queue, otherwise they are rejected.
+#. Anyone connecting with the username ``SystemUsers/Peer`` is treated as a peer on the same Corda network as the node. Their
+   TLS root CA must be the same as the node's root CA - the root CA is the doorman of the network and having the same root CA
+   implies we've been let in by the same doorman. If they are part of the same network then they are only given permission
+   to send to our ``p2p.inbound`` queue, otherwise they are rejected.
 
-# Every other username is treated as a RPC user and authenticated against the node's list of valid RPC users. If that
-is successful then they are only given sufficient permission to perform RPC, otherwise they are rejected.
+#. Every other username is treated as a RPC user and authenticated against the node's list of valid RPC users. If that
+   is successful then they are only given sufficient permission to perform RPC, otherwise they are rejected.
 
-# Clients connecting without a username and password are rejected.
+#. Clients connecting without a username and password are rejected.
 
 Artemis provides a feature of annotating each received message with the validated user. This allows the node's messaging
 service to provide authenticated messages to the rest of the system. For the first two client types described above the
