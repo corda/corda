@@ -6,6 +6,7 @@ import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.api.Project
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.MavenPom
+import net.corda.plugins.bintray.*
 
 /**
  * A utility plugin that when applied will automatically create source and javadoc publishing tasks
@@ -24,10 +25,9 @@ class PublishTasks implements Plugin<Project> {
         createTasks()
         createExtensions()
 
-        def bintrayConfig = project.rootProject.extensions.findByName('bintrayConfig')
+        def bintrayConfig = project.rootProject.extensions.findByType(BintrayConfigExtension.class)
         if((bintrayConfig != null) && (bintrayConfig.publications)) {
             def publications = bintrayConfig.publications.findAll { it == project.name }
-            println("HI")
             if(publications.size > 0) {
                 project.logger.info("Configuring bintray for ${project.name}")
                 project.configure(project) {
@@ -43,44 +43,44 @@ class PublishTasks implements Plugin<Project> {
                     artifact project.tasks.sourceJar
                     artifact project.tasks.javadocJar
 
-                    extendPomForMavenCentral(pom)
+                    extendPomForMavenCentral(pom, bintrayConfig)
                 }
             }
         }
     }
 
     // Maven central requires all of the below fields for this to be a valid POM
-    void extendPomForMavenCentral(MavenPom pom) {
+    void extendPomForMavenCentral(MavenPom pom, BintrayConfigExtension config) {
         pom.withXml {
             asNode().children().last() + {
                 resolveStrategy = Closure.DELEGATE_FIRST
                 name project.name
                 description project.description
-                url 'https://github.com/corda/corda'
+                url config.projectUrl
                 scm {
-                    url 'https://github.com/corda/corda'
+                    url config.vcsUrl
                 }
 
                 licenses {
                     license {
-                        name 'Apache-2.0'
-                        url 'https://www.apache.org/licenses/LICENSE-2.0'
-                        distribution 'repo'
+                        name config.license.name
+                        url config.license.url
+                        distribution config.license.url
                     }
                 }
 
                 developers {
                     developer {
-                        id 'R3'
-                        name 'R3'
-                        email 'dev@corda.net'
+                        id config.developer.id
+                        name config.developer.name
+                        email config.developer.email
                     }
                 }
             }
         }
     }
 
-    void configureBintray(def bintray, def bintrayConfig) {
+    void configureBintray(def bintray, BintrayConfigExtension bintrayConfig) {
         bintray.user = bintrayConfig.user
         bintray.key = bintrayConfig.key
         bintray.publications = [ project.name ]

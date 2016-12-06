@@ -1,4 +1,6 @@
-package net.corda.plugins
+package net.corda.plugins.bintray
+
+import org.gradle.util.ConfigureUtil
 
 class BintrayConfigExtension {
     /**
@@ -30,6 +32,14 @@ class BintrayConfigExtension {
      */
     String gpgPassphrase
     /**
+     * VCS URL
+     */
+    String vcsUrl
+    /**
+     * Project URL
+     */
+    String projectUrl
+    /**
      * The publications that will be uploaded as a part of this configuration. These must match both the name on
      * bintray and the gradle module name. ie; it must be "some-package" as a gradle sub-module (root project not
      * supported, this extension is to improve multi-build bintray uploads). The publication must also be called
@@ -41,4 +51,20 @@ class BintrayConfigExtension {
      * Whether to test the publication without uploading to bintray.
      */
     Boolean dryRun
+    /**
+     * The license this project will use (currently limited to one)
+     */
+    License license = new License()
+    /**
+     * The developer of this project (currently limited to one)
+     */
+    Developer developer = new Developer()
+
+    void license(Closure closure) {
+        ConfigureUtil.configure(closure, license)
+    }
+
+    void developer(Closure closure) {
+        ConfigureUtil.configure(closure, developer)
+    }
 }
