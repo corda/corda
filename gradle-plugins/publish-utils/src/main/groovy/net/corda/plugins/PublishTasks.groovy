@@ -24,36 +24,38 @@ class PublishTasks implements Plugin<Project> {
 
         createTasks()
         createExtensions()
-        checkAndApplyPublishing()
+        checkAndConfigurePublishing()
     }
 
-    void checkAndApplyPublishing() {
+    void checkAndConfigurePublishing() {
+        project.logger.info("Checking whether to publish ${project.name}")
         def bintrayConfig = project.rootProject.extensions.findByType(BintrayConfigExtension.class)
         if((bintrayConfig != null) && (bintrayConfig.publications) && (bintrayConfig.publications.findAll { it == project.name }.size() > 0)) {
-            applyPublishing(bintrayConfig)
+            configurePublishing(bintrayConfig)
         }
     }
 
-    void applyPublishing(BintrayConfigExtension bintrayConfig) {
+    void configurePublishing(BintrayConfigExtension bintrayConfig) {
         project.afterEvaluate {
             project.logger.info("Configuring bintray for ${project.name}")
-            project.configure(project) {
-                apply plugin: 'maven-publish'
-                apply plugin: 'com.jfrog.bintray'
-            }
-            def bintray = project.extensions.findByName("bintray")
-            configureBintray(bintray, bintrayConfig)
-            project.publishing.publications.create(project.name, MavenPublication) {
-                from project.components.java
-                groupId project.group
-                artifactId project.name
-
-                artifact project.tasks.sourceJar
-                artifact project.tasks.javadocJar
-
-                extendPomForMavenCentral(pom, bintrayConfig)
-            }
+            configureMavenPublish(bintrayConfig)
+            configureBintray(bintrayConfig)
         }
+    }
+
+    void configureMavenPublish(BintrayConfigExtension bintrayConfig) {
+        project.apply([plugin: 'maven-publish'])
+        project.publishing.publications.create(project.name, MavenPublication) {
+            from project.components.java
+            groupId project.group
+            artifactId project.name
+
+            artifact project.tasks.sourceJar
+            artifact project.tasks.javadocJar
+
+            extendPomForMavenCentral(pom, bintrayConfig)
+        }
+        project.task("install", dependsOn: "publishToMavenLocal")
     }
 
     // Maven central requires all of the below fields for this to be a valid POM
@@ -87,7 +89,9 @@ class PublishTasks implements Plugin<Project> {
         }
     }
 
-    void configureBintray(def bintray, BintrayConfigExtension bintrayConfig) {
+    void configureBintray(BintrayConfigExtension bintrayConfig) {
+        project.apply([plugin: 'com.jfrog.bintray'])
+        def bintray = project.extensions.findByName("bintray")
         bintray.user = bintrayConfig.user
         bintray.key = bintrayConfig.key
         bintray.publications = [ project.name ]
