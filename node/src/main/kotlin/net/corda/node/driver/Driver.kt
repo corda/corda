@@ -1,3 +1,5 @@
+@file:JvmName("Driver")
+
 package net.corda.node.driver
 
 import com.fasterxml.jackson.databind.ObjectMapper
