@@ -31,9 +31,21 @@ class FXFwdTimeOption
         }
     }
 
+    val outContract1 = arrange {
+        highStreetBank.owes(acmeCorp, 1070.K, EUR)
+    }
+    val outContract2 = arrange {
+        acmeCorp.owes(highStreetBank, 1.M, USD)
+    }
+
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
+    val TEST_TX_TIME_BEFORE_MATURITY: Instant get() = Instant.parse("2018-05-01T12:00:00.00Z")
+    val TEST_TX_TIME_AFTER_MATURITY: Instant get() = Instant.parse("2018-06-02T12:00:00.00Z")
 
     val inState = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), initialContract)
+    val outState1 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), outContract1)
+    val outState2 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), outContract2)
+
     @Test
     fun `issue - signature`() {
         transaction {
@@ -52,6 +64,70 @@ class FXFwdTimeOption
             }
 
             command(highStreetBank.owningKey, acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
+
+            this.verifies()
+        }
+    }
+
+    @Test
+    fun `maturity, bank exercise`() {
+        transaction {
+            input { inState }
+            output { outState1 }
+            output { outState2 }
+
+            timestamp(TEST_TX_TIME_AFTER_MATURITY)
+
+            tweak {
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                this `fails with` "action must be defined"
+            }
+            tweak {
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("exercise") }
+                this `fails with` "condition must be met"
+            }
+            tweak {
+                command(acmeCorp.owningKey) { UniversalContract.Commands.Action("exercise") }
+                this `fails with` "condition must be met"
+            }
+            tweak {
+                command(acmeCorp.owningKey) { UniversalContract.Commands.Action("expire") }
+                this `fails with` "condition must be met"
+            }
+
+            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("expire") }
+
+            this.verifies()
+        }
+    }
+
+    @Test
+    fun `maturity, corp exercise`() {
+        transaction {
+            input { inState }
+            output { outState1 }
+            output { outState2 }
+
+            timestamp(TEST_TX_TIME_BEFORE_MATURITY)
+
+            tweak {
+                command(acmeCorp.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                this `fails with` "action must be defined"
+            }
+            tweak {
+                command(acmeCorp.owningKey) { UniversalContract.Commands.Action("expire") }
+                this `fails with` "condition must be met"
+            }
+            tweak {
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("expire") }
+                this `fails with` "condition must be met"
+            }
+            tweak {
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("exercise") }
+                this `fails with` "condition must be met"
+            }
+
+            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("exercise") }
 
             this.verifies()
         }
