@@ -1,8 +1,6 @@
 package net.corda.core.node
 
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionResolutionException
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.MessagingService
@@ -46,6 +44,16 @@ interface ServiceHub {
     fun loadState(stateRef: StateRef): TransactionState<*> {
         val definingTx = storageService.validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
         return definingTx.tx.outputs[stateRef.index]
+    }
+
+    /**
+     * Given a [StateRef] loads the referenced transaction and returns a [StateAndRef<T>]
+     *
+     * @throws TransactionResolutionException if the [StateRef] points to a non-existent transaction.
+     */
+    fun <T : ContractState> toStateAndRef(ref: StateRef): StateAndRef<T> {
+        val definingTx =  storageService.validatedTransactions.getTransaction(ref.txhash) ?: throw TransactionResolutionException(ref.txhash)
+        return definingTx.tx.outRef<T>(ref.index)
     }
 
     /**

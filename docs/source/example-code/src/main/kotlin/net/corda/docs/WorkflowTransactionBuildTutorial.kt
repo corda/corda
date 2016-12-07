@@ -20,10 +20,6 @@ object WorkflowTransactionBuildTutorial {
 }
 
 // DOCSTART 1
-// Helper method to access the StorageService and expand a StateRef into a StateAndRef
-fun <T : ContractState> ServiceHub.toStateAndRef(ref: StateRef): StateAndRef<T> {
-    return storageService.validatedTransactions.getTransaction(ref.txhash)!!.tx.outRef<T>(ref.index)
-}
 
 // Helper method to locate the latest Vault version of a LinearState from a possibly out of date StateRef
 inline fun <reified T : LinearState> ServiceHub.latest(ref: StateRef): StateAndRef<T> {
