@@ -29,6 +29,10 @@ class UniversalContract : Contract {
 
         // must be signed by all liable parties present in contract
         class Issue : TypeOnlyCommandData(), Commands
+
+        // Split contract in two, ratio must be positive and less than one.
+        // todo: Who should sign this?
+        class Split(val ratio: BigDecimal) : Commands
     }
 
     fun eval(@Suppress("UNUSED_PARAMETER") tx: TransactionForContract, expr: Perceivable<Instant>): Instant? = when (expr) {
