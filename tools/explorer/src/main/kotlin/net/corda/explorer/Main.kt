@@ -107,10 +107,10 @@ fun main(args: Array<String>) {
     driver(portAllocation = portAllocation) {
         val user = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>()))
         // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
-        val notary = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-        val alice = startNode("Alice", rpcUsers = arrayListOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))))
-        val bob = startNode("Bob", rpcUsers = arrayListOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))))
-        val issuer = startNode("Royal Mint", rpcUsers = arrayListOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))))
+        val notary = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)), customOverrides = mapOf("nearestCity" to "Zurich"))
+        val alice = startNode("Alice", rpcUsers = arrayListOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))), customOverrides = mapOf("nearestCity" to "Paris"))
+        val bob = startNode("Bob", rpcUsers = arrayListOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))), customOverrides = mapOf("nearestCity" to "Frankfurt"))
+        val issuer = startNode("Royal Mint", rpcUsers = arrayListOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))), customOverrides = mapOf("nearestCity" to "London"))
 
         val notaryNode = notary.get()
         val aliceNode = alice.get()
