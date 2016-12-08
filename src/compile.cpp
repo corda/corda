@@ -268,6 +268,7 @@ class MyThread : public Thread {
         heapImage(0),
         codeImage(0),
         thunkTable(0),
+        dynamicTable(0),
         trace(0),
         reference(0),
         arch(parent ? parent->arch : avian::codegen::makeArchitectureNative(
@@ -1310,6 +1311,10 @@ Allocator* allocator(MyThread* t);
 
 unsigned addDynamic(MyThread* t, GcInvocation* invocation)
 {
+  if (t->dynamicTable == nullptr) {
+    t->dynamicTable = dynamicTable(t);
+  }
+
   ACQUIRE(t, t->m->classLock);
 
   int index = invocation->index();
@@ -5177,13 +5182,18 @@ loop:
 
               jclass lmfClass = e->vtable->FindClass(
                   e, "java/lang/invoke/LambdaMetafactory");
-              jmethodID makeLambda = e->vtable->GetStaticMethodID(
-                  e,
-                  lmfClass,
-                  "makeLambda",
-                  "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/"
-                  "String;Ljava/"
-                  "lang/String;Ljava/lang/String;Ljava/lang/String;I)[B");
+              jmethodID makeLambda
+                  = e->vtable->GetStaticMethodID(e,
+                                                 lmfClass,
+                                                 "makeLambda",
+                                                 "(Ljava/lang/String;"
+                                                 "Ljava/lang/String;"
+                                                 "Ljava/lang/String;"
+                                                 "Ljava/lang/String;"
+                                                 "Ljava/lang/String;"
+                                                 "Ljava/lang/String;"
+                                                 "I"
+                                                 ")[B");
 
               GcReference* reference = cast<GcReference>(
                   t,

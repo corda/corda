@@ -1075,7 +1075,7 @@ unsigned parsePoolEntry(Thread* t,
                        returnCode,
                        parameterCount,
                        parameterFootprint,
-                       0,
+                       ACC_STATIC,
                        0,
                        0,
                        0,
@@ -6076,6 +6076,8 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
   array->setBodyElement(t, argument++, name);
   array->setBodyElement(t, argument++, type);
 
+  THREAD_RUNTIME_ARRAY(t, char, specBuffer, bootstrap->spec()->length());
+
   const char* spec;
   GcArray* argArray = array;
   PROTECT(t, argArray);
@@ -6101,7 +6103,10 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
       "[Ljava/lang/invoke/MethodType;"
       ")Ljava/lang/invoke/CallSite;";
   } else if (bootstrap->parameterCount() == 2 + bootstrapArray->length()) {
-    spec = reinterpret_cast<char*>(bootstrap->spec()->body().begin());
+    memcpy(RUNTIME_ARRAY_BODY(specBuffer),
+           bootstrap->spec()->body().begin(),
+           bootstrap->spec()->length());
+    spec = RUNTIME_ARRAY_BODY(specBuffer);
   } else {
     abort(t);
   }

@@ -56,5 +56,11 @@ public class InvokeDynamic {
       expect(s.get().first == 42L);
       expect(s.get().second == 77.1D);
     }
+
+    { double[] a = new double[] { 3.14D };
+      Supplier<Pair<Long, Double>> s = () -> new Pair<Long, Double>(42L, a[0]);
+      expect(s.get().first == 42L);
+      expect(s.get().second == 3.14D);
+    }
   }
 }

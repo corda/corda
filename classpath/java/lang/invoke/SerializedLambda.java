@@ -11,6 +11,11 @@
 package java.lang.invoke;
 
 public class SerializedLambda implements java.io.Serializable {
+  public Object getCapturedArg(int i) {
+    // todo
+    return null;
+  }
+
   public int getImplMethodKind() {
     // todo
     return 0;
