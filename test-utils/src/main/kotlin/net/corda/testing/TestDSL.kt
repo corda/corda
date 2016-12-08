@@ -79,6 +79,7 @@ sealed class EnforceVerifyOrFail {
 }
 
 class DuplicateOutputLabel(label: String) : Exception("Output label '$label' already used")
+class DoubleSpentInputs(ids: List<SecureHash>) : Exception("Transactions spend the same input. Conflicting transactions ids: '$ids'")
 class AttachmentResolutionException(attachmentId: SecureHash) : Exception("Attachment with id $attachmentId not found")
 
 /**
@@ -167,7 +168,7 @@ data class TestLedgerDSLInterpreter private constructor (
     companion object {
         private fun getCallerLocation(): String? {
             val stackTrace = Thread.currentThread().stackTrace
-            for (i in 1 .. stackTrace.size) {
+            for (i in 1..stackTrace.size) {
                 val stackTraceElement = stackTrace[i]
                 if (!stackTraceElement.fileName.contains("DSL")) {
                     return stackTraceElement.toString()
@@ -182,8 +183,10 @@ data class TestLedgerDSLInterpreter private constructor (
             val transaction: WireTransaction,
             val location: String?
     )
+
     class VerifiesFailed(transactionName: String, cause: Throwable) :
             Exception("Transaction ($transactionName) didn't verify: $cause", cause)
+
     class TypeMismatch(requested: Class<*>, actual: Class<*>) :
             Exception("Actual type $actual is not a subtype of requested type $requested")
 
@@ -249,7 +252,6 @@ data class TestLedgerDSLInterpreter private constructor (
             }
             labelToOutputStateAndRefs[label] = wireTransaction.outRef(index)
         }
-
         transactionMap[wireTransaction.id] =
                 WireTransactionWithLocation(transactionLabel, wireTransaction, transactionLocation)
 
@@ -279,10 +281,20 @@ data class TestLedgerDSLInterpreter private constructor (
 
     override fun verifies(): EnforceVerifyOrFail {
         try {
+            val usedInputs = mutableSetOf<StateRef>()
             services.recordTransactions(transactionsUnverified.map { SignedTransaction(it.serialized, listOf(NullSignature), it.id) })
             for ((key, value) in transactionWithLocations) {
-                value.transaction.toLedgerTransaction(services).verify()
-                services.recordTransactions(SignedTransaction(value.transaction.serialized, listOf(NullSignature), value.transaction.id))
+                val wtx = value.transaction
+                val ltx = wtx.toLedgerTransaction(services)
+                ltx.verify()
+                val doubleSpend = wtx.inputs.intersect(usedInputs)
+                if (!doubleSpend.isEmpty()) {
+                    val txIds = mutableListOf(wtx.id)
+                    doubleSpend.mapTo(txIds) { it.txhash }
+                    throw DoubleSpentInputs(txIds)
+                }
+                usedInputs.addAll(wtx.inputs)
+                services.recordTransactions(SignedTransaction(wtx.serialized, listOf(NullSignature), wtx.id))
             }
             return EnforceVerifyOrFail.Token
         } catch (exception: TransactionVerificationException) {
