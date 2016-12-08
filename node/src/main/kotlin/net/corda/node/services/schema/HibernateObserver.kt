@@ -35,7 +35,7 @@ class HibernateObserver(services: ServiceHubInternal) {
     val sessionFactories = ConcurrentHashMap<MappedSchema, SessionFactory>()
 
     init {
-        services.vaultService.updates.subscribe { persist(it.produced) }
+        services.vaultService.rawUpdates.subscribe { persist(it.produced) }
     }
 
     private fun sessionFactoryForSchema(schema: MappedSchema): SessionFactory {

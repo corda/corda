@@ -16,6 +16,7 @@ import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_FLOW
 import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_FLOW_TOPIC
 import net.corda.node.services.network.NodeRegistration
 import net.corda.node.utilities.AddOrRemove
+import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.junit.Before
@@ -201,7 +202,9 @@ class InMemoryNetworkMapServiceTest : AbstractNetworkMapServiceTest() {
     fun success() {
         val (mapServiceNode, registerNode) = network.createTwoNodes()
         val service = mapServiceNode.inNodeNetworkMapService!! as InMemoryNetworkMapService
-        success(mapServiceNode, registerNode, { service }, { })
+        databaseTransaction(mapServiceNode.database) {
+            success(mapServiceNode, registerNode, { service }, { })
+        }
     }
 
     @Test

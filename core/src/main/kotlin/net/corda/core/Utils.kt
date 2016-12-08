@@ -13,6 +13,8 @@ import kotlinx.support.jdk7.use
 import net.corda.core.crypto.newSecureRandom
 import org.slf4j.Logger
 import rx.Observable
+import rx.Observer
+import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.io.BufferedInputStream
 import java.io.InputStream
@@ -361,6 +363,16 @@ fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
     val subject = UnicastSubject.create<T>()
     val subscription = subscribe(subject)
     return subject.doOnUnsubscribe { subscription.unsubscribe() }
+}
+
+/**
+ * Copy an [Observer] to multiple other [Observer]s.
+ */
+fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
+    val subject = PublishSubject.create<T>()
+    subject.subscribe(this)
+    teeTo.forEach { subject.subscribe(it) }
+    return subject
 }
 
 /** Allows summing big decimals that are in iterable collections */

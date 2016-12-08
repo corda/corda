@@ -50,7 +50,7 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
     override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {
         mutex.locked {
             stateMachineTransactionMap[transactionId] = stateMachineRunId
-            updates.onNext(StateMachineTransactionMapping(stateMachineRunId, transactionId))
+            updates.bufferUntilDatabaseCommit().onNext(StateMachineTransactionMapping(stateMachineRunId, transactionId))
         }
     }
 

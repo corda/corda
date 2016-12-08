@@ -29,6 +29,7 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.isolatedTransaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
@@ -93,7 +94,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val changesPublisher = PublishSubject.create<Change>()
 
         fun notifyChangeObservers(psm: FlowStateMachineImpl<*>, addOrRemove: AddOrRemove) {
-            changesPublisher.onNext(Change(psm.logic, addOrRemove, psm.id))
+            changesPublisher.bufferUntilDatabaseCommit().onNext(Change(psm.logic, addOrRemove, psm.id))
         }
     })
 
@@ -393,13 +394,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * restarted with checkpointed state machines in the storage service.
      */
     fun <T> add(logic: FlowLogic<T>): FlowStateMachine<T> {
-        val fiber = createFiber(logic)
         // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
         // on the flow completion future inside that context. The problem is that any progress checkpoints are
         // unable to acquire the table lock and move forward till the calling transaction finishes.
         // Committing in line here on a fresh context ensure we can progress.
-        isolatedTransaction(database) {
+        val fiber = isolatedTransaction(database) {
+            val fiber = createFiber(logic)
             updateCheckpoint(fiber)
+            fiber
         }
         // If we are not started then our checkpoint will be picked up during start
         mutex.locked {
