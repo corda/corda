@@ -40,6 +40,8 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Notification
 import rx.Observable
+import java.io.BufferedInputStream
+import java.io.InputStream
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.*
@@ -142,6 +144,8 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         ImmutableSortedSetSerializer.registerSerializers(this)
         ImmutableMapSerializer.registerSerializers(this)
         ImmutableMultimapSerializer.registerSerializers(this)
+
+        register(BufferedInputStream::class.java, InputStreamSerializer)
 
         noReferencesWithin<WireTransaction>()
 

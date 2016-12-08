@@ -441,7 +441,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         /** This ensures any kotlin objects that implement [DeserializeAsKotlinObjectDef] are read back in as singletons. */
         addDefaultSerializer(DeserializeAsKotlinObjectDef::class.java, KotlinObjectSerializer)
 
-        addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
+        addDefaultSerializer(BufferedInputStream::class.java, InputStreamSerializer)
 
         ImmutableListSerializer.registerSerializers(k)
         ImmutableSetSerializer.registerSerializers(k)

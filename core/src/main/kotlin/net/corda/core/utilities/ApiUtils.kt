@@ -1,5 +1,6 @@
 package net.corda.core.utilities
 
+import net.corda.core.ErrorOr
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.messaging.CordaRPCOps
@@ -16,12 +17,15 @@ class ApiUtils(val rpc: CordaRPCOps) {
      * Usage: withParty(key) { doSomethingWith(it) }
      */
     fun withParty(partyKeyStr: String, notFound: (String) -> Response = defaultNotFound, found: (Party) -> Response): Response {
-        return try {
+        val party = try {
             val partyKey = CompositeKey.parseFromBase58(partyKeyStr)
-            val party = rpc.partyFromKey(partyKey)
-            if (party == null) notFound("Unknown party") else found(party)
+            ErrorOr(rpc.partyFromKey(partyKey))
         } catch (e: IllegalArgumentException) {
-            notFound("Invalid base58 key passed for party key")
+            ErrorOr.of(Exception("Invalid base58 key passed for party key $e"))
         }
+        return party.bind { if (it == null) ErrorOr.of(Exception("Unknown party")) else ErrorOr(found(it)) }.match(
+                onValue = { it },
+                onError = { notFound(it.toString()) }
+        )
     }
 }
