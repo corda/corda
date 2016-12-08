@@ -1,7 +1,7 @@
-package com.r3corda.netpermission.internal
+package com.r3.corda.netpermission.internal
 
-import com.r3corda.netpermission.internal.persistence.CertificationData
-import com.r3corda.netpermission.internal.persistence.CertificationRequestStorage
+import com.r3.corda.netpermission.internal.persistence.CertificationData
+import com.r3.corda.netpermission.internal.persistence.CertificationRequestStorage
 import net.corda.core.crypto.X509Utilities.CACertAndKey
 import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.core.crypto.X509Utilities.CORDA_INTERMEDIATE_CA

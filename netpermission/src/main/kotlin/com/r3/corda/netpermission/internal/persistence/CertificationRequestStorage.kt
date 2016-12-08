@@ -1,4 +1,4 @@
-package com.r3corda.netpermission.internal.persistence
+package com.r3.corda.netpermission.internal.persistence
 
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.security.cert.Certificate

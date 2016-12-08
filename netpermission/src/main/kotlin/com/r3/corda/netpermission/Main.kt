@@ -1,8 +1,8 @@
-package com.r3corda.netpermission
+package com.r3.corda.netpermission
 
 import com.google.common.net.HostAndPort
-import com.r3corda.netpermission.internal.CertificateSigningService
-import com.r3corda.netpermission.internal.persistence.DBCertificateRequestStorage
+import com.r3.corda.netpermission.internal.CertificateSigningService
+import com.r3.corda.netpermission.internal.persistence.DBCertificateRequestStorage
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
 import net.corda.core.crypto.X509Utilities

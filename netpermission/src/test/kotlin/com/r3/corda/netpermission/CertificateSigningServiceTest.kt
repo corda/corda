@@ -1,11 +1,11 @@
-package com.r3corda.netpermission
+package com.r3.corda.netpermission
 
 import com.google.common.net.HostAndPort
 import com.nhaarman.mockito_kotlin.*
-import com.r3corda.netpermission.CertificateSigningServer.Companion.hostAndPort
-import com.r3corda.netpermission.internal.CertificateSigningService
-import com.r3corda.netpermission.internal.persistence.CertificationData
-import com.r3corda.netpermission.internal.persistence.CertificationRequestStorage
+import com.r3.corda.netpermission.CertificateSigningServer.Companion.hostAndPort
+import com.r3.corda.netpermission.internal.CertificateSigningService
+import com.r3.corda.netpermission.internal.persistence.CertificationData
+import com.r3.corda.netpermission.internal.persistence.CertificationRequestStorage
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.X509Utilities
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest

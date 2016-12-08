@@ -1,4 +1,4 @@
-package com.r3corda.netpermission.internal.persistence
+package com.r3.corda.netpermission.internal.persistence
 
 import net.corda.core.crypto.SecureHash
 import net.corda.node.utilities.*
@@ -50,12 +50,12 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
     override fun saveRequest(certificationData: CertificationData): String {
         return databaseTransaction(database) {
             withFinalizables { finalizables ->
-                val requestId = SecureHash.randomSHA256().toString()
+                val requestId = SecureHash.Companion.randomSHA256().toString()
                 DataTable.insert {
                     it[DataTable.requestId] = requestId
                     it[hostName] = certificationData.hostName
                     it[ipAddress] = certificationData.ipAddr
-                    it[DataTable.request] = serializeToBlob(certificationData.request, finalizables)
+                    it[request] = serializeToBlob(certificationData.request, finalizables)
                     it[requestTimestamp] = LocalDateTime.now()
                 }
                 requestId
