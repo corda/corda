@@ -8,7 +8,6 @@ import net.corda.core.serialization.DeserializeAsKotlinObjectDef
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.style.BCStyle
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -184,7 +183,6 @@ interface Message {
 interface ReceivedMessage : Message {
     /** The authenticated sender. */
     val peer: X500Name
-    val peerLegalName: String get() = peer.getRDNs(BCStyle.CN).first().first.value.toString()
 }
 
 /** A singleton that's useful for validating topic strings */

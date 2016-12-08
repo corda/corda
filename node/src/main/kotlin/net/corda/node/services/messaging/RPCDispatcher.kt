@@ -8,6 +8,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.HashMultimap
 import net.corda.core.ErrorOr
+import net.corda.core.crypto.commonName
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.RPCReturnsObservables
 import net.corda.core.serialization.SerializedBytes
@@ -16,14 +17,12 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.debug
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.User
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.node.utilities.AffinityExecutor
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.style.BCStyle
 import rx.Notification
 import rx.Observable
 import rx.Subscription
@@ -168,7 +167,7 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
         val rpcUser = userService.getUser(validatedUser)
         if (rpcUser != null) {
             return rpcUser
-        } else if (X500Name(validatedUser).getRDNs(BCStyle.CN).first().first.value.toString() == nodeLegalName) {
+        } else if (X500Name(validatedUser).commonName == nodeLegalName) {
             return nodeUser
         } else {
             throw IllegalArgumentException("Validated user '$validatedUser' is not an RPC user nor the NODE user")

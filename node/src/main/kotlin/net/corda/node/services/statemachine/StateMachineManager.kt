@@ -12,6 +12,7 @@ import kotlinx.support.jdk8.collections.removeIf
 import net.corda.core.ThreadBox
 import net.corda.core.abbreviate
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.commonName
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
@@ -220,7 +221,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                     // isn't required to be unique
                     // TODO For now have the doorman block signups with identical names, and names with characters that
                     // are used in X.500 name textual serialisation
-                    val otherParty = serviceHub.networkMapCache.getNodeByLegalName(message.peerLegalName)?.legalIdentity
+                    val otherParty = serviceHub.networkMapCache.getNodeByLegalName(message.peer.commonName)?.legalIdentity
                     if (otherParty != null) {
                         onSessionInit(sessionMessage, otherParty)
                     } else {

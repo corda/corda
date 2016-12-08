@@ -1,12 +1,13 @@
 package net.corda.node.utilities.certsigning
 
+import net.corda.core.crypto.CertificateStream
 import org.apache.commons.io.IOUtils
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.HttpURLConnection.*
 import java.net.URL
 import java.security.cert.Certificate
-import java.security.cert.CertificateFactory
 import java.util.*
 import java.util.zip.ZipInputStream
 
@@ -24,18 +25,17 @@ class HTTPCertificateSigningService(val server: URL) : CertificateSigningService
         conn.requestMethod = "GET"
 
         return when (conn.responseCode) {
-            HttpURLConnection.HTTP_OK -> conn.inputStream.use {
-                ZipInputStream(it).use {
-                    val certificates = ArrayList<Certificate>()
-                    while (it.nextEntry != null) {
-                        certificates.add(CertificateFactory.getInstance("X.509").generateCertificate(it))
-                    }
-                    certificates.toTypedArray()
+            HTTP_OK -> ZipInputStream(conn.inputStream).use {
+                val certificates = ArrayList<Certificate>()
+                val stream = CertificateStream(it)
+                while (it.nextEntry != null) {
+                    certificates.add(stream.nextCertificate())
                 }
+                certificates.toTypedArray()
             }
-            HttpURLConnection.HTTP_NO_CONTENT -> null
-            HttpURLConnection.HTTP_UNAUTHORIZED -> throw IOException("Certificate signing request has been rejected, please contact Corda network administrator for more information.")
-            else -> throw IOException("Unexpected response code ${conn.responseCode} - ${IOUtils.toString(conn.errorStream)}")
+            HTTP_NO_CONTENT -> null
+            HTTP_UNAUTHORIZED -> throw IOException("Certificate signing request has been rejected: ${conn.errorMessage}")
+            else -> throwUnexpectedResponseCode(conn)
         }
     }
 
@@ -49,10 +49,15 @@ class HTTPCertificateSigningService(val server: URL) : CertificateSigningService
         conn.outputStream.write(request.encoded)
 
         return when (conn.responseCode) {
-            HttpURLConnection.HTTP_OK -> IOUtils.toString(conn.inputStream)
-            HttpURLConnection.HTTP_FORBIDDEN -> throw IOException("Client version $clientVersion is forbidden from accessing permissioning server, please upgrade to newer version.")
-            else -> throw IOException("Unexpected response code ${conn.responseCode} - ${IOUtils.toString(conn.errorStream)}")
+            HTTP_OK -> IOUtils.toString(conn.inputStream)
+            HTTP_FORBIDDEN -> throw IOException("Client version $clientVersion is forbidden from accessing permissioning server, please upgrade to newer version.")
+            else -> throwUnexpectedResponseCode(conn)
         }
-
     }
+
+    private fun throwUnexpectedResponseCode(connection: HttpURLConnection): Nothing {
+        throw IOException("Unexpected response code ${connection.responseCode} - ${connection.errorMessage}")
+    }
+
+    private val HttpURLConnection.errorMessage: String get() = IOUtils.toString(errorStream)
 }
