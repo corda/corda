@@ -12,9 +12,11 @@ class AttachmentDemoTest {
     @Test fun `runs attachment demo`() {
         driver(dsl = {
             startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.Companion.type)))
-            val nodeA = startNode("Bank A").getOrThrow()
-            val nodeAApiAddr = nodeA.config.getHostAndPort("webAddress")
+            val nodeAFuture = startNode("Bank A")
             val nodeBApiAddr = startNode("Bank B").getOrThrow().config.getHostAndPort("webAddress")
+
+            val nodeA = nodeAFuture.getOrThrow()
+            val nodeAApiAddr = nodeA.config.getHostAndPort("webAddress")
 
             var recipientReturn: Boolean? = null
             var senderReturn: Boolean? = null

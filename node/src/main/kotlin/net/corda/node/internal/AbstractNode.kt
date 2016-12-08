@@ -11,6 +11,7 @@ import net.corda.core.crypto.X509Utilities
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.FlowStateMachine
+import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.*
 import net.corda.core.node.services.*
@@ -21,6 +22,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
+import net.corda.flows.FinalityFlow
 import net.corda.flows.sendRequest
 import net.corda.node.api.APIServer
 import net.corda.node.services.api.*
@@ -30,7 +32,6 @@ import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
-import net.corda.node.services.messaging.RPCOps
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_FLOW_TOPIC
@@ -82,7 +83,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
                         CashCommand.IssueCash::class.java,
                         CashCommand.PayCash::class.java,
                         CashCommand.ExitCash::class.java
-                )
+                ),
+                FinalityFlow::class.java to emptySet()
         )
     }
 
@@ -340,8 +342,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
     private fun buildPluginServices(tokenizableServices: MutableList<Any>): List<Any> {
         val pluginServices = pluginRegistries.flatMap { x -> x.servicePlugins }
         val serviceList = mutableListOf<Any>()
-        for (serviceClass in pluginServices) {
-            val service = serviceClass.getConstructor(PluginServiceHub::class.java).newInstance(services)
+        for (serviceConstructor in pluginServices) {
+            val service = serviceConstructor.apply(services)
             serviceList.add(service)
             tokenizableServices.add(service)
             if (service is AcceptsFileUpload) {

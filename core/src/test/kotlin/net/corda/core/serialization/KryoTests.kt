@@ -7,8 +7,10 @@ import net.corda.core.messaging.Ack
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.io.InputStream
 import java.time.Instant
 import java.util.*
+import kotlin.test.assertEquals
 
 class KryoTests {
 
@@ -80,6 +82,16 @@ class KryoTests {
         val serializedBytes = tokenizableBefore.serialize(kryo)
         val tokenizableAfter = serializedBytes.deserialize(kryo)
         assertThat(tokenizableAfter).isSameAs(tokenizableBefore)
+    }
+
+    @Test
+    fun `InputStream serialisation`() {
+        val rubbish = ByteArray(12345, { (it * it * 0.12345).toByte() })
+        val readRubbishStream: InputStream = rubbish.inputStream().serialize(kryo).deserialize(kryo)
+        for (i in 0 .. 12344) {
+            assertEquals(rubbish[i], readRubbishStream.read().toByte())
+        }
+        assertEquals(-1, readRubbishStream.read())
     }
 
     private data class Person(val name: String, val birthday: Instant?)

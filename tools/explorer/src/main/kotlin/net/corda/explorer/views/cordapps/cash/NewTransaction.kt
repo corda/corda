@@ -12,6 +12,7 @@ import net.corda.client.fxutils.unique
 import net.corda.client.model.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.explorer.model.CashTransaction
@@ -21,7 +22,6 @@ import net.corda.explorer.views.stringConverter
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.flows.CashFlowResult
-import net.corda.node.services.messaging.startFlow
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.Fragment
 import tornadofx.booleanBinding

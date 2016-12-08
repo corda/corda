@@ -31,6 +31,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
+import java.util.function.Function
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -49,8 +50,8 @@ object NodeInterestRates {
      * Register the flow that is used with the Fixing integration tests.
      */
     class Plugin : CordaPluginRegistry() {
-        override val requiredFlows: Map<String, Set<String>> = mapOf(Pair(FixingFlow.FixingRoleDecider::class.java.name, setOf(Duration::class.java.name, StateRef::class.java.name)))
-        override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
+        override val requiredFlows = mapOf(Pair(FixingFlow.FixingRoleDecider::class.java.name, setOf(Duration::class.java.name, StateRef::class.java.name)))
+        override val servicePlugins = listOf(Function(::Service))
     }
 
     /**

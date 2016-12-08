@@ -2,6 +2,7 @@ package net.corda.client
 
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.getOrThrow
+import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.OpaqueBytes
@@ -12,7 +13,7 @@ import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.toHostAndPort
-import net.corda.node.services.messaging.startFlow
+import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException

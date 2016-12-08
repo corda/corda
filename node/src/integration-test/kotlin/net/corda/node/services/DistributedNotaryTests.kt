@@ -34,6 +34,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
@@ -41,7 +44,11 @@ import kotlin.test.assertFailsWith
 
 // TODO: clean up and rewrite this using DriverDSL
 class DistributedNotaryTests {
-    val baseDir = "build/notaryTest"
+    private val folderName = DateTimeFormatter
+            .ofPattern("yyyyMMddHHmmss")
+            .withZone(ZoneOffset.UTC)
+            .format(Instant.now())
+    val baseDir = "build/notaryTest/$folderName"
     val notaryName = "Notary Service"
     val clusterSize = 3
 

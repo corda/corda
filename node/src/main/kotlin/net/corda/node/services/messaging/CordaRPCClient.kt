@@ -1,26 +1,17 @@
-package net.corda.client
+package net.corda.node.services.messaging
 
 import com.google.common.net.HostAndPort
-import net.corda.client.impl.CordaRPCClientImpl
 import net.corda.core.ThreadBox
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.node.services.config.NodeSSLConfiguration
-import net.corda.node.services.messaging.ArtemisMessagingComponent
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
-import net.corda.node.services.messaging.CordaRPCOps
-import net.corda.node.services.messaging.RPCException
-import net.corda.node.services.messaging.rpcLog
 import org.apache.activemq.artemis.api.core.ActiveMQException
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.apache.activemq.artemis.api.core.client.ClientSessionFactory
-import org.slf4j.LoggerFactory
 import rx.Observable
 import java.io.Closeable
-import java.nio.file.Path
 import java.time.Duration
 import javax.annotation.concurrent.ThreadSafe
-import kotlin.concurrent.thread
 
 /**
  * An RPC client connects to the specified server and allows you to make calls to the server that perform various
