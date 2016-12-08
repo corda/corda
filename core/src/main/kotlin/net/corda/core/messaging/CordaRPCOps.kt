@@ -1,7 +1,9 @@
-package net.corda.node.services.messaging
+package net.corda.core.messaging
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
@@ -10,49 +12,19 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ProgressTracker
-import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.utilities.AddOrRemove
 import rx.Observable
+import java.io.InputStream
+import java.time.Instant
 
 data class StateMachineInfo(
         val id: StateMachineRunId,
         val flowLogicClassName: String,
         val progressTrackerStepAndUpdates: Pair<String, Observable<String>>?
-) {
-    companion object {
-        fun fromFlowStateMachineImpl(psm: FlowStateMachineImpl<*>): StateMachineInfo {
-            return StateMachineInfo(
-                    id = psm.id,
-                    flowLogicClassName = psm.logic.javaClass.simpleName,
-                    progressTrackerStepAndUpdates = psm.logic.track()
-            )
-        }
-    }
-}
+)
 
 sealed class StateMachineUpdate(val id: StateMachineRunId) {
     class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate(stateMachineInfo.id)
     class Removed(id: StateMachineRunId) : StateMachineUpdate(id)
-
-    companion object {
-        fun fromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {
-            return when (change.addOrRemove) {
-                AddOrRemove.ADD -> {
-                    val stateMachineInfo = StateMachineInfo(
-                            id = change.id,
-                            flowLogicClassName = change.logic.javaClass.simpleName,
-                            progressTrackerStepAndUpdates = change.logic.track()
-                    )
-                    StateMachineUpdate.Added(stateMachineInfo)
-                }
-                AddOrRemove.REMOVE -> {
-                    StateMachineUpdate.Removed(change.id)
-                }
-            }
-        }
-    }
 }
 
 /**
@@ -112,6 +84,33 @@ interface CordaRPCOps : RPCOps {
      * Retrieve existing note(s) for a given Vault transaction
      */
     fun getVaultTransactionNotes(txnId: SecureHash): Iterable<String>
+
+    /**
+     * Checks whether an attachment with the given hash is stored on the node.
+     */
+    fun attachmentExists(id: SecureHash): Boolean
+
+    /**
+     * Uploads a jar to the node, returns it's hash.
+     */
+    fun uploadAttachment(jar: InputStream): SecureHash
+
+    /**
+     * Returns the node-local current time.
+     */
+    fun currentNodeTime(): Instant
+
+    // TODO These need rethinking. Instead of these direct calls we should have a way of replicating a subset of
+    // the node's state locally and query that directly.
+    /**
+     * Returns the [Party] corresponding to the given key, if found.
+     */
+    fun partyFromKey(key: CompositeKey): Party?
+
+    /**
+     * Returns the [Party] with the given name as it's [Party.name]
+     */
+    fun partyFromName(name: String): Party?
 }
 
 /**
@@ -158,8 +157,17 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow
         arg3: D
 ) = startFlowDynamic(R::class.java, arg0, arg1, arg2, arg3)
 
+/**
+ * [FlowHandle] is a serialisable handle for the started flow, parameterised by the type of the flow's return value.
+ *
+ * @param id The started state machine's ID.
+ * @param progress The stream of progress tracker events.
+ * @param returnValue An Observable emitting a single event containing the flow's return value.
+ *     To block on this value:
+ *       val returnValue = rpc.startFlow(::MyFlow).returnValue.toBlocking().first()
+ */
 data class FlowHandle<A>(
         val id: StateMachineRunId,
-        val progress: Observable<ProgressTracker.Change>,
+        val progress: Observable<String>,
         val returnValue: Observable<A>
 )

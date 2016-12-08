@@ -1,9 +1,9 @@
 package net.corda.docs
 
-import net.corda.client.CordaRPCClient
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.issuedBy
+import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
@@ -14,7 +14,7 @@ import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.ArtemisMessagingComponent
-import net.corda.node.services.messaging.startFlow
+import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.expect

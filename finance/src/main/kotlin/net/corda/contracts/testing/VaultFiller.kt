@@ -63,7 +63,7 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
     return Vault(states)
 }
 
-private fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, max: Int, rng: Random): LongArray {
+fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, max: Int, rng: Random): LongArray {
     val numSlots = min + Math.floor(rng.nextDouble() * (max - min)).toInt()
     val baseSize = howMuch.quantity / numSlots
     check(baseSize > 0) { baseSize }

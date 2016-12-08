@@ -7,12 +7,12 @@ import net.corda.client.mock.replicatePoisson
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.Party
+import net.corda.core.messaging.startFlow
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.flows.CashFlowResult
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeHandle
-import net.corda.node.services.messaging.startFlow
 import org.slf4j.LoggerFactory
 import java.util.*
 

@@ -50,8 +50,6 @@ dependencies {
     // Corda integration dependencies
     runtime project(path: ":node", configuration: 'runtimeArtifacts')
     compile project(':core')
-    compile project(':client')
-    compile project(':node')
     compile project(':finance')
     compile project(':test-utils')
 

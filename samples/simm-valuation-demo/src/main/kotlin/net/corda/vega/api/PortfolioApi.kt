@@ -1,11 +1,13 @@
 package net.corda.vega.api
 
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount
+import net.corda.core.contracts.DealState
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.filterStatesOfType
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.dealsWith
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.startFlow
 import net.corda.vega.analytics.InitialMarginTriple
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState
@@ -17,23 +19,29 @@ import net.corda.vega.portfolio.toPortfolio
 import net.corda.vega.portfolio.toStateAndRef
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 
 //TODO: Change import namespaces vega -> ....
 
+
 @Path("simmvaluationdemo")
-class PortfolioApi(val services: ServiceHub) {
-    private val ownParty: Party get() = services.myInfo.legalIdentity
+class PortfolioApi(val rpc: CordaRPCOps) {
+    private val ownParty: Party get() = rpc.nodeIdentity().legalIdentity
     private val portfolioUtils = PortfolioApiUtils(ownParty)
+
+    private inline fun <reified T : DealState> dealsWith(party: Party): List<StateAndRef<T>> {
+        return rpc.vaultAndUpdates().first.filterStatesOfType<T>().filter { it.state.data.parties.any { it == party } }
+    }
 
     /**
      * DSL to get a party and then executing the passed function with the party as a parameter.
      * Used as such: withParty(name) { doSomethingWith(it) }
      */
     private fun withParty(partyName: String, func: (Party) -> Response): Response {
-        val otherParty = services.identityService.partyFromKey(CompositeKey.parseFromBase58(partyName))
+        val otherParty = rpc.partyFromKey(CompositeKey.parseFromBase58(partyName))
         return if (otherParty != null) {
             func(otherParty)
         } else {
@@ -57,13 +65,13 @@ class PortfolioApi(val services: ServiceHub) {
     /**
      * Gets all existing IRSStates with the party provided.
      */
-    private fun getTradesWith(party: Party) = services.vaultService.dealsWith<IRSState>(party)
+    private fun getTradesWith(party: Party) = dealsWith<IRSState>(party)
 
     /**
      * Gets the most recent portfolio state, or null if not extant, with the party provided.
      */
     private fun getPortfolioWith(party: Party): PortfolioState? {
-        val portfolios = services.vaultService.dealsWith<PortfolioState>(party)
+        val portfolios = dealsWith<PortfolioState>(party)
         // Can have at most one between any two parties with the current no split portfolio model
         require(portfolios.size < 2) { "This API currently only supports one portfolio with a counterparty" }
         return portfolios.firstOrNull()?.state?.data
@@ -75,7 +83,7 @@ class PortfolioApi(val services: ServiceHub) {
      * @warning Do not call if you have not agreed a portfolio with the other party.
      */
     private fun getPortfolioStateAndRefWith(party: Party): StateAndRef<PortfolioState> {
-        val portfolios = services.vaultService.dealsWith<PortfolioState>(party)
+        val portfolios = dealsWith<PortfolioState>(party)
         // Can have at most one between any two parties with the current no split portfolio model
         require(portfolios.size < 2) { "This API currently only supports one portfolio with a counterparty" }
         return portfolios.first()
@@ -92,7 +100,7 @@ class PortfolioApi(val services: ServiceHub) {
     fun getBusinessDate(): Any {
         return json {
             obj(
-                    "business-date" to LocalDateTime.now(services.clock).toLocalDate()
+                    "business-date" to  LocalDateTime.ofInstant(rpc.currentNodeTime(), ZoneId.systemDefault()).toLocalDate()
             )
         }
     }
@@ -106,13 +114,13 @@ class PortfolioApi(val services: ServiceHub) {
     @Produces(MediaType.APPLICATION_JSON)
     fun getPartyTrades(@PathParam("party") partyName: String): Response {
         return withParty(partyName) {
-            val states = services.vaultService.dealsWith<IRSState>(it)
+            val states = dealsWith<IRSState>(it)
             val latestPortfolioStateRef: StateAndRef<PortfolioState>
             var latestPortfolioStateData: PortfolioState? = null
             var PVs: Map<String, MultiCurrencyAmount>? = null
             var IMs: Map<String, InitialMarginTriple>? = null
-            if (services.vaultService.dealsWith<PortfolioState>(it).isNotEmpty()) {
-                latestPortfolioStateRef = services.vaultService.dealsWith<PortfolioState>(it).last()
+            if (dealsWith<PortfolioState>(it).isNotEmpty()) {
+                latestPortfolioStateRef = dealsWith<PortfolioState>(it).last()
                 latestPortfolioStateData = latestPortfolioStateRef.state.data
                 PVs = latestPortfolioStateData.valuation?.presentValues
                 IMs = latestPortfolioStateData.valuation?.imContributionMap
@@ -121,9 +129,9 @@ class PortfolioApi(val services: ServiceHub) {
             val swaps = states.map { it.state.data.swap }
             Response.ok().entity(swaps.map {
                 it.toView(ownParty,
-                        latestPortfolioStateData?.portfolio?.toStateAndRef<IRSState>(services)?.toPortfolio(),
-                        PVs?.get(it.id.second) ?: MultiCurrencyAmount.empty(),
-                        IMs?.get(it.id.second) ?: InitialMarginTriple.zero()
+                        latestPortfolioStateData?.portfolio?.toStateAndRef<IRSState>(rpc)?.toPortfolio(),
+                        PVs?.get(it.id.second.toString()) ?: MultiCurrencyAmount.empty(),
+                        IMs?.get(it.id.second.toString()) ?: InitialMarginTriple.zero()
                 )
             }).build()
         }
@@ -137,7 +145,7 @@ class PortfolioApi(val services: ServiceHub) {
     @Produces(MediaType.APPLICATION_JSON)
     fun getPartyTrade(@PathParam("party") partyName: String, @PathParam("tradeId") tradeId: String): Response {
         return withParty(partyName) {
-            val states = services.vaultService.dealsWith<IRSState>(it)
+            val states = dealsWith<IRSState>(it)
             val tradeState = states.first { it.state.data.swap.id.second == tradeId }.state.data
             Response.ok().entity(portfolioUtils.createTradeView(tradeState)).build()
         }
@@ -153,7 +161,7 @@ class PortfolioApi(val services: ServiceHub) {
         return withParty(partyName) {
             val buyer = if (swap.buySell.isBuy) ownParty else it
             val seller = if (swap.buySell.isSell) ownParty else it
-            services.invokeFlowAsync(IRSTradeFlow.Requester::class.java, swap.toData(buyer, seller), it).resultFuture.get()
+            rpc.startFlow(IRSTradeFlow::Requester, swap.toData(buyer, seller), it).returnValue.toBlocking().first()
             Response.accepted().entity("{}").build()
         }
     }
@@ -169,7 +177,7 @@ class PortfolioApi(val services: ServiceHub) {
     fun getPartyPortfolioValuations(@PathParam("party") partyName: String): Response {
         return withParty(partyName) { otherParty ->
             withPortfolio(otherParty) { portfolioState ->
-                val portfolio = portfolioState.portfolio.toStateAndRef<IRSState>(services).toPortfolio()
+                val portfolio = portfolioState.portfolio.toStateAndRef<IRSState>(rpc).toPortfolio()
                 Response.ok().entity(portfolioUtils.createValuations(portfolioState, portfolio)).build()
             }
         }
@@ -238,7 +246,7 @@ class PortfolioApi(val services: ServiceHub) {
     @Path("whoami")
     @Produces(MediaType.APPLICATION_JSON)
     fun getWhoAmI(): Any {
-        val counterParties = services.networkMapCache.partyNodes.filter { it.legalIdentity.name != "NetworkMapService" && it.legalIdentity.name != "Notary" && it.legalIdentity.name != ownParty.name }
+        val counterParties = rpc.networkMapUpdates().first.filter { it.legalIdentity.name != "NetworkMapService" && it.legalIdentity.name != "Notary" && it.legalIdentity.name != ownParty.name }
         return json {
             obj(
                     "self" to obj(
@@ -268,13 +276,14 @@ class PortfolioApi(val services: ServiceHub) {
         return withParty(partyName) { otherParty ->
             val existingSwap = getPortfolioWith(otherParty)
             if (existingSwap == null) {
-                services.invokeFlowAsync(SimmFlow.Requester::class.java, otherParty, params.valuationDate).resultFuture.get()
+                rpc.startFlow(SimmFlow::Requester, otherParty, params.valuationDate).returnValue.toBlocking().first()
             } else {
-                services.invokeFlowAsync(SimmRevaluation.Initiator::class.java, getPortfolioStateAndRefWith(otherParty).ref, params.valuationDate).resultFuture.get()
+                val handle = rpc.startFlow(SimmRevaluation::Initiator, getPortfolioStateAndRefWith(otherParty).ref, params.valuationDate)
+                handle.returnValue.toBlocking().first()
             }
 
             withPortfolio(otherParty) { portfolioState ->
-                val portfolio = portfolioState.portfolio.toStateAndRef<IRSState>(services).toPortfolio()
+                val portfolio = portfolioState.portfolio.toStateAndRef<IRSState>(rpc).toPortfolio()
                 Response.ok().entity(portfolioUtils.createValuations(portfolioState, portfolio)).build()
             }
         }

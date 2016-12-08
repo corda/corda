@@ -28,5 +28,6 @@ data class User(val username: String, val password: String, val permissions: Set
     override fun toString(): String = "${javaClass.simpleName}($username, permissions=$permissions)"
 }
 
-fun <P : FlowLogic<*>> startFlowPermission(clazz: Class<P>) = "StartFlow.${clazz.name}"
+fun startFlowPermission(className: String) = "StartFlow.$className"
+fun <P : FlowLogic<*>> startFlowPermission(clazz: Class<P>) = startFlowPermission(clazz.name)
 inline fun <reified P : FlowLogic<*>> startFlowPermission(): String = startFlowPermission(P::class.java)
