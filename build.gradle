@@ -155,3 +155,5 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
 
 // Aliasing the publishToMavenLocal for simplicity.
 task(install, dependsOn: 'publishToMavenLocal')
+ 
+ 
