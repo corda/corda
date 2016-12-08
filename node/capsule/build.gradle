@@ -48,7 +48,7 @@ dependencies {
     compile project(':node')
 }
 
-task buildCordaJAR(type: FatCapsule, dependsOn: [':node:jar', 'buildCertSigningRequestUtilityJAR']) {
+task buildCordaJAR(type: FatCapsule, dependsOn: ['buildCertSigningRequestUtilityJAR']) {
     applicationClass 'net.corda.node.MainKt'
     archiveName "corda-${corda_version}.jar"
     applicationSource = files(project.tasks.findByName('jar'), 'build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
@@ -61,7 +61,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [':node:jar', 'buildCertSigningR
     }
 }
 
-task buildCertSigningRequestUtilityJAR(type: FatCapsule, dependsOn: [':node:jar']) {
+task buildCertSigningRequestUtilityJAR(type: FatCapsule) {
     applicationClass 'net.corda.node.utilities.certsigning.CertificateSignerKt'
     archiveName 'certSigningRequestUtility.jar'
     capsuleManifest {

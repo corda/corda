@@ -68,16 +68,16 @@ Next you must setup the general bintray configuration you wish to use project wi
 **Publications**
 
 This plugin assumes, by default, that publications match the name of the project. This means, by default, you can
-just list the names of the projects you wish to publish (eg; to publish `test:myapp` you need  `publications = ['myapp']`.
+just list the names of the projects you wish to publish (e.g. to publish `test:myapp` you need  `publications = ['myapp']`.
 If a project requires a different name you can configure it *per project* with the project configuration block.
 
-The project configuration block has the following structure;
+The project configuration block has the following structure:
 
 .. code-block:: text
 
     publish {
         name = 'non-default-project-name'
-        disableDefaultJar = false // set to true to disable the default JAR being created (eg; when creating a fat JAR)
+        disableDefaultJar = false // set to true to disable the default JAR being created (e.g. when creating a fat JAR)
     }
 
 **Artifacts**

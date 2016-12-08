@@ -69,7 +69,7 @@ Publishing
 ``````````
 
 1. Publish to Bintray
-2. Navigate to the project you wish to publist
+2. Navigate to the project you wish to publish
 3. Click "Maven Central"
 4. Enter your Sonatype credentials to publish a new version
 
