@@ -1,0 +1,16 @@
+<html5>
+<html>
+  <head>
+    <script src='angular.js'></script>
+    <script src='fcsaNumber.js'></script>
+    <script>
+      var app = angular.module('app', ['fcsa-number']);
+      app.controller('HomeController', function($scope) {
+        $scope.amount = 1000;
+      });
+    </script>
+  </head>
+  <body ng-app='app' ng-controller='HomeController'>
+    <input type='text' ng-model='amount' fcsa-number />
+  </body>
+</html>

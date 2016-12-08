@@ -11,8 +11,9 @@
       <option name="taskNames">
         <list>
           <option value="clean" />
+          <option value="build" />
           <option value="installDist" />
-          <option value="buildCordaJAR" />
+          <option value="install" />
         </list>
       </option>
       <option name="vmOptions" value="" />

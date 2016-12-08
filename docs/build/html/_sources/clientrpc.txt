@@ -17,6 +17,13 @@ detail on how to use this is provided in the docs for the proxy method.
 
 For a brief tutorial on how one can use the RPC API see :doc:`tutorial-clientrpc-api`.
 
+Security
+--------
+
+Users wanting to use the RPC library are first required to authenticate themselves with the node using a valid username
+and password. These are specified in the configuration file. Each user can be configured with a set of permissions which
+the RPC can use for fine-grain access control.
+
 Observables
 -----------
 
@@ -73,5 +80,17 @@ Wire protocol
 The client RPC wire protocol is not currently documented. To use it you must use the client library provided.
 This is likely to change in a future release.
 
-.. _CordaRPCClient: api/com.r3corda.client/-corda-r-p-c-client/index.html
-.. _CordaRPCOps: api/com.r3corda.node.services.messaging/-corda-r-p-c-ops/index.html
+Registering classes with RPC Kryo
+---------------------------------
+
+In the present implementation of the node we use Kryo to generate the *on the wire* representation of contracts states
+or any other classes that form part of the RPC arguments or response.  To avoid the RPC interface being wide open to all
+classes on the classpath, Cordapps will currently have to register any classes or custom serialisers they require with Kryo
+if they are not one of those registered by default in ``RPCKryo`` via the plugin architecture.  See :doc:`creating-a-cordapp`.
+This will require some familiarity with Kryo.  An example is shown in :doc:`tutorial-clientrpc-api`.
+
+.. warning:: We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin
+   customisation point will either go away completely or change.
+
+.. _CordaRPCClient: api/net.corda.client/-corda-r-p-c-client/index.html
+.. _CordaRPCOps: api/net.corda.node.services.messaging/-corda-r-p-c-ops/index.html

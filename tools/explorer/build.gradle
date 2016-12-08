@@ -1,0 +1,83 @@
+buildscript {
+    ext.kotlin_version = '1.0.3'
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'application'
+
+sourceCompatibility = 1.8
+mainClassName = 'net.corda.explorer.Main'
+
+sourceSets {
+    main {
+        resources {
+            srcDir "../../config/dev"
+        }
+    }
+    test {
+        resources {
+            srcDir "../../config/test"
+        }
+    }
+}
+
+repositories {
+    jcenter()
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+
+    // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
+    compile 'no.tornado:tornadofx:1.5.7'
+
+    // Corda Core: Data structures and basic types needed to work with Corda.
+    compile project(':core')
+    compile project(':client')
+    compile project(':node')
+    compile project(':finance')
+
+    // FontAwesomeFX: The "FontAwesome" icon library.
+    compile 'de.jensd:fontawesomefx-fontawesome:4.6.1-2'
+
+    // ReactFX: Functional reactive UI programming.
+    compile 'org.reactfx:reactfx:2.0-M5'
+    compile 'org.fxmisc.easybind:easybind:1.0.3'
+
+    // JFXtras: useful widgets including a calendar control.
+    compile 'org.jfxtras:jfxtras-agenda:8.0-r5'
+    compile 'org.jfxtras:jfxtras-font-roboto:8.0-r5'
+
+    // Humanize: formatting
+    compile 'com.github.mfornos:humanize-icu:1.2.2'
+
+    // Controls FX: more java FX components http://fxexperience.com/controlsfx/
+    compile 'org.controlsfx:controlsfx:8.40.12'
+    compile 'commons-lang:commons-lang:2.6'
+    // This provide com.apple.eawt stub for non-mac system.
+    compile 'com.yuvimasory:orange-extensions:1.3.0'
+}
+
+task(runDemoNodes, dependsOn: 'classes', type: JavaExec) {
+    main = 'net.corda.explorer.MainKt'
+    classpath = sourceSets.main.runtimeClasspath
+}

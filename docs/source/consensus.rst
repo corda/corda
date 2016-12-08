@@ -59,18 +59,18 @@ Ensuring that all input states point to the same notary is the responsibility of
 Changing notaries
 ~~~~~~~~~~~~~~~~~
 
-To change the notary for an input state, use the ``NotaryChangeProtocol``. For example:
+To change the notary for an input state, use the ``NotaryChangeFlow``. For example:
 
 .. sourcecode:: kotlin
 
     @Suspendable
     fun changeNotary(originalState: StateAndRef<ContractState>,
                      newNotary: Party): StateAndRef<ContractState> {
-        val protocol = NotaryChangeProtocol.Instigator(originalState, newNotary)
-        return subProtocol(protocol)
+        val flow = NotaryChangeFlow.Instigator(originalState, newNotary)
+        return subFlow(flow)
     }
 
-The protocol will:
+The flow will:
 
 1. Construct a transaction with the old state as the input and the new state as the output
 
@@ -96,7 +96,7 @@ Our platform is flexible and we currently support both validating and non-valida
 .. note:: In the non-validating model the "denial of state" attack is partially alleviated by requiring the calling
    party to authenticate and storing its identity for the request. The conflict information returned by the notary
    specifies the consuming transaction ID along with the identity of the party that had requested the commit. If the
-   conflicting transaction is valid, the current one gets aborted; if not – a dispute can be raised and the input states
+   conflicting transaction is valid, the current one gets aborted; if not - a dispute can be raised and the input states
    of the conflicting invalid transaction are "un-committed" (to be covered by legal process).
 
 .. note:: At present all notaries can see the entire contents of a transaction, but we have a separate piece of work to
@@ -124,7 +124,7 @@ time observed in step 1.
 For this reason, times in transactions are specified as time *windows*, not absolute times. Time windows can be
 open-ended, i.e. specify only one of "before" and "after" or they can be fully bounded. If a time window needs to
 be converted to an absolute time for e.g. display purposes, there is a utility method on ``Timestamp`` to
-calculate the mid point - but in a distributed system there can never be "true time", only an approximation of it.
+calculate the mid point -- but in a distributed system there can never be "true time", only an approximation of it.
 
 In this way we express that the *true value* of the fact "the current time" is actually unknowable. Even when both before and
 after times are included, the transaction could have occurred at any point between those two timestamps. Here
@@ -139,57 +139,3 @@ By creating a range that can be either closed or open at one end, we allow all o
 
 .. note:: It is assumed that the time feed for a notary is GPS/NaviStar time as defined by the atomic
    clocks at the US Naval Observatory. This time feed is extremely accurate and available globally for free.
-
-Running a notary service
-------------------------
-
-At present we have two basic implementations that store committed input states in memory:
-
-- ``SimpleNotaryService`` -- commits the provided transaction without any validation
-
-- ``ValidatingNotaryService`` -- retrieves and validates the whole transaction history (including the given transaction) before committing
-
-Obtaining a signature
----------------------
-
-Once a transaction is built and ready to be finalised, normally you would call ``FinalityProtocol`` passing in a
-``SignedTransaction`` (including signatures from the participants) and a list of participants to notify. This requests a
-notary signature if needed, and then sends a copy of the notarised transaction to all participants for them to store.
-``FinalityProtocol`` delegates to ``NotaryProtocol.Client`` followed by ``BroadcastTransactionProtocol`` to do the
-actual work of notarising and broadcasting the transaction. For example:
-
-.. sourcecode:: kotlin
-
-    fun finaliseTransaction(serviceHub: ServiceHubInternal, ptx: TransactionBuilder, participants: Set<Party>)
-            : ListenableFuture<Unit> {
-        // We conclusively cannot have all the signatures, as the notary has not signed yet
-        val tx = ptx.toSignedTransaction(checkSufficientSignatures = false)
-        // The empty set would be the trigger events, which are not used here
-        val protocol = FinalityProtocol(tx, emptySet(), participants)
-        return serviceHub.startProtocol("protocol.finalisation", protocol)
-    }
-
-To manually obtain a signature from a notary you can call ``NotaryProtocol.Client`` directly. The protocol will work out
-which notary needs to be called based on the input states and the timestamp command. For example, the following snippet
-can be used when writing a custom protocol:
-
-.. sourcecode:: kotlin
-
-    fun getNotarySignature(wtx: WireTransaction): DigitalSignature.LegallyIdentifiable {
-        return subProtocol(NotaryProtocol.Client(wtx))
-    }
-
-On conflict the ``NotaryProtocol`` with throw a ``NotaryException`` containing the conflict details:
-
-.. sourcecode:: kotlin
-
-    /** Specifies the consuming transaction for the conflicting input state */
-    data class Conflict(val stateHistory: Map<StateRef, ConsumingTx>)
-
-    /**
-     * Specifies the transaction id, the position of the consumed state in the inputs, and
-     * the caller identity requesting the commit
-     */
-    data class ConsumingTx(val id: SecureHash, val inputIndex: Int, val requestingParty: Party)
-
-Conflict handling and resolution is currently the responsibility of the protocol author.

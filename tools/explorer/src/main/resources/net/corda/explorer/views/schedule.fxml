@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import java.lang.*?>
+<VBox xmlns="http://javafx.com/javafx/8.0.60" xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <StackPane alignment="CENTER_RIGHT">
+            <VBox.margin>
+                <Insets bottom="5.0"/>
+            </VBox.margin>
+            <children>
+                <TextField promptText="Search by creditor" styleClass="search">
+                    <opaqueInsets>
+                        <Insets/>
+                    </opaqueInsets>
+                    <StackPane.margin>
+                        <Insets/>
+                    </StackPane.margin>
+                    <padding>
+                        <Insets bottom="5.0" left="30.0" right="5.0" top="5.0"/>
+                    </padding>
+                </TextField>
+                <ImageView id="clear" fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true"
+                           styleClass="search-clear">
+                    <image>
+                        <Image url="@Desktop/clear_inactive.png"/>
+                    </image>
+                    <StackPane.margin>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                    </StackPane.margin>
+                </ImageView>
+            </children>
+        </StackPane>
+        <VBox/>
+        <TreeTableView showRoot="false" sortMode="ONLY_FIRST_LEVEL" VBox.vgrow="ALWAYS">
+            <columns>
+                <TreeTableColumn prefWidth="240.0" styleClass="first-column" text="Creditor"/>
+                <TreeTableColumn editable="false" minWidth="0.0" prefWidth="122.0" text="Total outstanding">
+                    <styleClass>
+                        <String fx:value="montetary-value"/>
+                        <String fx:value="second-column"/>
+                    </styleClass>
+                </TreeTableColumn>
+                <TreeTableColumn editable="false" minWidth="0.0" prefWidth="156.0" styleClass="montetary-value"
+                                 text="Overdue"/>
+                <TreeTableColumn prefWidth="75.0" styleClass="montetary-value" text="1d"/>
+                <TreeTableColumn prefWidth="75.0" styleClass="montetary-value" text="2-7d"/>
+                <TreeTableColumn prefWidth="75.0" styleClass="montetary-value" text="8-14d"/>
+                <TreeTableColumn prefWidth="75.0" styleClass="montetary-value" text="14d-1m"/>
+                <TreeTableColumn prefWidth="75.0" styleClass="montetary-value" text="1-3m"/>
+                <TreeTableColumn prefWidth="75.0" styleClass="montetary-value" text="3-6m"/>
+                <TreeTableColumn prefWidth="75.0" styleClass="montetary-value" text="6m-1yr"/>
+                <TreeTableColumn prefWidth="75.0" styleClass="montetary-value" text="1-5yr"/>
+                <TreeTableColumn prefWidth="75.0" styleClass="montetary-value" text="&gt;5yr"/>
+            </columns>
+            <columnResizePolicy>
+                <TreeTableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+            </columnResizePolicy>
+        </TreeTableView>
+        <Label alignment="BOTTOM_LEFT" prefHeight="16.0" text="Total 15 matching issuer(s)" wrapText="true">
+            <VBox.margin>
+                <Insets bottom="5.0" right="10.0" top="5.0"/>
+            </VBox.margin>
+        </Label>
+    </children>
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+    </padding>
+</VBox>

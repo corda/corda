@@ -32,7 +32,7 @@
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Writing a contract using clauses" href="tutorial-contract-clauses.html"/>
-        <link rel="prev" title="Where to start" href="where-to-start.html"/> 
+        <link rel="prev" title="Network permissioning" href="permissioning.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -85,26 +85,45 @@
           
             
             
-                <p class="caption"><span class="caption-text">Overview</span></p>
+                <p class="caption"><span class="caption-text">Getting started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#template-build-gradle">Template build.gradle</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#cordformation">Cordformation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Writing a contract</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#where-to-put-your-code">Where to put your code</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#starting-the-commercial-paper-class">Starting the commercial paper class</a></li>
@@ -124,30 +143,44 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Contracts</span></p>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Node API</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>
 
             
@@ -195,24 +228,45 @@
   <script type="text/javascript" src="_static/jquery.js"></script>
 <script type="text/javascript" src="_static/codesets.js"></script><div class="section" id="writing-a-contract">
 <h1>Writing a contract<a class="headerlink" href="#writing-a-contract" title="Permalink to this headline">¶</a></h1>
-<p>This tutorial will take you through how the commercial paper contract works. This uses a simple contract structure of
-everything being in one contract class, while most actual contracts in Corda are broken into clauses (which we&#8217;ll
-discuss in the next tutorial). Clauses help reduce tedious boilerplate, but it&#8217;s worth understanding how a
-contract is built without them before starting.</p>
-<p>You can see the full Kotlin version of this contract in the code as <code class="docutils literal"><span class="pre">CommercialPaperLegacy</span></code>. The code in this
-tutorial is available in both Kotlin and Java. You can quickly switch between them to get a feeling for how
-Kotlin syntax works.</p>
+<p>This tutorial will take you through writing a contract, using a simple commercial paper contract as an example.
+Smart contracts in Corda have three key elements:</p>
+<ul class="simple">
+<li>Executable code (validation logic)</li>
+<li>State objects</li>
+<li>Commands</li>
+</ul>
+<p>The core of a smart contract is the executable code which validates changes to state objects in transactions. State
+objects are the data held on the ledger, which represent the current state of an instance of a contract, and are used as
+inputs and outputs of transactions. Commands are additional data included in transactions to describe what is going on,
+used to instruct the executable code on how to verify the transaction. For example an <code class="docutils literal"><span class="pre">Issue</span></code> command may indicate
+that the validation logic should expect to see an output which does not exist as an input, issued by the same entity
+that signed the command.</p>
+<p>The first thing to think about with a new contract is the lifecycle of contract states, how are they issued, what happens
+to them after they are issued, and how are they destroyed (if applicable). For the commercial paper contract, states are
+issued by a legal entity which wishes to create a contract to pay money in the future (the maturity date), in return for
+a lesser payment now. They are then transferred (moved) to another owner as part of a transaction where the issuer
+receives funds in payment, and later (after the maturity date) are destroyed (redeemed) by paying the owner the face
+value of the commercial paper.</p>
+<p>This lifecycle for commercial paper is illustrated in the diagram below:</p>
+<img alt="_images/contract-cp.png" src="_images/contract-cp.png" />
 <div class="section" id="where-to-put-your-code">
 <h2>Where to put your code<a class="headerlink" href="#where-to-put-your-code" title="Permalink to this headline">¶</a></h2>
-<p>A CorDapp is a collection of contracts, state definitions, protocols and other ways to extend the server. To create
-one you would just create a Java-style project as normal, with your choice of build system (Maven, Gradle, etc).
-Then add a dependency on <code class="docutils literal"><span class="pre">com.r3corda:core:0.X</span></code> where X is the milestone number you are depending on. The core
-module defines the base classes used in this tutorial.</p>
+<p>A CorDapp is a collection of contracts, state definitions, flows and other ways to extend the Corda platform.
+To create one you would typically clone the CorDapp template project (&#8220;cordapp-template&#8221;), which provides an example
+structure for the code. Alternatively you can just create a Java-style project as normal, with your choice of build
+system (Maven, Gradle, etc), then add a dependency on <code class="docutils literal"><span class="pre">net.corda.core:0.X</span></code> where X is the milestone number you are
+depending on. The core module defines the base classes used in this tutorial.</p>
 </div>
 <div class="section" id="starting-the-commercial-paper-class">
 <h2>Starting the commercial paper class<a class="headerlink" href="#starting-the-commercial-paper-class" title="Permalink to this headline">¶</a></h2>
-<p>A smart contract is a class that implements the <code class="docutils literal"><span class="pre">Contract</span></code> interface. This can be either implemented directly, or
-by subclassing an abstract contract such as <code class="docutils literal"><span class="pre">OnLedgerAsset</span></code>.</p>
+<p>A smart contract is a class that implements the <code class="docutils literal"><span class="pre">Contract</span></code> interface. This can be either implemented directly, as done
+here, or by subclassing an abstract contract such as <code class="docutils literal"><span class="pre">OnLedgerAsset</span></code>. The heart of any contract in Corda is the
+<code class="docutils literal"><span class="pre">verify()</span></code> function, which determined whether any given transaction is valid. This example shows how to write a
+<code class="docutils literal"><span class="pre">verify()</span></code> function from scratch. A later tutorial will introduce &#8220;clauses&#8221;, which are reusable chunks of verification
+logic, but first it&#8217;s worth understanding how a contract is built without them.</p>
+<p>You can see the full Kotlin version of this contract in the code as <code class="docutils literal"><span class="pre">CommercialPaperLegacy</span></code>. The code in this
+tutorial is available in both Kotlin and Java. You can quickly switch between them to get a feeling for how
+Kotlin syntax works.</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CommercialPaper</span> <span class="p">:</span> <span class="n">Contract</span> <span class="p">{</span>
     <span class="k">override</span> <span class="k">val</span> <span class="py">legalContractReference</span><span class="p">:</span> <span class="n">SecureHash</span> <span class="p">=</span> <span class="n">SecureHash</span><span class="p">.</span><span class="n">sha256</span><span class="p">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="p">);</span>
@@ -251,7 +305,8 @@ piece of issued paper.</p>
 </div>
 <div class="section" id="states">
 <h2>States<a class="headerlink" href="#states" title="Permalink to this headline">¶</a></h2>
-<p>A state is a class that stores data that is checked by the contract.</p>
+<p>A state is a class that stores data that is checked by the contract. A commercial paper state is structured as below:</p>
+<img alt="_images/contract-cp-state.png" src="_images/contract-cp-state.png" />
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">data</span> <span class="k">class</span> <span class="nc">State</span><span class="p">(</span>
         <span class="k">val</span> <span class="py">issuance</span><span class="p">:</span> <span class="n">PartyAndReference</span><span class="p">,</span>
@@ -349,7 +404,7 @@ piece of issued paper.</p>
 </div>
 <p>We define a class that implements the <code class="docutils literal"><span class="pre">ContractState</span></code> interface.</p>
 <p>The <code class="docutils literal"><span class="pre">ContractState</span></code> interface requires us to provide a <code class="docutils literal"><span class="pre">getContract</span></code> method that returns an instance of the
-contract class itself. In future, this will change to support dynamic loading of contracts with versioning
+contract class itself. In future, this may change to support dynamic loading of contracts with versioning
 and signing constraints, but for now this is how it&#8217;s written.</p>
 <p>We have four fields in our state:</p>
 <ul class="simple">
@@ -374,8 +429,9 @@ the state with the owner public key blanked out: this will prove useful later.</
 </div>
 <div class="section" id="commands">
 <h2>Commands<a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h2>
-<p>The logic for a contract may vary depending on what stage of a lifecycle it is automating. So it can be useful to
-pass additional data into the contract code that isn&#8217;t represented by the states which exist permanently in the ledger.</p>
+<p>The validation logic for a contract may vary depending on what stage of a state&#8217;s lifecycle it is automating. So it can
+be useful to pass additional data into the contract code that isn&#8217;t represented by the states which exist permanently
+in the ledger, in order to clarify intent of a transaction.</p>
 <p>For this purpose we have commands. Often they don&#8217;t need to contain any data at all, they just need to exist. A command
 is a piece of data associated with some <em>signatures</em>. By the time the contract runs the signatures have already been
 checked, so from the contract code&#8217;s perspective, a command is simply a data structure with a list of attached
@@ -454,7 +510,7 @@ splitting/merging of assets, atomic swaps and so on. More on this next.</p>
 such command.</p>
 </div>
 <div class="section" id="using-state-groups">
-<h2>Using state groups<a class="headerlink" href="#using-state-groups" title="Permalink to this headline">¶</a></h2>
+<span id="state-ref"></span><h2>Using state groups<a class="headerlink" href="#using-state-groups" title="Permalink to this headline">¶</a></h2>
 <p>The simplest way to write a smart contract would be to say that each transaction can have a single input state and a
 single output state of the kind govered by that contract. This would be easy for the developer, but would prevent many
 important use cases.</p>
@@ -808,7 +864,7 @@ is about keeping many different parties all in sync with each other.</p>
 a multi-party transaction, you&#8217;re on your own. In Corda data is transmitted only to parties that need it and
 multi-party transactions are a way of life, so we provide lots of support for managing them.</p>
 <p>You can learn how transactions are moved between peers and taken through the build-sign-notarise-broadcast
-process in a separate tutorial, <a class="reference internal" href="protocol-state-machines.html"><span class="doc">Protocol state machines</span></a>.</p>
+process in a separate tutorial, <a class="reference internal" href="flow-state-machines.html"><span class="doc">Writing flows</span></a>.</p>
 </div>
 <div class="section" id="non-asset-oriented-smart-contracts">
 <h2>Non-asset-oriented smart contracts<a class="headerlink" href="#non-asset-oriented-smart-contracts" title="Permalink to this headline">¶</a></h2>
@@ -818,7 +874,7 @@ world, and (code) contracts as imposing logical relations on how facts combine t
 you can imagine that states are like rows in a relational database and contracts are like stored procedures and
 relational constraints.</p>
 <p>When writing a contract that handles deal-like entities rather than asset-like entities, you may wish to refer
-to &#8220;<a class="reference internal" href="contract-irs.html"><span class="doc">Interest Rate Swaps</span></a>&#8221; and the accompanying source code. Whilst all the concepts are the same, deals are
+to &#8220;<a class="reference internal" href="contract-irs.html"><span class="doc">Interest rate swaps</span></a>&#8221; and the accompanying source code. Whilst all the concepts are the same, deals are
 typically not splittable or mergeable and thus you don&#8217;t have to worry much about grouping of states.</p>
 </div>
 <div class="section" id="making-things-happen-at-a-particular-time">
@@ -909,7 +965,7 @@ frequently needed chunks of logic &#8220;clauses&#8221;, and they can simplify d
         <a href="tutorial-contract-clauses.html" class="btn btn-neutral float-right" title="Writing a contract using clauses" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="where-to-start.html" class="btn btn-neutral" title="Where to start" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="permissioning.html" class="btn btn-neutral" title="Network permissioning" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -918,7 +974,7 @@ frequently needed chunks of logic &#8220;clauses&#8221;, and they can simplify d
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+        &copy; Copyright 2016, R3 Limited.
 
     </p>
   </div>

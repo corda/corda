@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Consensus model" href="consensus.html"/>
+        <link rel="next" title="Transaction tear-offs" href="merkle-trees.html"/>
         <link rel="prev" title="Data model" href="data-model.html"/> 
 
   
@@ -85,10 +85,16 @@
           
             
             
-                <p class="caption"><span class="caption-text">Overview</span></p>
-<ul class="current">
+                <p class="caption"><span class="caption-text">Getting started</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Data types</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#amount">Amount</a></li>
@@ -98,7 +104,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#transaction-lifecycle-types">Transaction lifecycle types</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#party-and-publickey">Party and PublicKey</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#multi-signature-support">Multi-signature support</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#key-trees">Key Trees</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Composite Keys</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#verification">Verification</a></li>
 </ul>
 </li>
@@ -106,47 +112,74 @@
 <li class="toctree-l2"><a class="reference internal" href="#cryptography-maths-support">Cryptography &amp; maths support</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#template-build-gradle">Template build.gradle</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#cordformation">Cordformation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Contracts</span></p>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Node API</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>
 
             
@@ -197,7 +230,7 @@
 These provide a common language for states and contracts.</p>
 <div class="section" id="amount">
 <h2>Amount<a class="headerlink" href="#amount" title="Permalink to this headline">¶</a></h2>
-<p>The <a class="reference external" href="api/com.r3corda.core.contracts/-amount/index.html">Amount</a> class is used to represent an amount of some
+<p>The <a class="reference external" href="api/net.corda.core.contracts/-amount/index.html">Amount</a> class is used to represent an amount of some
 fungible asset. It is a generic class which wraps around a type used to define the underlying product, called
 the <em>token</em>. For instance it can be the standard JDK type <code class="docutils literal"><span class="pre">Currency</span></code>, or an <code class="docutils literal"><span class="pre">Issued</span></code> instance, or this can be
 a more complex type such as an obligation contract issuance definition (which in turn contains a token definition
@@ -249,7 +282,7 @@ useful when modelling an indivisible/non-fungible thing like a specific deal, or
 split (like a rare piece of art).</dd>
 <dt><code class="docutils literal"><span class="pre">DealState</span></code></dt>
 <dd>A LinearState representing an agreement between two or more parties. Intended to simplify implementing generic
-protocols that manipulate many agreement types.</dd>
+flows that manipulate many agreement types.</dd>
 <dt><code class="docutils literal"><span class="pre">FixableDealState</span></code></dt>
 <dd>A deal state, with further functions exposed to support fixing of interest rates.</dd>
 </dl>
@@ -326,35 +359,19 @@ fleshed out.</p>
 </div>
 </div>
 <div class="section" id="multi-signature-support">
-<h2>Multi-signature support<a class="headerlink" href="#multi-signature-support" title="Permalink to this headline">¶</a></h2>
+<span id="composite-keys"></span><h2>Multi-signature support<a class="headerlink" href="#multi-signature-support" title="Permalink to this headline">¶</a></h2>
 <p>Corda supports scenarios where more than one key or party is required to authorise a state object transition, for example:
 &#8220;Either the CEO or 3 out of 5 of his assistants need to provide signatures&#8221;.</p>
-<div class="section" id="key-trees">
-<h3>Key Trees<a class="headerlink" href="#key-trees" title="Permalink to this headline">¶</a></h3>
-<p>This is achieved by public key composition, using a tree data structure <code class="docutils literal"><span class="pre">PublicKeyTree</span></code>. A <code class="docutils literal"><span class="pre">PublicKeyTree</span></code> stores the
-cryptographic public key primitives in its leaves and the composition logic in the intermediary nodes. Every intermediary
+<div class="section" id="id2">
+<h3>Composite Keys<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<p>This is achieved by public key composition, using a tree data structure <code class="docutils literal"><span class="pre">CompositeKey</span></code>. A <code class="docutils literal"><span class="pre">CompositeKey</span></code> is a tree that
+stores the cryptographic public key primitives in its leaves and the composition logic in the intermediary nodes. Every intermediary
 node specifies a <em>threshold</em> of how many child signatures it requires.</p>
-<p>An illustration of an <em>&#8220;either Alice and Bob, or Charlie&#8221;</em> public key tree:</p>
-<img alt="_images/public-key-tree.png" src="_images/public-key-tree.png" />
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">width:</th><td class="field-body">300px</td>
-</tr>
-</tbody>
-</table>
+<p>An illustration of an <em>&#8220;either Alice and Bob, or Charlie&#8221;</em> composite key:</p>
+<a class="reference internal image-reference" href="_images/composite-key.png"><img alt="_images/composite-key.png" src="_images/composite-key.png" style="width: 300px;" /></a>
 <p>To allow further flexibility, each child node can have an associated custom <em>weight</em> (the default is 1). The <em>threshold</em>
 then specifies the minimum total weight of all children required. Our previous example can also be expressed as:</p>
-<img alt="_images/public-key-tree-2.png" src="_images/public-key-tree-2.png" />
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">width:</th><td class="field-body">300px</td>
-</tr>
-</tbody>
-</table>
+<a class="reference internal image-reference" href="_images/composite-key-2.png"><img alt="_images/composite-key-2.png" src="_images/composite-key-2.png" style="width: 300px;" /></a>
 </div>
 <div class="section" id="verification">
 <h3>Verification<a class="headerlink" href="#verification" title="Permalink to this headline">¶</a></h3>
@@ -362,9 +379,9 @@ then specifies the minimum total weight of all children required. Our previous e
 <blockquote>
 <div><ol class="arabic simple">
 <li>Given a list of signatures, each signature is verified against the expected content.</li>
-<li>The public keys corresponding to the signatures are matched against the leaves of the public key tree in question,
+<li>The public keys corresponding to the signatures are matched against the leaves of the composite key tree in question,
 and the total combined weight of all children is calculated for every intermediary node. If all thresholds are satisfied,
-the public key tree requirement is considered to be met.</li>
+the composite key requirement is considered to be met.</li>
 </ol>
 </div></blockquote>
 </div>
@@ -387,7 +404,7 @@ dates used.</p>
 <p>The <code class="docutils literal"><span class="pre">SecureHash</span></code> class represents a secure hash of unknown algorithm. We currently define only a single subclass,
 <code class="docutils literal"><span class="pre">SecureHash.SHA256</span></code>. There are utility methods to create them, parse them and so on.</p>
 <p>We also provide some mathematical utilities, in particular a set of interpolators and classes for working with
-splines. These can be found in the <a class="reference external" href="api/com.r3corda.core.math/index.html">maths package</a>.</p>
+splines. These can be found in the <a class="reference external" href="api/net.corda.core.math/index.html">maths package</a>.</p>
 </div>
 </div>
 
@@ -398,7 +415,7 @@ splines. These can be found in the <a class="reference external" href="api/com.r
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="consensus.html" class="btn btn-neutral float-right" title="Consensus model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="merkle-trees.html" class="btn btn-neutral float-right" title="Transaction tear-offs" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="data-model.html" class="btn btn-neutral" title="Data model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -410,7 +427,7 @@ splines. These can be found in the <a class="reference external" href="api/com.r
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+        &copy; Copyright 2016, R3 Limited.
 
     </p>
   </div>

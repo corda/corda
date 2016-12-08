@@ -1,11 +1,11 @@
 package com.r3corda.netpermission.internal
 
-import com.r3corda.core.crypto.X509Utilities
-import com.r3corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
-import com.r3corda.core.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
-import com.r3corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import com.r3corda.netpermission.internal.persistence.CertificationData
 import com.r3corda.netpermission.internal.persistence.CertificationRequestStorage
+import net.corda.core.crypto.X509Utilities.CACertAndKey
+import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
+import net.corda.core.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
+import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -24,7 +24,7 @@ import javax.ws.rs.core.Response.ok
  * Provides functionality for asynchronous submission of certificate signing requests and retrieval of the results.
  */
 @Path("")
-class CertificateSigningService(val intermediateCACertAndKey: X509Utilities.CACertAndKey, val rootCert: Certificate, val storage: CertificationRequestStorage) {
+class CertificateSigningService(val intermediateCACertAndKey: CACertAndKey, val rootCert: Certificate, val storage: CertificationRequestStorage) {
     @Context lateinit var request: HttpServletRequest
     /**
      * Accept stream of [PKCS10CertificationRequest] from user and persists in [CertificationRequestStorage] for approval.

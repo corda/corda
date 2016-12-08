@@ -7,11 +7,35 @@ map service and are notified of the changes to the map. The network simulator is
 
 **Windows**::
 
-    gradlew.bat network-simulator:run
+    gradlew.bat :samples:network-visualiser:run
 
 **Other**::
 
-    ./gradlew network-simulator:run
+    ./gradlew :samples:network-visualiser:run
+
+You can produce a standalone JAR of the tool by using the ``:samples:network-visualiser:deployVisualiser`` target
+and then using the ``samples/network-visualiser/build/libs/network-visualiser-*-capsule.jar`` file, where * is
+whatever the current Corda version is.
+
+What it is and is not
+---------------------
+
+The simulator currenty exists as an illustrative tool to help with explaining how Corda works in an example scenario.
+It utilises the ``Simulator`` tools that support creating a simulated Corda network and the nodes running in it within
+a single JVM, as an extension of the ``MockNetwork`` testing framework.  See more about the ``MockNetwork`` and
+testing flows here: :doc:`flow-testing`.
+
+Whilst it is not yet fully generic or full featured, the intention is for the simulator to mature into the following,
+which it presently cannot do without writing more code:
+
+1. A tool for visualising new CorDapps and their flows to help with debugging, presentations, explanations and tutorials,
+   but still running as a simulation in a single JVM.
+2. A tool to visualise the activity on a real Corda network deployment, with activity streams being fed from each node
+   running in its own JVM, most likely on remote hosts.
+
+Both of these scenarios would be fed by the standard observables in the RPC framework, rather than the local binding
+that the simulator uses currently.  The ability to step through a flow one step at a time would obviously be restricted
+to single JVM simulations.
 
 Interface
 ---------

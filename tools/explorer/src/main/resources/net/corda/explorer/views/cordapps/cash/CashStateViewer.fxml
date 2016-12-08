@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<GridPane vgap="5" hgap="5" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
+    <Label text="State ID"/>
+    <Label text="Issuer" GridPane.rowIndex="1"/>
+    <Label text="Originated" wrapText="true" GridPane.rowIndex="2"/>
+    <Label text="Amount" wrapText="true" GridPane.rowIndex="3"/>
+    <Label fx:id="equivLabel" text="USD" wrapText="true" GridPane.rowIndex="4"/>
+
+    <Label fx:id="stateIdValueLabel" text="39043-329090-390091" GridPane.columnIndex="1"/>
+    <Label fx:id="issuerValueLabel" styleClass="counterparty" text="C-03820 HSBC GROUP PLC" GridPane.columnIndex="1"
+           GridPane.rowIndex="1"/>
+    <Label fx:id="originatedValueLabel" text="2018-04-27 11:34 UTC" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+    <Label fx:id="amountValueLabel" text="GBP 0.00" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+    <Label fx:id="equivValueLabel" text="0.00" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+</GridPane>

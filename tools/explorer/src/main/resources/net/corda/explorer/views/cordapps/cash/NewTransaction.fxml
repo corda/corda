@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<DialogPane stylesheets="@../../../css/corda.css" xmlns="http://javafx.com/javafx/8.0.76-ea"
+            xmlns:fx="http://javafx.com/fxml/1">
+    <content>
+        <GridPane hgap="10" vgap="10">
+            <!-- Row 0 -->
+            <Label text="Transaction Type : " GridPane.halignment="RIGHT"/>
+            <ChoiceBox fx:id="transactionTypeCB" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.columnSpan="4"
+                       GridPane.hgrow="ALWAYS"/>
+
+            <!-- Row 1 -->
+            <Label fx:id="partyALabel" GridPane.halignment="RIGHT" GridPane.rowIndex="1"/>
+            <TextField fx:id="partyATextField" GridPane.columnIndex="1" GridPane.columnSpan="4" GridPane.rowIndex="1"/>
+
+            <!-- Row 2 -->
+            <Label fx:id="partyBLabel" GridPane.halignment="RIGHT" GridPane.rowIndex="2"/>
+            <ChoiceBox fx:id="partyBChoiceBox" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.columnSpan="4"
+                       GridPane.fillWidth="true" GridPane.hgrow="ALWAYS" GridPane.rowIndex="2"/>
+
+            <!-- Row 3 -->
+            <Label fx:id="issuerLabel" text="Issuer : " GridPane.halignment="RIGHT" GridPane.rowIndex="3"/>
+            <StackPane GridPane.columnIndex="1" GridPane.rowIndex="3" GridPane.columnSpan="1">
+                <ChoiceBox fx:id="issuerChoiceBox" maxWidth="Infinity"/>
+                <TextField fx:id="issuerTextField" maxWidth="Infinity" prefWidth="100" visible="false"/>
+            </StackPane>
+            <Label fx:id="issueRefLabel" text="Issue Reference : " GridPane.halignment="RIGHT" GridPane.columnIndex="3"
+                   GridPane.rowIndex="3"/>
+
+            <TextField fx:id="issueRefTextField" prefWidth="50" GridPane.columnIndex="4" GridPane.rowIndex="3"/>
+
+            <!-- Row 4 -->
+            <Label fx:id="currencyLabel" text="Currency : " GridPane.halignment="RIGHT" GridPane.rowIndex="4"/>
+            <ChoiceBox fx:id="currencyChoiceBox" GridPane.columnIndex="1" GridPane.rowIndex="4" maxWidth="Infinity"/>
+            <Label fx:id="availableAmount" text="100000 USD available" GridPane.rowIndex="4" GridPane.columnIndex="3"
+                   GridPane.columnSpan="2" styleClass="availableAmountLabel"/>
+
+            <!-- Row 5 -->
+            <Label fx:id="amountLabel" text="Amount : " GridPane.halignment="RIGHT" GridPane.rowIndex="5"/>
+            <TextField fx:id="amountTextField" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"
+                       GridPane.rowIndex="5" GridPane.columnSpan="4"/>
+
+            <padding>
+                <Insets bottom="20.0" left="30.0" right="30.0" top="30.0"/>
+            </padding>
+        </GridPane>
+    </content>
+</DialogPane>

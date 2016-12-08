@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<BorderPane stylesheets="@../../../css/corda.css" xmlns="http://javafx.com/javafx/8.0.76-ea"
+            xmlns:fx="http://javafx.com/fxml/1">
+    <padding>
+        <Insets right="5" left="5" bottom="5" top="5"/>
+    </padding>
+    <top>
+        <fx:include source="../../SearchField.fxml"/>
+    </top>
+    <center>
+        <SplitPane fx:id="splitPane" dividerPositions="0.5">
+            <VBox fx:id="leftPane" spacing="5.0">
+                <TreeTableView fx:id="cashViewerTable" showRoot="false" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TreeTableColumn fx:id="cashViewerTableIssuerCurrency" styleClass="first-column"
+                                         text="Issuer/Currency"/>
+                        <TreeTableColumn fx:id="cashViewerTableLocalCurrency" text="Local currency"
+                                         styleClass="monetary-value, second-column"/>
+                        <TreeTableColumn fx:id="cashViewerTableEquiv" styleClass="monetary-value" text="Equiv"/>
+                    </columns>
+                </TreeTableView>
+                <Label fx:id="totalMatchingLabel" text="Total 15 matching issuer(s)"/>
+            </VBox>
+            <VBox fx:id="rightPane" spacing="5.0">
+                <Button fx:id="toggleButton" mnemonicParsing="false" text="&gt;&gt;"/>
+                <ListView fx:id="cashStatesList" VBox.vgrow="ALWAYS"/>
+                <Label fx:id="totalPositionsLabel" text="Total 18 position(s)"/>
+            </VBox>
+        </SplitPane>
+    </center>
+</BorderPane>

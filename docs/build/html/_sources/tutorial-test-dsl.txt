@@ -32,8 +32,8 @@ We start with the empty ledger:
 
     .. sourcecode:: java
 
-        import static com.r3corda.core.testing.JavaTestHelpers.*;
-        import static com.r3corda.core.contracts.JavaTestHelpers.*;
+        import static net.corda.core.testing.JavaTestHelpers.*;
+        import static net.corda.core.contracts.JavaTestHelpers.*;
 
         @Test
         public void emptyLedger() {
@@ -139,7 +139,7 @@ last line of ``transaction``:
 
 The code finally compiles. When run, it produces the following error::
 
-    com.r3corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalArgumentException: Failed requirement: for deposit [01] at issuer Snake Oil Issuer the amounts balance
+    net.corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalArgumentException: Failed requirement: for deposit [01] at issuer Snake Oil Issuer the amounts balance
 
 .. note:: The reference here to the 'Snake Oil Issuer' is because we are using the pre-canned ``DUMMY_CASH_ISSUER``
     identity as the issuer of our cash.

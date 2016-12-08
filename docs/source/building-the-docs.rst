@@ -20,7 +20,7 @@ script to find it, as in:
 
 .. sourcecode:: shell
 
-    r3prototyping/lib/dokka.jar
+    corda/lib/dokka.jar
 
 Note that to install under OS X El Capitan, you will need to tell pip to install under ``/usr/local``, which can be
 done by specifying the installation target on the command line:
@@ -38,7 +38,7 @@ documentation by running the following script:
 
 .. sourcecode:: shell
 
-    scripts/generate-docsite.sh
+    docs/generate-docsite.sh
 
 Alternatively you can build non-HTML formats from the ``docs`` folder. Change directory to the folder and then run the
 following to see a list of all available formats:

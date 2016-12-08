@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import java.lang.*?>
+<DialogPane expanded="true" headerText="Sign in to Corda" prefHeight="246.0" prefWidth="648.0"
+            xmlns="http://javafx.com/javafx/8.0.60" xmlns:fx="http://javafx.com/fxml/1">
+    <content>
+        <TilePane alignment="CENTER">
+            <children>
+                <TitledPane alignment="CENTER" collapsible="false" prefHeight="160.0" prefWidth="160.0" text="Log in">
+                    <content>
+                        <Label alignment="BOTTOM_RIGHT" prefHeight="200.0" prefWidth="200.0" text="Thomas"
+                               textAlignment="CENTER" wrapText="true"/>
+                    </content>
+                    <styleClass>
+                        <String fx:value="tile-user"/>
+                        <String fx:value="tile-user-test-man"/>
+                    </styleClass>
+                </TitledPane>
+                <TitledPane alignment="CENTER" collapsible="false" layoutX="232.0" layoutY="10.0" prefHeight="160.0"
+                            prefWidth="160.0" text="Log in">
+                    <styleClass>
+                        <String fx:value="tile-user"/>
+                        <String fx:value="tile-user-test-woman"/>
+                    </styleClass>
+                    <content>
+                        <Label alignment="BOTTOM_RIGHT" prefHeight="200.0" prefWidth="200.0" text="Theresa"
+                               textAlignment="CENTER" wrapText="true"/>
+                    </content>
+                </TitledPane>
+                <TitledPane alignment="CENTER" collapsible="false" layoutX="312.0" layoutY="10.0" prefHeight="160.0"
+                            prefWidth="160.0" styleClass="tile-user" text="Log in">
+                    <content>
+                        <Label alignment="BOTTOM_RIGHT" prefHeight="200.0" prefWidth="200.0" text="Other user"
+                               textAlignment="CENTER" wrapText="true"/>
+                    </content>
+                </TitledPane>
+            </children>
+        </TilePane>
+    </content>
+    <expandableContent>
+        <VBox alignment="TOP_CENTER">
+            <children>
+                <ComboBox editable="true" maxWidth="300.0" prefWidth="300.0" promptText="Server name">
+                    <VBox.margin>
+                        <Insets top="5.0"/>
+                    </VBox.margin>
+                </ComboBox>
+                <TextField maxWidth="300.0" promptText="User name">
+                    <VBox.margin>
+                        <Insets top="5.0"/>
+                    </VBox.margin>
+                </TextField>
+                <PasswordField maxWidth="300.0" prefWidth="300.0" promptText="Password">
+                    <VBox.margin>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                    </VBox.margin>
+                </PasswordField>
+            </children>
+        </VBox>
+    </expandableContent>
+</DialogPane>

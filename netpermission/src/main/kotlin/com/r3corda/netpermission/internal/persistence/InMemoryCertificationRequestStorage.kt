@@ -1,6 +1,6 @@
 package com.r3corda.netpermission.internal.persistence
 
-import com.r3corda.core.crypto.SecureHash
+import net.corda.core.crypto.SecureHash
 import java.security.cert.Certificate
 import java.util.*
 

@@ -1,0 +1,31 @@
+// This script exists just to allow bootstrapping the gradle plugins if maven central or jcenter are unavailable
+// or if you are developing these plugins. See the readme for more information.
+
+buildscript {
+    ext.gradle_plugins_version = "0.6.1" // Our version: bump this on release.
+    ext.corda_published_version = "0.5" // Depend on our existing published publishing plugin.
+
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath "net.corda.plugins:publish-utils:$corda_published_version"
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
+    }
+}
+
+apply plugin: 'maven-publish'
+
+allprojects {
+    version "$gradle_plugins_version"
+    group 'net.corda'
+}
+
+subprojects {
+	task(install, dependsOn: 'publishToMavenLocal')
+}
+
+// Aliasing the publishToMavenLocal for simplicity.
+task(install, dependsOn: 'publishToMavenLocal')
+

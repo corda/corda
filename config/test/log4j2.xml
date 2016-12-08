@@ -13,7 +13,7 @@
         <Root level="info">
             <AppenderRef ref="Console-Appender"/>
         </Root>
-        <Logger name="com.r3corda" level="info" additivity="false">
+        <Logger name="net.corda" level="info" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
     </Loggers>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<BorderPane styleClass="networkView" stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.112-ea"
+            xmlns:fx="http://javafx.com/fxml/1">
+    <center>
+        <StackPane>
+            <ScrollPane fx:id="mapScrollPane" hbarPolicy="NEVER" pannable="true" vbarPolicy="NEVER">
+                <StackPane>
+                    <ImageView fx:id="mapImageView" styleClass="worldMap" preserveRatio="true" fitHeight="2000"/>
+                    <Pane fx:id="mapPane" styleClass="map"/>
+                </StackPane>
+            </ScrollPane>
+            <VBox spacing="5" StackPane.alignment="TOP_LEFT" maxWidth="-Infinity" maxHeight="-Infinity">
+                <StackPane.margin>
+                    <Insets bottom="25" left="5" right="5" top="5"/>
+                </StackPane.margin>
+                <TitledPane styleClass="networkTile" text="My Identity">
+                    <BorderPane fx:id="myIdentityPane"/>
+                </TitledPane>
+                <TitledPane styleClass="networkTile" text="Notaries">
+                    <BorderPane>
+                        <center>
+                            <ScrollPane hbarPolicy="NEVER">
+                                <VBox fx:id="notaryList" maxWidth="-Infinity"/>
+                            </ScrollPane>
+                        </center>
+                    </BorderPane>
+                </TitledPane>
+                <TitledPane styleClass="networkTile" text="Peers" VBox.vgrow="ALWAYS">
+                    <BorderPane>
+                        <center>
+                            <ScrollPane hbarPolicy="NEVER">
+                                <VBox fx:id="peerList" maxWidth="-Infinity">
+                                    <Button text="Template" prefHeight="100" prefWidth="200"/>
+                                </VBox>
+                            </ScrollPane>
+                        </center>
+                    </BorderPane>
+                </TitledPane>
+            </VBox>
+            <VBox StackPane.alignment="BOTTOM_RIGHT" maxWidth="-Infinity" maxHeight="-Infinity" spacing="10">
+                <StackPane.margin>
+                    <Insets bottom="10" right="10"/>
+                </StackPane.margin>
+                <Button fx:id="zoomInButton" text="+" maxWidth="Infinity"/>
+                <Button fx:id="zoomOutButton" text="-" maxWidth="Infinity"/>
+            </VBox>
+        </StackPane>
+    </center>
+</BorderPane>

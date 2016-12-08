@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import de.jensd.fx.glyphs.fontawesome.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<GridPane styleClass="contractStateView" hgap="10" stylesheets="@../css/corda.css" vgap="10"
+          xmlns="http://javafx.com/javafx/8.0.112-ea" xmlns:fx="http://javafx.com/fxml/1">
+    <TitledPane fx:id="inputPane" collapsible="false" text="Input" GridPane.fillWidth="true">
+        <ListView fx:id="inputs"/>
+    </TitledPane>
+
+    <FontAwesomeIconView glyphName="PLAY" glyphSize="40" GridPane.columnIndex="1"/>
+
+    <TitledPane fx:id="outputPane" collapsible="false" text="Outputs" GridPane.columnIndex="2">
+        <ListView fx:id="outputs" maxWidth="Infinity"/>
+    </TitledPane>
+
+    <TitledPane fx:id="signaturesPane" collapsible="false" text="Signatures" GridPane.columnSpan="3"
+                GridPane.rowIndex="1">
+        <VBox fx:id="signatures" spacing="5"/>
+    </TitledPane>
+
+    <columnConstraints>
+        <ColumnConstraints hgrow="ALWAYS"/>
+        <ColumnConstraints/>
+        <ColumnConstraints hgrow="ALWAYS"/>
+    </columnConstraints>
+    <rowConstraints>
+        <RowConstraints vgrow="ALWAYS"/>
+        <RowConstraints vgrow="NEVER"/>
+    </rowConstraints>
+</GridPane>

@@ -1,0 +1,36 @@
+/* Corda dark color theme */
+* {
+    -color-0: rgba(0, 0, 0, 1); /* Background color */
+    -color-1: rgba(0, 0, 0, 0.1); /* Background color layer 1*/
+    -color-2: white; /* Background color layer 2*/
+    -color-3: rgba(219, 0, 23, 1); /* Corda logo color */
+    -color-4: rgba(239, 0, 23, 1); /* Corda logo color light */
+    -color-5: rgb(255, 191, 198); /* Corda logo highlight */
+    -color-6: rgba(219, 0, 23, 0.2); /* Corda logo highlight */
+}
+
+.root {
+    -fx-background: #f4f4f4;
+    -fx-control-inner-background: white;
+    -fx-dark-text-color: black;
+    -fx-mid-text-color: #292929;
+    -fx-light-text-color: white;
+    -fx-accent: -color-5;
+    -fx-focus-color: -color-3;
+    -fx-color: -fx-base;
+    -fx-disabled-opacity: 0.4;
+    -fx-cell-hover-color: -color-6;
+    -fx-cell-focus-inner-border: -color-5;
+    -fx-page-bullet-border: #acacac;
+    -fx-page-indicator-hover-border: -color-6;
+    -fx-faint-focus-color: #d3524422;
+}
+
+/* Global Style*/
+.corda-logo {
+    -fx-image: url("../images/Logo-03.png");
+}
+
+.corda-text-logo {
+    -fx-image: url("../images/Logo-04.png");
+}

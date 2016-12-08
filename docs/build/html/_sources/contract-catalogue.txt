@@ -29,7 +29,7 @@ Commodity
 The ``Commodity`` contract is an early stage example of a non-currency contract whose states implement the ``FungibleAsset``
 interface. This is used as a proof of concept for non-cash obligations.
 
-Commercial Paper
+Commercial paper
 ----------------
 
 ``CommercialPaper`` is a very simple obligation to pay an amount of cash at some future point in time (the maturity
@@ -38,7 +38,7 @@ and redeeming (settling) states. Unlike the full obligation contract it does not
 be settled if the obligor defaults on payment, or netting of state objects. All commands are exclusive of the other
 commercial paper commands. Use the ``Obligation`` contract for more advanced functionality.
 
-Interest Rate Swap
+Interest rate swap
 ------------------
 
 The Interest Rate Swap (IRS) contract is a bilateral contract to implement a vanilla fixed / floating same currency

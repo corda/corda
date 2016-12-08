@@ -4,7 +4,8 @@
     <Properties>
         <Property name="log-path">logs</Property>
         <Property name="log-name">node-${hostName}</Property>
-        <Property name="archive">${log-path}/archive</Property>
+        <Property name="archive">${sys:log-path}/archive</Property>
+        <Property name="consoleLogLevel">error</Property>
     </Properties>
 
     <ThresholdFilter level="trace"/>
@@ -21,7 +22,7 @@
         <!-- Will generate up to 10 log files for a given day. During every rollover it will delete
              those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingFile name="RollingFile-Appender"
-                     fileName="${log-path}/${log-name}.log"
+                     fileName="${sys:log-path}/${log-name}.log"
                      filePattern="${archive}/${log-name}.%d{yyyy-MM-dd}-%i.log.gz">
 
             <PatternLayout pattern="[%-5level] %d{ISO8601}{GMT+0} [%t] %c{1} - %msg%n"/>
@@ -47,13 +48,12 @@
 
     <Loggers>
         <Root level="info">
-            <AppenderRef ref="Console-Appender"/>
-            <AppenderRef ref="RollingFile-Appender"/>
+            <AppenderRef ref="Console-Appender" level="${sys:consoleLogLevel}"/>
+            <AppenderRef ref="RollingFile-Appender" level="info"/>
         </Root>
-        <Logger name="com.r3corda" level="info" additivity="false">
-            <AppenderRef ref="Console-Appender"/>
+        <Logger name="net.corda" level="info" additivity="false">
+            <AppenderRef ref="Console-Appender" level="${sys:consoleLogLevel}"/>
             <AppenderRef ref="RollingFile-Appender"/>
         </Logger>
     </Loggers>
-
 </Configuration>

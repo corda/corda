@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import de.jensd.fx.glyphs.fontawesome.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<StackPane styleClass="mainView" stylesheets="@../css/corda.css" prefHeight="650" prefWidth="900"
+           xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
+    <BorderPane maxHeight="Infinity">
+        <top>
+            <GridPane styleClass="header" vgap="5">
+                <!-- Corda logo -->
+                <ImageView styleClass="corda-text-logo" fitHeight="35" preserveRatio="true" GridPane.hgrow="ALWAYS"
+                           fx:id="cordaLogo"/>
+
+                <!-- User account menu -->
+                <MenuButton fx:id="userButton" mnemonicParsing="false" GridPane.columnIndex="3">
+                    <items>
+                        <MenuItem fx:id="exit" mnemonicParsing="false" text="Exit Corda Explorer"/>
+                    </items>
+                    <graphic>
+                        <FontAwesomeIconView glyphName="USER" glyphSize="20"/>
+                    </graphic>
+                </MenuButton>
+            </GridPane>
+        </top>
+        <center>
+            <SplitPane id="mainSplitPane" dividerPositions="0.0">
+                <VBox styleClass="sidebar" fx:id="sidebar" SplitPane.resizableWithParent="false">
+                    <StackPane>
+                        <Button fx:id="template" text="Template" styleClass="sidebar-menu-item"/>
+                        <FontAwesomeIconView glyphName="CARET_LEFT" visible="false"/>
+                    </StackPane>
+                    <StackPane>
+                        <Button fx:id="selectedTemplate" text="Selected"
+                                styleClass="sidebar-menu-item, sidebar-menu-item-selected"/>
+                        <FontAwesomeIconView glyphName="CARET_LEFT" StackPane.alignment="CENTER_RIGHT"
+                                             styleClass="sidebar-menu-item-arrow"/>
+                    </StackPane>
+                </VBox>
+                <BorderPane fx:id="selectionBorderPane"/>
+            </SplitPane>
+        </center>
+    </BorderPane>
+</StackPane>

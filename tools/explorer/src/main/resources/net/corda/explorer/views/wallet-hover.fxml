@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import java.lang.*?>
+<DialogPane headerText="Issuer C039201 HSBC GROUP PLC" xmlns="http://javafx.com/javafx/8.0.60"
+            xmlns:fx="http://javafx.com/fxml/1">
+    <content>
+        <VBox spacing="5.0">
+            <children>
+                <Label styleClass="subline" text="Total 18 position(s)"/>
+                <Label styleClass="headline" text="USD 394.6k"/>
+                <TableView prefHeight="284.0" prefWidth="417.0">
+                    <columns>
+                        <TableColumn prefWidth="155.0" text="Position ID"/>
+                        <TableColumn prefWidth="123.0" styleClass="first-column" text="Local ccy"/>
+                        <TableColumn prefWidth="79.0" text="Amount">
+                            <styleClass>
+                                <String fx:value="second-column"/>
+                                <String fx:value="monetary-value"/>
+                            </styleClass>
+                        </TableColumn>
+                        <TableColumn prefWidth="75.0" styleClass="monetary-value" text="USD equiv"/>
+                    </columns>
+                    <columnResizePolicy>
+                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                    </columnResizePolicy>
+                </TableView>
+            </children>
+            <opaqueInsets>
+                <Insets/>
+            </opaqueInsets>
+            <padding>
+                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+            </padding>
+        </VBox>
+    </content>
+    <buttonTypes>
+        <ButtonType fx:constant="CLOSE"/>
+    </buttonTypes>
+</DialogPane>

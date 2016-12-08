@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Will attempt to execute a corda node within all subdirectories in the current working directory.
+
+set -euo pipefail
+export CAPSULE_CACHE_DIR=cache
+
+# Allow the script to be run from outside the nodes directory.
+basedir=$( dirname "$0" )
+cd "$basedir"
+
+if which osascript >/dev/null; then
+    # MacOS X: open each node in a in new tab.
+    first=true
+    script='tell app "Terminal"
+    activate'
+    rootdir=`pwd`
+    for dir in `ls`; do
+        if [ -d $dir ]; then
+            script="$script
+    tell application \"System Events\" to tell process \"Terminal\" to keystroke \"t\" using command down
+    delay 0.5
+    do script \"cd $rootdir/$dir; java -jar JAR_NAME && exit\" in window 1"
+            first=false
+        fi
+    done
+    script="$script
+end tell"
+    osascript -e "$script"
+else
+    # Some other UNIX, probably Linux (does not support msys or cygwin)
+    # TODO: msys and cygwin support
+    #
+    # If it is set, it means that java overrides the default system java, which is what we want.
+    if [ -n "${JAVA_HOME-}" ]; then
+	export PATH="$JAVA_HOME/bin:$PATH"
+    fi
+    for dir in `ls`; do
+        if [ -d $dir ]; then
+            pushd $dir >/dev/null
+            xterm -T "`basename $dir`" -e 'java -jar JAR_NAME' &
+            popd >/dev/null
+        fi
+    done
+fi

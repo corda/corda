@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<ScrollPane hbarPolicy="NEVER" fitToWidth="true" stylesheets="@../css/corda.css"
+            xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
+    <TilePane fx:id="tilePane" tileAlignment="TOP_LEFT">
+        <TitledPane fx:id="template" text="Template" collapsible="false" styleClass="tile">
+            <Label text="USD 186.7m" textAlignment="CENTER" wrapText="true"/>
+        </TitledPane>
+    </TilePane>
+</ScrollPane>

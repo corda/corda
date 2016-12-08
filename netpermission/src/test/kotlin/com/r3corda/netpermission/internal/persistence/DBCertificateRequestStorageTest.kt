@@ -1,8 +1,8 @@
 package com.r3corda.netpermission.internal.persistence
 
-import com.r3corda.core.crypto.X509Utilities
-import com.r3corda.node.utilities.configureDatabase
-import com.r3corda.testing.node.makeTestDataSourceProperties
+import net.corda.core.crypto.X509Utilities
+import net.corda.node.utilities.configureDatabase
+import net.corda.testing.node.makeTestDataSourceProperties
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.Test
 import kotlin.test.assertEquals

@@ -1,0 +1,31 @@
+group 'net.corda'
+version '0.6-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+sourceCompatibility = 1.8
+
+buildscript {
+    ext.asm_version = '5.1'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Asm: bytecode manipulation library.
+    compile "org.ow2.asm:asm:$asm_version"
+    compile "org.ow2.asm:asm-tree:$asm_version"
+    compile "org.ow2.asm:asm-util:$asm_version"
+    compile "org.ow2.asm:asm-commons:$asm_version"
+
+    // JOptSimple: command line option parsing
+    compile "net.sf.jopt-simple:jopt-simple:5.0.1"
+
+    // Simple Logging Facade: makes the code independent of the chosen logging framework.
+    compile "org.slf4j:slf4j-api:1.7.21"
+
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}

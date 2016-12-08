@@ -1,0 +1,5 @@
+# Build directories
+src/main/resources/vegaweb
+src/main/web/src/app/**/*.js*
+src/main/web/src/*.js
+src/main/web/config/*.js*

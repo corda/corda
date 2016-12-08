@@ -1,61 +1,83 @@
 Getting set up
 ==============
 
-Ensure that you have access to R3 git repository.
+We have tried to make access to Corda as relatively simple as possible, using industry standard established tools.
+Although it is possible to replace any of the recommendations below, we will find it a lot easier to support your efforts
+if you follow our guidelines. Saying that, we are also interested in problems that arise due to different configurations.
 
-    https://bitbucket.org/R3-CEV/r3prototyping.git
+A JVM
+-----
 
-If you cannot access the page please contact the R3 admin team.
+Corda runs in a JVM and is written predominantly in Kotlin with some example use cases demonstrated in Java that we have
+incorporated to demonstrate that Kotlin and Java can work seemlessly together. We recommend the most recent production
+version of Java 8. The JDK can be obtained `from Oracle <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_.
+Other implementations of the JVM are not actively supported, but as mentioned, we are interested in finding out any issues you
+do have with them.
 
-Install the Oracle JDK 8u45 or higher. OpenJDK will probably also work, but it hasn't been tested.
+.. note:: If you are using a JVM implementation other than Oracle's you may get errors similiar to ``Unresolved reference: javafx``.
+   This means JavaFX is not bundled with the JVM and you will need to install it separately (e.g. OpenJFX is needed
+   with OpenJDK).
 
-Then install IntelliJ. The Community Edition is good enough:
+IntelliJ
+--------
+We strongly recommend the use of IntelliJ's Development Environment known as IDEA. Download it for free from
+`JetBrains <https://www.jetbrains.com/idea/download/>`_. The primary reason we recommend this particular IDE is that it integrates
+very well with our choice of language for Corda, "Kotlin", as Jetbrains also support the development of Kotlin.
 
-    https://www.jetbrains.com/idea/download/
+.. warning:: When opening the Corda project for the first time from the IntelliJ splash screen, please use "Open"
+   and then agree to import the Gradle project from the popup bubble. Don't pick "Import" on the splash screen,
+   because a bug in IntelliJ will cause the pre-packaged run configurations to be erased. If you see this warning
+   too late, it's no problem, just use ``git checkout .idea/runConfiguration`` or the version control tab in IntelliJ
+   to undelete the files.
 
-Upgrade the Kotlin plugin to the latest version by clicking "Configure > Plugins" in the opening screen,
-then clicking "Install JetBrains plugin", then searching for Kotlin, then hitting "Upgrade" and then "Restart".
-You can confirm what is the latest version of Kotlin plugin on this page:
 
-    https://plugins.jetbrains.com/plugin/6954
+Kotlin
+------
+Kotlin is available as a downloadable plugin to IntelliJ. Refer to IntelliJ's instructions on
+`getting Started with Kotlin and IntelliJ <https://kotlinlang.org/docs/tutorials/getting-started.html>`_. Additionally,
+if you would like to start getting to grips with the Kotlin language, then we strongly recommend you work through some
+of the tutorials (known as "koans") as well. Also see our :doc:`further-notes-on-kotlin`.
 
-Choose "Check out from version control" and use this git URL. Please remember to replace your_username with your
-actual bitbucket user name.
 
-    https://your_username@bitbucket.org/R3-CEV/r3prototyping.git
+Version control via Git
+-----------------------
 
-After code is cloned open the project. Please ensure that Gradle project is imported.
-You should have the "Unliked Gradle project?" pop-up window in the IntelliJ top right corner. Please click on "Import Gradle Project". Wait for it to think and download the dependencies. After that you might have another popup titled "Unindexed remote maven repositories found." This is general IntelliJ question and doesn't affect Corda, therefore you can decided to index them or not.
+We use git to version control Corda. The authorative place to obtain git is from the main `git website <https://git-scm.com/downloads>`_
+but it may be the case that your operating system provides git with a supported utility (e.g. for Apple, git is provided along
+with XCode - their free development environment). If this is the case, we would recommend you obtain git via that
+supported route.
 
-Next click on "green arrow" next to "All tests" pop-up on the top toolbar.
+You will need the command line package installed which you can then use natively (via the command line) or via IntelliJ
+(in which case you may need to configure IntelliJ to recognise where git has been installed on your system). IntelliJ and
+git configuration are quite seemless although the first time you use it, you will have to configure IntelliJ the location
+of your git command installation. More details regarding this can be found
+on the `JetBrains website <https://www.jetbrains.com/help/idea/2016.2/using-git-integration.html>`_
 
-The code should build, the unit tests should show as all green.
+Gradle
+------
 
-You can catch up with the latest code by selecting "VCS -> Update Project" in the menu.
+Gradle is our primary means of building Corda and managing dependencies. IntelliJ has its own view of this and occasionally
+may need to be resynced from time to time. This can be done within IntelliJ by pressing the "gradle refresh" icon located
+on the gradle tab (generally found on the right hand side), or by following the gradle commands specific for the task you
+are performing (details expounded later). Whenever prompted about gradle, accept the defaults suggested by IntelliJ.
 
-If IntelliJ complains about lack of an SDK
-------------------------------------------
 
-If on attempting to open the project (including importing Gradle project), IntelliJ refuses because SDK was not selected, do the following:
+Corda source code
+-----------------
 
-   Configure -> Project Defaults -> Project Structure
+You can check out the Corda platform source code from this repository:
 
-on that tab:
+    https://github.com/corda/corda.git
 
-   Project Settings / Project
+and a template app that you can use as a basis for experimenting with app development from:
 
-click on New… next to the red <No SDK> symbol, and select JDK.  It should then pop up and show the latest JDK it has
-found at something like
+    https://github.com/corda/cordapp-template.git
 
-    jdk1.8.0_xx…/Contents/Home
+You can catch up with the latest code by selecting "VCS -> Update Project" in the IntelliJ menu.
 
-Also select Project language level: as 8.  Click OK.  Open should now work.
 
-Doing it without IntelliJ
--------------------------
+Troubleshooting
+---------------
 
-If you don't want to explore or modify the code in a local IDE, you can also just use the command line and a text editor:
-* First run ``git clone https://your_username@bitbucket.org/R3-CEV/r3prototyping.git`` to download Corda source code. Please remember to replace your_username with your actual bitbucket user name.
-* Next ensure that you are in r3repository ``cd r3repository``
-* Then you can run ``./gradlew test`` to run the unit tests.
-* Finally remeber to run ``git pull`` to upgrade the source code.
+See :doc:`getting-set-up-fault-finding`, or get in touch with us either on the `forums <https://discourse.corda.net/>`_ or via `slack <http://slack.corda.net/>`_.
+

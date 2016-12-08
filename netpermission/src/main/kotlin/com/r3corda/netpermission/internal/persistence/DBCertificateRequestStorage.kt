@@ -1,7 +1,7 @@
 package com.r3corda.netpermission.internal.persistence
 
-import com.r3corda.core.crypto.SecureHash
-import com.r3corda.node.utilities.*
+import net.corda.core.crypto.SecureHash
+import net.corda.node.utilities.*
 import org.jetbrains.exposed.sql.*
 import java.security.cert.Certificate
 import java.time.LocalDateTime

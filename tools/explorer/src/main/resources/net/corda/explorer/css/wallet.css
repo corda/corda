@@ -1,0 +1,446 @@
+#topLevel.root {
+    -fx-background-image: url('../images/r3bg.png');
+    -fx-background-size: cover;
+    -fx-background-repeat: no-repeat;
+    -fx-base: white;
+}
+
+#cashViewer {
+    -fx-background-color: transparent;
+}
+
+#cashViewerTable {
+    -fx-background-color: transparent;
+}
+
+#cashViewerTable .tree-table-row-cell {
+    -fx-background-color: transparent;
+}
+
+.expand-row {
+    -fx-padding: 10;
+}
+
+.dialog-pane {
+    -fx-background-color: rgba(255, 255, 255, 0.7);
+    -fx-background-radius: 2px;
+    -fx-border-radius: 2px;
+    -fx-border-color: rgb(20, 136, 204);
+}
+
+.nested-column-header, .nested-column-header {
+    -fx-background-color: transparent;
+    -fx-wrap-text: true;
+    -fx-border-color: transparent;
+}
+
+.text-field,
+.table-column,
+.label,
+.title,
+.combo-box,
+.button,
+.split-menu-button,
+.choice-box {
+    -fx-font-family: Effra;
+    -fx-font-size: 1em;
+    -fx-text-fill: rgb(63, 63, 63);
+    -fx-font-smoothing-type: gray;
+}
+
+.text-highlight {
+    -fx-text-fill: rgb(20, 136, 204);
+}
+
+.context-menu {
+    -fx-background-color: rgba(255, 255, 255, 0.9);
+}
+
+.titled-pane .content,
+.split-menu-button .label,
+.split-menu-button .arrow-button,
+.titled-pane .split-pane, .scroll-pane {
+    -fx-background-color: transparent;
+}
+
+.text-field,
+.tree-table-view,
+.table-view,
+.accordion,
+.combo-box,
+.context-menu,
+.button,
+.split-menu-button,
+.choice-box,
+.titled-pane .title {
+    -fx-border-color: rgb(150, 150, 150);
+    -fx-border-width: 1px;
+
+}
+
+.text-field:focused,
+.tree-table-view:focused,
+.table-view:focused,
+.accordion:focused,
+.combo-box:focused,
+.context-menu:focused,
+.button:focused,
+.split-menu-button:focused,
+.text-field:hover,
+.button:hover,
+.split-menu-button:hover,
+.choice-box:hover,
+.titled-pane:hover .title {
+    -fx-border-color: rgb(20, 136, 204);
+}
+
+.split-menu-button:pressed,
+.button:pressed,
+.choice-box:pressed,
+.titled-pane:expanded .title {
+    -fx-background-color: rgb(20, 136, 204);
+    -fx-text-fill: white;
+}
+
+.chart {
+    -fx-padding: 0;
+}
+
+.chart-series-line {
+    -fx-stroke-width: 2px;
+    -fx-effect: null;
+}
+
+.default-color0.chart-series-line {
+    -fx-stroke: rgb(20, 136, 204);
+}
+
+.chart-plot-background {
+    -fx-background-color: transparent;
+}
+
+.chart-vertical-grid-lines {
+    -fx-stroke: transparent;
+}
+
+.chart-horizontal-grid-lines {
+    -fx-stroke: transparent;
+}
+
+.chart-alternative-row-fill {
+    -fx-fill: transparent;
+    -fx-stroke: transparent;
+    -fx-stroke-width: 0;
+}
+
+.titled-pane:expanded .title .text {
+    -fx-fill: white;
+}
+
+.titled-pane .title, .titled-pane .title:hover {
+    -fx-border-width: 0.5px;
+}
+
+.text-field, .combo-box, .choice-box, .password-field {
+    -fx-background-color: rgba(255, 255, 255, 0.5);
+    -fx-background-radius: 2px;
+    -fx-border-radius: 2px;
+
+}
+
+/* switch off highlighting for text-field when it's inside a combo-box */
+.combo-box .text-field, .combo-box .text-field:hover, .combo-box .text-field:focused {
+    -fx-border-color: transparent;
+}
+
+/* table formatting */
+
+.column-header-background,
+.table-column,
+.tree-table-row-cell, .column-header-background .filler {
+    -fx-background-color: transparent;
+    -fx-label-padding: 3px;
+
+}
+
+.nested-column-header .label {
+    -fx-wrap-text: true
+}
+
+.table-column {
+    -fx-border-style: solid;
+    -fx-border-color: rgb(216, 216, 216); /*t r b l */
+
+    -fx-border-width: 1px;
+    -fx-border-insets: 1px;
+    -fx-background-insets: 2px;
+}
+
+.tree-table-row-cell:even .table-column,
+.table-row-cell:even .table-column,
+.title, .split-menu-button, .button {
+    -fx-background-color: rgba(20, 136, 204, 0.2);
+}
+
+.table-row-cell:selected, .tree-table-row-cell:selected {
+    -fx-background-color: transparent;
+}
+
+.tree-table-row-cell:selected .table-column,
+.tree-table-row-cell:focused .table-column,
+.table-row-cell:selected .table-column,
+.table-row-cell:focused .table-column {
+    -fx-background-color: rgba(20, 136, 204, 0.8);
+
+}
+
+.bad .text {
+    -fx-fill: rgb(236, 29, 36);
+}
+
+.table-row-cell:focused .table-column .text,
+.tree-table-row-cell:focused .table-column .text {
+    -fx-fill: white;
+}
+
+.table-column:hover,
+.table-row-cell:hover .first-column,
+.table-row-cell:hover .second-column,
+.tree-table-row-cell:hover .first-column,
+.tree-table-row-cell:hover .second-column {
+    -fx-border-color: rgb(20, 136, 204);
+}
+
+.tree-table-view .column-header-background .nested-column-header .table-column,
+.table-view .column-header-background .nested-column-header .table-column {
+    -fx-border-color: transparent;
+}
+
+/* Special formatting - columns to be presented with no join between them */
+
+.first-column {
+    -fx-border-width: 0.5px 0px 0.5px 0.5px;
+    -fx-border-insets: 1.5px 0px 1.5px 1.5px;
+    -fx-background-insets: 2px 0px 2px 2px;
+}
+
+.second-column {
+    -fx-border-width: 0.5px 0.5px 0.5px 0px;
+    -fx-border-insets: 1.5px 1.5px 1.5px 0px;
+    -fx-background-insets: 2px 2px 2px 0px;
+}
+
+/* highlighting where the user has typed a key */
+.tree-table-view text-area, .table-view text-area {
+    -fx-font-weight: bold;
+    -fx-fill: rgb(20, 136, 204);
+
+}
+
+.tree-table-row-cell:selected .table-column text-area,
+.table-row-cell:selected .table-column text-area {
+    -fx-font-weight: bold;
+    -fx-fill: rgb(255, 255, 255);
+}
+
+/* labels */
+.dialog-pane .header-panel .label .text {
+    -fx-font-size: 1em;
+    -fx-fill: rgb(20, 136, 204);
+}
+
+#headline, .headline {
+    -fx-font-size: 2.4em;
+}
+
+#subline, .subline {
+    -fx-font-size: 1.4em;
+}
+
+#headline, #subline {
+    -fx-text-fill: rgb(65, 65, 65);
+    -fx-padding: 0px;
+
+}
+
+/* search boxes */
+.search {
+    -fx-background-image: url('../images/search.png');
+    -fx-background-size: Auto 16px;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: 8px center;
+    -fx-padding: 5px 5px 5px 30px;
+    -fx-background-radius: 2px;
+    -fx-border-radius: 2px;
+}
+
+.search-clear {
+    -fx-image: url('../images/clear_inactive.png');
+    -fx-padding: 5px 5px 5px 30px;
+}
+
+.search-clear:hover {
+    -fx-image: url('../images/clear.png');
+}
+
+.split-menu-button, .button, .choice-box {
+    -fx-background-radius: 2px;
+    -fx-border-radius: 2px;
+    -fx-border-insets: 0.5px;
+    -fx-background-insets: 0.5px;
+
+}
+
+.tree-table-row-cell .monetary-value, .monetary-value .label, .table-row-cell .monetary-value {
+    -fx-alignment: center-right;
+}
+
+/* split panes */
+.split-pane-divider {
+    -fx-background-color: transparent;
+    -fx-border-color: rgb(160, 160, 160);
+    -fx-border-width: 0 0 0 0px;
+    -fx-padding: 0 0 0 3;
+}
+
+.sidebar {
+    -fx-background-color: #c3dbe9;
+}
+
+.sidebar-menu-item {
+    -fx-background-color: transparent;
+    -fx-max-width: infinity;
+    -fx-border-width: 0;
+    -fx-padding: 10, 10, 10, 10;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.sidebar-menu-item:hover, .sidebar-menu-item:selected {
+    -fx-background-color: #9edde9;
+}
+
+.no-padding {
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+/* Dashboard tiles */
+.tile, .tile-user {
+    -fx-padding: 10px;
+    -fx-pref-height: 250px;
+}
+
+.corda-logo {
+    -fx-font-weight: bolder;
+    -fx-font-size: 1.8em;
+    -fx-padding: 5;
+    -fx-text-fill: rgb(20, 136, 204);
+    -fx-image: url("../images/corda-logo-alpha.png");
+    -fx-max-width: 30;
+    -fx-max-height: 30;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.tile .title, .tile:expanded .title,
+.tile-user .title, .tile-user:expanded .title {
+    -fx-alignment: center-left;
+    -fx-font-size: 1.4em;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-background-color: rgba(183, 210, 228, 0.2);
+    -fx-border-color: transparent; /*t r b l */
+
+}
+
+.tile .title .text, .tile:expanded .title .text,
+.tile-user .title .text, .tile-user:expanded .title .text {
+    -fx-fill: rgb(65, 65, 65);
+}
+
+.tile .content,
+.tile-user .content {
+    -fx-background-color: rgba(183, 210, 228, 0.2);
+    -fx-background-size: Auto 90%;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center center;
+    -fx-cursor: hand;
+    -fx-padding: 0px;
+    -fx-alignment: bottom-right;
+    -fx-border-color: transparent; /*t r b l */
+}
+
+.tile .label,
+.tile-user .label {
+    -fx-font-size: 2.4em;
+    -fx-padding: 20px;
+    -fx-text-fill: rgb(65, 65, 65);
+    -fx-font-weight: normal;
+    -fx-text-alignment: right;
+
+}
+
+.tile:hover,
+.tile-user:hover .content, .tile-user:hover .title {
+    -fx-border-color: rgb(20, 136, 204);
+    -fx-border-width: 2;
+}
+
+#tile_cash .content {
+    -fx-background-image: url('../images/cash_lrg.png');
+}
+
+#tile_debtors .content {
+    -fx-background-image: url('../images/outflow_lrg.png');
+}
+
+#tile_creditors .content {
+    -fx-background-image: url('../images/inflow_lrg.png');
+}
+
+#tile_tx .content {
+    -fx-background-image: url('../images/tx_lrg.png');
+}
+
+#tile_cpty .content {
+    -fx-background-image: url('../images/cpty_lrg.png');
+}
+
+.tile-user .content {
+    -fx-background-image: url('../images/user_b.png');
+}
+
+.tile-user-test-man .content {
+    -fx-background-image: url('../images/man1.png');
+    -fx-background-size: cover;
+}
+
+.tile-user-test-woman .content {
+    -fx-background-image: url('../images/woman1.png');
+    -fx-background-size: cover;
+}
+
+.tile-user .label {
+    -fx-background-color: rgba(255, 255, 255, 0.7);
+}
+
+.tile-user:hover .title, .tile-user:hover .content {
+    -fx-background-color: rgba(255, 255, 255, 0.7);
+}
+
+.counterparty {
+    -fx-background-image: url('../images/inst_128.png');
+    -fx-background-size: Auto 16px;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: 0px center;
+    -fx-padding: 0 0 0 20px;
+}
+
+.state-panel {
+    -fx-background-color: rgba(255, 255, 255, 0.7);
+    -fx-border-color: rgb(150, 150, 150);
+    -fx-insets: 5px
+}

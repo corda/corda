@@ -1,22 +1,35 @@
 buildscript {
-    ext.kotlin_version = '1.0.3'
+    // Our version: bump this on release.
+    ext.corda_version = "0.7-SNAPSHOT"
+    ext.gradle_plugins_version = "0.6.1"
+
+    ext.kotlin_version = '1.0.5'
     ext.quasar_version = '0.7.6'
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.4.0'
     ext.jackson_version = '2.8.0.rc2'
     ext.jetty_version = '9.3.9.v20160517'
     ext.jersey_version = '2.23.1'
-	ext.jolokia_version = '2.0.0-M1'
+    ext.jolokia_version = '2.0.0-M1'
     ext.assertj_version = '3.5.1'
     ext.log4j_version = '2.6.2'
     ext.bouncycastle_version = '1.54'
 
     repositories {
+        mavenLocal()
         mavenCentral()
         jcenter()
+        // TODO: Remove this once all packages are published to jcenter or maven central. (M6 or 7).
+        maven {
+            url  "http://r3.bintray.com/corda"
+        }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
+        classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
+        classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
+        classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
 
         // Can run 'gradle dependencyUpdates' to find new versions of things.
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'
@@ -30,11 +43,20 @@ plugins {
 }
 
 apply plugin: 'kotlin'
-apply plugin: 'application'
 apply plugin: 'project-report'
-apply plugin: QuasarPlugin
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'maven-publish'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordformation'
+
+// We need the following three lines even though they're inside an allprojects {} block below because otherwise
+// IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
+// with the run configurations. It also doesn't realise that the project is a Java 8 project and misconfigures
+// the resulting import. This fixes it.
+apply plugin: 'java'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
 
 allprojects {
     apply plugin: 'java'
@@ -44,117 +66,35 @@ allprojects {
     targetCompatibility = 1.8
 
     tasks.withType(JavaCompile) {
-        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options"
     }
 
-    // Our version: bump this on release.
-    group 'com.r3corda'
-    version '0.5-SNAPSHOT'
+    group 'net.corda'
+    version "$corda_version"
 }
 
+// Check that we are running on a Java 8 JDK. The source/targetCompatibility values above aren't sufficient to
+// guarantee this because those are properties checked by the Java plugin, but we're using Kotlin.
+//
+// We recommend a specific minor version (unfortunately, not checkable directly) because JavaFX adds APIs in
+// minor releases, so we can't work with just any Java 8, it has to be a recent one.
+if (!JavaVersion.current().java8Compatible)
+    throw new GradleException("Corda requires Java 8, please upgrade to at least 1.8.0_112")
+
 repositories {
-    mavenLocal()
     mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
     jcenter()
     maven {
         url 'https://dl.bintray.com/kotlin/exposed'
     }
 }
 
-sourceSets {
-    integrationTest {
-        kotlin {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/kotlin')
-        }
-    }
-    main {
-        resources {
-            srcDir "config/dev"
-        }
-    }
-    test {
-        resources {
-            srcDir "config/test"
-        }
-    }
-}
-
-//noinspection GroovyAssignabilityCheck
-configurations {
-    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
-    runtime.exclude module: 'isolated'
-
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
-}
-
-// This is required for quasar. I think.
-applicationDefaultJvmArgs = ["-javaagent:${configurations.quasar.singleFile}"]
-// Needed by the :startScripts task
-mainClassName = 'com.r3corda.demos.TraderDemoKt'
-
-// To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
-// build/reports/project/dependencies/index.html for green highlighted parts of the tree.
-
+// Required for building out the fat JAR.
 dependencies {
     compile project(':node')
-    // TODO: Demos should not depend on test code, but only use production APIs
-    compile project(':test-utils')
-
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.2"
-
-    // Unit testing helpers.
-    testCompile 'junit:junit:4.12'
-    testCompile 'org.assertj:assertj-core:3.4.1'
-
-    // Integration test helpers
-    integrationTestCompile 'junit:junit:4.12'
-    integrationTestCompile 'org.assertj:assertj-core:${assertj_version}'
-    integrationTestCompile project(':test-utils')
+    compile "com.google.guava:guava:19.0"
+    runtime project(path: ":node", configuration: 'runtimeArtifacts')
 }
-
-// Package up the demo programs.
-
-task getAttachmentDemo(type: CreateStartScripts) {
-    mainClassName = "com.r3corda.demos.attachment.AttachmentDemoKt"
-    applicationName = "attachment-demo"
-    defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
-    outputDir = new File(project.buildDir, 'scripts')
-    classpath = jar.outputs.files + project.configurations.runtime
-}
-
-task getTraderDemo(type: CreateStartScripts) {
-    mainClassName = "com.r3corda.demos.TraderDemoKt"
-    applicationName = "trader-demo"
-    defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
-    outputDir = new File(project.buildDir, 'scripts')
-    classpath = jar.outputs.files + project.configurations.runtime
-}
-
-// Force windows script classpath to wildcard path to avoid the 'Command Line Is Too Long' issues
-// with generated scripts. Include Jolokia .war explicitly as this isn't picked up by wildcard
-tasks.withType(CreateStartScripts) {
-    doLast {
-        windowsScript.text = windowsScript
-                .readLines()
-                .collect { line -> line.replaceAll(~/^set CLASSPATH=.*$/, 'set CLASSPATH=%APP_HOME%/lib/*;%APP_HOME%/lib/jolokia-agent-war-'+project.ext.jolokia_version+'.war') }
-                .join('\r\n')
-    }
-}
-
-task integrationTest(type: Test, dependsOn: [':node:integrationTest',':client:integrationTest']) {
-    testClassesDir = sourceSets.integrationTest.output.classesDir
-    classpath = sourceSets.integrationTest.runtimeClasspath
-}
-
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
     dependsOn = subprojects.test
@@ -181,80 +121,37 @@ tasks.withType(Test) {
     reports.html.destination = file("${reporting.baseDir}/${name}")
 }
 
-quasarScan.dependsOn('classes', 'core:classes', 'contracts:classes', 'node:classes')
-
-applicationDistribution.into("bin") {
-    from(getAttachmentDemo)
-    from(getTraderDemo)
-    fileMode = 0755
-}
-
-task buildCordaJAR(type: FatCapsule, dependsOn: ['quasarScan', 'buildCertSigningRequestUtilityJAR']) {
-    applicationClass 'com.r3corda.node.MainKt'
-    archiveName 'corda.jar'
-    applicationSource = files(project.tasks.findByName('jar'), 'node/build/classes/main/CordaCaplet.class')
-
-    capsuleManifest {
-        appClassPath = ["jolokia-agent-war-${project.ext.jolokia_version}.war"]
-        systemProperties['log4j.configuration'] = 'log4j2.xml'
-        javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
-        minJavaVersion = '1.8.0'
-        caplets = ['CordaCaplet']
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+    directory "./build/nodes"
+    networkMap "Controller"
+    node {
+        name "Controller"
+        dirName "controller"
+        nearestCity "London"
+        advertisedServices = ["corda.notary.validating"]
+        artemisPort 10002
+        webPort 10003
+        cordapps = []
     }
-}
-
-task buildCertSigningRequestUtilityJAR(type: FatCapsule, dependsOn: project.jar) {
-    applicationClass 'com.r3corda.node.utilities.certsigning.CertificateSignerKt'
-    archiveName 'certSigningRequestUtility.jar'
-    capsuleManifest {
-        systemProperties['log4j.configuration'] = 'log4j2.xml'
-        minJavaVersion = '1.8.0'
+    node {
+        name "Bank A"
+        dirName "nodea"
+        nearestCity "London"
+        advertisedServices = []
+        artemisPort 10004
+        webPort 10005
+        cordapps = []
     }
-}
-
-task installTemplateNodes(dependsOn: 'buildCordaJAR') << {
-    copy {
-        from buildCordaJAR.outputs.getFiles()
-        from 'config/dev/nameservernode.conf'
-        into "${buildDir}/nodes/nameserver"
-        rename 'nameservernode.conf', 'node.conf'
-    }
-
-    copy {
-        from buildCordaJAR.outputs.getFiles()
-        from 'config/dev/generalnodea.conf'
-        into "${buildDir}/nodes/nodea"
-        rename 'generalnodea.conf', 'node.conf'
-    }
-
-    copy {
-        from buildCordaJAR.outputs.getFiles()
-        from 'config/dev/generalnodeb.conf'
-        into "${buildDir}/nodes/nodeb"
-        rename 'generalnodeb.conf', 'node.conf'
-    }
-
-    delete("${buildDir}/nodes/runnodes")
-    def jarName = buildCordaJAR.outputs.getFiles().getSingleFile().getName()
-    copy {
-        from "buildSrc/scripts/runnodes"
-        filter { String line -> line.replace("JAR_NAME", jarName) }
-        filter(org.apache.tools.ant.filters.FixCrLfFilter.class, eol: org.apache.tools.ant.filters.FixCrLfFilter.CrLf.newInstance("lf"))
-        into "${buildDir}/nodes"
+    node {
+        name "Bank B"
+        dirName "nodeb"
+        nearestCity "New York"
+        advertisedServices = []
+        artemisPort 10006
+        webPort 10007
+        cordapps = []
     }
 }
 
 // Aliasing the publishToMavenLocal for simplicity.
 task(install, dependsOn: 'publishToMavenLocal')
-
-publishing {
-    publications {
-        corda(MavenPublication) {
-            artifactId 'corda'
-
-            artifact buildCordaJAR {
-                classifier ""
-            }
-        }
-    }
-}

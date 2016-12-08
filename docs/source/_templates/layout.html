@@ -1,6 +1,15 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 {% extends "!layout.html" %}
 {% block sidebartitle %}
 {{ super() }}
 <br>
 <a href="api/index.html">API reference</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 {% endblock %}

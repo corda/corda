@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import de.jensd.fx.glyphs.fontawesome.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<ScrollPane fitToWidth="true" stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.112-ea"
+            xmlns:fx="http://javafx.com/fxml/1">
+    <VBox alignment="CENTER">
+        <padding>
+            <Insets bottom="10" left="10" right="10" top="10"/>
+        </padding>
+        <StackPane>
+            <TitledPane text="Client Setting">
+                <GridPane fx:id="clientPane" disable="true" hgap="50" vgap="20">
+                    <padding>
+                        <Insets top="30" right="30" bottom="30" left="30"/>
+                    </padding>
+                    <Label text="Reporting Currency :"/>
+                    <ComboBox fx:id="reportingCurrenciesComboBox" GridPane.columnIndex="1"/>
+
+                    <Label text="Fullscreen :" GridPane.rowIndex="1"/>
+                    <CheckBox fx:id="fullscreenCheckBox" GridPane.columnIndex="1" GridPane.halignment="CENTER"
+                              GridPane.rowIndex="1"/>
+
+                    <Label text="Remember me :" GridPane.rowIndex="2"/>
+                    <CheckBox fx:id="rememberMeCheckBox" GridPane.columnIndex="1" GridPane.halignment="CENTER"
+                              GridPane.rowIndex="2"/>
+
+                    <Label text="Corda Node :" GridPane.rowIndex="3" GridPane.valignment="TOP"/>
+
+                    <HBox spacing="3" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="3">
+                        <TextField fx:id="hostTextField" promptText="Host"/>
+                        <TextField fx:id="portTextField" prefWidth="100" promptText="Port"/>
+                    </HBox>
+                </GridPane>
+            </TitledPane>
+
+            <HBox alignment="TOP_RIGHT" maxWidth="-Infinity" maxHeight="-Infinity" StackPane.alignment="TOP_RIGHT">
+                <Label id="setting-edit-label" fx:id="save" text="Save" visible="false">
+                    <padding>
+                        <Insets bottom="5" left="10" right="10" top="5"/>
+                    </padding>
+                    <graphic>
+                        <FontAwesomeIconView glyphName="SAVE"/>
+                    </graphic>
+                </Label>
+                <Label id="setting-edit-label" fx:id="editCancel" text="Edit">
+                    <padding>
+                        <Insets bottom="5" left="10" right="10" top="5"/>
+                    </padding>
+                    <graphic>
+                        <FontAwesomeIconView glyphName="EDIT"/>
+                    </graphic>
+                </Label>
+            </HBox>
+        </StackPane>
+    </VBox>
+</ScrollPane>

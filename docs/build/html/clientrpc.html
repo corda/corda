@@ -31,8 +31,8 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Release process" href="release-process.html"/>
-        <link rel="prev" title="Interest Rate Swaps" href="contract-irs.html"/> 
+        <link rel="next" title="Networking and messaging" href="messaging.html"/>
+        <link rel="prev" title="The CorDapp Template" href="tutorial-cordapp.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -85,60 +85,95 @@
           
             
             
-                <p class="caption"><span class="caption-text">Overview</span></p>
+                <p class="caption"><span class="caption-text">Getting started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
-<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle Plugins for Cordapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#template-build-gradle">Template build.gradle</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#cordformation">Cordformation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Tutorials</span></p>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
-<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
-<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Contracts</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Node API</span></p>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Client RPC</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#security">Security</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#observables">Observables</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#versioning">Versioning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#thread-safety">Thread safety</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#error-handling">Error handling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#wire-protocol">Wire protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#registering-classes-with-rpc-kryo">Registering classes with RPC Kryo</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>
 
             
@@ -189,8 +224,8 @@
 compatible language the easiest way to do so is using the client library. The library connects to your running
 node using a message queue protocol and then provides a simple RPC interface to interact with it. You make calls
 on a Java object as normal, and the marshalling back and forth is handled for you.</p>
-<p>The starting point for the client library is the <a class="reference external" href="api/com.r3corda.client/-corda-r-p-c-client/index.html">CordaRPCClient</a> class. This provides a <code class="docutils literal"><span class="pre">proxy</span></code> method that
-returns an implementation of the <a class="reference external" href="api/com.r3corda.node.services.messaging/-corda-r-p-c-ops/index.html">CordaRPCOps</a> interface. A timeout parameter can be specified, and observables that
+<p>The starting point for the client library is the <a class="reference external" href="api/net.corda.client/-corda-r-p-c-client/index.html">CordaRPCClient</a> class. This provides a <code class="docutils literal"><span class="pre">proxy</span></code> method that
+returns an implementation of the <a class="reference external" href="api/net.corda.node.services.messaging/-corda-r-p-c-ops/index.html">CordaRPCOps</a> interface. A timeout parameter can be specified, and observables that
 are returned by RPCs can be subscribed to in order to receive an ongoing stream of updates from the node. More
 detail on how to use this is provided in the docs for the proxy method.</p>
 <div class="admonition warning">
@@ -199,7 +234,13 @@ detail on how to use this is provided in the docs for the proxy method.</p>
 resources. When you&#8217;re done with it, cast it to <code class="docutils literal"><span class="pre">Closeable</span></code> or <code class="docutils literal"><span class="pre">AutoCloseable</span></code> and close it. Don&#8217;t create
 one for every call you make - create a proxy and reuse it.</p>
 </div>
-<p>For a brief tutorial on how one can use the RPC API see <a class="reference internal" href="tutorial-clientrpc-api.html"><span class="doc">Client RPC API</span></a>.</p>
+<p>For a brief tutorial on how one can use the RPC API see <a class="reference internal" href="tutorial-clientrpc-api.html"><span class="doc">Client RPC API tutorial</span></a>.</p>
+<div class="section" id="security">
+<h2>Security<a class="headerlink" href="#security" title="Permalink to this headline">¶</a></h2>
+<p>Users wanting to use the RPC library are first required to authenticate themselves with the node using a valid username
+and password. These are specified in the configuration file. Each user can be configured with a set of permissions which
+the RPC can use for fine-grain access control.</p>
+</div>
 <div class="section" id="observables">
 <h2>Observables<a class="headerlink" href="#observables" title="Permalink to this headline">¶</a></h2>
 <p>The RPC system handles observables in a special way. When a method returns an observable, whether directly or
@@ -250,6 +291,19 @@ side as if it was thrown from inside the called RPC method. These exceptions can
 <p>The client RPC wire protocol is not currently documented. To use it you must use the client library provided.
 This is likely to change in a future release.</p>
 </div>
+<div class="section" id="registering-classes-with-rpc-kryo">
+<h2>Registering classes with RPC Kryo<a class="headerlink" href="#registering-classes-with-rpc-kryo" title="Permalink to this headline">¶</a></h2>
+<p>In the present implementation of the node we use Kryo to generate the <em>on the wire</em> representation of contracts states
+or any other classes that form part of the RPC arguments or response.  To avoid the RPC interface being wide open to all
+classes on the classpath, Cordapps will currently have to register any classes or custom serialisers they require with Kryo
+if they are not one of those registered by default in <code class="docutils literal"><span class="pre">RPCKryo</span></code> via the plugin architecture.  See <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">CorDapps Background</span></a>.
+This will require some familiarity with Kryo.  An example is shown in <a class="reference internal" href="tutorial-clientrpc-api.html"><span class="doc">Client RPC API tutorial</span></a>.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin
+customisation point will either go away completely or change.</p>
+</div>
+</div>
 </div>
 
 
@@ -259,10 +313,10 @@ This is likely to change in a future release.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="release-process.html" class="btn btn-neutral float-right" title="Release process" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="messaging.html" class="btn btn-neutral float-right" title="Networking and messaging" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="contract-irs.html" class="btn btn-neutral" title="Interest Rate Swaps" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="tutorial-cordapp.html" class="btn btn-neutral" title="The CorDapp Template" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -271,7 +325,7 @@ This is likely to change in a future release.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+        &copy; Copyright 2016, R3 Limited.
 
     </p>
   </div>
