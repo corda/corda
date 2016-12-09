@@ -2,6 +2,25 @@ apply plugin: 'groovy'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
 
+// Used for bootstrapping project
+buildscript {
+    // For sharing constants between builds
+    Properties props = new Properties()
+    file("../../publish.properties").withInputStream { props.load(it) }
+
+    ext.gradle_plugins_version = props.getProperty("gradlePluginsVersion")
+
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
+    }
+}
+
+version "$gradle_plugins_version"
+
 dependencies {
     compile gradleApi()
     compile localGroovy()
@@ -81,3 +100,6 @@ publishing {
         }
     }
 }
+
+// Aliasing the publishToMavenLocal for simplicity.
+task(install, dependsOn: 'publishToMavenLocal')

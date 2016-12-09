@@ -1,9 +1,12 @@
 buildscript {
+    // For sharing constants between builds
+    Properties props = new Properties()
+    file("publish.properties").withInputStream { props.load(it) }
+
     // Our version: bump this on release.
     ext.corda_version = "0.7-SNAPSHOT"
-    ext.gradle_plugins_version = "0.6.1"
-
-    ext.kotlin_version = '1.0.5'
+    ext.gradle_plugins_version = props.getProperty("gradlePluginsVersion")
+    ext.kotlin_version = '1.0.5-2'
     ext.quasar_version = '0.7.6'
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.4.0'
@@ -45,7 +48,7 @@ plugins {
 apply plugin: 'kotlin'
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
-apply plugin: 'maven-publish'
+apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordformation'
 
@@ -93,7 +96,7 @@ repositories {
 dependencies {
     compile project(':node')
     compile "com.google.guava:guava:19.0"
-    runtime project(path: ":node", configuration: 'runtimeArtifacts')
+    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 }
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
@@ -153,5 +156,25 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     }
 }
 
-// Aliasing the publishToMavenLocal for simplicity.
-task(install, dependsOn: 'publishToMavenLocal')
+bintrayConfig {
+    user = System.getenv('CORDA_BINTRAY_USER')
+    key = System.getenv('CORDA_BINTRAY_KEY')
+    repo = 'corda'
+    org = 'r3'
+    licenses = ['Apache-2.0']
+    vcsUrl = 'https://github.com/corda/corda'
+    projectUrl = 'https://github.com/corda/corda'
+    gpgSign = true
+    gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
+    publications = ['client', 'core', 'corda', 'finance', 'node', 'test-utils']
+    license {
+        name = 'Apache-2.0'
+        url = 'https://www.apache.org/licenses/LICENSE-2.0'
+        distribution = 'repo'
+    }
+    developer {
+        id = 'R3'
+        name = 'R3'
+        email = 'dev@corda.net'
+    }
+}

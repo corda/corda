@@ -2,13 +2,13 @@ apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
 
+description 'Corda core'
+
 buildscript {
     repositories {
         mavenCentral()
     }
 }
-
-// apply plugin: 'org.jetbrains.dokka'
 
 repositories {
     mavenLocal()
@@ -88,16 +88,4 @@ dependencies {
 
     // RS API: Response type and codes for ApiUtils.
     compile "javax.ws.rs:javax.ws.rs-api:2.0"
-}
-
-publishing {
-    publications {
-        core(MavenPublication) {
-            from components.java
-            artifactId 'core'
-
-            artifact sourceJar
-            artifact javadocJar
-        }
-    }
 }
