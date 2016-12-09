@@ -54,12 +54,16 @@ abstract class FlowLogic<out T> {
         return sendAndReceive(otherParty, payload, T::class.java)
     }
 
+    // TODO: Move the receiveType param to first position for readability
+
     @Suspendable
     fun <T : Any> sendAndReceive(otherParty: Party, payload: Any, receiveType: Class<T>): UntrustworthyData<T> {
         return fsm.sendAndReceive(otherParty, payload, receiveType, sessionFlow)
     }
 
     inline fun <reified T : Any> receive(otherParty: Party): UntrustworthyData<T> = receive(otherParty, T::class.java)
+
+    // TODO: Move the receiveType param to first position for readability
 
     @Suspendable
     fun <T : Any> receive(otherParty: Party, receiveType: Class<T>): UntrustworthyData<T> {

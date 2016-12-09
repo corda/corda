@@ -96,6 +96,9 @@ class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfigur
      *
      * @throws RPCException if the server version is too low or if the server isn't reachable within the given time.
      */
+
+    // TODO: Add an @JvmOverloads annotation
+
     @Throws(RPCException::class)
     fun proxy(timeout: Duration? = null, minVersion: Int = 0): CordaRPCOps {
         return state.locked {
