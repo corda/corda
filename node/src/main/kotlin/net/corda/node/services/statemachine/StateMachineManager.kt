@@ -217,10 +217,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             when (sessionMessage) {
                 is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage)
                 is SessionInit -> {
-                    // TODO SECURITY Look up the party with the full X.500 name instead of just the legal name which
-                    // isn't required to be unique
-                    // TODO For now have the doorman block signups with identical names, and names with characters that
-                    // are used in X.500 name textual serialisation
+                    // TODO Look up the party with the full X.500 name instead of just the legal name
                     val otherParty = serviceHub.networkMapCache.getNodeByLegalName(message.peer.commonName)?.legalIdentity
                     if (otherParty != null) {
                         onSessionInit(sessionMessage, otherParty)
