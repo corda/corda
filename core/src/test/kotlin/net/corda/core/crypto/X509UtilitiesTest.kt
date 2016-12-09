@@ -2,7 +2,6 @@ package net.corda.core.crypto
 
 import net.corda.core.div
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.asn1.x509.GeneralName
 import org.junit.Rule
 import org.junit.Test
@@ -249,8 +248,7 @@ class X509UtilitiesTest {
         val peerChain = clientSocket.session.peerCertificates
         val peerX500Principal = (peerChain[0] as X509Certificate).subjectX500Principal
         val x500name = X500Name(peerX500Principal.name)
-        val cn = x500name.getRDNs(BCStyle.CN).first().first.value.toString()
-        assertEquals("Mega Corp.", cn)
+        assertEquals("Mega Corp.", x500name.commonName)
 
 
         val output = DataOutputStream(clientSocket.outputStream)

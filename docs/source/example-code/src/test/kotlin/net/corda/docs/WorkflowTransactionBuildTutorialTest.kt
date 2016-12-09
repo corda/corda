@@ -53,7 +53,7 @@ class WorkflowTransactionBuildTutorialTest {
         net.stopNodes()
     }
 
-    //@Test
+    @Test
     fun `Run workflow to completion`() {
         // Setup a vault subscriber to wait for successful upload of the proposal to NodeB
         val done1 = SettableFuture.create<Unit>()

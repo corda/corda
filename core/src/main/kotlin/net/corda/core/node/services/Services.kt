@@ -100,8 +100,19 @@ interface VaultService {
     val currentVault: Vault
 
     /**
+     * Prefer the use of [updates] unless you know why you want to use this instead.
+     *
      * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Vault will already incorporate
-     * the update.
+     * the update, and the database transaction associated with the update will still be open and current.  If for some
+     * reason the processing crosses outside of the database transaction (for example, the update is pushed outside the current
+     * JVM or across to another [Thread] which is executing in a different database transaction) then the Vault may
+     * not incorporate the update due to racing with committing the current database transaction.
+     */
+    val rawUpdates: Observable<Vault.Update>
+
+    /**
+     * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Vault will already incorporate
+     * the update, and the database transaction associated with the update will have been committed and closed.
      */
     val updates: Observable<Vault.Update>
 

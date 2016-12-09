@@ -31,6 +31,9 @@ sealed class StateMachineUpdate(val id: StateMachineRunId) {
  * RPC operations that the node exposes to clients using the Java client library. These can be called from
  * client apps and are implemented by the node in the [CordaRPCOpsImpl] class.
  */
+
+// TODO: The use of Pairs throughout is unfriendly for Java interop.
+
 interface CordaRPCOps : RPCOps {
     /**
      * Returns a pair of currently in-progress state machine infos and an observable of future state machine adds/removes.

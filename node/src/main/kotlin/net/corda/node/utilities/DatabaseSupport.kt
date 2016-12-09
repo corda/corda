@@ -7,9 +7,13 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
+import net.corda.node.utilities.StrandLocalTransactionManager.Boundary
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.TransactionInterface
 import org.jetbrains.exposed.sql.transactions.TransactionManager
+import rx.Observable
+import rx.subjects.PublishSubject
+import rx.subjects.UnicastSubject
 import java.io.Closeable
 import java.security.PublicKey
 import java.sql.Connection
@@ -18,6 +22,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Table prefix for all tables owned by the node module.
@@ -78,12 +83,19 @@ fun <T> isolatedTransaction(database: Database, block: Transaction.() -> T): T {
  * over each other.  So here we use a companion object to hold them as [ThreadLocal] and [StrandLocalTransactionManager]
  * is otherwise effectively stateless so it's replacement does not matter.  The [ThreadLocal] is then set correctly and
  * explicitly just prior to initiating a transaction in [databaseTransaction] and [createDatabaseTransaction] above.
+ *
+ * The [StrandLocalTransactionManager] instances have an [Observable] of the transaction close [Boundary]s which
+ * facilitates the use of [Observable.afterDatabaseCommit] to create event streams that only emit once the database
+ * transaction is closed and the data has been persisted and becomes visible to other observers.
  */
 class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionManager {
 
     companion object {
+        private val TX_ID = Key<UUID>()
+
         private val threadLocalDb = ThreadLocal<Database>()
         private val threadLocalTx = ThreadLocal<Transaction>()
+        private val databaseToInstance = ConcurrentHashMap<Database, StrandLocalTransactionManager>()
 
         fun setThreadLocalTx(tx: Transaction?): Pair<Database?, Transaction?> {
             val oldTx = threadLocalTx.get()
@@ -101,10 +113,21 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
             set(value: Database) {
                 threadLocalDb.set(value)
             }
+
+        val transactionId: UUID
+            get() = threadLocalTx.get()?.getUserData(TX_ID) ?: throw IllegalStateException("Was expecting to find transaction set on current strand: ${Strand.currentStrand()}")
+
+        val manager: StrandLocalTransactionManager get() = databaseToInstance[database]!!
+
+        val transactionBoundaries: PublishSubject<Boundary> get() = manager._transactionBoundaries
     }
 
+
+    data class Boundary(val txId: UUID)
+
+    private val _transactionBoundaries = PublishSubject.create<Boundary>()
+
     init {
-        database = initWithDatabase
         // Found a unit test that was forgetting to close the database transactions.  When you close() on the top level
         // database transaction it will reset the threadLocalTx back to null, so if it isn't then there is still a
         // databae transaction open.  The [databaseTransaction] helper above handles this in a finally clause for you
@@ -112,16 +135,23 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
         if (threadLocalTx.get() != null) {
             throw IllegalStateException("Was not expecting to find existing database transaction on current strand when setting database: ${Strand.currentStrand()}, ${threadLocalTx.get()}")
         }
+        database = initWithDatabase
+        databaseToInstance[database] = this
     }
 
-    override fun newTransaction(isolation: Int): Transaction = Transaction(StrandLocalTransaction(database, isolation, threadLocalTx)).apply {
-        threadLocalTx.set(this)
+    override fun newTransaction(isolation: Int): Transaction {
+        val impl = StrandLocalTransaction(database, isolation, threadLocalTx, transactionBoundaries)
+        return Transaction(impl).apply {
+            threadLocalTx.set(this)
+            putUserData(TX_ID, impl.id)
+        }
     }
 
     override fun currentOrNull(): Transaction? = threadLocalTx.get()
 
     // Direct copy of [ThreadLocalTransaction].
-    private class StrandLocalTransaction(override val db: Database, isolation: Int, val threadLocal: ThreadLocal<Transaction>) : TransactionInterface {
+    private class StrandLocalTransaction(override val db: Database, isolation: Int, val threadLocal: ThreadLocal<Transaction>, val transactionBoundaries: PublishSubject<Boundary>) : TransactionInterface {
+        val id = UUID.randomUUID()
 
         override val connection: Connection by lazy(LazyThreadSafetyMode.NONE) {
             db.connector().apply {
@@ -145,13 +175,33 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
         override fun close() {
             connection.close()
             threadLocal.set(outerTransaction)
+            if (outerTransaction == null) {
+                transactionBoundaries.onNext(Boundary(id))
+            }
         }
     }
 }
 
+/**
+ * Buffer observations until after the current database transaction has been closed.  Observations are never
+ * dropped, simply delayed.
+ *
+ * Primarily for use by component authors to publish observations during database transactions without racing against
+ * closing the database transaction.
+ *
+ * For examples, see the call hierarchy of this function.
+ */
+fun <T : Any> rx.Observer<T>.bufferUntilDatabaseCommit(): rx.Observer<T> {
+    val currentTxId = StrandLocalTransactionManager.transactionId
+    val databaseTxBoundary: Observable<StrandLocalTransactionManager.Boundary> = StrandLocalTransactionManager.transactionBoundaries.filter { it.txId == currentTxId }.first()
+    val subject = UnicastSubject.create<T>()
+    subject.delaySubscription(databaseTxBoundary).subscribe(this)
+    databaseTxBoundary.doOnCompleted { subject.onCompleted() }
+    return subject
+}
+
 // Composite columns for use with below Exposed helpers.
 data class PartyColumns(val name: Column<String>, val owningKey: Column<CompositeKey>)
-
 data class StateRefColumns(val txId: Column<SecureHash>, val index: Column<Int>)
 data class TxnNoteColumns(val txId: Column<SecureHash>, val note: Column<String>)
 

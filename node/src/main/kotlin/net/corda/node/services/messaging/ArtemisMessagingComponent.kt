@@ -136,6 +136,8 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
                         TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
                         TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
                         TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true
+
+                        // TODO: Set up the connector's host name verifier logic to ensure we connect to the expected node even in case of MITM or BGP hijacks
                 )
         )
     }

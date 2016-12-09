@@ -40,7 +40,7 @@ class DBTransactionStorage : TransactionStorage {
             val old = txStorage.get(transaction.id)
             if (old == null) {
                 txStorage.put(transaction.id, transaction)
-                updatesPublisher.onNext(transaction)
+                updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
                 true
             } else {
                 false
