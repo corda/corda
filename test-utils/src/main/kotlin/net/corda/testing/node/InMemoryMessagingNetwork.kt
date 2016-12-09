@@ -374,7 +374,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
 
         private fun MessageTransfer.toReceivedMessage() = object : ReceivedMessage {
             override val topicSession: TopicSession get() = message.topicSession
-            override val data: ByteArray get() = message.data
+            override val data: ByteArray get() = message.data.copyOf() // Kryo messes with the buffer so give each client a unique copy
             override val peer: X500Name get() = X509Utilities.getDevX509Name(sender.description)
             override val debugTimestamp: Instant get() = message.debugTimestamp
             override val uniqueMessageId: UUID get() = message.uniqueMessageId
