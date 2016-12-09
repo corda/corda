@@ -51,7 +51,7 @@ dependencies {
 task buildCordaJAR(type: FatCapsule, dependsOn: ['buildCertSigningRequestUtilityJAR']) {
     applicationClass 'net.corda.node.MainKt'
     archiveName "corda-${corda_version}.jar"
-    applicationSource = files(project.tasks.findByName('jar'), 'build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
+    applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
 
     capsuleManifest {
         appClassPath = ["jolokia-agent-war-${project.rootProject.ext.jolokia_version}.war"]
