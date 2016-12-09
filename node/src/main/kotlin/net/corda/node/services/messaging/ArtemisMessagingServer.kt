@@ -88,7 +88,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     fun start() = mutex.locked {
         if (!running) {
             configureAndStartServer()
-            networkChangeHandle = networkMapCache.changed.subscribe { destroyPossibleStaleBridge(it) }
+            networkChangeHandle = networkMapCache.changed.subscribe { destroyOrCreateBridge(it) }
             running = true
         }
     }
@@ -108,13 +108,14 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         maybeDeployBridgeForAddress(networkMapService)
     }
 
-    private fun destroyPossibleStaleBridge(change: MapChange) {
-        val staleNodeInfo = when (change) {
-            is MapChange.Modified -> change.previousNode
-            is MapChange.Removed -> change.node
-            is MapChange.Added -> return
+    private fun destroyOrCreateBridge(change: MapChange) {
+        val (newNode, staleNode) = when (change) {
+            is MapChange.Modified -> change.node to change.previousNode
+            is MapChange.Removed -> null to change.node
+            is MapChange.Added -> change.node to null
         }
-        (staleNodeInfo.address as? ArtemisAddress)?.let { maybeDestroyBridge(it.queueName) }
+        (staleNode?.address as? ArtemisAddress)?.let { maybeDestroyBridge(it.queueName) }
+        (newNode?.address as? ArtemisAddress)?.let { if (activeMQServer.queueQuery(it.queueName).isExists) maybeDeployBridgeForAddress(it) }
     }
 
     private fun configureAndStartServer() {
