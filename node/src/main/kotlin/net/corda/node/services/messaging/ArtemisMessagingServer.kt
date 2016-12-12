@@ -85,6 +85,10 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         config.basedir.expectedOnDefaultFileSystem()
     }
 
+    /**
+     * The server will make sure the bridge exists on network map changes, see method [destroyOrCreateBridge]
+     * We assume network map will be updated accordingly when the client node register with the network map server.
+     */
     fun start() = mutex.locked {
         if (!running) {
             configureAndStartServer()
@@ -108,6 +112,14 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         maybeDeployBridgeForAddress(networkMapService)
     }
 
+    /**
+     * The bridge will be created automatically when the queues are created, however, this is not the case when the network map restarted.
+     * The queues are restored from the journal, and because the queues are added before we register the callback handler, this method will never get called for existing queues.
+     * This results in message queues up and never get send out. (https://github.com/corda/corda/issues/37)
+     *
+     * We create the bridges indirectly now because the network map is not persisted and there are no ways to obtain host and port information on startup.
+     * TODO : Create the bridge directly from the list of queues on start up when we have a persisted network map service.
+     */
     private fun destroyOrCreateBridge(change: MapChange) {
         val (newNode, staleNode) = when (change) {
             is MapChange.Modified -> change.node to change.previousNode

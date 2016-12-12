@@ -1,4 +1,4 @@
-package net.corda.node.services.messaging
+package net.corda.services.messaging
 
 import net.corda.node.driver.driver
 import org.junit.Test
@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 
 class ArtemisMessagingServerTest {
     @Test
-    fun `test network map will work after restart`() {
+    fun `network map will work after restart`() {
         val dir = Paths.get("build", getTimestampAsDirectoryName())
         // Start the network map.
         driver(driverDirectory = dir) {
