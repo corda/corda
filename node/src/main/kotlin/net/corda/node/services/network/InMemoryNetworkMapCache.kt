@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.Party
 import net.corda.core.map
+import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.createMessage
@@ -14,6 +15,7 @@ import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.NetworkCacheError
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -51,6 +53,21 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
     private var registeredForPush = false
     protected var registeredNodes: MutableMap<Party, NodeInfo> = Collections.synchronizedMap(HashMap<Party, NodeInfo>())
+
+    override fun getPartyInfo(party: Party): PartyInfo? {
+        val node = registeredNodes[party]
+        if (node != null) {
+            return PartyInfo.Node(node)
+        }
+        for (entry in registeredNodes) {
+            for (service in entry.value.advertisedServices) {
+                if (service.identity == party) {
+                    return PartyInfo.Service(service)
+                }
+            }
+        }
+        return null
+    }
 
     override fun track(): Pair<List<NodeInfo>, Observable<MapChange>> {
         synchronized(_changed) {

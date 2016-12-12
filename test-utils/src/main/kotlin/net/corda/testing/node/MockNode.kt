@@ -5,6 +5,7 @@ import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
 import net.corda.core.*
 import net.corda.core.crypto.Party
+import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PhysicalLocation
@@ -15,7 +16,6 @@ import net.corda.node.internal.AbstractNode
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.keys.E2ETestKeyManagementService
-import net.corda.core.messaging.RPCOps
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.InMemoryUniquenessProvider
@@ -118,7 +118,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // through the java.nio API which we are already mocking via Jimfs.
         override fun makeMessagingService(): MessagingServiceInternal {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
-            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, serverThread, configuration.myLegalName, database).start().getOrThrow()
+            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, serverThread, makeServiceEntries(), configuration.myLegalName, database).start().getOrThrow()
         }
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)

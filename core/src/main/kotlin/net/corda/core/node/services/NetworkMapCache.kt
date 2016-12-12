@@ -5,9 +5,11 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.Contract
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceEntry
 import net.corda.core.randomOrNull
 import rx.Observable
 
@@ -64,15 +66,27 @@ interface NetworkMapCache {
     fun getNodeByLegalName(name: String): NodeInfo? = partyNodes.singleOrNull { it.legalIdentity.name == name }
 
     /** Look up the node info for a composite key. */
-    fun getNodeByCompositeKey(compositeKey: CompositeKey): NodeInfo? {
+    fun getNodeByLegalIdentityKey(compositeKey: CompositeKey): NodeInfo? {
         // Although we should never have more than one match, it is theoretically possible. Report an error if it happens.
-        val candidates = partyNodes.filter {
-            (it.legalIdentity.owningKey == compositeKey)
-                    || it.advertisedServices.any { it.identity.owningKey == compositeKey }
-        }
+        val candidates = partyNodes.filter { it.legalIdentity.owningKey == compositeKey }
         check(candidates.size <= 1) { "Found more than one match for key $compositeKey" }
         return candidates.singleOrNull()
     }
+
+    /**
+     * Look up all nodes advertising the service owned by [compositeKey]
+     */
+    fun getNodesByAdvertisedServiceIdentityKey(compositeKey: CompositeKey): List<NodeInfo> {
+        return partyNodes.filter { it.advertisedServices.any { it.identity.owningKey == compositeKey } }
+    }
+
+    /**
+     * Returns information about the party, which may be a specific node or a service
+     *
+     * @party The party we would like the address of.
+     * @return The address of the party, if found.
+     */
+    fun getPartyInfo(party: Party): PartyInfo?
 
     /**
      * Given a [party], returns a node advertising it as an identity. If more than one node found the result

@@ -3,6 +3,7 @@ package net.corda.node.services.messaging
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.net.HostAndPort
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.read
@@ -34,6 +35,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
 
         const val INTERNAL_PREFIX = "internal."
         const val PEERS_PREFIX = "${INTERNAL_PREFIX}peers."
+        const val SERVICES_PREFIX = "${INTERNAL_PREFIX}services."
         const val CLIENTS_PREFIX = "clients."
         const val P2P_QUEUE = "p2p.inbound"
         const val RPC_REQUESTS_QUEUE = "rpc.requests"
@@ -55,7 +57,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
         }
     }
 
-    protected interface ArtemisAddress {
+    protected interface ArtemisAddress : SingleMessageRecipient {
         val queueName: SimpleString
         val hostAndPort: HostAndPort
     }
@@ -69,9 +71,18 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      * may change or evolve and code that relies upon it being a simple host/port may not function correctly.
      * For instance it may contain onion routing data.
      */
-    data class NodeAddress(val identity: CompositeKey, override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
-        override val queueName: SimpleString = SimpleString("$PEERS_PREFIX${identity.toBase58String()}")
+    data class NodeAddress(override val queueName: SimpleString, override val hostAndPort: HostAndPort) : ArtemisAddress {
+        companion object {
+            fun asPeer(identity: CompositeKey, hostAndPort: HostAndPort) =
+                    NodeAddress(SimpleString("$PEERS_PREFIX${identity.toBase58String()}"), hostAndPort)
+            fun asService(identity: CompositeKey, hostAndPort: HostAndPort) =
+                    NodeAddress(SimpleString("$SERVICES_PREFIX${identity.toBase58String()}"), hostAndPort)
+        }
         override fun toString(): String = "${javaClass.simpleName}(identity = $queueName, $hostAndPort)"
+    }
+
+    data class ServiceAddress(val identity: CompositeKey) : MessageRecipientGroup {
+        val queueName: SimpleString = SimpleString("$SERVICES_PREFIX${identity.toBase58String()}")
     }
 
     /** The config object is used to pass in the passwords for the certificate KeyStore and TrustStore */

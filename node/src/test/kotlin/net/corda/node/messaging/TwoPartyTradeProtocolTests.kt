@@ -133,7 +133,7 @@ class TwoPartyTradeFlowTests {
             val aliceKey = aliceNode.services.legalIdentityKey
             val notaryKey = notaryNode.services.notaryIdentityKey
 
-            val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.Handle
+            val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.PeerHandle
             val networkMapAddr = notaryNode.info.address
 
             net.runNetwork() // Clear network map registration messages

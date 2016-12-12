@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.catch
 import net.corda.core.node.services.DEFAULT_SESSION_ID
+import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.DeserializeAsKotlinObjectDef
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -78,6 +79,8 @@ interface MessagingService {
      * @param topicSession identifier for the topic and session the message is sent to.
      */
     fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID = UUID.randomUUID()): Message
+
+    fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients
 
     /** Returns an address that refers to this node. */
     val myAddress: SingleMessageRecipient
