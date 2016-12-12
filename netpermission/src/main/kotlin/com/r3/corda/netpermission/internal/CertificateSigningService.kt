@@ -1,5 +1,6 @@
 package com.r3.corda.netpermission.internal
 
+import com.r3.corda.netpermission.internal.persistence.CertificateResponse
 import com.r3.corda.netpermission.internal.persistence.CertificationData
 import com.r3.corda.netpermission.internal.persistence.CertificationRequestStorage
 import net.corda.core.crypto.X509Utilities.CACertAndKey
@@ -17,8 +18,8 @@ import javax.ws.rs.*
 import javax.ws.rs.core.Context
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
-import javax.ws.rs.core.Response.noContent
-import javax.ws.rs.core.Response.ok
+import javax.ws.rs.core.Response.*
+import javax.ws.rs.core.Response.Status.UNAUTHORIZED
 
 /**
  * Provides functionality for asynchronous submission of certificate signing requests and retrieval of the results.
@@ -53,28 +54,31 @@ class CertificateSigningService(val intermediateCACertAndKey: CACertAndKey, val 
     @Path("certificate/{var}")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     fun retrieveCert(@PathParam("var") requestId: String): Response {
-        val clientCert = storage.getCertificate(requestId)
-        return if (clientCert != null) {
-            // Write certificate chain to a zip stream and extract the bit array output.
-            ByteArrayOutputStream().use {
-                ZipOutputStream(it).use {
-                    zipStream ->
+        val response = storage.getResponse(requestId)
+        return when (response) {
+            is CertificateResponse.Ready -> {
+                // Write certificate chain to a zip stream and extract the bit array output.
+                val baos = ByteArrayOutputStream()
+                ZipOutputStream(baos).use { zip ->
                     // Client certificate must come first and root certificate should come last.
-                    mapOf(CORDA_CLIENT_CA to clientCert,
+                    val entries = listOf(
+                            CORDA_CLIENT_CA to response.certificate,
                             CORDA_INTERMEDIATE_CA to intermediateCACertAndKey.certificate,
-                            CORDA_ROOT_CA to rootCert).forEach {
-                        zipStream.putNextEntry(ZipEntry("${it.key}.cer"))
-                        zipStream.write(it.value.encoded)
-                        zipStream.setComment(it.key)
-                        zipStream.closeEntry()
+                            CORDA_ROOT_CA to rootCert
+                    )
+                    entries.forEach {
+                        zip.putNextEntry(ZipEntry("${it.first}.cer"))
+                        zip.write(it.second.encoded)
+                        zip.setComment(it.first)
+                        zip.closeEntry()
                     }
                 }
-                ok(it.toByteArray())
+                ok(baos.toByteArray())
                         .type("application/zip")
                         .header("Content-Disposition", "attachment; filename=\"certificates.zip\"")
             }
-        } else {
-            noContent()
+            is CertificateResponse.NotReady -> noContent()
+            is CertificateResponse.Unauthorised -> status(UNAUTHORIZED).entity(response.message)
         }.build()
     }
 }

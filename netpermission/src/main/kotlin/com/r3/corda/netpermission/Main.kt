@@ -107,11 +107,11 @@ fun main(args: Array<String>) {
             thread {
                 while (!stopSigner) {
                     Thread.sleep(1000)
-                    for (id in storage.pendingRequestIds()) {
-                        storage.saveCertificate(id, {
+                    for (id in storage.getPendingRequestIds()) {
+                        storage.approveRequest(id, {
                             JcaPKCS10CertificationRequest(it.request).run {
                                 X509Utilities.createServerCert(subject, publicKey, intermediateCACertAndKey,
-                                        if (it.ipAddr == it.hostName) listOf() else listOf(it.hostName), listOf(it.ipAddr))
+                                        if (it.ipAddress == it.hostName) listOf() else listOf(it.hostName), listOf(it.ipAddress))
                             }
                         })
                         log.debug { "Approved $id" }

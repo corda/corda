@@ -8,7 +8,8 @@ import java.security.cert.Certificate
  */
 interface CertificationRequestStorage {
     /**
-     * Persist [certificationData] in storage for further approval, returns randomly generated request ID.
+     * Persist [certificationData] in storage for further approval if it's a valid request. If not then it will be automically
+     * rejected and not subject to any approval process. In both cases a randomly generated request ID is returned.
      */
     fun saveRequest(certificationData: CertificationData): String
 
@@ -18,20 +19,31 @@ interface CertificationRequestStorage {
     fun getRequest(requestId: String): CertificationData?
 
     /**
-     * Retrieve client certificate with provided [requestId].
+     * Return the response for a previously saved request with ID [requestId].
      */
-    fun getCertificate(requestId: String): Certificate?
+    fun getResponse(requestId: String): CertificateResponse
 
     /**
-     * Generate new certificate and store in storage using provided [certificateGenerator].
+     * Approve the given request by generating and storing a new certificate using the provided generator.
      */
-    fun saveCertificate(requestId: String, certificateGenerator: (CertificationData) -> Certificate)
+    fun approveRequest(requestId: String, certificateGenerator: (CertificationData) -> Certificate)
+
+    /**
+     * Reject the given request using the given reason.
+     */
+    fun rejectRequest(requestId: String, rejectReason: String)
 
     /**
      * Retrieve list of request IDs waiting for approval.
      * TODO : This is used for the background thread to approve request automatically without KYC checks, should be removed after testnet.
      */
-    fun pendingRequestIds(): List<String>
+    fun getPendingRequestIds(): List<String>
 }
 
-data class CertificationData(val hostName: String, val ipAddr: String, val request: PKCS10CertificationRequest)
+data class CertificationData(val hostName: String, val ipAddress: String, val request: PKCS10CertificationRequest)
+
+sealed class CertificateResponse {
+    object NotReady : CertificateResponse()
+    class Ready(val certificate: Certificate) : CertificateResponse()
+    class Unauthorised(val message: String) : CertificateResponse()
+}

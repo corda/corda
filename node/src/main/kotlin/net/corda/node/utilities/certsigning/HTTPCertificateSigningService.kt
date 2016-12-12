@@ -10,6 +10,7 @@ import java.net.URL
 import java.security.cert.Certificate
 import java.util.*
 import java.util.zip.ZipInputStream
+import javax.ws.rs.core.MediaType
 
 class HTTPCertificateSigningService(val server: URL) : CertificateSigningService {
     companion object {
@@ -20,7 +21,6 @@ class HTTPCertificateSigningService(val server: URL) : CertificateSigningService
     override fun retrieveCertificates(requestId: String): Array<Certificate>? {
         // Poll server to download the signed certificate once request has been approved.
         val url = URL("$server/api/certificate/$requestId")
-
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
 
@@ -44,7 +44,7 @@ class HTTPCertificateSigningService(val server: URL) : CertificateSigningService
         val conn = URL("$server/api/certificate").openConnection() as HttpURLConnection
         conn.doOutput = true
         conn.requestMethod = "POST"
-        conn.setRequestProperty("Content-Type", "application/octet-stream")
+        conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM)
         conn.setRequestProperty("Client-Version", clientVersion)
         conn.outputStream.write(request.encoded)
 
