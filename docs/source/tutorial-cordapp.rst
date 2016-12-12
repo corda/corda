@@ -22,6 +22,25 @@ We recommend you read the non-technical white paper and technical white paper be
    intended design from beginning to end. It is the kind of document that you should read, or at least, read parts of. Note
    that because the technical white paper describes the intended end state, it does not always align with the implementation.
 
+Background
+----------
+
+The Example CorDapp implements a basic scenario where a buyer wishes to submit purchase orders to a seller. The scenario
+defines four nodes:
+
+* **Controller** which hosts the network map service and validating notary service.
+* **NodeA** who is the buyer.
+* **NodeB** who is the seller.
+* **NodeC** an unrelated third party.
+
+NodeA can generate purchase orders for lists and quantities of items and associated metadata such as delivery address
+and delivery date. The flows used to facilitate the agreement process always results in an agreement with the seller as
+long as the purchase order meets the contract constraints which are defined in ``PurchaseOrderContract.kt``.
+
+All agreed purchase orders between NodeA and NodeB become "shared facts" between NodeA and NodeB. But note that NodeC
+won't see any of these transactions or have copies of any of the resulting ``PurchaseOrderState`` objects. This is
+because data is only propagated on a need-to-know basis.
+
 Getting started
 ---------------
 
@@ -245,9 +264,13 @@ Unix/Mac OSX: ``./gradlew deployNodes``
 
 Windows: ``gradlew.bat deployNodes``
 
-Building straight away will build the example CorDapp defined the the CorDapp template source. For more information on the example
-CorDapp see "The Example CorDapp" section below. Gradle will then grab all the dependencies for you and build the
-example CorDapp.
+This build process will build the example CorDapp defined the the CorDapp template source. CorDapps can be written in 
+any language targeting the JVM. In our case, we've provided the template source in both Kotlin (``/kotlin/src``) and 
+Java (``/java/src``) Since both sets of source files are functionally identical, we will refer to the Kotlin build 
+throughout the documentation.
+
+For more information on the example CorDapp see "The Example CorDapp" section below. Gradle will then grab all the 
+dependencies for you and build the example CorDapp.
 
 The ``deployNodes`` Gradle task allows you easily create a formation of Corda nodes. In the case of the example CorDapp
 we are creating ``four`` nodes.
@@ -294,11 +317,11 @@ Open the Gradle window by selecting ``View > Tool windows > Gradle`` from the ma
 open on the right hand side of the IDE. Expand `tasks` and then expand `other`. Double click on `deployNodes`. Gradle will
 start the build process and output progress to a console window in the IDE.
 
-Running the Sample CorDapp
-==========================
+Running the CorDapp template
+============================
 
-Running the Sample CorDapp from the command line
-------------------------------------------------
+Running the CorDapp template from the command line
+--------------------------------------------------
 
 To run the sample CorDapp navigate to the ``kotlin/build/nodes`` folder and execute the ``runnodes`` shell script with:
 
@@ -405,30 +428,11 @@ To stop the nodes, press the red "stop" button at the top right-hand side of the
 
 The node driver can also be used to as a basis for `debugging your CorDapp`_
 
-Using the sample CorDapp
-========================
+Interacting with the CorDapp template
+=====================================
 
-Background
-----------
-
-The Example CorDapp implements a basic scenario where a buyer wishes to submit purchase orders to a seller. The scenario
-defines four nodes:
-
-* **Controller** which hosts the network map service and validating notary service.
-* **NodeA** who is the buyer.
-* **NodeB** who is the seller.
-* **NodeC** an unrelated third party.
-
-NodeA can generate purchase orders for lists and quantities of items and associated metadata such as delivery address
-and delivery date. The flows used to facilitate the agreement process always results in an agreement with the seller as
-long as the purchase order meets the contract constraints which are defined in ``PurchaseOrderContract.kt``.
-
-All agreed purchase orders between NodeA and NodeB become "shared facts" between NodeA and NodeB. But note that NodeC
-won't see any of these transactions or have copies of any of the resulting ``PurchaseOrderState`` objects. This is
-because data is only propagated on a need-to-know basis.
-
-Interfaces
-----------
+Via HTTP
+--------
 
 The CorDapp defines a few HTTP API end-points and also serves some static web content. The end-points allow you to
 list purchase orders and add purchase orders.
@@ -550,7 +554,8 @@ navigate to http://localhost:10007/api/example/purchase-orders.
 Navigate to http://localhost:10005/web/example the refresh button in the top left-hand side of the page. You should
 see the newly created agreement on the page.
 
-**Accessing the h2 database via h2 web console:**
+Using the h2 web console
+------------------------
 
 You can connect to the h2 database to see the current state of the ledger, among other data such as the current state of
 the network map cache. Firstly, navigate to the folder where you downloaded the h2 web console as part of the pre-requisites
@@ -578,7 +583,8 @@ you can use the string on the right to connect to the h2 database: just paste it
 You will be presented with a web application that enumerates all the available tables and provides an interface for you to
 query them using SQL.
 
-**Using the Example RPC client:**
+Using the Example RPC client
+----------------------------
 
 The ``/src/main/kotlin/com/example/client/ExampleClientRPC.kt`` file is a simple utility which uses the client RPC library
 to connect to a node and log the 'placed' purchase orders. It will log any existing purchase orders and listen for any future
@@ -606,6 +612,9 @@ application see:
 * :doc:`Client RPC documentation <clientrpc>`
 * :doc:`Client RPC tutorial <tutorial-clientrpc-api>`
 
+Extending the CorDapp template
+==============================
+
 CorDapp-template Project Structure
 ----------------------------------
 
@@ -627,48 +636,90 @@ The CorDapp template has the following directory structure:
     ├── lib
     │   ├── ...
     ├── settings.gradle
-    └── src
-        ├── main
-        │   ├── java
-        │   ├── kotlin
-        │   │   └── com
-        │   │       └── example
-        │   │           ├── Main.kt
-        │   │           ├── api
-        │   │           │   └── ExampleApi.kt
-        │   │           ├── client
-        │   │           │   └── ExampleClientRPC.kt
-        │   │           ├── contract
-        │   │           │   ├── PurchaseOrderContract.kt
-        │   │           │   └── PurchaseOrderState.kt
-        │   │           ├── model
-        │   │           │   └── PurchaseOrder.kt
-        │   │           ├── plugin
-        │   │           │   └── ExamplePlugin.kt
-        │   │           └── flow
-        │   │               └── ExampleFlow.kt
-        │   │           └── service
-        │   │               └── ExampleService.kt
-        │   ├── python
-        │   └── resources
-        │       ├── META-INF
-        │       │   └── services
-        │       │       └── net.corda.core.node.CordaPluginRegistry
-        │       ├── certificates
-        │       │   ├── readme.txt
-        │       │   ├── sslkeystore.jks
-        │       │   └── truststore.jks
-        │       └── exampleWeb
-        │           ├── index.html
-        │           └── js
-        │               └── example.js
-        └── test
-            ├── java
-            ├── kotlin
-            │   └── com
-            │       └── example
-            │           └── ExampleTest.kt
-            └── resources
+    ├── kotlin
+    │   └── src
+    │       ├── main
+    │       │   ├── kotlin
+    │       │   │   └── com
+    │       │   │       └── example
+    │       │   │           ├── Main.kt
+    │       │   │           ├── api
+    │       │   │           │   └── ExampleApi.kt
+    │       │   │           ├── client
+    │       │   │           │   └── ExampleClientRPC.kt
+    │       │   │           ├── contract
+    │       │   │           │   ├── PurchaseOrderContract.kt
+    │       │   │           │   └── PurchaseOrderState.kt
+    │       │   │           ├── model
+    │       │   │           │   └── PurchaseOrder.kt
+    │       │   │           ├── plugin
+    │       │   │           │   └── ExamplePlugin.kt
+    │       │   │           └── flow
+    │       │   │               └── ExampleFlow.kt
+    │       │   │           └── service
+    │       │   │               └── ExampleService.kt
+    │       │   ├── python
+    │       │   └── resources
+    │       │       ├── META-INF
+    │       │       │   └── services
+    │       │       │       └── net.corda.core.node.CordaPluginRegistry
+    │       │       ├── certificates
+    │       │       │   ├── readme.txt
+    │       │       │   ├── sslkeystore.jks
+    │       │       │   └── truststore.jks
+    │       │       └── exampleWeb
+    │       │           ├── index.html
+    │       │           └── js
+    │       │               └── example.js
+    │       └── test
+    │           ├── java
+    │           ├── kotlin
+    │           │   └── com
+    │           │       └── example
+    │           │           └── ExampleTest.kt
+    │           └── resources
+    └── java
+        └── src
+            ├── main
+            │   ├── java
+            │   │   └── com
+            │   │       └── example
+            │   │           ├── Main.java
+            │   │           ├── api
+            │   │           │   └── ExampleApi.java
+            │   │           ├── client
+            │   │           │   └── ExampleClientRPC.java
+            │   │           ├── contract
+            │   │           │   ├── PurchaseOrderContract.java
+            │   │           │   └── PurchaseOrderState.java
+            │   │           ├── model
+            │   │           │   └── PurchaseOrder.java
+            │   │           ├── plugin
+            │   │           │   └── ExamplePlugin.java
+            │   │           └── flow
+            │   │               └── ExampleFlow.java
+            │   │           └── service
+            │   │               └── ExampleService.java
+            │   ├── python
+            │   └── resources
+            │       ├── META-INF
+            │       │   └── services
+            │       │       └── net.corda.core.node.CordaPluginRegistry
+            │       ├── certificates
+            │       │   ├── readme.txt
+            │       │   ├── sslkeystore.jks
+            │       │   └── truststore.jks
+            │       └── exampleWeb
+            │           ├── index.html
+            │           └── js
+            │               └── example.js
+            └── test
+                ├── java
+                ├── kotlin
+                │   └── com
+                │       └── example
+                │           └── ExampleTest.kt
+                └── resources
 
 In the file structure above, the most important files and directories to note are:
 
@@ -677,15 +728,18 @@ In the file structure above, the most important files and directories to note ar
 * **gradle** contains the gradle wrapper, which allows the use of Gradle without installing it yourself and worrying
   about which version is required.
 * **lib** contains the Quasar.jar which is required for runtime instrumentation of classes by Quasar.
-* **src/main/kotlin** contains the source code for the example CorDapp.
-* **src/main/python** contains a python script which accesses nodes via RPC.
-* **src/main/resources** contains the certificate store, some static web content to be served by the nodes and the
-  PluginServiceRegistry file.
-* **src/test/kotlin** contains unit tests for protocols, contracts, etc.
+* **kotlin** contains the source code for the example CorDapp written in Kotlin.
+ * **kotlin/src/main/kotlin** contains the source code for the example CorDapp.
+ * **kotlin/src/main/python** contains a python script which accesses nodes via RPC.
+ * **kotlin/src/main/resources** contains the certificate store, some static web content to be served by the nodes and the
+   PluginServiceRegistry file.
+ * **kotlin/src/test/kotlin** contains unit tests for protocols, contracts, etc.
+* **java** contains the same source code, but written in java. This is an aid for users who do not want to develop in 
+  Kotlin, and serves as an example of how CorDapps can be developed in any language targeting the JVM.
 
 Some elements are covered in more detail below.
 
-The build.gradle File
+The build.gradle file
 ---------------------
 
 It is usually necessary to make a couple of changes to the ``build.gradle`` file. Here will cover the most pertinent bits.
@@ -812,6 +866,39 @@ Once you have made some changes to your CorDapp you can redeploy it with the fol
 Unix/Mac OSX: ``./gradlew deployNodes``
 
 Windows: ``gradlew.bat deployNodes``
+
+Running Nodes Across Machines
+-----------------------------
+
+The nodes can also be set up to communicate between separate machines on the 
+same subnet.
+
+After deploying the nodes, navigate to the build folder (`kotlin/build/
+nodes` or `java/build/nodes`) and move some of the individual node folders to 
+separate machines on the same subnet (e.g. using a USB key). It is important 
+that no nodes - including the controller node - end up on more than one 
+machine. Each computer should also have a copy of `runnodes` and 
+`runnodes.bat`.
+
+For example, you may end up with the following layout:
+
+* Machine 1: `controller`, `nodea`, `runnodes`, `runnodes.bat`
+* Machine 2: `nodeb`, `nodec`, `runnodes`, `runnodes.bat`
+
+You must now edit the configuration file for each node, including the 
+controller. Open each node's config file (`[nodeName]/node.conf`), and make 
+the following changes:
+
+* Change the artemis address to the machine's ip address (e.g. 
+`artemisAddress="10.18.0.166:10006"`)
+* Change the network map address to the ip address of the machine where the 
+controller node is running (e.g. `networkMapAddress="10.18.0.166:10002"`) 
+(please note that the controller will not have a network map address)
+
+Each machine should now run its nodes using `runnodes` or `runnodes.bat` 
+files. Once they are up and running, the nodes should be able to place 
+purchase orders among themselves in the same way as when they were running on 
+the same machine.
 
 Debugging your CorDapp
 ----------------------
