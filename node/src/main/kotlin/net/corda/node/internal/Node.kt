@@ -111,7 +111,7 @@ class Node(override val configuration: FullNodeConfiguration,
     // serialisation/deserialisation work.
     override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread", 1)
 
-    lateinit var webServer: Server
+    //lateinit var webServer: Server
     var messageBroker: ArtemisMessagingServer? = null
 
     // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
@@ -314,34 +314,32 @@ class Node(override val configuration: FullNodeConfiguration,
     override fun start(): Node {
         alreadyRunningNodeCheck()
         super.start()
-
-        // Only start the service API requests once the network map registration is successfully complete
-        networkMapRegistrationFuture.success {
-            // This needs to be in a seperate thread so that we can reply to our own request to become RPC clients
-            thread(name = "WebServer") {
-                try {
-                    webServer = initWebServer(connectLocalRpcAsNodeUser())
-                } catch(ex: Exception) {
-                    // TODO: We need to decide if this is a fatal error, given the API is unavailable, or whether the API
-                    //       is not critical and we continue anyway.
-                    log.error("Web server startup failed", ex)
-                }
-                // Begin exporting our own metrics via JMX.
-                JmxReporter.
-                        forRegistry(services.monitoringService.metrics).
-                        inDomain("net.corda").
-                        createsObjectNamesWith { type, domain, name ->
-                            // Make the JMX hierarchy a bit better organised.
-                            val category = name.substringBefore('.')
-                            val subName = name.substringAfter('.', "")
-                            if (subName == "")
-                                ObjectName("$domain:name=$category")
-                            else
-                                ObjectName("$domain:type=$category,name=$subName")
-                        }.
-                        build().
-                        start()
-            }
+        // Only start the service API requests once the network map registration is complete
+        thread(name = "WebServer") {
+            networkMapRegistrationFuture.getOrThrow()
+            // TODO: Remove when cleanup
+            //try {
+            //    webServer = initWebServer(connectLocalRpcAsNodeUser())
+            //} catch(ex: Exception) {
+            //    // TODO: We need to decide if this is a fatal error, given the API is unavailable, or whether the API
+            //    //       is not critical and we continue anyway.
+            //    log.error("Web server startup failed", ex)
+            //}
+            // Begin exporting our own metrics via JMX.
+            JmxReporter.
+                    forRegistry(services.monitoringService.metrics).
+                    inDomain("net.corda").
+                    createsObjectNamesWith { type, domain, name ->
+                        // Make the JMX hierarchy a bit better organised.
+                        val category = name.substringBefore('.')
+                        val subName = name.substringAfter('.', "")
+                        if (subName == "")
+                            ObjectName("$domain:name=$category")
+                        else
+                            ObjectName("$domain:type=$category,name=$subName")
+                    }.
+                    build().
+                    start()
         }
 
         shutdownThread = thread(start = false) {
