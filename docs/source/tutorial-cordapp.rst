@@ -264,7 +264,7 @@ Unix/Mac OSX: ``./gradlew deployNodes``
 
 Windows: ``gradlew.bat deployNodes``
 
-This build process will build the example CorDapp defined the the CorDapp template source. CorDapps can be written in 
+This build process will build the example CorDapp defined in the CorDapp template source. CorDapps can be written in 
 any language targeting the JVM. In our case, we've provided the template source in both Kotlin (``/kotlin/src``) and 
 Java (``/java/src``) Since both sets of source files are functionally identical, we will refer to the Kotlin build 
 throughout the documentation.
