@@ -220,14 +220,14 @@ Next, IntelliJ will show a bunch of pop-up windows. One of which requires our at
 .. image:: resources/unlinked-gradle-project.png
   :width: 400
 
-Click the 'import gradle project' link. A dialogue will pop-up. Press OK. Gradle will now begin obtianing all the
+Click the 'import gradle project' link. A dialogue will pop-up. Press OK. Gradle will now obtain all the
 project dependencies and perform some indexing. It usually takes a minute or so. If you miss the 'import gradle project'
 dialogue, simply close and re-open IntelliJ again to see it again.
 
 **Alternative approach**
 
 Alternatively, one can instruct IntelliJ to create a new project through cloning a repository. From the IntelliJ welcome
-dialogue (shown above), opt to 'check out from version control', then select git and enter the git url for the CorDpp tempalte
+dialogue (shown above), opt to 'check out from version control', then select git and enter the git URL for the CorDapp template
 (https://github.com/corda/cordapp-template). You'll then need to import the Gradle project when prompted, as explained above.
 
 **If you already have IntelliJ open**
@@ -343,7 +343,7 @@ message and some pertinent config information, see below:
   --- DEVELOPER SNAPSHOT ------------------------------------------------------------
 
   Logs can be found in                    : /Users/rogerwillis/Documents/Corda/cordapp-template/kotlin/build/nodes/nodea/logs
-  Database connection url is              : jdbc:h2:tcp://10.18.0.196:50661/node
+  Database connection URL is              : jdbc:h2:tcp://10.18.0.196:50661/node
   Node listening on address               : localhost:10004
   Loaded plugins                          : com.example.plugin.ExamplePlugin
   Embedded web server is listening on     : http://10.18.0.196:10005/
@@ -469,7 +469,7 @@ To create a purchase order from NodeA to NodeB, use:
 
 .. sourcecode:: bash
 
-  echo '{"orderNumber": "1","deliveryDate": "2018-09-15","deliveryAddress": {"city": "London","country": "UK"},"items" : [{"name": "widget","amount": "3"},{"name": "thing","amount": "4"}]}' | curl -T - -H 'Content-Type: application/json' http://localhost:10005/api/example/NodeB/create-purchase-order
+  echo '{"orderNumber": "1","deliveryDate": "2018-09-15","deliveryAddress": {"city": "London","country": "UK"},"items" : [{"name": "widget","amount": "3"},{"name": "thing","amount": "4"}]}' | cURL -T - -H 'Content-Type: application/json' http://localhost:10005/api/example/NodeB/create-purchase-order
 
 Note the port number ``10005`` (NodeA) and NodeB referenced in the API end-point path. This command instructs NodeA to
 create and send a purchase order to NodeB. Upon verification and completion of the process, both nodes (but not NodeC) will
@@ -577,7 +577,7 @@ The h2 web console should start up in a web browser tab. To connect we first nee
 node outputs its connection string in the terminal window as it starts up. In a terminal window where a node is running,
 look for the following string:
 
-``Database connection url is              : jdbc:h2:tcp://10.18.0.150:56736/node``
+``Database connection URL is              : jdbc:h2:tcp://10.18.0.150:56736/node``
 
 you can use the string on the right to connect to the h2 database: just paste it in to the JDBC URL field and click Connect.
 You will be presented with a web application that enumerates all the available tables and provides an interface for you to
