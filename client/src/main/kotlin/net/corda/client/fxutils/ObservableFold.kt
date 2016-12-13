@@ -38,6 +38,7 @@ fun <A, B> Observable<A>.foldToObservableValue(initial: B, folderFun: (A, B) -> 
 fun <T, R> Observable<T>.fold(accumulator: R, folderFun: (R, T) -> R): R {
     /**
      * This capture is fine, as [Platform.runLater] runs closures in order
+     * The buffer is to avoid flooding FX thread with runnable.
      */
     buffer(1, TimeUnit.SECONDS).subscribe {
         if (it.isNotEmpty()) {
