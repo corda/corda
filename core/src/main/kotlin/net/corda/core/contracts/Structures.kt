@@ -397,11 +397,8 @@ interface NetCommand : CommandData {
     val type: NetType
 }
 
-/** Indicates that this transaction replaces the inputs from a legacy contract to a new equivalent contract. */
-interface UpgradeCommand<T: ContractState> : CommandData {
-    val oldContract: Contract
-    val newContract: UpgradedContract<T>
-}
+/** Indicates that this transaction replaces the inputs contract state to another contract state */
+data class UpgradeCommand(val upgradedContractClass: Class<UpgradedContract<*, *>>) : CommandData
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
 data class AuthenticatedObject<out T : Any>(
@@ -452,28 +449,22 @@ interface Contract {
 }
 
 /**
- * Interface for contracts which can upgrade state objects issued by other contracts. Generally represents that this
- * is an upgraded version of the previous contract.
+ * Interface which can upgrade state objects issued by a contract to a new state object issued by a different contract.
  *
- * @param O the old contract state (can be [ContractState] or other common supertype if this supports upgrading
+ * @param OldState the old contract state (can be [ContractState] or other common supertype if this supports upgrading
  * more than one state).
+ * @param NewState the upgraded contract state.
  */
-interface UpgradedContract<O : ContractState>: Contract {
+interface UpgradedContract<in OldState : ContractState, out NewState : ContractState> : Contract {
+    val legacyContract: Contract
     /**
-     * Upgrade the another contract's state object to a state object referencing this contract.
+     * Upgrade contract's state object to a new state object.
      *
      * @throws IllegalArgumentException if the given state object is not one that can be upgraded. This can be either
      * that the class is incompatible, or that the data inside the state object cannot be upgraded for some reason.
      */
-    @Throws(IllegalArgumentException::class)
-    fun upgrade(state: O): ContractState
+    fun upgrade(state: OldState): NewState
 }
-
-/**
- * Convenience method for upgrading a contract state from state and reference.
- */
-@Throws(IllegalArgumentException::class)
-fun <O : ContractState> UpgradedContract<O>.upgrade(ref: StateAndRef<O>): ContractState = upgrade(ref.state.data)
 
 /**
  * An attachment is a ZIP (or an optionally signed JAR) that contains one or more files. Attachments are meant to
@@ -510,5 +501,3 @@ interface Attachment : NamedByHash {
         throw FileNotFoundException()
     }
 }
-
-

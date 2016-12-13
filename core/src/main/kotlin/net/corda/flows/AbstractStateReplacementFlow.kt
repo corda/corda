@@ -23,19 +23,31 @@ import net.corda.flows.AbstractStateReplacementFlow.Instigator
  * Abstract flow to be used for replacing one state with another, for example when changing the notary of a state.
  * Notably this requires a one to one replacement of states, states cannot be split, merged or issued as part of these
  * flows.
- *
- * The [Instigator] assembles the transaction for state replacement and sends out change proposals to all participants
- * ([Acceptor]) of that state. If participants agree to the proposed change, they each sign the transaction.
- * Finally, [Instigator] sends the transaction containing all participants' signatures to the notary for signature, and
- * then back to each participant so they can record it and use the new updated state for future transactions.
  */
 abstract class AbstractStateReplacementFlow {
-    data class Proposal<out T>(val stateRef: StateRef, val modification: T, val stx: SignedTransaction)
 
-    abstract class Instigator<out S : ContractState, out T>(
+    /**
+     * The [Proposal] contains the details of proposed state modification.
+     * This is the message sent by the [Instigator] to all participants([Acceptor]) during the state replacement process.
+     *
+     * @param M the type of a class representing proposed modification by the instigator.
+     */
+    data class Proposal<out M>(val stateRef: StateRef, val modification: M, val stx: SignedTransaction)
+
+    /**
+     * The [Instigator] assembles the transaction for state replacement and sends out change proposals to all participants
+     * ([Acceptor]) of that state. If participants agree to the proposed change, they each sign the transaction.
+     * Finally, [Instigator] sends the transaction containing all participants' signatures to the notary for signature, and
+     * then back to each participant so they can record it and use the new updated state for future transactions.
+     *
+     * @param S the input contract state type
+     * @param T the output contract state type, this can be different from [S]. For example, in contract upgrade, the output state type can be different from the input state type after the upgrade process.
+     * @param M the type of a class representing proposed modification by the instigator.
+     */
+    abstract class Instigator<out S : ContractState, out T : ContractState, out M>(
             val originalState: StateAndRef<S>,
-            val modification: T,
-            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<StateAndRef<S>>() {
+            val modification: M,
+            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<StateAndRef<T>>() {
         companion object {
             object SIGNING : ProgressTracker.Step("Requesting signatures from other parties")
             object NOTARY : ProgressTracker.Step("Requesting notary signature")
@@ -45,7 +57,7 @@ abstract class AbstractStateReplacementFlow {
 
         @Suspendable
         @Throws(StateReplacementException::class)
-        override fun call(): StateAndRef<S> {
+        override fun call(): StateAndRef<T> {
             val (stx, participants) = assembleTx()
 
             progressTracker.currentStep = SIGNING

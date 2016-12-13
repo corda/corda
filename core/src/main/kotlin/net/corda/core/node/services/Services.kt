@@ -7,7 +7,6 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import rx.Observable
-import java.io.File
 import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -143,7 +142,7 @@ interface VaultService {
 
     fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?> {
         val refsToStates = currentVault.states.associateBy { it.ref }
-        return refs.associateBy({ it }, { refsToStates[it]?.state })
+        return refs.associateBy({ it }) { refsToStates[it]?.state }
     }
 
     /**
@@ -166,9 +165,21 @@ interface VaultService {
 
     /** Get contracts we would be willing to upgrade the suggested contract to. */
     // TODO: We need a better place to put business logic functions
-    fun <T : ContractState> getUpgradeCandidates(old: Contract): Set<UpgradedContract<T>>
-    /** Attempt to upgrade the given contract to a newer version. */
-    fun <T: ContractState> upgradeContracts(refs: List<StateAndRef<T>>, new: UpgradedContract<T>): List<ListenableFuture<*>>
+    fun getAuthorisedContractUpgrade(ref: StateRef): Class<UpgradedContract<*, *>>?
+
+    /**
+     * Authorise a contract state upgrade.
+     * This will store the upgrade authorisation in the vault, and will be queried by [ContractUpgradeFlow.Acceptor] during contract upgrade process.
+     * Invoking this method indicate the node is willing to upgrade the [state] using the [upgradedContractClass].
+     * This method will NOT initiate the upgrade process. To start the upgrade process, see [ContractUpgradeFlow.Instigator].
+     */
+    fun authoriseContractUpgrade(stateAndRef: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>)
+
+    /**
+     * Authorise a contract state upgrade.
+     * This will remove the upgrade authorisation from the vault.
+     */
+    fun deauthoriseContractUpgrade(stateAndRef: StateAndRef<*>)
 
     /**
      *  Add a note to an existing [LedgerTransaction] given by its unique [SecureHash] id

@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 class DummyContractV2Tests {
     @Test
     fun `upgrade from v1`() {
-        val contract = DummyContractV2()
+        val contractUpgrade = DummyContractV2()
         val v1State = TransactionState(DummyContract.SingleOwnerState(0, ALICE_PUBKEY), DUMMY_NOTARY)
         val v1Ref = StateRef(SecureHash.randomSHA256(), 0)
         val v1StateAndRef = StateAndRef(v1State, v1Ref)
@@ -21,12 +21,11 @@ class DummyContractV2Tests {
 
         assertEquals(v1Ref, tx.inputs.single())
 
-        val expectedOutput: TransactionState<ContractState> = TransactionState(contract.upgrade(v1State.data), DUMMY_NOTARY)
+        val expectedOutput = TransactionState(contractUpgrade.upgrade(v1State.data), DUMMY_NOTARY)
         val actualOutput = tx.outputs.single()
         assertEquals(expectedOutput, actualOutput)
 
         val actualCommand = tx.commands.map { it.value }.single()
-        assertTrue((actualCommand as UpgradeCommand<*>).oldContract is DummyContract)
-        assertTrue(actualCommand.newContract is DummyContractV2)
+        assertTrue((actualCommand as UpgradeCommand).upgradedContractClass == DummyContractV2::class.java)
     }
 }
