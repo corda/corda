@@ -14,6 +14,7 @@ import net.corda.core.serialization.p2PKryo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Emoji
 import java.security.PublicKey
+import java.util.*
 
 /**
  * A transaction ready for serialisation, without any signatures attached. A WireTransaction is usually wrapped

@@ -27,6 +27,7 @@ import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.sql.Connection
 import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -46,6 +47,24 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
          * Return the current [FlowStateMachineImpl] or null if executing outside of one.
          */
         fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
+
+        /**
+         * Provide a mechanism to sleep within a Strand without locking any transactional state
+         */
+        // TODO: inlined due to an intermittent Quasar error (to be fully investigated)
+        @Suppress("NOTHING_TO_INLINE")
+        @Suspendable
+        inline fun sleep(millis: Long) {
+            if (currentStateMachine() != null) {
+                val db = StrandLocalTransactionManager.database
+                TransactionManager.current().commit()
+                TransactionManager.current().close()
+                Strand.sleep(millis)
+                StrandLocalTransactionManager.database = db
+                TransactionManager.manager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
+            }
+            else Strand.sleep(millis)
+        }
     }
 
     // These fields shouldn't be serialised, so they are marked @Transient.
@@ -92,7 +111,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             // Check if the FlowException was propagated by looking at where the stack trace originates (see suspendAndExpectReceive).
             val propagated = e.stackTrace[0].className == javaClass.name
             processException(e, propagated)
-            logger.debug(if (propagated) "Flow ended due to receiving exception" else "Flow finished with exception", e)
+            logger.error(if (propagated) "Flow ended due to receiving exception" else "Flow finished with exception", e)
             return
         } catch (t: Throwable) {
             recordDuration(startTime, success = false)

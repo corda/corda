@@ -60,10 +60,10 @@ class EventGenerator(
 
     val issueRefGenerator = Generator.intRange(0, 1).map { number -> OpaqueBytes(ByteArray(1, { number.toByte() })) }
 
-    val amountGenerator = Generator.intRange(0, 10000).combine(currencyGenerator) { quantity, currency -> Amount(quantity.toLong(), currency) }
+    val amountToIssueGenerator = Generator.intRange(10000, 1000000).combine(currencyGenerator) { quantity, currency -> Amount(quantity.toLong(), currency) }
 
     val issueCashGenerator =
-            amountGenerator.combine(partyGenerator, issueRefGenerator) { amount, to, issueRef ->
+            amountToIssueGenerator.combine(partyGenerator, issueRefGenerator) { amount, to, issueRef ->
                 CashFlowCommand.IssueCash(
                         amount,
                         issueRef,
@@ -81,10 +81,10 @@ class EventGenerator(
             }
 
     val exitCashGenerator =
-            amountIssuedGenerator.map {
+            amountToIssueGenerator.combine(partyGenerator, issueRefGenerator) { amount, to, issueRef ->
                 CashFlowCommand.ExitCash(
-                        it.withoutIssuer(),
-                        it.token.issuer.reference
+                        amount,
+                        issueRef
                 )
             }
 
