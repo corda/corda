@@ -72,6 +72,7 @@ interface DriverDSLExposedInterface {
      * @param notaryName The legal name of the advertised distributed notary service.
      * @param clusterSize Number of nodes to create for the cluster.
      * @param type The advertised notary service type. Currently the only supported type is [RaftValidatingNotaryService.type].
+     * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
      * @return The [Party] identity of the distributed notary service, and the [NodeInfo]s of the notaries in the cluster.
      */
     fun startNotaryCluster(

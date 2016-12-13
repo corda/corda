@@ -80,6 +80,7 @@ interface MessagingService {
      */
     fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID = UUID.randomUUID()): Message
 
+    /** Given information about either a specific node or a service returns it's corresponding address */
     fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients
 
     /** Returns an address that refers to this node. */

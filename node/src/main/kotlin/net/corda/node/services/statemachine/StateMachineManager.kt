@@ -481,6 +481,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     data class SessionEnd(override val recipientSessionId: Long) : ExistingSessionMessage
 
+    /**
+     * [FlowSessionState] describes the session's state.
+     *
+     * [Initiating] is pre-handshake. [Initiating.otherParty] at this point holds a [Party] corresponding to either a
+     *     specific peer or a service.
+     * [Initiated] is post-handshake. At this point [Initiating.otherParty] will have been resolved to a specific peer
+     *     [Initiated.peerParty], and the peer's sessionId has been initialised.
+     */
     sealed class FlowSessionState {
         abstract val sendToParty: Party
         class Initiating(

@@ -76,6 +76,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      *
      * @param queueName The name of the queue this address is associated with. This is either the direct peer queue or
      *     an advertised service queue.
+     * @param hostAndPort The address of the node.
      */
     data class NodeAddress(override val queueName: SimpleString, override val hostAndPort: HostAndPort) : ArtemisPeerAddress {
         companion object {
@@ -87,6 +88,15 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
         override fun toString(): String = "${javaClass.simpleName}(identity = $queueName, $hostAndPort)"
     }
 
+    /**
+     * [ServiceAddress] implements [MessageRecipientGroup]. It holds a queue associated with a service advertised by
+     * zero or more nodes. Each advertising node has an associated consumer.
+     *
+     * By sending to such an address Artemis will pick a consumer (uses Round Robin by default) and sends the message
+     * there. We use this to establish sessions involving service counterparties.
+     *
+     * @param identity The service identity's owning key.
+     */
     data class ServiceAddress(val identity: CompositeKey) : ArtemisAddress, MessageRecipientGroup {
         override val queueName: SimpleString = SimpleString("$SERVICES_PREFIX${identity.toBase58String()}")
     }

@@ -123,8 +123,10 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      */
     private fun destroyOrCreateBridges(change: MapChange) {
         fun addAddresses(node: NodeInfo, target: HashSet<ArtemisPeerAddress>) {
+            // Add the node's address with the p2p queue.
             val nodeAddress = node.address as ArtemisPeerAddress
             target.add(nodeAddress)
+            // Add the node's address with service queues, one per service.
             change.node.advertisedServices.forEach {
                 target.add(NodeAddress.asService(it.identity.owningKey, nodeAddress.hostAndPort))
             }
@@ -196,6 +198,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             queueName.startsWith(SERVICES_PREFIX) -> try {
                 val identity = CompositeKey.parseFromBase58(queueName.substring(SERVICES_PREFIX.length))
                 val nodeInfos = networkMapCache.getNodesByAdvertisedServiceIdentityKey(identity)
+                // Create a bridge for each node advertising the service.
                 for (nodeInfo in nodeInfos) {
                     maybeDeployBridgeForNode(queueName, nodeInfo)
                 }

@@ -38,7 +38,8 @@ import kotlin.concurrent.thread
  * case no thread is created and a caller is expected to force delivery one at a time (this is useful for unit
  * testing).
  *
- * @param random The RNG used to choose which node to send to in case one sends to a service.
+ * @param servicePeerAllocationStrategy defines the strategy to be used when determining which peer to send to in case
+ *     a service is addressed.
  */
 @ThreadSafe
 class InMemoryMessagingNetwork(
@@ -74,6 +75,7 @@ class InMemoryMessagingNetwork(
     private val messageReceiveQueues = HashMap<PeerHandle, LinkedBlockingQueue<MessageTransfer>>()
     private val _receivedMessages = PublishSubject.create<MessageTransfer>()
 
+    // Holds the mapping from services to peers advertising the service.
     private val serviceToPeersMapping = HashMap<ServiceHandle, LinkedHashSet<PeerHandle>>()
 
     val messagesInFlight = ReusableLatch()
