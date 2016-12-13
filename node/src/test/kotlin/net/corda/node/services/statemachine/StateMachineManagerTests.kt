@@ -3,20 +3,30 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.contracts.DOLLARS
+import net.corda.core.contracts.issuedBy
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSessionException
 import net.corda.core.getOrThrow
 import net.corda.core.random63BitValue
+import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.deserialize
+import net.corda.flows.CashCommand
+import net.corda.flows.CashFlow
+import net.corda.flows.NotaryFlow
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.statemachine.StateMachineManager.*
 import net.corda.node.utilities.databaseTransaction
+import net.corda.testing.expect
+import net.corda.testing.expectEvents
 import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.sequence
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -30,16 +40,24 @@ import kotlin.test.assertTrue
 
 class StateMachineManagerTests {
 
-    private val net = MockNetwork()
+    private val net = MockNetwork(servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin())
     private val sessionTransfers = ArrayList<SessionTransfer>()
     private lateinit var node1: MockNode
     private lateinit var node2: MockNode
+    private lateinit var notary1: MockNode
+    private lateinit var notary2: MockNode
 
     @Before
     fun start() {
         val nodes = net.createTwoNodes()
         node1 = nodes.first
         node2 = nodes.second
+        val notaryKeyPair = generateKeyPair()
+        // Note that these notaries don't operate correctly as they don's share their state. They are only used for testing
+        // service addressing.
+        notary1 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, keyPair = notaryKeyPair, serviceName = "notary-service-2000")
+        notary2 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, keyPair = notaryKeyPair, serviceName = "notary-service-2000")
+
         net.messagingNetwork.receivedMessages.toSessionTransfers().forEach { sessionTransfers += it }
         net.runNetwork()
     }
@@ -261,6 +279,57 @@ class StateMachineManagerTests {
     }
 
     @Test
+    fun `different notaries are picked when addressing shared notary identity`() {
+        assertEquals(notary1.info.notaryIdentity, notary2.info.notaryIdentity)
+        node1.services.startFlow(CashFlow(CashCommand.IssueCash(
+                DOLLARS(2000),
+                OpaqueBytes.of(0x01),
+                node1.info.legalIdentity,
+                notary1.info.notaryIdentity)))
+        // We pay a couple of times, the notary picking should go round robin
+        for (i in 1 .. 3) {
+            node1.services.startFlow(CashFlow(CashCommand.PayCash(
+                    DOLLARS(500).issuedBy(node1.info.legalIdentity.ref(0x01)),
+                    node2.info.legalIdentity)))
+            net.runNetwork()
+        }
+        sessionTransfers.expectEvents(isStrict = false) {
+            sequence(
+                    // First Pay
+                    expect(match = { it.message is SessionInit && it.message.flowName == NotaryFlow.Client::class.java.name }) {
+                        it.message as SessionInit
+                        require(it.from == node1.id)
+                        require(it.to == TransferRecipient.Service(notary1.info.notaryIdentity))
+                    },
+                    expect(match = { it.message is SessionConfirm }) {
+                        it.message as SessionConfirm
+                        require(it.from == notary1.id)
+                    },
+                    // Second pay
+                    expect(match = { it.message is SessionInit && it.message.flowName == NotaryFlow.Client::class.java.name }) {
+                        it.message as SessionInit
+                        require(it.from == node1.id)
+                        require(it.to == TransferRecipient.Service(notary1.info.notaryIdentity))
+                    },
+                    expect(match = { it.message is SessionConfirm }) {
+                        it.message as SessionConfirm
+                        require(it.from == notary2.id)
+                    },
+                    // Third pay
+                    expect(match = { it.message is SessionInit && it.message.flowName == NotaryFlow.Client::class.java.name }) {
+                        it.message as SessionInit
+                        require(it.from == node1.id)
+                        require(it.to == TransferRecipient.Service(notary1.info.notaryIdentity))
+                    },
+                    expect(match = { it.message is SessionConfirm }) {
+                        it.message as SessionConfirm
+                        require(it.from == notary1.id)
+                    }
+            )
+        }
+    }
+
+    @Test
     fun `exception thrown on other side`() {
         node2.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { ExceptionFlow }
         val future = node1.smm.add(ReceiveThenSuspendFlow(node2.info.legalIdentity)).resultFuture
@@ -301,11 +370,16 @@ class StateMachineManagerTests {
     }
 
     private fun assertSessionTransfers(node: MockNode, vararg expected: SessionTransfer) {
-        val actualForNode = sessionTransfers.filter { it.from == node.id || it.to == node.id }
+        val actualForNode = sessionTransfers.filter { it.from == node.id || it.to == TransferRecipient.Peer(node.id) }
         assertThat(actualForNode).containsExactly(*expected)
     }
 
-    private data class SessionTransfer(val from: Int, val message: SessionMessage, val to: Int) {
+    private interface TransferRecipient {
+        data class Peer(val id: Int) : TransferRecipient
+        data class Service(val identity: Party) : TransferRecipient
+    }
+
+    private data class SessionTransfer(val from: Int, val message: SessionMessage, val to: TransferRecipient) {
         val isPayloadTransfer: Boolean get() = message is SessionData || message is SessionInit && message.firstPayload != null
         override fun toString(): String = "$from sent $message to $to"
     }
@@ -314,7 +388,12 @@ class StateMachineManagerTests {
         return filter { it.message.topicSession == StateMachineManager.sessionTopic }.map {
             val from = it.sender.id
             val message = it.message.data.deserialize<SessionMessage>()
-            val to = (it.recipients as InMemoryMessagingNetwork.PeerHandle).id
+            val recipients = it.recipients
+            val to = when (recipients) {
+                is InMemoryMessagingNetwork.PeerHandle -> TransferRecipient.Peer(recipients.id)
+                is InMemoryMessagingNetwork.ServiceHandle -> TransferRecipient.Service(recipients.service.identity)
+                else -> throw IllegalStateException("Unknown recipients $recipients")
+            }
             SessionTransfer(from, sanitise(message), to)
         }
     }
@@ -330,7 +409,7 @@ class StateMachineManagerTests {
     }
 
     private infix fun MockNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(id, message)
-    private infix fun Pair<Int, SessionMessage>.to(node: MockNode): SessionTransfer = SessionTransfer(first, second, node.id)
+    private infix fun Pair<Int, SessionMessage>.to(node: MockNode): SessionTransfer = SessionTransfer(first, second, TransferRecipient.Peer(node.id))
 
 
     private class NoOpFlow(val nonTerminating: Boolean = false) : FlowLogic<Unit>() {

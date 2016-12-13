@@ -47,10 +47,12 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   private val threadPerNode: Boolean = false,
+                  private val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy =
+                      InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
     private var nextNodeId = 0
     val filesystem: FileSystem = Jimfs.newFileSystem(unix())
-    val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped)
+    val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped, servicePeerAllocationStrategy)
 
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
@@ -268,8 +270,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return BasketOfNodes(nodes, notaryNode, mapNode)
     }
 
-    fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null): MockNode {
-        return createNode(null, -1, defaultFactory, true, legalName, keyPair, ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type))
+    fun createNotaryNode(networkMapAddr: SingleMessageRecipient? = null, legalName: String? = null, keyPair: KeyPair? = null, serviceName: String? = null): MockNode {
+        return createNode(networkMapAddr, -1, defaultFactory, true, legalName, keyPair, ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type, serviceName))
     }
 
     fun createPartyNode(networkMapAddr: SingleMessageRecipient, legalName: String? = null, keyPair: KeyPair? = null): MockNode {

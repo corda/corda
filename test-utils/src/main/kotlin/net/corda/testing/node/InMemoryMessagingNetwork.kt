@@ -9,7 +9,6 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.*
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.PartyInfo
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.MessagingServiceBuilder
@@ -42,7 +41,10 @@ import kotlin.concurrent.thread
  * @param random The RNG used to choose which node to send to in case one sends to a service.
  */
 @ThreadSafe
-class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean, val random: SplittableRandom = SplittableRandom()) : SingletonSerializeAsToken() {
+class InMemoryMessagingNetwork(
+        val sendManuallyPumped: Boolean,
+        val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random()
+) : SingletonSerializeAsToken() {
     companion object {
         val MESSAGES_LOG_NAME = "messages"
         private val log = LoggerFactory.getLogger(MESSAGES_LOG_NAME)
@@ -72,7 +74,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean, val random: Spli
     private val messageReceiveQueues = HashMap<PeerHandle, LinkedBlockingQueue<MessageTransfer>>()
     private val _receivedMessages = PublishSubject.create<MessageTransfer>()
 
-    private val serviceToPeersMapping = HashMap<ServiceHandle, HashSet<PeerHandle>>()
+    private val serviceToPeersMapping = HashMap<ServiceHandle, LinkedHashSet<PeerHandle>>()
 
     val messagesInFlight = ReusableLatch()
 
@@ -181,7 +183,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean, val random: Spli
                 val node = InMemoryMessaging(manuallyPumped, id, executor, database)
                 handleEndpointMap[id] = node
                 serviceHandles.forEach {
-                    serviceToPeersMapping.getOrPut(it) { HashSet<PeerHandle>() }.add(id)
+                    serviceToPeersMapping.getOrPut(it) { LinkedHashSet<PeerHandle>() }.add(id)
                     Unit
                 }
                 return Futures.immediateFuture(node)
@@ -189,7 +191,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean, val random: Spli
         }
     }
 
-    class PeerHandle(val id: Int, val description: String) : SingleMessageRecipient {
+    data class PeerHandle(val id: Int, val description: String) : SingleMessageRecipient {
         override fun toString() = description
         override fun equals(other: Any?) = other is PeerHandle && other.id == id
         override fun hashCode() = id.hashCode()
@@ -197,6 +199,27 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean, val random: Spli
 
     data class ServiceHandle(val service: ServiceEntry) : MessageRecipientGroup {
         override fun toString() = "Service($service)"
+    }
+
+    /**
+     * Mock service loadbalancing
+     */
+    sealed class ServicePeerAllocationStrategy {
+        abstract fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A
+        class Random(val random: SplittableRandom = SplittableRandom()) : ServicePeerAllocationStrategy() {
+            override fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A {
+                return pickFrom[random.nextInt(pickFrom.size)]
+            }
+        }
+        class RoundRobin : ServicePeerAllocationStrategy() {
+            val previousPicks = HashMap<ServiceHandle, Int>()
+            override fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A {
+                val nextIndex = previousPicks.compute(service) { _key, previous ->
+                    (previous?.plus(1) ?: 0) % pickFrom.size
+                }
+                return pickFrom[nextIndex]
+            }
+        }
     }
 
     // If block is set to true this function will only return once a message has been pushed onto the recipients' queues
@@ -227,8 +250,8 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean, val random: Spli
             is PeerHandle -> getQueueForPeerHandle(transfer.recipients).add(transfer)
             is ServiceHandle -> {
                 val queues = getQueuesForServiceHandle(transfer.recipients)
-                val chosedPeerIndex = random.nextInt(queues.size)
-                queues[chosedPeerIndex].add(transfer)
+                val queue = servicePeerAllocationStrategy.pickNext(transfer.recipients, queues)
+                queue.add(transfer)
             }
             is AllPossibleRecipients -> {
                 // This means all possible recipients _that the network knows about at the time_, not literally everyone
