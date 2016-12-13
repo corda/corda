@@ -52,17 +52,20 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
         @JvmStatic
         @VisibleForTesting
         fun toHostAndPort(target: MessageRecipients): HostAndPort {
-            val addr = target as? ArtemisMessagingComponent.ArtemisAddress ?: throw IllegalArgumentException("Not an Artemis address")
+            val addr = target as? ArtemisMessagingComponent.ArtemisPeerAddress ?: throw IllegalArgumentException("Not an Artemis address")
             return addr.hostAndPort
         }
     }
 
-    protected interface ArtemisAddress : SingleMessageRecipient {
+    protected interface ArtemisAddress : MessageRecipients {
         val queueName: SimpleString
+    }
+
+    protected interface ArtemisPeerAddress : ArtemisAddress, SingleMessageRecipient {
         val hostAndPort: HostAndPort
     }
 
-    data class NetworkMapAddress(override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
+    data class NetworkMapAddress(override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisPeerAddress {
         override val queueName: SimpleString get() = NETWORK_MAP_ADDRESS
     }
 
@@ -70,8 +73,11 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      * This is the class used to implement [SingleMessageRecipient], for now. Note that in future this class
      * may change or evolve and code that relies upon it being a simple host/port may not function correctly.
      * For instance it may contain onion routing data.
+     *
+     * @param queueName The name of the queue this address is associated with. This is either the direct peer queue or
+     *     an advertised service queue.
      */
-    data class NodeAddress(override val queueName: SimpleString, override val hostAndPort: HostAndPort) : ArtemisAddress {
+    data class NodeAddress(override val queueName: SimpleString, override val hostAndPort: HostAndPort) : ArtemisPeerAddress {
         companion object {
             fun asPeer(identity: CompositeKey, hostAndPort: HostAndPort) =
                     NodeAddress(SimpleString("$PEERS_PREFIX${identity.toBase58String()}"), hostAndPort)
@@ -81,8 +87,8 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
         override fun toString(): String = "${javaClass.simpleName}(identity = $queueName, $hostAndPort)"
     }
 
-    data class ServiceAddress(val identity: CompositeKey) : MessageRecipientGroup {
-        val queueName: SimpleString = SimpleString("$SERVICES_PREFIX${identity.toBase58String()}")
+    data class ServiceAddress(val identity: CompositeKey) : ArtemisAddress, MessageRecipientGroup {
+        override val queueName: SimpleString = SimpleString("$SERVICES_PREFIX${identity.toBase58String()}")
     }
 
     /** The config object is used to pass in the passwords for the certificate KeyStore and TrustStore */
