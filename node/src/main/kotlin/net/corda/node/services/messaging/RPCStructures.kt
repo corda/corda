@@ -41,9 +41,7 @@ import org.slf4j.LoggerFactory
 import rx.Notification
 import rx.Observable
 import java.io.BufferedInputStream
-import java.io.InputStream
 import java.time.Instant
-import java.time.LocalDateTime
 import java.util.*
 
 /** Global RPC logger */
@@ -146,6 +144,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         ImmutableMultimapSerializer.registerSerializers(this)
 
         register(BufferedInputStream::class.java, InputStreamSerializer)
+        register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
 
         noReferencesWithin<WireTransaction>()
 
