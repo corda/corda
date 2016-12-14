@@ -122,13 +122,13 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * TODO : Create the bridge directly from the list of queues on start up when we have a persisted network map service.
      */
     private fun destroyOrCreateBridges(change: MapChange) {
-        fun addAddresses(node: NodeInfo, target: HashSet<ArtemisPeerAddress>) {
+        fun addAddresses(node: NodeInfo, targets: MutableSet<ArtemisPeerAddress>) {
             // Add the node's address with the p2p queue.
             val nodeAddress = node.address as ArtemisPeerAddress
-            target.add(nodeAddress)
+            targets.add(nodeAddress)
             // Add the node's address with service queues, one per service.
-            change.node.advertisedServices.forEach {
-                target.add(NodeAddress.asService(it.identity.owningKey, nodeAddress.hostAndPort))
+            node.advertisedServices.forEach {
+                targets.add(NodeAddress.asService(it.identity.owningKey, nodeAddress.hostAndPort))
             }
         }
 
@@ -151,7 +151,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             maybeDestroyBridge(bridgeNameForAddress(it))
         }
         addressesToCreateBridgesTo.forEach {
-            maybeDeployBridgeForAddress(it)
+            if (activeMQServer.queueQuery(it.queueName).isExists) maybeDeployBridgeForAddress(it)
         }
     }
 

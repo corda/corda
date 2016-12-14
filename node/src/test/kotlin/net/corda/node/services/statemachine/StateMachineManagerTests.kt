@@ -53,7 +53,7 @@ class StateMachineManagerTests {
         node1 = nodes.first
         node2 = nodes.second
         val notaryKeyPair = generateKeyPair()
-        // Note that these notaries don't operate correctly as they don's share their state. They are only used for testing
+        // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.
         notary1 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, keyPair = notaryKeyPair, serviceName = "notary-service-2000")
         notary2 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, keyPair = notaryKeyPair, serviceName = "notary-service-2000")
@@ -216,14 +216,14 @@ class StateMachineManagerTests {
 
         assertSessionTransfers(node2,
                 node1 sent sessionInit(SendFlow::class, payload) to node2,
-                node2 sent sessionConfirm(node2) to node1,
+                node2 sent sessionConfirm() to node1,
                 node1 sent sessionEnd() to node2
                 //There's no session end from the other flows as they're manually suspended
         )
 
         assertSessionTransfers(node3,
                 node1 sent sessionInit(SendFlow::class, payload) to node3,
-                node3 sent sessionConfirm(node3) to node1,
+                node3 sent sessionConfirm() to node1,
                 node1 sent sessionEnd() to node3
                 //There's no session end from the other flows as they're manually suspended
         )
@@ -249,14 +249,14 @@ class StateMachineManagerTests {
 
         assertSessionTransfers(node2,
                 node1 sent sessionInit(ReceiveThenSuspendFlow::class) to node2,
-                node2 sent sessionConfirm(node2) to node1,
+                node2 sent sessionConfirm() to node1,
                 node2 sent sessionData(node2Payload) to node1,
                 node2 sent sessionEnd() to node1
         )
 
         assertSessionTransfers(node3,
                 node1 sent sessionInit(ReceiveThenSuspendFlow::class) to node3,
-                node3 sent sessionConfirm(node3) to node1,
+                node3 sent sessionConfirm() to node1,
                 node3 sent sessionData(node3Payload) to node1,
                 node3 sent sessionEnd() to node1
         )
@@ -270,7 +270,7 @@ class StateMachineManagerTests {
 
         assertSessionTransfers(
                 node1 sent sessionInit(PingPongFlow::class, 10L) to node2,
-                node2 sent sessionConfirm(node2) to node1,
+                node2 sent sessionConfirm() to node1,
                 node2 sent sessionData(20L) to node1,
                 node1 sent sessionData(11L) to node2,
                 node2 sent sessionData(21L) to node1,
@@ -337,7 +337,7 @@ class StateMachineManagerTests {
         assertThatThrownBy { future.getOrThrow() }.isInstanceOf(FlowSessionException::class.java)
         assertSessionTransfers(
                 node1 sent sessionInit(ReceiveThenSuspendFlow::class) to node2,
-                node2 sent sessionConfirm(node2) to node1,
+                node2 sent sessionConfirm() to node1,
                 node2 sent sessionEnd() to node1
         )
     }
@@ -359,7 +359,7 @@ class StateMachineManagerTests {
 
     private fun sessionInit(flowMarker: KClass<*>, payload: Any? = null) = SessionInit(0, flowMarker.java.name, payload)
 
-    private fun sessionConfirm(mockNode: MockNode) = SessionConfirm(0, 0, mockNode.info.legalIdentity)
+    private fun sessionConfirm() = SessionConfirm(0, 0)
 
     private fun sessionData(payload: Any) = SessionData(0, payload)
 

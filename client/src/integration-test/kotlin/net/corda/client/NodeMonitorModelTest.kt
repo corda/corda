@@ -19,6 +19,7 @@ import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
+import net.corda.node.driver.callSuspendResume
 import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.config.configureTestSSL
@@ -34,14 +35,11 @@ import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import rx.Observer
-import java.util.concurrent.CountDownLatch
-import kotlin.concurrent.thread
 
 class NodeMonitorModelTest {
     lateinit var aliceNode: NodeInfo
     lateinit var notaryNode: NodeInfo
-    val stopDriver = CountDownLatch(1)
-    var driverThread: Thread? = null
+    lateinit var stopDriver: () -> Unit
 
     lateinit var stateMachineTransactionMapping: Observable<StateMachineTransactionMapping>
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
@@ -54,8 +52,7 @@ class NodeMonitorModelTest {
 
     @Before
     fun start() {
-        val driverStarted = CountDownLatch(1)
-        driverThread = thread {
+        stopDriver = callSuspendResume { suspend ->
             driver {
                 val cashUser = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>()))
                 val aliceNodeFuture = startNode("Alice", rpcUsers = listOf(cashUser))
@@ -75,17 +72,14 @@ class NodeMonitorModelTest {
                 clientToService = monitor.clientToService
 
                 monitor.register(ArtemisMessagingComponent.toHostAndPort(aliceNode.address), configureTestSSL(), cashUser.username, cashUser.password)
-                driverStarted.countDown()
-                stopDriver.await()
+                suspend()
             }
         }
-        driverStarted.await()
     }
 
     @After
     fun stop() {
-        stopDriver.countDown()
-        driverThread?.join()
+        stopDriver()
     }
 
     @Test

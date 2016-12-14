@@ -74,18 +74,22 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      * may change or evolve and code that relies upon it being a simple host/port may not function correctly.
      * For instance it may contain onion routing data.
      *
-     * @param queueName The name of the queue this address is associated with. This is either the direct peer queue or
-     *     an advertised service queue.
+     * [NodeAddress] identifies a specific peer node and an associated queue. The queue may be the peer's p2p queue or
+     *     an advertised service's queue.
+     *
+     * @param queueName The name of the queue this address is associated with.
      * @param hostAndPort The address of the node.
      */
     data class NodeAddress(override val queueName: SimpleString, override val hostAndPort: HostAndPort) : ArtemisPeerAddress {
         companion object {
-            fun asPeer(identity: CompositeKey, hostAndPort: HostAndPort) =
-                    NodeAddress(SimpleString("$PEERS_PREFIX${identity.toBase58String()}"), hostAndPort)
-            fun asService(identity: CompositeKey, hostAndPort: HostAndPort) =
-                    NodeAddress(SimpleString("$SERVICES_PREFIX${identity.toBase58String()}"), hostAndPort)
+            fun asPeer(peerIdentity: CompositeKey, hostAndPort: HostAndPort): NodeAddress {
+                return NodeAddress(SimpleString("$PEERS_PREFIX${peerIdentity.toBase58String()}"), hostAndPort)
+            }
+            fun asService(serviceIdentity: CompositeKey, hostAndPort: HostAndPort): NodeAddress {
+                return NodeAddress(SimpleString("$SERVICES_PREFIX${serviceIdentity.toBase58String()}"), hostAndPort)
+            }
         }
-        override fun toString(): String = "${javaClass.simpleName}(identity = $queueName, $hostAndPort)"
+        override fun toString(): String = "${javaClass.simpleName}(queue = $queueName, $hostAndPort)"
     }
 
     /**

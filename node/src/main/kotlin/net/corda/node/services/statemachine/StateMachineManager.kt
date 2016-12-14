@@ -28,6 +28,8 @@ import net.corda.core.utilities.trace
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.statemachine.StateMachineManager.FlowSessionState.Initiated
+import net.corda.node.services.statemachine.StateMachineManager.FlowSessionState.Initiating
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.bufferUntilDatabaseCommit
@@ -214,17 +216,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         serviceHub.networkService.addMessageHandler(sessionTopic) { message, reg ->
             executor.checkOnThread()
             val sessionMessage = message.data.deserialize<SessionMessage>()
-            when (sessionMessage) {
-                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage)
-                is SessionInit -> {
-                    // TODO Look up the party with the full X.500 name instead of just the legal name
-                    val otherParty = serviceHub.networkMapCache.getNodeByLegalName(message.peer.commonName)?.legalIdentity
-                    if (otherParty != null) {
-                        onSessionInit(sessionMessage, otherParty)
-                    } else {
-                        logger.error("Unknown peer ${message.peer} in $sessionMessage")
-                    }
+            val otherParty = serviceHub.networkMapCache.getNodeByLegalName(message.peer.commonName)?.legalIdentity
+            if (otherParty != null) {
+                when (sessionMessage) {
+                    is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, otherParty)
+                    is SessionInit -> onSessionInit(sessionMessage, otherParty)
                 }
+            } else {
+                logger.error("Unknown peer ${message.peer} in $sessionMessage")
             }
         }
     }
@@ -238,14 +237,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun onExistingSessionMessage(message: ExistingSessionMessage) {
+    private fun onExistingSessionMessage(message: ExistingSessionMessage, otherParty: Party) {
         val session = openSessions[message.recipientSessionId]
         if (session != null) {
             session.psm.logger.trace { "Received $message on $session" }
             if (message is SessionEnd) {
                 openSessions.remove(message.recipientSessionId)
             }
-            session.receivedMessages += message
+            session.receivedMessages += Pair(otherParty, message)
             if (session.waitingForResponse) {
                 // We only want to resume once, so immediately reset the flag.
                 session.waitingForResponse = false
@@ -278,12 +277,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 val psm = createFiber(flow)
                 val session = FlowSession(flow, random63BitValue(), FlowSessionState.Initiated(otherParty, otherPartySessionId))
                 if (sessionInit.firstPayload != null) {
-                    session.receivedMessages += SessionData(session.ourSessionId, sessionInit.firstPayload)
+                    session.receivedMessages += Pair(otherParty, SessionData(session.ourSessionId, sessionInit.firstPayload))
                 }
                 openSessions[session.ourSessionId] = session
                 psm.openSessions[Pair(flow, otherParty)] = session
                 updateCheckpoint(psm)
-                sendSessionMessage(otherParty, SessionConfirm(otherPartySessionId, session.ourSessionId, serviceHub.myInfo.legalIdentity), psm)
+                sendSessionMessage(otherParty, SessionConfirm(otherPartySessionId, session.ourSessionId), psm)
                 psm.logger.debug { "Initiated from $sessionInit on $session" }
                 startFiber(psm)
             } else {
@@ -465,7 +464,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     interface SessionInitResponse : ExistingSessionMessage
 
-    data class SessionConfirm(val initiatorSessionId: Long, val initiatedSessionId: Long, val peerParty: Party) : SessionInitResponse {
+    data class SessionConfirm(val initiatorSessionId: Long, val initiatedSessionId: Long) : SessionInitResponse {
         override val recipientSessionId: Long get() = initiatorSessionId
     }
 
@@ -510,7 +509,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             var state: FlowSessionState,
             @Volatile var waitingForResponse: Boolean = false
     ) {
-        val receivedMessages = ConcurrentLinkedQueue<ExistingSessionMessage>()
+        val receivedMessages = ConcurrentLinkedQueue<Pair<Party, ExistingSessionMessage>>()
         val psm: FlowStateMachineImpl<*> get() = flow.fsm as FlowStateMachineImpl<*>
     }
 

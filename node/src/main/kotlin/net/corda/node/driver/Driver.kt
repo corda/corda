@@ -5,12 +5,12 @@ package net.corda.node.driver
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.common.net.HostAndPort
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
-import net.corda.core.ThreadBox
+import net.corda.core.*
 import net.corda.core.crypto.Party
-import net.corda.core.div
-import net.corda.core.future
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
@@ -33,10 +33,13 @@ import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.util.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
 /**
@@ -159,6 +162,40 @@ fun <A> driver(
         coerce = { it },
         dsl = dsl
 )
+
+/**
+ * Executes the passed in closure in a new thread, providing a function that suspends the closure, passing control back
+ * to the caller's context. The returned function may be used to then resume the closure.
+ *
+ * This can be used in conjunction with the driver to create @Before/@After blocks that start/shutdown the driver:
+ *
+ *   val stopDriver = callSuspendResume { suspend ->
+ *     driver(someOption = someValue) {
+ *       .. initialise some test variables ..
+ *       suspend()
+ *     }
+ *   }
+ *   .. do tests ..
+ *   stopDriver()
+ */
+fun <C> callSuspendResume(closure: (suspend: () -> Unit) -> C): () -> C {
+    val suspendLatch = CountDownLatch(1)
+    val resumeLatch = CountDownLatch(1)
+    val returnFuture = CompletableFuture<C>()
+    thread {
+        returnFuture.complete(
+                closure {
+                    suspendLatch.countDown()
+                    resumeLatch.await()
+                }
+        )
+    }
+    suspendLatch.await()
+    return {
+        resumeLatch.countDown()
+        returnFuture.get()
+    }
+}
 
 /**
  * This is a helper method to allow extending of the DSL, along the lines of
@@ -322,7 +359,7 @@ open class DriverDSL(
     }
 
     override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>,
-                           rpcUsers: List<User>, customOverrides: Map<String, Any?>): Future<NodeHandle> {
+                           rpcUsers: List<User>, customOverrides: Map<String, Any?>): ListenableFuture<NodeHandle> {
         val messagingAddress = portAllocation.nextHostAndPort()
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
@@ -364,7 +401,7 @@ open class DriverDSL(
             clusterSize: Int,
             type: ServiceType,
             rpcUsers: List<User>
-    ): Future<Pair<Party, List<NodeHandle>>> {
+    ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
         val nodeNames = (1..clusterSize).map { "Notary Node $it" }
         val paths = nodeNames.map { driverDirectory / it }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
@@ -382,15 +419,11 @@ open class DriverDSL(
             startNode(it, advertisedService, rpcUsers, configOverride)
         }
 
-        return future {
-            val firstNotary = firstNotaryFuture.get()
+        return firstNotaryFuture.flatMap { firstNotary ->
             val notaryParty = firstNotary.nodeInfo.notaryIdentity
-            val restNotaries = restNotaryFutures.map {
-                val notary = it.get()
-                assertEquals(notaryParty, notary.nodeInfo.notaryIdentity)
-                notary
+            Futures.allAsList(restNotaryFutures).map { restNotaries ->
+                Pair(notaryParty, listOf(firstNotary) + restNotaries)
             }
-            Pair(notaryParty, listOf(firstNotary) + restNotaries)
         }
     }
 

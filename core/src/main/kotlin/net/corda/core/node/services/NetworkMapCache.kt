@@ -73,19 +73,12 @@ interface NetworkMapCache {
         return candidates.singleOrNull()
     }
 
-    /**
-     * Look up all nodes advertising the service owned by [compositeKey]
-     */
+    /** Look up all nodes advertising the service owned by [compositeKey] */
     fun getNodesByAdvertisedServiceIdentityKey(compositeKey: CompositeKey): List<NodeInfo> {
         return partyNodes.filter { it.advertisedServices.any { it.identity.owningKey == compositeKey } }
     }
 
-    /**
-     * Returns information about the party, which may be a specific node or a service
-     *
-     * @party The party we would like the address of.
-     * @return The address of the party, if found.
-     */
+    /** Returns information about the party, which may be a specific node or a service */
     fun getPartyInfo(party: Party): PartyInfo?
 
     /**
