@@ -42,7 +42,7 @@ abstract class ServiceHubInternal : PluginServiceHub {
     abstract val schemaService: SchemaService
 
     abstract override val networkService: MessagingServiceInternal
-    
+
     /**
      * Given a list of [SignedTransaction]s, writes them to the given storage for validated transactions and then
      * sends them to the vault for further processing. This is intended for implementations to call from
