@@ -188,9 +188,7 @@ and try again.
 
 .. note:: Java 9 is likely to remove this pre-marking requirement completely.
 
-.. note:: Be careful when using a lambda inside an @Suspendable function. It may capture a reference to a 
-non-suspendable Service in the ServiceHub, causing serialisation to fail. If in doubt, place the lambda in a 
-separate, non-@Suspendable function, which you can then call from the @Suspendable function.
+.. note:: Accessing the vault from inside an @Suspendable function (e.g. via ``serviceHub.vaultService``) can cause a serialisation error when the fiber suspends. Instead, vault access should be performed from a helper non-suspendable function, which you then call from the @Suspendable function. We are working to fix this.
 
 Starting your flow
 ------------------
