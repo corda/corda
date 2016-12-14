@@ -30,20 +30,23 @@ fun <A, B> Observable<A>.foldToObservableValue(initial: B, folderFun: (A, B) -> 
 }
 
 /**
- * [fold] takes an [rx.Observable] stream and apply fold function on it, and collect all elements using the accumulator.
+ * [fold] takes an [rx.Observable] stream and applies fold function on it, and collects all elements using the accumulator.
  * @param accumulator The accumulator for accumulating elements.
  * @param folderFun The transformation function to be called on the observable list when a new element is emitted on
  *     the stream, which should modify the list as needed.
  */
-fun <T, R> Observable<T>.fold(accumulator: R, folderFun: (R, T) -> R): R {
+fun <T, R> Observable<T>.fold(accumulator: R, folderFun: (R, T) -> Unit): R {
     /**
-     * This capture is fine, as [Platform.runLater] runs closures in order
+     * This capture is fine, as [Platform.runLater] runs closures in order.
      * The buffer is to avoid flooding FX thread with runnable.
      */
     buffer(1, TimeUnit.SECONDS).subscribe {
         if (it.isNotEmpty()) {
             Platform.runLater {
-                it.fold(accumulator, folderFun)
+                it.fold(accumulator){ list, item ->
+                    folderFun.invoke(list, item)
+                    list
+                }
             }
         }
     }
@@ -56,7 +59,6 @@ fun <T, R> Observable<T>.fold(accumulator: R, folderFun: (R, T) -> R): R {
 fun <A> Observable<A>.recordInSequence(): ObservableList<A> {
     return fold(FXCollections.observableArrayList()) { list, newElement ->
         list.add(newElement)
-        list
     }
 }
 
@@ -69,6 +71,5 @@ fun <A, K> Observable<A>.recordAsAssociation(toKey: (A) -> K, merge: (K, oldValu
     return fold(FXCollections.observableHashMap<K, A>()) { map, item ->
         val key = toKey(item)
         map[key] = map[key]?.let { merge(key, it, item) } ?: item
-        map
     }
 }

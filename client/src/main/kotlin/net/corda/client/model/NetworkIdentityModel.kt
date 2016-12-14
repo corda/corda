@@ -27,7 +27,6 @@ class NetworkIdentityModel {
                     }
                 }
                 list.addAll(update.node)
-                list
             }
 
     private val rpcProxy by observableValue(NodeMonitorModel::proxyObservable)

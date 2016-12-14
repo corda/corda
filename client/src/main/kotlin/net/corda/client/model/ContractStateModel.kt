@@ -33,7 +33,6 @@ class ContractStateModel {
     val cashStates: ObservableList<StateAndRef<Cash.State>> = cashStatesDiff.fold(FXCollections.observableArrayList()) { list, statesDiff ->
         list.removeIf { it.ref in statesDiff.removed }
         list.addAll(statesDiff.added)
-        list
     }
 
     val cash = cashStates.map { it.state.data.amount }
