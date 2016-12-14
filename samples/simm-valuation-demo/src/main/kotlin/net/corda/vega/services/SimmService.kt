@@ -1,13 +1,17 @@
 package net.corda.vega.services
 
+import com.esotericsoftware.kryo.Kryo
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Party
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.vega.api.PortfolioApi
+import net.corda.vega.contracts.IRSState
+import net.corda.vega.contracts.OGTrade
 import net.corda.vega.contracts.SwapData
 import net.corda.vega.flows.IRSTradeFlow
 import net.corda.vega.flows.SimmFlow
 import net.corda.vega.flows.SimmRevaluation
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.function.Function
 
@@ -25,5 +29,15 @@ object SimmService {
                 IRSTradeFlow.Requester::class.java.name to setOf(SwapData::class.java.name, Party::class.java.name))
         override val staticServeDirs: Map<String, String> = mapOf("simmvaluationdemo" to javaClass.classLoader.getResource("simmvaluationweb").toExternalForm())
         override val servicePlugins = listOf(Function(SimmFlow::Service), Function(IRSTradeFlow::Service))
+        override fun registerRPCKryoTypes(kryo: Kryo): Boolean {
+            kryo.apply {
+                register(SwapData::class.java)
+                register(LocalDate::class.java)
+                register(BigDecimal::class.java)
+                register(IRSState::class.java)
+                register(OGTrade::class.java)
+            }
+            return true
+        }
     }
 }
