@@ -9,7 +9,9 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.getOrThrow
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceInfo
@@ -32,19 +34,18 @@ import net.corda.testing.expectEvents
 import net.corda.testing.sequence
 import org.junit.Test
 import rx.Observable
-import rx.Observer
 
 class NodeMonitorModelTest : DriverBasedTest() {
     lateinit var aliceNode: NodeInfo
     lateinit var notaryNode: NodeInfo
 
+    lateinit var rpc: CordaRPCOps
     lateinit var stateMachineTransactionMapping: Observable<StateMachineTransactionMapping>
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
     lateinit var progressTracking: Observable<ProgressTrackingEvent>
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update>
     lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
-    lateinit var clientToService: Observer<CashCommand>
     lateinit var newNode: (String) -> NodeInfo
 
     override fun setup() = driver {
@@ -63,9 +64,9 @@ class NodeMonitorModelTest : DriverBasedTest() {
         transactions = monitor.transactions.bufferUntilSubscribed()
         vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
         networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
-        clientToService = monitor.clientToService
 
         monitor.register(ArtemisMessagingComponent.toHostAndPort(aliceNode.address), configureTestSSL(), cashUser.username, cashUser.password)
+        rpc = monitor.proxyObservable.value!!
         runTest()
     }
 
@@ -93,7 +94,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     @Test
     fun `cash issue works end to end`() {
-        clientToService.onNext(CashCommand.IssueCash(
+        rpc.startFlow(::CashFlow, CashCommand.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                 recipient = aliceNode.legalIdentity,
@@ -118,14 +119,14 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     @Test
     fun `cash issue and move`() {
-        clientToService.onNext(CashCommand.IssueCash(
+        rpc.startFlow(::CashFlow, CashCommand.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                 recipient = aliceNode.legalIdentity,
                 notary = notaryNode.notaryIdentity
         ))
 
-        clientToService.onNext(CashCommand.PayCash(
+        rpc.startFlow(::CashFlow, CashCommand.PayCash(
                 amount = Amount(100, Issued(PartyAndReference(aliceNode.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
                 recipient = aliceNode.legalIdentity
         ))

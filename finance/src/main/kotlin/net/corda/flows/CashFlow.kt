@@ -11,6 +11,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.ProgressTracker
 import java.security.KeyPair
 import java.util.*
 
@@ -19,7 +20,16 @@ import java.util.*
  *
  * @param command Indicates what Cash transaction to create with what parameters.
  */
-class CashFlow(val command: CashCommand) : FlowLogic<CashFlowResult>() {
+class CashFlow(val command: CashCommand, override val progressTracker: ProgressTracker) : FlowLogic<CashFlowResult>() {
+    constructor(command: CashCommand) : this(command, tracker())
+
+    companion object {
+        object ISSUING : ProgressTracker.Step("Issuing cash")
+        object PAYING : ProgressTracker.Step("Paying cash")
+        object EXITING : ProgressTracker.Step("Exiting cash")
+
+        fun tracker() = ProgressTracker(ISSUING, PAYING, EXITING)
+    }
 
     @Suspendable
     override fun call(): CashFlowResult {
@@ -33,6 +43,7 @@ class CashFlow(val command: CashCommand) : FlowLogic<CashFlowResult>() {
     // TODO check with the recipient if they want to accept the cash.
     @Suspendable
     private fun initiatePayment(req: CashCommand.PayCash): CashFlowResult {
+        progressTracker.currentStep = PAYING
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
         // TODO: Have some way of restricting this to states the caller controls
         try {
@@ -59,6 +70,7 @@ class CashFlow(val command: CashCommand) : FlowLogic<CashFlowResult>() {
 
     @Suspendable
     private fun exitCash(req: CashCommand.ExitCash): CashFlowResult {
+        progressTracker.currentStep = EXITING
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
         try {
             val issuer = PartyAndReference(serviceHub.myInfo.legalIdentity, req.issueRef)
@@ -94,6 +106,7 @@ class CashFlow(val command: CashCommand) : FlowLogic<CashFlowResult>() {
 
     @Suspendable
     private fun issueCash(req: CashCommand.IssueCash): CashFlowResult {
+        progressTracker.currentStep = ISSUING
         val builder: TransactionBuilder = TransactionType.General.Builder(notary = null)
         val issuer = PartyAndReference(serviceHub.myInfo.legalIdentity, req.issueRef)
         Cash().generateIssue(builder, req.amount.issuedBy(issuer), req.recipient.owningKey, req.notary)
