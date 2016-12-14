@@ -188,6 +188,10 @@ and try again.
 
 .. note:: Java 9 is likely to remove this pre-marking requirement completely.
 
+.. note:: Be careful when using a lambda inside an @Suspendable function. It may capture a reference to a 
+non-suspendable Service in the ServiceHub, causing serialisation to fail. If in doubt, place the lambda in a 
+separate, non-@Suspendable function, which you can then call from the @Suspendable function.
+
 Starting your flow
 ------------------
 
