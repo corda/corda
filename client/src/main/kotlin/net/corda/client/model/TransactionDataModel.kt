@@ -2,6 +2,7 @@ package net.corda.client.model
 
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
+import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.collections.ObservableMap
 import net.corda.client.fxutils.*
@@ -80,7 +81,7 @@ data class StateMachineData(
 /**
  * This model provides an observable list of transactions and what state machines/flows recorded them
  */
-class GatheredTransactionDataModel {
+class TransactionDataModel {
     private val transactions by observable(NodeMonitorModel::transactions)
     private val stateMachineUpdates by observable(NodeMonitorModel::stateMachineUpdates)
     private val progressTracking by observable(NodeMonitorModel::progressTracking)
@@ -89,7 +90,7 @@ class GatheredTransactionDataModel {
     private val collectedTransactions = transactions.recordInSequence()
     private val transactionMap = collectedTransactions.associateBy(SignedTransaction::id)
     private val progressEvents = progressTracking.recordAsAssociation(ProgressTrackingEvent::stateMachineId)
-    private val stateMachineStatus = stateMachineUpdates.foldToObservableMap(Unit) { update, _unit, map: ObservableMap<StateMachineRunId, SimpleObjectProperty<StateMachineStatus>> ->
+    private val stateMachineStatus = stateMachineUpdates.fold(FXCollections.observableHashMap<StateMachineRunId, SimpleObjectProperty<StateMachineStatus>>()) { map, update ->
         when (update) {
             is StateMachineUpdate.Added -> {
                 val added: SimpleObjectProperty<StateMachineStatus> =
@@ -102,6 +103,7 @@ class GatheredTransactionDataModel {
                 added.set(StateMachineStatus.Removed(added.value.stateMachineName))
             }
         }
+        map
     }
     private val stateMachineDataList = LeftOuterJoinedMap(stateMachineStatus, progressEvents) { id, status, progress ->
         StateMachineData(id, progress.map { it?.let { FlowStatus(it.message) } }, status)

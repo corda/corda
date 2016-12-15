@@ -38,7 +38,7 @@ class Network : CordaView() {
     val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
     val notaries by observableList(NetworkIdentityModel::notaries)
     val peers by observableList(NetworkIdentityModel::parties)
-    val transactions by observableList(GatheredTransactionDataModel::partiallyResolvedTransactions)
+    val transactions by observableList(TransactionDataModel::partiallyResolvedTransactions)
     // UI components
     private val myIdentityPane by fxid<BorderPane>()
     private val notaryList by fxid<VBox>()
