@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <title>NodeMessagingClient.<init> - </title>
-<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="..\..\style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href="index.html">NodeMessagingClient</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
@@ -14,7 +14,7 @@ Artemis is a message queue broker and here we run a client connecting to the spe
 <p>Message handlers are run on the provided <a href="../../net.corda.node.utilities/-affinity-executor/index.html">AffinityExecutor</a> synchronously, that is, the Artemis callback threads
 are blocked until the handler is scheduled and completed. This allows backpressure to propagate from the given
 executor through into Artemis and from there, back through to senders.</p>
-<p>An implementation of <a href="../-corda-r-p-c-ops/index.html">CordaRPCOps</a> can be provided. If given, clients using the CordaMQClient RPC library can
+<p>An implementation of <a href="../../net.corda.core.messaging/-corda-r-p-c-ops/index.html">CordaRPCOps</a> can be provided. If given, clients using the CordaMQClient RPC library can
 invoke methods on the provided implementation. There is more documentation on this in the docsite and the
 CordaRPCClient class.</p>
 <br/>

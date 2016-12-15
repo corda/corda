@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <title>net.corda.node.services.messaging - </title>
-<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="..\style.css">
 </HEAD>
 <BODY>
 <a href=".">net.corda.node.services.messaging</a><br/>
@@ -26,6 +26,12 @@
 </tr>
 <tr>
 <td>
+<a href="-class-serializer/index.html">ClassSerializer</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">ClassSerializer</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="-client-r-p-c-request-message/index.html">ClientRPCRequestMessage</a></td>
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ClientRPCRequestMessage</span></code><p>The contents of an RPC request message, separated from the MQ layer.</p>
@@ -33,17 +39,18 @@
 </tr>
 <tr>
 <td>
-<a href="-corda-r-p-c-ops/index.html">CordaRPCOps</a></td>
+<a href="-corda-r-p-c-client/index.html">CordaRPCClient</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">CordaRPCOps</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-r-p-c-ops/index.html"><span class="identifier">RPCOps</span></a></code><p>RPC operations that the node exposes to clients using the Java client library. These can be called from
-client apps and are implemented by the node in the <a href="#">CordaRPCOpsImpl</a> class.</p>
+<code><span class="keyword">class </span><span class="identifier">CordaRPCClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/Closeable.html"><span class="identifier">Closeable</span></a><span class="symbol">, </span><a href="-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a></code><p>An RPC client connects to the specified server and allows you to make calls to the server that perform various
+useful tasks. See the documentation for <a href="-corda-r-p-c-client/proxy.html">proxy</a> or review the docsite to learn more about how this API works.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="-flow-handle/index.html">FlowHandle</a></td>
+<a href="-corda-r-p-c-client-impl/index.html">CordaRPCClientImpl</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">FlowHandle</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">class </span><span class="identifier">CordaRPCClientImpl</span></code><p>Core RPC engine implementation, to learn how to use RPC you should be looking at <a href="-corda-r-p-c-client/index.html">CordaRPCClient</a>.</p>
+</td>
 </tr>
 <tr>
 <td>
@@ -71,40 +78,11 @@ wrong system (you could just send a message). If you want complex customisation 
 are handled, this is probably the wrong system.</p>
 </td>
 </tr>
-<tr>
-<td>
-<a href="-r-p-c-ops/index.html">RPCOps</a></td>
-<td>
-<code><span class="keyword">interface </span><span class="identifier">RPCOps</span></code><p>Base interface that all RPC servers must implement. Note: in Corda theres only one RPC interface. This base
-interface is here in case we split the RPC system out into a separate library one day.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="-state-machine-info/index.html">StateMachineInfo</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">StateMachineInfo</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-state-machine-update/index.html">StateMachineUpdate</a></td>
-<td>
-<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">StateMachineUpdate</span></code></td>
-</tr>
 </tbody>
 </table>
 <h3>Annotations</h3>
 <table>
 <tbody>
-<tr>
-<td>
-<a href="-r-p-c-returns-observables/index.html">RPCReturnsObservables</a></td>
-<td>
-<code><span class="keyword">annotation</span> <span class="keyword">class </span><span class="identifier">RPCReturnsObservables</span></code><p>If an RPC is tagged with this annotation it may return one or more observables anywhere in its response graph.
-Calling such a method comes with consequences: its slower, and consumes server side resources as observations
-will buffer up on the server until theyre consumed by the client.</p>
-</td>
-</tr>
 <tr>
 <td>
 <a href="-r-p-c-since-version/index.html">RPCSinceVersion</a></td>
@@ -168,16 +146,6 @@ permissions theyre entitled to which can be used to control access.</p>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">requirePermission</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging$requirePermission(kotlin.String)/permission">permission</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Helper method which checks that the current RPC user is entitled for the given permission. Throws a <a href="-permission-exception/index.html">PermissionException</a> otherwise.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="start-flow.html">startFlow</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span> <a href="-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a><span class="symbol">.</span><span class="identifier">startFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function0((net.corda.node.services.messaging.startFlow.R)))/flowConstructor">flowConstructor</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>These allow type safe invocations of flows from Kotlin, e.g.:</p>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span> <a href="-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a><span class="symbol">.</span><span class="identifier">startFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function1((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A)/flowConstructor">flowConstructor</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function1((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A)/arg0">arg0</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><br/>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span> <a href="-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a><span class="symbol">.</span><span class="identifier">startFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function2((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B)/flowConstructor">flowConstructor</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function2((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B)/arg0">arg0</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function2((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B)/arg1">arg1</span><span class="symbol">:</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><br/>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">, </span><span class="identifier">C</span><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span> <a href="-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a><span class="symbol">.</span><span class="identifier">startFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function3((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C)/flowConstructor">flowConstructor</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">B</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function3((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C)/arg0">arg0</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function3((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C)/arg1">arg1</span><span class="symbol">:</span>&nbsp;<span class="identifier">B</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function3((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C)/arg2">arg2</span><span class="symbol">:</span>&nbsp;<span class="identifier">C</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><br/>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">, </span><span class="identifier">C</span><span class="symbol">, </span><span class="identifier">D</span><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span> <a href="-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a><span class="symbol">.</span><span class="identifier">startFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function4((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.D, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.D)/flowConstructor">flowConstructor</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">B</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">D</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function4((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.D, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.D)/arg0">arg0</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function4((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.D, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.D)/arg1">arg1</span><span class="symbol">:</span>&nbsp;<span class="identifier">B</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function4((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.D, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.D)/arg2">arg2</span><span class="symbol">:</span>&nbsp;<span class="identifier">C</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging$startFlow(net.corda.node.services.messaging.CordaRPCOps, kotlin.Function4((net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.D, net.corda.node.services.messaging.startFlow.R)), net.corda.node.services.messaging.startFlow.A, net.corda.node.services.messaging.startFlow.B, net.corda.node.services.messaging.startFlow.C, net.corda.node.services.messaging.startFlow.D)/arg3">arg3</span><span class="symbol">:</span>&nbsp;<span class="identifier">D</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

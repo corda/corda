@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <title>alltypes - </title>
-<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="..\style.css">
 </HEAD>
 <BODY>
 <h3>All Types</h3>
@@ -389,6 +389,12 @@ the certificate chain will be downloaded and stored in <a href="#">KeyStore</a> 
 </tr>
 <tr>
 <td>
+<a href="../net.corda.core.crypto/-certificate-stream/index.html">net.corda.core.crypto.CertificateStream</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../net.corda.node.services.api/-checkpoint/index.html">net.corda.node.services.api.Checkpoint</a></td>
 <td>
 </td>
@@ -413,6 +419,12 @@ the certificate chain will be downloaded and stored in <a href="#">KeyStore</a> 
 <a href="../net.corda.core.node/-city-database/index.html">net.corda.core.node.CityDatabase</a></td>
 <td>
 <p>A simple lookup table of city names to their coordinates. Lookups are case insensitive.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.services.messaging/-class-serializer/index.html">net.corda.node.services.messaging.ClassSerializer</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -549,6 +561,19 @@ internal accounting by the issuer (it might be, for example, a warehouse and/or 
 </tr>
 <tr>
 <td>
+<a href="../net.corda.core.serialization/-composite-key-leaf-serializer/index.html">net.corda.core.serialization.CompositeKeyLeafSerializer</a></td>
+<td>
+<p>For serialising composite keys</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.serialization/-composite-key-node-serializer/index.html">net.corda.core.serialization.CompositeKeyNodeSerializer</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../net.corda.client.fxutils/-concatenated-list/index.html">net.corda.client.fxutils.ConcatenatedList</a></td>
 <td>
 <p><a href="../net.corda.client.fxutils/-concatenated-list/index.html">ConcatenatedList</a> takes a list of lists and concatenates them. Any change to the underlying lists or the outer list
@@ -641,22 +666,22 @@ to extend a Corda node with additional application services.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.client/-corda-r-p-c-client/index.html">net.corda.client.CordaRPCClient</a></td>
+<a href="../net.corda.node.services.messaging/-corda-r-p-c-client/index.html">net.corda.node.services.messaging.CordaRPCClient</a></td>
 <td>
 <p>An RPC client connects to the specified server and allows you to make calls to the server that perform various
-useful tasks. See the documentation for <a href="../net.corda.client/-corda-r-p-c-client/proxy.html">proxy</a> or review the docsite to learn more about how this API works.</p>
+useful tasks. See the documentation for <a href="../net.corda.node.services.messaging/-corda-r-p-c-client/proxy.html">proxy</a> or review the docsite to learn more about how this API works.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.client.impl/-corda-r-p-c-client-impl/index.html">net.corda.client.impl.CordaRPCClientImpl</a></td>
+<a href="../net.corda.node.services.messaging/-corda-r-p-c-client-impl/index.html">net.corda.node.services.messaging.CordaRPCClientImpl</a></td>
 <td>
-<p>Core RPC engine implementation, to learn how to use RPC you should be looking at <a href="../net.corda.client/-corda-r-p-c-client/index.html">CordaRPCClient</a>.</p>
+<p>Core RPC engine implementation, to learn how to use RPC you should be looking at <a href="../net.corda.node.services.messaging/-corda-r-p-c-client/index.html">CordaRPCClient</a>.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.services.messaging/-corda-r-p-c-ops/index.html">net.corda.node.services.messaging.CordaRPCOps</a></td>
+<a href="../net.corda.core.messaging/-corda-r-p-c-ops/index.html">net.corda.core.messaging.CordaRPCOps</a></td>
 <td>
 <p>RPC operations that the node exposes to clients using the Java client library. These can be called from
 client apps and are implemented by the node in the <a href="#">CordaRPCOpsImpl</a> class.</p>
@@ -802,6 +827,12 @@ across a Copycat Raft cluster.</p>
 <tr>
 <td>
 <a href="../net.corda.core/kotlin.-double/index.html">kotlin.Double</a> (extensions in package net.corda.core)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.driver/-driver-based-test/index.html">net.corda.node.driver.DriverBasedTest</a></td>
 <td>
 </td>
 </tr>
@@ -1040,8 +1071,9 @@ are reflected in the exposed list as expected.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.services.messaging/-flow-handle/index.html">net.corda.node.services.messaging.FlowHandle</a></td>
+<a href="../net.corda.core.messaging/-flow-handle/index.html">net.corda.core.messaging.FlowHandle</a></td>
 <td>
+<p><a href="../net.corda.core.messaging/-flow-handle/index.html">FlowHandle</a> is a serialisable handle for the started flow, parameterised by the type of the flows return value.</p>
 </td>
 </tr>
 <tr>
@@ -1183,13 +1215,6 @@ container), shares of the same class in a specific company are fungible and coun
 </tr>
 <tr>
 <td>
-<a href="../net.corda.client.model/-gathered-transaction-data-model/index.html">net.corda.client.model.GatheredTransactionDataModel</a></td>
-<td>
-<p>This model provides an observable list of transactions and what state machines/flows recorded them</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../net.corda.client.mock/-generator/index.html">net.corda.client.mock.Generator</a></td>
 <td>
 <p>This file defines a basic <a href="../net.corda.client.mock/-generator/index.html">Generator</a> library for composing random generators of objects.</p>
@@ -1280,6 +1305,12 @@ set via the constructor and the class is immutable.</p>
 <tr>
 <td>
 <a href="../net.corda.core/java.io.-input-stream/index.html">java.io.InputStream</a> (extensions in package net.corda.core)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.serialization/-input-stream-serializer/index.html">net.corda.core.serialization.InputStreamSerializer</a></td>
 <td>
 </td>
 </tr>
@@ -1793,15 +1824,15 @@ loads important data off disk and starts listening for connections.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.core.node/-node-info/index.html">net.corda.core.node.NodeInfo</a></td>
+<a href="../net.corda.node.driver/-node-handle/index.html">net.corda.node.driver.NodeHandle</a></td>
 <td>
-<p>Info about a network node that acts on behalf of some form of contract party.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.driver/-node-info-and-config/index.html">net.corda.node.driver.NodeInfoAndConfig</a></td>
+<a href="../net.corda.core.node/-node-info/index.html">net.corda.core.node.NodeInfo</a></td>
 <td>
+<p>Info about a network node that acts on behalf of some form of contract party.</p>
 </td>
 </tr>
 <tr>
@@ -2065,6 +2096,13 @@ ledger. The reference is intended to be encrypted so its meaningless to anyone o
 </tr>
 <tr>
 <td>
+<a href="../net.corda.core.node.services/-party-info/index.html">net.corda.core.node.services.PartyInfo</a></td>
+<td>
+<p>Holds information about a <a href="../net.corda.core.crypto/-party/index.html">Party</a>, which may refer to either a specific node or a service.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../net.corda.core/java.nio.file.-path/index.html">java.nio.file.Path</a> (extensions in package net.corda.core)</td>
 <td>
 </td>
@@ -2220,7 +2258,7 @@ method.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.services.messaging/-r-p-c-ops/index.html">net.corda.node.services.messaging.RPCOps</a></td>
+<a href="../net.corda.core.messaging/-r-p-c-ops/index.html">net.corda.core.messaging.RPCOps</a></td>
 <td>
 <p>Base interface that all RPC servers must implement. Note: in Corda theres only one RPC interface. This base
 interface is here in case we split the RPC system out into a separate library one day.</p>
@@ -2228,7 +2266,7 @@ interface is here in case we split the RPC system out into a separate library on
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.services.messaging/-r-p-c-returns-observables/index.html">net.corda.node.services.messaging.RPCReturnsObservables</a></td>
+<a href="../net.corda.core.messaging/-r-p-c-returns-observables/index.html">net.corda.core.messaging.RPCReturnsObservables</a></td>
 <td>
 <p>If an RPC is tagged with this annotation it may return one or more observables anywhere in its response graph.
 Calling such a method comes with consequences: its slower, and consumes server side resources as observations
@@ -2296,6 +2334,12 @@ using a backing HashMap that subclasses should modify.</p>
 <tr>
 <td>
 <a href="../net.corda.node.services.statemachine/-receive-request/index.html">net.corda.node.services.statemachine.ReceiveRequest</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.messaging/-received-message/index.html">net.corda.core.messaging.ReceivedMessage</a></td>
 <td>
 </td>
 </tr>
@@ -2625,7 +2669,7 @@ Points at which polynomial pieces connect are known as <emph>knots</emph>.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.services.messaging/-state-machine-info/index.html">net.corda.node.services.messaging.StateMachineInfo</a></td>
+<a href="../net.corda.core.messaging/-state-machine-info/index.html">net.corda.core.messaging.StateMachineInfo</a></td>
 <td>
 </td>
 </tr>
@@ -2665,7 +2709,7 @@ during a flow run <a href="../net.corda.core.node.services/-state-machine-record
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.services.messaging/-state-machine-update/index.html">net.corda.node.services.messaging.StateMachineUpdate</a></td>
+<a href="../net.corda.core.messaging/-state-machine-update/index.html">net.corda.core.messaging.StateMachineUpdate</a></td>
 <td>
 </td>
 </tr>
@@ -2854,6 +2898,13 @@ and commands are right, this class can be used as a holding bucket to gather sig
 <td>
 <a href="../net.corda.client.model/-transaction-create-status/index.html">net.corda.client.model.TransactionCreateStatus</a></td>
 <td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.client.model/-transaction-data-model/index.html">net.corda.client.model.TransactionDataModel</a></td>
+<td>
+<p>This model provides an observable list of transactions and what state machines/flows recorded them</p>
 </td>
 </tr>
 <tr>

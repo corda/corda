@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <title>net.corda.node.driver - </title>
-<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="..\style.css">
 </HEAD>
 <BODY>
 <a href=".">net.corda.node.driver</a><br/>
@@ -10,6 +10,12 @@
 <h3>Types</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="-driver-based-test/index.html">DriverBasedTest</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">DriverBasedTest</span></code></td>
+</tr>
 <tr>
 <td>
 <a href="-driver-d-s-l/index.html">DriverDSL</a></td>
@@ -31,9 +37,9 @@
 </tr>
 <tr>
 <td>
-<a href="-node-info-and-config/index.html">NodeInfoAndConfig</a></td>
+<a href="-node-handle/index.html">NodeHandle</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">NodeInfoAndConfig</span></code></td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">NodeHandle</span></code></td>
 </tr>
 <tr>
 <td>
@@ -77,6 +83,12 @@ interface SomeOtherExposedDSLInterface : DriverDSLExposedInterface
 interface SomeOtherInternalDSLInterface : DriverDSLInternalInterface, SomeOtherExposedDSLInterface
 class SomeOtherDSL(val driverDSL : DriverDSL) : DriverDSLInternalInterface by driverDSL, SomeOtherInternalDSLInterface</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="get-timestamp-as-directory-name.html">getTimestampAsDirectoryName</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getTimestampAsDirectoryName</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
 </tr>
 <tr>
 <td>

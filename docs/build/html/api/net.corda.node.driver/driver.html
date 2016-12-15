@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <title>driver - </title>
-<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="..\style.css">
 </HEAD>
 <BODY>
 <a href="index.html">net.corda.node.driver</a>&nbsp;/&nbsp;<a href=".">driver</a><br/>
@@ -17,7 +17,7 @@ val notary = startNode("Notary")</p>
 }</p>
 <p>Note that <a href="-driver-d-s-l/start-node.html">DriverDSL.startNode</a> does not wait for the node to start up synchronously, but rather returns a <a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html">Future</a>
 of the <a href="../net.corda.core.node/-node-info/index.html">NodeInfo</a> that may be waited on, which completes when the new node registered with the network map service.</p>
-<p>The driver implicitly bootstraps a <a href="../net.corda.node.services.network/-network-map-service/index.html">NetworkMapService</a> that may be accessed through a local cache <a href="#">DriverDSL.networkMapCache</a>.</p>
+<p>The driver implicitly bootstraps a <a href="../net.corda.node.services.network/-network-map-service/index.html">NetworkMapService</a>.</p>
 <br/>
 <br/>
 <h3>Parameters</h3>

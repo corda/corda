@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <title>VaultService - </title>
-<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="..\..\style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">net.corda.core.node.services</a>&nbsp;/&nbsp;<a href=".">VaultService</a><br/>
@@ -45,10 +45,17 @@ keys in this vault, you must inform the vault service so it can update its inter
 </tr>
 <tr>
 <td>
+<a href="raw-updates.html">rawUpdates</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">rawUpdates</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Prefer the use of <a href="updates.html">updates</a> unless you know why you want to use this instead.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="updates.html">updates</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">updates</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Vault will already incorporate
-the update.</p>
+the update, and the database transaction associated with the update will have been committed and closed.</p>
 </td>
 </tr>
 </tbody>
