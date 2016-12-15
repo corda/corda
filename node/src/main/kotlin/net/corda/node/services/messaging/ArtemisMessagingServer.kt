@@ -9,6 +9,7 @@ import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.div
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.utilities.debug
@@ -92,7 +93,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     fun start() = mutex.locked {
         if (!running) {
             configureAndStartServer()
-            networkChangeHandle = networkMapCache.changed.subscribe { destroyOrCreateBridge(it) }
+            networkChangeHandle = networkMapCache.changed.subscribe { destroyOrCreateBridges(it) }
             running = true
         }
     }
@@ -120,14 +121,38 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * We create the bridges indirectly now because the network map is not persisted and there are no ways to obtain host and port information on startup.
      * TODO : Create the bridge directly from the list of queues on start up when we have a persisted network map service.
      */
-    private fun destroyOrCreateBridge(change: MapChange) {
-        val (newNode, staleNode) = when (change) {
-            is MapChange.Modified -> change.node to change.previousNode
-            is MapChange.Removed -> null to change.node
-            is MapChange.Added -> change.node to null
+    private fun destroyOrCreateBridges(change: MapChange) {
+        fun addAddresses(node: NodeInfo, targets: MutableSet<ArtemisPeerAddress>) {
+            // Add the node's address with the p2p queue.
+            val nodeAddress = node.address as ArtemisPeerAddress
+            targets.add(nodeAddress)
+            // Add the node's address with service queues, one per service.
+            node.advertisedServices.forEach {
+                targets.add(NodeAddress.asService(it.identity.owningKey, nodeAddress.hostAndPort))
+            }
         }
-        (staleNode?.address as? ArtemisAddress)?.let { maybeDestroyBridge(it.queueName) }
-        (newNode?.address as? ArtemisAddress)?.let { if (activeMQServer.queueQuery(it.queueName).isExists) maybeDeployBridgeForAddress(it) }
+
+        val addressesToCreateBridgesTo = HashSet<ArtemisPeerAddress>()
+        val addressesToRemoveBridgesFrom = HashSet<ArtemisPeerAddress>()
+        when (change) {
+            is MapChange.Modified -> {
+                addAddresses(change.node, addressesToCreateBridgesTo)
+                addAddresses(change.previousNode, addressesToRemoveBridgesFrom)
+            }
+            is MapChange.Removed -> {
+                addAddresses(change.node, addressesToRemoveBridgesFrom)
+            }
+            is MapChange.Added -> {
+                addAddresses(change.node, addressesToCreateBridgesTo)
+            }
+        }
+
+        (addressesToRemoveBridgesFrom - addressesToCreateBridgesTo).forEach {
+            maybeDestroyBridge(bridgeNameForAddress(it))
+        }
+        addressesToCreateBridgesTo.forEach {
+            if (activeMQServer.queueQuery(it.queueName).isExists) maybeDeployBridgeForAddress(it)
+        }
     }
 
     private fun configureAndStartServer() {
@@ -138,31 +163,48 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             registerActivationFailureListener { exception -> throw exception }
             // Some types of queue might need special preparation on our side, like dialling back or preparing
             // a lazily initialised subsystem.
-            registerPostQueueCreationCallback { deployBridgeFromNewPeerQueue(it) }
+            registerPostQueueCreationCallback { deployBridgeFromNewQueue(it) }
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
         activeMQServer.start()
         printBasicNodeInfo("Node listening on address", myHostPort.toString())
     }
 
-    private fun deployBridgeFromNewPeerQueue(queueName: SimpleString) {
-        log.debug { "Queue created: $queueName" }
-        if (!queueName.startsWith(PEERS_PREFIX)) return
-        try {
-            val identity = CompositeKey.parseFromBase58(queueName.substring(PEERS_PREFIX.length))
-            val nodeInfo = networkMapCache.getNodeByCompositeKey(identity)
-            if (nodeInfo != null) {
-                val address = nodeInfo.address
-                if (address is NodeAddress) {
-                    maybeDeployBridgeForAddress(address)
+    private fun maybeDeployBridgeForNode(queueName: SimpleString, nodeInfo: NodeInfo) {
+        log.debug("Deploying bridge for $queueName to $nodeInfo")
+        val address = nodeInfo.address
+        if (address is NodeAddress) {
+            maybeDeployBridgeForAddress(NodeAddress(queueName, address.hostAndPort))
+        } else {
+            log.error("Don't know how to deal with $address")
+        }
+    }
+
+    private fun deployBridgeFromNewQueue(queueName: SimpleString) {
+        log.debug { "Queue created: $queueName, deploying bridge(s)" }
+        when {
+            queueName.startsWith(PEERS_PREFIX) -> try {
+                val identity = CompositeKey.parseFromBase58(queueName.substring(PEERS_PREFIX.length))
+                val nodeInfo = networkMapCache.getNodeByLegalIdentityKey(identity)
+                if (nodeInfo != null) {
+                    maybeDeployBridgeForNode(queueName, nodeInfo)
                 } else {
-                    log.error("Don't know how to deal with $address")
+                    log.error("Queue created for a peer that we don't know from the network map: $queueName")
                 }
-            } else {
-                log.error("Queue created for a peer that we don't know from the network map: $queueName")
+            } catch (e: AddressFormatException) {
+                log.error("Flow violation: Could not parse peer queue name as Base 58: $queueName")
             }
-        } catch (e: AddressFormatException) {
-            log.error("Flow violation: Could not parse queue name as Base 58: $queueName")
+
+            queueName.startsWith(SERVICES_PREFIX) -> try {
+                val identity = CompositeKey.parseFromBase58(queueName.substring(SERVICES_PREFIX.length))
+                val nodeInfos = networkMapCache.getNodesByAdvertisedServiceIdentityKey(identity)
+                // Create a bridge for each node advertising the service.
+                for (nodeInfo in nodeInfos) {
+                    maybeDeployBridgeForNode(queueName, nodeInfo)
+                }
+            } catch (e: AddressFormatException) {
+                log.error("Flow violation: Could not parse service queue name as Base 58: $queueName")
+            }
         }
     }
 
@@ -240,16 +282,19 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             tcpTransport(OUTBOUND, hostAndPort.hostText, hostAndPort.port)
     )
 
-    private fun bridgeExists(name: SimpleString) = activeMQServer.clusterManager.bridges.containsKey(name.toString())
+    private fun bridgeExists(name: String) = activeMQServer.clusterManager.bridges.containsKey(name)
 
-    private fun maybeDeployBridgeForAddress(address: ArtemisAddress) {
-        if (!connectorExists(address.hostAndPort)) {
-            addConnector(address.hostAndPort)
+    private fun maybeDeployBridgeForAddress(peerAddress: ArtemisPeerAddress) {
+        if (!connectorExists(peerAddress.hostAndPort)) {
+            addConnector(peerAddress.hostAndPort)
         }
-        if (!bridgeExists(address.queueName)) {
-            deployBridge(address)
+        val bridgeName = bridgeNameForAddress(peerAddress)
+        if (!bridgeExists(bridgeName)) {
+            deployBridge(bridgeName, peerAddress)
         }
     }
+
+    private fun bridgeNameForAddress(peerAddress: ArtemisPeerAddress) = "${peerAddress.queueName}-${peerAddress.hostAndPort}"
 
     /**
      * All nodes are expected to have a public facing address called [ArtemisMessagingComponent.P2P_QUEUE] for receiving
@@ -257,12 +302,12 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * as defined by ArtemisAddress.queueName. A bridge is then created to forward messages from this queue to the node's
      * P2P address.
      */
-    private fun deployBridge(address: ArtemisAddress) {
+    private fun deployBridge(bridgeName: String, peerAddress: ArtemisPeerAddress) {
         activeMQServer.deployBridge(BridgeConfiguration().apply {
-            name = address.queueName.toString()
-            queueName = address.queueName.toString()
+            name = bridgeName
+            queueName = peerAddress.queueName.toString()
             forwardingAddress = P2P_QUEUE
-            staticConnectors = listOf(address.hostAndPort.toString())
+            staticConnectors = listOf(peerAddress.hostAndPort.toString())
             confirmationWindowSize = 100000 // a guess
             isUseDuplicateDetection = true // Enable the bridge's automatic deduplication logic
             // As a peer of the target node we must connect to it using the peer user. Actual authentication is done using
@@ -272,9 +317,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         })
     }
 
-    private fun maybeDestroyBridge(name: SimpleString) {
+    private fun maybeDestroyBridge(name: String) {
         if (bridgeExists(name)) {
-            activeMQServer.destroyBridge(name.toString())
+            activeMQServer.destroyBridge(name)
         }
     }
 

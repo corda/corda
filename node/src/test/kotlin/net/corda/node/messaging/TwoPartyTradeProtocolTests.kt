@@ -85,7 +85,7 @@ class TwoPartyTradeFlowTests {
         net = MockNetwork(false, true)
 
         ledger {
-            notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+            notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
             aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
             bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
             val aliceKey = aliceNode.services.legalIdentityKey
@@ -125,7 +125,7 @@ class TwoPartyTradeFlowTests {
     @Test
     fun `shutdown and restore`() {
         ledger {
-            notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+            notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
             aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
             bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
             aliceNode.disableDBCloseOnStop()
@@ -133,7 +133,7 @@ class TwoPartyTradeFlowTests {
             val aliceKey = aliceNode.services.legalIdentityKey
             val notaryKey = notaryNode.services.notaryIdentityKey
 
-            val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.Handle
+            val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.PeerHandle
             val networkMapAddr = notaryNode.info.address
 
             net.runNetwork() // Clear network map registration messages
@@ -235,7 +235,7 @@ class TwoPartyTradeFlowTests {
 
     @Test
     fun `check dependencies of sale asset are resolved`() {
-        notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name, ALICE_KEY)
         bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name, BOB_KEY)
         val aliceKey = aliceNode.services.legalIdentityKey
@@ -327,7 +327,7 @@ class TwoPartyTradeFlowTests {
     @Test
     fun `track() works`() {
 
-        notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name, ALICE_KEY)
         bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name, BOB_KEY)
         val aliceKey = aliceNode.services.legalIdentityKey
@@ -427,7 +427,7 @@ class TwoPartyTradeFlowTests {
             aliceError: Boolean,
             expectedMessageSubstring: String
     ) {
-        notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
         bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
         val aliceKey = aliceNode.services.legalIdentityKey

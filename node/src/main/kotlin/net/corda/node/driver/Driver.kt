@@ -5,12 +5,12 @@ package net.corda.node.driver
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.common.net.HostAndPort
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
-import net.corda.core.ThreadBox
+import net.corda.core.*
 import net.corda.core.crypto.Party
-import net.corda.core.div
-import net.corda.core.future
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
@@ -33,21 +33,20 @@ import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.util.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
+import kotlin.test.assertEquals
 
 /**
  * This file defines a small "Driver" DSL for starting up nodes that is only intended for development, demos and tests.
  *
  * The process the driver is run in behaves as an Artemis client and starts up other processes. Namely it first
  * bootstraps a network map service to allow the specified nodes to connect to, then starts up the actual nodes.
- *
- * TODO The driver actually starts up as an Artemis server now that may route traffic. Fix this once the client MessagingService is done.
- * TODO The nodes are started up sequentially which is quite slow. Either speed up node startup or make startup parallel somehow.
- * TODO The driver now polls the network map cache for info about newly started up nodes, this could be done asynchronously(?).
- * TODO The network map service bootstrap is hacky (needs to fake the service's public key in order to retrieve the true one), needs some thought.
  */
 
 private val log: Logger = loggerFor<DriverDSL>()
@@ -68,7 +67,7 @@ interface DriverDSLExposedInterface {
     fun startNode(providedName: String? = null,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
-                  customOverrides: Map<String, Any?> = emptyMap()): Future<NodeInfoAndConfig>
+                  customOverrides: Map<String, Any?> = emptyMap()): Future<NodeHandle>
 
     /**
      * Starts a distributed notary cluster.
@@ -76,8 +75,14 @@ interface DriverDSLExposedInterface {
      * @param notaryName The legal name of the advertised distributed notary service.
      * @param clusterSize Number of nodes to create for the cluster.
      * @param type The advertised notary service type. Currently the only supported type is [RaftValidatingNotaryService.type].
+     * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
+     * @return The [Party] identity of the distributed notary service, and the [NodeInfo]s of the notaries in the cluster.
      */
-    fun startNotaryCluster(notaryName: String, clusterSize: Int = 3, type: ServiceType = RaftValidatingNotaryService.type)
+    fun startNotaryCluster(
+            notaryName: String,
+            clusterSize: Int = 3,
+            type: ServiceType = RaftValidatingNotaryService.type,
+            rpcUsers: List<User> = emptyList()): Future<Pair<Party, List<NodeHandle>>>
 
     fun waitForAllNodesToFinish()
 }
@@ -87,7 +92,11 @@ interface DriverDSLInternalInterface : DriverDSLExposedInterface {
     fun shutdown()
 }
 
-data class NodeInfoAndConfig(val nodeInfo: NodeInfo, val config: Config)
+data class NodeHandle(
+        val nodeInfo: NodeInfo,
+        val config: Config,
+        val process: Process
+)
 
 sealed class PortAllocation {
     abstract fun nextPort(): Int
@@ -120,7 +129,7 @@ sealed class PortAllocation {
  * Note that [DriverDSL.startNode] does not wait for the node to start up synchronously, but rather returns a [Future]
  * of the [NodeInfo] that may be waited on, which completes when the new node registered with the network map service.
  *
- * The driver implicitly bootstraps a [NetworkMapService] that may be accessed through a local cache [DriverDSL.networkMapCache].
+ * The driver implicitly bootstraps a [NetworkMapService].
  *
  * @param driverDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
  *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
@@ -176,6 +185,9 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         })
         Runtime.getRuntime().addShutdownHook(shutdownHook)
         return returnValue
+    } catch (exception: Throwable) {
+        println("Driver shutting down because of exception $exception")
+        throw exception
     } finally {
         driverDsl.shutdown()
         if (shutdownHook != null) {
@@ -184,7 +196,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     }
 }
 
-private fun getTimestampAsDirectoryName(): String {
+fun getTimestampAsDirectoryName(): String {
     return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(UTC).format(Instant.now())
 }
 
@@ -313,7 +325,7 @@ open class DriverDSL(
     }
 
     override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>,
-                           rpcUsers: List<User>, customOverrides: Map<String, Any?>): Future<NodeInfoAndConfig> {
+                           rpcUsers: List<User>, customOverrides: Map<String, Any?>): ListenableFuture<NodeHandle> {
         val messagingAddress = portAllocation.nextHostAndPort()
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
@@ -344,12 +356,18 @@ open class DriverDSL(
         )
 
         return future {
-            registerProcess(DriverDSL.startNode(FullNodeConfiguration(config), quasarJarPath, debugPort))
-            NodeInfoAndConfig(queryNodeInfo(apiAddress)!!, config)
+            val process = DriverDSL.startNode(FullNodeConfiguration(config), quasarJarPath, debugPort)
+            registerProcess(process)
+            NodeHandle(queryNodeInfo(apiAddress)!!, config, process)
         }
     }
 
-    override fun startNotaryCluster(notaryName: String, clusterSize: Int, type: ServiceType) {
+    override fun startNotaryCluster(
+            notaryName: String,
+            clusterSize: Int,
+            type: ServiceType,
+            rpcUsers: List<User>
+    ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
         val nodeNames = (1..clusterSize).map { "Notary Node $it" }
         val paths = nodeNames.map { driverDirectory / it }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
@@ -359,12 +377,19 @@ open class DriverDSL(
         val notaryClusterAddress = portAllocation.nextHostAndPort()
 
         // Start the first node that will bootstrap the cluster
-        startNode(nodeNames.first(), advertisedService, emptyList(), mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
+        val firstNotaryFuture = startNode(nodeNames.first(), advertisedService, rpcUsers, mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
         // All other nodes will join the cluster
-        nodeNames.drop(1).forEach {
+        val restNotaryFutures = nodeNames.drop(1).map {
             val nodeAddress = portAllocation.nextHostAndPort()
             val configOverride = mapOf("notaryNodeAddress" to nodeAddress.toString(), "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))
-            startNode(it, advertisedService, emptyList(), configOverride)
+            startNode(it, advertisedService, rpcUsers, configOverride)
+        }
+
+        return firstNotaryFuture.flatMap { firstNotary ->
+            val notaryParty = firstNotary.nodeInfo.notaryIdentity
+            Futures.allAsList(restNotaryFutures).map { restNotaries ->
+                Pair(notaryParty, listOf(firstNotary) + restNotaries)
+            }
         }
     }
 

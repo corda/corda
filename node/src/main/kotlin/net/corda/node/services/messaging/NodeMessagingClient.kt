@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.messaging.*
+import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.opaque
 import net.corda.core.success
@@ -96,7 +97,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     /**
      * Apart from the NetworkMapService this is the only other address accessible to the node outside of lookups against the NetworkMapCache.
      */
-    override val myAddress: SingleMessageRecipient = if (myIdentity != null) NodeAddress(myIdentity, serverHostPort) else NetworkMapAddress(serverHostPort)
+    override val myAddress: SingleMessageRecipient = if (myIdentity != null) NodeAddress.asPeer(myIdentity, serverHostPort) else NetworkMapAddress(serverHostPort)
 
     private val state = ThreadBox(InnerState())
     private val handlers = CopyOnWriteArrayList<Handler>()
@@ -449,4 +450,11 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                     }
                 }
             }
+
+    override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
+        return when (partyInfo) {
+            is PartyInfo.Node -> partyInfo.node.address
+            is PartyInfo.Service -> ArtemisMessagingComponent.ServiceAddress(partyInfo.service.identity.owningKey)
+        }
+    }
 }

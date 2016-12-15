@@ -81,7 +81,6 @@ interface ServiceHub {
      * Typical use is during signing in flows and for unit test signing.
      */
     val notaryIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.notaryIdentity.owningKey.keys)
-
 }
 
 /**

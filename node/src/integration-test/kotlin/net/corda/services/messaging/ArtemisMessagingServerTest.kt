@@ -1,6 +1,7 @@
 package net.corda.services.messaging
 
 import net.corda.node.driver.driver
+import net.corda.node.driver.getTimestampAsDirectoryName
 import org.junit.Test
 import java.nio.file.Paths
 import java.time.Instant
@@ -21,9 +22,5 @@ class ArtemisMessagingServerTest {
         driver(driverDirectory = dir) {
             arrayOf(startNode("NodeA"), startNode("NodeB"), startNode("Notary")).forEach { it.get(5, TimeUnit.MINUTES) }
         }
-    }
-
-    private fun getTimestampAsDirectoryName(): String {
-        return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC).format(Instant.now())
     }
 }

@@ -81,7 +81,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
         databaseTransaction(database) {
             val kms = MockKeyManagementService(ALICE_KEY)
-            val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), database)
+            val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.PeerHandle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), database)
             services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
                 override val testReference = this@NodeSchedulerServiceTest
             }
