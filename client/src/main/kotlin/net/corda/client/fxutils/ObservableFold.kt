@@ -43,7 +43,7 @@ fun <T, R> Observable<T>.fold(accumulator: R, folderFun: (R, T) -> Unit): R {
     buffer(1, TimeUnit.SECONDS).subscribe {
         if (it.isNotEmpty()) {
             Platform.runLater {
-                it.fold(accumulator){ list, item ->
+                it.fold(accumulator) { list, item ->
                     folderFun.invoke(list, item)
                     list
                 }
