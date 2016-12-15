@@ -1,18 +1,11 @@
 Working with the Azure VM
 ==========
 
-Corda ships with a VM image which can be used to deploy a pre-configured virtual machine on `Microsoft's Azure platform<https://azure.microsoft.com/en-gb/overview/what-is-azure/>`_. 
+Corda ships with a VM image which can be used to deploy a pre-configured virtual machine on `Microsoft's Azure platform<https://azure.microsoft.com/en-gb/overview/what-is-azure/>`_.
 
-Deploying on Azure provides a rapid way to :doc:`running-the-demos` without needing to manually setup the JDK etc. in advance. 
+Deploying on Azure provides a rapid way of :doc:`running-the-demos` without needing to manually setup the JDK etc. in advance.
 
-.. image:: resources/azure_vm_10_20.png
-  :width: 300px
-.. image:: resources/azure_vm_10_22.png
-  :width: 300px
-.. image:: resources/azure_vm_10_26.png
-  :width: 300px
-.. image:: resources/azure_vm_10_36.png
-  :width: 300px
+.. note:: This VM is an easy option for running the samples; it is *NOT* a development environment. If you want to get started developing on Corda, browsing the codebase or contributing to the project, please clone the `GitHub Repos<https://github.com/corda/>` instead.
 
 Pre-requisites
 -------
