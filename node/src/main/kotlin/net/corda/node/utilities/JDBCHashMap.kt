@@ -19,6 +19,14 @@ import kotlin.system.measureTimeMillis
  */
 
 /**
+ * The default maximum size of the LRU cache.
+ *
+ * TODO: make this value configurable
+ * TODO: tune this value, as it's currently mostly a guess
+ */
+val DEFAULT_MAX_BUCKETS = 4096
+
+/**
  * A convenient JDBC table backed hash map with iteration order based on insertion order.
  * See [AbstractJDBCHashMap] for further implementation details.
  *
@@ -28,7 +36,7 @@ import kotlin.system.measureTimeMillis
  */
 class JDBCHashMap<K : Any, V : Any>(tableName: String,
                                     loadOnInit: Boolean = false,
-                                    maxBuckets: Int = 256)
+                                    maxBuckets: Int = DEFAULT_MAX_BUCKETS)
     : AbstractJDBCHashMap<K, V, JDBCHashMap.BlobMapTable>(BlobMapTable(tableName), loadOnInit, maxBuckets) {
 
     class BlobMapTable(tableName: String) : JDBCHashedTable(tableName) {
@@ -78,7 +86,7 @@ fun <T : Any> deserializeFromBlob(blob: Blob): T = bytesFromBlob<T>(blob).deseri
  */
 class JDBCHashSet<K : Any>(tableName: String,
                            loadOnInit: Boolean = false,
-                           maxBuckets: Int = 256)
+                           maxBuckets: Int = DEFAULT_MAX_BUCKETS)
     : AbstractJDBCHashSet<K, JDBCHashSet.BlobSetTable>(BlobSetTable(tableName), loadOnInit, maxBuckets) {
 
     class BlobSetTable(tableName: String) : JDBCHashedTable(tableName) {
@@ -100,7 +108,7 @@ class JDBCHashSet<K : Any>(tableName: String,
  */
 abstract class AbstractJDBCHashSet<K : Any, out T : JDBCHashedTable>(protected val table: T,
                                                                      loadOnInit: Boolean = false,
-                                                                     maxBuckets: Int = 256) : MutableSet<K>, AbstractSet<K>() {
+                                                                     maxBuckets: Int = DEFAULT_MAX_BUCKETS) : MutableSet<K>, AbstractSet<K>() {
     protected val innerMap = object : AbstractJDBCHashMap<K, Unit, T>(table, loadOnInit, maxBuckets) {
         override fun keyFromRow(row: ResultRow): K = this@AbstractJDBCHashSet.elementFromRow(row)
 
@@ -194,7 +202,7 @@ abstract class AbstractJDBCHashSet<K : Any, out T : JDBCHashedTable>(protected v
  */
 abstract class AbstractJDBCHashMap<K : Any, V : Any, out T : JDBCHashedTable>(val table: T,
                                                                               val loadOnInit: Boolean = false,
-                                                                              val maxBuckets: Int = 256) : MutableMap<K, V>, AbstractMap<K, V>() {
+                                                                              val maxBuckets: Int = DEFAULT_MAX_BUCKETS) : MutableMap<K, V>, AbstractMap<K, V>() {
 
     companion object {
         protected val log = loggerFor<AbstractJDBCHashMap<*, *, *>>()
