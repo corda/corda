@@ -51,22 +51,18 @@ abstract class FlowLogic<out T> {
 
     // Kotlin helpers that allow the use of generic types.
     inline fun <reified T : Any> sendAndReceive(otherParty: Party, payload: Any): UntrustworthyData<T> {
-        return sendAndReceive(otherParty, payload, T::class.java)
+        return sendAndReceive(T::class.java, otherParty, payload)
     }
 
-    // TODO: Move the receiveType param to first position for readability
-
     @Suspendable
-    fun <T : Any> sendAndReceive(otherParty: Party, payload: Any, receiveType: Class<T>): UntrustworthyData<T> {
+    fun <T : Any> sendAndReceive(receiveType: Class<T>, otherParty: Party, payload: Any): UntrustworthyData<T> {
         return fsm.sendAndReceive(otherParty, payload, receiveType, sessionFlow)
     }
 
-    inline fun <reified T : Any> receive(otherParty: Party): UntrustworthyData<T> = receive(otherParty, T::class.java)
-
-    // TODO: Move the receiveType param to first position for readability
+    inline fun <reified T : Any> receive(otherParty: Party): UntrustworthyData<T> = receive(T::class.java, otherParty)
 
     @Suspendable
-    fun <T : Any> receive(otherParty: Party, receiveType: Class<T>): UntrustworthyData<T> {
+    fun <T : Any> receive(receiveType: Class<T>, otherParty: Party): UntrustworthyData<T> {
         return fsm.receive(otherParty, receiveType, sessionFlow)
     }
 

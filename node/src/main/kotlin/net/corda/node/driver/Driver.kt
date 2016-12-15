@@ -141,15 +141,13 @@ sealed class PortAllocation {
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
-
-// TODO: Add an @JvmOverloads annotation
-
+@JvmOverloads
 fun <A> driver(
+        isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         useTestClock: Boolean = false,
-        isDebug: Boolean = false,
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
         driverDsl = DriverDSL(
