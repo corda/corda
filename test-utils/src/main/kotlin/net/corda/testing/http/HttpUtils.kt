@@ -1,6 +1,7 @@
 package net.corda.testing.http
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.core.utilities.loggerFor
 import okhttp3.*
 import java.net.URL
@@ -30,7 +31,7 @@ object HttpUtils {
     inline fun<reified T: Any> getJson(url: URL, params: Map<String, String> = mapOf()) : T {
         val paramString = if(params.isEmpty()) "" else "?" + params.map { "${it.key}=${it.value}" }.joinToString("&")
         val parameterisedUrl = URL(url.toExternalForm() + paramString)
-        return ObjectMapper().readValue(parameterisedUrl, T::class.java)
+        return ObjectMapper().registerModule(KotlinModule()).readValue(parameterisedUrl, T::class.java)
     }
 
     private fun makeRequest(request: Request): Boolean {
