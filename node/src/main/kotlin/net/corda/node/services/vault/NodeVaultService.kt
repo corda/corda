@@ -38,7 +38,6 @@ import java.util.*
  * TODO: have transaction storage do some caching.
  */
 class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsToken(), VaultService {
-
     private companion object {
         val log = loggerFor<NodeVaultService>()
     }
@@ -132,7 +131,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
     override val linearHeads: Map<UniqueIdentifier, StateAndRef<LinearState>>
         get() = currentVault.states.filterStatesOfType<LinearState>().associateBy { it.state.data.linearId }.mapValues { it.value }
 
-    override fun notifyAll(txns: Iterable<WireTransaction>): Vault {
+    override fun notifyAll(txns: Iterable<WireTransaction>) {
         val ourKeys = services.keyManagementService.keys.keys
         val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn, netDelta, ourKeys) }
         if (netDelta != Vault.NoUpdate) {
@@ -141,7 +140,6 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
                 updatesPublisher.onNext(netDelta)
             }
         }
-        return currentVault
     }
 
     override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {

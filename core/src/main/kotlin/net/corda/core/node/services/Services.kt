@@ -162,10 +162,10 @@ interface VaultService {
      *
      * TODO: Consider if there's a good way to enforce the must-be-verified requirement in the type system.
      */
-    fun notifyAll(txns: Iterable<WireTransaction>): Vault
+    fun notifyAll(txns: Iterable<WireTransaction>)
 
     /** Same as notifyAll but with a single transaction. */
-    fun notify(tx: WireTransaction): Vault = notifyAll(listOf(tx))
+    fun notify(tx: WireTransaction) = notifyAll(listOf(tx))
 
     /**
      * Provide a [Future] for when a [StateRef] is consumed, which can be very useful in building tests.
