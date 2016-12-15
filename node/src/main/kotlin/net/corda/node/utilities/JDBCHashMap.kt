@@ -18,8 +18,13 @@ import kotlin.system.measureTimeMillis
  * access patterns and performance requirements.
  */
 
-/** The default maximum size of the LRU cache */
-val DEFAULT_MAX_BUCKETS = 65536
+/**
+ * The default maximum size of the LRU cache.
+ *
+ * TODO: make this value configurable
+ * TODO: tune this value, as it's currently mostly a guess
+ */
+val DEFAULT_MAX_BUCKETS = 4096
 
 /**
  * A convenient JDBC table backed hash map with iteration order based on insertion order.
