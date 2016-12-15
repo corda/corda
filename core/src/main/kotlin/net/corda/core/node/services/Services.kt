@@ -38,7 +38,7 @@ val DEFAULT_SESSION_ID = 0L
  *   Active means they haven't been consumed yet (or we don't know about it).
  *   Relevant means they contain at least one of our pubkeys.
  */
-class Vault(val states: Iterable<StateAndRef<ContractState>>) {
+class Vault(val states: List<StateAndRef<ContractState>>) {
     @Suppress("UNCHECKED_CAST")
     inline fun <reified T : ContractState> statesOfType() = states.filter { it.state.data is T } as List<StateAndRef<T>>
 
@@ -151,14 +151,12 @@ interface VaultService {
      * Possibly update the vault by marking as spent states that these transactions consume, and adding any relevant
      * new states that they create. You should only insert transactions that have been successfully verified here!
      *
-     * Returns the new vault that resulted from applying the transactions (note: it may quickly become out of date).
-     *
      * TODO: Consider if there's a good way to enforce the must-be-verified requirement in the type system.
      */
-    fun notifyAll(txns: Iterable<WireTransaction>): Vault
+    fun notifyAll(txns: Iterable<WireTransaction>)
 
     /** Same as notifyAll but with a single transaction. */
-    fun notify(tx: WireTransaction): Vault = notifyAll(listOf(tx))
+    fun notify(tx: WireTransaction) = notifyAll(listOf(tx))
 
     /**
      * Provide a [Future] for when a [StateRef] is consumed, which can be very useful in building tests.

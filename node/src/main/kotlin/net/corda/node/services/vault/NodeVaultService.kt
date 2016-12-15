@@ -103,13 +103,13 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         // For use during publishing only.
         val updatesPublisher: rx.Observer<Vault.Update> get() = _updatesPublisher.bufferUntilDatabaseCommit().tee(_rawUpdatesPublisher)
 
-        fun allUnconsumedStates(): Iterable<StateAndRef<ContractState>> {
-            // Order by txhash for if and when transaction storage has some caching.
-            // Map to StateRef and then to StateAndRef.  Use Sequence to avoid conversion to ArrayList that Iterable.map() performs.
-            return unconsumedStates.asSequence().map {
+        fun allUnconsumedStates(): List<StateAndRef<ContractState>> {
+            // Ideally we'd map this transform onto a sequence, but we can't have a lazy list here, since accessing it
+            // from a flow might end up trying to serialize the captured context - vault internal state or db context.
+            return unconsumedStates.map {
                 val storedTx = services.storageService.validatedTransactions.getTransaction(it.txhash) ?: throw Error("Found transaction hash ${it.txhash} in unconsumed contract states that is not in transaction storage.")
                 StateAndRef(storedTx.tx.outputs[it.index], it)
-            }.asIterable()
+            }
         }
 
         fun recordUpdate(update: Vault.Update): Vault.Update {
@@ -169,7 +169,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
     override val linearHeads: Map<UniqueIdentifier, StateAndRef<LinearState>>
         get() = currentVault.states.filterStatesOfType<LinearState>().associateBy { it.state.data.linearId }.mapValues { it.value }
 
-    override fun notifyAll(txns: Iterable<WireTransaction>): Vault {
+    override fun notifyAll(txns: Iterable<WireTransaction>) {
         val ourKeys = services.keyManagementService.keys.keys
         val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn, netDelta, ourKeys) }
         if (netDelta != Vault.NoUpdate) {
@@ -179,7 +179,6 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
                 updatesPublisher.onNext(netDelta)
             }
         }
-        return currentVault
     }
 
     override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
