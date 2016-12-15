@@ -12,6 +12,7 @@ import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.utilities.ANSIProgressObserver
 import org.fusesource.jansi.Ansi
+import org.fusesource.jansi.AnsiConsole
 import org.slf4j.LoggerFactory
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
@@ -139,6 +140,9 @@ private fun messageOfTheDay(): Pair<String, String> {
 }
 
 private fun drawBanner() {
+    // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
+    AnsiConsole.systemInstall()
+
     val (msg1, msg2) = Emoji.renderIfSupported { messageOfTheDay() }
 
     println(Ansi.ansi().fgBrightRed().a(
