@@ -169,14 +169,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     private inline fun <reified M : SessionMessage> receiveInternal(session: FlowSession): M {
-        return suspendAndExpectReceive(ReceiveOnly(session, M::class.java)).second
+        return suspendAndExpectReceive(ReceiveOnly(session, M::class.java)).message
     }
 
     private inline fun <reified M : SessionMessage> sendAndReceiveInternal(session: FlowSession, message: SessionMessage): M {
-        return suspendAndExpectReceive(SendAndReceive(session, message, M::class.java)).second
+        return suspendAndExpectReceive(SendAndReceive(session, message, M::class.java)).message
     }
 
-    private inline fun <reified M : SessionMessage> sendAndReceiveInternalWithParty(session: FlowSession, message: SessionMessage): Pair<Party, M> {
+    private inline fun <reified M : SessionMessage> sendAndReceiveInternalWithParty(session: FlowSession, message: SessionMessage): ReceivedSessionMessage<M> {
         return suspendAndExpectReceive(SendAndReceive(session, message, M::class.java))
     }
 
@@ -215,8 +215,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    private fun <M : SessionMessage> suspendAndExpectReceive(receiveRequest: ReceiveRequest<M>): Pair<Party, M> {
-        fun getReceivedMessage(): Pair<Party, ExistingSessionMessage>? = receiveRequest.session.receivedMessages.poll()
+    private fun <M : SessionMessage> suspendAndExpectReceive(receiveRequest: ReceiveRequest<M>): ReceivedSessionMessage<M> {
+        fun getReceivedMessage(): ReceivedSessionMessage<ExistingSessionMessage>? = receiveRequest.session.receivedMessages.poll()
 
         val polledMessage = getReceivedMessage()
         val receivedMessage = if (polledMessage != null) {
@@ -232,11 +232,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     ?: throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but got nothing: $receiveRequest")
         }
 
-        if (receivedMessage.second is SessionEnd) {
+        if (receivedMessage.message is SessionEnd) {
             openSessions.values.remove(receiveRequest.session)
             throw FlowSessionException("Counterparty on ${receiveRequest.session.state.sendToParty} has prematurely ended on $receiveRequest")
-        } else if (receiveRequest.receiveType.isInstance(receivedMessage.second)) {
-            return Pair(receivedMessage.first, receiveRequest.receiveType.cast(receivedMessage.second))
+        } else if (receiveRequest.receiveType.isInstance(receivedMessage.message)) {
+            return ReceivedSessionMessage(receivedMessage.sendingParty, receiveRequest.receiveType.cast(receivedMessage.message))
         } else {
             throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but got $receivedMessage: $receiveRequest")
         }

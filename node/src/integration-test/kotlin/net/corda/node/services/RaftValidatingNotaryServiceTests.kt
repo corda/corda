@@ -12,8 +12,8 @@ import net.corda.core.serialization.OpaqueBytes
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.flows.CashFlowResult
+import net.corda.node.driver.DriverBasedTest
 import net.corda.node.driver.NodeHandle
-import net.corda.node.driver.callSuspendResume
 import net.corda.node.driver.driver
 import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.ArtemisMessagingComponent
@@ -22,64 +22,51 @@ import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.replicate
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.util.*
 import kotlin.test.assertEquals
 
-class RaftValidatingNotaryServiceTests {
-    lateinit var stopDriver: () -> Unit
+class RaftValidatingNotaryServiceTests : DriverBasedTest() {
     lateinit var alice: NodeInfo
     lateinit var notaries: List<NodeHandle>
     lateinit var aliceProxy: CordaRPCOps
     lateinit var raftNotaryIdentity: Party
     lateinit var notaryStateMachines: Observable<Pair<NodeInfo, StateMachineUpdate>>
 
-    @Before
-    fun start() {
-        stopDriver = callSuspendResume { suspend ->
-            driver {
-                // Start Alice and 3 raft notaries
-                val clusterSize = 3
-                val testUser = User("test", "test", permissions = setOf(startFlowPermission<CashFlow>()))
-                val aliceFuture = startNode("Alice", rpcUsers = listOf(testUser))
-                val notariesFuture = startNotaryCluster(
-                        "Notary",
-                        rpcUsers = listOf(testUser),
-                        clusterSize = clusterSize,
-                        type = RaftValidatingNotaryService.type
-                )
+    override fun setup() = driver {
+        // Start Alice and 3 raft notaries
+        val clusterSize = 3
+        val testUser = User("test", "test", permissions = setOf(startFlowPermission<CashFlow>()))
+        val aliceFuture = startNode("Alice", rpcUsers = listOf(testUser))
+        val notariesFuture = startNotaryCluster(
+                "Notary",
+                rpcUsers = listOf(testUser),
+                clusterSize = clusterSize,
+                type = RaftValidatingNotaryService.type
+        )
 
-                alice = aliceFuture.get().nodeInfo
-                val (notaryIdentity, notaryNodes) = notariesFuture.get()
-                raftNotaryIdentity = notaryIdentity
-                notaries = notaryNodes
+        alice = aliceFuture.get().nodeInfo
+        val (notaryIdentity, notaryNodes) = notariesFuture.get()
+        raftNotaryIdentity = notaryIdentity
+        notaries = notaryNodes
 
-                assertEquals(notaries.size, clusterSize)
-                assertEquals(notaries.size, notaries.map { it.nodeInfo.legalIdentity }.toSet().size)
+        assertEquals(notaries.size, clusterSize)
+        assertEquals(notaries.size, notaries.map { it.nodeInfo.legalIdentity }.toSet().size)
 
-                // Connect to Alice and the notaries
-                fun connectRpc(node: NodeInfo): CordaRPCOps {
-                    val client = CordaRPCClient(ArtemisMessagingComponent.toHostAndPort(node.address), configureTestSSL())
-                    client.start("test", "test")
-                    return client.proxy()
-                }
-                aliceProxy = connectRpc(alice)
-                val notaryProxies = notaries.map { connectRpc(it.nodeInfo) }
-                notaryStateMachines = Observable.from(notaryProxies.map { proxy ->
-                    proxy.stateMachinesAndUpdates().second.map { Pair(proxy.nodeIdentity(), it) }
-                }).flatMap { it.onErrorResumeNext(Observable.empty()) }.bufferUntilSubscribed()
-
-                suspend()
-            }
+        // Connect to Alice and the notaries
+        fun connectRpc(node: NodeInfo): CordaRPCOps {
+            val client = CordaRPCClient(ArtemisMessagingComponent.toHostAndPort(node.address), configureTestSSL())
+            client.start("test", "test")
+            return client.proxy()
         }
-    }
+        aliceProxy = connectRpc(alice)
+        val notaryProxies = notaries.map { connectRpc(it.nodeInfo) }
+        notaryStateMachines = Observable.from(notaryProxies.map { proxy ->
+            proxy.stateMachinesAndUpdates().second.map { Pair(proxy.nodeIdentity(), it) }
+        }).flatMap { it.onErrorResumeNext(Observable.empty()) }.bufferUntilSubscribed()
 
-    @After
-    fun stop() {
-        stopDriver()
+        runTest()
     }
 
     @Test

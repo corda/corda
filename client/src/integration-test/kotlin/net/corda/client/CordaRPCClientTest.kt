@@ -8,6 +8,7 @@ import net.corda.core.random63BitValue
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
+import net.corda.node.driver.DriverBasedTest
 import net.corda.node.driver.NodeHandle
 import net.corda.node.driver.driver
 import net.corda.node.services.User
@@ -24,32 +25,16 @@ import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.thread
 
-class CordaRPCClientTest {
+class CordaRPCClientTest : DriverBasedTest() {
 
     private val rpcUser = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>()))
-    private val stopDriver = CountDownLatch(1)
-    private var driverThread: Thread? = null
     private lateinit var client: CordaRPCClient
     private lateinit var driverInfo: NodeHandle
 
-    @Before
-    fun start() {
-        val driverStarted = CountDownLatch(1)
-        driverThread = thread {
-            driver(isDebug = true) {
-                driverInfo = startNode(rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
-                client = CordaRPCClient(toHostAndPort(driverInfo.nodeInfo.address), configureTestSSL())
-                driverStarted.countDown()
-                stopDriver.await()
-            }
-        }
-        driverStarted.await()
-    }
-
-    @After
-    fun stop() {
-        stopDriver.countDown()
-        driverThread?.join()
+    override fun setup() = driver(isDebug = true) {
+        driverInfo = startNode(rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
+        client = CordaRPCClient(toHostAndPort(driverInfo.nodeInfo.address), configureTestSSL())
+        runTest()
     }
 
     @Test

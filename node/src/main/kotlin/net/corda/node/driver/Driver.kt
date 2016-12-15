@@ -164,40 +164,6 @@ fun <A> driver(
 )
 
 /**
- * Executes the passed in closure in a new thread, providing a function that suspends the closure, passing control back
- * to the caller's context. The returned function may be used to then resume the closure.
- *
- * This can be used in conjunction with the driver to create @Before/@After blocks that start/shutdown the driver:
- *
- *   val stopDriver = callSuspendResume { suspend ->
- *     driver(someOption = someValue) {
- *       .. initialise some test variables ..
- *       suspend()
- *     }
- *   }
- *   .. do tests ..
- *   stopDriver()
- */
-fun <C> callSuspendResume(closure: (suspend: () -> Unit) -> C): () -> C {
-    val suspendLatch = CountDownLatch(1)
-    val resumeLatch = CountDownLatch(1)
-    val returnFuture = CompletableFuture<C>()
-    thread {
-        returnFuture.complete(
-                closure {
-                    suspendLatch.countDown()
-                    resumeLatch.await()
-                }
-        )
-    }
-    suspendLatch.await()
-    return {
-        resumeLatch.countDown()
-        returnFuture.get()
-    }
-}
-
-/**
  * This is a helper method to allow extending of the DSL, along the lines of
  *   interface SomeOtherExposedDSLInterface : DriverDSLExposedInterface
  *   interface SomeOtherInternalDSLInterface : DriverDSLInternalInterface, SomeOtherExposedDSLInterface

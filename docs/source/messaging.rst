@@ -61,8 +61,9 @@ for maintenance and other minor purposes.
    These are private queues the node may use to route messages to services. The queue name ends in the base 58 encoding
    of the service's owning identity key. There is at most one queue per service identity (but note that any one service
    may have several identities). The broker creates bridges to all nodes in the network advertising the service in
-   question. When a session is initiated with a service counterparty the handshake arrives on this queue, and once a
-   peer is picked the session continues on as normal.
+   question. When a session is initiated with a service counterparty the handshake is pushed onto this queue, and a
+   corresponding bridge is used to forward the message to an advertising peer's p2p queue. Once a peer is picked the
+   session continues on as normal.
 
 :``internal.networkmap``:
    This is another private queue just for the node which functions in a similar manner to the ``internal.peers.*`` queues

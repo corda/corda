@@ -133,21 +133,21 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         }
 
         val addressesToCreateBridgesTo = HashSet<ArtemisPeerAddress>()
-        val addressesToRemoveBridgesTo = HashSet<ArtemisPeerAddress>()
+        val addressesToRemoveBridgesFrom = HashSet<ArtemisPeerAddress>()
         when (change) {
             is MapChange.Modified -> {
                 addAddresses(change.node, addressesToCreateBridgesTo)
-                addAddresses(change.previousNode, addressesToRemoveBridgesTo)
+                addAddresses(change.previousNode, addressesToRemoveBridgesFrom)
             }
             is MapChange.Removed -> {
-                addAddresses(change.node, addressesToRemoveBridgesTo)
+                addAddresses(change.node, addressesToRemoveBridgesFrom)
             }
             is MapChange.Added -> {
                 addAddresses(change.node, addressesToCreateBridgesTo)
             }
         }
 
-        (addressesToRemoveBridgesTo - addressesToCreateBridgesTo).forEach {
+        (addressesToRemoveBridgesFrom - addressesToCreateBridgesTo).forEach {
             maybeDestroyBridge(bridgeNameForAddress(it))
         }
         addressesToCreateBridgesTo.forEach {

@@ -244,7 +244,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             if (message is SessionEnd) {
                 openSessions.remove(message.recipientSessionId)
             }
-            session.receivedMessages += Pair(otherParty, message)
+            session.receivedMessages += ReceivedSessionMessage(otherParty, message)
             if (session.waitingForResponse) {
                 // We only want to resume once, so immediately reset the flag.
                 session.waitingForResponse = false
@@ -277,7 +277,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 val psm = createFiber(flow)
                 val session = FlowSession(flow, random63BitValue(), FlowSessionState.Initiated(otherParty, otherPartySessionId))
                 if (sessionInit.firstPayload != null) {
-                    session.receivedMessages += Pair(otherParty, SessionData(session.ourSessionId, sessionInit.firstPayload))
+                    session.receivedMessages += ReceivedSessionMessage(otherParty, SessionData(session.ourSessionId, sessionInit.firstPayload))
                 }
                 openSessions[session.ourSessionId] = session
                 psm.openSessions[Pair(flow, otherParty)] = session
@@ -453,6 +453,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         serviceHub.networkService.send(sessionTopic, message, address)
     }
 
+    data class ReceivedSessionMessage<out M : SessionMessage>(val sendingParty: Party, val message: M)
 
     interface SessionMessage
 
@@ -509,7 +510,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             var state: FlowSessionState,
             @Volatile var waitingForResponse: Boolean = false
     ) {
-        val receivedMessages = ConcurrentLinkedQueue<Pair<Party, ExistingSessionMessage>>()
+        val receivedMessages = ConcurrentLinkedQueue<ReceivedSessionMessage<ExistingSessionMessage>>()
         val psm: FlowStateMachineImpl<*> get() = flow.fsm as FlowStateMachineImpl<*>
     }
 
