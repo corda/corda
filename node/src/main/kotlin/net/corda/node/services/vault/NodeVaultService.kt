@@ -56,7 +56,21 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         val note = text("note")
     }
 
-    private val mutex = ThreadBox(content = object {
+    private class TransactionNotesSet : AbstractJDBCHashSet<TxnNote, TransactionNotesTable>(TransactionNotesTable) {
+        override fun elementFromRow(row: ResultRow): TxnNote = TxnNote(row[table.txnId], row[table.note])
+
+        override fun addElementToInsert(insert: InsertStatement, entry: TxnNote, finalizables: MutableList<() -> Unit>) {
+            insert[table.txnId] = entry.txnId
+            insert[table.note] = entry.note
+        }
+
+        // TODO: caching (2nd tier db cache) and db results filtering (max records, date, other)
+        fun select(txnId: SecureHash): Iterable<String> {
+            return table.select { table.txnId.eq(txnId) }.map { row -> row[table.note] }.toSet().asIterable()
+        }
+    }
+
+    private inner class ThreadState {
         val unconsumedStates = object : AbstractJDBCHashSet<StateRef, StatesSetTable>(StatesSetTable) {
             override fun elementFromRow(row: ResultRow): StateRef = StateRef(row[table.stateRef.txId], row[table.stateRef.index])
 
@@ -66,22 +80,11 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             }
         }
 
-        val transactionNotes = object : AbstractJDBCHashSet<TxnNote, TransactionNotesTable>(TransactionNotesTable) {
-            override fun elementFromRow(row: ResultRow): TxnNote = TxnNote(row[table.txnId], row[table.note])
+        val transactionNotes = TransactionNotesSet()
 
-            override fun addElementToInsert(insert: InsertStatement, entry: TxnNote, finalizables: MutableList<() -> Unit>) {
-                insert[table.txnId] = entry.txnId
-                insert[table.note] = entry.note
-            }
+        val _updatesPublisher: PublishSubject<Vault.Update> = PublishSubject.create()
+        val _rawUpdatesPublisher: PublishSubject<Vault.Update> = PublishSubject.create()
 
-            // TODO: caching (2nd tier db cache) and db results filtering (max records, date, other)
-            fun select(txnId: SecureHash): Iterable<String> {
-                return table.select { table.txnId.eq(txnId) }.map { row -> row[table.note] }.toSet().asIterable()
-            }
-        }
-
-        val _updatesPublisher = PublishSubject.create<Vault.Update>()
-        val _rawUpdatesPublisher = PublishSubject.create<Vault.Update>()
         // For use during publishing only.
         val updatesPublisher: rx.Observer<Vault.Update> get() = _updatesPublisher.bufferUntilDatabaseCommit().tee(_rawUpdatesPublisher)
 
@@ -104,7 +107,8 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             }
             return update
         }
-    })
+    }
+    private val mutex = ThreadBox(ThreadState())
 
     override val currentVault: Vault get() = mutex.locked { Vault(allUnconsumedStates()) }
 
