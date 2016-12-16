@@ -129,6 +129,8 @@ public class Runtime {
   public native long freeMemory();
 
   public native long totalMemory();
+  
+  public native long maxMemory();
 
   private static class MyProcess extends Process {
     private long pid;
