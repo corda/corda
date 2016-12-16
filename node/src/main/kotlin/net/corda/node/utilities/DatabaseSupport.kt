@@ -12,6 +12,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.TransactionInterface
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import rx.Observable
+import rx.Subscriber
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.io.Closeable
@@ -23,6 +24,7 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Table prefix for all tables owned by the node module.
@@ -186,6 +188,75 @@ fun <T : Any> rx.Observer<T>.bufferUntilDatabaseCommit(): rx.Observer<T> {
     subject.delaySubscription(databaseTxBoundary).subscribe(this)
     databaseTxBoundary.doOnCompleted { subject.onCompleted() }
     return subject
+}
+
+/**
+ * Wrap delivery of observations in a database transaction.  Multiple subscribers will receive the observations inside
+ * the same database transaction.  This also lazily subscribes to the source [rx.Observable] to preserve any buffering
+ * that might be in place.
+ */
+fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: Database? = null): rx.Observable<T> {
+    val op = object : Observable.Operator<T, T> {
+        val shared = object : Subscriber<T>() {
+            // Some unsubscribes happen inside onNext() so need something that supports concurrent modification.
+            val subscribers = CopyOnWriteArrayList<Subscriber<in T>>()
+
+            override fun onCompleted() {
+                databaseTransaction(db ?: StrandLocalTransactionManager.database) {
+                    subscribers.forEach {
+                        if (!it.isUnsubscribed) it.onCompleted()
+                    }
+                }
+            }
+
+            override fun onError(e: Throwable?) {
+                databaseTransaction(db ?: StrandLocalTransactionManager.database) {
+                    subscribers.forEach {
+                        if (!it.isUnsubscribed) it.onError(e)
+                    }
+                }
+            }
+
+            override fun onNext(s: T) {
+                databaseTransaction(db ?: StrandLocalTransactionManager.database) {
+                    subscribers.forEach {
+                        if (!it.isUnsubscribed) it.onNext(s)
+                    }
+                }
+            }
+
+            override fun onStart() {
+                databaseTransaction(db ?: StrandLocalTransactionManager.database) {
+                    subscribers.forEach {
+                        if (!it.isUnsubscribed) it.onStart()
+                    }
+                }
+            }
+
+            fun cleanUp() {
+                if (subscribers.removeIf { it.isUnsubscribed }) {
+                    if (subscribers.isEmpty()) {
+                        unsubscribe()
+                    }
+                }
+            }
+        }
+
+        override fun call(t: Subscriber<in T>): Subscriber<in T> {
+            shared.subscribers.add(t)
+            return if (shared.subscribers.size == 1) shared else object : Subscriber<T>(t) {
+                override fun onCompleted() {
+                }
+
+                override fun onError(e: Throwable?) {
+                }
+
+                override fun onNext(s: T) {
+                }
+            }
+        }
+    }
+    return this.lift<T>(op).doOnUnsubscribe { op.shared.cleanUp() }
 }
 
 // Composite columns for use with below Exposed helpers.

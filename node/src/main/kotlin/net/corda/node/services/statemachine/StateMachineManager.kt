@@ -9,8 +9,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.support.jdk8.collections.removeIf
-import net.corda.core.ThreadBox
-import net.corda.core.abbreviate
+import net.corda.core.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.commonName
 import net.corda.core.flows.FlowLogic
@@ -18,9 +17,7 @@ import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.TopicSession
 import net.corda.core.messaging.send
-import net.corda.core.random63BitValue
 import net.corda.core.serialization.*
-import net.corda.core.then
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -30,15 +27,11 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.statemachine.StateMachineManager.FlowSessionState.Initiated
 import net.corda.node.services.statemachine.StateMachineManager.FlowSessionState.Initiating
-import net.corda.node.utilities.AddOrRemove
-import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.bufferUntilDatabaseCommit
-import net.corda.node.utilities.isolatedTransaction
+import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
 import rx.Observable
 import rx.subjects.PublishSubject
-import rx.subjects.UnicastSubject
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -143,8 +136,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * An observable that emits triples of the changing flow, the type of change, and a process-specific ID number
      * which may change across restarts.
      */
-    val changes: Observable<Change>
-        get() = mutex.content.changesPublisher
+    val changes: Observable<Change> = mutex.content.changesPublisher.wrapWithDatabaseTransaction()
 
     init {
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
@@ -188,9 +180,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      */
     fun track(): Pair<List<FlowStateMachineImpl<*>>, Observable<Change>> {
         return mutex.locked {
-            val bufferedChanges = UnicastSubject.create<Change>()
-            changesPublisher.subscribe(bufferedChanges)
-            Pair(stateMachines.keys.toList(), bufferedChanges)
+            //val bufferedChanges = UnicastSubject.create<Change>()
+            //changesPublisher.subscribe(bufferedChanges)
+            Pair(stateMachines.keys.toList(), changesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 

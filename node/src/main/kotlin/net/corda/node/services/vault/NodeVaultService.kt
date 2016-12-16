@@ -153,11 +153,11 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         get() = mutex.locked { _rawUpdatesPublisher }
 
     override val updates: Observable<Vault.Update>
-        get() = mutex.locked { _updatesPublisher }
+        get() = mutex.locked { _updatesPublisher.wrapWithDatabaseTransaction() }
 
     override fun track(): Pair<Vault, Observable<Vault.Update>> {
         return mutex.locked {
-            Pair(Vault(allUnconsumedStates()), _updatesPublisher.bufferUntilSubscribed())
+            Pair(Vault(allUnconsumedStates()), _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 
