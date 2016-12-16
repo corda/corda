@@ -32,6 +32,24 @@ object JsonSupport {
         mapper.enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
         mapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
 
+        mapper.registerModule(createJavaTimeModule())
+        mapper.registerModule(createCordaModule())
+        mapper.registerModule(KotlinModule())
+        return mapper
+    }
+
+    fun createJavaTimeModule(): Module {
+        val timeModule = SimpleModule("java.time")
+        timeModule.apply {
+            addSerializer(LocalDate::class.java, ToStringSerializer)
+            addDeserializer(LocalDate::class.java, LocalDateDeserializer)
+            addKeyDeserializer(LocalDate::class.java, LocalDateKeyDeserializer)
+            addSerializer(LocalDateTime::class.java, ToStringSerializer)
+        }
+        return timeModule
+    }
+
+    fun createCordaModule(): Module {
         val cordaModule = SimpleModule("core")
         cordaModule.addSerializer(Party::class.java, PartySerializer)
         cordaModule.addDeserializer(Party::class.java, PartyDeserializer)
@@ -56,21 +74,7 @@ object JsonSupport {
         cordaModule.addSerializer(NodeInfo::class.java, NodeInfoSerializer)
         cordaModule.addDeserializer(NodeInfo::class.java, NodeInfoDeserializer)
 
-        mapper.registerModule(createJavaTimeModule())
-        mapper.registerModule(cordaModule)
-        mapper.registerModule(KotlinModule())
-        return mapper
-    }
-
-    fun createJavaTimeModule(): Module {
-        val timeModule = SimpleModule("java.time")
-        timeModule.apply {
-            addSerializer(LocalDate::class.java, ToStringSerializer)
-            addDeserializer(LocalDate::class.java, LocalDateDeserializer)
-            addKeyDeserializer(LocalDate::class.java, LocalDateKeyDeserializer)
-            addSerializer(LocalDateTime::class.java, ToStringSerializer)
-        }
-        return timeModule
+        return cordaModule
     }
 
     class ServiceHubObjectMapper(val identities: IdentityService) : ObjectMapper()
