@@ -1,112 +1,115 @@
-Working with the Azure VM
+Working with the Corda Demo on Azure Marketplace
 ==========
 
-Corda ships with a VM image which can be used to deploy a pre-configured virtual machine on `Microsoft's Azure platform<https://azure.microsoft.com/en-gb/overview/what-is-azure/>`_.
+Corda ships with a VM image which can be used to deploy a pre-configured virtual machine on the `Microsoft Azure Marketplace <https://azure.microsoft.com/en-gb/overview/what-is-azure>`_
 
-Deploying on Azure provides a rapid way of :doc:`running-the-demos` without needing to manually setup the JDK etc. in advance.
 
-.. note:: This VM is an easy option for running the samples; it is *NOT* a development environment. If you want to get started developing on Corda, browsing the codebase or contributing to the project, please clone the `GitHub Repos<https://github.com/corda/>` instead.
+This Corda Demo VM is an easy option for running the demos; it is *NOT* a development environment. When you are ready to get developing on Corda and start making contributions to the project please clone the `GitHub Repos <https://github.com/corda/>`_ instead.
 
 Pre-requisites
 -------
-* Ensure you have a registered Microsoft Azure account and are logged on to `portal.azure.com<https://portal.azure.com/>` before proceeding with the following steps.
-* Generate a private-public SSH key pair (see `here<https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2/>` for )
+* Ensure you have a registered Microsoft Azure account and are logged on to the Azure portal.
+* It is recommended you generate a private-public SSH key pair (see `here <https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2/>`_)
 
 
 Deploying the VM
 ------
 
-Click the 'Create' button to start the process of creating a new VM, specifying the following basic settings:
+Click the 'Create' button.
+
+STEP 1: Basics
 
 * **Name**: Choose an appropriate descriptive name for the VM
 * **VM Disk Type**: Select 'SSD'
 * **Username**: Your preferred user name for the administrator account when accessing via SSH
 * **Authentication type**: Select 'SSH public key', then paste the contents of your SSH public key file (see pre-requisites, above) into the box below
+Alternatively select 'Password' to use a password of your choice to administer the VM
+
 * **Subscription**: Select 'GCL'
 * **Resource group**: Select 'Use existing'. From the drop-down menu, select 'CordaOS'
-* **Location**: Select 'UK South'
+* **Location**: Select the geographical location physically closest to you
  
 .. image:: resources/azure_vm_10_00.png
   :width: 300px
 
-Click 'OK' to progress to the 'Choose a Size' screen.
+Click 'OK'
 
-**'Choose a Size' screen**: A range of available hardware configurations will be presented, along with estimated costs. ***For the purposes of running the demos, configuration DS11_V2 (2 cores, 14 GB) is recommended.***
+STEP 2: Size
+
+A range of available hardware configurations will be presented, along with estimated costs. For the purposes of running the demos, a configuration of 2 cores and at least 14GB is recommended
 
 .. image:: resources/azure_vm_10_05.png
   :width: 300px
  
-Select the required configuration and click 'Select'.
+Choose the required configuration and click 'Select'.
 
-**Settings screen**: Adjust any configuration settings required (optional - ***For the purposes of running the demos, all settings may be left on their defaults.***)
+STEP 3: Settings
+
+Adjust any configuration settings required. For the purposes of running the Corda demos, all settings may be left as default.
 
 .. image:: resources/azure_vm_10_16.png
   :width: 300px
 
-**Summary screen**: The banner at the top of the dialog should read 'Validation passed'; otherwise, go back and adjust settings where needed.
+STEP 4: Summary
+
+The banner at the top of the dialog should read 'Validation passed' otherwise go back and adjust settings where needed.
 
 .. image:: resources/azure_vm_10_19.png
   :width: 300px
 
-Click OK to proceed.
+Click 'OK' to proceed.
 
-**Buy screen**: Click to proceed with the purchase.
+STEP 5: Buy
+
+Click 'Purchase' to complete the configuration and start the VM deployment.
 
 The VM will begin the deployment process, which typically takes 4-5 minutes to complete. To see progress, click on the "Deploying" icon displayed.
 
 .. image:: resources/azure_vm_10_20.png
   :width: 300px
 
-Once deployed, open the virtual machine details and identify the **Public IP address** on the Overview tab (see screenshot):
+Once deployed, click 'Overview' to see the virtual machine details. Note down the **Public IP address**. You will need this to connect to the demo screens via your web browser:
 
 .. image:: resources/azure_vm_10_26.png
   :width: 300px
 
-Once deployed, open the virtual machine details and identify the **Public IP address** (see screenshot):
-
-.. image:: resources/azure_vm_10_26.png
-  :width: 300px
-
-Navigate to the Network Interfaces settings tab. Select the network interface and the network security group associated with it (see screenshot):
-
-.. image:: resources/azure_vm_10_36.png
-  :width: 300px
-
-Go to the "Inbound security rules" tab for the group and add new rules as needed (see above screenshot).
 
 Viewing the SIMM Valuation demo
 ------
-The SIMM Valuation spawns three nodes, representing three parties in the example workflow (Bank A, Bank B, Bank C). Each node listens on a different port - those used by the demo are:
+The SIMM Valuation demo creates three nodes, representing three parties in the example workflow (Bank A, Bank B, Bank C). Each node listens on a different port - those used by the demo are:
 
-**SIMM Valuation Demo ports:** **12005**, **12007**, **12009**
+**SIMM Valuation Demo ports:** **12005 (node A for Bank A)**, **12007 (node B for Bank B)**, **12009 (node C for Bank C)**
 
-Open three browser windows/tabs and direct each one to http://*(public IP address)*:*(port)*/web/simmvaluationdemo, specifying each of the three ports above in different windows. You should be able to view the basic web interface identifying the different banks (see screenshot below).
+Open three browser tabs and direct each one to http://*(public IP address)*:*(port)*/*web*/*simmvaluationdemo*, specifying each of the three ports above in different windows, e.g. http://51.140.41.48/12005/web/simmvaluationdemo. You will be able to view the basic web interface identifying the different banks.
+
+Now lets take a look at a transaction between Bank A and B which is not visible to Bank C. This illustrates the restricted data sharing feature of Corda, i.e. data is shared on a need-to-know basis. Nodes provide the dependency graph of a transaction they are sending to another node on demand, but there is no global broadcast of all transactions. 
+
+1. In the browser tab for Bank A (the top right hand corner shows which bank you are administering) click 'Create New Trade' from the top navigation bar
+2. Select to trade with Bank B
+3. Select 'EUR Fixed 1y EURIBOR 3m' from the drop down
+4. Click 'Submit' to create the trade
+5. In the browser tab for Bank B click 'View Portfolio' from the top navigation bar to see this new trade
+6. In the browser tab for Bank C click 'View Portfolio' from the top navigation bar and you will not be able to see the trade, as expected
 
 .. image:: resources/azure_vm_10_51.png
   :width: 300px
 
-Note that in the example, the transaction takes place between Bank A and B; this transaction is not visible on Node C, illustrating the restricted data sharing feature of Corda.
-
-You can now navigate the demo and use it to:
-
-* Set up new (fictitious) interest rate swaps between any two of the three nodes: Click "Create New Trade", set the terms of the deal (e.g. EUR / 1Y fixed vs. 3m EURIBOR) and click submit. 
-* Agree valuations on positions and run the valuation calculation
-* View changes in the portfolio of each bank as new swaps are created
-
-.. note:: There is a known issue whereby some users may see a 400 error when navigating the SIMM Valuation demo. If you encounter this error, simply navigate back to the root page (http://*(public IP address)*:*(port)*/web/simmvaluationdemo) in the browser before continuing.
+.. note:: There is a known issue whereby some users may see a 400 error when navigating the SIMM Valuation demo. If you encounter this error, simply navigate back to the root page (http://*(public IP address)*:*(port)*/*web*/*simmvaluationdemo*) in the browser before continuing.
 
 Viewing the IRS demo
 ------
 The IRS demo can be accessed in the same way as the SIMM Valuation demo above, substituting for the three ports on which the IRS demo is set to run: 
 
-**SIMM Valuation Demo ports:** **11003**, **11005**, **11007**
+**IRS demo ports:** **11003**, **11005**, **11007**
 
 
 Viewing logs (advanced users)
 ------
 Users may wish to view the raw logs generated by each node, which contain more information about the operations performed by each node.
 
-You can access these by logging into the virtual machine using the public IP address (no password required assuming your SSH key is correctly installed). Once logged in, navigate to */opt/irs-nodes/* . There are separate sub-directories for each of the three nodes (*nodea*, *nodeb*, *nodec*), each containing a */logs* sub-directory.
+You can access these using an SSH client of your choice (e.g. Putty) and logging into the virtual machine using the public IP address.
+Once logged in, navigate to */opt/irs-nodes/* .
+There are separate sub-directories for each of the three nodes (*nodea*, *nodeb*, *nodec*), each containing a */logs* sub-directory.
 
 The name of the log file will follow the name given to the service it reflects, e.g. *node-clint-vm-test.log*.
 
@@ -117,3 +120,9 @@ You can open log files with any text editor.
 
 .. image:: resources/azure_vm_10_49.png
   :width: 300px
+  
+Next Steps
+------
+Now you have taken a look at two Corda demos do go and visit the `dedicated Corda website <https://www.corda.net>`_
+
+Or to get straight into the Corda open source codebase, head over to the `Github Corda repo <https://www.github.com/corda>`_
