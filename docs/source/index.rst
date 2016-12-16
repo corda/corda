@@ -108,6 +108,7 @@ Read on to learn:
    codestyle
    building-the-docs
    publishing-corda
+   azure-vm
 
 .. toctree::
    :maxdepth: 2
