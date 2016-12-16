@@ -3,6 +3,7 @@ package net.corda.testing.http
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.core.utilities.loggerFor
+import net.corda.node.utilities.JsonSupport
 import okhttp3.*
 import java.net.URL
 import java.util.concurrent.TimeUnit
@@ -31,7 +32,7 @@ object HttpUtils {
     inline fun<reified T: Any> getJson(url: URL, params: Map<String, String> = mapOf()) : T {
         val paramString = if(params.isEmpty()) "" else "?" + params.map { "${it.key}=${it.value}" }.joinToString("&")
         val parameterisedUrl = URL(url.toExternalForm() + paramString)
-        return ObjectMapper().registerModule(KotlinModule()).readValue(parameterisedUrl, T::class.java)
+        return createDefaultMapper().readValue(parameterisedUrl, T::class.java)
     }
 
     private fun makeRequest(request: Request): Boolean {
@@ -44,14 +45,7 @@ object HttpUtils {
         return response.isSuccessful
     }
 
-    private fun getRequest(request: Request): Pair<Boolean, String> {
-        val response = client.newCall(request).execute()
-
-        if (!response.isSuccessful) {
-            logger.error("Could not fulfill HTTP request of type ${request.method()} to ${request.url()}. Status Code: ${response.code()}. Message: ${response.body().string()}")
-            return Pair(false, "")
-        }
-
-        return Pair(true, response.body().string())
+    fun createDefaultMapper(): ObjectMapper {
+        return ObjectMapper().registerModule(JsonSupport.createJavaTimeModule()).registerModule(KotlinModule())
     }
 }
