@@ -12,6 +12,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.core.*
 import net.corda.core.crypto.Party
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
@@ -19,6 +20,9 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.config.NodeSSLConfiguration
+import net.corda.node.services.messaging.ArtemisMessagingComponent
+import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.NetworkMapService
@@ -318,23 +322,14 @@ open class DriverDSL(
         executorService.shutdown()
     }
 
-    private fun queryNodeInfo(webAddress: HostAndPort): NodeInfo? {
-        val url = URL("http://$webAddress/api/info")
+    private fun queryNodeInfo(webAddress: HostAndPort, sslConfig: NodeSSLConfiguration): NodeInfo? {
         try {
-            val conn = url.openConnection() as HttpURLConnection
-            conn.requestMethod = "GET"
-            if (conn.responseCode != 200) {
-                log.error("Received response code ${conn.responseCode} from $url during startup.")
-                return null
-            }
-            // For now the NodeInfo is tunneled in its Kryo format over the Node's Web interface.
-            val om = ObjectMapper()
-            val module = SimpleModule("NodeInfo")
-            module.addDeserializer(NodeInfo::class.java, JsonSupport.NodeInfoDeserializer)
-            om.registerModule(module)
-            return om.readValue(conn.inputStream, NodeInfo::class.java)
+            val client = CordaRPCClient(webAddress, sslConfig)
+            client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
+            val rpcOps = client.proxy()
+        return rpcOps.nodeIdentity()
         } catch(e: Exception) {
-            log.error("Could not query node info at $url due to an exception.", e)
+            log.error("Could not query node info at $webAddress due to an exception.", e)
             return null
         }
     }
@@ -378,7 +373,7 @@ open class DriverDSL(
         val startNode = startNode(executorService, configuration, quasarJarPath, debugPort)
         registerProcess(startNode)
         return startNode.map {
-            NodeHandle(queryNodeInfo(apiAddress)!!, configuration, it)
+            NodeHandle(queryNodeInfo(messagingAddress, configuration)!!, configuration, it)
         }
     }
 
@@ -488,9 +483,7 @@ open class DriverDSL(
             return Futures.allAsList(
                     addressMustBeBound(executorService, nodeConf.artemisAddress),
                     // TODO There is a race condition here. Even though the messaging address is bound it may be the case that
-                    // the handlers for the advertised services are not yet registered. A hacky workaround is that we wait for
-                    // the web api address to be bound as well, as that starts after the services. Needs rethinking.
-                    addressMustBeBound(executorService, nodeConf.webAddress)
+                    // the handlers for the advertised services are not yet registered. Needs rethinking.
             ).map { process }
         }
     }

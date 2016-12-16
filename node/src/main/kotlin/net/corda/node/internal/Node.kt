@@ -111,7 +111,6 @@ class Node(override val configuration: FullNodeConfiguration,
     // serialisation/deserialisation work.
     override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread", 1)
 
-    //lateinit var webServer: Server
     var messageBroker: ArtemisMessagingServer? = null
 
     // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
@@ -157,116 +156,6 @@ class Node(override val configuration: FullNodeConfiguration,
         return networkMapConnection.flatMap { super.registerWithNetworkMap() }
     }
 
-    // TODO: add flag to enable/disable webserver
-    private fun initWebServer(localRpc: CordaRPCOps): Server {
-        // Note that the web server handlers will all run concurrently, and not on the node thread.
-        val handlerCollection = HandlerCollection()
-
-        // Export JMX monitoring statistics and data over REST/JSON.
-        if (configuration.exportJMXto.split(',').contains("http")) {
-            val classpath = System.getProperty("java.class.path").split(System.getProperty("path.separator"))
-            val warpath = classpath.firstOrNull { it.contains("jolokia-agent-war-2") && it.endsWith(".war") }
-            if (warpath != null) {
-                handlerCollection.addHandler(WebAppContext().apply {
-                    // Find the jolokia WAR file on the classpath.
-                    contextPath = "/monitoring/json"
-                    setInitParameter("mimeType", "application/json")
-                    war = warpath
-                })
-            } else {
-                log.warn("Unable to locate Jolokia WAR on classpath")
-            }
-        }
-
-        // API, data upload and download to services (attachments, rates oracles etc)
-        handlerCollection.addHandler(buildServletContextHandler(localRpc))
-
-        val server = Server()
-
-        val connector = if (configuration.useHTTPS) {
-            val httpsConfiguration = HttpConfiguration()
-            httpsConfiguration.outputBufferSize = 32768
-            httpsConfiguration.addCustomizer(SecureRequestCustomizer())
-            val sslContextFactory = SslContextFactory()
-            sslContextFactory.keyStorePath = configuration.keyStoreFile.toString()
-            sslContextFactory.setKeyStorePassword(configuration.keyStorePassword)
-            sslContextFactory.setKeyManagerPassword(configuration.keyStorePassword)
-            sslContextFactory.setTrustStorePath(configuration.trustStoreFile.toString())
-            sslContextFactory.setTrustStorePassword(configuration.trustStorePassword)
-            sslContextFactory.setExcludeProtocols("SSL.*", "TLSv1", "TLSv1.1")
-            sslContextFactory.setIncludeProtocols("TLSv1.2")
-            sslContextFactory.setExcludeCipherSuites(".*NULL.*", ".*RC4.*", ".*MD5.*", ".*DES.*", ".*DSS.*")
-            sslContextFactory.setIncludeCipherSuites(".*AES.*GCM.*")
-            val sslConnector = ServerConnector(server, SslConnectionFactory(sslContextFactory, "http/1.1"), HttpConnectionFactory(httpsConfiguration))
-            sslConnector.port = configuration.webAddress.port
-            sslConnector
-        } else {
-            val httpConfiguration = HttpConfiguration()
-            httpConfiguration.outputBufferSize = 32768
-            val httpConnector = ServerConnector(server, HttpConnectionFactory(httpConfiguration))
-            httpConnector.port = configuration.webAddress.port
-            httpConnector
-        }
-        server.connectors = arrayOf<Connector>(connector)
-
-        server.handler = handlerCollection
-        runOnStop += Runnable { server.stop() }
-        server.start()
-        printBasicNodeInfo("Embedded web server is listening on", "http://${InetAddress.getLocalHost().hostAddress}:${connector.port}/")
-        return server
-    }
-
-    private fun buildServletContextHandler(localRpc: CordaRPCOps): ServletContextHandler {
-        return ServletContextHandler().apply {
-            contextPath = "/"
-            setAttribute("node", this@Node)
-            addServlet(DataUploadServlet::class.java, "/upload/*")
-            addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
-
-            val resourceConfig = ResourceConfig()
-            // Add your API provider classes (annotated for JAX-RS) here
-            resourceConfig.register(Config(services))
-            resourceConfig.register(ResponseFilter())
-            resourceConfig.register(api)
-
-            val webAPIsOnClasspath = pluginRegistries.flatMap { x -> x.webApis }
-            for (webapi in webAPIsOnClasspath) {
-                log.info("Add plugin web API from attachment $webapi")
-                val customAPI = try {
-                    webapi.apply(localRpc)
-                } catch (ex: InvocationTargetException) {
-                    log.error("Constructor $webapi threw an error: ", ex.targetException)
-                    continue
-                }
-                resourceConfig.register(customAPI)
-            }
-
-            val staticDirMaps = pluginRegistries.map { x -> x.staticServeDirs }
-            val staticDirs = staticDirMaps.flatMap { it.keys }.zip(staticDirMaps.flatMap { it.values })
-            staticDirs.forEach {
-                val staticDir = ServletHolder(DefaultServlet::class.java)
-                staticDir.setInitParameter("resourceBase", it.second)
-                staticDir.setInitParameter("dirAllowed", "true")
-                staticDir.setInitParameter("pathInfoOnly", "true")
-                addServlet(staticDir, "/web/${it.first}/*")
-            }
-
-            // Give the app a slightly better name in JMX rather than a randomly generated one and enable JMX
-            resourceConfig.addProperties(mapOf(ServerProperties.APPLICATION_NAME to "node.api",
-                    ServerProperties.MONITORING_STATISTICS_MBEANS_ENABLED to "true"))
-
-            val container = ServletContainer(resourceConfig)
-            val jerseyServlet = ServletHolder(container)
-            addServlet(jerseyServlet, "/api/*")
-            jerseyServlet.initOrder = 0 // Initialise at server start
-
-            // Wrap all API calls in a database transaction.
-            val filterHolder = FilterHolder(DatabaseTransactionFilter(database))
-            addFilter(filterHolder, "/api/*", EnumSet.of(DispatcherType.REQUEST))
-            addFilter(filterHolder, "/upload/*", EnumSet.of(DispatcherType.REQUEST))
-        }
-    }
-
     override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider {
         return when (type) {
             RaftValidatingNotaryService.type -> with(configuration) {
@@ -305,26 +194,12 @@ class Node(override val configuration: FullNodeConfiguration,
         super.initialiseDatabasePersistence(insideTransaction)
     }
 
-    private fun connectLocalRpcAsNodeUser(): CordaRPCOps {
-        val client = CordaRPCClient(configuration.artemisAddress, configuration)
-        client.start(NODE_USER, NODE_USER)
-        return client.proxy()
-    }
-
     override fun start(): Node {
         alreadyRunningNodeCheck()
         super.start()
         // Only start the service API requests once the network map registration is complete
         thread(name = "WebServer") {
             networkMapRegistrationFuture.getOrThrow()
-            // TODO: Remove when cleanup
-            //try {
-            //    webServer = initWebServer(connectLocalRpcAsNodeUser())
-            //} catch(ex: Exception) {
-            //    // TODO: We need to decide if this is a fatal error, given the API is unavailable, or whether the API
-            //    //       is not critical and we continue anyway.
-            //    log.error("Web server startup failed", ex)
-            //}
             // Begin exporting our own metrics via JMX.
             JmxReporter.
                     forRegistry(services.monitoringService.metrics).

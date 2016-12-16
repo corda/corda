@@ -24,7 +24,6 @@ import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.flows.FinalityFlow
 import net.corda.flows.sendRequest
-import net.corda.node.api.APIServer
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -163,7 +162,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     lateinit var identity: IdentityService
     lateinit var net: MessagingServiceInternal
     lateinit var netMapCache: NetworkMapCache
-    lateinit var api: APIServer
     lateinit var scheduler: NodeSchedulerService
     lateinit var flowLogicFactory: FlowLogicRefFactory
     lateinit var schemas: SchemaService
@@ -219,7 +217,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
             // the identity key. But the infrastructure to make that easy isn't here yet.
             keyManagement = makeKeyManagementService()
-            api = APIServerImpl(this@AbstractNode)
             flowLogicFactory = initialiseFlowLogicFactory()
             scheduler = NodeSchedulerService(database, services, flowLogicFactory, unfinishedSchedules = busyNodeLatch)
 

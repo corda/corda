@@ -82,6 +82,11 @@ interface CordaRPCOps : RPCOps {
      */
     fun nodeIdentity(): NodeInfo
 
+    /**
+     * Returns true if node is up and ready
+     */
+    fun ready(): Boolean
+
     /*
      * Add note(s) to an existing Vault transaction
      */
