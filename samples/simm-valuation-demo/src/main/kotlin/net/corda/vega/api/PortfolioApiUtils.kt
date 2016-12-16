@@ -15,7 +15,16 @@ import java.time.LocalDate
  * API JSON generation functions for larger JSON outputs.
  */
 class PortfolioApiUtils(private val ownParty: Party) {
-    fun createValuations(state: PortfolioState, portfolio: Portfolio): Any {
+    data class InitialMarginView(val baseCurrency: String, val post: Map<String, Double>, val call: Map<String, Double>, val agreed: Boolean)
+    data class ValuationsView(
+            val businessDate: LocalDate,
+            val portfolio: Map<String, Any>,
+            val marketData: Map<String, Any>,
+            val sensitivities: Map<String, Any>,
+            val initialMargin: InitialMarginView,
+            val confirmation: Map<String, Any>)
+
+    fun createValuations(state: PortfolioState, portfolio: Portfolio): ValuationsView {
         val valuation = state.valuation!!
 
         val currency = if (portfolio.trades.isNotEmpty()) {
@@ -61,10 +70,28 @@ class PortfolioApiUtils(private val ownParty: Party) {
 
         val processedSensitivities = valuation.totalSensivities.sensitivities.map { it.marketDataName to it.parameterMetadata.map { it.label }.zip(it.sensitivity.toList()).toMap() }.toMap()
 
-        return json {
-            obj(
-                    "businessDate" to LocalDate.now(),
-                    "portfolio" to obj(
+        val initialMarginView = InitialMarginView(
+                baseCurrency = currency,
+                post = mapOf(
+                        "IRFX" to valuation.margin.first,
+                        "commodity" to 0.0,
+                        "equity" to 0.0,
+                        "credit" to 0.0,
+                        "total" to valuation.margin.first
+                ),
+                call = mapOf(
+                        "IRFX" to valuation.margin.first,
+                        "commodity" to 0.0,
+                        "equity" to 0.0,
+                        "credit" to 0.0,
+                        "total" to valuation.margin.first
+                ),
+                agreed = true)
+
+        return ValuationsView(
+                businessDate = LocalDate.now(),
+                portfolio = json {
+                    obj(
                             "trades" to tradeCount,
                             "baseCurrency" to currency,
                             "IRFX" to tradeCount,
@@ -73,13 +100,17 @@ class PortfolioApiUtils(private val ownParty: Party) {
                             "credit" to 0,
                             "total" to tradeCount,
                             "agreed" to true
-                    ),
-                    "marketData" to obj(
+                    )
+                },
+                marketData = json {
+                    obj(
                             "yieldCurves" to yieldCurves,
                             "fixings" to fixings,
                             "agreed" to true
-                    ),
-                    "sensitivities" to obj("curves" to processedSensitivities,
+                    )
+                },
+                sensitivities = json {
+                    obj("curves" to processedSensitivities,
                             "currency" to valuation.currencySensitivies.amounts.toList().map {
                                 obj(
                                         "currency" to it.currency.code,
@@ -87,31 +118,16 @@ class PortfolioApiUtils(private val ownParty: Party) {
                                 )
                             },
                             "agreed" to true
-                    ),
-                    "initialMargin" to obj(
-                            "baseCurrency" to currency,
-                            "post" to obj(
-                                    "IRFX" to valuation.margin.first,
-                                    "commodity" to 0,
-                                    "equity" to 0,
-                                    "credit" to 0,
-                                    "total" to valuation.margin.first
-                            ),
-                            "call" to obj(
-                                    "IRFX" to valuation.margin.first,
-                                    "commodity" to 0,
-                                    "equity" to 0,
-                                    "credit" to 0,
-                                    "total" to valuation.margin.first
-                            ),
-                            "agreed" to true
-                    ),
-                    "confirmation" to obj(
+                    )
+                },
+                initialMargin = initialMarginView,
+                confirmation = json {
+                    obj(
                             "hash" to state.hash().toString(),
                             "agreed" to true
                     )
-            )
-        }
+                }
+        )
     }
 
     fun createTradeView(state: IRSState): Any {
