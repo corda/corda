@@ -360,6 +360,7 @@ public class Misc {
 
     // just test that it's there; don't care what it returns:
     Runtime.getRuntime().totalMemory();
+    Runtime.getRuntime().maxMemory();
   }
 
   protected class Protected { }
