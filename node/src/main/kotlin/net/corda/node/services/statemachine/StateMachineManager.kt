@@ -135,6 +135,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     /**
      * An observable that emits triples of the changing flow, the type of change, and a process-specific ID number
      * which may change across restarts.
+     *
+     * We use assignment here so that multiple subscribers share the same wrapped Observable.
      */
     val changes: Observable<Change> = mutex.content.changesPublisher.wrapWithDatabaseTransaction()
 
@@ -180,8 +182,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      */
     fun track(): Pair<List<FlowStateMachineImpl<*>>, Observable<Change>> {
         return mutex.locked {
-            //val bufferedChanges = UnicastSubject.create<Change>()
-            //changesPublisher.subscribe(bufferedChanges)
             Pair(stateMachines.keys.toList(), changesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }

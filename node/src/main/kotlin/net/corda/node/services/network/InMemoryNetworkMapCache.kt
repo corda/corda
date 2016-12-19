@@ -45,7 +45,8 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override val partyNodes: List<NodeInfo> get() = registeredNodes.map { it.value }
     override val networkMapNodes: List<NodeInfo> get() = getNodesWithService(NetworkMapService.type)
     private val _changed = PublishSubject.create<MapChange>()
-    override val changed: Observable<MapChange> get() = _changed.wrapWithDatabaseTransaction()
+    // We use assignment here so that multiple subscribers share the same wrapped Observable.
+    override val changed: Observable<MapChange> = _changed.wrapWithDatabaseTransaction()
     private val changePublisher: rx.Observer<MapChange> get() = _changed.bufferUntilDatabaseCommit()
 
     private val _registrationFuture = SettableFuture.create<Unit>()

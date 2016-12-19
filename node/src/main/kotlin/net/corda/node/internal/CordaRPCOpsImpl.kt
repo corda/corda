@@ -15,11 +15,9 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
-import net.corda.core.serialization.serialize
-import net.corda.node.services.messaging.requirePermission
 import net.corda.core.toObservable
 import net.corda.core.transactions.SignedTransaction
-import net.corda.node.services.messaging.createRPCKryo
+import net.corda.node.services.messaging.requirePermission
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
@@ -27,12 +25,8 @@ import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.databaseTransaction
 import org.jetbrains.exposed.sql.Database
 import rx.Observable
-import java.io.BufferedInputStream
-import java.io.File
-import java.io.FileInputStream
 import java.io.InputStream
 import java.time.Instant
-import java.time.LocalDateTime
 
 /**
  * Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
@@ -46,7 +40,9 @@ class CordaRPCOpsImpl(
     override val protocolVersion: Int get() = 0
 
     override fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>> {
-        return services.networkMapCache.track()
+        return databaseTransaction(database) {
+            services.networkMapCache.track()
+        }
     }
 
     override fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>> {
@@ -63,11 +59,13 @@ class CordaRPCOpsImpl(
     }
 
     override fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>> {
-        val (allStateMachines, changes) = smm.track()
-        return Pair(
-                allStateMachines.map { stateMachineInfoFromFlowLogic(it.id, it.logic) },
-                changes.map {  stateMachineUpdateFromStateMachineChange(it) }
-        )
+        return databaseTransaction(database) {
+            val (allStateMachines, changes) = smm.track()
+            return@databaseTransaction Pair(
+                    allStateMachines.map { stateMachineInfoFromFlowLogic(it.id, it.logic) },
+                    changes.map { stateMachineUpdateFromStateMachineChange(it) }
+            )
+        }
     }
 
     override fun stateMachineRecordedTransactionMapping(): Pair<List<StateMachineTransactionMapping>, Observable<StateMachineTransactionMapping>> {

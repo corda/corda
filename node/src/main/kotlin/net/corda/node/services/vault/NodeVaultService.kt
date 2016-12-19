@@ -100,6 +100,8 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
 
         val _updatesPublisher = PublishSubject.create<Vault.Update>()
         val _rawUpdatesPublisher = PublishSubject.create<Vault.Update>()
+        val _wrappedPublisher = _updatesPublisher.wrapWithDatabaseTransaction()
+
         // For use during publishing only.
         val updatesPublisher: rx.Observer<Vault.Update> get() = _updatesPublisher.bufferUntilDatabaseCommit().tee(_rawUpdatesPublisher)
 
@@ -153,7 +155,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         get() = mutex.locked { _rawUpdatesPublisher }
 
     override val updates: Observable<Vault.Update>
-        get() = mutex.locked { _updatesPublisher.wrapWithDatabaseTransaction() }
+        get() = mutex.locked { _wrappedPublisher }
 
     override fun track(): Pair<Vault, Observable<Vault.Update>> {
         return mutex.locked {
