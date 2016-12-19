@@ -19,7 +19,7 @@ object HttpUtils {
                 .readTimeout(60, TimeUnit.SECONDS).build()
     }
     val defaultMapper: ObjectMapper by lazy {
-        ObjectMapper().registerModule(JsonSupport.createJavaTimeModule()).registerModule(KotlinModule())
+        ObjectMapper().registerModule(JsonSupport.javaTimeModule).registerModule(KotlinModule())
     }
 
     fun putJson(url: URL, data: String) : Boolean {

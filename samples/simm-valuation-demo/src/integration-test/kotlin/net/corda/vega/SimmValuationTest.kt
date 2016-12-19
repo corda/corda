@@ -49,30 +49,30 @@ class SimmValuationTest: IntegrationTestCategory {
         return HttpApi.fromHostAndPort(nodeAddr, "api/simmvaluationdemo")
     }
 
-    private fun getPartyWithName(node: HttpApi, countryparty: String): PortfolioApi.ApiParty =
-            getAvailablePartiesFor(node).counterparties.single { it.text == countryparty }
+    private fun getPartyWithName(partyApi: HttpApi, countryparty: String): PortfolioApi.ApiParty =
+            getAvailablePartiesFor(partyApi).counterparties.single { it.text == countryparty }
 
-    private fun getAvailablePartiesFor(api: HttpApi): PortfolioApi.AvailableParties {
-        return api.getJson<PortfolioApi.AvailableParties>("whoami")
+    private fun getAvailablePartiesFor(partyApi: HttpApi): PortfolioApi.AvailableParties {
+        return partyApi.getJson<PortfolioApi.AvailableParties>("whoami")
     }
 
-    private fun createTradeBetween(api: HttpApi, counterparty: PortfolioApi.ApiParty, tradeId: String): Boolean {
+    private fun createTradeBetween(partyApi: HttpApi, counterparty: PortfolioApi.ApiParty, tradeId: String): Boolean {
         val trade = SwapDataModel(tradeId, "desc", valuationDate, "EUR_FIXED_1Y_EURIBOR_3M",
                 valuationDate, LocalDate.parse("2020-01-02"), BuySell.BUY, BigDecimal.valueOf(1000), BigDecimal.valueOf(0.1))
-        return api.putJson("${counterparty.id}/trades", trade)
+        return partyApi.putJson("${counterparty.id}/trades", trade)
     }
 
-    private fun tradeExists(api: HttpApi, counterparty: PortfolioApi.ApiParty, tradeId: String): Boolean {
-        val trades = api.getJson<Array<SwapDataView>>("${counterparty.id}/trades")
+    private fun tradeExists(partyApi: HttpApi, counterparty: PortfolioApi.ApiParty, tradeId: String): Boolean {
+        val trades = partyApi.getJson<Array<SwapDataView>>("${counterparty.id}/trades")
         return (trades.find { it.id == tradeId } != null)
     }
 
-    private fun runValuationsBetween(api: HttpApi, counterparty: PortfolioApi.ApiParty): Boolean {
-        return api.postJson("${counterparty.id}/portfolio/valuations/calculate", PortfolioApi.ValuationCreationParams(valuationDate))
+    private fun runValuationsBetween(partyApi: HttpApi, counterparty: PortfolioApi.ApiParty): Boolean {
+        return partyApi.postJson("${counterparty.id}/portfolio/valuations/calculate", PortfolioApi.ValuationCreationParams(valuationDate))
     }
 
-    private fun valuationExists(api: HttpApi, counterparty: PortfolioApi.ApiParty): Boolean {
-        val valuations = api.getJson<PortfolioApiUtils.ValuationsView>("${counterparty.id}/portfolio/valuations")
+    private fun valuationExists(partyApi: HttpApi, counterparty: PortfolioApi.ApiParty): Boolean {
+        val valuations = partyApi.getJson<PortfolioApiUtils.ValuationsView>("${counterparty.id}/portfolio/valuations")
         return (valuations.initialMargin.call["total"] != 0.0)
     }
 }
