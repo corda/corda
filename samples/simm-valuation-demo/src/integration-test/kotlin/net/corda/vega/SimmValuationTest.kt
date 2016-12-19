@@ -12,6 +12,7 @@ import net.corda.testing.http.HttpApi
 import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
+import net.corda.vega.api.SwapDataView
 import net.corda.vega.portfolio.Portfolio
 import org.junit.Test
 import java.math.BigDecimal
@@ -25,6 +26,7 @@ class SimmValuationTest: IntegrationTestCategory {
         val valuationDate = LocalDate.parse("2016-06-06")
         val nodeALegalName = "Bank A"
         val nodeBLegalName = "Bank B"
+        val testTradeId = "trade1"
     }
 
     @Test fun `runs SIMM valuation demo`() {
@@ -35,8 +37,8 @@ class SimmValuationTest: IntegrationTestCategory {
             val nodeBParty = getPartyWithName(nodeA, nodeBLegalName)
             val nodeAParty = getPartyWithName(nodeB, nodeALegalName)
 
-            assert(createTradeBetween(nodeA, nodeBParty))
-            assert(tradeExists(nodeB, nodeAParty))
+            assert(createTradeBetween(nodeA, nodeBParty, testTradeId))
+            assert(tradeExists(nodeB, nodeAParty, testTradeId))
             assert(runValuationsBetween(nodeA, nodeBParty))
             assert(valuationExists(nodeB, nodeAParty))
         }
@@ -54,15 +56,15 @@ class SimmValuationTest: IntegrationTestCategory {
         return api.getJson<PortfolioApi.AvailableParties>("whoami")
     }
 
-    private fun createTradeBetween(api: HttpApi, counterparty: PortfolioApi.ApiParty): Boolean {
-        val trade = SwapDataModel("trade1", "desc", valuationDate, "EUR_FIXED_1Y_EURIBOR_3M",
+    private fun createTradeBetween(api: HttpApi, counterparty: PortfolioApi.ApiParty, tradeId: String): Boolean {
+        val trade = SwapDataModel(tradeId, "desc", valuationDate, "EUR_FIXED_1Y_EURIBOR_3M",
                 valuationDate, LocalDate.parse("2020-01-02"), BuySell.BUY, BigDecimal.valueOf(1000), BigDecimal.valueOf(0.1))
         return api.putJson("${counterparty.id}/trades", trade)
     }
 
-    private fun tradeExists(api: HttpApi, counterparty: PortfolioApi.ApiParty): Boolean {
-        val trades = api.getJson<List<Map<String, Any>>>("${counterparty.id}/trades")
-        return (!trades.isEmpty())
+    private fun tradeExists(api: HttpApi, counterparty: PortfolioApi.ApiParty, tradeId: String): Boolean {
+        val trades = api.getJson<Array<SwapDataView>>("${counterparty.id}/trades")
+        return (trades.find { it.id == tradeId } != null)
     }
 
     private fun runValuationsBetween(api: HttpApi, counterparty: PortfolioApi.ApiParty): Boolean {

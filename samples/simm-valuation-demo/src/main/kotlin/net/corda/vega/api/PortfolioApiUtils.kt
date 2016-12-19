@@ -115,15 +115,21 @@ class PortfolioApiUtils(private val ownParty: Party) {
         )
     }
 
-    fun createTradeView(state: IRSState): Any {
+    data class TradeView(
+            val fixedLeg: Map<String, Any>,
+            val floatingLeg: Map<String, Any>,
+            val common: Map<String, Any>,
+            val ref: String)
+
+    fun createTradeView(state: IRSState): TradeView {
         val trade = if (state.buyer.name == ownParty.name) state.swap.toFloatingLeg() else state.swap.toFloatingLeg()
         val fixedLeg = trade.product.legs.first { it.type == SwapLegType.FIXED } as RateCalculationSwapLeg
         val floatingLeg = trade.product.legs.first { it.type != SwapLegType.FIXED } as RateCalculationSwapLeg
         val fixedRate = fixedLeg.calculation as FixedRateCalculation
         val floatingRate = floatingLeg.calculation as IborRateCalculation
 
-        return mapOf(
-                "fixedLeg" to mapOf(
+        return TradeView(
+                fixedLeg = mapOf(
                         "fixedRatePayer" to state.buyer.name,
                         "notional" to mapOf(
                                 "token" to fixedLeg.currency.code,
@@ -139,7 +145,7 @@ class PortfolioApiUtils(private val ownParty: Party) {
                         "calendar" to listOf("TODO"),
                         "paymentCalendar" to mapOf<String, Any>() // TODO
                 ),
-                "floatingLeg" to mapOf(
+                floatingLeg = mapOf(
                         "floatingRatePayer" to state.seller.name,
                         "notional" to mapOf(
                                 "token" to floatingLeg.currency.code,
@@ -154,7 +160,7 @@ class PortfolioApiUtils(private val ownParty: Party) {
                         "paymentCalendar" to listOf("TODO"),
                         "fixingCalendar" to mapOf<String, Any>() // TODO
                 ),
-                "common" to mapOf(
+                common = mapOf(
                         "valuationDate" to trade.product.startDate.unadjusted,
                         "hashLegalDocs" to state.contract.legalContractReference.toString(),
                         "interestRate" to mapOf(
@@ -165,7 +171,7 @@ class PortfolioApiUtils(private val ownParty: Party) {
                                 )
                         )
                 ),
-                "ref" to trade.info.id.get().value
+                ref = trade.info.id.get().value
         )
     }
 }
