@@ -3,6 +3,7 @@ package net.corda.vega
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
+import net.corda.node.driver.NodeHandle
 import net.corda.node.driver.driver
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.IntegrationTestCategory
@@ -16,6 +17,7 @@ import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.*
+import java.util.concurrent.Future
 
 class SimmValuationTest: IntegrationTestCategory {
     private companion object {
@@ -28,14 +30,10 @@ class SimmValuationTest: IntegrationTestCategory {
     @Test fun `runs SIMM valuation demo`() {
         driver(isDebug = true) {
             startNode("Controller", setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
-            val nodeAAddr = startNode(nodeALegalName).getOrThrow().config.getHostAndPort("webAddress")
-            val nodeBAddr = startNode(nodeBLegalName).getOrThrow().config.getHostAndPort("webAddress")
-
-            val nodeA = HttpApi.fromHostAndPort(nodeAAddr, "api/simmvaluationdemo")
-            val nodeB = HttpApi.fromHostAndPort(nodeBAddr, "api/simmvaluationdemo")
-
-            val nodeBParty = getAvailablePartiesFor(nodeA).counterparties.single { it.text == nodeBLegalName }
-            val nodeAParty = getAvailablePartiesFor(nodeB).counterparties.single { it.text == nodeALegalName }
+            val nodeA = getSimmNodeApi(startNode(nodeALegalName))
+            val nodeB = getSimmNodeApi(startNode(nodeBLegalName))
+            val nodeBParty = getPartyWithName(nodeA, nodeBLegalName)
+            val nodeAParty = getPartyWithName(nodeB, nodeALegalName)
 
             assert(createTradeBetween(nodeA, nodeBParty))
             assert(tradeExists(nodeB, nodeAParty))
@@ -43,6 +41,14 @@ class SimmValuationTest: IntegrationTestCategory {
             assert(valuationExists(nodeB, nodeAParty))
         }
     }
+
+    private fun getSimmNodeApi(futureNode: Future<NodeHandle>): HttpApi {
+        val nodeAddr = futureNode.getOrThrow().config.getHostAndPort("webAddress")
+        return HttpApi.fromHostAndPort(nodeAddr, "api/simmvaluationdemo")
+    }
+
+    private fun getPartyWithName(node: HttpApi, countryparty: String): PortfolioApi.ApiParty =
+            getAvailablePartiesFor(node).counterparties.single { it.text == countryparty }
 
     private fun getAvailablePartiesFor(api: HttpApi): PortfolioApi.AvailableParties {
         return api.getJson<PortfolioApi.AvailableParties>("whoami")
