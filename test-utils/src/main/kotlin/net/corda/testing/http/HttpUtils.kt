@@ -18,6 +18,9 @@ object HttpUtils {
                 .connectTimeout(5, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS).build()
     }
+    val defaultMapper: ObjectMapper by lazy {
+        ObjectMapper().registerModule(JsonSupport.createJavaTimeModule()).registerModule(KotlinModule())
+    }
 
     fun putJson(url: URL, data: String) : Boolean {
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
@@ -32,7 +35,7 @@ object HttpUtils {
     inline fun<reified T: Any> getJson(url: URL, params: Map<String, String> = mapOf()) : T {
         val paramString = if(params.isEmpty()) "" else "?" + params.map { "${it.key}=${it.value}" }.joinToString("&")
         val parameterisedUrl = URL(url.toExternalForm() + paramString)
-        return createDefaultMapper().readValue(parameterisedUrl, T::class.java)
+        return defaultMapper.readValue(parameterisedUrl, T::class.java)
     }
 
     private fun makeRequest(request: Request): Boolean {
@@ -43,9 +46,5 @@ object HttpUtils {
         }
 
         return response.isSuccessful
-    }
-
-    fun createDefaultMapper(): ObjectMapper {
-        return ObjectMapper().registerModule(JsonSupport.createJavaTimeModule()).registerModule(KotlinModule())
     }
 }
