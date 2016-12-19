@@ -49,12 +49,16 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
     }
 
     private val _clientFuture: CompletableFuture<CopycatClient>
+    private val _serverFuture: CompletableFuture<CopycatServer>
     /**
      * Copycat clients are responsible for connecting to the cluster and submitting commands and queries that operate
      * on the cluster's replicated state machine.
      */
     private val client: CopycatClient
         get() = _clientFuture.get()
+
+    private val server: CopycatServer
+        get() = _serverFuture.get()
 
     init {
         log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
@@ -69,7 +73,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
                 .withServerTransport(transport)
                 .build()
 
-        val serverFuture = if (clusterAddresses.isNotEmpty()) {
+        _serverFuture = if (clusterAddresses.isNotEmpty()) {
             log.info("Joining an existing Copycat cluster at $clusterAddresses")
             val cluster = clusterAddresses.map { Address(it.hostText, it.port) }
             server.join(cluster)
@@ -82,7 +86,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
                 .withTransport(transport) // TODO: use local transport for client-server communications
                 .withConnectionStrategy(ConnectionStrategies.EXPONENTIAL_BACKOFF)
                 .build()
-        _clientFuture = serverFuture.thenCompose { client.connect(address) }
+        _clientFuture = _serverFuture.thenCompose { client.connect(address) }
     }
 
     private fun buildStorage(storagePath: Path): Storage? {
@@ -126,5 +130,23 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
     private fun decode(items: Map<String, ByteArray>): Map<StateRef, UniquenessProvider.ConsumingTx> {
         fun String.toStateRef() = split(":").let { StateRef(SecureHash.parse(it[0]), it[1].toInt()) }
         return items.map { it.key.toStateRef() to it.value.deserialize<UniquenessProvider.ConsumingTx>() }.toMap()
+    }
+
+    /** Disconnect the Copycat client and shut down the replica (without leaving the cluster) */
+    fun stop(): CompletableFuture<Void> {
+        val future = CompletableFuture<Void>()
+        client.close().whenComplete({ clientResult, clientError ->
+            server.shutdown().whenComplete({ serverResult, serverError ->
+                if (clientError != null) {
+                    future.completeExceptionally(clientError)
+                } else if (serverError != null) {
+                    future.completeExceptionally(serverError)
+                } else {
+                    future.complete(null)
+                }
+            })
+        })
+
+        return future
     }
 }

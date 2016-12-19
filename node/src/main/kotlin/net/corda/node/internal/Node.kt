@@ -264,7 +264,9 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
     override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider {
         return when (type) {
             RaftValidatingNotaryService.type -> with(configuration) {
-                RaftUniquenessProvider(basedir, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
+                RaftUniquenessProvider(basedir, notaryNodeAddress!!, notaryClusterAddresses, database, configuration).apply {
+                    runOnStop += Runnable { stop() }
+                }
             }
             else -> PersistentUniquenessProvider()
         }
