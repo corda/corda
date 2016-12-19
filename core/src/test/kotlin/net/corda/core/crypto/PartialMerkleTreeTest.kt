@@ -45,7 +45,7 @@ class PartialMerkleTreeTest {
 
     val testTx = testLedger.interpreter.transactionsToVerify[0]
 
-    //Building full Merkle Tree tests.
+    // Building full Merkle Tree tests.
     @Test
     fun `building Merkle tree with 6 nodes - no rightmost nodes`() {
         assertEquals(root, merkleTree.hash)
@@ -85,7 +85,7 @@ class PartialMerkleTreeTest {
         assert(mt.verify(testTx.id))
     }
 
-    //Partial Merkle Tree building tests
+    // Partial Merkle Tree building tests
     @Test
     fun `build Partial Merkle Tree, only left nodes branch`() {
         val inclHashes = listOf(hashed[3], hashed[5])
@@ -137,7 +137,7 @@ class PartialMerkleTreeTest {
 
     @Test
     fun `verify Partial Merkle Tree - duplicate leaves failure`() {
-        val mt = MerkleTree.getMerkleTree(hashed.subList(0, 5)) //Odd number of leaves. Last one is duplicated.
+        val mt = MerkleTree.getMerkleTree(hashed.subList(0, 5)) // Odd number of leaves. Last one is duplicated.
         val inclHashes = arrayListOf(hashed[3], hashed[4])
         val pmt = PartialMerkleTree.build(mt, inclHashes)
         inclHashes.add(hashed[4])
@@ -162,7 +162,7 @@ class PartialMerkleTreeTest {
     @Test
     fun `hash map serialization`() {
         val hm1 = hashMapOf("a" to 1, "b" to 2, "c" to 3, "e" to 4)
-        assert(serializedHash(hm1) == serializedHash(hm1.serialize().deserialize())) //It internally uses the ordered HashMap extension.
+        assert(serializedHash(hm1) == serializedHash(hm1.serialize().deserialize())) // It internally uses the ordered HashMap extension.
         val kryo = extendKryoHash(createKryo())
         assertTrue(kryo.getSerializer(HashMap::class.java) is OrderedSerializer)
         assertTrue(kryo.getSerializer(LinkedHashMap::class.java) is MapSerializer)

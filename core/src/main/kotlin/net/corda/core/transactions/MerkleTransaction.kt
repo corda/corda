@@ -13,23 +13,6 @@ import net.corda.core.serialization.extendKryoHash
 import net.corda.core.serialization.serialize
 import java.util.*
 
-/**
- * Build filtered transaction using provided filtering functions.
- */
-fun WireTransaction.buildFilteredTransaction(filterFuns: FilterFuns): FilteredTransaction {
-    return FilteredTransaction.buildMerkleTransaction(this, filterFuns)
-}
-
-/**
- * Calculation of all leaves hashes that are needed for calculation of transaction id and partial Merkle branches.
- */
-fun WireTransaction.calculateLeavesHashes(): List<SecureHash> {
-    val resultHashes = ArrayList<SecureHash>()
-    val entries = listOf(inputs, outputs, attachments, commands)
-    entries.forEach { it.mapTo(resultHashes, { x -> serializedHash(x) }) }
-    return resultHashes
-}
-
 fun SecureHash.hashConcat(other: SecureHash) = (this.bytes + other.bytes).sha256()
 
 fun <T : Any> serializedHash(x: T): SecureHash {
@@ -49,9 +32,9 @@ fun <T : Any> serializedHash(x: T): SecureHash {
 sealed class MerkleTree(val hash: SecureHash) {
     class Leaf(val value: SecureHash) : MerkleTree(value)
     class Node(val value: SecureHash, val left: MerkleTree, val right: MerkleTree) : MerkleTree(value)
-    //DuplicatedLeaf is storing a hash of the rightmost node that had to be duplicated to obtain the tree.
-    //That duplication can cause problems while building and verifying partial tree (especially for trees with duplicate
-    //attachments or commands).
+    // DuplicatedLeaf is storing a hash of the rightmost node that had to be duplicated to obtain the tree.
+    // That duplication can cause problems while building and verifying partial tree (especially for trees with duplicate
+    // attachments or commands).
     class DuplicatedLeaf(val value: SecureHash) : MerkleTree(value)
 
     fun hashNodes(right: MerkleTree): MerkleTree {
@@ -74,7 +57,7 @@ sealed class MerkleTree(val hash: SecureHash) {
          * @return Tree root.
          */
         private tailrec fun buildMerkleTree(lastNodesList: List<MerkleTree>): MerkleTree {
-            if (lastNodesList.size < 1)
+            if (lastNodesList.isEmpty())
                 throw MerkleTreeException("Cannot calculate Merkle root on empty hash list.")
             if (lastNodesList.size == 1) {
                 return lastNodesList[0] //Root reached.
@@ -172,7 +155,7 @@ class FilteredTransaction(
      */
     fun verify(merkleRootHash: SecureHash): Boolean {
         val hashes: List<SecureHash> = filteredLeaves.getFilteredHashes()
-        if (hashes.size == 0)
+        if (hashes.isEmpty())
             throw MerkleTreeException("Transaction without included leaves.")
         return partialMerkleTree.verify(merkleRootHash, hashes)
     }

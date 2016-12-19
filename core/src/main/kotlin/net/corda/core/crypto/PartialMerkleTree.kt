@@ -69,7 +69,7 @@ class PartialMerkleTree(val root: PartialTree) {
         fun build(merkleRoot: MerkleTree, includeHashes: List<SecureHash>): PartialMerkleTree {
             val usedHashes = ArrayList<SecureHash>()
             val tree = buildPartialTree(merkleRoot, includeHashes, usedHashes)
-            //Too much included hashes or different ones.
+            // Too much included hashes or different ones.
             if (includeHashes.size != usedHashes.size)
                 throw MerkleTreeException("Some of the provided hashes are not in the tree.")
             return PartialMerkleTree(tree.second)
@@ -98,11 +98,11 @@ class PartialMerkleTree(val root: PartialTree) {
                     val leftNode = buildPartialTree(root.left, includeHashes, usedHashes)
                     val rightNode = buildPartialTree(root.right, includeHashes, usedHashes)
                     if (leftNode.first or rightNode.first) {
-                        //This node is on a path to some included leaves. Don't store hash.
+                        // This node is on a path to some included leaves. Don't store hash.
                         val newTree = PartialTree.Node(leftNode.second, rightNode.second)
                         return Pair(true, newTree)
                     } else {
-                        //This node has no included leaves below. Cut the tree here and store a hash as a Leaf.
+                        // This node has no included leaves below. Cut the tree here and store a hash as a Leaf.
                         val newTree = PartialTree.Leaf(root.value)
                         return Pair(false, newTree)
                     }
@@ -118,7 +118,7 @@ class PartialMerkleTree(val root: PartialTree) {
     fun verify(merkleRootHash: SecureHash, hashesToCheck: List<SecureHash>): Boolean {
         val usedHashes = ArrayList<SecureHash>()
         val verifyRoot = verify(root, usedHashes)
-        //It means that we obtained more/less hashes than needed or different sets of hashes.
+        // It means that we obtained more/less hashes than needed or different sets of hashes.
         if (hashesToCheck.groupBy { it } != usedHashes.groupBy { it })
             return false
         return (verifyRoot == merkleRootHash)

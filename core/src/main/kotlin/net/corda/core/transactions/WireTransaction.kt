@@ -14,6 +14,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Emoji
 import java.io.FileNotFoundException
 import java.security.PublicKey
+import java.util.*
 
 /**
  * A transaction ready for serialisation, without any signatures attached. A WireTransaction is usually wrapped
@@ -42,7 +43,7 @@ class WireTransaction(
     @Volatile @Transient private var cachedBytes: SerializedBytes<WireTransaction>? = null
     val serialized: SerializedBytes<WireTransaction> get() = cachedBytes ?: serialize().apply { cachedBytes = this }
 
-    //We need cashed leaves hashes and whole tree for an id and Partial Merkle Tree calculation.
+    // We need cashed leaves hashes and whole tree for an id and Partial Merkle Tree calculation.
     @Volatile @Transient private var cachedLeavesHashes: List<SecureHash>? = null
     val allLeavesHashes: List<SecureHash> get() = cachedLeavesHashes ?: calculateLeavesHashes().apply { cachedLeavesHashes = this }
 
@@ -89,6 +90,23 @@ class WireTransaction(
         }
         val resolvedInputs = inputs.map { StateAndRef(services.loadState(it), it) }
         return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, mustSign, timestamp, type)
+    }
+
+    /**
+     * Build filtered transaction using provided filtering functions.
+     */
+    fun buildFilteredTransaction(filterFuns: FilterFuns): FilteredTransaction {
+        return FilteredTransaction.buildMerkleTransaction(this, filterFuns)
+    }
+
+    /**
+     * Calculation of all leaves hashes that are needed for calculation of transaction id and partial Merkle branches.
+     */
+    fun calculateLeavesHashes(): List<SecureHash> {
+        val resultHashes = ArrayList<SecureHash>()
+        val entries = listOf(inputs, outputs, attachments, commands)
+        entries.forEach { it.mapTo(resultHashes, { x -> serializedHash(x) }) }
+        return resultHashes
     }
 
     override fun toString(): String {
