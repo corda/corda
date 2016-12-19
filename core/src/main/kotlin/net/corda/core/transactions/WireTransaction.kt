@@ -106,6 +106,7 @@ class WireTransaction(
         val resultHashes = ArrayList<SecureHash>()
         val entries = listOf(inputs, outputs, attachments, commands)
         entries.forEach { it.mapTo(resultHashes, { x -> serializedHash(x) }) }
+        if (timestamp != null) resultHashes.add(serializedHash(timestamp))
         return resultHashes
     }
 

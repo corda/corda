@@ -1,9 +1,6 @@
 package net.corda.core.transactions
 
-import net.corda.core.contracts.Command
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.PartialMerkleTree
 import net.corda.core.crypto.SecureHash
@@ -90,12 +87,15 @@ class FilteredLeaves(
         val inputs: List<StateRef>,
         val outputs: List<TransactionState<ContractState>>,
         val attachments: List<SecureHash>,
-        val commands: List<Command>
+        val commands: List<Command>,
+        val timestamp: Timestamp?
 ) {
     fun getFilteredHashes(): List<SecureHash> {
         val resultHashes = ArrayList<SecureHash>()
         val entries = listOf(inputs, outputs, attachments, commands)
         entries.forEach { it.mapTo(resultHashes, { x -> serializedHash(x) }) }
+        if (timestamp != null)
+            resultHashes.add(serializedHash(timestamp))
         return resultHashes
     }
 }
@@ -143,8 +143,7 @@ class FilteredTransaction(
             val filteredOutputs = wtx.outputs.filter { filterFuns.genericFilter(it) }
             val filteredAttachments = wtx.attachments.filter { filterFuns.genericFilter(it) }
             val filteredCommands = wtx.commands.filter { filterFuns.genericFilter(it) }
-            val filteredLeaves = FilteredLeaves(filteredInputs, filteredOutputs, filteredAttachments, filteredCommands)
-
+            val filteredLeaves = FilteredLeaves(filteredInputs, filteredOutputs, filteredAttachments, filteredCommands, wtx.timestamp)
             val pmt = PartialMerkleTree.build(wtx.merkleTree, filteredLeaves.getFilteredHashes())
             return FilteredTransaction(filteredLeaves, pmt)
         }

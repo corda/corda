@@ -8,7 +8,7 @@ import net.corda.core.contracts.`issued by`
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
 import net.corda.core.utilities.DUMMY_PUBKEY_1
-import net.corda.testing.ALICE_PUBKEY
+import net.corda.core.utilities.TEST_TX_TIME
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
 import net.corda.testing.ledger
@@ -33,13 +33,21 @@ class PartialMerkleTreeTest {
                         owner = MEGA_CORP_PUBKEY
                 )
             }
+            output("dummy cash 1") {
+                Cash.State(
+                        amount = 900.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+                        owner = DUMMY_PUBKEY_1
+                )
+            }
         }
 
         transaction {
             input("MEGA_CORP cash")
+            input("dummy cash 1")
             output("MEGA_CORP cash".output<Cash.State>().copy(owner = DUMMY_PUBKEY_1))
             command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-            this.verifies()
+            timestamp(TEST_TX_TIME)
+            this.fails()
         }
     }
 
@@ -76,12 +84,29 @@ class PartialMerkleTreeTest {
     @Test
     fun `building Merkle tree for a transaction`() {
         val filterFuns = FilterFuns(
-                filterCommands = { x -> ALICE_PUBKEY in x.signers },
-                filterOutputs = { true },
+                filterCommands = { x -> MEGA_CORP_PUBKEY in x.signers },
+                filterOutputs = { it.data.participants[0].keys == DUMMY_PUBKEY_1.keys },
                 filterInputs = { true })
         val mt = testTx.buildFilteredTransaction(filterFuns)
+        val leaves = mt.filteredLeaves
         val d = WireTransaction.deserialize(testTx.serialized)
         assertEquals(testTx.id, d.id)
+        assertEquals(1, leaves.commands.size)
+        assertEquals(1, leaves.outputs.size)
+        assertEquals(2, leaves.inputs.size)
+        assertTrue(mt.filteredLeaves.timestamp != null)
+        assert(mt.verify(testTx.id))
+    }
+
+    @Test
+    fun `only timestamp`() {
+        val filterFuns = FilterFuns()
+        val mt = testTx.buildFilteredTransaction(filterFuns)
+        assertTrue(mt.filteredLeaves.attachments.isEmpty())
+        assertTrue(mt.filteredLeaves.commands.isEmpty())
+        assertTrue(mt.filteredLeaves.inputs.isEmpty())
+        assertTrue(mt.filteredLeaves.outputs.isEmpty())
+        assertTrue(mt.filteredLeaves.timestamp != null)
         assert(mt.verify(testTx.id))
     }
 
