@@ -98,11 +98,9 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     @Path("business-date")
     @Produces(MediaType.APPLICATION_JSON)
     fun getBusinessDate(): Any {
-        return json {
-            obj(
-                    "business-date" to  LocalDateTime.ofInstant(rpc.currentNodeTime(), ZoneId.systemDefault()).toLocalDate()
-            )
-        }
+        return mapOf(
+                "business-date" to LocalDateTime.ofInstant(rpc.currentNodeTime(), ZoneId.systemDefault()).toLocalDate()
+        )
     }
 
     /**
@@ -195,12 +193,10 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         return withParty(partyName) { party ->
             val trades = getTradesWith(party)
             val portfolio = Portfolio(trades)
-            val summary = json {
-                obj(
-                        "trades" to portfolio.trades.size,
-                        "notional" to portfolio.getNotionalForParty(ownParty).toDouble()
-                )
-            }
+            val summary = mapOf(
+                    "trades" to portfolio.trades.size,
+                    "notional" to portfolio.getNotionalForParty(ownParty).toDouble()
+            )
             Response.ok().entity(summary).build()
         }
     }
