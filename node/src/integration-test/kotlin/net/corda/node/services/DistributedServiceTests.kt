@@ -27,7 +27,7 @@ import rx.Observable
 import java.util.*
 import kotlin.test.assertEquals
 
-class RaftValidatingNotaryServiceTests : DriverBasedTest() {
+class DistributedServiceTests : DriverBasedTest() {
     lateinit var alice: NodeInfo
     lateinit var notaries: List<NodeHandle>
     lateinit var aliceProxy: CordaRPCOps
@@ -69,8 +69,10 @@ class RaftValidatingNotaryServiceTests : DriverBasedTest() {
         runTest()
     }
 
+    // TODO Use a dummy distributed service rather than a Raft Notary Service as this test is only about Artemis' ability
+    // to handle distributed services
     @Test
-    fun `notarisation requests are distributed evenly in raft cluster`() {
+    fun `requests are distributed evenly amongst the nodes`() {
         // Issue 100 pounds, then pay ourselves 50x2 pounds
         val issueHandle = aliceProxy.startFlow(::CashFlow, CashCommand.IssueCash(100.POUNDS, OpaqueBytes.of(0), alice.legalIdentity, raftNotaryIdentity))
         require(issueHandle.returnValue.toBlocking().first() is CashFlowResult.Success)
@@ -98,6 +100,7 @@ class RaftValidatingNotaryServiceTests : DriverBasedTest() {
         require(notarisationsPerNotary.values.all { it > 10 })
     }
 
+    // TODO This should be in RaftNotaryServiceTests
     @Test
     fun `cluster survives if a notary is killed`() {
         // Issue 100 pounds, then pay ourselves 10x5 pounds
