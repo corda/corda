@@ -47,10 +47,17 @@ __strpbrk(const char *s1, const char *s2)
 	return (NULL);
 }
 
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+extern char *_intel_fast_strpbrk(const char *, const char *);
+#endif
 
 char *
 strpbrk(const char *s1, const char *s2)
 {
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+	return _intel_fast_strpbrk(s1, s2);
+#else
 	return __strpbrk(s1, s2);
+#endif
 }
 

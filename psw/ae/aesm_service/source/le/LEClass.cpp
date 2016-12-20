@@ -53,6 +53,10 @@ int CLEClass::white_list_register(
     int retry = 0;
     uint32_t status = 0;
     AESMLogicLock locker(AESMLogic::_le_mutex);
+    const wl_cert_chain_t *wl_cert_chain = reinterpret_cast<const wl_cert_chain_t *>(white_list_cert);
+    if (white_list_cert_size < sizeof(wl_cert_chain_t)){
+        return LE_INVALID_PARAMETER;
+    }
 
     assert(m_enclave_id);
 
@@ -76,6 +80,9 @@ int CLEClass::white_list_register(
         if(AE_SUCCESS != aesm_write_data(FT_PERSISTENT_STORAGE,AESM_WHITE_LIST_CERT_FID,white_list_cert, white_list_cert_size)){//ignore error if failed to save in persistent storage
             AESM_DBG_WARN("Fail to save white list cert in persistent storage");
         }
+    }
+    if (LE_WHITE_LIST_ALREADY_UPDATED == status) {
+                status = AE_SUCCESS;
     }
     return status;
 }
@@ -118,9 +125,7 @@ ae_error_t CLEClass::update_white_list_by_url()
                 ret = (ae_error_t)instance().white_list_register(resp_buf, resp_size, true);
                 if (AE_SUCCESS == ret&&resp_size >= sizeof(wl_cert_chain_t)){
                     const wl_cert_chain_t* wl = reinterpret_cast<const wl_cert_chain_t*>(resp_buf);
-                }
-                else{
-                    ret = AE_FAILURE;//Internal error, maybe LE not consistent with AESM?
+                    AESM_DBG_INFO("White list update request successful for Version: %d", _ntohl(wl->wl_cert.wl_version));
                 }
             }
             last_updated_time = cur_time;
@@ -247,8 +252,10 @@ ae_error_t CLEClass::load_enclave_only()
         AESM_DBG_ERROR("Loading LE failed:%d",ret);
         return AE_SERVER_NOT_AVAILABLE;
     }else if(production_le_loaded!=0){//production signed LE loaded
+        m_ufd = false;
         AESM_DBG_INFO("Production signed LE loaded, try loading white list now");
     }else{
+        m_ufd = true;
         AESM_DBG_INFO("Debug signed LE loaded");
     }
     return AE_SUCCESS;
@@ -285,7 +292,8 @@ int CLEClass::get_launch_token(
     if(mrenclave_size !=sizeof(sgx_measurement_t) ||
         SE_KEY_SIZE != public_key_size ||
         se_attributes_size != sizeof(sgx_attributes_t) ||
-        lictoken_size < sizeof(token_t) )
+        lictoken_size < sizeof(token_t) ||
+        lictoken == NULL)
         return LE_INVALID_PARAMETER;
     //set mrsigner based on the hash of isv pub key from enclave signature
     IppStatus ipperrorCode = ippStsNoErr;
@@ -332,6 +340,9 @@ int CLEClass::get_launch_token(
         return sgx_error_to_ae_error(ret);
     if (status == LE_WHITELIST_UNINITIALIZED_ERROR || status == LE_INVALID_PRIVILEGE_ERROR){
         start_white_list_thread(0);//try to query white list unblocking
+    }
+    if(is_ufd()){
+        reinterpret_cast<token_t*>(lictoken)->body.valid = 0;
     }
     return status;
 }

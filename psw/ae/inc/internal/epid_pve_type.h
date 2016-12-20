@@ -37,7 +37,7 @@
 #ifndef _EPID_PVE_TYPE_H_
 #define _EPID_PVE_TYPE_H_
 
-#include "epid_types.h"
+#include "epid/common/types.h"
 #include "se_types.h"
 #include "sgx_key.h"
 
@@ -47,7 +47,7 @@
 #define EPID_TYPE_GROUP_CERT      12
 #define IV_SIZE                   12                     /*length in bytes of iv in block cipher. */
 #define SK_SIZE                   16                     /*length in bytes of SK, which is used in block cipher info*/
-#define GID_SIZE                  sizeof(GroupID)        /*length in bytes of GroupID*/
+#define GID_SIZE                  sizeof(GroupId)        /*length in bytes of GroupID*/
 #define SK_CMAC_KEY_LEN           IppsRijndaelKey128
 #define XID_SIZE                  8                      /*length in bytes of transaction id*/
 #define NONCE_SIZE                8                      /*length in bytes of Nonce R in ProvMsg*/
@@ -71,7 +71,7 @@
 #define PVE_RSA_SEED_SIZE         32
 
 #define XEGB_SIZE                 456                   /*hardcoded size of extended_epid_group_blob_t*/
-#define XEGB_FORMAT_ID            0x0100                /*hardcoded format id in extended_epid_group_blob to be 16bits bigendian 1*/
+#define XEGB_FORMAT_ID            0x0100                /*hardcoded format id in extended_epid_group_blob to be 16bits big-endian 1*/
 
 #pragma pack(push, 1)
 /*Define some structure will be used in TLV payload. Make sure the alignment of all of them is 1 since they'll be used in an unaligned buffer
@@ -122,7 +122,7 @@ typedef struct _signed_epid_group_cert_t{
     epid_version_t version;
     epid_type_t type;
     GroupPubKey key;
-    uint8_t    intel_signature[2*ECDSA_SIGN_SIZE];
+    uint8_t     ecdsa_signature[2*ECDSA_SIGN_SIZE];
 }signed_epid_group_cert_t;
 
 #define PEK_MOD_SIZE 256
@@ -139,7 +139,7 @@ typedef struct _signed_pek_t{
 typedef struct _blind_escrow_data_t{
     uint32_t version;
     uint8_t  iv[IV_SIZE];
-    PElemStr f;
+    FpElemStr f;
     uint8_t  mac[MAC_SIZE];
 }blind_escrow_data_t;
 
@@ -151,7 +151,7 @@ typedef struct _join_proof_with_escrow_t{
 
 /*The Membership Credential with Escrow Data used in provisioning message 4*/
 typedef struct _membership_credential_with_escrow_t{
-    PElemStr            x;
+    FpElemStr            x;
     G1ElemStr           A;
     blind_escrow_data_t escrow;
 }membership_credential_with_escrow_t;
@@ -163,42 +163,60 @@ typedef struct _device_id_t{
     fmsp_t fmsp;
 }device_id_t;
 
-#define EPID_KEY_BLOB_VERSION_PAK   2
+#define EPID_KEY_BLOB_VERSION_SIK   2
+#define EPID_KEY_BLOB_VERSION_SDK   3
 #define PVE_SEAL_EPID_KEY_BLOB      0
 
-typedef struct _se_secret_epid_data_t {
+typedef struct _se_secret_epid_data_sik_t {
     PrivKey         epid_private_key;
-}se_secret_epid_data_t;
+}se_secret_epid_data_sik_t;
 
-/*From beginning to field epid_group_cert, se_plaintext_epid_data_pak_t should has same layout as se_plaintext_epid_data_t*/
-typedef struct _se_plaintext_epid_data_pak_t {
-    uint8_t         seal_blob_type;  /*Encalve-specific Sealblob Type, for 2015 PvE/QE, only one Sealblob type defined: PVE_SEAL_EPID_KEY_BLOB=0*/
-    uint8_t         epid_key_version;/*seal_blob_type specific version number, should be EPID_KEY_BLOB_VERSION_PAK(_NPC). 2 or 3*/
+typedef struct _se_secret_epid_data_sdk_t{
+    PrivKey         epid_private_key;  /*This field must be the first field of the structure so that offset of epid_private_key is same in both se_secret_epid_data_sik_t and se_secret_epid_data_sdk_t*/
+    MemberPrecomp   member_precomp_data;
+}se_secret_epid_data_sdk_t;
+
+/*The first two fields are same for plaintext part of both EPID Blob Data*/
+typedef struct _se_plaintext_epid_data_sik_t {
+    uint8_t         seal_blob_type;             /*Enclave-specific Sealblob Type, currently only one Sealblob type defined: PVE_SEAL_EPID_KEY_BLOB=0*/
+    uint8_t         epid_key_version;           /*epid_key_version specifies version number, should be EPID_KEY_BLOB_VERSION_SIK*/
     sgx_cpu_svn_t   equiv_cpu_svn;
     sgx_isv_svn_t   equiv_pve_isv_svn;
-    EPID2Params     epid_param_cert;
+    Epid2Params     epid_param_cert;
     GroupPubKey     epid_group_cert;
-    uint8_t         qsdk_exp[4];     /*little endian*/
+    uint8_t         qsdk_exp[4];                /*little endian*/
     uint8_t         qsdk_mod[PVE_RSA_KEY_BYTES];/*little endian*/
     uint8_t         epid_sk[2*ECDSA_SIGN_SIZE]; /*little endian*/
     uint32_t        xeid;                       /*ExtEPIDGroup ID, little endian*/
-}se_plaintext_epid_data_pak_t;
+}se_plaintext_epid_data_sik_t;
+
+typedef struct _se_plaintext_epid_data_sdk_t{
+    uint8_t         seal_blob_type;             /*Enclave-specific Sealblob Type, currently only one Sealblob type defined: PVE_SEAL_EPID_KEY_BLOB=0*/
+    uint8_t         epid_key_version;           /*epid_key_versione specifies version number, should be EPID_KEY_BLOB_VERSION_SDK*/
+    sgx_cpu_svn_t   equiv_cpu_svn;
+    sgx_isv_svn_t   equiv_pve_isv_svn;
+    GroupPubKey     epid_group_cert;
+    uint8_t         qsdk_exp[4];                /*little endian*/
+    uint8_t         qsdk_mod[PVE_RSA_KEY_BYTES];/*little endian*/
+    uint8_t         epid_sk[2*ECDSA_SIGN_SIZE]; /*little endian*/
+    uint32_t        xeid;                       /*ExtEPIDGroup ID, little endian*/
+}se_plaintext_epid_data_sdk_t;
 
 typedef struct _extended_epid_group_blob_t{
-    uint16_t        format_id;                 /*fixed bigendian 1*/
-    uint16_t        data_length;               /*bigendian length for fields after it and not including signature*/
-    uint32_t        xeid;                      /*ExtEPIDGroup ID, little endian*/
-    uint8_t         epid_sk[2*ECDSA_SIGN_SIZE];/*ecdsa public key for EPID sign Key in little endian*/
-    uint8_t         pek_sk[2*ECDSA_SIGN_SIZE]; /*ecdsa public key for PEKSK in little endian*/
-    uint8_t         qsdk_exp[4];               /*exponient of RSA key for QSDK, little endian*/
-    uint8_t         qsdk_mod[PVE_RSA_KEY_BYTES];/*Modulus of RSA key for QSDK. current it is 2048 bits, little endian*/
+    uint16_t        format_id;                   /*must be 1 in big-endian*/
+    uint16_t        data_length;                 /*big-endian length for fields after it but not including signature*/
+    uint32_t        xeid;                        /*ExtEPIDGroup ID, little endian*/
+    uint8_t         epid_sk[2*ECDSA_SIGN_SIZE];  /*ecdsa public key for EPID sign Key in little endian*/
+    uint8_t         pek_sk[2*ECDSA_SIGN_SIZE];   /*ecdsa public key for PEKSK in little endian*/
+    uint8_t         qsdk_exp[4];                 /*exponient of RSA key for QSDK, little endian*/
+    uint8_t         qsdk_mod[PVE_RSA_KEY_BYTES]; /*Modulus of RSA key for QSDK. current it is 2048 bits, little endian*/
     uint8_t         signature[2*ECDSA_SIGN_SIZE];/*ECDSA signature of the data, big endian*/
 }extended_epid_group_blob_t;
 
 #define EXTENDED_EPID_GROUP_BLOB_DATA_LEN    ((uint32_t)(sizeof(uint32_t)+4*(ECDSA_SIGN_SIZE)+4+(PVE_RSA_KEY_BYTES)))
 
-#define SGX_TRUSTED_EPID_BLOB_SIZE_PAK  (sizeof(sgx_sealed_data_t)+sizeof(se_secret_epid_data_t)+sizeof(se_plaintext_epid_data_pak_t))
-
+#define SGX_TRUSTED_EPID_BLOB_SIZE_SIK  ((uint32_t)(sizeof(sgx_sealed_data_t)+sizeof(se_secret_epid_data_sik_t)+sizeof(se_plaintext_epid_data_sik_t)))
+#define SGX_TRUSTED_EPID_BLOB_SIZE_SDK  ((uint32_t)(sizeof(sgx_sealed_data_t)+sizeof(se_secret_epid_data_sdk_t)+sizeof(se_plaintext_epid_data_sdk_t)))
 #pragma pack(pop)
 #endif
 

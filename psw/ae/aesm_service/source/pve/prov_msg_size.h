@@ -68,8 +68,8 @@ inline uint32_t calc_msg3_size_by_sigrl_count(uint32_t sigrl_count)
     return static_cast<uint32_t>(PROVISION_REQUEST_HEADER_SIZE+field0_size+field1_size+field2_size+field3_size+field4_size);
 }
 
-/*Function to estimate the count of SigRL Entry inside a ProvMsg2
-  Nonce_TLV(NONCE_SIZE):E+MAC(PubGroupCert:ChallengeNonce[:PlatformInfoPSVN]:PSID:EPID_GID:PlatformInfo)[:signed SigRL]*/
+/*Function to estimate the count of SigRl Entry inside a ProvMsg2
+  Nonce_TLV(NONCE_SIZE):E+MAC(PubGroupCert:ChallengeNonce[:PlatformInfoPSVN]:PSID:EPID_GID:PlatformInfo)[:signed SigRl]*/
 inline uint32_t estimate_sigrl_count_by_msg2_size(uint32_t msg2_size)
 {
     size_t field_0_size = NONCE_TLV_SIZE(NONCE_SIZE);
@@ -86,11 +86,11 @@ inline uint32_t estimate_sigrl_count_by_msg2_size(uint32_t msg2_size)
     if(PROVISION_RESPONSE_HEADER_SIZE+field_0_size+field_1_size+field_2_size>=msg2_size)
         return 0;
     field_3_size = msg2_size - (PROVISION_RESPONSE_HEADER_SIZE+field_0_size+field_1_size+field_2_size);
-    if(field_3_size < ECDSA_SIGN_SIZE*2 +sizeof(SigRL))
+    if(field_3_size < ECDSA_SIGN_SIZE*2 +sizeof(SigRl))
         return 0;
-    field_3_size -= ECDSA_SIGN_SIZE*2 + sizeof(SigRL);
-    /*The first SigRLEntry has been included into SigRL structure so that an extra 1 is added*/
-    return static_cast<uint32_t>(1+field_3_size/sizeof(SigRLEntry));
+    field_3_size -= ECDSA_SIGN_SIZE*2 + sizeof(SigRl);
+    /*The first SigRlEntry has been included into SigRl structure so that an extra 1 is added*/
+    return static_cast<uint32_t>(1+field_3_size/sizeof(SigRlEntry));
 }
 
 inline uint32_t estimate_msg3_size_by_msg2_size(uint32_t msg2_size)

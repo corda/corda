@@ -39,8 +39,8 @@
 uint64_t se_get_sig_rl_size(const se_sig_rl_t *p_sig_rl)
 {
   uint64_t n2 = (p_sig_rl) ? lv_ntohl(p_sig_rl->sig_rl.n2) : 0;
-  return(sizeof(se_sig_rl_t) - sizeof(p_sig_rl->sig_rl.BK[0])
-         + n2 * sizeof(p_sig_rl->sig_rl.BK[0]) + 2 * SE_ECDSA_SIGN_SIZE);
+  return(sizeof(se_sig_rl_t) - sizeof(p_sig_rl->sig_rl.bk[0])
+         + n2 * sizeof(p_sig_rl->sig_rl.bk[0]) + 2 * SE_ECDSA_SIGN_SIZE);
 }
 
 sgx_status_t sgx_get_quote_size(const uint8_t *sig_rl, uint32_t* p_quote_size)
@@ -62,7 +62,7 @@ sgx_status_t sgx_get_quote_size(const uint8_t *sig_rl, uint32_t* p_quote_size)
     }
 
     n2 = (sig_rl) ? lv_ntohl(p_sig_rl->sig_rl.n2) : 0;
-    sign_size = sizeof(EPIDSignature) - sizeof(NRProof) + n2*sizeof(NRProof);
+    sign_size = sizeof(EpidSignature) - sizeof(NrProof) + n2*sizeof(NrProof);
     quote_size = SE_QUOTE_LENGTH_WITHOUT_SIG + sign_size;
     if (quote_size >= 1ull<<32)
     {

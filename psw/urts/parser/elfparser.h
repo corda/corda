@@ -87,6 +87,7 @@ public:
 
     sgx_status_t modify_info(enclave_diff_info_t *enclave_diff_info);
     sgx_status_t get_info(enclave_diff_info_t *enclave_diff_info);
+    void get_executable_sections(vector<const char *>& xsec_names) const;
 
 private:
     const uint8_t*      m_start_addr;

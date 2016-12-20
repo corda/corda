@@ -30,6 +30,9 @@
 
 #include <string.h>
 
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+extern size_t _intel_fast_strspn(const char *, const char *);
+#endif
 
 /*
  * Span the string s2 (skip characters that are in s2).
@@ -55,5 +58,9 @@ cont:
 size_t
 strspn(const char *s1, const char *s2)
 {
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+	return _intel_fast_strspn(s1, s2);
+#else
 	return __strspn(s1, s2);
+#endif
 }

@@ -83,7 +83,7 @@ typedef struct _platform_info_blob_wrapper_t
         pse_isvsvn_t latest_pse_isvsvn;
         psda_svn_t latest_psda_svn;
         uint32_t xeid;
-        GroupID gid;
+        GroupId gid;
         sgx_ec256_signature_t signature;
     } platform_info_blob;
 } platform_info_blob_wrapper_t;

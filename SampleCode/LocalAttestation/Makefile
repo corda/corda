@@ -32,8 +32,9 @@
 ######## SGX SDK Settings ########
 
 SGX_SDK ?= /opt/intel/sgxsdk
-SGX_MODE ?= SIM
+SGX_MODE ?= HW
 SGX_ARCH ?= x64
+SGX_DEBUG ?= 1
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
@@ -71,7 +72,8 @@ Trust_Lib_Name := libLocalAttestation_Trusted.a
 TrustLib_Cpp_Files := $(wildcard LocalAttestationCode/*.cpp)
 TrustLib_Cpp_Objects := $(TrustLib_Cpp_Files:.cpp=.o)
 TrustLib_Include_Paths := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I./Include
-TrustLib_Compile_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector -std=c++03 -nostdinc++ $(TrustLib_Include_Paths)
+TrustLib_Compile_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector  $(TrustLib_Include_Paths)
+TrustLib_Compile_Cxx_Flags :=  -std=c++03 -nostdinc++
 
 UnTrustLib_Name := libLocalAttestation_unTrusted.a
 UnTrustLib_Cpp_Files := $(wildcard Untrusted_LocalAttestation/*.cpp)
@@ -155,10 +157,20 @@ Enclave_Name_2 := libenclave2.so
 Enclave_Name_3 := libenclave3.so
 
 ifeq ($(SGX_MODE), HW)
-ifneq ($(SGX_DEBUG), 1)
-ifneq ($(SGX_PRERELEASE), 1)
-Build_Mode = HW_RELEASE
+ifeq ($(SGX_DEBUG), 1)
+	Build_Mode = HW_DEBUG
+else ifeq ($(SGX_PRERELEASE), 1)
+	Build_Mode = HW_PRERELEASE
+else
+	Build_Mode = HW_RELEASE
 endif
+else
+ifeq ($(SGX_DEBUG), 1)
+	Build_Mode = SIM_DEBUG
+else ifeq ($(SGX_PRERELEASE), 1)
+	Build_Mode = SIM_PRERELEASE
+else
+	Build_Mode = SIM_RELEASE
 endif
 endif
 
@@ -174,6 +186,17 @@ all: $(Trust_Lib_Name) $(UnTrustLib_Name) Enclave1.so Enclave2.so Enclave3.so $(
 	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
 else
 all: $(Trust_Lib_Name) $(UnTrustLib_Name) $(Enclave_Name_1) $(Enclave_Name_2) $(Enclave_Name_3) $(App_Name)
+ifeq ($(Build_Mode), HW_DEBUG)
+	@echo "The project has been built in debug hardware mode."
+else ifeq ($(Build_Mode), SIM_DEBUG)
+	@echo "The project has been built in debug simulation mode."
+else ifeq ($(Build_Mode), HW_PRERELEASE)
+	@echo "The project has been built in pre-release hardware mode."
+else ifeq ($(Build_Mode), SIM_PRERELEASE)
+	@echo "The project has been built in pre-release simulation mode."
+else
+	@echo "The project has been built in release simulation mode."
+endif
 endif
 
 ######## Library Objects ########
@@ -187,7 +210,7 @@ LocalAttestationCode/LocalAttestationCode_t.o: LocalAttestationCode/LocalAttesta
 	@echo "CC   <=  $<"
 
 LocalAttestationCode/%.o: LocalAttestationCode/%.cpp LocalAttestationCode/LocalAttestationCode_t.h
-	@$(CXX) $(TrustLib_Compile_Flags) -c $< -o $@
+	@$(CXX) $(TrustLib_Compile_Flags) $(TrustLib_Compile_Cxx_Flags) -c $< -o $@
 	@echo "CC   <= $<"
 
 $(Trust_Lib_Name): LocalAttestationCode/LocalAttestationCode_t.o $(TrustLib_Cpp_Objects)

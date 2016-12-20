@@ -394,9 +394,12 @@ AttestationStatus* AEServicesImpl::ReportAttestationError(const PlatformInfo* pl
         UpdateInfo* tInfo = new UpdateInfo;
         tInfo->length = reportAttestationErrorResponse->GetUpdateInfoLength();
 
-        tInfo->data = new uint8_t[tInfo->length];
-        memcpy(tInfo->data, reportAttestationErrorResponse->GetUpdateInfo(), tInfo->length);
-        attestationStatus->updateInfo = tInfo;
+        if (tInfo->length != 0)
+        {
+            tInfo->data = new uint8_t[tInfo->length];
+            memcpy(tInfo->data, reportAttestationErrorResponse->GetUpdateInfo(), tInfo->length);
+            attestationStatus->updateInfo = tInfo;
+        }
     }
 
     attestationStatus->errorCode = reportAttestationErrorResponse->GetErrorCode();

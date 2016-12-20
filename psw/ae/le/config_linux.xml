@@ -7,7 +7,7 @@
   <TCSNum>1</TCSNum>
   <TCSPolicy>1</TCSPolicy>
   <StackMaxSize>0x2000</StackMaxSize>
-  <HeapMaxSize>0xb000</HeapMaxSize>
+  <HeapMaxSize>0x20000</HeapMaxSize>
   <HW>0x1</HW>
   <DisableDebug>1</DisableDebug>
 </EnclaveConfiguration>

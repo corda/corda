@@ -400,6 +400,9 @@ extern "C" sgx_status_t trts_handle_exception(void *tcs)
     ssa_gpr->REG(di) = (size_t)info;        // 1st parameter (info) for LINUX64, LINUX32 also uses it while restoring the context
     *new_sp = info->cpu_context.REG(ip);    // for debugger to get call trace
     
+    //mark valid to 0 to prevent eenter again
+    ssa_gpr->exit_info.valid = 0;
+
     return SGX_SUCCESS;
  
 default_handler:

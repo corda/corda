@@ -56,7 +56,7 @@ extern "C" bool write_data_to_file(const char *filename, std::ios_base::openmode
     return true;
 }
 
-extern "C" long get_file_size(const char *filename)
+extern "C" size_t get_file_size(const char *filename)
 {
     std::ifstream ifs(filename, std::ios::in | std::ios::binary);
     if(!ifs.good())

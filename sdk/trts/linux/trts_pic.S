@@ -460,16 +460,14 @@ DECLARE_LOCAL_FUNC continue_execution
 #else
     mov     %xdi, %xcx
 #endif
-    mov     SE_WORDSIZE*4(%xcx), %xdx
-    mov     %xdx, %xsp
-    sub     $(SE_WORDSIZE), %xsp
-#ifdef LINUX64
-    mov     SE_WORDSIZE*17(%xcx), %xax
-#else
-    mov     SE_WORDSIZE*9(%xcx), %xax
-#endif
-    mov     %xax, (%xsp)
     mov     SE_WORDSIZE*0(%xcx), %xax
+    push    %xax                       # push xax
+    mov     SE_WORDSIZE*1(%xcx), %xax
+    push    %xax                       # push xcx
+    mov     SE_WORDSIZE*4(%xcx), %xax
+    sub     $(SE_WORDSIZE), %xax       # xax: xsp
+
+# restore registers except xax, xcx, xsp
     mov     SE_WORDSIZE*2(%xcx), %xdx
     mov     SE_WORDSIZE*3(%xcx), %xbx
     mov     SE_WORDSIZE*5(%xcx), %xbp
@@ -485,10 +483,22 @@ DECLARE_LOCAL_FUNC continue_execution
     mov     SE_WORDSIZE*14(%xcx), %r14
     mov     SE_WORDSIZE*15(%xcx), %r15
     push    SE_WORDSIZE*16(%xcx)
-    popf
+    popf    # make sure the following instructions do not affect flags
 #else
     push    SE_WORDSIZE*8(%xcx)
     popf
 #endif
-    mov     SE_WORDSIZE*1(%xcx), %xcx
+
+#ifdef LINUX64
+    mov     SE_WORDSIZE*17(%xcx), %xcx
+#else
+    mov     SE_WORDSIZE*9(%xcx), %xcx  # xcx: xip
+#endif
+
+# do not setup the new stack until info is not needed any more
+# otherwise, info will be overwritten
+    mov     %xcx, (%xax)               # save xip to the new stack
+    pop     %xcx                       # restore xcx
+    pop     %xsp                       # xsp: xax
+    xchg    %xax, %xsp
     ret

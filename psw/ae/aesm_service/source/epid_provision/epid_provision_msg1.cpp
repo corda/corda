@@ -56,13 +56,13 @@
 //#define MSG1_TOP_FIELD_GCM_MAC       msg1_fields[2]
 
 //Function to transform the RSA public key(big endian) into ipp format, the function is defined in pve_pub_key.cpp
-//the key is from Provision Server which is used for rsa-oaep in ProvMsg1
-//free_rsa_key should be called to release the memory on successfully returned rsa_pub_key
+//the key is received in endpoint selection from Provision Server which is used for rsa-oaep in ProvMsg1
+//secure_free_rsa_pub_key should be called to release the memory on successfully returned rsa_pub_key
 //return PVEC_SUCCESS on success
 IppStatus get_provision_server_rsa_pub_key_in_ipp_format(const signed_pek_t& pek, IppsRSAPublicKeyState **rsa_pub_key);
 
 
-//Function to initialize reqeust header for ProvMsg1
+//Function to initialize request header for ProvMsg1
 //msg1_header: request header for ProvMsg1 to fill in
 //use_flags: whether the flag tlv is included
 //xid: transaction ID
@@ -90,7 +90,7 @@ static ae_error_t prov_msg1_gen_header(provision_request_header_t *msg1_header,
     msg1_header->protocol = SE_EPID_PROVISIONING;
     msg1_header->type = TYPE_PROV_MSG1;
     msg1_header->version = TLV_VERSION_2;
-    if(0!=memcpy_s(msg1_header->xid, XID_SIZE, xid, XID_SIZE)){
+    if(0!=memcpy_s(msg1_header->xid, sizeof(msg1_header->xid), xid, XID_SIZE)){
         AESM_DBG_FATAL("fail in memcpy_s");
         return PVE_UNEXPECTED_ERROR;
     }
@@ -110,8 +110,8 @@ static ae_error_t prov_msg1_gen_header(provision_request_header_t *msg1_header,
     return AE_SUCCESS;
 }
 
-//This function will do the rsa oaep encrypt with input src[0:src_len] and put the output to buffer dst
-//The function will assume that buffer src_len is no more than PVE_RSAOAEP_ENCRYPT_MAXLEN and the buffer size is at least PVE_RSA_KEY_BITS
+//This function will do the rsa oaep encryption with input src[0:src_len] and put the output to buffer dst
+//The function will assume that buffer src_len is no more than PVE_RSAOAEP_ENCRYPT_MAXLEN and the buffer size of dst is at least PVE_RSA_KEY_BITS
 static ae_error_t aesm_rsa_oaep_encrypt(const uint8_t *src, uint32_t src_len, const IppsRSAPublicKeyState *rsa, uint8_t dst[PVE_RSA_KEY_BYTES])
 {
     const int hashsize = SHA_SIZE_BIT;
@@ -140,9 +140,9 @@ static ae_error_t aesm_rsa_oaep_encrypt(const uint8_t *src, uint32_t src_len, co
         goto ret_point;
     }
 
-    if((status = ippsRSA_OAEPEncrypt_SHA256(src, src_len,
+    if((status = ippsRSAEncrypt_OAEP(src, src_len,
                                         NULL, 0, seeds,
-                                        dst, rsa, pub_key_buffer)) != ippStsNoErr)
+                                        dst, rsa, IPP_ALG_HASH_SHA256, pub_key_buffer)) != ippStsNoErr)
     {
         ret = AE_FAILURE;
         goto ret_point;
@@ -156,7 +156,7 @@ ret_point:
 
 
 //generate ProvMsg1
-//The function will generate a random transaction id which is used by msg header of msg1 and saved in global memory too
+//The function will generate a random transaction id which is used by msg header of msg1 and saved in pve_data
 //The function return AE_SUCCESS on success and other to indicate error
 //@pve_data: global structure used to store pve relative data
 //@msg1: buffer to receive ProvMsg1 (including both header and body)
@@ -175,7 +175,7 @@ ret_point:
     uint8_t *field2 = NULL;
     uint8_t field2_iv[IV_SIZE];
     uint8_t field2_mac[MAC_SIZE];
-    uint8_t encrypted_pcid[PVE_RSA_KEY_BYTES];
+    uint8_t encrypted_ppid[PVE_RSA_KEY_BYTES];
     //msg1 header will be in the beginning part of the output msg
     provision_request_header_t *msg1_header = reinterpret_cast<provision_request_header_t *>(msg1);
     memset(&pek_report, 0, sizeof(pek_report));
@@ -206,7 +206,7 @@ ret_point:
         AESM_DBG_ERROR("Gen ProvMsg1 in trusted code failed:( ae %d)",ret);
         return ret;
     }
-    se_static_assert(sizeof(encrypted_pcid)==PEK_MOD_SIZE);
+    se_static_assert(sizeof(encrypted_ppid)==PEK_MOD_SIZE);
     //Load PCE Enclave required
     ret = CPCEClass::instance().load_enclave();
     if(ret != AE_SUCCESS){
@@ -214,7 +214,7 @@ ret_point:
         return ret;
     }
     ret = CPCEClass::instance().get_pce_info(pek_report, pve_data.pek, pce_id,
-        pce_isv_svn, encrypted_pcid);
+        pce_isv_svn, encrypted_ppid);
     if(AE_SUCCESS != ret){
         AESM_DBG_ERROR("Fail to generate pc_info:(ae%d)",ret);
         return ret;
@@ -287,7 +287,7 @@ ret_point:
         }
 
         TLVsMsg tlvs_msg2_sub;
-        tlv_status = tlvs_msg2_sub.add_cipher_text(encrypted_pcid, PVE_RSA_KEY_BYTES, PEK_PUB);
+        tlv_status = tlvs_msg2_sub.add_cipher_text(encrypted_ppid, PVE_RSA_KEY_BYTES, PEK_PUB);
         ret = tlv_error_2_pve_error(tlv_status);
         if(AE_SUCCESS!=ret){
             return ret;
@@ -320,7 +320,6 @@ ret_point:
             return ret;
         }
         if(pve_data.is_performance_rekey){
-            //ignore performance rekey in backup retrieval
             flags_t flags;
             memset(&flags,0,sizeof(flags));
             //set performance rekey flags

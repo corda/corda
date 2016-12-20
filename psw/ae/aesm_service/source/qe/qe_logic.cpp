@@ -136,8 +136,9 @@ aesm_error_t QEAESMLogic::init_quote(
             aesm_result = AESM_UNEXPECTED_ERROR;
         goto ret_point;
     }
+    se_static_assert(SGX_TRUSTED_EPID_BLOB_SIZE_SDK>=SGX_TRUSTED_EPID_BLOB_SIZE_SIK);
     ae_ret = static_cast<ae_error_t>(CQEClass::instance().verify_blob(epid_data.trusted_epid_blob,
-        SGX_TRUSTED_EPID_BLOB_SIZE_PAK,
+        SGX_TRUSTED_EPID_BLOB_SIZE_SDK,
         &resealed));
     if(ae_ret == QE_EPIDBLOB_ERROR){
         (void)epid_blob.remove();
@@ -246,7 +247,7 @@ aesm_error_t QEAESMLogic::get_quote(const uint8_t *report,
     }
     AESM_DBG_TRACE("start to get quote");
     ae_ret = CQEClass::instance().get_quote(epid_data.trusted_epid_blob,
-        SGX_TRUSTED_EPID_BLOB_SIZE_PAK,
+        SGX_TRUSTED_EPID_BLOB_SIZE_SDK,
         reinterpret_cast<const sgx_report_t *>(report),
         static_cast<sgx_quote_sign_type_t>(quote_type),
         reinterpret_cast<const sgx_spid_t *>(spid),

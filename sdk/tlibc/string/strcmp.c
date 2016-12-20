@@ -34,6 +34,9 @@
 
 #include <string.h>
 
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+extern int _intel_fast_strcmp(const char *, const char *);
+#endif
 
 /*
  * Compare strings.
@@ -41,8 +44,12 @@
 int
 strcmp(const char *s1, const char *s2)
 {
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+	return _intel_fast_strcmp(s1, s2);
+#else
 	while (*s1 == *s2++)
 		if (*s1++ == 0)
 			return (0);
 	return (*(const unsigned char *)s1 - *(const unsigned char *)--s2);
+#endif
 }

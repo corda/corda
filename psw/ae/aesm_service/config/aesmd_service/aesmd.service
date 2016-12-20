@@ -1,5 +1,5 @@
 [Unit]
-Description=Intel(R) Application Enclave Service Managerment server
+Description=Intel(R) Architectural Enclave Service Manager 
 After=syslog.target network.target auditd.service
 
 [Service]

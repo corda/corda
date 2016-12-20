@@ -319,7 +319,7 @@ ae_error_t EndpointSelectionInfo::start_protocol(endpoint_selection_infos_t& es_
 
     msg_size = estimate_es_msg1_size();
     assert(msg_size>0);
-    msg = reinterpret_cast<uint8_t *>(malloc(msg_size));
+    msg = static_cast<uint8_t *>(malloc(msg_size));
     if(msg == NULL){
         AESM_DBG_ERROR("malloc error");
         ae_ret = AE_OUT_OF_MEMORY_ERROR;

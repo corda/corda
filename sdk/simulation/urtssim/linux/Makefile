@@ -39,8 +39,8 @@ CXXFLAGS += -DDISABLE_TRACE
 CFLAGS += -DDISABLE_TRACE
 endif
 
-CXXFLAGS += -fPIC -DSE_SIM -Werror
-CFLAGS   += -fPIC -DSE_SIM -Werror
+CXXFLAGS += -fPIC -DSE_SIM -Werror -g
+CFLAGS   += -fPIC -DSE_SIM -Werror -g
 
 CPPFLAGS += $(ADDED_INC) #for ubuntu 11 and later version
 CPPFLAGS += -I$(COMMON_DIR)/inc                \
@@ -104,22 +104,46 @@ OBJ     := $(CPP_OBJ) $(OBJ4)
 
 vpath %.cpp .:$(DIR1):$(DIR2):$(DIR3):$(DIR4)
 
-LDFLAGS +=  -L$(LINUX_EXTERNAL_DIR)/crypto_px
+LDFLAGS +=  -L$(IPP_LIBS_DIR)
+LDFLAGS += -Wl,--version-script=$(LINUX_PSW_DIR)/urts/linux/urts.lds
 
 LIBURTSSIM_SHARED := libsgx_urts_sim.so
+LIBURTSSIM_DEBUG := libsgx_urts_sim.so.debug
 LIBURTS_DEPLOY := libsgx_urts_deploy.so
 
-LDLIBS  += -lwrapper -lcrypto_px -Wl,-Bdynamic -Wl,-Bsymbolic -lsgx_uae_service_sim
+LDLIBS  += -lwrapper $(LD_IPP) -Wl,-Bdynamic -Wl,-Bsymbolic -lsgx_uae_service_sim
 SONAME = $(LIBURTSSIM_SHARED)
 
 .PHONY: all
-all: $(LIBURTSSIM_SHARED) $(LIBURTS_DEPLOY)| $(BUILD_DIR)
-	$(CP) $^ $|
+all: $(LIBURTSSIM_SHARED) $(LIBURTSSIM_DEBUG) $(LIBURTS_DEPLOY)| $(BUILD_DIR)
+	$(CP) $(LIBURTSSIM_SHARED) $|
+	$(CP) $(LIBURTS_DEPLOY) $|
+ifndef DEBUG
+	$(CP) $(LIBURTSSIM_DEBUG) $|
+endif
 
+ifneq ($(USE_OPT_LIBS), 0)
+$(LIBURTSSIM_SHARED): simasm uinst driver_api wrapper uae_service_sim $(OBJ) $(OBJ6) ittnotify
+	$(CXX) $(CXXFLAGS) -shared -Wl,-soname=$(SONAME) $(OBJ) $(OBJ6) $(LDFLAGS) $(LDLIBS) -o $@
+else
+-lcrypto_px:
+	$(MAKE) -C $(IPP_LIBS_DIR)
 
 $(LIBURTSSIM_SHARED): simasm uinst driver_api wrapper uae_service_sim $(OBJ) $(OBJ6) -lcrypto_px ittnotify
 	$(CXX) $(CXXFLAGS) -shared -Wl,-soname=$(SONAME) $(OBJ) $(OBJ6) $(LDFLAGS) $(LDLIBS) -o $@
+endif
 
+$(LIBURTSSIM_DEBUG): $(LIBURTSSIM_SHARED)
+	((test -f $(LIBURTSSIM_DEBUG)) || $(MAKE) separate_debug_info)
+
+.PHONY: separate_debug_info
+separate_debug_info:
+ifndef DEBUG
+	$(CP) $(LIBURTSSIM_SHARED) $(LIBURTSSIM_SHARED).orig
+	$(OBJCOPY) --only-keep-debug $(LIBURTSSIM_SHARED) $(LIBURTSSIM_DEBUG)
+	$(STRIP) -g $(LIBURTSSIM_SHARED)
+	$(OBJCOPY)  --add-gnu-debuglink=$(LIBURTSSIM_DEBUG) $(LIBURTSSIM_SHARED)
+endif
 
 $(BUILD_DIR):
 	@$(MKDIR) $@
@@ -129,9 +153,6 @@ $(OBJ4): %.o: $(DIR2)/%.S
 
 $(CPP_OBJ): %.o: %.cpp
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
-
--lcrypto_px:
-	$(MAKE) -C $(LINUX_EXTERNAL_DIR)/crypto_px
 
 .PHONY: wrapper
 wrapper:
@@ -162,12 +183,14 @@ $(LIBURTS_DEPLOY):../urts_deploy.c
 
 .PHONY: clean
 clean::
-	@$(RM) *.o $(LIBURTSSIM_SHARED) $(LIBURTS_DEPLOY) 
-	@$(RM) $(BUILD_DIR)/$(LIBURTSSIM_SHARED) $(BUILD_DIR)/$(LIBURTS_DEPLOY)
+	@$(RM) *.o $(LIBURTSSIM_SHARED) $(LIBURTS_DEPLOY) $(LIBURTSSIM_DEBUG) $(LIBURTSSIM_SHARED).orig 
+	@$(RM) $(BUILD_DIR)/$(LIBURTSSIM_SHARED) $(BUILD_DIR)/$(LIBURTS_DEPLOY) $(BUILD_DIR)/$(LIBURTSSIM_DEBUG)
 	$(MAKE) -C $(COMMON_DIR)/se_wrapper                                    clean
 	$(MAKE) -C $(SIM_DIR)/driver_api/                                      clean
 	$(MAKE) -C $(SIM_DIR)/assembly/                                        clean
 	$(MAKE) -C $(SIM_DIR)/uinst/                                           clean
 	$(MAKE) -C $(SIM_DIR)/uae_service_sim/linux                            clean
-	$(MAKE) -C $(LINUX_EXTERNAL_DIR)/crypto_px                             clean
+ifeq ($(USE_OPT_LIBS), 0)
+	$(MAKE) -C $(IPP_LIBS_DIR)                                              clean
+endif
 	$(MAKE) -C $(VTUNE_DIR)/sdk/src/ittnotify/                             clean

@@ -45,9 +45,15 @@ ae_error_t EPIDBlob::read(epid_blob_with_cur_psvn_t& blob)
             goto CLEANUP_READ_FILE;
         }
 
-        if (data_size != sizeof(blob_cache)){
+        if (data_size != sizeof(blob_cache)&&
+            data_size != sizeof(epid_blob_v2_with_cur_psvn_t)){//support previous version epid blob too
             ae_ret = QE_EPIDBLOB_ERROR;
             goto CLEANUP_READ_FILE;
+        }
+        if(data_size == sizeof(epid_blob_v2_with_cur_psvn_t)){
+            //move bk_platform_info_t so that all other parts of aesm service could access the field consistently
+            epid_blob_v2_with_cur_psvn_t *old_format = (epid_blob_v2_with_cur_psvn_t *)&blob_cache;
+            memmove(&blob_cache.cur_pi, &old_format->cur_pi, sizeof(old_format->cur_pi));
         }
         status = update_to_date;
 CLEANUP_READ_FILE:
@@ -117,7 +123,7 @@ ae_error_t EPIDBlob::get_sgx_gid(uint32_t* pgid)
         // get the gid
         //
         uint32_t plain_text_offset = sealed_epid->plain_text_offset;
-        se_plaintext_epid_data_pak_t* plain_text = reinterpret_cast<se_plaintext_epid_data_pak_t *>(epid_blob.trusted_epid_blob + sizeof(sgx_sealed_data_t) + plain_text_offset);
+        se_plaintext_epid_data_sdk_t* plain_text = reinterpret_cast<se_plaintext_epid_data_sdk_t *>(epid_blob.trusted_epid_blob + sizeof(sgx_sealed_data_t) + plain_text_offset);
          
          if(memcpy_s(pgid, sizeof(*pgid), &plain_text->epid_group_cert.gid, sizeof(plain_text->epid_group_cert.gid)))	//read gid from EPID Data blob
          {
@@ -158,12 +164,29 @@ ae_error_t EPIDBlob::get_extended_epid_group_id(uint32_t* pxeid)
         // get the xeid
         //
         uint32_t plain_text_offset = sealed_epid->plain_text_offset;
-        se_plaintext_epid_data_pak_t* plain_text_new = reinterpret_cast<se_plaintext_epid_data_pak_t*>(epid_blob.trusted_epid_blob + sizeof(sgx_sealed_data_t)+plain_text_offset);
+        se_plaintext_epid_data_sdk_t* plain_text_new = reinterpret_cast<se_plaintext_epid_data_sdk_t*>(epid_blob.trusted_epid_blob + sizeof(sgx_sealed_data_t)+plain_text_offset);
+        se_plaintext_epid_data_sik_t *plain_text_old = reinterpret_cast<se_plaintext_epid_data_sik_t *>(plain_text_new);
         switch (plain_text_new->epid_key_version)
         {
-        case EPID_KEY_BLOB_VERSION_PAK:
+        case EPID_KEY_BLOB_VERSION_SDK:
             
             if (memcpy_s(pxeid, sizeof(*pxeid), &plain_text_new->xeid, sizeof(plain_text_new->xeid)))	//read extended_epid_group_id from EPID Data blob
+            {
+                AESM_DBG_ERROR("memcpy_s failed");
+                aesm_result = AE_FAILURE;
+            }
+            else
+            {
+                //
+                // return little-endian
+                //
+                AESM_DBG_TRACE(": get gid %d from epid blob", *pxeid);
+                aesm_result = AE_SUCCESS;
+            }
+            break;
+        case EPID_KEY_BLOB_VERSION_SIK:
+            
+            if (memcpy_s(pxeid, sizeof(*pxeid), &plain_text_old->xeid, sizeof(plain_text_old->xeid)))   //read extended_epid_group_id from EPID Data blob
             {
                 AESM_DBG_ERROR("memcpy_s failed");
                 aesm_result = AE_FAILURE;

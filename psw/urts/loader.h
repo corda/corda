@@ -47,7 +47,7 @@
 #define ENCLAVE_ID_IOCTL m_enclave_id
 #else
 //only translate enclave id to start address for linux HW mode.
-#define ENCLAVE_ID_IOCTL (sgx_enclave_id_t)m_start_addr
+#define ENCLAVE_ID_IOCTL (sgx_enclave_id_t)((uintptr_t)m_start_addr)
 #endif
 
 class BinParser;

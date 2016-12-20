@@ -32,12 +32,18 @@
 #include <string.h>
 
 
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+extern char *_intel_fast_strrchr(const char *, int);
+#endif
 
 __weak_alias(rindex, strrchr);
 
 char *
 strrchr(const char *p, int ch)
 {
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+	return _intel_fast_strrchr(p, ch);
+#else
 	char *save;
 
 	for (save = NULL;; ++p) {
@@ -47,4 +53,5 @@ strrchr(const char *p, int ch)
 			return(save);
 	}
 	/* NOTREACHED */
+#endif	
 }

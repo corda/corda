@@ -44,10 +44,14 @@
 #include "internal/se_rwlock.h"
 
 typedef struct _epid_blob_with_cur_psvn_t{
-    uint8_t trusted_epid_blob[SGX_TRUSTED_EPID_BLOB_SIZE_PAK];
+    uint8_t trusted_epid_blob[SGX_TRUSTED_EPID_BLOB_SIZE_SDK];
     bk_platform_info_t   cur_pi;
 }epid_blob_with_cur_psvn_t;
 
+typedef struct _epid_blob_v2_with_cur_psvn_t{
+    uint8_t trusted_epid_blob[SGX_TRUSTED_EPID_BLOB_SIZE_SIK];
+    bk_platform_info_t   cur_pi;
+}epid_blob_v2_with_cur_psvn_t;
 
 #define SGX_EPID_BLOB_SIZE sizeof(epid_blob_with_cur_psvn_t)
 

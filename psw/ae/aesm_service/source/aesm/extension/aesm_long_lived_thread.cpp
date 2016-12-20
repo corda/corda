@@ -400,7 +400,7 @@ static time_t get_timeout_via_ae_error(ae_error_t ae)
     case PVE_REVOKED_ERROR:
     case PVE_MSG_ERROR:
     case PVE_PERFORMANCE_REKEY_NOT_SUPPORTED:
-    case PSW_UPDATE_REQUIRED:
+    case PSW_UPDATED_REQUIRED:
         return cur+TIMEOUT_LONG_TIME;
     default:
         return cur+TIMEOUT_SHORT_TIME;//retry quicky for unknown error

@@ -54,6 +54,8 @@ LINUX_UNITTESTS       := $(ROOT_DIR)/unittests
 
 CP    := /bin/cp -f
 MKDIR := mkdir -p
+STRIP := strip
+OBJCOPY := objcopy
 
 # clean the content of 'INCLUDE' - this variable will be set by vcvars32.bat
 # thus it will cause build error when this variable is used by our Makefile,
@@ -151,3 +153,28 @@ ENCLAVE_CXXFLAGS = $(ENCLAVE_CFLAGS) -nostdinc++
 ENCLAVE_LDFLAGS  = -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
                    -Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
                    -Wl,--defsym,__ImageBase=0
+
+
+# Choose to use the optimized libraries (IPP/String/Math) by default.
+# Users could also use the non-optimized source code version by
+# explicitly specifying 'USE_OPT_LIBS=0'
+USE_OPT_LIBS ?= 1
+
+ifeq ($(ARCH), x86_64)
+IPP_SUBDIR = intel64
+else
+IPP_SUBDIR = ia32
+endif
+
+ifneq ($(USE_OPT_LIBS), 0)
+    SGX_IPP_DIR     := $(ROOT_DIR)/external/ippcp_internal
+    SGX_IPP_INC     := $(SGX_IPP_DIR)/inc
+    IPP_LIBS_DIR    := $(SGX_IPP_DIR)/lib/linux/$(IPP_SUBDIR)
+    LD_IPP          := -lippcp -lippcore
+else
+    SGX_IPP_DIR     := $(ROOT_DIR)/external/crypto_px
+    SGX_IPP_INC     := $(SGX_IPP_DIR)/include
+    IPP_LIBS_DIR    := $(SGX_IPP_DIR)
+    LD_IPP          := -lcrypto_px
+endif
+

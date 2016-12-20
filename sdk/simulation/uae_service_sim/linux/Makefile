@@ -38,24 +38,23 @@ INCLUDES := -I..                                            \
             -I$(LINUX_SDK_DIR)/tseal                        \
             -I$(LINUX_SDK_DIR)/simulation/tinst             \
             -I$(LINUX_SDK_DIR)/simulation/urtssim           \
-            -I$(LINUX_EXTERNAL_DIR)/crypto_px/include                       \
-            -I$(LINUX_EXTERNAL_DIR)/epid/inc                \
+            -I$(SGX_IPP_INC)                                \
+            -I$(LINUX_EXTERNAL_DIR)/epid                    \
             -I$(LINUX_EXTERNAL_DIR)/rdrand/                 \
             -I$(LINUX_PSW_DIR)/ae/inc     \
             -I$(LINUX_PSW_DIR)/ae/inc/internal \
             -I$(LINUX_PSW_DIR)/ae/common  
 
-CXXFLAGS += -Wall -fPIC $(INCLUDES) -Werror
+CXXFLAGS += -Wall -fPIC $(INCLUDES) -Werror -g
 CFLAGS := $(filter-out -fPIC -Werror, $(CFLAGS)) -Wall $(INCLUDES)
 
 VERSION_SCRIPT = $(shell pwd)/uae_service_sim.linux.version
 LD_OPT_WITHVER = -Wl,--version-script=$(VERSION_SCRIPT)
 
-IPP_LIBDIR := $(LINUX_EXTERNAL_DIR)/crypto_px/
 RDRAND_LIBDIR := $(LINUX_EXTERNAL_DIR)/rdrand/src
 RDRAND_MAKEFILE := $(RDRAND_LIBDIR)/Makefile
 
-EXTERNAL_LIB += -L$(IPP_LIBDIR) -lcrypto_px
+EXTERNAL_LIB += -L$(IPP_LIBS_DIR) $(LD_IPP)
 EXTERNAL_LIB += -L$(RDRAND_LIBDIR) -lrdrand
 EXTERNAL_LIB += -L$(RDRAND_LIBDIR) -lrt
 EXTERNAL_LIB += -ldl
@@ -73,24 +72,45 @@ OBJ := $(CPP_SRC:.cpp=.o) \
        $(C_SRC:.c=.o)
 
 DLLNAME = libsgx_uae_service_sim.so
+DLLNAME_DEBUG = libsgx_uae_service_sim.so.debug
 LIBUAE_SERVICE_DEPLOY := libsgx_uae_service_deploy.so
 
 .PHONY: all
-all: $(DLLNAME) $(LIBUAE_SERVICE_DEPLOY) | $(BUILD_DIR)
+all: $(DLLNAME) $(DLLNAME_DEBUG) $(LIBUAE_SERVICE_DEPLOY) | $(BUILD_DIR)
 	$(CP) $(DLLNAME) $|
 	$(CP) $(LIBUAE_SERVICE_DEPLOY) $|
+ifndef DEBUG
+	$(CP) $(DLLNAME_DEBUG) $|
+endif
+
+ifneq ($(USE_OPT_LIBS), 0)
+$(DLLNAME): $(OBJ) -lrdrand
+	$(CXX) $(CXXFLAGS) $(OBJ) -shared $(EXTERNAL_LIB) -o $@ $(LD_OPT_WITHVER)
+else
+-lcrypto_px:
+	$(MAKE) -C $(IPP_LIBS_DIR)
 
 $(DLLNAME): $(OBJ) -lrdrand -lcrypto_px
 	$(CXX) $(CXXFLAGS) $(OBJ) -shared $(EXTERNAL_LIB) -o $@ $(LD_OPT_WITHVER)
+endif
+
+$(DLLNAME_DEBUG): $(DLLNAME)
+	((test -f $(DLLNAME_DEBUG)) || $(MAKE) separate_debug_info)
+
+.PHONY: separate_debug_info
+separate_debug_info:
+ifndef DEBUG
+	$(CP) $(DLLNAME) $(DLLNAME).orig
+	$(OBJCOPY) --only-keep-debug $(DLLNAME) $(DLLNAME_DEBUG)
+	$(STRIP) -g $(DLLNAME)
+	$(OBJCOPY) --add-gnu-debuglink=$(DLLNAME_DEBUG) $(DLLNAME)
+endif
 
 %.o: %.c
 	$(CC) $(CFLAGS) -Werror -fPIC -c $< -o $@
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
-
--lcrypto_px:
-	$(MAKE) -C $(IPP_LIBDIR)
 
 -lrdrand: $(RDRAND_MAKEFILE)
 	$(MAKE) -C $(RDRAND_LIBDIR)
@@ -112,13 +132,18 @@ $(BUILD_DIR):
 .PHONY: clean
 clean:
 	@$(RM) *.o
-	@$(RM) ../*.o
+	@$(RM) ../*.o $(DLLNAME).orig
 	@$(RM) $(DLLNAME) $(BUILD_DIR)/$(DLLNAME)
+	@$(RM) $(DLLNAME_DEBUG) $(BUILD_DIR)/$(DLLNAME_DEBUG)
 	@$(RM) $(LIBUAE_SERVICE_DEPLOY) $(BUILD_DIR)/$(LIBUAE_SERVICE_DEPLOY)
-	@$(MAKE) -C $(IPP_LIBDIR) clean
+ifeq ($(USE_OPT_LIBS), 0)
+	@$(MAKE) -C $(IPP_LIBS_DIR) clean
+endif
 ifeq ($(RDRAND_MAKEFILE), $(wildcard $(RDRAND_MAKEFILE)))
 	@$(MAKE) distclean -C $(RDRAND_LIBDIR)
 endif
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild:
+	$(MAKE) clean
+	$(MAKE) all

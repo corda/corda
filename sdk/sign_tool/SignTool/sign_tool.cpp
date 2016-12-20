@@ -153,7 +153,7 @@ static bool get_enclave_info(BinParser *parser, bin_fmt_t *bf, uint64_t * meta_o
 // measure_enclave():
 //    1. Get the enclave hash by loading enclave
 //    2. Get the enclave info - metadata offset and enclave file format
-static bool measure_enclave(uint8_t *hash, const char *dllpath, const xml_parameter_t *parameter, metadata_t *metadata, bin_fmt_t *bin_fmt, uint64_t *meta_offset)
+static bool measure_enclave(uint8_t *hash, const char *dllpath, const xml_parameter_t *parameter, bool ignore_rel_error, metadata_t *metadata, bin_fmt_t *bin_fmt, uint64_t *meta_offset)
 {
     assert(hash && dllpath && metadata && bin_fmt && meta_offset);
     bool res = false;
@@ -199,14 +199,20 @@ static bool measure_enclave(uint8_t *hash, const char *dllpath, const xml_parame
         close_handle(fh);
         return false;
     }
-
+    bool no_rel = false;
     if (*bin_fmt == BF_ELF64)
     {
-        ElfHelper<64>::dump_textrels(parser.get());
+        no_rel = ElfHelper<64>::dump_textrels(parser.get());
     }
-    else if (*bin_fmt == BF_ELF32)
+    else
+    {	
+        no_rel = ElfHelper<32>::dump_textrels(parser.get());
+    }
+    if(no_rel == false && ignore_rel_error == false)
     {
-        ElfHelper<32>::dump_textrels(parser.get());
+        close_handle(fh);
+        se_trace(SE_TRACE_ERROR, TEXT_REL_ERROR);
+        return false;
     }
 
     // Load enclave to get enclave hash
@@ -330,8 +336,8 @@ static bool fill_enclave_css(const IppsRSAPublicKeyState *pub_key, const xml_par
     }
     if(para[LAUNCHKEY].value == 1)
     {
-        enclave_css.body.attributes.flags |= SGX_FLAGS_LICENSE_KEY;
-        enclave_css.body.attribute_mask.flags |= SGX_FLAGS_LICENSE_KEY;
+        enclave_css.body.attributes.flags |= SGX_FLAGS_EINITOKEN_KEY;
+        enclave_css.body.attribute_mask.flags |= SGX_FLAGS_EINITOKEN_KEY;
     }
     if(bf == BF_PE64 || bf == BF_ELF64)
     {
@@ -644,7 +650,7 @@ static bool gen_enclave_signing_file(const enclave_css_t *enclave_css, const cha
     return true;
 }
 
-static bool cmdline_parse(unsigned int argc, char *argv[], int *mode, const char **path)
+static bool cmdline_parse(unsigned int argc, char *argv[], int *mode, const char **path, bool *ignore_rel_error)
 {
     assert(mode!=NULL && path != NULL);
     if(argc<2)
@@ -716,6 +722,12 @@ static bool cmdline_parse(unsigned int argc, char *argv[], int *mode, const char
         se_trace(SE_TRACE_ERROR, UNREC_CMD_ERROR, argv[1]);
         return false;
     }
+    unsigned int err_idx = 2;
+    for(; err_idx < argc; err_idx++)
+    {
+        if(!STRCMP(argv[err_idx], "-ignore-rel-error"))
+            break;
+    }
     
     unsigned int params_count = (unsigned)(sizeof(params_sign)/sizeof(params_sign[0]));
     unsigned int params_count_min = 0;
@@ -727,6 +739,8 @@ static bool cmdline_parse(unsigned int argc, char *argv[], int *mode, const char
             params_count_min ++;
     }
     unsigned int additional_param = 2;
+    if(err_idx != argc)
+        additional_param++;
     if(argc<params_count_min * 2 + additional_param)
         return false;
     if(argc>params_count_max * 2 + additional_param)
@@ -734,6 +748,11 @@ static bool cmdline_parse(unsigned int argc, char *argv[], int *mode, const char
 
     for(unsigned int i=2; i<argc; i=i+2)
     {
+        if(i == err_idx)
+        {
+            i++;
+            continue;
+        }
         unsigned int j=0;
         for(; j<params_count; j++)
         {
@@ -779,6 +798,8 @@ static bool cmdline_parse(unsigned int argc, char *argv[], int *mode, const char
         path[i] = params[tempmode][i].value;
     }
     *mode = tempmode;
+    if(err_idx != argc)
+       *ignore_rel_error = true; 
     return true;
 
 }
@@ -1101,14 +1122,25 @@ int main(int argc, char* argv[])
     size_t parameter_count = sizeof(parameter)/sizeof(parameter[0]);
     bin_fmt_t bin_fmt = BF_UNKNOWN;
     uint64_t meta_offset = 0;
+    bool ignore_rel_error = false;
     rsa_params_t rsa;
 
     memset(&rsa,      0, sizeof(rsa));
     memset(&metadata, 0, sizeof(metadata));
 
+#ifdef SGX_USE_OPT_LIB
+    //NOTE: 
+    //    We can not use any other Intel IPP function 
+    //    while the function ippInit() continues execution.
+    if(ippInit() != ippStsNoErr)
+    {
+        se_trace(SE_TRACE_ERROR, INIT_IPP_LIBRARY_ERROR);
+        return -1;
+    }
+#endif
 
     //Parse command line
-    if(cmdline_parse(argc, argv, &mode, path) == false)
+    if(cmdline_parse(argc, argv, &mode, path, &ignore_rel_error) == false)
     {
         se_trace(SE_TRACE_ERROR, USAGE_STRING);
         goto clear_return;
@@ -1145,7 +1177,7 @@ int main(int argc, char* argv[])
         goto clear_return;
     }
 
-    if(measure_enclave(enclave_hash, path[OUTPUT], parameter, &metadata, &bin_fmt, &meta_offset) == false)
+    if(measure_enclave(enclave_hash, path[OUTPUT], parameter, ignore_rel_error, &metadata, &bin_fmt, &meta_offset) == false)
     {
         se_trace(SE_TRACE_ERROR, OVERALL_ERROR);
         goto clear_return;

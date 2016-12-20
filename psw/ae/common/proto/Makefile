@@ -45,6 +45,8 @@ proto_sources_fullpath     := $(addprefix $(LOCAL_PATH)/, $(proto_sources))
 proto_generated_cc_sources := $(patsubst %.proto,%.pb.cc,$(proto_sources_fullpath))
 proto_generated_headers    := $(patsubst %.pb.cc,%.pb.h, $(proto_generated_cc_sources))
 
+.PHONY: all clean
+
 all: $(proto_generated_headers)
 
 $(proto_generated_headers):    %.pb.h:  %.pb.cc

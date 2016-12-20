@@ -54,6 +54,7 @@ ASM_SRCS  := $(wildcard *.S)
 OBJS      := $(CPP_SRCS:.cpp=.o)
 OBJS      += $(C_SRCS:.c=.o)
 OBJS      += $(ASM_SRCS:.S=.o)
+OBJS      := $(sort $(OBJS))
 
 LIBTRTS = libsgx_trts.a
 
@@ -87,5 +88,7 @@ clean:
 	$(MAKE) -C $(ARCH) clean
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild:
+	$(MAKE) clean
+	$(MAKE) all
 

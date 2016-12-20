@@ -40,33 +40,30 @@ else
 endif
 
 .PHONY: all
-all: $(CURL_RESULT) LE AESM COPY_PVE_QE_PCE| $(BUILD_DIR)
+all: $(CURL_RESULT) AESM COPY_AES| $(BUILD_DIR)
 
-.PHONY: COPY_PVE_QE_PCE
-COPY_PVE_QE_PCE: | $(BUILD_DIR)
+# COPY_AES: currently copy le, qe, pve, pce
+.PHONY: COPY_AES
+COPY_AES: | $(BUILD_DIR)
 	$(CP) data/prebuilt/* $(BUILD_DIR)
 
 .PHONY: AESM
-AESM: LE | $(BUILD_DIR)
+AESM: | $(BUILD_DIR)
 	$(MAKE) -C aesm_service
 	$(CP) aesm_service/config/aesmd_service/aesmd.conf $(BUILD_DIR)
 	$(CP) aesm_service/config/aesmd_service/aesmd.service $(BUILD_DIR)
-
-.PHONY: LE
-LE:
-	$(MAKE) -C le
 
 $(BUILD_DIR):
 	@$(MKDIR) $@
 
 .PHONY: clean
 clean::
-	$(MAKE) -C le                              clean
 	$(MAKE) -C aesm_service/                   clean
-	$(RM)   common/version.cpp
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild:
+	$(MAKE) clean
+	$(MAKE) all
 
 .PHONY: check_fail
 check_fail:

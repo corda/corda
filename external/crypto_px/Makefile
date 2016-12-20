@@ -31,7 +31,7 @@
 
 include ../../buildenv.mk
 
-CFLAGS += $(ENCLAVE_CFLAGS)  -D_PX
+CFLAGS += -fPIC  -D_PX
 ifeq ($(ARCH), x86_64)
 	CFLAGS += -D_ARCH_EM64T
 else

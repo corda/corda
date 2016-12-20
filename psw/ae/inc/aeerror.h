@@ -80,7 +80,7 @@ typedef enum _ae_error_t{
     /* LICENSING ENCLAVE ERROR CASES*/
     LE_UNEXPECTED_ERROR                      = 37,
     LE_INVALID_PARAMETER                     = 38,
-    LE_GET_LICENSE_KEY_ERROR                 = 39,
+    LE_GET_EINITOKEN_KEY_ERROR                 = 39,
     LE_INVALID_ATTRIBUTE                     = 40,
     LE_INVALID_PRIVILEGE_ERROR               = 41,
     LE_WHITELIST_UNINITIALIZED_ERROR         = 42,
@@ -108,7 +108,7 @@ typedef enum _ae_error_t{
     AESM_PSE_PR_GET_PRIVRL_ERROR             =199,
     AESM_NETWORK_TIMEOUT                     =200,
 
-    PSW_UPDATE_REQUIRED                      =201,
+    PSW_UPDATED_REQUIRED                     =201,
     AESM_AE_OUT_OF_EPC                       =202,
 
     PVE_PROV_ATTEST_KEY_NOT_FOUND            =203,
@@ -127,7 +127,7 @@ typedef enum _ae_error_t{
     // MORE PSE_OP ERROR CASES
     PSE_OP_ERROR_KDF_MISMATCH                =212,
 
-    LE_WHITE_LIST_HAS_BEEN_UPDATED           =213,
+    LE_WHITE_LIST_ALREADY_UPDATED            =213,
 } ae_error_t;
 
 #define AE_FAILED(x)    (AE_SUCCESS != (x))

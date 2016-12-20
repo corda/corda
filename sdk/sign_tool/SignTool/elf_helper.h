@@ -85,21 +85,29 @@ public:
         return (uint64_t)rel->r_offset;
     }
 
-    static void dump_textrels(BinParser *bp)
+    static bool dump_textrels(BinParser *bp)
     {
         vector<uint64_t> offsets;
-
+        bool no_rel = true;
         /* The dynamic_cast<> shouldn't fail. */
         elf_parser_t   * p = dynamic_cast<elf_parser_t*>(bp);
         if (p == NULL)
-            return;
-
+            return no_rel;
+        vector<const char *> sec_names;
+        p->get_executable_sections(sec_names);
         /* Warn user of TEXTRELs */
-        p->get_reloc_entry_offset(".text", offsets);
-        for (size_t idx = 0; idx < offsets.size(); ++idx)
+        for (unsigned i = 0; i< sec_names.size(); i++)
         {
-            dump_textrel(get_r_offset_from_entry(p, offsets[idx]));
+            p->get_reloc_entry_offset(sec_names[i], offsets);
+            if(offsets.size() != 0 && no_rel == true)
+                 no_rel = false;
+
+            for (size_t idx = 0; idx < offsets.size(); ++idx)
+            {
+                dump_textrel(get_r_offset_from_entry(p, offsets[idx]));
+            }
         }
+        return no_rel;
     }
 };
 

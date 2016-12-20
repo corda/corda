@@ -33,6 +33,9 @@
 
 #include <string.h>
 
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+extern int _intel_fast_memcmp(void *, void *, size_t);
+#endif
 
 /*
  * Compare memory regions.
@@ -55,5 +58,9 @@ __memcmp(const void *s1, const void *s2, size_t n)
 int
 memcmp(const void *s1, const void *s2, size_t n)
 {
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+	return _intel_fast_memcmp((void*)s1, (void*)s2, n);
+#else
 	return __memcmp(s1, s2, n);
+#endif
 }

@@ -52,3 +52,5 @@ clean: TARGET := clean
 .PHONY: $(DIRS)
 $(DIRS):
 	$(MAKE) -C $@ $(TARGET)
+
+urtssim: uae_service_sim/linux uinst tinst driver_api

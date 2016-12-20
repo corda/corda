@@ -64,4 +64,6 @@ clean:
 	@$(RM) $(LIBNAME)
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild:
+	$(MAKE) clean
+	$(MAKE) all

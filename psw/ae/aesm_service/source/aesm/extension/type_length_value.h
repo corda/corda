@@ -67,7 +67,7 @@
 
 #ifndef _PVE_TLV_H
 #define _PVE_TLV_H
-#include "epid_types.h"
+#include "epid/common/types.h"
 #include "sgx_urts.h"
 #include <string.h>
 #include <stdlib.h>
@@ -103,7 +103,7 @@ typedef enum _tlv_status_t {
 }tlv_status_t;
 
 /*usually, we could initialize header_size by UNKOWN_TLV_HEADER_SIZE
- * but sometimes, we could initialize it by LARGE_TLV_HEADER_SIZE if we want to always use 4 bytes for size even though it is small such as in EPIDSignature TLV
+ * but sometimes, we could initialize it by LARGE_TLV_HEADER_SIZE if we want to always use 4 bytes for size even though it is small such as in EpidSignature TLV
  */
 #define UNKNOWN_TLV_HEADER_SIZE 0
 #define TLV_HEADER_SIZE_OFFSET  2
@@ -127,11 +127,11 @@ typedef struct _tlv_msg_t{
     uint32_t msg_size;
 }tlv_msg_t;
 
-#define SIGRL_CERT_PREFIX_SIZE  (sizeof(se_sig_rl_t)-sizeof(SigRL))    /*size for version and type*/
-#define SIGRL_CERT_HEADER_SIZE  (sizeof(se_sig_rl_t)-sizeof(SigRLEntry))
-#define SIGRL_CERT_SIZE(sigrl_count) (sizeof(se_sig_rl_t)+((sigrl_count)-1)*sizeof(SigRLEntry)+2*SE_ECDSA_SIGN_SIZE)
-#define EPID_SIGNATURE_HEADER_SIZE (sizeof(EPIDSignature)-sizeof(NRProof))
-#define EPID_SIGNATURE_SIZE(sign_count) (sizeof(EPIDSignature)+((sign_count)-1)*sizeof(NRProof))
+#define SIGRL_CERT_PREFIX_SIZE  (sizeof(se_sig_rl_t)-sizeof(SigRl))    /*size for version and type*/
+#define SIGRL_CERT_HEADER_SIZE  (sizeof(se_sig_rl_t)-sizeof(SigRlEntry))
+#define SIGRL_CERT_SIZE(sigrl_count) (sizeof(se_sig_rl_t)+((sigrl_count)-1)*sizeof(SigRlEntry)+2*SE_ECDSA_SIGN_SIZE)
+#define EPID_SIGNATURE_HEADER_SIZE (sizeof(EpidSignature)-sizeof(NrProof))
+#define EPID_SIGNATURE_SIZE(sign_count) (sizeof(EpidSignature)+((sign_count)-1)*sizeof(NrProof))
 
 
 /*Function to decode a buffer which contains a list of TLV containers
@@ -227,17 +227,17 @@ typedef struct _tlv_nonce_t tlv_nonce_t;
 tlv_nonce_t *nonce_tlv_get_nonce(const tlv_info_t& info);
 
 /*EPID GID TLV*/
-#define EPID_GID_TLV_PAYLOAD_SIZE()                     (sizeof(GroupID))
+#define EPID_GID_TLV_PAYLOAD_SIZE()                     (sizeof(GroupId))
 #define EPID_GID_TLV_SIZE()                             get_tlv_total_size(EPID_GID_TLV_PAYLOAD_SIZE())
 struct _tlv_gid_t; /*an incomplete type for GID only*/
 typedef struct _tlv_gid_t tlv_gid_t;
 tlv_sk_t *epid_gid_tlv_get_gid(const tlv_info_t& info);
 
-/*EPID SigRL TLV*/
-#define EPID_SIGRL_TLV_PAYLOAD_SIZE(sigrl_count)        (sizeof(se_sig_rl_t)+sizeof(SigRLEntry)*(sigrl_count)-sizeof(SigRLEntry)+ECDSA_SIGN_SIZE*2)
+/*EPID SigRl TLV*/
+#define EPID_SIGRL_TLV_PAYLOAD_SIZE(sigrl_count)        (sizeof(se_sig_rl_t)+sizeof(SigRlEntry)*(sigrl_count)-sizeof(SigRlEntry)+ECDSA_SIGN_SIZE*2)
 #define EPID_SIGRL_TLV_SIZE(sigrl_count)                (sigrl_count>0?get_tlv_total_size(EPID_SIGRL_TLV_PAYLOAD_SIZE(sigrl_count)):0)
 
-/*EPID SigRL PSVN TLV*/
+/*EPID SigRl PSVN TLV*/
 #define EPID_SIGRL_PSVN_TLV_PAYLOAD_SIZE()              (sizeof(psvn_t))
 #define EPID_SIGRL_PSVN_TLV_SIZE()                      get_tlv_total_size(EPID_SIGRL_PSVN_TLV_PAYLOAD_SIZE())
 psvn_t *epid_sigrl_psvn_tlv_get_psvn(const tlv_info_t& info);
@@ -279,13 +279,13 @@ psid_t *psid_tlv_get_psid(const tlv_info_t& info);
 #define EPID_JOIN_PROOF_TLV_SIZE()                      get_tlv_total_size(EPID_JOIN_PROOF_TLV_PAYLOAD_SIZE())
 
 /*EPID Signature TLV*/
-#define EPID_SIGNATURE_TLV_PAYLOAD_SIZE(sign_count)     (sizeof(EPIDSignature)+sizeof(NRProof)*(sign_count)-sizeof(NRProof))
+#define EPID_SIGNATURE_TLV_PAYLOAD_SIZE(sign_count)     (sizeof(EpidSignature)+sizeof(NrProof)*(sign_count)-sizeof(NrProof))
 #define EPID_SIGNATURE_TLV_SIZE(sign_count)             (LARGE_TLV_HEADER_SIZE+EPID_SIGNATURE_TLV_PAYLOAD_SIZE(sign_count)) /*always use large header size for Signature TLV*/
 
 /*EPID Membership Credential TLV*/
 #define MEMBERSHIP_CREDENTIAL_TLV_PAYLOAD_SIZE()        (sizeof(membership_credential_with_escrow_t))
 #define MEMBERSHIP_CREDENTIAL_TLV_SIZE()                get_tlv_total_size(MEMBERSHIP_CREDENTIAL_TLV_PAYLOAD_SIZE())
-PElemStr *membership_credential_tlv_get_x(const tlv_info_t& info);
+FpElemStr *membership_credential_tlv_get_x(const tlv_info_t& info);
 G1ElemStr *membership_credential_tlv_get_A(const tlv_info_t& info);
 
 /*FLAGS TLV*/
@@ -363,7 +363,7 @@ public:
     tlv_status_t add_block_cipher_info(const uint8_t sk[SK_SIZE]);
     tlv_status_t add_mac(const uint8_t mac[MAC_SIZE]);
     tlv_status_t add_nonce(const uint8_t *nonce, uint32_t nonce_size);
-    tlv_status_t add_epid_gid(const GroupID& gid);
+    tlv_status_t add_epid_gid(const GroupId& gid);
     tlv_status_t add_platform_info(const bk_platform_info_t& pi);
     tlv_status_t add_pce_report_sign(const sgx_report_body_t& report, const uint8_t ecdsa_sign[64]);
     tlv_status_t add_psid(const psid_t *psid);

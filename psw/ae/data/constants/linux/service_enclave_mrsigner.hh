@@ -31,7 +31,7 @@
 
 #ifndef _SERVICE_ENCLAVE_MRSIGNER_HH_
 #define _SERVICE_ENCLAVE_MRSIGNER_HH_
-/* hard-coded mrsigner is SHA256 of CSS production signing key*/
+/* hard-coded mrsigner is SHA256 of public key of production signing key*/
 const sgx_measurement_t G_SERVICE_ENCLAVE_MRSIGNER[] =
 {
     {

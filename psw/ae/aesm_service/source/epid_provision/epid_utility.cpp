@@ -63,7 +63,7 @@ ae_error_t check_endpoint_pg_stauts(const provision_response_header_t *msg_heade
     case GRS_INTEGRITY_CHECK_FAIL:
         return PVE_INTEGRITY_CHECK_ERROR;
     case GRS_INCOMPATIBLE_VERSION://Backend report that PSW has used too old protocol, we need update PSW software
-        return PSW_UPDATE_REQUIRED;
+        return PSW_UPDATED_REQUIRED;
     case GRS_INCORRECT_SYNTAX:
         return PVE_MSG_ERROR;
     case GRS_OK:
@@ -83,7 +83,7 @@ ae_error_t check_epid_pve_pg_status_before_mac_verification(const  provision_res
     case GRS_INTEGRITY_CHECK_FAIL:
         return PVE_INTEGRITY_CHECK_ERROR;
     case GRS_INCOMPATIBLE_VERSION://Backend report that PSW has used too old protocol, we need update PSW software, no MAC provided
-        return PSW_UPDATE_REQUIRED;
+        return PSW_UPDATED_REQUIRED;
     case GRS_INCORRECT_SYNTAX:
         return PVE_MSG_ERROR;
     case GRS_OK:

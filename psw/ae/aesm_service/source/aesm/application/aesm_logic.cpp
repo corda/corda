@@ -145,12 +145,13 @@ static ae_error_t thread_to_load_qe(aesm_thread_arg_type_t arg)
         }else{
             AESM_DBG_TRACE("QE loaded successfully");
             bool resealed = false;
+            se_static_assert(SGX_TRUSTED_EPID_BLOB_SIZE_SDK>=SGX_TRUSTED_EPID_BLOB_SIZE_SIK);
             // Just take this chance to reseal EPID blob in case TCB is
             // upgraded, return value is ignored and no provisioning is
             // triggered.
             ae_ret = static_cast<ae_error_t>(CQEClass::instance().verify_blob(
                 epid_data.trusted_epid_blob,
-                SGX_TRUSTED_EPID_BLOB_SIZE_PAK,
+                SGX_TRUSTED_EPID_BLOB_SIZE_SDK,
                 &resealed));
             if(AE_SUCCESS != ae_ret)
             {
@@ -200,8 +201,9 @@ ae_error_t AESMLogic::service_start()
     ae_error_t ae_ret = AE_SUCCESS;
 
     AESM_LOG_INIT();
-
-    //ippInit();//no ippInit available for c version ipp
+#ifdef SGX_USE_OPT_LIB
+    ippInit();
+#endif
     AESM_DBG_INFO("aesm service is starting");
 
     //Try to read current active extended epid group id
@@ -743,7 +745,7 @@ aesm_error_t AESMLogic::report_attestation_status(
     return PlatformInfoLogic::report_attestation_status(platform_info, platform_info_size, attestation_status, update_info, update_info_size);
 }
 
-uint32_t AESMLogic::is_gid_matching_result_in_epid_blob(const GroupID& gid)
+uint32_t AESMLogic::is_gid_matching_result_in_epid_blob(const GroupId& gid)
 {
     AESMLogicLock lock(_qe_pve_mutex);
     EPIDBlob& epid_blob = EPIDBlob::instance();

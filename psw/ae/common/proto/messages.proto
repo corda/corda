@@ -1,3 +1,35 @@
+/*
+ * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in
+ *     the documentation and/or other materials provided with the
+ *     distribution.
+ *   * Neither the name of Intel Corporation nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+
 package aesm.message;
 
 message Request{
@@ -27,7 +59,7 @@ message Request{
     message ReportAttestationErrorRequest{
         required    bytes platform_info             = 1;
         required    uint32 attestation_error_code   = 2;
-        required    uint32 update_info_size   =3;
+        required    uint32 update_info_size         = 3;
         optional    uint32  timeout                 = 9;
     }
 
@@ -60,33 +92,33 @@ message Request{
     }
 
     message GetWhiteListSizeRequest{
-        optional    uint32  timeout        = 9;
+        optional    uint32  timeout         = 9;
     }
 
     message GetWhiteListRequest{
-        optional    uint32  white_list_size= 1;
-        optional    uint32  timeout        = 9;
+        optional    uint32  white_list_size = 1;
+        optional    uint32  timeout         = 9;
     }
 
     message SGXGetExtendedEpidGroupIdRequest{
-        optional    uint32  timeout        = 9;
+        optional    uint32  timeout         = 9;
     }
 
     message SGXSwitchExtendedEpidGroupRequest{
         optional    uint32  x_group_id      = 1;
-        optional    uint32  timeout        = 9;
+        optional    uint32  timeout         = 9;
     }
     optional    InitQuoteRequest initQuoteReq                 = 1;
     optional    GetQuoteRequest getQuoteReq                   = 2;
-    optional    GetLaunchTokenRequest getLicTokenReq         = 3;
+    optional    GetLaunchTokenRequest getLicTokenReq          = 3;
     optional    ReportAttestationErrorRequest   reportErrReq  = 4;
     optional    CreateSessionRequest createSessionReq         = 5;
     optional    InvokeServiceRequest invokeServiceReq         = 6;
     optional    ExchangeReportRequest exchangeReportReq       = 7;
     optional    CloseSessionRequest closeSessionReq           = 8;
     optional    GetPsCapRequest getPsCapReq                   = 9;
-    optional    GetWhiteListSizeRequest getWhiteListSizeReq     = 10;
-    optional    GetWhiteListRequest     getWhiteListReq         = 11;
+    optional    GetWhiteListSizeRequest getWhiteListSizeReq   = 10;
+    optional    GetWhiteListRequest     getWhiteListReq       = 11;
     optional    SGXGetExtendedEpidGroupIdRequest sgxGetExtendedEpidGroupIdReq   = 12;
     optional    SGXSwitchExtendedEpidGroupRequest sgxSwitchExtendedEpidGroupReq = 13;
 }
@@ -160,7 +192,7 @@ message Response{
     }
     optional    InitQuoteResponse initQuoteRes              = 1;
     optional    GetQuoteResponse getQuoteRes                = 2;
-    optional    GetLaunchTokenResponse getLicTokenRes      = 3;
+    optional    GetLaunchTokenResponse getLicTokenRes       = 3;
     optional    ReportAttestationErrorResponse reportErrRes = 4;
     optional    CreateSessionResponse createSessionRes      = 5;
     optional    InvokeServiceResponse invokeServiceRes      = 6;

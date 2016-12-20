@@ -64,7 +64,7 @@ TARGET      := libsgx_ptrace.so
 all: $(TARGET) install
 
 .PHONY:install
-install: | $(GDB_OUT_DIR) $(GDB_PLUGINS_FILES)
+install: $(TARGET) | $(GDB_OUT_DIR) $(GDB_PLUGINS_FILES)
 	$(CP) $(GDB_PLUGINS_FILES) $(GDB_OUT_DIR)
 	$(CP) $(TARGET) $(BUILD_DIR)
 

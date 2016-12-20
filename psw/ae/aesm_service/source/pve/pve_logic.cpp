@@ -76,7 +76,7 @@ ae_error_t PvEAESMLogic::process_pve_msg2(pve_data_t& data, const uint8_t* msg2,
     AESM_DBG_TRACE("estimate msg3 size: %d",msg_size);
 
     assert(msg_size > 0);
-    msg = reinterpret_cast<uint8_t *>(malloc(msg_size));
+    msg = static_cast<uint8_t *>(malloc(msg_size));
     if(msg == NULL){
         AESM_DBG_ERROR("malloc failed");
         ret = AE_OUT_OF_MEMORY_ERROR;
@@ -85,7 +85,7 @@ ae_error_t PvEAESMLogic::process_pve_msg2(pve_data_t& data, const uint8_t* msg2,
     memset(msg, 0, msg_size);
     AESM_DBG_TRACE("start processing msg2 and gen msg3");
     ret = static_cast<ae_error_t>(CPVEClass::instance().proc_prov_msg2(data, msg2, msg2_size,
-        epid_data.trusted_epid_blob, SGX_TRUSTED_EPID_BLOB_SIZE_PAK,//discard curpsvn in epid blob
+        epid_data.trusted_epid_blob, SGX_TRUSTED_EPID_BLOB_SIZE_SDK,//discard curpsvn in epid blob
          msg, msg_size));//with help of PvE, process ProvMsg2 and generate ProvMsg3
 
     if(ret == AE_SUCCESS){
@@ -135,7 +135,7 @@ ae_error_t PvEAESMLogic::process_pve_msg4(const pve_data_t& data, const uint8_t*
 
     //with the help of PvE to process ProvMsg4 and generate EPIDDataBlob
     if((ret = static_cast<ae_error_t>(CPVEClass::instance().proc_prov_msg4(data,  msg4, msg4_size,
-        epid_data.trusted_epid_blob, SGX_TRUSTED_EPID_BLOB_SIZE_PAK)))!=AE_SUCCESS){
+        epid_data.trusted_epid_blob, SGX_TRUSTED_EPID_BLOB_SIZE_SDK)))!=AE_SUCCESS){
             AESM_DBG_WARN("proc prov msg4 fail:%d",ret);
             goto fini;
     }
@@ -174,7 +174,7 @@ ae_error_t PvEAESMLogic::update_old_blob(pve_data_t& data, const endpoint_select
     msg_size = estimate_msg1_size(false);
     assert(msg_size > 0);
 
-    msg = reinterpret_cast<uint8_t *>(malloc(msg_size));
+    msg = static_cast<uint8_t *>(malloc(msg_size));
     if(msg == NULL){
         AESM_DBG_ERROR("malloc fail");
         ae_ret = AE_OUT_OF_MEMORY_ERROR;
@@ -272,7 +272,7 @@ aesm_error_t PvEAESMLogic::pve_error_postprocess(ae_error_t ae_error)
         return AESM_BACKEND_SERVER_BUSY;
     case AE_OUT_OF_MEMORY_ERROR:
         return AESM_OUT_OF_MEMORY_ERROR;
-    case PSW_UPDATE_REQUIRED:
+    case PSW_UPDATED_REQUIRED:
         return AESM_UPDATE_AVAILABLE;
     case AESM_AE_OUT_OF_EPC:
         return AESM_OUT_OF_EPC;

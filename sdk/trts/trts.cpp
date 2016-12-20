@@ -229,9 +229,9 @@ static uint32_t get_rand_lcg()
 {
     sgx_spin_lock(&g_seed_lock);
 
-    uint32_t& seed = g_global_data_sim.seed;
-    seed = seed * 1103515245 + 12345;
-    uint32_t n = (seed % ((uint32_t)RAND_MAX + 1));
+    uint64_t& seed = g_global_data_sim.seed;
+    seed = (uint64_t)(6364136223846793005ULL * seed + 1);
+    uint32_t n = (uint32_t)(seed >> 32);
 
     sgx_spin_unlock(&g_seed_lock);
 

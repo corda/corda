@@ -123,27 +123,27 @@ static int32_t *low_32_bits(volatile int64_t *ptr)
  */
 extern "C" int __cxa_guard_acquire(volatile int64_t *guard_object)
 {
-	char first_byte = (*guard_object) >> 56;
-	if (1 == first_byte) { return 0; }
-	int32_t *lock = low_32_bits(guard_object);
-	// Simple spin lock using the low 32 bits.  We assume that concurrent
-	// attempts to initialize statics are very rare, so we don't need to
-	// optimise for the case where we have lots of threads trying to acquire
-	// the lock at the same time.
-	while (!__sync_bool_compare_and_swap_4(lock, 0, 1))
-	{
-		if (1 == ((*guard_object) >> 56))
-		{
-			break;
-		}
-		// sched_yield need to be implemented as a OCALL, 
-		// while we try to remove OCALLs in this library.
-        //sched_yield();
-	}
-	// We have to test the guard again, in case another thread has performed
-	// the initialisation while we were trying to acquire the lock.
-	first_byte = (*guard_object) >> 56;
-	return (1 != first_byte);
+    char first_byte = (char) (*guard_object);
+    if (1 == first_byte) { return 0; }
+    int32_t *lock = low_32_bits((int64_t *)((char*)guard_object + 1));
+    // Simple spin lock using the low 32 bits.  We assume that concurrent
+    // attempts to initialize statics are very rare, so we don't need to
+    // optimise for the case where we have lots of threads trying to acquire
+    // the lock at the same time.    
+    while (!__sync_bool_compare_and_swap_4(lock, 0, 1))
+    {
+        if (1 == ((char) (*guard_object)))
+        {
+             break;
+        }
+       // sched_yield need to be implemented as a OCALL, 
+       // while we try to remove OCALLs in this library.
+       //sched_yield();        
+    }
+    // We have to test the guard again, in case another thread has performed
+    // the initialisation while we were trying to acquire the lock.
+    first_byte = (char) (*guard_object);
+    return (1 != first_byte);    
 }
 
 /**
@@ -152,8 +152,8 @@ extern "C" int __cxa_guard_acquire(volatile int64_t *guard_object)
  */
 extern "C" void __cxa_guard_abort(int64_t *guard_object)
 {
-	int32_t *lock = low_32_bits(guard_object);
-	*lock = 0;
+    int32_t *lock = low_32_bits((int64_t *)((char*)guard_object + 1));
+    *lock = 0;
 }
 /**
  * Releases the guard and marks the object as initialised.  This function is
@@ -161,9 +161,9 @@ extern "C" void __cxa_guard_abort(int64_t *guard_object)
  */
 extern "C" void __cxa_guard_release(int64_t *guard_object)
 {
-	// Set the first byte to 1
-	*guard_object |= ((int64_t)1) << 56;
-	__cxa_guard_abort(guard_object);
+    // Set the first byte to 1
+    *guard_object |= ((int64_t)1);
+    __cxa_guard_abort(guard_object);
 }
 
 #endif

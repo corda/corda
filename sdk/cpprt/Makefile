@@ -56,7 +56,7 @@ CPP_OBJS := $(CPP_SRCS:.cpp=.o)
 CC_OBJS  := $(CC_SRCS:.cc=.o)
 C_OBJS   := $(C_SRCS:.c=.o)
 
-OBJS := $(CPP_OBJS) $(C_OBJS) $(CC_OBJS)
+OBJS := $(sort $(CPP_OBJS) $(C_OBJS) $(CC_OBJS))
 
 $(C_OBJS): %.o: %.c
 	$(CC) -c  $(CFLAGS)   $(CPPFLAGS) $< -o $@

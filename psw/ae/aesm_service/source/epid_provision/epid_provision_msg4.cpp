@@ -42,12 +42,12 @@
 *
 * Untrusted Code for EPID Provision
 */
-#define MSG4_TOP_FIELDS_COUNT    3
-#define MSG4_TOP_FIELD_NONCE tlvs_msg4[0]
-#define MSG4_TOP_FIELD_DATA  tlvs_msg4[1]
-#define MSG4_TOP_FIELD_MAC   tlvs_msg4[2]
+#define MSG4_TOP_FIELDS_COUNT       3
+#define MSG4_TOP_FIELD_NONCE        tlvs_msg4[0]
+#define MSG4_TOP_FIELD_DATA         tlvs_msg4[1]
+#define MSG4_TOP_FIELD_MAC          tlvs_msg4[2]
 
-#define MSG4_FIELD1_COUNT  5
+#define MSG4_FIELD1_COUNT           5
 #define MSG4_FIELD1_PLATFORM_INFO   tlvs_field1[4]
 #define MSG4_FIELD1_Nonce2          tlvs_field1[0]
 #define MSG4_FIELD1_ENC_Axf         tlvs_field1[1]
@@ -138,8 +138,8 @@ uint32_t CPVEClass::proc_prov_msg4(
         AESM_DBG_ERROR("invalid msg4 size");
         return PVE_MSG_ERROR;
     }
-    if (blob_size != SGX_TRUSTED_EPID_BLOB_SIZE_PAK){
-        AESM_DBG_FATAL("invalid input epid blob size");
+    if (blob_size != SGX_TRUSTED_EPID_BLOB_SIZE_SDK){
+        AESM_DBG_FATAL("invalid input of epid blob size");
         return PVE_PARAMETER_ERROR;
     }
 
@@ -175,8 +175,8 @@ uint32_t CPVEClass::proc_prov_msg4(
         }
         AESM_DBG_TRACE("ProvMsg4 decoded");
         se_static_assert(sizeof(sgx_cmac_128bit_key_t)==SK_SIZE);
-        if(0!=memcpy_s(temp,sizeof(temp), data.xid, XID_SIZE)||
-            0!=memcpy_s(temp+XID_SIZE, sizeof(temp)-XID_SIZE, MSG4_TOP_FIELD_NONCE.payload, NONCE_SIZE)){
+        if(0!=memcpy_s(temp,sizeof(temp), data.xid, sizeof(data.xid))||
+            0!=memcpy_s(temp+XID_SIZE, sizeof(temp)-XID_SIZE, MSG4_TOP_FIELD_NONCE.payload, MSG4_TOP_FIELD_NONCE.size)){
                 AESM_DBG_ERROR("Fail in memcpy");
                 ret = AE_FAILURE;
                 break;
@@ -190,7 +190,7 @@ uint32_t CPVEClass::proc_prov_msg4(
         }
         se_static_assert(SK_SIZE==sizeof(sgx_aes_gcm_128bit_key_t));
         tlv_msg_t field1 = block_cipher_tlv_get_encrypted_text(MSG4_TOP_FIELD_DATA);
-        decoded_msg4 = reinterpret_cast<uint8_t *>(malloc(field1.msg_size));
+        decoded_msg4 = static_cast<uint8_t *>(malloc(field1.msg_size));
         if(NULL == decoded_msg4){
             AESM_DBG_ERROR("malloc error");
             ret = AE_OUT_OF_MEMORY_ERROR;
@@ -238,19 +238,19 @@ uint32_t CPVEClass::proc_prov_msg4(
         proc_prov_msg4_input_t msg4_input;
         tlv_msg_t Axf_data = block_cipher_tlv_get_encrypted_text(MSG4_FIELD1_ENC_Axf);
         if(0!=memcpy_s(&msg4_input.group_cert, sizeof(msg4_input.group_cert), MSG4_FIELD1_GROUP_CERT.payload, MSG4_FIELD1_GROUP_CERT.size)||
-            0!=memcpy_s(&msg4_input.n2, NONCE_2_SIZE, MSG4_FIELD1_Nonce2.payload, MSG4_FIELD1_Nonce2.size) ||
-            0!=memcpy_s(&msg4_input.equivalent_psvn, sizeof(psvn_t), platform_info_tlv_get_psvn(MSG4_FIELD1_PLATFORM_INFO), sizeof(psvn_t))||
-            0!=memcpy_s(&msg4_input.fmsp, sizeof(fmsp_t), platform_info_tlv_get_fmsp(MSG4_FIELD1_PLATFORM_INFO), sizeof(fmsp_t))||
-            0!=memcpy_s(&msg4_input.member_credential_iv, IV_SIZE, block_cipher_tlv_get_iv(MSG4_FIELD1_ENC_Axf), IV_SIZE)||
-            0!=memcpy_s(&msg4_input.encrypted_member_credential, HARD_CODED_EPID_MEMBER_WITH_ESCROW_TLV_SIZE, Axf_data.msg_buf, Axf_data.msg_size)||
-            0!=memcpy_s(&msg4_input.member_credential_mac, MAC_SIZE, MSG4_FIELD1_MAC_Axf.payload, MSG4_FIELD1_MAC_Axf.size)){
+            0!=memcpy_s(&msg4_input.n2, sizeof(msg4_input.n2), MSG4_FIELD1_Nonce2.payload, MSG4_FIELD1_Nonce2.size) ||
+            0!=memcpy_s(&msg4_input.equivalent_psvn, sizeof(msg4_input.equivalent_psvn), platform_info_tlv_get_psvn(MSG4_FIELD1_PLATFORM_INFO), sizeof(psvn_t))||
+            0!=memcpy_s(&msg4_input.fmsp, sizeof(msg4_input.fmsp), platform_info_tlv_get_fmsp(MSG4_FIELD1_PLATFORM_INFO), sizeof(fmsp_t))||
+            0!=memcpy_s(&msg4_input.member_credential_iv, sizeof(msg4_input.member_credential_iv), block_cipher_tlv_get_iv(MSG4_FIELD1_ENC_Axf), IV_SIZE)||
+            0!=memcpy_s(&msg4_input.encrypted_member_credential, sizeof(msg4_input.encrypted_member_credential), Axf_data.msg_buf, Axf_data.msg_size)||
+            0!=memcpy_s(&msg4_input.member_credential_mac, sizeof(msg4_input.member_credential_mac), MSG4_FIELD1_MAC_Axf.payload, MSG4_FIELD1_MAC_Axf.size)){
                 AESM_DBG_ERROR("memcpy error");
                 ret = PVE_UNEXPECTED_ERROR;
                 break;
         }
         if (AE_SUCCESS != (ret =XEGDBlob::instance().read(msg4_input.xegb))){
             AESM_DBG_ERROR("Fail to read extend epid blob info (ae%d)",ret);
-            return ret;
+            break;
         }
 
         ret = CPVEClass::instance().load_enclave();//Load PvE enclave now

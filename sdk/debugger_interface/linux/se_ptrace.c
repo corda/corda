@@ -41,8 +41,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdio.h>
-    #include <sys/user.h>
-    #include <sys/ptrace.h>
+#include <sys/user.h>
+#include <sys/ptrace.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -53,11 +53,11 @@
 #define ELF32_SSA_FS_OFFSET 0x34
 
 #ifdef __x86_64__
-#define SSA2USER_REG(to, from, name) to->r##name = from.r##name 
-#define USER_REG2SSA(to, from, name) to.r##name = from->r##name 
+#define SSA2USER_REG(to, from, name) to->r##name = from.r##name
+#define USER_REG2SSA(to, from, name) to.r##name = from->r##name
 #else
-#define SSA2USER_REG(to, from, name) to->e##name = from.e##name 
-#define USER_REG2SSA(to, from, name) to.e##name = from->e##name 
+#define SSA2USER_REG(to, from, name) to->e##name = from.e##name
+#define USER_REG2SSA(to, from, name) to.e##name = from->e##name
 #endif
 
 #define XSTATE_MAX_SIZE 832
@@ -70,7 +70,7 @@ typedef enum _direction_t
 
 
 typedef long int (* ptrace_t)(enum __ptrace_request request, pid_t pid,
-                                   void *addr, void *data);
+                              void *addr, void *data);
 
 static ptrace_t g_sys_ptrace = NULL;
 __attribute__((constructor)) void init()
@@ -221,7 +221,7 @@ static inline int read_ssa(pid_t pid, long tcs_addr, direction_t dir, long offse
     long addr = 0;
 
     if(!get_ssa_pos(pid, tcs_addr, dir, offset, size, &addr))
-        return FALSE; 
+        return FALSE;
 
     //read the content of ssa
     if(!se_read_process_mem(pid, (void *)addr, buf, size, NULL))
@@ -235,7 +235,7 @@ static inline int write_ssa(pid_t pid, long tcs_addr, direction_t dir, long offs
     long addr = 0;
 
     if(!get_ssa_pos(pid, tcs_addr, dir, offset, size, &addr))
-        return FALSE; 
+        return FALSE;
 
     //write the content of ssa
     if(!se_write_process_mem(pid, (void *)addr, buf, size, NULL))
@@ -377,7 +377,7 @@ static long int get_regs(pid_t pid, void* addr, void* data)
 
     if(!data)
         return -1;
-    struct user_regs_struct *regs = (struct user_regs_struct *)data;        
+    struct user_regs_struct *regs = (struct user_regs_struct *)data;
     if(-1 == (ret = g_sys_ptrace(PTRACE_GETREGS, pid, addr, data)))
         return -1;
     if(is_eresume(pid, regs))
@@ -405,7 +405,7 @@ static long int set_regs(pid_t pid, void* addr, void* data)
         return -1;
     if(is_eresume(pid, &aep_regs))
     {
-        struct user_regs_struct *regs = (struct user_regs_struct *)data;        
+        struct user_regs_struct *regs = (struct user_regs_struct *)data;
         //get tcs address
         if(-1 == (ret = set_enclave_gregs(pid, regs, aep_regs.REG(bx))))
             return -1;
@@ -490,7 +490,7 @@ static long int get_regset(pid_t pid, void* addr, void* data)
         }
         struct iovec *iov = (struct iovec *)data;
         if(iov->iov_base && iov->iov_len
-            && get_ssa_xstate(pid, regs.REG(bx), iov->iov_len, (char *)iov->iov_base))
+                && get_ssa_xstate(pid, regs.REG(bx), iov->iov_len, (char *)iov->iov_base))
         {
             return 0;
         }
@@ -523,7 +523,7 @@ static long int set_regset(pid_t pid, void* addr, void* data)
         }
         struct iovec *iov = (struct iovec *)data;
         if(iov->iov_base && iov->iov_len
-            && set_ssa_xstate(pid, regs.REG(bx), iov->iov_len, (char *)iov->iov_base))
+                && set_ssa_xstate(pid, regs.REG(bx), iov->iov_len, (char *)iov->iov_base))
         {
             return 0;
         }

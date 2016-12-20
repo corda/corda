@@ -32,16 +32,11 @@
 
 include ../../buildenv.mk
 
-CRYPTO_PATH = $(LINUX_EXTERNAL_DIR)/crypto_px
 
 CXXFLAGS += -Werror -fno-rtti -fno-exceptions -fPIC
 
-CPPFLAGS := -isystem $(CRYPTO_PATH)/include \
+CPPFLAGS := -isystem $(SGX_IPP_INC) \
             -I$(COMMON_DIR)/inc/internal/           
-
-IPPFLAGS := -Wl,--start-group  \
-            $(CRYPTO_PATH)/libcrypto_px.a \
-            -Wl,--end-group 
 
 OBJS := sample_libcrypto.o
 
@@ -54,20 +49,29 @@ $(BUILD_DIR):
 all: $(LIBSAMPLECRYPTO) | $(BUILD_DIR)
 	@$(CP) $< $|
 
-libcrypto_px:
-	$(MAKE) -C $(CRYPTO_PATH)
+ifneq ($(USE_OPT_LIBS), 0) 
+$(LIBSAMPLECRYPTO): $(OBJS)
+	$(CXX) $(CXXFLAGS) -shared -Bdynamic -Wl,-soname,$(LIBSAMPLECRYPTO) $< -o $@ -L$(IPP_LIBS_DIR) $(LD_IPP) -Wl,--version-script,sample_libcrypto.lds	
 
-# It's important that the IPPFLAGS go AFTER the .o / .cpp file(s)
+else
+libcrypto_px:
+	$(MAKE) -C $(SGX_IPP_DIR)
+
 $(LIBSAMPLECRYPTO): $(OBJS) libcrypto_px
-	$(CXX) $(CXXFLAGS) -shared -Bdynamic -Wl,-soname,$(LIBSAMPLECRYPTO) $< -o $@ $(IPPFLAGS) -Wl,--version-script,sample_libcrypto.lds
+	$(CXX) $(CXXFLAGS) -shared -Bdynamic -Wl,-soname,$(LIBSAMPLECRYPTO) $< -o $@ -L$(IPP_LIBS_DIR) $(LD_IPP) -Wl,--version-script,sample_libcrypto.lds
+endif
 
 $(OBJS): %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 .PHONY: clean
 clean:
-	$(MAKE) -C $(CRYPTO_PATH)  clean
+ifeq ($(USE_OPT_LIBS), 0)
+	$(MAKE) -C $(SGX_IPP_DIR)  clean
+endif
 	@$(RM) $(OBJS) $(LIBSAMPLECRYPTO) $(BUILD_DIR)/$(LIBSAMPLECRYPTO)
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild:
+	$(MAKE) clean
+	$(MAKE) all

@@ -77,7 +77,7 @@ endif
 
 .PHONY: all run
 
-all: $(enclaveName).sgx.static.lib.a
+all: lib$(enclaveName).sgx.static.lib.a
 
 ######## $(enclaveName) Objects ########
 
@@ -97,8 +97,8 @@ static_trusted/%.o: static_trusted/%.c
 	@$(CC) $($(EnclaveName)_C_Flags) -c $< -o $@
 	@echo "CC  <=  $<"
 
-$(enclaveName).sgx.static.lib.a: static_trusted/$(enclaveName)_t.h $($(EnclaveName)_Cpp_Objects) $($(EnclaveName)_C_Objects)
-	ar rcs $(enclaveName).sgx.static.lib.a $($(EnclaveName)_Cpp_Objects) $($(EnclaveName)_C_Objects)  
+lib$(enclaveName).sgx.static.lib.a: static_trusted/$(enclaveName)_t.h $($(EnclaveName)_Cpp_Objects) $($(EnclaveName)_C_Objects)
+	ar rcs lib$(enclaveName).sgx.static.lib.a $($(EnclaveName)_Cpp_Objects) $($(EnclaveName)_C_Objects)  
 	@echo "LINK =>  $@"
 
 clean:

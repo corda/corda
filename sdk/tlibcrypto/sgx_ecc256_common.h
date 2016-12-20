@@ -35,7 +35,6 @@
 
 #include "sgx_trts.h"
 #include "sgx_tcrypto.h"
-#include "sgx_tcrypto_internal.h"
 #include "ippcp.h"
 #include "util.h"
 #include "stdlib.h"

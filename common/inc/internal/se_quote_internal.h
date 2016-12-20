@@ -33,7 +33,7 @@
 #define _SE_QUOTE_INTERNAL_H_
 
 #include "se_types.h"
-#include "epid_types.h"
+#include "epid/common/types.h"
 
 #ifdef  __cplusplus
 extern "C" {

@@ -50,29 +50,13 @@ static int set_global_feature_indicator(uint64_t feature_bit_array, uint64_t xfr
         // clear the reserved bits
         feature_bit_array = feature_bit_array & (~(RESERVED_CPU_FEATURE_BIT));
     }
-    ;
-    
-    
-#ifdef SE_SIM
-    // Simulation mode - requires SSE for x86 and SSE2 for x64.
-#ifdef SE_32
-    if(!(feature_bit_array & ~(CPU_FEATURE_SSE - 1)))
+
+    // Requires SSE4.1. Take SSE4.1 as the baseline.
+    if(!(feature_bit_array & ~(CPU_FEATURE_SSE4_1 - 1)))
     {
         return -1;
     }
-#else
-    if(!(feature_bit_array & ~(CPU_FEATURE_SSE2 - 1)))
-    {
-        return -1;
-    }
-#endif
-#else
-    // HW mode - requires SSE4.2. Take SSE4.2 as the baseline.
-    if(!(feature_bit_array & ~(CPU_FEATURE_SSE4_2 - 1)))
-    {
-        return -1;
-    }
-#endif
+
     // Check for inconsistencies in the CPUID feature mask.
     if ( (((feature_bit_array & CPU_FEATURE_SSE) == CPU_FEATURE_SSE) &&((feature_bit_array & (CPU_FEATURE_SSE - 1)) != (CPU_FEATURE_SSE - 1))) || 
         (((feature_bit_array & CPU_FEATURE_SSE2) == CPU_FEATURE_SSE2) &&((feature_bit_array & (CPU_FEATURE_SSE2 - 1)) != (CPU_FEATURE_SSE2 - 1))) ||

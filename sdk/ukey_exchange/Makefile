@@ -38,7 +38,7 @@ CXXFLAGS += -Werror
 INCLUDE += -I$(COMMON_DIR)/inc/internal \
            -I$(COMMON_DIR)/inc
 
-INCLUDE += -I$(LINUX_EXTERNAL_DIR)/crypto_px/include 
+INCLUDE += -I$(SGX_IPP_INC) 
 
 vpath %.cpp $(COMMON_DIR)/src
 
@@ -67,4 +67,6 @@ clean:
 	@$(RM) $(LIBNAME) $(BUILD_DIR)/$(LIBNAME)
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild:
+	$(MAKE) clean
+	$(MAKE) all

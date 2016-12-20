@@ -11,7 +11,7 @@ TRUNK_HOME=$(cd $(pwd)/../../ ; pwd)
 [ -n "${ECLIPSE_HOME}" ] || { echo "using default ECLIPSE_HOME=${TRUNK_HOME}/eclipse"; ECLIPSE_HOME=${TRUNK_HOME}/eclipse; }
 
 
-BUILD_RELEASE_ID_PREFIX=Linux_SGX_1.6
+BUILD_RELEASE_ID_PREFIX=Linux_SGX_1.5
 
 if [ "$RELEASE_ID" != "${RELEASE_ID%$BUILD_RELEASE_ID_PREFIX*}" ]; then
     echo "$BUILD_RELEASE_ID_PREFIX IS in $RELEASE_ID, so it is an triggered build. Change the RELEASE_ID to an accepted form."

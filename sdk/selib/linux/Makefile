@@ -58,4 +58,6 @@ clean:
 	@$(RM) $(OBJS) $(LIBSELIB)
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild: 
+	$(MAKE) clean 
+	$(MAKE) all

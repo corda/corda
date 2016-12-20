@@ -101,6 +101,22 @@ void* CLoader::get_symbol_address(const char * const symbol)
     return GET_PTR(void, m_start_addr, rva);
 }
 
+// is_relocation_page returns true if the specified RVA is a writable relocation page based on the bitmap.
+bool CLoader::is_relocation_page(const uint64_t rva, vector<uint8_t> *bitmap)
+{
+    uint64_t page_frame = rva >> SE_PAGE_SHIFT;
+    //NOTE:
+    //  Current enclave size is not beyond 128G, so the type-casting from (uint64>>15) to (size_t) is OK.
+    //  In the future, if the max enclave size is extended to beyond (1<<49), this type-casting will not work.
+    //  It only impacts the enclave signing process. (32bit signing tool to sign 64 bit enclaves)
+    size_t index = (size_t)(page_frame / 8);
+    if(bitmap && (index < bitmap->size()))
+    {
+        return ((*bitmap)[index] & (1 << (page_frame % 8)));
+    }
+    return false;
+}
+
 int CLoader::build_mem_region(const section_info_t &sec_info)
 {
     int ret = SGX_SUCCESS;
@@ -115,9 +131,9 @@ int CLoader::build_mem_region(const section_info_t &sec_info)
     {
         uint64_t rva = sec_info.rva + offset;
         uint64_t size = MIN((SE_PAGE_SIZE - PAGE_OFFSET(rva)), (sec_info.raw_data_size - offset));
-
         sinfo.flags = sec_info.flag;
-        if (is_relocation_page(rva, sec_info.bitmap))
+
+        if(is_relocation_page(rva, sec_info.bitmap))
             sinfo.flags = sec_info.flag | SI_FLAG_W;
 
         if (size == SE_PAGE_SIZE)
@@ -127,13 +143,11 @@ int CLoader::build_mem_region(const section_info_t &sec_info)
         if(SGX_SUCCESS != ret)
             return ret;
 
-        // The only time we aren't guaranteed to advance the offset by a full
-        // page is when the rva to be added starts in the middle of a page, as
-        // offset is always advanced to the next page boundary.  The only case
-        // where the rva can start in the middle of the page is for the initial
-        // rva, i.e. offset == 0.
-        offset += (offset == 0) ? size : SE_PAGE_SIZE;
+        // only the first time that rva may be not page aligned
+        offset += SE_PAGE_SIZE - PAGE_OFFSET(rva);
     }
+    
+    assert(IS_PAGE_ALIGNED(sec_info.rva + offset));
 
     // Add any remaining uninitialized data.  We can call build_pages directly
     // even if there are partial pages since the source is null, i.e. everything
@@ -161,6 +175,9 @@ int CLoader::build_sections(vector<uint8_t> *bitmap)
 
     for(unsigned int i = 0; i < sections.size() ; i++)
     {
+        
+        
+        
         if((last_section != NULL) &&
            (ROUND_TO_PAGE(last_section->virtual_size() + last_section->get_rva()) < ROUND_TO_PAGE(ROUND_TO_PAGE(last_section->virtual_size()) + last_section->get_rva())) &&
            (ROUND_TO_PAGE(last_section->get_rva() + last_section->virtual_size()) < (sections[i]->get_rva() & (~(SE_PAGE_SIZE - 1)))))
@@ -181,9 +198,12 @@ int CLoader::build_sections(vector<uint8_t> *bitmap)
         }
 
         section_info_t sec_info = { sections[i]->raw_data(), sections[i]->raw_data_size(), sections[i]->get_rva(), sections[i]->virtual_size(), sections[i]->get_si_flags(), bitmap };
+
         if(SGX_SUCCESS != (ret = build_mem_region(sec_info)))
             return ret;
     }
+    
+    
     
     if((last_section != NULL) &&
        (ROUND_TO_PAGE(last_section->virtual_size() + last_section->get_rva()) < ROUND_TO_PAGE(ROUND_TO_PAGE(last_section->virtual_size()) + last_section->get_rva())))
@@ -429,22 +449,6 @@ bool CLoader::is_enclave_buffer(uint64_t offset, uint64_t size)
     }
     return true;
 }
-
-// is_relocation_page returns true if the specified RVA is a writable relocation page based on the bitmap.
-bool CLoader::is_relocation_page(const uint64_t rva, vector<uint8_t> *bitmap)
-{
-    uint64_t page_frame = rva >> SE_PAGE_SHIFT;
-    //NOTE:
-    //  Current enclave size is not beyond 128G, so the type-casting from (uint64>>15) to (size_t) is OK.
-    //  In the future, if the max enclave size is extended to beyond (1<<49), this type-casting will not work.
-    //  It only impacts the enclave signing process. (32bit signing tool to sign 64 bit enclaves)
-    size_t index = (size_t)(page_frame / 8);
-    if(bitmap && (index < bitmap->size()))
-    {
-        return ((*bitmap)[index] & (1 << (page_frame % 8)));
-    }
-    return false;
-}
 int CLoader::validate_layout_table()
 {
     layout_t *layout_start = GET_PTR(layout_t, m_metadata, m_metadata->dirs[DIR_LAYOUT].offset);
@@ -618,7 +622,7 @@ int CLoader::load_enclave(SGXLaunchToken *lc, int debug, const metadata_t *metad
     }
 
     ret = build_image(lc, &sgx_misc_attr.secs_attr, prd_css_file, &sgx_misc_attr);
-    //Update misc_attr with secs.attr upon success.
+    // Update misc_attr with secs.attr upon success.
     if(SGX_SUCCESS == ret)
     {
         if(misc_attr)
@@ -763,7 +767,7 @@ int CLoader::set_context_protection(layout_t *layout_start, layout_t *layout_end
             {
                 SE_TRACE(SE_TRACE_WARNING, "mprotect(rva=%" PRIu64 ", len=%" PRIu64 ", flags=%d) failed\n",
                          (uint64_t)m_start_addr + layout->entry.rva + delta, 
-                         (uint64_t)layout->entry.page_count << SE_PAGE_SHIFT,
+                         (uint64_t)layout->entry.page_count << SE_PAGE_SHIFT, 
                           prot);
                 return SGX_ERROR_UNEXPECTED;
             }

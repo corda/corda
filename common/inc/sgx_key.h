@@ -43,7 +43,7 @@
 #include "sgx_attributes.h"
 
 /* Key Name */
-#define SGX_KEYSELECT_LICENSE          0x0000
+#define SGX_KEYSELECT_EINITOKEN        0x0000
 #define SGX_KEYSELECT_PROVISION        0x0001
 #define SGX_KEYSELECT_PROVISION_SEAL   0x0002
 #define SGX_KEYSELECT_REPORT           0x0003
@@ -73,15 +73,15 @@ typedef struct _sgx_key_id_t
 
 typedef struct _key_request_t
 {
-   uint16_t                        key_name;        /* Identifies the key required */
-   uint16_t                        key_policy;      /* Identifies which inputs should be used in the key derivation */
-   sgx_isv_svn_t                   isv_svn;         /* Security Version of the Enclave */
-   uint16_t                        reserved1;       /* Must be 0 */
-   sgx_cpu_svn_t                   cpu_svn;         /* Security Version of the CPU */
-   sgx_attributes_t                attribute_mask;  /* Mask which ATTRIBUTES Seal keys should be bound to */
-   sgx_key_id_t                    key_id;          /* Value for key wear-out protection */
-   sgx_misc_select_t               misc_mask;       /* Mask what MISCSELECT Seal keys bound to */
-   uint8_t                         reserved2[SGX_KEY_REQUEST_RESERVED2_BYTES];  /* Struct size is 512 bytes */
+    uint16_t                        key_name;        /* Identifies the key required */
+    uint16_t                        key_policy;      /* Identifies which inputs should be used in the key derivation */
+    sgx_isv_svn_t                   isv_svn;         /* Security Version of the Enclave */
+    uint16_t                        reserved1;       /* Must be 0 */
+    sgx_cpu_svn_t                   cpu_svn;         /* Security Version of the CPU */
+    sgx_attributes_t                attribute_mask;  /* Mask which ATTRIBUTES Seal keys should be bound to */
+    sgx_key_id_t                    key_id;          /* Value for key wear-out protection */
+    sgx_misc_select_t               misc_mask;       /* Mask what MISCSELECT Seal keys bound to */
+    uint8_t                         reserved2[SGX_KEY_REQUEST_RESERVED2_BYTES];  /* Struct size is 512 bytes */
 } sgx_key_request_t;
 
 

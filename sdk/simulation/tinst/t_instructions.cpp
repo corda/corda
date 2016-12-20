@@ -177,8 +177,8 @@ static int _EGETKEY(sgx_key_request_t* kr, sgx_key_128bit_t okey)
         memcpy(&dd.ddrk.key_id, &kr->key_id, sizeof(sgx_key_id_t));
         break;
 
-    case SGX_KEYSELECT_LICENSE:
-        check_attr_flag(cur_secs, SGX_FLAGS_LICENSE_KEY);
+    case SGX_KEYSELECT_EINITOKEN:
+        check_attr_flag(cur_secs, SGX_FLAGS_EINITOKEN_KEY);
         check_isv_svn(kr, cur_secs);
         check_cpu_svn(kr);
 

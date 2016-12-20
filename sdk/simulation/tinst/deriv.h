@@ -71,7 +71,7 @@ typedef struct {
 
 /* Derive data for license key */
 typedef struct {
-    uint16_t          key_name;        /* should always be 'SGX_KEYSELECT_LICENSE' */
+    uint16_t          key_name;        /* should always be 'SGX_KEYSELECT_EINITOKEN' */
     sgx_attributes_t  attributes;      /* attributes from SECS */
     se_owner_epoch_t  csr_owner_epoch;
     sgx_cpu_svn_t     cpu_svn;         /* CPUSVN from KEYREQUEST */

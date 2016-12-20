@@ -77,10 +77,17 @@ cont:
 	/* NOTREACHED */
 }
 
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+extern char *_intel_fast_strtok(char *, const char *);
+#endif
 
 char *
 strtok(char *s, const char *delim)
 {
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+	return _intel_fast_strtok(s, delim);
+#else
 	static _TLIBC_THREAD_ char *last = NULL;
 	return strtok_r(s, delim, &last);
+#endif
 }

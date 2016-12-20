@@ -51,28 +51,17 @@ INCLUDE += -I$(LINUX_PSW_DIR)/ae/common \
            -I$(LINUX_PSW_DIR)/ae/inc/internal    \
            -I$(LINUX_SDK_DIR)/tseal
 
-INCLUDE += -I$(LINUX_EXTERNAL_DIR)/epid/inc \
+INCLUDE += -I$(LINUX_EXTERNAL_DIR)/epid     \
            -I$(IPC_COMMON_INC_DIR) \
            -I$(UAE_INC_DIR) \
            -I$(IPC_COMMON_PROTO_DIR) \
            -I$(LINUX_PSW_DIR)/ae/aesm_service/source
 
-CXXFLAGS += -fPIC -Werror
-PROTPBUF_CXXFLAGS := -fstack-protector -fPIC -Wall -Werror
-ifdef DEBUG
-	PROTPBUF_CXXFLAGS += -ggdb -DDEBUG -UNDEBUG
-else
-	PROTPBUF_CXXFLAGS += -O2 -UDEBUG -DNDEBUG
-endif
-ifeq ($(ARCH), x86)
-	PROTPBUF_CXXFLAGS += -m32
-else
-	PROTPBUF_CXXFLAGS += -m64
-endif
+CXXFLAGS += -fPIC -Werror -g
 
 EXTERNAL_LIB += -lprotobuf 
  
-vpath %.cpp .. $(COMMON_DIR)/src  $(IPC_COMMON_SRC_DIR) $(IPC_COMMON_PROTO_DIR) $(UAE_SRC_DIR) $(COMMON_DIR)/src $(AE_COMMON_DIR)
+vpath %.cpp .. $(COMMON_DIR)/src  $(IPC_COMMON_SRC_DIR) $(IPC_COMMON_PROTO_DIR) $(UAE_SRC_DIR) $(AE_COMMON_DIR)
 
 
 
@@ -125,8 +114,10 @@ SRC :=       AEInternalServicesProvider.cpp \
 OBJ := $(SRC:.cpp=.o) $(IPC_SRC:.cpp=.o)  $(PROTOBUF_SRC:.cc=.o) 
 
 LDUFLAGS:= -pthread -L$(BUILD_DIR)
+LDUFLAGS += -Wl,--version-script=uae_service.lds
 
 DLLNAME  = libsgx_uae_service.so
+DLLNAME_DEBUG  = libsgx_uae_service.so.debug
 
 
 .PHONY: all
@@ -134,28 +125,48 @@ all:  install_dll
  
 
 .PHONY: install_dll
-install_dll: $(DLLNAME)| $(BUILD_DIR)
-	@$(CP) $^ $|
+install_dll: $(DLLNAME) $(DLLNAME_DEBUG) | $(BUILD_DIR)
+	@$(CP) $(DLLNAME) $|
+ifndef DEBUG
+	@$(CP) $(DLLNAME_DEBUG) $|
+endif
 
 $(DLLNAME): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -shared $(LDUFLAGS) $(EXTERNAL_LIB) -o $@
+$(DLLNAME_DEBUG): $(DLLNAME)
+	((test -f $(DLLNAME_DEBUG)) || $(MAKE) separate_debug_info)
 
-%.o :%.cpp PROTPBUF
+.PHONY: separate_debug_info
+separate_debug_info:
+ifndef DEBUG
+	$(CP) $(DLLNAME) $(DLLNAME).orig
+	$(OBJCOPY) --only-keep-debug $(DLLNAME) $(DLLNAME_DEBUG)
+	$(STRIP) -g $(DLLNAME)
+	$(OBJCOPY) --add-gnu-debuglink=$(DLLNAME_DEBUG) $(DLLNAME)
+endif
+
+ProtobufSerializer.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
+AEServicesImpl.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
+
+messages.pb.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
+	$(CXX) $(filter-out -Wshadow, $(CXXFLAGS)) -c $< -o $@
+%.o :%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
 
 $(BUILD_DIR):
 	@$(MKDIR) $@
 
-.PHONY: PROTPBUF
-PROTPBUF:
+$(IPC_COMMON_PROTO_DIR)/messages.pb.cc: $(IPC_COMMON_PROTO_DIR)/messages.proto 
 	$(MAKE) -C $(IPC_COMMON_PROTO_DIR) 
-	(test -f messages.pb.o) || ($(CXX) $(PROTPBUF_CXXFLAGS) -c $(IPC_COMMON_PROTO_DIR)/messages.pb.cc -o messages.pb.o)
 
 .PHONY: clean
 clean:
 	$(MAKE) -C $(IPC_COMMON_PROTO_DIR) clean
-	@$(RM) $(OBJ)
+	@$(RM) $(OBJ) $(DLLNAME).orig
 	@$(RM) $(DLLNAME) $(BUILD_DIR)/$(DLLNAME) 
+	@$(RM) $(DLLNAME_DEBUG) $(BUILD_DIR)/$(DLLNAME_DEBUG)
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild:
+	$(MAKE) clean
+	$(MAKE) all

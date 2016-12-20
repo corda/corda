@@ -36,10 +36,10 @@ CXXFLAGS += -DDISABLE_TRACE
 CFLAGS += -DDISABLE_TRACE
 endif
 
-CXXFLAGS += -fPIC -Werror
+CXXFLAGS += -fPIC -Werror -g
 CXXFLAGS += $(ADDED_INC)
 
-CFLAGS += -fPIC -Werror
+CFLAGS += -fPIC -Werror -g
 CFLAGS += $(ADDED_INC)
 
 VTUNE_DIR = $(LINUX_EXTERNAL_DIR)/vtune/linux
@@ -57,6 +57,7 @@ LDFLAGS := -lwrapper
 LDFLAGS += -Wl,-Bdynamic -lsgx_uae_service
 
 LDFLAGS += -L$(VTUNE_DIR)/sdk/src/ittnotify -littnotify -ldl
+LDFLAGS += -Wl,--version-script=urts.lds
 
 DIR1 := $(LINUX_PSW_DIR)/urts/linux
 DIR2 := $(LINUX_PSW_DIR)/urts
@@ -105,18 +106,34 @@ vpath %.cpp $(DIR1):$(DIR2):$(DIR3):$(DIR4)
 LIBWRAPPER       := libwrapper.a
 LIBURTS          := libsgx_urts.so
 LIBURTS_INTERNAL := liburts_internal.a
+LIBURTS_DEBUG    := libsgx_urts.so.debug
 
 .PHONY: all
-all: $(LIBWRAPPER) uae_service ittnotify $(LIBURTS) $(LIBURTS_INTERNAL) | $(BUILD_DIR)
+all: $(LIBURTS) $(LIBURTS_INTERNAL) $(LIBURTS_DEBUG) | $(BUILD_DIR)
 	@$(CP) $(LIBURTS)          $|
 	@$(CP) $(LIBURTS_INTERNAL) $|
+ifndef DEBUG
+	@$(CP) $(LIBURTS_DEBUG)    $|
+endif
 
-$(LIBURTS_INTERNAL): $(INTERNAL_OBJ)
+$(LIBURTS_INTERNAL): $(INTERNAL_OBJ) $(LIBWRAPPER)
 	$(CP) $(COMMON_DIR)/se_wrapper/libwrapper.a $@
-	$(AR) rcs $@ $^
+	$(AR) rcs $@ $(INTERNAL_OBJ)
 
-$(LIBURTS): $(URTS_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -Wl,-soname=$@ $(LIB) -o $@  $^ $(LDFLAGS)
+$(LIBURTS): $(URTS_OBJ) $(LIBWRAPPER) uae_service ittnotify
+	$(CXX) $(CXXFLAGS) -shared -Wl,-soname=$@ $(LIB) -o $@  $(URTS_OBJ) $(LDFLAGS)
+
+$(LIBURTS_DEBUG): $(LIBURTS)
+	((test -f $(LIBURTS_DEBUG)) || $(MAKE) separate_debug_info)
+
+.PHONY: separate_debug_info
+separate_debug_info:
+ifndef DEBUG
+	$(CP) $(LIBURTS) $(LIBURTS).orig
+	$(OBJCOPY) --only-keep-debug $(LIBURTS) $(LIBURTS_DEBUG)
+	$(STRIP) -g $(LIBURTS)
+	$(OBJCOPY) --add-gnu-debuglink=$(LIBURTS_DEBUG) $(LIBURTS)
+endif
 
 $(CPP_OBJ): %.o: %.cpp
 	$(CXX) -c $(CXXFLAGS) $(INC) $< -o $@
@@ -140,8 +157,9 @@ $(BUILD_DIR):
 
 .PHONY: clean
 clean::
-	@$(RM) *.o $(LIBURTS) $(LIBURTS_INTERNAL)
+	@$(RM) *.o $(LIBURTS) $(LIBURTS_INTERNAL) $(LIBURTS_DEBUG)
 	@$(RM) $(BUILD_DIR)/$(LIBURTS) $(BUILD_DIR)/$(LIBURTS_INTERNAL)
+	@$(RM) $(LIBURTS).orig $(BUILD_DIR)/$(LIBURTS_DEBUG)
 	$(MAKE) -C $(COMMON_DIR)/se_wrapper/                   clean
 	$(MAKE) -C $(LINUX_PSW_DIR)/uae_service/linux/         clean
 	$(MAKE) -C $(VTUNE_DIR)/sdk/src/ittnotify              clean

@@ -38,10 +38,16 @@
  * are written at dst (at most n+1 bytes being appended).  Return dst.
  */
 
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+extern char *_intel_fast_strncat(char *, const char *, size_t);
+#endif
 
 char *
 strncat(char *dst, const char *src, size_t n)
 {
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+	return _intel_fast_strncat(dst, src, n);
+#else
 	if (n != 0) {
 		char *d = dst;
 		const char *s = src;
@@ -56,4 +62,5 @@ strncat(char *dst, const char *src, size_t n)
 		*d = 0;
 	}
 	return (dst);
+#endif
 }

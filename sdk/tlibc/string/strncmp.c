@@ -31,10 +31,16 @@
 
 #include <string.h>
 
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+extern int _intel_fast_strncmp(const char *, const char *, size_t);
+#endif
 
 int
 strncmp(const char *s1, const char *s2, size_t n)
 {
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+	return _intel_fast_strncmp(s1, s2, n);
+#else
 	if (n == 0)
 		return (0);
 	do {
@@ -44,4 +50,5 @@ strncmp(const char *s1, const char *s2, size_t n)
 			break;
 	} while (--n != 0);
 	return (0);
+#endif
 }

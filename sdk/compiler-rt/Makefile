@@ -36,7 +36,7 @@ CPPFLAGS += $(ADDED_INC)                \
             -I$(COMMON_DIR)/inc/tlibc/
 
 SRCS := $(wildcard *.c)
-OBJS := $(SRCS:.c=.o)
+OBJS := $(sort $(SRCS:.c=.o))
 
 TARGET  := libcompiler-rt.a
 

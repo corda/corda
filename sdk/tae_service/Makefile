@@ -46,7 +46,7 @@ INCLUDE += -I$(LINUX_PSW_DIR)/ae/common \
            -I$(LINUX_PSW_DIR)/ae/inc/internal
 #           -I$(LINUX_PSW_DIR)/ae/pse/pse_op
 
-INCLUDE += -I$(LINUX_EXTERNAL_DIR)/crypto_px/include
+INCLUDE += -I$(SGX_IPP_INC)
 
 vpath %.cpp $(COMMON_DIR)/src:\
             $(LINUX_PSW_DIR)/ae/common:\
@@ -63,7 +63,7 @@ EC_DH_LIB     := $(EC_DH_LIB_DIR)/libsgx_dh.a
 SRC := $(wildcard *.cpp)
 SRC += dh.cpp
 
-OBJ := $(SRC:.cpp=.o)
+OBJ := $(sort $(SRC:.cpp=.o))
 
 LIBNAME := libtae_service.a
 
@@ -76,11 +76,12 @@ $(AENAME)_t.h: $(EDLFILE) $(EDGER8R)
 $(EDGER8R):
 	$(MAKE) -C $(EDGER8R_DIR)
 
-$(LIBNAME): $(AENAME)_t.h $(OBJ)
+$(LIBNAME): $(OBJ)
 	$(MAKE) -C $(EC_DH_LIB_DIR)
 	$(CP) $(EC_DH_LIB) $@
 	$(AR) rs $@ $(OBJ)
 
+$(OBJ): $(AENAME)_t.h
 $(OBJ): %.o :%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE)  -c $< -o $@
 
@@ -94,4 +95,6 @@ clean:
 	$(MAKE) -C $(EDGER8R_DIR) clean
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild:
+	$(MAKE) clean
+	$(MAKE) all

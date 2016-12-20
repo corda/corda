@@ -34,7 +34,7 @@
 #define _SE_SIG_RL_H_
 
 #include "se_types.h"
-#include "epid_types.h"
+#include "epid/common/types.h"
 #include "sgx_error.h"
 
 #ifdef  __cplusplus
@@ -52,7 +52,7 @@ extern "C" {
 typedef struct _se_sig_rl_t {
     uint16_t  protocol_version;   /* Big-endian*/
     uint16_t  epid_identifier;    /* Big-endian, 14 for sig_rl.*/
-    SigRL sig_rl;
+    SigRl sig_rl;
 }se_sig_rl_t;
 
 typedef struct _se_ae_ecdsa_hash_t {

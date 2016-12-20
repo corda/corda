@@ -168,24 +168,24 @@
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-		<project id="SimpleEnclave.null.1312290154" name="SimpleEnclave"/>
+		<project id="RemoteAttestation.null.1312290154" name="RemoteAttestation"/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="refreshScope" versionNumber="2">
 		<configuration configurationName="SGX Debug HW Mode">
-			<resource resourceType="PROJECT" workspacePath="/SimpleEnclave"/>
+			<resource resourceType="PROJECT" workspacePath="/RemoteAttestation"/>
 		</configuration>
 		<configuration configurationName="SGX Debug Sim Mode">
-			<resource resourceType="PROJECT" workspacePath="/SimpleEnclave"/>
+			<resource resourceType="PROJECT" workspacePath="/RemoteAttestation"/>
 		</configuration>
 		<configuration configurationName="Debug">
-			<resource resourceType="PROJECT" workspacePath="/SimpleEnclave"/>
+			<resource resourceType="PROJECT" workspacePath="/RemoteAttestation"/>
 		</configuration>
 		<configuration configurationName="Release">
-			<resource resourceType="PROJECT" workspacePath="/SimpleEnclave"/>
+			<resource resourceType="PROJECT" workspacePath="/RemoteAttestation"/>
 		</configuration>
 		<configuration configurationName="SGX Release HW Mode">
-			<resource resourceType="PROJECT" workspacePath="/SimpleEnclave"/>
+			<resource resourceType="PROJECT" workspacePath="/RemoteAttestation"/>
 		</configuration>
 	</storageModule>
 	<storageModule moduleId="scannerConfiguration">

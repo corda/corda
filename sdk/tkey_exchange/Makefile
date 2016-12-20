@@ -44,8 +44,8 @@ INCLUDE += -I$(LINUX_PSW_DIR)/ae/inc    \
            -I$(LINUX_PSW_DIR)/ae/common \
            -I$(LINUX_PSW_DIR)/ae/
 
-INCLUDE += -I$(LINUX_EXTERNAL_DIR)/crypto_px/include     \
-           -I$(LINUX_EXTERNAL_DIR)/epid/inc
+INCLUDE += -I$(SGX_IPP_INC)     \
+           -I$(LINUX_EXTERNAL_DIR)/epid
 
 INCLUDE += -I$(LINUX_SDK_DIR)/tlibstdcxx/stlport
 
@@ -57,9 +57,10 @@ CXXFLAGS += $(ENCLAVE_CXXFLAGS)
 SRC := $(wildcard *.cpp)
 SRC += ecp.cpp
 
-OBJ := $(SRC:.cpp=.o)
+OBJ := $(sort $(SRC:.cpp=.o))
 
-EDGER8R = $(LINUX_SDK_DIR)/edger8r/linux/_build/Edger8r.native
+EDGER8R_DIR = $(LINUX_SDK_DIR)/edger8r/linux
+EDGER8R = $(EDGER8R_DIR)/_build/Edger8r.native
 LIBNAME := libsgx_tkey_exchange.a
 
 .PHONY: all
@@ -73,8 +74,11 @@ $(LIBNAME): $(OBJ)
 
 tkey_exchange.o: $(COMMON_DIR)/inc/sgx_tkey_exchange_t.h
 
-$(COMMON_DIR)/inc/sgx_tkey_exchange_t.h: $(COMMON_DIR)/inc/sgx_tkey_exchange.edl
+$(COMMON_DIR)/inc/sgx_tkey_exchange_t.h: $(COMMON_DIR)/inc/sgx_tkey_exchange.edl $(EDGER8R)
 	$(EDGER8R) --search-path $(TOP_DIR)/common/inc sgx_tkey_exchange.edl
+
+$(EDGER8R):
+	$(MAKE) -C $(EDGER8R_DIR)
 
 $(OBJ): %.o :%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE)  -c $< -o $@
@@ -89,6 +93,9 @@ clean:
 	@$(RM) $(COMMON_DIR)/inc/sgx_tkey_exchange_t.h $(COMMON_DIR)/inc/sgx_tkey_exchange_u.h
 	@$(RM) $(COMMON_DIR)/src/sgx_tkey_exchange_t.c $(COMMON_DIR)/src/sgx_tkey_exchange_u.c
 	@$(RM) sgx_tkey_exchange_t.* sgx_tkey_exchange_u.*
+	$(MAKE) -C $(EDGER8R_DIR) clean
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild: 
+	$(MAKE) clean 
+	$(MAKE) all

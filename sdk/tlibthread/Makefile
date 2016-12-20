@@ -59,4 +59,6 @@ clean:
 	@$(RM) *.o *.a
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild: 
+	$(MAKE) clean
+	$(MAKE) all

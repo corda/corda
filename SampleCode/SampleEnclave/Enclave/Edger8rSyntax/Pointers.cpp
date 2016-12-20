@@ -78,7 +78,7 @@ size_t ecall_pointer_user_check(void *val, size_t sz)
     
     int32_t sum = checksum_internal((char *)tmp, len);
     printf("Checksum(0x%p, %zu) = 0x%x\n", 
-            val, len, sum);
+            val, len, (unsigned int)sum);
     
     /* modify outside memory directly */
     memcpy(val, "SGX_SUCCESS", len>12?12:len);

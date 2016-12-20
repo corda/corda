@@ -31,14 +31,21 @@
 
 #include <string.h>
 
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+extern size_t _intel_fast_strlen(const char *);
+#endif
 
 size_t
 strlen(const char *str)
 {
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+	return _intel_fast_strlen(str);
+#else
 	const char *s;
 
 	for (s = str; *s; ++s)
 		;
 	return (s - str);
+#endif
 }
 

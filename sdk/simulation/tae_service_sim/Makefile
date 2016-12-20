@@ -37,8 +37,8 @@ CXXFLAGS += -Werror $(ENCLAVE_CXXFLAGS)
 
 INCLUDE += -I$(COMMON_DIR)            \
            -I$(COMMON_DIR)/inc/tlibc  \
-           -I$(LINUX_EXTERNAL_DIR)/crypto_px/include \
-           -I$(LINUX_PSW_DIR)/ae/inc \
+           -I$(SGX_IPP_INC)           \
+           -I$(LINUX_PSW_DIR)/ae/inc  \
            -I$(LINUX_PSW_DIR)/ae/inc/internal \
            -I$(TOP_DIR)/common/inc \
            -I$(TOP_DIR)/common/inc/internal 
@@ -70,7 +70,7 @@ OBJS := $(CXX_OBJ) $(C_OBJ)
 all: $(TSERVICE_SIM_LIB) | $(BUILD_DIR)
 	$(CP) $^ $|
 
-$(TAE_SERVICE_SIM_LIB): sgx_tae_service_t.h $(OBJS)
+$(TAE_SERVICE_SIM_LIB): $(OBJS)
 	$(AR) rcsD $@ $(OBJS)
 
 $(TSERVICE_SIM_LIB): $(TAE_SERVICE_SIM_LIB) $(EC_DH_LIB) $(TSEAL_LIB) $(SE_LIB)
@@ -85,6 +85,8 @@ $(TSERVICE_SIM_LIB): $(TAE_SERVICE_SIM_LIB) $(EC_DH_LIB) $(TSEAL_LIB) $(SE_LIB)
 
 sgx_tae_service_t.h: $(EDLFILE) $(EDGER8R)
 	$(EDGER8R) --trusted --header-only --search-path $(TOP_DIR)/common/inc $<
+
+$(OBJS): sgx_tae_service_t.h
 
 $(CXX_OBJ): %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -fno-exceptions -fno-rtti $(INCLUDE) $(DEFINES) -c $< -o $@
@@ -119,4 +121,6 @@ clean:
 	@$(RM) sgx_tae_service_*.h
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild:
+	$(MAKE) clean
+	$(MAKE) all

@@ -131,4 +131,6 @@ clean:
 	@$(RM) *.o $(LIBTRTS) $(BUILD_DIR)/$(LIBTRTS)
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild:
+	$(MAKE) clean
+	$(MAKE) all

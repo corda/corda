@@ -32,12 +32,38 @@
 
 
 top_dir=`dirname $0`
-out_dir=$top_dir/psw/ae/data/prebuilt
-file_name=sgxprebuilt-1.6.100.34040.tar
-server_url=https://download.01.org/intel-sgx/linux-1.6/$file_name
-wget $server_url -P $out_dir
+#out_dir=$top_dir/psw/ae/data/prebuilt
+out_dir=$top_dir
+optlib_name=optimized_libs-1.7.100.35958.tar
+ae_file_name=prebuilt-ae-1.7.100.35958.tar
+server_url_path=https://download.01.org/intel-sgx/linux-1.7/
+server_optlib_url=$server_url_path/$optlib_name
+server_ae_url=$server_url_path/$ae_file_name
+optlib_md5=d873e20155fceb870c2e14771cc2258a
+ae_md5=ca7cf31f1e9fee06feea44732cfbc908
+rm -rf $out_dir/$optlib_name
+wget $server_optlib_url -P $out_dir 
 if [ $? -ne 0 ]; then
-    echo "Fail to download file $server_url"
+    echo "Fail to download file $server_optlib_url"
     exit -1
 fi
-pushd $out_dir;tar -xf $file_name;rm -rf $file_name;popd
+md5sum $out_dir/$optlib_name > check_sum.txt
+grep $optlib_md5 check_sum.txt
+if [ $? -ne 0 ]; then 
+    echo "File $server_optlib_url checksum failure"
+    exit -1
+fi
+rm -rf $out_dir/$ae_file_name
+wget $server_ae_url -P $out_dir 
+if [ $? -ne 0 ]; then
+    echo "Fail to download file $server_ae_url"
+    exit -1
+fi
+md5sum $out_dir/$ae_file_name > check_sum.txt
+grep $ae_md5 check_sum.txt
+if [ $? -ne 0 ]; then
+    echo "File $server_optlib_url checksum failure"
+    exit -1
+fi
+
+pushd $out_dir;tar -xf $optlib_name;tar -xf $ae_file_name;rm -f $optlib_name;rm -f $ae_file_name;popd

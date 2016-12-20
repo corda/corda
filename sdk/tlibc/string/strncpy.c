@@ -39,10 +39,16 @@
  * Return dst.
  */
 
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+extern char *_intel_fast_strncpy(char *, const char *, size_t);
+#endif
 
 char *
 strncpy(char *dst, const char *src, size_t n)
 {
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+	return _intel_fast_strncpy(dst, src, n);
+#else
 	if (n != 0) {
 		char *d = dst;
 		const char *s = src;
@@ -57,4 +63,5 @@ strncpy(char *dst, const char *src, size_t n)
 		} while (--n != 0);
 	}
 	return (dst);
+#endif
 }

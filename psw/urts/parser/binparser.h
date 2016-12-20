@@ -104,6 +104,8 @@ public:
     virtual sgx_status_t modify_info(enclave_diff_info_t *enclave_diff_info) = 0;
 
     virtual sgx_status_t get_info(enclave_diff_info_t *enclave_diff_info) = 0;
+
+    virtual void get_executable_sections(vector<const char *>& xsec_names) const = 0;
 };
 
 #endif

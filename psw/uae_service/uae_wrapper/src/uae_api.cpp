@@ -275,7 +275,7 @@ uae_oal_status_t SGXAPI oal_report_attestation_status(
         *result = (aesm_error_t)attestationStatus->errorCode;
         ret = attestationStatus->uaeStatus;     
 
-        if (*result == AESM_SUCCESS)
+        if (attestationStatus->updateInfo != NULL)
             memcpy(platform_update_info, attestationStatus->updateInfo->data, attestationStatus->updateInfo->length);
     }
 

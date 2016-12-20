@@ -33,6 +33,9 @@
 
 #include <string.h>
 
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+extern size_t _intel_fast_strcspn(const char *, const char *);
+#endif
 
 /*
  * Span the complement of string s2.
@@ -61,5 +64,9 @@ __strcspn(const char *s1, const char *s2)
 size_t
 strcspn(const char *s1, const char *s2)
 {
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+	return _intel_fast_strcspn(s1, s2);
+#else
 	return __strcspn(s1, s2);
+#endif
 }

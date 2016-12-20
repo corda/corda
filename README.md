@@ -43,8 +43,8 @@ Build the Intel(R) SGX SDK and Intel(R) SGX PSW Package
 ```
   $ sudo apt-get install libcurl4-openssl-dev protobuf-compiler protobuf-c-compiler libprotobuf-dev libprotobuf-c0-dev
 ```
-- Use the script `download_prebuilt.sh` inside source code package to download prebuilt binaries to prebuilt folder  
-  You may need set https proxy for wget tool used by the script (such as `export https_proxy=http://test-proxy:test-port`)  
+- Use the script ``download_prebuilt.sh`` inside source code package to download prebuilt binaries to prebuilt folder  
+  You may need set https proxy for wget tool used by the script (such as ``export https_proxy=http://test-proxy:test-port``)  
 ```
   $ ./download_prebuilt.sh
 ```
@@ -58,6 +58,11 @@ The following steps describe how to build the Intel SGX SDK and PSW. You can bui
   $ make  
 ```  
 
+- The default build uses precompiled optimized libraries which have been downloaded by the script ``./download_prebuilt.sh``.
+  You can also use the non-optimized source code version implementation instead by entering the following command:
+```
+  $ make USE_OPT_LIBS=0
+```
 - To build Intel SGX SDK and PSW with debug information, enter the following command:  
 ```
   $ make DEBUG=1
@@ -67,20 +72,34 @@ The following steps describe how to build the Intel SGX SDK and PSW. You can bui
   $ make clean
 ```
 
+- The build above uses prebuilt Intel(R) Architecture Enclaves(LE/PvE/QE/PCE) - the files ``psw/ae/data/prebuilt/libsgx_*.signed.so``, which have been signed by Intel in advance.
+  To build those binaries by yourself (without a signature), first you need to build both Intel SGX SDK and PSW with the default configuration. After that, you can build each Architecture Enclave by using the `make` command from the corresponding folder:
+```
+  $ cd psw/ae/le
+  $ make
+``` 
+
 ###Build Intel(R) SGX SDK Installer
 To build Intel(R) SGX SDK installer, enter the following command:
 ```
 $ make sdk_install_pkg
 ```
-You can find the generated Intel SGX SDK installer `sgx_linux_x64_sdk_${version}.bin` located under `linux/installer/bin/`, where `${version}` refers to the version number.
+You can find the generated Intel SGX SDK installer ``sgx_linux_x64_sdk_${version}.bin`` located under `linux/installer/bin/`, where `${version}` refers to the version number.
+You could also make an SGX SDK installer with non-optimized source code for crypto library by
+```
+$ make sdk_install_pkg USE_OPT_LIBS=0
+```
 
 ###Build Intel(R) SGX PSW Installer
 To build Intel(R) SGX PSW installer, enter the following command:
 ```
 $ make psw_install_pkg
 ```
-You can find the generated Intel SGX PSW installer `sgx_linux_x64_psw_${version}.bin` located under `linux/installer/bin/`, where `${version}` refers to the version number.
-
+You can find the generated Intel SGX PSW installer ``sgx_linux_x64_psw_${version}.bin`` located under `linux/installer/bin/`, where `${version}` refers to the version number.
+You could also make an SGX PSW intaller with non-optimized source code for crypto library by
+```
+$ make psw_install_pkg USE_OPT_LIBS=0
+```
 Install Intel(R) SGX SDK
 ------------------------
 ###Prerequisites
@@ -92,12 +111,16 @@ Install Intel(R) SGX SDK
 ```
 
 ###Install Intel(R) SGX SDK
-To install Intel(R) SGX SDK, enter the following commands:
+To install Intel(R) SGX SDK, execute the installer with root privilege:
 ```
 $ cd linux/installer/bin
-$ ./sgx_linux_x64_sdk_${version}.bin 
+$ sudo ./sgx_linux_x64_sdk_${version}.bin 
 ```
 ###Test Intel(R) SGX SDK Package with the Sample Codes
+- Copy the sample codes installed by Intel(R) SGX SDK package into your work folder, such as  
+```
+  $ cp -r /opt/intel/sgxsdk/SampleCode ~
+```
 - Compile and run each sample codes in the simulation mode to make sure the package works well.  
 ```
   $ cd SampleCode/LocalAttestation
@@ -110,6 +133,10 @@ $ ./sgx_linux_x64_sdk_${version}.bin
 If you use an SGX hardware enabled machine, you need to run the sample codes in the hardware mode.
 Ensure that you install SGX driver and Intel(R) SGX PSW installer on the machine.  
 See the topic, Install Intel(R) SGX PSW, on how to install the PSW package.
+- Copy the sample codes installed by the Intel(R) SGX SDK package into your work folder, such as  
+```
+  $ cp -r /opt/intel/sgxsdk/SampleCode ~
+```
 - Compile and run each sample codes in the debug mode.  
 ```
   $ cd SampleCode/LocalAttestation

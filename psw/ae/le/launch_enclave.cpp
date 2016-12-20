@@ -65,7 +65,7 @@
 }
 #endif
 
-#define LE_MAX_MRSIGNER_NUMBER  512
+#define LE_MAX_MRSIGNER_NUMBER  2048
 // Macro used to get mac wl cert size, signature is not included
 #define LE_MAX_WL_CERT_SIZE     (sizeof(wl_cert_t) + LE_MAX_MRSIGNER_NUMBER \
                                  * sizeof(sgx_measurement_t))
@@ -110,7 +110,7 @@ static ae_error_t le_calc_lic_token(token_t* lictoken)
     memset(&key_request, 0, sizeof(key_request));
 
     //setup key_request parameters to derive launch key
-    key_request.key_name = SGX_KEYSELECT_LICENSE;
+    key_request.key_name = SGX_KEYSELECT_EINITOKEN;
 
     memcpy(&key_request.key_id, &lictoken->key_id,
            sizeof(key_request.key_id));
@@ -140,7 +140,7 @@ static ae_error_t le_calc_lic_token(token_t* lictoken)
     sgx_status_t sgx_ret = sgx_get_key(&key_request,&launch_key);
     if(SGX_SUCCESS != sgx_ret)
     {
-        return LE_GET_LICENSE_KEY_ERROR;
+        return LE_GET_EINITOKEN_KEY_ERROR;
     }
 
     sgx_cmac_state_handle_t p_cmac_handle = NULL;
@@ -429,9 +429,9 @@ uint32_t le_init_white_list(
         //    ret = LE_INVALID_PARAMETER;
         //    goto CLEANUP;
         //}
-        if(new_wl_version < p_wl_cert_cache->wl_version)
+        if(new_wl_version <= p_wl_cert_cache->wl_version)
         {
-            ret = LE_INVALID_PARAMETER;
+            ret = LE_WHITE_LIST_ALREADY_UPDATED;
             goto CLEANUP;
         }
     }

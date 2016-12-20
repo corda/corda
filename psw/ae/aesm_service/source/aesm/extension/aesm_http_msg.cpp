@@ -99,6 +99,10 @@ static ae_error_t http_network_init(CURL **curl, const char *url, bool is_ocsp)
         AESM_DBG_ERROR("libcurl not initialized");
         return AE_FAILURE;//fatal error that libcurl could not be initialized
     }
+    if(NULL == url){
+        AESM_DBG_ERROR("NULL url");
+        return AE_FAILURE;
+    }
     std::string url_path = url;
     uint32_t proxy_type;
     char proxy_url[MAX_PATH];

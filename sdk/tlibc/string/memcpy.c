@@ -44,6 +44,9 @@ typedef	long word;		/* "word" used for optimal copy speed */
 #define	wsize	sizeof(word)
 #define	wmask	(wsize - 1)
 
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+extern void *_intel_fast_memcpy(void *, void *, size_t);
+#endif
 
 /*
  * Copy a block of memory, not handling overlap.
@@ -101,5 +104,9 @@ done:
 void *
 memcpy(void *dst0, const void *src0, size_t length)
 {
+#ifdef _TLIBC_USE_INTEL_FAST_STRING_
+ 	return _intel_fast_memcpy(dst0, (void*)src0, length);
+#else
 	return __memcpy(dst0, src0, length);
+#endif
 }

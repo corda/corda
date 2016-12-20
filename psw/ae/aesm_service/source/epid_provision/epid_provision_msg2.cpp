@@ -60,7 +60,7 @@
 #define MSG2_FIELD1_PLAT_INFO   tlvs_field1[alt_index+3]
 
 
-//Function to verify that EPID SigRL type and version is correct for sigrl
+//Function to verify that EPID SigRl type and version is correct for sigrl
 static ae_error_t verify_sigrl_cert_type_version(const se_sig_rl_t *sigrl_cert)
 {
     if(sigrl_cert->epid_identifier!=SE_EPID_SIG_RL_ID||
@@ -96,7 +96,7 @@ static ae_error_t msg2_integrity_checking(const TLVsMsg& tlvs_msg2)
     return AE_SUCCESS;
 }
 
-//check the format of msg2_field1 and copy correspondent data input msg2_blob_input
+//check the format of msg2_field1 and copy correspondent data to msg2_blob_input
 static ae_error_t msg2_field1_msg_check_copy(const TLVsMsg& tlvs_field1, proc_prov_msg2_blob_input_t& msg2_blob_input, const signed_pek_t& pek)
 {
     uint32_t tlv_count = tlvs_field1.get_tlv_count();
@@ -116,7 +116,7 @@ static ae_error_t msg2_field1_msg_check_copy(const TLVsMsg& tlvs_field1, proc_pr
             return PVE_MSG_ERROR;
         }
         if(MSG2_FIELD1_PREV_GID.type != TLV_EPID_GID ||
-            MSG2_FIELD1_PREV_GID.size != sizeof(GroupID)){
+            MSG2_FIELD1_PREV_GID.size != sizeof(GroupId)){
             return PVE_MSG_ERROR;
         }
         if(MSG2_FIELD1_PREV_GID.version != TLV_VERSION_1){
@@ -125,10 +125,10 @@ static ae_error_t msg2_field1_msg_check_copy(const TLVsMsg& tlvs_field1, proc_pr
         if(MSG2_FIELD1_PREV_GID.header_size != SMALL_TLV_HEADER_SIZE){
             return PVE_MSG_ERROR;
         }
-        if(0!=memcpy_s(&msg2_blob_input.previous_gid, sizeof(GroupID), MSG2_FIELD1_PREV_GID.payload, MSG2_FIELD1_PREV_GID.size)){
+        if(0!=memcpy_s(&msg2_blob_input.previous_gid, sizeof(msg2_blob_input.previous_gid), MSG2_FIELD1_PREV_GID.payload, MSG2_FIELD1_PREV_GID.size)){
             return PVE_UNEXPECTED_ERROR;
         }
-        if(0!=memcpy_s(&msg2_blob_input.previous_pi, sizeof(bk_platform_info_t), MSG2_FIELD1_PREV_PI.payload, MSG2_FIELD1_PREV_PI.size)){
+        if(0!=memcpy_s(&msg2_blob_input.previous_pi, sizeof(msg2_blob_input.previous_pi), MSG2_FIELD1_PREV_PI.payload, MSG2_FIELD1_PREV_PI.size)){
             return PVE_UNEXPECTED_ERROR;
         }
     }else if(tlv_count!=MSG2_FIELD1_MIN_COUNT){
@@ -166,8 +166,8 @@ static ae_error_t msg2_field1_msg_check_copy(const TLVsMsg& tlvs_field1, proc_pr
     bk_platform_info_t *d2 = (bk_platform_info_t *)MSG2_FIELD1_PLAT_INFO.payload;
 
     if(0!=memcpy_s(&msg2_blob_input.group_cert, sizeof(msg2_blob_input.group_cert), MSG2_FIELD1_GROUP_CERT.payload, MSG2_FIELD1_GROUP_CERT.size)||
-        0!=memcpy_s(&msg2_blob_input.challenge_nonce, CHALLENGE_NONCE_SIZE, MSG2_FIELD1_NONCE.payload, MSG2_FIELD1_NONCE.size)||
-        0!=memcpy_s(&msg2_blob_input.equiv_pi, sizeof(bk_platform_info_t), d2,sizeof(bk_platform_info_t))){
+        0!=memcpy_s(&msg2_blob_input.challenge_nonce, sizeof(msg2_blob_input.challenge_nonce), MSG2_FIELD1_NONCE.payload, MSG2_FIELD1_NONCE.size)||
+        0!=memcpy_s(&msg2_blob_input.equiv_pi, sizeof(msg2_blob_input.equiv_pi), d2,sizeof(*d2))){
             return PVE_UNEXPECTED_ERROR;
     }
     return AE_SUCCESS;
@@ -192,17 +192,17 @@ static ae_error_t check_prov_msg2_header(const provision_response_header_t *msg2
 static uint32_t estimate_epid_sig_size(uint32_t sigrl_size)
 {
     uint32_t sigrl_body_size = 0;
-    uint32_t sigrl_extra_size = static_cast<uint32_t>(sizeof(se_sig_rl_t)-sizeof(SigRLEntry)+2*ECDSA_SIGN_SIZE);
+    uint32_t sigrl_extra_size = static_cast<uint32_t>(sizeof(se_sig_rl_t)-sizeof(SigRlEntry)+2*ECDSA_SIGN_SIZE);
     if(sigrl_size ==sigrl_extra_size || sigrl_size == 0){//sigrl_size==0 is special cases that no sigrl provided
         //Add the TLV Header size
-        return static_cast<uint32_t>(sizeof(EPIDSignature)-sizeof(NRProof)+MAX_TLV_HEADER_SIZE);
+        return static_cast<uint32_t>(sizeof(EpidSignature)-sizeof(NrProof)+MAX_TLV_HEADER_SIZE);
     }else if (sigrl_size < sigrl_extra_size){
         //Invalid sigrl size
         return 0;
     }else{
         sigrl_body_size = sigrl_size - sigrl_extra_size;
-        uint64_t entry_count = sigrl_body_size/sizeof(SigRLEntry);
-        uint64_t total_size = sizeof(EPIDSignature)-sizeof(NRProof)+sizeof(NRProof)*entry_count+MAX_TLV_HEADER_SIZE;
+        uint64_t entry_count = sigrl_body_size/sizeof(SigRlEntry);
+        uint64_t total_size = sizeof(EpidSignature)-sizeof(NrProof)+sizeof(NrProof)*entry_count+MAX_TLV_HEADER_SIZE;
         if(total_size > UINT32_MAX){
             return 0;
         }
@@ -233,20 +233,20 @@ static ae_error_t gen_msg3_header(const gen_prov_msg3_output_t& msg3_output, con
     if(total_body_size>msg3_size - PROVISION_REQUEST_HEADER_SIZE ){//make sure buffer size provided by user is large enough
         return PVE_INSUFFICIENT_MEMORY_ERROR;
     }
-    if(0!=memcpy_s(msg3_header->xid, XID_SIZE, xid, XID_SIZE))
+    if(0!=memcpy_s(msg3_header->xid, sizeof(msg3_header->xid), xid, XID_SIZE))
         return PVE_UNEXPECTED_ERROR; //copy transaction id of ProvMsg2
     msg3_size = static_cast<uint32_t>(total_body_size + PROVISION_REQUEST_HEADER_SIZE);
     return AE_SUCCESS;
 }
 
-//Function to decode ProvMsg2 and generate ProvMsg3 on success
+//Function to decode ProvMsg2 and generate ProvMsg3
 //@data: global structure used to store pve relative data
 //@msg2: ProvMsg2
 //@msg2_size: size of ProvMsg2
 //@epid_blob: input an optional old epid data blob used to generate non-revoke proof if required
 //@blob_size: size of the epid blob
 //@msg3: output buffer for ProvMsg3
-//@msg3_size: input the size of buffer ProvMsg3, in byte
+//@msg3_size: input the size of buffer msg3, in byte
 //@return AE_SUCCESS on success and error code on failure
 uint32_t CPVEClass::proc_prov_msg2(
         pve_data_t &data,
@@ -264,7 +264,7 @@ uint32_t CPVEClass::proc_prov_msg2(
     uint8_t *decoded_msg2 = NULL;
     uint8_t *encrypted_field1 = NULL;
     sgx_status_t sgx_status;
-    uint8_t aad[PROVISION_RESPONSE_HEADER_SIZE+sizeof(RLver_t)+sizeof(GroupID)];
+    uint8_t aad[PROVISION_RESPONSE_HEADER_SIZE+sizeof(RLver_t)+sizeof(GroupId)];
     size_t aad_size = PROVISION_RESPONSE_HEADER_SIZE;
     const provision_response_header_t *msg2_header = reinterpret_cast<const provision_response_header_t *>(msg2);
     provision_request_header_t *msg3_header = reinterpret_cast<provision_request_header_t *>(msg3);
@@ -272,7 +272,7 @@ uint32_t CPVEClass::proc_prov_msg2(
         AESM_DBG_ERROR("ProvMsg2 size too small");
         return PVE_MSG_ERROR;
     }
-    if (epid_blob != NULL && blob_size != SGX_TRUSTED_EPID_BLOB_SIZE_PAK){
+    if (epid_blob != NULL && blob_size != SGX_TRUSTED_EPID_BLOB_SIZE_SDK){
         AESM_DBG_FATAL("epid blob size error");
         return PVE_UNEXPECTED_ERROR;
     }
@@ -318,8 +318,8 @@ uint32_t CPVEClass::proc_prov_msg2(
         }
         sgx_aes_gcm_128bit_key_t ek2;
         uint8_t temp[NONCE_SIZE+XID_SIZE];
-        if(0!=memcpy_s(temp, sizeof(temp), data.xid, XID_SIZE)||
-            0!=memcpy_s(temp+XID_SIZE, sizeof(temp)-XID_SIZE, MSG2_TOP_FIELD_NONCE.payload, NONCE_SIZE)){
+        if(0!=memcpy_s(temp, sizeof(temp), data.xid, sizeof(data.xid))||
+            0!=memcpy_s(temp+XID_SIZE, sizeof(temp)-XID_SIZE, MSG2_TOP_FIELD_NONCE.payload, MSG2_TOP_FIELD_NONCE.size)){
                 AESM_DBG_ERROR("memcpy error");
                 ret = AE_FAILURE;
                 break;
@@ -332,24 +332,24 @@ uint32_t CPVEClass::proc_prov_msg2(
                 break;
         }
 
-        if(tlvs_msg2.get_tlv_count() == MSG2_TOP_FIELDS_COUNT_WITH_SIGRL){//RLver and gid is added as part of AAD if available
+        if(tlvs_msg2.get_tlv_count() == MSG2_TOP_FIELDS_COUNT_WITH_SIGRL){//sigrl version and gid is added as part of AAD if available
             sigrl = reinterpret_cast<const se_sig_rl_t *>(MSG2_TOP_FIELD_SIGRL.payload);
-            if(0!=memcpy_s(aad+PROVISION_RESPONSE_HEADER_SIZE, sizeof(RLver_t), &sigrl->sig_rl.RLver, sizeof(RLver_t))){
+            if(0!=memcpy_s(aad+PROVISION_RESPONSE_HEADER_SIZE, sizeof(RLver_t), &sigrl->sig_rl.version, sizeof(RLver_t))){
                 AESM_DBG_FATAL("memcpy error");
                 ret = PVE_UNEXPECTED_ERROR;
                 break;
             }
-            if(0!=memcpy_s(aad+PROVISION_RESPONSE_HEADER_SIZE+sizeof(RLver_t), sizeof(GroupID), &sigrl->sig_rl.gid, sizeof(GroupID))){
+            if(0!=memcpy_s(aad+PROVISION_RESPONSE_HEADER_SIZE+sizeof(RLver_t), sizeof(aad)- PROVISION_RESPONSE_HEADER_SIZE-sizeof(RLver_t), &sigrl->sig_rl.gid, sizeof(sigrl->sig_rl.gid))){
                 AESM_DBG_FATAL("memcpy error");
                 ret = PVE_UNEXPECTED_ERROR;
                 break;
             }
-            aad_size += sizeof(RLver_t)+sizeof(GroupID);
+            aad_size += sizeof(RLver_t)+sizeof(GroupId);
             sigrl_size = MSG2_TOP_FIELD_SIGRL.size;
         }
         se_static_assert(SK_SIZE==sizeof(sgx_aes_gcm_128bit_key_t));
         tlv_msg_t field1 = block_cipher_tlv_get_encrypted_text(MSG2_TOP_FIELD_DATA);
-        decoded_msg2 = reinterpret_cast<uint8_t *>(malloc(field1.msg_size));
+        decoded_msg2 = static_cast<uint8_t *>(malloc(field1.msg_size));
         if(NULL == decoded_msg2){
             AESM_DBG_ERROR("malloc error");
             ret= AE_OUT_OF_MEMORY_ERROR;
@@ -402,22 +402,22 @@ uint32_t CPVEClass::proc_prov_msg2(
         memset(&msg3_fixed_output, 0, sizeof(msg3_fixed_output));
         //collect old epid blob
         if(epid_blob==NULL){
-            memset(msg2_blob_input.old_epid_data_blob, 0, SGX_TRUSTED_EPID_BLOB_SIZE_PAK);
+            memset(msg2_blob_input.old_epid_data_blob, 0, SGX_TRUSTED_EPID_BLOB_SIZE_SDK);
         }else{
 #ifdef DBG_LOG
             {
                 char dbg_str[256];
-                aesm_dbg_format_hex(reinterpret_cast<const uint8_t *>(&epid_blob), blob_size, dbg_str, 256);
+                aesm_dbg_format_hex(epid_blob, blob_size, dbg_str, 256);
                 AESM_DBG_TRACE("old epid blob=%s",dbg_str);
             }
 #endif
-            if (0 != memcpy_s(msg2_blob_input.old_epid_data_blob, SGX_TRUSTED_EPID_BLOB_SIZE_PAK, epid_blob, blob_size)){
+            if (0 != memcpy_s(msg2_blob_input.old_epid_data_blob, sizeof(msg2_blob_input.old_epid_data_blob), epid_blob, blob_size)){
                 AESM_DBG_FATAL("memcpy error");
                 ret = PVE_UNEXPECTED_ERROR;
                 break;
             }
         }
-        if(0!=memcpy_s(&msg2_blob_input.pek,sizeof(data.pek), &data.pek, sizeof(data.pek))){
+        if(0!=memcpy_s(&msg2_blob_input.pek,sizeof(msg2_blob_input.pek), &data.pek, sizeof(data.pek))){
             AESM_DBG_ERROR("memcpy error");
             ret = AE_FAILURE;
             break;
@@ -434,7 +434,7 @@ uint32_t CPVEClass::proc_prov_msg2(
             ret = PVE_MSG_ERROR;
             break;
         }
-        epid_sig = reinterpret_cast<uint8_t *>(malloc(epid_sig_output_size));
+        epid_sig = static_cast<uint8_t *>(malloc(epid_sig_output_size));
         if(NULL == epid_sig){
             AESM_DBG_ERROR("malloc error");
             ret = AE_OUT_OF_MEMORY_ERROR;
@@ -448,7 +448,7 @@ uint32_t CPVEClass::proc_prov_msg2(
         ret = (ae_error_t)proc_prov_msg2_data(&msg2_blob_input, data.is_performance_rekey, reinterpret_cast<const uint8_t *>(sigrl), sigrl_size,
             &msg3_fixed_output, epid_sig, epid_sig_output_size);//ecall to process msg2 data and generate msg3 data in PvE
         if( PVE_EPIDBLOB_ERROR == ret){
-            if(0!=memcpy_s(&data.bpi, sizeof(bk_platform_info_t), &msg2_blob_input.previous_pi, sizeof(bk_platform_info_t))){
+            if(0!=memcpy_s(&data.bpi, sizeof(data.bpi), &msg2_blob_input.previous_pi, sizeof(msg2_blob_input.previous_pi))){
                 AESM_DBG_FATAL("memcpy error");
                 ret = PVE_UNEXPECTED_ERROR;
                 break;
@@ -461,8 +461,8 @@ uint32_t CPVEClass::proc_prov_msg2(
         }
         uint8_t ecdsa_sign[64];
         psvn_t psvn={0};
-        if(0!=memcpy_s(&psvn.cpu_svn,sizeof(sgx_cpu_svn_t), &msg2_blob_input.equiv_pi.cpu_svn, sizeof(sgx_cpu_svn_t))||
-            0!=memcpy_s(&psvn.isv_svn, sizeof(sgx_isv_svn_t), &msg2_blob_input.equiv_pi.pce_svn, sizeof(sgx_isv_svn_t))){
+        if(0!=memcpy_s(&psvn.cpu_svn,sizeof(psvn.cpu_svn), &msg2_blob_input.equiv_pi.cpu_svn, sizeof(msg2_blob_input.equiv_pi.cpu_svn))||
+            0!=memcpy_s(&psvn.isv_svn, sizeof(psvn.isv_svn), &msg2_blob_input.equiv_pi.pce_svn, sizeof(msg2_blob_input.equiv_pi.pce_svn))){
                 ret = PVE_UNEXPECTED_ERROR;
                 break;
         }
@@ -535,7 +535,7 @@ uint32_t CPVEClass::proc_prov_msg2(
             AESM_DBG_ERROR("Fail to generate Field3.5 PCE Report Sign TLV  in ProvMsg3:(ae %d)",ret);
             break;
         }
-        encrypted_field1 = reinterpret_cast<uint8_t *>(malloc(tlvs_m3field1.get_tlv_msg_size()));
+        encrypted_field1 = static_cast<uint8_t *>(malloc(tlvs_m3field1.get_tlv_msg_size()));
         if( NULL == encrypted_field1){
             AESM_DBG_ERROR("malloc error");
             ret = AE_OUT_OF_MEMORY_ERROR;
@@ -548,7 +548,7 @@ uint32_t CPVEClass::proc_prov_msg2(
             iv, IV_SIZE, reinterpret_cast<uint8_t *>(msg3_header), PROVISION_REQUEST_HEADER_SIZE,
             reinterpret_cast<sgx_aes_gcm_128bit_tag_t *>(mac));
         if(AE_SUCCESS != (ret = sgx_error_to_ae_error(sgx_status))){
-            AESM_DBG_ERROR("fail to encrypting ProvMsg3 body by ek2:(sgx0x%x)",sgx_status);
+            AESM_DBG_ERROR("fail to encrypt ProvMsg3 body by ek2:(sgx0x%x)",sgx_status);
             break;
         }
         tlv_status = tlvs_msg3.add_block_cipher_text(iv, encrypted_field1, tlvs_m3field1.get_tlv_msg_size());

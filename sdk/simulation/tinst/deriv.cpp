@@ -45,8 +45,8 @@ static const uint8_t BASE_REPORT_KEY[] = {
     0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00,
 };
 
-// The built-in license key in simulation mode
-static const uint8_t BASE_LICENSE_KEY[] = {
+// The built-in EINIT token key in simulation mode
+static const uint8_t BASE_EINITOKEN_KEY[] = {
     0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55,
     0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55,
 };
@@ -66,11 +66,16 @@ static const uint8_t BASE_PROV_SEAL_KEY[] = {
 const uint8_t* get_base_key(uint16_t key_name)
 {
     switch (key_name) {
-    case SGX_KEYSELECT_SEAL:            return BASE_SEAL_KEY;
-    case SGX_KEYSELECT_REPORT:          return BASE_REPORT_KEY;
-    case SGX_KEYSELECT_LICENSE:         return BASE_LICENSE_KEY;
-    case SGX_KEYSELECT_PROVISION:       return BASE_PROVISION_KEY;
-    case SGX_KEYSELECT_PROVISION_SEAL:  return BASE_PROV_SEAL_KEY;
+    case SGX_KEYSELECT_SEAL:
+        return BASE_SEAL_KEY;
+    case SGX_KEYSELECT_REPORT:
+        return BASE_REPORT_KEY;
+    case SGX_KEYSELECT_EINITOKEN:
+        return BASE_EINITOKEN_KEY;
+    case SGX_KEYSELECT_PROVISION:
+        return BASE_PROVISION_KEY;
+    case SGX_KEYSELECT_PROVISION_SEAL:
+        return BASE_PROV_SEAL_KEY;
     }
 
     // Should not come here - error should have been reported
@@ -82,8 +87,8 @@ const uint8_t* get_base_key(uint16_t key_name)
 // and save it to `okey'.
 void derive_key(const derivation_data_t* dd, sgx_key_128bit_t okey)
 {
-    sgx_rijndael128_cmac_msg((const sgx_cmac_128bit_key_t*)(get_base_key(dd->key_name)), 
-        dd->ddbuf, dd->size, (sgx_cmac_128bit_tag_t*)okey);
+    sgx_rijndael128_cmac_msg((const sgx_cmac_128bit_key_t*)(get_base_key(dd->key_name)),
+                             dd->ddbuf, dd->size, (sgx_cmac_128bit_tag_t*)okey);
 }
 
 // Compute the CMAC of a `buf' with a given `key'.

@@ -40,28 +40,26 @@ CXXFLAGS += -Werror
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/common
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/data/constants/linux 
 
-SRC := $(wildcard *.cpp) version.cpp
+SRC := $(wildcard *.cpp)
 OBJ := $(SRC:.cpp=.o)
+OBJS := $(sort $(OBJ) version.o)
 AENAME_OUT :=  $(SONAME) #generate $(SONAME) only but do not sign it
-LE_COPY_OUT := ../../ae/data/prebuilt/libsgx_le.signed.so ../../ae/data/prebuilt/le_prod_css.bin
 
 CONFIG := config_linux.xml
 
 .PHONY: all
-all: version $(AENAME_OUT) | $(BUILD_DIR)
-	@$(CP) $(LE_COPY_OUT) $|
+all: $(AENAME_OUT) 
 
-$(SONAME): $(AENAME)_t.c $(OBJ)
-	$(CXX) $(CXXFLAGS) -o $@  $(OBJ) -nostdlib -nodefaultlibs -nostartfiles $(LDTFLAGS)
+$(SONAME): $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $@  $(OBJS) -nostdlib -nodefaultlibs -nostartfiles $(LDTFLAGS)
+	$(STRIP)  --strip-unneeded $(SONAME)
 
+$(OBJ):$(AENAME)_t.c  
 $(OBJ): %.o:%.cpp
 	$(CXX) $(CXXFLAGS) -fno-exceptions -fno-rtti $(INCLUDE) $(DEFINES) -c $< -o $@
 
 $(AENAME)_t.c: $(EDLFILE)
 	@$(EDGER8R) --trusted $<
-
-version.o: $(LINUX_PSW_DIR)/ae/common/version.cpp
-	$(CXX) $(CXXFLAGS) -fno-exceptions -fno-rtti $(INCLUDE) $(DEFINES) -c $< -o $@
 
 $(BUILD_DIR):
 	@$(MKDIR) $@
@@ -74,4 +72,6 @@ clean:
 	@$(RM) *_t.*
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild: 
+	$(MAKE)	clean
+	$(MAKE) all

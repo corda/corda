@@ -87,9 +87,9 @@ LDTFLAGS_NO_CRYPTO += -fuse-ld=gold -Wl,--rosegment -Wl,-Map=out.map
 
 DEFINES := -D__linux__
 
-vpath %.cpp $(COMMON_DIR)/src:\
-            $(LINUX_PSW_DIR)/ae/common
+vpath %.cpp $(COMMON_DIR)/src:$(LINUX_PSW_DIR)/ae/common
 
 .PHONY : version
-version:
-	echo "#include \"se_version.h\"\nchar version[] = \"\$$SGXVer: LinuxOpenSource\" STRFILEVER \"\$$\";" > $(LINUX_PSW_DIR)/ae/common/version.cpp
+
+version.o: $(LINUX_PSW_DIR)/ae/common/version.cpp
+	$(CXX) $(CXXFLAGS) -fno-exceptions -fno-rtti $(INCLUDE) $(DEFINES) -c $(LINUX_PSW_DIR)/ae/common/version.cpp -o $@

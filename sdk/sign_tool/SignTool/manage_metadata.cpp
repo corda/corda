@@ -38,7 +38,7 @@
 */
 
 #include "metadata.h"
-#include "tinyxml.h"
+#include "tinyxml2.h"
 #include "manage_metadata.h"
 #include "se_trace.h"
 #include "util_st.h"
@@ -52,6 +52,7 @@
 #include <assert.h>
 #include <iostream>
 
+using namespace tinyxml2;
 
 #define ALIGN_SIZE 0x1000
 
@@ -84,7 +85,7 @@ static bool traverser_parameter(const char *temp_name, const char *temp_text, xm
 
     //Look for the matched one
     int i=0;
-    for(;i<parameter_count&&STRCMP(temp_name,parameter[i].name);i++);
+    for(; i<parameter_count&&STRCMP(temp_name,parameter[i].name); i++);
     if(i>=parameter_count) //no matched, return false
     {
         se_trace(SE_TRACE_ERROR, UNREC_ELEMENT_ERROR, temp_name);
@@ -98,7 +99,7 @@ static bool traverser_parameter(const char *temp_name, const char *temp_text, xm
     }
     parameter[i].flag = 1;
     if((temp_value<parameter[i].min_value)||
-        (temp_value>parameter[i].max_value)) // the value is invalid, return false
+            (temp_value>parameter[i].max_value)) // the value is invalid, return false
     {
         se_trace(SE_TRACE_ERROR, VALUE_OUT_OF_RANGE_ERROR, temp_name);
         return false;
@@ -118,11 +119,11 @@ bool parse_metadata_file(const char *xmlpath, xml_parameter_t *parameter, int pa
         return true;
     }
     //use the metadata file that user gives us. parse xml file
-    TiXmlDocument doc(xmlpath);
-    bool loadOkay = doc.LoadFile();
-    if(!loadOkay)
+    tinyxml2::XMLDocument doc;
+    XMLError loadOkay = doc.LoadFile(xmlpath);
+    if(loadOkay != XML_SUCCESS)
     {
-        if(doc.ErrorId() == TiXmlBase::TIXML_ERROR_OPENING_FILE)
+        if(doc.ErrorID() == XML_ERROR_FILE_COULD_NOT_BE_OPENED)
         {
             se_trace(SE_TRACE_ERROR, OPEN_FILE_ERROR, xmlpath);
         }
@@ -134,46 +135,35 @@ bool parse_metadata_file(const char *xmlpath, xml_parameter_t *parameter, int pa
     }
     doc.Print();//Write the document to standard out using formatted printing ("pretty print").
 
-    TiXmlNode *pmetadata_node = doc.FirstChild("EnclaveConfiguration");
-    if(!pmetadata_node)
+    XMLElement *pmetadata_element = doc.FirstChildElement("EnclaveConfiguration");
+    if(!pmetadata_element || pmetadata_element->GetText() != NULL)
     {
         se_trace(SE_TRACE_ERROR, XML_FORMAT_ERROR);
         return false;
     }
-    TiXmlNode *sub_node = NULL;
-    sub_node = pmetadata_node->FirstChild();
+    XMLElement *sub_element = NULL;
+    sub_element = pmetadata_element->FirstChildElement();
     const char *temp_text = NULL;
 
-    while(sub_node)//parse xml node
+    while(sub_element)//parse xml node
     {
-        switch(sub_node->Type())
+        if(sub_element->FirstAttribute() != NULL)
         {
-        case TiXmlNode::TINYXML_ELEMENT:
-            if(sub_node->ToElement()->FirstAttribute() != NULL)
-            {
-                se_trace(SE_TRACE_ERROR, XML_FORMAT_ERROR);
-                return false;
-            }
-
-            temp_name = sub_node->ToElement()->Value();
-            temp_text = sub_node->ToElement()->GetText();
-
-            //traverse every node. Compare with the default value.
-            if(traverser_parameter(temp_name, temp_text, parameter, parameter_count) == false)
-            {
-                se_trace(SE_TRACE_ERROR, XML_FORMAT_ERROR);
-                return false;
-            }
-            break;
-        case TiXmlNode::TINYXML_DECLARATION:
-        case TiXmlNode::TINYXML_COMMENT:
-            break;
-
-        default:
-            se_trace(SE_TRACE_ERROR, XML_FORMAT_ERROR); 
+            se_trace(SE_TRACE_ERROR, XML_FORMAT_ERROR);
             return false;
         }
-        sub_node=pmetadata_node->IterateChildren(sub_node);
+
+        temp_name = sub_element->Value();
+        temp_text = sub_element->GetText();
+
+        //traverse every node. Compare with the default value.
+        if(traverser_parameter(temp_name, temp_text, parameter, parameter_count) == false)
+        {
+            se_trace(SE_TRACE_ERROR, XML_FORMAT_ERROR);
+            return false;
+        }
+
+        sub_element= sub_element->NextSiblingElement();
     }
 
     return true;
@@ -272,6 +262,11 @@ bool CMetadata::build_layout_entries(vector<layout_t> &layouts)
     m_metadata->dirs[DIR_LAYOUT].size = size;
 
     uint64_t rva = calculate_sections_size();
+    if(rva == 0)
+    {
+        se_trace(SE_TRACE_ERROR, INVALID_ENCLAVE_ERROR);
+        return false;
+    }
     for(uint32_t i = 0; i < layouts.size(); i++)
     {
         memcpy_s(layout_table, sizeof(layout_t), &layouts[i], sizeof(layout_t));
@@ -630,7 +625,7 @@ uint64_t CMetadata::calculate_sections_size()
     
     
     
-    if(size < ROUND_TO_PAGE(last_section->get_rva() + ROUND_TO_PAGE(last_section->virtual_size())))
+    if(last_section != NULL && size < ROUND_TO_PAGE(last_section->get_rva() + ROUND_TO_PAGE(last_section->virtual_size())))
     {
         size += SE_PAGE_SIZE;
     }    

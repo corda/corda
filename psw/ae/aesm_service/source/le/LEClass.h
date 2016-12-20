@@ -48,6 +48,7 @@ protected:
     ae_error_t load_enclave_only();/*protected function to load Enclave only without loading white list*/
     ae_error_t load_verified_white_cert_list();
     ae_error_t load_white_cert_list_to_be_verify();
+    bool m_ufd; // if LEClass considers the platform ufd
 public:
     virtual ae_error_t load_enclave();/*overload LE load enclave function since i) we have two different LE SigStruct now, ii) we need load white list*/
 	int get_launch_token(
@@ -62,6 +63,7 @@ public:
         uint32_t white_list_cert_size,
         bool save_to_persistent_storage=true);
     static ae_error_t update_white_list_by_url(void);
+    bool is_ufd() { return m_ufd; }
 };
 #endif
 

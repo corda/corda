@@ -31,25 +31,37 @@
 
 include ../../buildenv.mk
 
-CRYPTO_PATH = $(LINUX_EXTERNAL_DIR)/crypto_px
-
 CXXFLAGS += $(ENCLAVE_CXXFLAGS) -Werror -fno-exceptions -fno-rtti
 
 CPPFLAGS := -I$(COMMON_DIR)/inc/internal \
             -I$(COMMON_DIR)/inc          \
             -I$(COMMON_DIR)/inc/tlibc    \
-            -I$(CRYPTO_PATH)/include
+            -I$(SGX_IPP_INC)
 
-OBJ = init_crypto_lib.o sgx_aes_ctr.o sgx_aes_gcm.o sgx_cmac128.o sgx_ecc256.o sgx_ecc256_common.o sgx_ecc256_ecdsa.o sgx_sha256.o sgx_sha256_msg.o tcrypto_version.o
+ifneq ($(USE_OPT_LIBS), 0)
+	CXXFLAGS += -DSGX_USE_OPT_LIB	
+endif
+
+OBJ = init_tcrypto_lib.o sgx_aes_ctr.o sgx_aes_gcm.o sgx_cmac128.o sgx_ecc256.o sgx_ecc256_common.o sgx_ecc256_ecdsa.o sgx_sha256.o sgx_sha256_msg.o tcrypto_version.o
 
 TARGET := libsgx_tcrypto.a
 
+ifneq ($(USE_OPT_LIBS), 0)
+$(TARGET): $(OBJ)
+	$(MKDIR) $(BUILD_DIR)/.libippcore
+	$(RM) $(BUILD_DIR)/.libippcore/*
+	cd $(BUILD_DIR)/.libippcore && $(AR) x $(IPP_LIBS_DIR)/libippcore.a
+	@$(CP) $(IPP_LIBS_DIR)/libippcp.a $@
+	$(AR) rsD $@ $(OBJ) $(BUILD_DIR)/.libippcore/*.o
+	$(RM) -r $(BUILD_DIR)/.libippcore
+else
 libcrypto_px:
-	$(MAKE) -C $(CRYPTO_PATH)
+	$(MAKE) -C $(SGX_IPP_DIR)
 
 $(TARGET): $(OBJ) libcrypto_px
-	@$(CP) $(CRYPTO_PATH)/libcrypto_px.a $@
+	@$(CP) $(SGX_IPP_DIR)/libcrypto_px.a $@
 	$(AR) rsD $@ $(OBJ)
+endif
 
 $(OBJ): %.o: %.cpp
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
@@ -63,8 +75,12 @@ all: $(TARGET) | $(BUILD_DIR)
 
 .PHONY: clean
 clean:
-	$(MAKE) -C $(CRYPTO_PATH)  clean
+ifeq ($(USE_OPT_LIBS), 0)
+	$(MAKE) -C $(SGX_IPP_DIR)  clean
+endif
 	@$(RM) *.o $(TARGET) $(BUILD_DIR)/$(TARGET)
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild:
+	$(MAKE) clean
+	$(MAKE) all

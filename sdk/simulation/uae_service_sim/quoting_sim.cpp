@@ -32,7 +32,7 @@
 
 #include <stdlib.h>
 #include "uae_service_sim.h"
-#include "epid_types.h"
+#include "epid/common/types.h"
 #include "se_sig_rl.h"
 #include "se_quote_internal.h"
 #include "ippcp.h"
@@ -376,7 +376,7 @@ sgx_status_t sgx_get_quote(
                            + sizeof(RLCount)
                            + 16; // size of payload_mac
     if(p_sig_rl){
-        required_buffer_size += (sizeof(NRProof) * rl_entry_count);
+        required_buffer_size += (sizeof(NrProof) * rl_entry_count);
     }
 
     /* If the p_quote is not NULL, then we should make sure the buffer size is
@@ -427,7 +427,7 @@ sgx_status_t sgx_get_quote(
     p_signature->payload_size = (uint32_t)(sizeof(BasicSignature)
                                 + sizeof(RLver_t)
                                 + sizeof(RLCount)
-                                + (sizeof(NRProof) * rl_entry_count));
+                                + (sizeof(NrProof) * rl_entry_count));
 
     if(SGX_SUCCESS != sgx_read_rand(p_signature->iv, sizeof(p_signature->iv)))
     {

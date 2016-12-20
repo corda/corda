@@ -40,6 +40,8 @@ RPC_PB_C  = messages.pb.cc
 
 PROTOC = protoc
 
+.PHONY: all clean
+
 all: $(RPC_PB_C) 
 
 $(RPC_PROTO):

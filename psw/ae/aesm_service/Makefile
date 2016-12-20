@@ -63,6 +63,7 @@ INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/qe/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/pce/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/storage/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/data/constants/linux 
+INCLUDE += -I$(LINUX_PSW_DIR)/ae/pve
 
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/inc                        \
            -I$(LINUX_PSW_DIR)/ae/inc/internal               \
@@ -70,29 +71,16 @@ INCLUDE += -I$(LINUX_PSW_DIR)/ae/inc                        \
 
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/epid_provision 
 
-INCLUDE += -I$(LINUX_EXTERNAL_DIR)/epid/inc                        
+INCLUDE += -I$(LINUX_EXTERNAL_DIR)/epid                        
 
-INCLUDE += -I$(LINUX_EXTERNAL_DIR)/crypto_px/include/              \
-           -I$(LINUX_EXTERNAL_DIR)/                                                 \
+INCLUDE += -I$(SGX_IPP_INC) \
+           -I$(LINUX_EXTERNAL_DIR)/       \
            -I$(LINUX_EXTERNAL_DIR)/rdrand \
            -I$(IPC_COMMON_INC_DIR) \
            -I$(AESM_INC_DIR) \
            -I$(IPC_COMMON_PROTO_DIR)
 
 EDGER8R  := $(LINUX_SDK_DIR)/edger8r/linux/_build/Edger8r.native
-
-PROTPBUF_CXXFLAGS := -fstack-protector -fPIC -Wall -Werror
-
-ifdef DEBUG
-	PROTPBUF_CXXFLAGS += -ggdb -DDEBUG -UNDEBUG
-else
-	PROTPBUF_CXXFLAGS += -O2 -UDEBUG -DNDEBUG
-endif
-ifeq ($(ARCH), x86)
-	PROTPBUF_CXXFLAGS += -m32
-else
-	PROTPBUF_CXXFLAGS += -m64
-endif
 
 ifdef PROFILE
         CXXFLAGS += -D_PROFILE_
@@ -130,7 +118,7 @@ EXTERNAL_LIB += -L$(LINUX_SE_WRAPPER) -lwrapper -lrt
 EXTERNAL_LIB += -L$(RDRAND_LIBDIR) -lrdrand
 EXTERNAL_LIB += -L$(VTUNE_LIBDIR) -littnotify
 
-vpath %.cpp $(COMMON_DIR)/src ./source/epid_provision $(LINUX_PSW_DIR)/ae/common  $(AESM_APPLICATION) $(AESM_EXTENSION) $(AESM_SRC_DIR) $(IPC_COMMON_PROTO_DIR) $(COMMON_DIR)/src $(TOP_DIR)/sdk/tseal
+vpath %.cpp $(COMMON_DIR)/src ./source/epid_provision $(LINUX_PSW_DIR)/ae/common  $(AESM_APPLICATION) $(AESM_EXTENSION) $(AESM_SRC_DIR) $(IPC_COMMON_PROTO_DIR) $(TOP_DIR)/sdk/tseal $(IPC_COMMON_SRC_DIR) 
 vpath %.cc $(IPC_COMMON_PROTO_DIR)
 vpath %.c $(TOP_DIR)/sdk/tlibc/string
 
@@ -177,38 +165,38 @@ COMMON_SRC += ./source/qe/QEClass.cpp                  \
 
 COMMON_OBJ := $(COMMON_SRC:.cpp=.o) 
 
-IPC_SRC  :=  $(IPC_COMMON_SRC_DIR)/AECloseSessionRequest.cpp    \
-             $(IPC_COMMON_SRC_DIR)/AEGetQuoteResponse.cpp \
-             $(IPC_COMMON_SRC_DIR)/AECloseSessionResponse.cpp  \
-             $(IPC_COMMON_SRC_DIR)/AEInitQuoteRequest.cpp \
-             $(IPC_COMMON_SRC_DIR)/AECreateSessionRequest.cpp  \
-             $(IPC_COMMON_SRC_DIR)/AEInitQuoteResponse.cpp \
-             $(IPC_COMMON_SRC_DIR)/AECreateSessionResponse.cpp  \
-             $(IPC_COMMON_SRC_DIR)/AEInvokeServiceRequest.cpp \
-             $(IPC_COMMON_SRC_DIR)/AEExchangeReportRequest.cpp   \
-             $(IPC_COMMON_SRC_DIR)/AEInvokeServiceResponse.cpp \
-             $(IPC_COMMON_SRC_DIR)/AEExchangeReportResponse.cpp \
-             $(IPC_COMMON_SRC_DIR)/ProtobufSerializer.cpp \
-             $(IPC_COMMON_SRC_DIR)/AEGetLaunchTokenRequest.cpp  \
-             $(IPC_COMMON_SRC_DIR)/AEGetPsCapRequest.cpp  \
-             $(IPC_COMMON_SRC_DIR)/AEGetPsCapResponse.cpp  \
-             $(IPC_COMMON_SRC_DIR)/AEGetWhiteListSizeRequest.cpp \
-             $(IPC_COMMON_SRC_DIR)/AEGetWhiteListSizeResponse.cpp \
-             $(IPC_COMMON_SRC_DIR)/AEGetWhiteListRequest.cpp \
-             $(IPC_COMMON_SRC_DIR)/AEGetWhiteListResponse.cpp \
-             $(IPC_COMMON_SRC_DIR)/AESGXGetExtendedEpidGroupIdRequest.cpp \
-             $(IPC_COMMON_SRC_DIR)/AESGXGetExtendedEpidGroupIdResponse.cpp \
-             $(IPC_COMMON_SRC_DIR)/AESGXSwitchExtendedEpidGroupRequest.cpp \
-             $(IPC_COMMON_SRC_DIR)/AESGXSwitchExtendedEpidGroupResponse.cpp \
-             $(IPC_COMMON_SRC_DIR)/AEReportAttestationRequest.cpp \
-             $(IPC_COMMON_SRC_DIR)/AEReportAttestationResponse.cpp \
-             $(IPC_COMMON_SRC_DIR)/SocketTransporter.cpp \
-             $(IPC_COMMON_SRC_DIR)/AEGetLaunchTokenResponse.cpp  \
-             $(IPC_COMMON_SRC_DIR)/UnixCommunicationSocket.cpp \
-             $(IPC_COMMON_SRC_DIR)/NonBlockingUnixCommunicationSocket.cpp \
-             $(IPC_COMMON_SRC_DIR)/AEGetQuoteRequest.cpp \
-             $(IPC_COMMON_SRC_DIR)/UnixSocketFactory.cpp \
-             $(IPC_COMMON_SRC_DIR)/NonBlockingUnixSocketFactory.cpp
+IPC_SRC  :=  AECloseSessionRequest.cpp    \
+             AEGetQuoteResponse.cpp \
+             AECloseSessionResponse.cpp  \
+             AEInitQuoteRequest.cpp \
+             AECreateSessionRequest.cpp  \
+             AEInitQuoteResponse.cpp \
+             AECreateSessionResponse.cpp  \
+             AEInvokeServiceRequest.cpp \
+             AEExchangeReportRequest.cpp   \
+             AEInvokeServiceResponse.cpp \
+             AEExchangeReportResponse.cpp \
+             ProtobufSerializer.cpp \
+             AEGetLaunchTokenRequest.cpp  \
+             AEGetPsCapRequest.cpp  \
+             AEGetPsCapResponse.cpp  \
+             AEGetWhiteListSizeRequest.cpp \
+             AEGetWhiteListSizeResponse.cpp \
+             AEGetWhiteListRequest.cpp \
+             AEGetWhiteListResponse.cpp \
+             AESGXGetExtendedEpidGroupIdRequest.cpp \
+             AESGXGetExtendedEpidGroupIdResponse.cpp \
+             AESGXSwitchExtendedEpidGroupRequest.cpp \
+             AESGXSwitchExtendedEpidGroupResponse.cpp \
+             AEReportAttestationRequest.cpp \
+             AEReportAttestationResponse.cpp \
+             SocketTransporter.cpp \
+             AEGetLaunchTokenResponse.cpp  \
+             UnixCommunicationSocket.cpp \
+             NonBlockingUnixCommunicationSocket.cpp \
+             AEGetQuoteRequest.cpp \
+             UnixSocketFactory.cpp \
+             NonBlockingUnixSocketFactory.cpp
 
 PROTOBUF_SRC  := messages.pb.cc
 
@@ -238,11 +226,15 @@ OBJ        := $(IPC_SRC:.cpp=.o) \
 LDUFLAGS := -pthread -L$(BUILD_DIR) $(URTSLIB)
 
 APPNAME           := aesm_service
+APPNAME_DEBUG     := aesm_service.debug
 LIBNAME           := libaesm_service_common.a
 
 .PHONY: all
-all: $(APPNAME) copy_data_file | $(BUILD_DIR)
-	@$(CP) $< $|
+all: $(APPNAME) $(APPNAME_DEBUG) copy_data_file | $(BUILD_DIR)
+	@$(CP) $(APPNAME)          $|
+ifndef DEBUG
+	@$(CP) $(APPNAME_DEBUG)    $|
+endif
 
 copy_data_file:
 	@$(MKDIR) -p data
@@ -255,17 +247,33 @@ sgx_tcrypto:
 $(LIBNAME): $(COMMON_OBJ)
 	$(AR) rcs $@ $^
 	
+
+ProtobufSerializer.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
+CAESMServer.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
 %.o :%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
-%.o :%.cc
-	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
 
+messages.pb.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
+	$(CXX) $(filter-out -Wshadow, $(CXXFLAGS)) $(INCLUDE) -c $< -o $@
+	
 consttime_memequal.o :consttime_memequal.c
 	$(CC) $(filter-out -O2,$(CFLAGS)) -fPIC -O1 $(INCLUDE) -c $< -o $@
 
 $(APPNAME): $(OBJ) $(LIBNAME) sgx_tcrypto -lrdrand urts
 	$(CXX) $(CXXFLAGS) $(OBJ) $(LIBNAME) $(LDUFLAGS) $(EXTERNAL_LIB)   -o $@ -ldl
-$(IPC_SRC): PROTPBUF
+
+$(APPNAME_DEBUG): $(APPNAME)
+	((test -f $(APPNAME_DEBUG)) || $(MAKE) separate_debug_info)
+
+.PHONY: separate_debug_info
+separate_debug_info:
+ifndef DEBUG
+	$(CP) $(APPNAME) $(APPNAME).orig
+	$(OBJCOPY) --only-keep-debug $(APPNAME) $(APPNAME_DEBUG)
+	$(STRIP) -g $(APPNAME)
+	$(OBJCOPY) --add-gnu-debuglink=$(APPNAME_DEBUG) $(APPNAME)
+endif
+
 
 ./source/le/LEClass.o: ${AESM_EXTENSION}/launch_enclave_u.c
 ./source/pve/PVEClass.o: ${AESM_EXTENSION}/provision_enclave_u.c
@@ -297,10 +305,9 @@ ${AESM_EXTENSION}/pse_pr_u.c:  ${LINUX_PSW_DIR}/ae/pse/pse_pr/pse_pr.edl
 
 ${AESM_EXTENSION}/pce_u.c:  ${LINUX_PSW_DIR}/ae/pce/pce.edl
 	@$(EDGER8R) --untrusted --untrusted-dir ${AESM_EXTENSION} $<
-.PHONY: PROTPBUF
-PROTPBUF:
+
+$(IPC_COMMON_PROTO_DIR)/messages.pb.cc:
 	$(MAKE) -C $(IPC_COMMON_PROTO_DIR)
-	(test -f messages.pb.o) || ($(CXX) $(PROTPBUF_CXXFLAGS) -c $(IPC_COMMON_PROTO_DIR)/messages.pb.cc -o messages.pb.o)
 
 .PHONY: urts
 urts:
@@ -313,10 +320,10 @@ $(BUILD_DIR):
 clean:
 	@$(RM) *.o $(IPC_COMMON_SRC_DIR)/*.o
 	@$(RM) -r data
-	@$(RM) $(APPNAME)
+	@$(RM) $(APPNAME) $(APPNAME).orig $(APPNAME_DEBUG)
+	@$(RM) $(BUILD_DIR)/$(APPNAME)  $(BUILD_DIR)/$(APPNAME_DEBUG)
 	@$(RM) $(LIBNAME)
 	$(MAKE) -C $(IPC_COMMON_PROTO_DIR) clean
-	$(MAKE) -C $(LINUX_PSW_DIR)/urts/linux clean
 	@$(RM) source/le/*.o
 	@$(RM) source/pve/*.o
 	@$(RM) source/pce/*.o
@@ -330,5 +337,7 @@ ifeq ($(RDRAND_MAKEFILE), $(wildcard $(RDRAND_MAKEFILE)))
 endif
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild:
+	$(MAKE) clean
+	$(MAKE) all
 
