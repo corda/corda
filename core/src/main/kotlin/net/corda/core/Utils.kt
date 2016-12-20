@@ -27,10 +27,7 @@ import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
 import java.time.Duration
 import java.time.temporal.Temporal
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.Executor
-import java.util.concurrent.Future
+import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.BiConsumer
 import java.util.stream.Stream
@@ -68,9 +65,9 @@ infix fun Long.checkedAdd(b: Long) = Math.addExact(this, b)
 fun random63BitValue(): Long = Math.abs(newSecureRandom().nextLong())
 
 /** Same as [Future.get] but with a more descriptive name, and doesn't throw [ExecutionException], instead throwing its cause */
-fun <T> Future<T>.getOrThrow(): T {
-    try {
-        return get()
+fun <T> Future<T>.getOrThrow(timeout: Duration? = null): T {
+    return try {
+        if (timeout == null) get() else get(timeout.toNanos(), TimeUnit.NANOSECONDS)
     } catch (e: ExecutionException) {
         throw e.cause!!
     }
