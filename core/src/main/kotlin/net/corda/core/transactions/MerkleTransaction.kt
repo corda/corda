@@ -13,7 +13,7 @@ import java.util.*
 fun SecureHash.hashConcat(other: SecureHash) = (this.bytes + other.bytes).sha256()
 
 fun <T : Any> serializedHash(x: T): SecureHash {
-    val kryo = extendKryoHash(createKryo()) //Dealing with HashMaps inside states.
+    val kryo = extendKryoHash(createKryo()) // Dealing with HashMaps inside states.
     return x.serialize(kryo).hash
 }
 
@@ -61,13 +61,13 @@ sealed class MerkleTree(val hash: SecureHash) {
             } else {
                 val newLevelHashes: MutableList<MerkleTree> = ArrayList()
                 var i = 0
-                while (i < lastNodesList.size) {
+                val n = lastNodesList.size
+                while (i < n) {
                     val left = lastNodesList[i]
-                    val n = lastNodesList.size
                     // If there is an odd number of elements at this level,
-                    // the last element is hashed with itself and stored as a Leaf.
+                    // the last element is hashed with hash(itself + index at this level in the tree) and stored as a Leaf.
                     val right = when {
-                        i + 1 > n - 1 -> MerkleTree.DuplicatedLeaf(lastNodesList[n - 1].hash)
+                        i + 1 > n - 1 -> MerkleTree.DuplicatedLeaf((lastNodesList[n - 1].hash.bytes + n.toByte()).sha256())
                         else -> lastNodesList[i + 1]
                     }
                     val combined = left.hashNodes(right)

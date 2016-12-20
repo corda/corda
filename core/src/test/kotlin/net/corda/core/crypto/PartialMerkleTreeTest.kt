@@ -3,8 +3,7 @@ package net.corda.core.crypto
 
 import com.esotericsoftware.kryo.serializers.MapSerializer
 import net.corda.contracts.asset.Cash
-import net.corda.core.contracts.DOLLARS
-import net.corda.core.contracts.`issued by`
+import net.corda.core.contracts.*
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
 import net.corda.core.utilities.DUMMY_PUBKEY_1
@@ -14,15 +13,12 @@ import net.corda.testing.MEGA_CORP_PUBKEY
 import net.corda.testing.ledger
 import org.junit.Test
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class PartialMerkleTreeTest {
     val nodes = "abcdef"
     val hashed = nodes.map { it.serialize().sha256() }
-    val root = SecureHash.parse("F6D8FB3720114F8D040D64F633B0D9178EB09A55AA7D62FAE1A070D1BF561051")
+    val root = SecureHash.parse("28B0EBAED5FD550AE90D4F477323EB4F9C1F90553C70DD279F4AD6B43E5A873D")
     val merkleTree = MerkleTree.getMerkleTree(hashed)
 
     val testLedger = ledger {
@@ -43,15 +39,32 @@ class PartialMerkleTreeTest {
 
         transaction {
             input("MEGA_CORP cash")
-            input("dummy cash 1")
             output("MEGA_CORP cash".output<Cash.State>().copy(owner = DUMMY_PUBKEY_1))
             command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
             timestamp(TEST_TX_TIME)
+            this.verifies()
+        }
+
+        // 3 leaves transaction.
+        transaction {
+            input("MEGA_CORP cash")
+            input("dummy cash 1")
+            output("MEGA_CORP cash".output<Cash.State>().copy(owner = DUMMY_PUBKEY_1))
+            this.fails()
+        }
+
+        // 4 leaves transaction with two the same outputs.
+        transaction {
+            input("MEGA_CORP cash")
+            input("dummy cash 1")
+            output("MEGA_CORP cash".output<Cash.State>().copy(owner = DUMMY_PUBKEY_1))
+            output("MEGA_CORP cash".output<Cash.State>().copy(owner = DUMMY_PUBKEY_1))
             this.fails()
         }
     }
 
-    val testTx = testLedger.interpreter.transactionsToVerify[0]
+    val txs = testLedger.interpreter.transactionsToVerify
+    val testTx = txs[0]
 
     // Building full Merkle Tree tests.
     @Test
@@ -75,7 +88,7 @@ class PartialMerkleTreeTest {
     fun `building Merkle tree odd number of nodes`() {
         val odd = hashed.subList(0, 3)
         val h1 = hashed[0].hashConcat(hashed[1])
-        val h2 = hashed[2].hashConcat(hashed[2])
+        val h2 = hashed[2].hashConcat((hashed[2].bytes + 3.toByte()).sha256())
         val expected = h1.hashConcat(h2)
         val mt = MerkleTree.getMerkleTree(odd)
         assertEquals(mt.hash, expected)
@@ -93,7 +106,8 @@ class PartialMerkleTreeTest {
         assertEquals(testTx.id, d.id)
         assertEquals(1, leaves.commands.size)
         assertEquals(1, leaves.outputs.size)
-        assertEquals(2, leaves.inputs.size)
+        println(leaves.inputs[0])
+        assertEquals(1, leaves.inputs.size)
         assertTrue(mt.filteredLeaves.timestamp != null)
         assert(mt.verify(testTx.id))
     }
@@ -193,5 +207,12 @@ class PartialMerkleTreeTest {
         assertTrue(kryo.getSerializer(LinkedHashMap::class.java) is MapSerializer)
         val hm2 = hm1.serialize(kryo).deserialize(kryo)
         assert(hm1.hashCode() == hm2.hashCode())
+    }
+
+    @Test
+    fun `transactions with the same ids`() {
+        val tx1 = txs[1]
+        val tx2 = txs[2]
+        assertFalse(tx1.id == tx2.id)
     }
 }
