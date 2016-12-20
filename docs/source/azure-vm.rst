@@ -126,7 +126,7 @@ You will be able to see the the nodes' view of the ledger.
 .. image:: resources/azure_vm_10_52.png
   :width: 300px
 
-Now lets take a look at how the interest rates oracle provides interest rates for a deal with a semi-annual payment frequency, and how the two counterparties to the trade see the same deal information on there own nodes, i.e. you see what I see.
+Now lets take a look at how the interest rates oracle provides interest rates for a deal with a semi-annual payment frequency, and how the two counterparties to the trade see the same deal information on their own nodes, i.e. you see what I see.
 
 1. In the browser tab for Bank A click 'Create Deal' from the top navigation bar
 2. Modify the terms of the IRS deal, or leave as default
