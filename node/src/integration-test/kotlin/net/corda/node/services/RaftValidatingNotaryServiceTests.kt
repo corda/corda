@@ -114,16 +114,15 @@ class RaftValidatingNotaryServiceTests : DriverBasedTest() {
             waitFor()
         }
 
-        // Pay ourselves another 10x5 pounds
-        for (i in 1..10) {
+        // Pay ourselves another 20x5 pounds
+        for (i in 1..20) {
             val payHandle = aliceProxy.startFlow(::CashFlow, CashCommand.PayCash(5.POUNDS.issuedBy(alice.legalIdentity.ref(0)), alice.legalIdentity))
             require(payHandle.returnValue.toBlocking().first() is CashFlowResult.Success)
         }
 
-        // Artemis still dispatches some requests to the dead notary but all others should go through.
         val notarisationsPerNotary = HashMap<Party, Int>()
         notaryStateMachines.expectEvents(isStrict = false) {
-            replicate<Pair<NodeInfo, StateMachineUpdate>>(15) {
+            replicate<Pair<NodeInfo, StateMachineUpdate>>(30) {
                 expect(match = { it.second is StateMachineUpdate.Added }) {
                     val (notary, update) = it
                     update as StateMachineUpdate.Added

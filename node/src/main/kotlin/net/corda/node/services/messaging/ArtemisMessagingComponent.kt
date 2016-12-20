@@ -39,10 +39,11 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
         const val CLIENTS_PREFIX = "clients."
         const val P2P_QUEUE = "p2p.inbound"
         const val RPC_REQUESTS_QUEUE = "rpc.requests"
+        const val RPC_QUEUE_REMOVALS_QUEUE = "rpc.qremovals"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
 
         @JvmStatic
-        val NETWORK_MAP_ADDRESS = SimpleString("${INTERNAL_PREFIX}networkmap")
+        val NETWORK_MAP_ADDRESS = "${INTERNAL_PREFIX}networkmap"
 
         /**
          * Assuming the passed in target address is actually an ArtemisAddress will extract the host and port of the node. This should
@@ -57,16 +58,16 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
         }
     }
 
-    protected interface ArtemisAddress : MessageRecipients {
+    interface ArtemisAddress : MessageRecipients {
         val queueName: SimpleString
     }
 
-    protected interface ArtemisPeerAddress : ArtemisAddress, SingleMessageRecipient {
+    interface ArtemisPeerAddress : ArtemisAddress, SingleMessageRecipient {
         val hostAndPort: HostAndPort
     }
 
     data class NetworkMapAddress(override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisPeerAddress {
-        override val queueName: SimpleString get() = NETWORK_MAP_ADDRESS
+        override val queueName = SimpleString(NETWORK_MAP_ADDRESS)
     }
 
     /**

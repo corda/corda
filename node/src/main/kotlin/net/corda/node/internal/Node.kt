@@ -142,7 +142,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
             runOnStop += Runnable { messageBroker?.stop() }
             start()
             if (networkMapService is NetworkMapAddress) {
-                bridgeToNetworkMapService(networkMapService)
+                deployBridgeIfAbsent(networkMapService.queueName, networkMapService.hostAndPort)
             }
         }
 
