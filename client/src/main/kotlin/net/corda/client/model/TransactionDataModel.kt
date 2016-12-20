@@ -103,7 +103,6 @@ class TransactionDataModel {
                 added.set(StateMachineStatus.Removed(added.value.stateMachineName))
             }
         }
-        map
     }
     private val stateMachineDataList = LeftOuterJoinedMap(stateMachineStatus, progressEvents) { id, status, progress ->
         StateMachineData(id, progress.map { it?.let { FlowStatus(it.message) } }, status)

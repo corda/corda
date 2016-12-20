@@ -59,16 +59,16 @@ class IRS {
                     highStreetBank.owes(acmeCorp, floating - fixed, currency)
                     rollOut("2016-12-01".ld, "2018-09-01".ld, Frequency.Quarterly) {
                         actions {
-                            (acmeCorp or highStreetBank).may {
-                                val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
-                                val fixed = interest(notional, "act/365", 0.5.bd, start, end)
+                            (acmeCorp or highStreetBank) may {
+                                val nextFloating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
+                                val nextFixed = interest(notional, "act/365", 0.5.bd, start, end)
 
                                 "pay floating".anytime {
-                                    highStreetBank.owes(acmeCorp, floating - fixed, currency)
+                                    highStreetBank.owes(acmeCorp, nextFloating - nextFixed, currency)
                                     next()
                                 }
                                 "pay fixed".anytime {
-                                    highStreetBank.owes(acmeCorp, fixed - floating, currency)
+                                    highStreetBank.owes(acmeCorp, nextFixed - nextFloating, currency)
                                     next()
                                 }
                             }
@@ -79,7 +79,7 @@ class IRS {
                     highStreetBank.owes(acmeCorp, fixed - floating, currency)
                     rollOut("2016-12-01".ld, "2018-09-01".ld, Frequency.Quarterly) {
                         actions {
-                            (acmeCorp or highStreetBank).may {
+                            (acmeCorp or highStreetBank) may {
                                 val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                                 val fixed = interest(notional, "act/365", 0.5.bd, start, end)
 
