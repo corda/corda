@@ -42,6 +42,7 @@ class ActionsBuilder {
     infix fun Set<Party>.or(party: Party) = this.plus(party)
 }
 
+@Suppress("UNUSED")
 open class ContractBuilder {
     private val contracts = mutableListOf<Arrangement>()
 
