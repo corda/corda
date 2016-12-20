@@ -126,16 +126,15 @@ You will be able to see the the nodes' view of the ledger.
 .. image:: resources/azure_vm_10_52.png
   :width: 300px
 
-Now lets take a look at how the interest rates oracle provides interest rates for a deal with a semi-annual payment frequency, and with the event scheduler service triggering payments.
+Now lets take a look at how the interest rates oracle provides interest rates for a deal with a semi-annual payment frequency, and how the two counterparties to the trade see the same deal information on there own nodes, i.e. you see what I see.
 
 1. In the browser tab for Bank A click 'Create Deal' from the top navigation bar
 2. Modify the terms of the IRS deal, or leave as default
 3. Click 'Submit' to create the deal
-4. In the browser tab for Bank B click 'Recent Deals' from the top navigation bar
-5. Artifically move time forward to trigger deal payments according to the payment schedule by incrementing the year in the Run Fixings box
-6. You will see the these deals listed
+4. In the browser tab for Bank A click 'Recent Deals' from the top navigation bar to view the deal
+5. In the browser tab for Bank B click 'Recent Deals' from the top navigation bar to view the deal. Compare the economic details to those shown in the Bank A tab
 
-.. image:: resources/azure_vm_10_53.png
+.. image:: resources/azure_vm_10_54.png
   :width: 300px
 
 
