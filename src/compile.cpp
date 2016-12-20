@@ -1311,10 +1311,6 @@ Allocator* allocator(MyThread* t);
 
 unsigned addDynamic(MyThread* t, GcInvocation* invocation)
 {
-  if (t->dynamicTable == nullptr) {
-    t->dynamicTable = dynamicTable(t);
-  }
-
   ACQUIRE(t, t->m->classLock);
 
   int index = invocation->index();
@@ -8828,6 +8824,7 @@ class MyProcessor : public Processor {
     t->heapImage = heapImage;
     t->codeImage = codeImage;
     t->thunkTable = thunkTable;
+    t->dynamicTable = local::dynamicTable(t);
 
 #if TARGET_BYTES_PER_WORD == BYTES_PER_WORD
 
