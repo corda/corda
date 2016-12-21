@@ -61,7 +61,7 @@ class CordaRPCOpsImpl(
     override fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>> {
         return databaseTransaction(database) {
             val (allStateMachines, changes) = smm.track()
-            return@databaseTransaction Pair(
+            Pair(
                     allStateMachines.map { stateMachineInfoFromFlowLogic(it.id, it.logic) },
                     changes.map { stateMachineUpdateFromStateMachineChange(it) }
             )
