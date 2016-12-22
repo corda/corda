@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Paths
+import java.time.LocalDate
 import kotlin.system.exitProcess
 
 private var renderBasicInfoToConsole = true
@@ -122,6 +123,13 @@ private fun printPluginsAndServices(node: Node) {
 }
 
 private fun messageOfTheDay(): Pair<String, String> {
+    // TODO: Remove this next year.
+    val today = LocalDate.now()
+    if (today.isAfter(LocalDate.of(2016, 12, 20)) && today.isBefore(LocalDate.of(2017, 1, 3))) {
+        val claus = if (Emoji.hasEmojiTerminal) Emoji.santaClaus else ""
+        return Pair("The Corda team wishes you a very merry", "christmas and a happy new year! $claus")
+    }
+
     val messages = arrayListOf(
             "The only distributed ledger that pays\nhomage to Pac Man in its logo.",
             "You know, I was a banker once ...\nbut I lost interest. ${Emoji.bagOfCash}",
@@ -151,7 +159,7 @@ private fun drawBanner() {
   / ____/     _________/ /___ _
  / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
 "/ /___  /_/ / /  / /_/ / /_/ /          ").fgBrightBlue().a(msg2).newline().fgBrightRed().a(
-"""\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().
+"""\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
 a("--- DEVELOPER SNAPSHOT ------------------------------------------------------------").newline().reset())
 }
 
