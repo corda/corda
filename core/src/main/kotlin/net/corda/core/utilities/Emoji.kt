@@ -5,7 +5,7 @@ package net.corda.core.utilities
  */
 object Emoji {
     // Unfortunately only Apple has a terminal that can do colour emoji AND an emoji font installed by default.
-    val hasEmojiTerminal by lazy { System.getenv("TERM_PROGRAM") == "Apple_Terminal" }
+    val hasEmojiTerminal by lazy { listOf("Apple_Terminal", "iTerm.app").contains(System.getenv("TERM_PROGRAM")) }
 
     const val CODE_SANTA_CLAUS = "\ud83c\udf85"
     const val CODE_DIAMOND = "\ud83d\udd37"
