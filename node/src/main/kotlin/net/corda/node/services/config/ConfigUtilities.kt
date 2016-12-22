@@ -119,12 +119,13 @@ private fun NodeSSLConfiguration.configureDevKeyAndTrustStores(myLegalName: Stri
 }
 
 // TODO Move this to CoreTestUtils.kt once we can pry this from the explorer
-fun configureTestSSL(): NodeSSLConfiguration = object : NodeSSLConfiguration {
+@JvmOverloads
+fun configureTestSSL(legalName: String = "Mega Corp."): NodeSSLConfiguration = object : NodeSSLConfiguration {
     override val certificatesPath = Files.createTempDirectory("certs")
     override val keyStorePassword: String get() = "cordacadevpass"
     override val trustStorePassword: String get() = "trustpass"
 
     init {
-        configureDevKeyAndTrustStores("Mega Corp.")
+        configureDevKeyAndTrustStores(legalName)
     }
 }

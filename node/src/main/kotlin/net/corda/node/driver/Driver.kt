@@ -19,7 +19,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
@@ -260,7 +259,7 @@ open class DriverDSL(
         val isDebug: Boolean
 ) : DriverDSLInternalInterface {
     private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
-    private val networkMapName = "NetworkMapService"
+    private val networkMapLegalName = "NetworkMapService"
     private val networkMapAddress = portAllocation.nextHostAndPort()
 
     class State {
@@ -291,9 +290,7 @@ open class DriverDSL(
 
     override fun shutdown() {
         state.locked {
-            clients.forEach {
-                it.stop()
-            }
+            clients.forEach(NodeMessagingClient::stop)
             registeredProcesses.forEach {
                 it.get().destroy()
             }
@@ -353,7 +350,10 @@ open class DriverDSL(
                 "artemisAddress" to messagingAddress.toString(),
                 "webAddress" to apiAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
-                "networkMapAddress" to networkMapAddress.toString(),
+                "networkMapService" to mapOf(
+                        "address" to networkMapAddress.toString(),
+                        "legalName" to networkMapLegalName
+                ),
                 "useTestClock" to useTestClock,
                 "rpcUsers" to rpcUsers.map {
                     mapOf(
@@ -416,12 +416,12 @@ open class DriverDSL(
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
-        val baseDirectory = driverDirectory / networkMapName
+        val baseDirectory = driverDirectory / networkMapLegalName
         val config = ConfigHelper.loadConfig(
                 baseDirectoryPath = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = mapOf(
-                        "myLegalName" to networkMapName,
+                        "myLegalName" to networkMapLegalName,
                         "basedir" to baseDirectory.normalize().toString(),
                         "artemisAddress" to networkMapAddress.toString(),
                         "webAddress" to apiAddress.toString(),

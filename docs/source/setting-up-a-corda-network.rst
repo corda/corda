@@ -46,8 +46,8 @@ The most important fields regarding network configuration are:
   but rather ``::`` (all addresses on all interfaces). The hostname specified is the hostname *that must be externally
   resolvable by other nodes in the network*. In the above configuration this is the resolvable name of a machine in a vpn.
 * ``webAddress``: The address the webserver should bind. Note that the port should be distinct from that of ``artemisAddress``.
-* ``networkMapAddress``: The resolvable name and artemis port of the network map node. Note that if this node itself
-  is to be the network map this field should not be specified.
+* ``networkMapService``: Details of the node running the network map service. If it's this node that's running the service
+  then this field must not be specified.
 
 Starting the nodes
 ------------------

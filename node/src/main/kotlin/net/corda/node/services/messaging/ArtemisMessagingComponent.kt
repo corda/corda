@@ -9,10 +9,10 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.read
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.config.NodeSSLConfiguration
-import org.apache.activemq.artemis.api.core.SimpleString
+import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Inbound
+import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Outbound
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
-import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import java.nio.file.FileSystems
 import java.nio.file.Path
@@ -41,9 +41,9 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
         const val RPC_REQUESTS_QUEUE = "rpc.requests"
         const val RPC_QUEUE_REMOVALS_QUEUE = "rpc.qremovals"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
+        const val NETWORK_MAP_QUEUE = "${INTERNAL_PREFIX}networkmap"
 
-        @JvmStatic
-        val NETWORK_MAP_ADDRESS = "${INTERNAL_PREFIX}networkmap"
+        const val VERIFY_PEER_COMMON_NAME = "corda.verifyPeerCommonName"
 
         /**
          * Assuming the passed in target address is actually an ArtemisAddress will extract the host and port of the node. This should
@@ -59,7 +59,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
     }
 
     interface ArtemisAddress : MessageRecipients {
-        val queueName: SimpleString
+        val queueName: String
     }
 
     interface ArtemisPeerAddress : ArtemisAddress, SingleMessageRecipient {
@@ -67,7 +67,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
     }
 
     data class NetworkMapAddress(override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisPeerAddress {
-        override val queueName = SimpleString(NETWORK_MAP_ADDRESS)
+        override val queueName: String get() = NETWORK_MAP_QUEUE
     }
 
     /**
@@ -75,22 +75,21 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      * may change or evolve and code that relies upon it being a simple host/port may not function correctly.
      * For instance it may contain onion routing data.
      *
-     * [NodeAddress] identifies a specific peer node and an associated queue. The queue may be the peer's p2p queue or
+     * [NodeAddress] identifies a specific peer node and an associated queue. The queue may be the peer's own queue or
      *     an advertised service's queue.
      *
      * @param queueName The name of the queue this address is associated with.
      * @param hostAndPort The address of the node.
      */
-    data class NodeAddress(override val queueName: SimpleString, override val hostAndPort: HostAndPort) : ArtemisPeerAddress {
+    data class NodeAddress(override val queueName: String, override val hostAndPort: HostAndPort) : ArtemisPeerAddress {
         companion object {
             fun asPeer(peerIdentity: CompositeKey, hostAndPort: HostAndPort): NodeAddress {
-                return NodeAddress(SimpleString("$PEERS_PREFIX${peerIdentity.toBase58String()}"), hostAndPort)
+                return NodeAddress("$PEERS_PREFIX${peerIdentity.toBase58String()}", hostAndPort)
             }
             fun asService(serviceIdentity: CompositeKey, hostAndPort: HostAndPort): NodeAddress {
-                return NodeAddress(SimpleString("$SERVICES_PREFIX${serviceIdentity.toBase58String()}"), hostAndPort)
+                return NodeAddress("$SERVICES_PREFIX${serviceIdentity.toBase58String()}", hostAndPort)
             }
         }
-        override fun toString(): String = "${javaClass.simpleName}(queue = $queueName, $hostAndPort)"
     }
 
     /**
@@ -103,13 +102,11 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      * @param identity The service identity's owning key.
      */
     data class ServiceAddress(val identity: CompositeKey) : ArtemisAddress, MessageRecipientGroup {
-        override val queueName: SimpleString = SimpleString("$SERVICES_PREFIX${identity.toBase58String()}")
+        override val queueName: String = "$SERVICES_PREFIX${identity.toBase58String()}"
     }
 
     /** The config object is used to pass in the passwords for the certificate KeyStore and TrustStore */
     abstract val config: NodeSSLConfiguration
-
-    protected enum class ConnectionDirection { INBOUND, OUTBOUND }
 
     // Restrict enabled Cipher Suites to AES and GCM as minimum for the bulk cipher.
     // Our self-generated certificates all use ECDSA for handshakes, but we allow classical RSA certificates to work
@@ -142,8 +139,8 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
         config.trustStorePath.expectedOnDefaultFileSystem()
         return TransportConfiguration(
                 when (direction) {
-                    ConnectionDirection.INBOUND -> NettyAcceptorFactory::class.java.name
-                    ConnectionDirection.OUTBOUND -> NettyConnectorFactory::class.java.name
+                    is Inbound -> NettyAcceptorFactory::class.java.name
+                    is Outbound -> VerifyingNettyConnectorFactory::class.java.name
                 },
                 mapOf(
                         // Basic TCP target details
@@ -167,14 +164,18 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
                         TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to config.trustStorePassword,
                         TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
                         TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
-                        TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true
-
-                        // TODO: Set up the connector's host name verifier logic to ensure we connect to the expected node even in case of MITM or BGP hijacks
+                        TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true,
+                        VERIFY_PEER_COMMON_NAME to (direction as? Outbound)?.expectedCommonName
                 )
         )
     }
 
     protected fun Path.expectedOnDefaultFileSystem() {
         require(fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
+    }
+
+    protected sealed class ConnectionDirection {
+        object Inbound : ConnectionDirection()
+        class Outbound(val expectedCommonName: String? = null) : ConnectionDirection()
     }
 }

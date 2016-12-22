@@ -2,10 +2,7 @@ package net.corda.node
 
 import com.typesafe.config.ConfigException
 import joptsimple.OptionParser
-import net.corda.core.div
-import net.corda.core.randomOrNull
-import net.corda.core.rootCause
-import net.corda.core.then
+import net.corda.core.*
 import net.corda.core.utilities.Emoji
 import net.corda.node.internal.Node
 import net.corda.node.services.config.ConfigHelper
@@ -82,32 +79,33 @@ fun main(args: Array<String>) {
     }
     val dir = conf.basedir.toAbsolutePath().normalize()
 
-    log.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().getPath()}")
+    log.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
     val info = ManagementFactory.getRuntimeMXBean()
-    log.info("CommandLine Args: ${info.getInputArguments().joinToString(" ")}")
+    log.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
     log.info("Application Args: ${args.joinToString(" ")}")
     log.info("bootclasspath: ${info.bootClassPath}")
     log.info("classpath: ${info.classPath}")
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
-    log.info("Working Directory: ${dir}")
+    log.info("Working Directory: $dir")
 
     try {
-        val dirFile = dir.toFile()
-        if (!dirFile.exists())
-            dirFile.mkdirs()
+        dir.createDirectories()
 
         val node = conf.createNode()
 
         node.start()
         printPluginsAndServices(node)
 
-        node.networkMapRegistrationFuture.then {
+        node.networkMapRegistrationFuture.success {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             printBasicNodeInfo("Node started up and registered in $elapsed sec")
 
             if (renderBasicInfoToConsole)
                 ANSIProgressObserver(node.smm)
+        } failure {
+            log.error("Error during network map registration", it)
+            exitProcess(1)
         }
         node.run()
     } catch (e: Exception) {

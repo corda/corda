@@ -1,53 +1,71 @@
 package net.corda.services.messaging
 
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.RPC_REQUESTS_QUEUE
-import net.corda.testing.messaging.SimpleMQClient
-import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
-import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException
-import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
+import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.support.jdk7.use
+import net.corda.core.crypto.Party
+import net.corda.core.div
+import net.corda.core.getOrThrow
+import net.corda.core.node.NodeInfo
+import net.corda.core.random63BitValue
+import net.corda.core.seconds
+import net.corda.flows.sendRequest
+import net.corda.node.internal.NetworkMapInfo
+import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_FLOW_TOPIC
+import net.corda.node.services.network.NetworkMapService.RegistrationRequest
+import net.corda.node.services.network.NodeRegistration
+import net.corda.node.utilities.AddOrRemove
+import net.corda.testing.TestNodeConfiguration
+import net.corda.testing.node.NodeBasedTest
+import net.corda.testing.node.SimpleNode
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.time.Instant
+import java.util.concurrent.TimeoutException
 
-/**
- * Runs the security tests with the attacker pretending to be a node on the network.
- */
-class P2PSecurityTest : MQSecurityTest() {
+class P2PSecurityTest : NodeBasedTest() {
 
-    override fun startAttacker(attacker: SimpleMQClient) {
-        attacker.start(PEER_USER, PEER_USER)  // Login as a peer
+    @Test
+    fun `incorrect legal name for the network map service config`() {
+        val incorrectNetworkMapName = random63BitValue().toString()
+        val node = startNode("Bob", configOverrides = mapOf(
+                "networkMapService" to mapOf(
+                        "address" to networkMapNode.configuration.artemisAddress.toString(),
+                        "legalName" to incorrectNetworkMapName
+                )
+        ))
+        // The connection will be rejected as the legal name doesn't match
+        assertThatThrownBy { node.getOrThrow() }.hasMessageContaining(incorrectNetworkMapName)
     }
 
     @Test
-    fun `send message to RPC requests address`() {
-        assertSendAttackFails(RPC_REQUESTS_QUEUE)
-    }
-
-    @Test
-    fun `only the node running the broker can login using the special node user`() {
-        val attacker = SimpleMQClient(alice.configuration.artemisAddress)
-        assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
-            attacker.start(NODE_USER, NODE_USER)
+    fun `register with the network map service using a legal name different from the TLS CN`() {
+        startSimpleNode("Attacker").use {
+            // Register with the network map using a different legal name
+            val response = it.registerWithNetworkMap("Legit Business")
+            // We don't expect a response because the network map's host verification will prevent a connection back
+            // to the attacker as the TLS CN will not match the legal name it has just provided
+            assertThatExceptionOfType(TimeoutException::class.java).isThrownBy {
+                response.getOrThrow(2.seconds)
+            }
         }
-        attacker.stop()
     }
 
-    @Test
-    fun `login as the default cluster user`() {
-        val attacker = SimpleMQClient(alice.configuration.artemisAddress)
-        assertThatExceptionOfType(ActiveMQClusterSecurityException::class.java).isThrownBy {
-            attacker.start(ActiveMQDefaultConfiguration.getDefaultClusterUser(), ActiveMQDefaultConfiguration.getDefaultClusterPassword())
-        }
-        attacker.stop()
+    private fun startSimpleNode(legalName: String): SimpleNode {
+        val config = TestNodeConfiguration(
+                basedir = tempFolder.root.toPath() / legalName,
+                myLegalName = legalName,
+                networkMapService = NetworkMapInfo(networkMapNode.configuration.artemisAddress, networkMapNode.info.legalIdentity.name))
+        config.configureWithDevSSLCertificate() // This creates the node's TLS cert with the CN as the legal name
+        return SimpleNode(config).apply { start() }
     }
 
-    @Test
-    fun `login without a username and password`() {
-        val attacker = SimpleMQClient(alice.configuration.artemisAddress)
-        assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
-            attacker.start()
-        }
-        attacker.stop()
+    private fun SimpleNode.registerWithNetworkMap(registrationName: String): ListenableFuture<NetworkMapService.RegistrationResponse> {
+        val nodeInfo = NodeInfo(net.myAddress, Party(registrationName, identity.public))
+        val registration = NodeRegistration(nodeInfo, System.currentTimeMillis(), AddOrRemove.ADD, Instant.MAX)
+        val request = RegistrationRequest(registration.toWire(identity.private), net.myAddress)
+        return net.sendRequest<NetworkMapService.RegistrationResponse>(REGISTER_FLOW_TOPIC, request, networkMapNode.net.myAddress)
     }
 }

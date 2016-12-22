@@ -1,8 +1,10 @@
 package net.corda.testing.node
 
+import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.createDirectories
 import net.corda.core.div
 import net.corda.core.getOrThrow
+import net.corda.core.map
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.internal.Node
 import net.corda.node.services.User
@@ -17,7 +19,7 @@ import kotlin.concurrent.thread
 
 /**
  * Extend this class if you need to run nodes in a test. You could use the driver DSL but it's extremely slow for testing
- * purposes.
+ * purposes. Use the DSL if you need to run the nodes in separate processes otherwise this class will suffice.
  */
 // TODO Some of the logic here duplicates what's in the driver
 abstract class NodeBasedTest {
@@ -50,7 +52,7 @@ abstract class NodeBasedTest {
                             rpcUsers: List<User> = emptyList(),
                             configOverrides: Map<String, Any> = emptyMap()): Node {
         check(_networkMapNode == null)
-        return startNodeInternal(legalName, advertisedServices, rpcUsers, configOverrides).apply {
+        return startNodeInternal(legalName, advertisedServices, rpcUsers, configOverrides).getOrThrow().apply {
             _networkMapNode = this
         }
     }
@@ -58,25 +60,28 @@ abstract class NodeBasedTest {
     fun startNode(legalName: String,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
-                  configOverrides: Map<String, Any> = emptyMap()): Node {
+                  configOverrides: Map<String, Any> = emptyMap()): ListenableFuture<Node> {
         return startNodeInternal(
                 legalName,
                 advertisedServices,
                 rpcUsers,
-                configOverrides + mapOf(
-                        "networkMapAddress" to networkMapNode.configuration.artemisAddress.toString()
-                )
+                mapOf(
+                        "networkMapService" to mapOf(
+                                "address" to networkMapNode.configuration.artemisAddress.toString(),
+                                "legalName" to networkMapNode.info.legalIdentity.name
+                        )
+                ) + configOverrides
         )
     }
 
     private fun startNodeInternal(legalName: String,
                                   advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
-                                  configOverrides: Map<String, Any>): Node {
+                                  configOverrides: Map<String, Any>): ListenableFuture<Node> {
         val config = ConfigHelper.loadConfig(
                 baseDirectoryPath = (tempFolder.root.toPath() / legalName).createDirectories(),
                 allowMissingConfig = true,
-                configOverrides = configOverrides + mapOf(
+                configOverrides = mapOf(
                         "myLegalName" to legalName,
                         "artemisAddress" to freeLocalHostAndPort().toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
@@ -87,7 +92,7 @@ abstract class NodeBasedTest {
                                     "permissions" to it.permissions
                             )
                         }
-                )
+                ) + configOverrides
         )
 
         val node = FullNodeConfiguration(config).createNode()
@@ -96,7 +101,6 @@ abstract class NodeBasedTest {
         thread(name = legalName) {
             node.run()
         }
-        node.networkMapRegistrationFuture.getOrThrow()
-        return node
+        return node.networkMapRegistrationFuture.map { node }
     }
 }

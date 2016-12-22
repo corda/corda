@@ -1,11 +1,14 @@
 package net.corda.node.services
 
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.DummyContract
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
 import net.corda.core.div
+import net.corda.core.flatMap
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.flows.NotaryError
@@ -30,8 +33,7 @@ class RaftNotaryServiceTests : NodeBasedTest() {
 
     @Test
     fun `detect double spend`() {
-        val masterNode = createNotaryCluster()
-        val alice = startNode("Alice")
+        val (masterNode, alice) = Futures.allAsList(createNotaryCluster(), startNode("Alice")).getOrThrow()
 
         val notaryParty = alice.netMapCache.getNotary(notaryName)!!
 
@@ -60,7 +62,7 @@ class RaftNotaryServiceTests : NodeBasedTest() {
         assertEquals(error.tx, stx.tx)
     }
 
-    private fun createNotaryCluster(): Node {
+    private fun createNotaryCluster(): ListenableFuture<Node> {
         val notaryService = ServiceInfo(RaftValidatingNotaryService.type, notaryName)
         val notaryAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
         ServiceIdentityGenerator.generateToDisk(
@@ -73,16 +75,16 @@ class RaftNotaryServiceTests : NodeBasedTest() {
             advertisedServices = setOf(notaryService),
             configOverrides = mapOf("notaryNodeAddress" to notaryAddresses[0]))
 
-        for (i in 1 until clusterSize) {
+        val remainingNodes = (1 until clusterSize).map {
             startNode(
-                "Notary$i",
+                "Notary$it",
                 advertisedServices = setOf(notaryService),
                 configOverrides = mapOf(
-                    "notaryNodeAddress" to notaryAddresses[i],
+                    "notaryNodeAddress" to notaryAddresses[it],
                     "notaryClusterAddresses" to listOf(notaryAddresses[0])))
         }
 
-        return masterNode
+        return Futures.allAsList(remainingNodes).flatMap { masterNode }
     }
 
     private fun issueState(node: AbstractNode, notary: Party, notaryKey: KeyPair): StateAndRef<*> {

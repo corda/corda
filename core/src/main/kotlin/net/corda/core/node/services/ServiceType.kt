@@ -11,7 +11,7 @@ sealed class ServiceType(val id: String) {
         //
         //  * IDs must start with a lower case letter
         //  * IDs can only contain alphanumeric, full stop and underscore ASCII characters
-        require(id.matches(Regex("[a-z][a-zA-Z0-9._]+")))
+        require(id.matches(Regex("[a-z][a-zA-Z0-9._]+"))) { id }
     }
     private class ServiceTypeImpl(baseId: String, subTypeId: String) : ServiceType("$baseId.$subTypeId")
 

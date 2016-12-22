@@ -14,6 +14,7 @@ import net.corda.core.utilities.trace
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Outbound
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
@@ -66,13 +67,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         // confusion.
         const val TOPIC_PROPERTY = "platform-topic"
         const val SESSION_ID_PROPERTY = "session-id"
-
-        /**
-         * This should be the only way to generate an ArtemisAddress and that only of the remote NetworkMapService node.
-         * All other addresses come from the NetworkMapCache, or myAddress below.
-         * The node will populate with their own identity based address when they register with the NetworkMapService.
-         */
-        fun makeNetworkMapAddress(hostAndPort: HostAndPort): SingleMessageRecipient = NetworkMapAddress(hostAndPort)
     }
 
     private class InnerState {
@@ -118,7 +112,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             started = true
 
             log.info("Connecting to server: $serverHostPort")
-            val tcpTransport = tcpTransport(ConnectionDirection.OUTBOUND, serverHostPort.hostText, serverHostPort.port)
+            // TODO Add broker CN to config for host verification in case the embedded broker isn't used
+            val tcpTransport = tcpTransport(Outbound(), serverHostPort.hostText, serverHostPort.port)
             val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
             clientFactory = locator.createSessionFactory()
 
@@ -375,10 +370,10 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         }
     }
 
-    private fun getMQAddress(target: MessageRecipients): SimpleString {
+    private fun getMQAddress(target: MessageRecipients): String {
         return if (target == myAddress) {
             // If we are sending to ourselves then route the message directly to our P2P queue.
-            SimpleString(P2P_QUEUE)
+            P2P_QUEUE
         } else {
             // Otherwise we send the message to an internal queue for the target residing on our broker. It's then the
             // broker's job to route the message to the target's P2P queue.
@@ -391,9 +386,9 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     }
 
     /** Attempts to create a durable queue on the broker which is bound to an address of the same name. */
-    private fun createQueueIfAbsent(queueName: SimpleString) {
+    private fun createQueueIfAbsent(queueName: String) {
         state.alreadyLocked {
-            val queueQuery = session!!.queueQuery(queueName)
+            val queueQuery = session!!.queueQuery(SimpleString(queueName))
             if (!queueQuery.isExists) {
                 log.info("Create fresh queue $queueName bound on same address")
                 session!!.createQueue(queueName, queueName, true)
