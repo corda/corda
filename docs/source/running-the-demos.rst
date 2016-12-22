@@ -14,7 +14,7 @@ so far. We have:
    using the Standard Initial Margin Model.
 6. The distributed notary demo, which demonstrates a single node getting multiple transactions notarised by a distributed (Raft-based) notary.
 7. The Bank of Corda demo, which demonstrates a node acting as an issuer of assets (the Bank of Corda) and remote client
-    applications requesting issuance (via RPC, HTTP) of some cash on behalf of a node called Big Corporation.
+   applications requesting issuance (via RPC, HTTP) of some cash on behalf of a node called Big Corporation.
 
 .. note:: If any demos don't work please jump on our mailing list and let us know.
 
