@@ -539,6 +539,25 @@ class CashTests {
         assertFailsWith<InsufficientBalanceException> { makeExit(1000.DOLLARS, MEGA_CORP, 1) }
     }
 
+    /**
+     * Try exiting for an owner with no states
+     */
+    @Test
+    fun generateOwnerWithNoStatesExit() {
+        assertFailsWith<InsufficientBalanceException> { makeExit(100.POUNDS, CHARLIE, 1) }
+    }
+
+    /**
+     * Try exiting when vault is empty
+     */
+    @Test
+    fun generateExitWithEmptyVault() {
+        assertFailsWith<InsufficientBalanceException> {
+            val tx = TransactionType.General.Builder(DUMMY_NOTARY)
+            Cash().generateExit(tx, Amount(100, Issued(CHARLIE.ref(1), GBP)), emptyList())
+        }
+    }
+
     @Test
     fun generateSimpleDirectSpend() {
 

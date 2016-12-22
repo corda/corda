@@ -81,3 +81,9 @@ task(runDemoNodes, dependsOn: 'classes', type: JavaExec) {
     main = 'net.corda.explorer.MainKt'
     classpath = sourceSets.main.runtimeClasspath
 }
+
+task(runSimulationNodes, dependsOn: 'classes', type: JavaExec) {
+    main = 'net.corda.explorer.MainKt'
+    classpath = sourceSets.main.runtimeClasspath
+    args '-S'
+}

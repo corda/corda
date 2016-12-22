@@ -1,9 +1,9 @@
-package net.corda.bank.flow
+package net.corda.flows
 
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.bank.api.BOC_ISSUER_PARTY
-import net.corda.bank.api.BOC_KEY
-import net.corda.bank.flow.IssuerFlow.IssuanceRequester
+import net.corda.testing.BOC
+import net.corda.testing.BOC_KEY
+import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.PartyAndReference
@@ -35,11 +35,11 @@ class IssuerFlowTest {
         net = MockNetwork(false, true)
         ledger {
             notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-            bankOfCordaNode = net.createPartyNode(notaryNode.info.address, BOC_ISSUER_PARTY.name, BOC_KEY)
+            bankOfCordaNode = net.createPartyNode(notaryNode.info.address, BOC.name, BOC_KEY)
             bankClientNode = net.createPartyNode(notaryNode.info.address, MEGA_CORP.name, MEGA_CORP_KEY)
 
             // using default IssueTo Party Reference
-            val issueToPartyAndRef = MEGA_CORP.ref(OpaqueBytes.of(123))
+            val issueToPartyAndRef = MEGA_CORP.ref(OpaqueBytes.Companion.of(123))
             val (issuer, issuerResult) = runIssuerAndIssueRequester(1000000.DOLLARS, issueToPartyAndRef)
             assertEquals(issuerResult.get(), issuer.get().resultFuture.get())
 
@@ -64,7 +64,7 @@ class IssuerFlowTest {
         val issueRequest = IssuanceRequester(amount, issueToPartyAndRef.party, issueToPartyAndRef.reference, bankOfCordaNode.info.legalIdentity)
         val issueRequestResultFuture = bankClientNode.smm.add(issueRequest).resultFuture
 
-        return RunResult(issuerFuture, issueRequestResultFuture)
+        return IssuerFlowTest.RunResult(issuerFuture, issueRequestResultFuture)
     }
 
     private data class RunResult(

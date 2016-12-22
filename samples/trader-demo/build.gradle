@@ -50,6 +50,9 @@ dependencies {
     compile project(':finance')
     compile project(':test-utils')
 
+    // Corda Plugins: dependent flows and services
+    compile project(':samples:bank-of-corda-demo')
+
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
 
@@ -93,6 +96,15 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         advertisedServices = []
         artemisPort 10006
         webPort 10007
+        cordapps = []
+    }
+    node {
+        name "BankOfCorda"
+        dirName "bankofcorda"
+        nearestCity "London"
+        advertisedServices = []
+        artemisPort 10008
+        webPort 10009
         cordapps = []
     }
 }

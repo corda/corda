@@ -5,11 +5,11 @@ import net.corda.core.contracts.DOLLARS
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.CashCommand
-import net.corda.flows.CashFlow
-import net.corda.flows.CashFlowResult
+import net.corda.flows.IssuerFlow.IssuanceRequester
+import net.corda.testing.BOC
 import net.corda.traderdemo.flow.SellerFlow
 import java.util.*
 import javax.ws.rs.*
@@ -27,26 +27,22 @@ class TraderDemoApi(val rpc: CordaRPCOps) {
     }
 
     /**
-     * Self issue some cash.
-     * TODO: At some point this demo should be extended to have a central bank node.
+     * Uses a central bank node (Bank of Corda) to request issuance of some cash.
      */
     @PUT
     @Path("create-test-cash")
     @Consumes(MediaType.APPLICATION_JSON)
     fun createTestCash(params: TestCashParams): Response {
-        val notary = rpc.networkMapUpdates().first.first { it.legalIdentity.name == params.notary }
+        val bankOfCordaParty = rpc.partyFromName(BOC.name)
+                ?: throw Exception("Unable to locate ${BOC.name} in Network Map Service")
         val me = rpc.nodeIdentity()
-        val amounts = calculateRandomlySizedAmounts(params.amount.DOLLARS, 3, 10, Random())
+        // TODO: revert back to multiple issue request amounts (3,10) when soft locking implemented
+        val amounts = calculateRandomlySizedAmounts(params.amount.DOLLARS, 1, 1, Random())
         val handles = amounts.map {
-            rpc.startFlow(::CashFlow, CashCommand.IssueCash(
-                    amount = params.amount.DOLLARS,
-                    issueRef = OpaqueBytes.of(1),
-                    recipient = me.legalIdentity,
-                    notary = notary.notaryIdentity
-            ))
+            rpc.startFlow(::IssuanceRequester, params.amount.DOLLARS, me.legalIdentity, OpaqueBytes.of(1), bankOfCordaParty)
         }
         handles.forEach {
-            require(it.returnValue.toBlocking().first() is CashFlowResult.Success)
+            require(it.returnValue.toBlocking().first() is SignedTransaction)
         }
         return Response.status(Response.Status.CREATED).build()
     }
