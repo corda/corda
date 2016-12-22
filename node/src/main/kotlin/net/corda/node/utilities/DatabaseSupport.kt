@@ -190,76 +190,73 @@ fun <T : Any> rx.Observer<T>.bufferUntilDatabaseCommit(): rx.Observer<T> {
     return subject
 }
 
+
+// A subscriber that delegates to multiple others, wrapping a database transaction around the combination.
+private class DatabaseTransactionWrappingSubscriber<U>(val db: Database?) : Subscriber<U>() {
+    // Some unsubscribes happen inside onNext() so need something that supports concurrent modification.
+    val delegates = CopyOnWriteArrayList<Subscriber<in U>>()
+
+    fun forEachSubscriberWithDbTx(block: Subscriber<in U>.() -> Unit) {
+        databaseTransaction(db ?: StrandLocalTransactionManager.database) {
+            delegates.filter { !it.isUnsubscribed }.forEach {
+                it.block()
+            }
+        }
+    }
+
+    override fun onCompleted() {
+        forEachSubscriberWithDbTx { onCompleted() }
+    }
+
+    override fun onError(e: Throwable?) {
+        forEachSubscriberWithDbTx { onError(e) }
+    }
+
+    override fun onNext(s: U) {
+        forEachSubscriberWithDbTx { onNext(s) }
+    }
+
+    override fun onStart() {
+        forEachSubscriberWithDbTx { onStart() }
+    }
+
+    fun cleanUp() {
+        if (delegates.removeIf { it.isUnsubscribed }) {
+            if (delegates.isEmpty()) {
+                unsubscribe()
+            }
+        }
+    }
+}
+
+// A subscriber that wraps another but does not pass on observations to it.
+private class NoOpSubscriber<U>(t: Subscriber<in U>) : Subscriber<U>(t) {
+    override fun onCompleted() {
+    }
+
+    override fun onError(e: Throwable?) {
+    }
+
+    override fun onNext(s: U) {
+    }
+}
+
 /**
  * Wrap delivery of observations in a database transaction.  Multiple subscribers will receive the observations inside
  * the same database transaction.  This also lazily subscribes to the source [rx.Observable] to preserve any buffering
  * that might be in place.
  */
 fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: Database? = null): rx.Observable<T> {
-    // A subscriber that wraps another but does not pass on observations to it.
-    class NoOpSubscriber<U>(t: Subscriber<in U>) : Subscriber<U>(t) {
-        override fun onCompleted() {
-        }
-
-        override fun onError(e: Throwable?) {
-        }
-
-        override fun onNext(s: U) {
-        }
-    }
-
-    // A subscriber that delegates to multiple others, wrapping a database transaction around the combination.
-    class DatabaseTransactionWrappingSubscriber<U>(db: Database?) : Subscriber<T>() {
-        // Some unsubscribes happen inside onNext() so need something that supports concurrent modification.
-        val delegates = CopyOnWriteArrayList<Subscriber<in T>>()
-
-        fun forEachSubscriberWithDbTx(block: Subscriber<in T>.() -> Unit) {
-            databaseTransaction(db ?: StrandLocalTransactionManager.database) {
-                delegates.filter { !it.isUnsubscribed }.forEach {
-                    it.block()
-                }
-            }
-        }
-
-        override fun onCompleted() {
-            forEachSubscriberWithDbTx { onCompleted() }
-        }
-
-        override fun onError(e: Throwable?) {
-            forEachSubscriberWithDbTx { onError(e) }
-        }
-
-        override fun onNext(s: T) {
-            forEachSubscriberWithDbTx { onNext(s) }
-        }
-
-        override fun onStart() {
-            forEachSubscriberWithDbTx { onStart() }
-        }
-
-        fun cleanUp() {
-            if (delegates.removeIf { it.isUnsubscribed }) {
-                if (delegates.isEmpty()) {
-                    unsubscribe()
-                }
-            }
-        }
-    }
-
-    // An operator that adds subscribers to a special subscriber that wraps a database transaction around observations.
-    val op = object : Observable.Operator<T, T> {
-        val wrappingSubscriber = DatabaseTransactionWrappingSubscriber<T>(db)
-
-        // Each subscriber will be passed to this function when they subscribe, at which point we add them to wrapping subscriber.
-        override fun call(toBeWrappedInDbTx: Subscriber<in T>): Subscriber<in T> {
-            // Add the subscriber to the wrapping subscriber, which will invoke the original subscribers together inside a database transaction.
-            wrappingSubscriber.delegates.add(toBeWrappedInDbTx)
-            // If we are the first subscriber, return the shared subscriber, otherwise return a subscriber that does nothing.
-            return if (wrappingSubscriber.delegates.size == 1) wrappingSubscriber else NoOpSubscriber<T>(toBeWrappedInDbTx)
-        }
-    }
-    // Wrap subscribers, and then when they unsubscribe, clean up the shared list of subscribers.
-    return this.lift<T>(op).doOnUnsubscribe { op.wrappingSubscriber.cleanUp() }
+    val wrappingSubscriber = DatabaseTransactionWrappingSubscriber<T>(db)
+    // Use lift to add subscribers to a special subscriber that wraps a database transaction around observations.
+    // Each subscriber will be passed to this lambda when they subscribe, at which point we add them to wrapping subscriber.
+    return this.lift { toBeWrappedInDbTx: Subscriber<in T> ->
+        // Add the subscriber to the wrapping subscriber, which will invoke the original subscribers together inside a database transaction.
+        wrappingSubscriber.delegates.add(toBeWrappedInDbTx)
+        // If we are the first subscriber, return the shared subscriber, otherwise return a subscriber that does nothing.
+        if (wrappingSubscriber.delegates.size == 1) wrappingSubscriber else NoOpSubscriber<T>(toBeWrappedInDbTx)
+        // Clean up the shared list of subscribers when they unsubscribe.
+    }.doOnUnsubscribe { wrappingSubscriber.cleanUp() }
 }
 
 // Composite columns for use with below Exposed helpers.

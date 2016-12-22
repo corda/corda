@@ -194,7 +194,7 @@ class ObservablesTests {
     }
 
     @Test
-    fun `check wrapping doesn't eagerly subscribe`() {
+    fun `check wrapping in db tx doesn't eagerly subscribe`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -217,7 +217,7 @@ class ObservablesTests {
     }
 
     @Test
-    fun `check wrapping unsubscribes`() {
+    fun `check wrapping in db tx unsubscribes`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
