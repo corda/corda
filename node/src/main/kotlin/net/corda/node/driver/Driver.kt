@@ -264,7 +264,7 @@ open class DriverDSL(
     private val networkMapAddress = portAllocation.nextHostAndPort()
 
     class State {
-        val registeredProcesses = LinkedList<Process>()
+        val registeredProcesses = LinkedList<ListenableFuture<Process>>()
         val clients = LinkedList<NodeMessagingClient>()
     }
 
@@ -279,12 +279,12 @@ open class DriverDSL(
         Paths.get(quasarFileUrl.toURI()).toString()
     }
 
-    fun registerProcess(process: Process) = state.locked { registeredProcesses.push(process) }
+    fun registerProcess(process: ListenableFuture<Process>) = state.locked { registeredProcesses.push(process) }
 
     override fun waitForAllNodesToFinish() {
         state.locked {
             registeredProcesses.forEach {
-                it.waitFor()
+                it.getOrThrow().waitFor()
             }
         }
     }
@@ -294,7 +294,9 @@ open class DriverDSL(
             clients.forEach {
                 it.stop()
             }
-            registeredProcesses.forEach(Process::destroy)
+            registeredProcesses.forEach {
+                it.get().destroy()
+            }
         }
         /** Wait 5 seconds, then [Process.destroyForcibly] */
         val finishedFuture = executorService.submit {
@@ -306,7 +308,7 @@ open class DriverDSL(
             finishedFuture.cancel(true)
             state.locked {
                 registeredProcesses.forEach {
-                    it.destroyForcibly()
+                    it.get().destroyForcibly()
                 }
             }
         }
@@ -368,8 +370,9 @@ open class DriverDSL(
                 configOverrides = configOverrides
         )
 
-        return startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort).map {
-            registerProcess(it)
+        val startNode = startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort)
+        registerProcess(startNode)
+        return startNode.map {
             NodeHandle(queryNodeInfo(apiAddress)!!, config, it)
         }
     }
@@ -409,7 +412,7 @@ open class DriverDSL(
         startNetworkMapService()
     }
 
-    private fun startNetworkMapService(): ListenableFuture<Unit> {
+    private fun startNetworkMapService(): ListenableFuture<Process> {
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
@@ -428,9 +431,9 @@ open class DriverDSL(
         )
 
         log.info("Starting network-map-service")
-        return startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort).map {
-            registerProcess(it)
-        }
+        val startNode = startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort)
+        registerProcess(startNode)
+        return startNode
     }
 
     companion object {
