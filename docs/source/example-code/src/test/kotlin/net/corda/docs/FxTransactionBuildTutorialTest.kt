@@ -3,9 +3,7 @@ package net.corda.docs
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.*
 import net.corda.core.getOrThrow
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
@@ -18,7 +16,6 @@ import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.util.*
 import kotlin.test.assertEquals
 
 class FxTransactionBuildTutorialTest {
@@ -69,13 +66,13 @@ class FxTransactionBuildTutorialTest {
         printBalances()
 
         // Setup some futures on the vaults to await the arrival of the exchanged funds at both nodes
-        val done2 = SettableFuture.create<Map<Currency, Amount<Currency>>>()
-        val done3 = SettableFuture.create<Map<Currency, Amount<Currency>>>()
+        val done2 = SettableFuture.create<Unit>()
+        val done3 = SettableFuture.create<Unit>()
         val subs2 = nodeA.services.vaultService.updates.subscribe {
-            done2.set(nodeA.services.vaultService.cashBalances)
+            done2.set(Unit)
         }
         val subs3 = nodeB.services.vaultService.updates.subscribe {
-            done3.set(nodeB.services.vaultService.cashBalances)
+            done3.set(Unit)
         }
         // Now run the actual Fx exchange
         val doIt = nodeA.services.startFlow(ForeignExchangeFlow("trade1",
@@ -86,8 +83,14 @@ class FxTransactionBuildTutorialTest {
         // wait for the flow to finish and the vault updates to be done
         doIt.resultFuture.getOrThrow()
         // Get the balances when the vault updates
-        val balancesA = done2.get()
-        val balancesB = done3.get()
+        done2.get()
+        val balancesA = databaseTransaction(nodeA.database) {
+            nodeA.services.vaultService.cashBalances
+        }
+        done3.get()
+        val balancesB = databaseTransaction(nodeB.database) {
+            nodeB.services.vaultService.cashBalances
+        }
         subs2.unsubscribe()
         subs3.unsubscribe()
         println("BalanceA\n" + balancesA)

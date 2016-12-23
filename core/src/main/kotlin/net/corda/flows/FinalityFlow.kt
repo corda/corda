@@ -16,7 +16,9 @@ import net.corda.core.utilities.ProgressTracker
  */
 class FinalityFlow(val transaction: SignedTransaction,
                    val participants: Set<Party>,
-                   override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+                   override val progressTracker: ProgressTracker) : FlowLogic<Unit>() {
+    constructor(transaction: SignedTransaction, participants: Set<Party>) : this(transaction, participants, tracker())
+
     companion object {
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service")
         object BROADCASTING : ProgressTracker.Step("Broadcasting transaction to participants")

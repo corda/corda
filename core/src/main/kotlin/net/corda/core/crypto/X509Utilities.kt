@@ -430,14 +430,8 @@ object X509Utilities {
     fun loadCertificateFromPEMFile(filename: Path): X509Certificate {
         val reader = PemReader(FileReader(filename.toFile()))
         val pemObject = reader.readPemObject()
-        val certFact = CertificateFactory.getInstance("X.509", BouncyCastleProvider.PROVIDER_NAME)
-        val inputStream = ByteArrayInputStream(pemObject.content)
-        try {
-            val cert = certFact.generateCertificate(inputStream) as X509Certificate
-            cert.checkValidity()
-            return cert
-        } finally {
-            inputStream.close()
+        return CertificateStream(pemObject.content.inputStream()).nextCertificate().apply {
+            checkValidity()
         }
     }
 
@@ -608,4 +602,12 @@ object X509Utilities {
 
         return keyStore
     }
+}
+
+val X500Name.commonName: String get() = getRDNs(BCStyle.CN).first().first.value.toString()
+
+class CertificateStream(val input: InputStream) {
+    private val certificateFactory = CertificateFactory.getInstance("X.509")
+
+    fun nextCertificate(): X509Certificate = certificateFactory.generateCertificate(input) as X509Certificate
 }

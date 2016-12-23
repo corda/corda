@@ -252,7 +252,7 @@ example CorDapp.
 The ``deployNodes`` Gradle task allows you easily create a formation of Corda nodes. In the case of the example CorDapp
 we are creating ``four`` nodes.
 
-After the building process has finished to see the newly built nodes, you can navigate to the ``/build/nodes`` folder
+After the building process has finished to see the newly built nodes, you can navigate to the ``kotlin/build/nodes`` folder
 located in the ``cordapp-template`` root directory. You can ignore the other folders in ``/build`` for now. The ``nodes``
 folder has the following structure:
 
@@ -300,7 +300,7 @@ Running the Sample CorDapp
 Running the Sample CorDapp from the command line
 ------------------------------------------------
 
-To run the sample CorDapp navigate to the ``build/nodes`` folder and execute the ``runnodes`` shell script with:
+To run the sample CorDapp navigate to the ``kotlin/build/nodes`` folder and execute the ``runnodes`` shell script with:
 
 Unix: ``./runnodes`` or ``sh runnodes``
 
@@ -319,7 +319,7 @@ message and some pertinent config information, see below:
 
   --- DEVELOPER SNAPSHOT ------------------------------------------------------------
 
-  Logs can be found in                    : /Users/rogerwillis/Documents/Corda/cordapp-template/build/nodes/nodea/logs
+  Logs can be found in                    : /Users/rogerwillis/Documents/Corda/cordapp-template/kotlin/build/nodes/nodea/logs
   Database connection url is              : jdbc:h2:tcp://10.18.0.196:50661/node
   Node listening on address               : localhost:10004
   Loaded plugins                          : com.example.plugin.ExamplePlugin
@@ -368,7 +368,7 @@ Running CorDapps on separate machines
 Corda nodes can be run on separate machines with little additional configuration to the above instructions.
 
 When you have successfully run the ``deployNodes`` gradle task, choose which nodes you would like to run on separate
-machines. Copy the folders for those nodes from ``build/nodes`` to the other machines. Make sure that you set the
+machines. Copy the folders for those nodes from ``kotlin/build/nodes`` to the other machines. Make sure that you set the
 ``networkMapAddress`` property in ``node.conf`` to the correct hostname:port where the network map service node is
 hosted.
 
@@ -434,7 +434,7 @@ The CorDapp defines a few HTTP API end-points and also serves some static web co
 list purchase orders and add purchase orders.
 
 The nodes can be found using the following port numbers, defined in build.gradle and the respective node.conf file for
-each node found in `build/nodes/NodeX`` etc:
+each node found in `kotlin/build/nodes/NodeX`` etc:
 
 * Controller: ``localhost:10003``
 * NodeA:      ``localhost:10005``
@@ -758,7 +758,7 @@ like to deploy for testing. See further details below:
 .. sourcecode:: groovy
 
   task deployNodes(type: com.r3corda.plugins.Cordform, dependsOn: ['build']) {
-      directory "./build/nodes"                            // The output directory.
+      directory "./kotlin/build/nodes"                            // The output directory.
       networkMap "Controller"                              // The artemis address of the node to be used as the network map.
       node {
           name "Controller"                                // Artemis name of node to be deployed.
@@ -804,7 +804,7 @@ Re-Deploying Your Nodes Locally
 If you need to create any additional nodes you can do it via the ``build.gradle`` file as discussed above in
 ``the build.gradle file`` and in more detail in the "cordFormation" section.
 
-You may also wish to edit the ``/build/nodes/<node name>/node.conf`` files for your nodes. For more information on
+You may also wish to edit the ``/kotlin/build/nodes/<node name>/node.conf`` files for your nodes. For more information on
 doing this, see the :doc:`Corda configuration file <corda-configuration-file>` page.
 
 Once you have made some changes to your CorDapp you can redeploy it with the following command:

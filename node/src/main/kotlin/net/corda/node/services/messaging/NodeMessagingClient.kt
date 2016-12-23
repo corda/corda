@@ -158,7 +158,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             session.createTemporaryQueue(NOTIFICATIONS_ADDRESS, RPC_QUEUE_REMOVALS_QUEUE, "_AMQ_NotifType = 1")
             rpcConsumer = session.createConsumer(RPC_REQUESTS_QUEUE)
             rpcNotificationConsumer = session.createConsumer(RPC_QUEUE_REMOVALS_QUEUE)
-            rpcDispatcher = createRPCDispatcher(rpcOps, userService)
+            rpcDispatcher = createRPCDispatcher(rpcOps, userService, config.myLegalName)
         }
     }
 
@@ -436,16 +436,17 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         }
     }
 
-    private fun createRPCDispatcher(ops: RPCOps, userService: RPCUserService) = object : RPCDispatcher(ops, userService) {
-        override fun send(data: SerializedBytes<*>, toAddress: String) {
-            state.locked {
-                val msg = session!!.createMessage(false).apply {
-                    writeBodyBufferBytes(data.bytes)
-                    // Use the magic deduplication property built into Artemis as our message identity too
-                    putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+    private fun createRPCDispatcher(ops: RPCOps, userService: RPCUserService, nodeLegalName: String) =
+            object : RPCDispatcher(ops, userService, nodeLegalName) {
+                override fun send(data: SerializedBytes<*>, toAddress: String) {
+                    state.locked {
+                        val msg = session!!.createMessage(false).apply {
+                            writeBodyBufferBytes(data.bytes)
+                            // Use the magic deduplication property built into Artemis as our message identity too
+                            putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+                        }
+                        producer!!.send(toAddress, msg)
+                    }
                 }
-                producer!!.send(toAddress, msg)
             }
-        }
-    }
 }

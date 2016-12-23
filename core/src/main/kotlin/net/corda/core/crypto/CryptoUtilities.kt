@@ -1,3 +1,5 @@
+@file:JvmName("CryptoUtilities")
+
 package net.corda.core.crypto
 
 import net.corda.core.serialization.OpaqueBytes

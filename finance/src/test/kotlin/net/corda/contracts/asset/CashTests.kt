@@ -717,4 +717,39 @@ class CashTests {
         // Test that summing everything fails because we're mixing units
         states.sumCash()
     }
+
+    // Double spend.
+    @Test
+    fun chainCashDoubleSpendFailsWith() {
+        ledger {
+            unverifiedTransaction {
+                output("MEGA_CORP cash") {
+                    Cash.State(
+                            amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+                            owner = MEGA_CORP_PUBKEY
+                    )
+                }
+            }
+
+            transaction {
+                input("MEGA_CORP cash")
+                output("MEGA_CORP cash".output<Cash.State>().copy(owner = DUMMY_PUBKEY_1))
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+                this.verifies()
+            }
+
+            tweak {
+                transaction {
+                    input("MEGA_CORP cash")
+                    // We send it to another pubkey so that the transaction is not identical to the previous one
+                    output("MEGA_CORP cash".output<Cash.State>().copy(owner = ALICE_PUBKEY))
+                    command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+                    this.verifies()
+                }
+                this.fails()
+            }
+
+            this.verifies()
+        }
+    }
 }

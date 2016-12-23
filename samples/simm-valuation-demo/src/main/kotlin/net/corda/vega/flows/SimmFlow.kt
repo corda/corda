@@ -47,8 +47,10 @@ object SimmFlow {
      */
     class Requester(val otherParty: Party,
                     val valuationDate: LocalDate,
-                    val existing: StateAndRef<PortfolioState>? = null)
-        : FlowLogic<RevisionedState<PortfolioState.Update>>() {
+                    val existing: StateAndRef<PortfolioState>?)
+    : FlowLogic<RevisionedState<PortfolioState.Update>>() {
+        constructor(otherParty: Party, valuationDate: LocalDate) : this(otherParty, valuationDate, null)
+
         lateinit var myIdentity: Party
         lateinit var notary: Party
 
@@ -69,7 +71,7 @@ object SimmFlow {
             val portfolioStateRef = serviceHub.vaultService.dealsWith<PortfolioState>(otherParty).first()
             val state = updateValuation(portfolioStateRef)
             logger.info("SimmFlow done")
-            return state;
+            return state
         }
 
         @Suspendable

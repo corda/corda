@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.Futures
 import net.corda.core.*
 import net.corda.core.crypto.Party
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PhysicalLocation
 import net.corda.core.node.services.*
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
@@ -14,7 +15,7 @@ import net.corda.node.internal.AbstractNode
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.keys.E2ETestKeyManagementService
-import net.corda.node.services.messaging.RPCOps
+import net.corda.core.messaging.RPCOps
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.InMemoryUniquenessProvider
@@ -150,6 +151,12 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             return this
         }
 
+        // Allow unit tests to modify the plugin list before the node start,
+        // so they don't have to ServiceLoad test plugins into all unit tests.
+        val testPluginRegistries = super.pluginRegistries.toMutableList()
+        override val pluginRegistries: List<CordaPluginRegistry>
+            get() = testPluginRegistries
+
         // This does not indirect through the NodeInfo object so it can be called before the node is started.
         // It is used from the network visualiser tool.
         @Suppress("unused") val place: PhysicalLocation get() = findMyLocation()!!
@@ -280,5 +287,21 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     fun stopNodes() {
         require(nodes.isNotEmpty())
         nodes.forEach { if (it.started) it.stop() }
+    }
+
+    // Test method to block until all scheduled activity, active flows
+    // and network activity has ceased.
+    // TODO This is not perfect in that certain orderings my skip over the scanning loop.
+    // However, in practice it works well for testing of scheduled flows.
+    fun waitQuiescent() {
+        while(nodes.any { it.smm.unfinishedFibers.count > 0
+                            || it.scheduler.unfinishedSchedules.count > 0}
+                || messagingNetwork.messagesInFlight.count > 0) {
+            for (node in nodes) {
+                node.smm.unfinishedFibers.await()
+                node.scheduler.unfinishedSchedules.await()
+            }
+            messagingNetwork.messagesInFlight.await()
+        }
     }
 }

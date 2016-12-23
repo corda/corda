@@ -9,6 +9,7 @@ import net.corda.vega.flows.IRSTradeFlow
 import net.corda.vega.flows.SimmFlow
 import net.corda.vega.flows.SimmRevaluation
 import java.time.LocalDate
+import java.util.function.Function
 
 /**
  * [SimmService] is the object that makes available the flows and services for the Simm agreement / evaluation flow
@@ -17,14 +18,12 @@ import java.time.LocalDate
  */
 object SimmService {
     class Plugin : CordaPluginRegistry() {
-        override val webApis: List<Class<*>> = listOf(PortfolioApi::class.java)
+        override val webApis = listOf(Function(::PortfolioApi))
         override val requiredFlows: Map<String, Set<String>> = mapOf(
                 SimmFlow.Requester::class.java.name to setOf(Party::class.java.name, LocalDate::class.java.name),
                 SimmRevaluation.Initiator::class.java.name to setOf(StateRef::class.java.name, LocalDate::class.java.name),
                 IRSTradeFlow.Requester::class.java.name to setOf(SwapData::class.java.name, Party::class.java.name))
-        override val servicePlugins: List<Class<*>> = listOf(
-                SimmFlow.Service::class.java,
-                IRSTradeFlow.Service::class.java)
         override val staticServeDirs: Map<String, String> = mapOf("simmvaluationdemo" to javaClass.classLoader.getResource("simmvaluationweb").toExternalForm())
+        override val servicePlugins = listOf(Function(SimmFlow::Service), Function(IRSTradeFlow::Service))
     }
 }

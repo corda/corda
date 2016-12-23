@@ -86,15 +86,16 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val result = try {
             logic.call()
         } catch (t: Throwable) {
-            processException(t)
+            actionOnEnd()
             commitTransaction()
+            _resultFuture?.setException(t)
             throw ExecutionException(t)
         }
 
         // This is to prevent actionOnEnd being called twice if it throws an exception
         actionOnEnd()
-        _resultFuture?.set(result)
         commitTransaction()
+        _resultFuture?.set(result)
         return result
     }
 
@@ -264,8 +265,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         // This can get called in actionOnSuspend *after* we commit the database transaction, so optionally open a new one here.
         databaseTransaction(database) {
             actionOnEnd()
-            _resultFuture?.setException(t)
         }
+        _resultFuture?.setException(t)
     }
 
     internal fun resume(scheduler: FiberScheduler) {

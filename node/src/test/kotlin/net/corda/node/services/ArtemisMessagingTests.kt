@@ -8,6 +8,7 @@ import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.Message
+import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.createMessage
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.utilities.LogHelper
@@ -16,7 +17,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
-import net.corda.node.services.messaging.RPCOps
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider

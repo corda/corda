@@ -9,7 +9,7 @@ import net.corda.core.transactions.TransactionBuilder
 
 val DUMMY_PROGRAM_ID = DummyContract()
 
-class DummyContract : Contract {
+data class DummyContract(override val legalContractReference: SecureHash = SecureHash.sha256("")) : Contract {
 
     interface State : ContractState {
         val magicNumber: Int
@@ -43,9 +43,6 @@ class DummyContract : Contract {
     override fun verify(tx: TransactionForContract) {
         // Always accepts.
     }
-
-    // The "empty contract"
-    override val legalContractReference: SecureHash = SecureHash.sha256("")
 
     companion object {
         @JvmStatic

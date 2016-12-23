@@ -1,10 +1,8 @@
 package net.corda.vega.portfolio
 
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.ServiceHub
 import net.corda.core.sum
 import net.corda.vega.contracts.IRSState
@@ -32,6 +30,11 @@ data class Portfolio(private val tradeStateAndRefs: List<StateAndRef<IRSState>>,
 
 fun List<StateAndRef<IRSState>>.toPortfolio(): Portfolio {
     return Portfolio(this)
+}
+
+inline fun <reified T : ContractState> List<StateRef>.toStateAndRef(rpc: CordaRPCOps): List<StateAndRef<T>> {
+    val stateRefs = rpc.vaultAndUpdates().first.associateBy { it.ref }
+    return mapNotNull { stateRefs[it] }.filterStatesOfType<T>()
 }
 
 // TODO: This should probably have its generics fixed and moved into the core platform API.

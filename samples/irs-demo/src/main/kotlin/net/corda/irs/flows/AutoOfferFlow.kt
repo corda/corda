@@ -13,6 +13,7 @@ import net.corda.flows.TwoPartyDealFlow
 import net.corda.flows.TwoPartyDealFlow.Acceptor
 import net.corda.flows.TwoPartyDealFlow.AutoOffer
 import net.corda.flows.TwoPartyDealFlow.Instigator
+import java.util.function.Function
 
 /**
  * This whole class is really part of a demo just to initiate the agreement of a deal with a simple
@@ -24,7 +25,7 @@ import net.corda.flows.TwoPartyDealFlow.Instigator
 object AutoOfferFlow {
 
     class Plugin : CordaPluginRegistry() {
-        override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
+        override val servicePlugins = listOf(Function(::Service))
     }
 
 

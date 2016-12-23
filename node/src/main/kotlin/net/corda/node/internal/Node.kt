@@ -2,12 +2,14 @@ package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import net.corda.core.div
+import net.corda.core.getOrThrow
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.UniquenessProvider
-import net.corda.core.then
 import net.corda.core.utilities.loggerFor
 import net.corda.node.printBasicNodeInfo
 import net.corda.node.serialization.NodeClock
@@ -17,8 +19,9 @@ import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent.NetworkMapAddress
 import net.corda.node.services.messaging.ArtemisMessagingServer
+import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.messaging.NodeMessagingClient
-import net.corda.node.services.messaging.RPCOps
+import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
@@ -50,6 +53,7 @@ import java.util.*
 import javax.management.ObjectName
 import javax.servlet.*
 import kotlin.concurrent.thread
+import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
 
 class ConfigurationException(message: String) : Exception(message)
 
@@ -120,6 +124,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
 
     override fun makeMessagingService(): MessagingServiceInternal {
         userService = RPCUserServiceImpl(configuration)
+
         val serverAddr = with(configuration) {
             messagingServerAddress ?: {
                 messageBroker = ArtemisMessagingServer(this, artemisAddress, services.networkMapCache, userService)
@@ -146,7 +151,8 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
         net.start(rpcOps, userService)
     }
 
-    private fun initWebServer(): Server {
+    // TODO: add flag to enable/disable webserver
+    private fun initWebServer(localRpc: CordaRPCOps): Server {
         // Note that the web server handlers will all run concurrently, and not on the node thread.
         val handlerCollection = HandlerCollection()
 
@@ -167,7 +173,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
         }
 
         // API, data upload and download to services (attachments, rates oracles etc)
-        handlerCollection.addHandler(buildServletContextHandler())
+        handlerCollection.addHandler(buildServletContextHandler(localRpc))
 
         val server = Server()
 
@@ -204,7 +210,7 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
         return server
     }
 
-    private fun buildServletContextHandler(): ServletContextHandler {
+    private fun buildServletContextHandler(localRpc: CordaRPCOps): ServletContextHandler {
         return ServletContextHandler().apply {
             contextPath = "/"
             setAttribute("node", this@Node)
@@ -219,17 +225,11 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
 
             val webAPIsOnClasspath = pluginRegistries.flatMap { x -> x.webApis }
             for (webapi in webAPIsOnClasspath) {
-                log.info("Add plugin web API from attachment ${webapi.name}")
-                val constructor = try {
-                    webapi.getConstructor(ServiceHub::class.java)
-                } catch (ex: NoSuchMethodException) {
-                    log.error("Missing constructor ${webapi.name}(ServiceHub)")
-                    continue
-                }
+                log.info("Add plugin web API from attachment $webapi")
                 val customAPI = try {
-                    constructor.newInstance(services)
+                    webapi.apply(localRpc)
                 } catch (ex: InvocationTargetException) {
-                    log.error("Constructor ${webapi.name}(ServiceHub) threw an error: ", ex.targetException)
+                    log.error("Constructor $webapi threw an error: ", ex.targetException)
                     continue
                 }
                 resourceConfig.register(customAPI)
@@ -299,13 +299,20 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
         super.initialiseDatabasePersistence(insideTransaction)
     }
 
+    private fun connectLocalRpcAsNodeUser(): CordaRPCOps {
+        val client = CordaRPCClient(configuration.artemisAddress, configuration)
+        client.start(NODE_USER, NODE_USER)
+        return client.proxy()
+    }
+
     override fun start(): Node {
         alreadyRunningNodeCheck()
         super.start()
         // Only start the service API requests once the network map registration is complete
-        networkMapRegistrationFuture.then {
+        thread(name = "WebServer") {
+            networkMapRegistrationFuture.getOrThrow()
             try {
-                webServer = initWebServer()
+                webServer = initWebServer(connectLocalRpcAsNodeUser())
             } catch(ex: Exception) {
                 // TODO: We need to decide if this is a fatal error, given the API is unavailable, or whether the API
                 //       is not critical and we continue anyway.

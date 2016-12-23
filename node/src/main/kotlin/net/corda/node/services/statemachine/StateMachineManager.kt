@@ -6,11 +6,13 @@ import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.Kryo
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.support.jdk8.collections.removeIf
 import net.corda.core.ThreadBox
 import net.corda.core.abbreviate
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.commonName
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
@@ -28,6 +30,7 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.isolatedTransaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
@@ -92,7 +95,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val changesPublisher = PublishSubject.create<Change>()
 
         fun notifyChangeObservers(psm: FlowStateMachineImpl<*>, addOrRemove: AddOrRemove) {
-            changesPublisher.onNext(Change(psm.logic, addOrRemove, psm.id))
+            changesPublisher.bufferUntilDatabaseCommit().onNext(Change(psm.logic, addOrRemove, psm.id))
         }
     })
 
@@ -100,6 +103,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     @Volatile private var stopping = false
     // How many Fibers are running and not suspended.  If zero and stopping is true, then we are halted.
     private val liveFibers = ReusableLatch()
+    @VisibleForTesting
+    val unfinishedFibers = ReusableLatch()
 
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
@@ -216,7 +221,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                     // isn't required to be unique
                     // TODO For now have the doorman block signups with identical names, and names with characters that
                     // are used in X.500 name textual serialisation
-                    val otherParty = serviceHub.networkMapCache.getNodeByLegalName(message.peerLegalName)?.legalIdentity
+                    val otherParty = serviceHub.networkMapCache.getNodeByLegalName(message.peer.commonName)?.legalIdentity
                     if (otherParty != null) {
                         onSessionInit(sessionMessage, otherParty)
                     } else {
@@ -335,6 +340,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 mutex.locked {
                     stateMachines.remove(psm)?.let { checkpointStorage.removeCheckpoint(it) }
                     totalFinishedFlows.inc()
+                    unfinishedFibers.countDown()
                     notifyChangeObservers(psm, AddOrRemove.REMOVE)
                 }
                 endAllFiberSessions(psm)
@@ -344,6 +350,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
         mutex.locked {
             totalStartedFlows.inc()
+            unfinishedFibers.countUp()
             notifyChangeObservers(psm, AddOrRemove.ADD)
         }
     }
@@ -388,13 +395,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * restarted with checkpointed state machines in the storage service.
      */
     fun <T> add(logic: FlowLogic<T>): FlowStateMachine<T> {
-        val fiber = createFiber(logic)
         // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
         // on the flow completion future inside that context. The problem is that any progress checkpoints are
         // unable to acquire the table lock and move forward till the calling transaction finishes.
         // Committing in line here on a fresh context ensure we can progress.
-        isolatedTransaction(database) {
+        val fiber = isolatedTransaction(database) {
+            val fiber = createFiber(logic)
             updateCheckpoint(fiber)
+            fiber
         }
         // If we are not started then our checkpoint will be picked up during start
         mutex.locked {

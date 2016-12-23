@@ -3,6 +3,8 @@ package net.corda.node
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
@@ -13,8 +15,6 @@ import net.corda.node.internal.CordaRPCOpsImpl
 import net.corda.node.services.User
 import net.corda.node.services.messaging.CURRENT_RPC_USER
 import net.corda.node.services.messaging.PermissionException
-import net.corda.node.services.messaging.StateMachineUpdate
-import net.corda.node.services.messaging.startFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService

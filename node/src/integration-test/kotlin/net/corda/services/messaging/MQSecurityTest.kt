@@ -2,12 +2,12 @@ package net.corda.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
-import net.corda.client.impl.CordaRPCClientImpl
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowLogic
 import net.corda.core.getOrThrow
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.random63BitValue
 import net.corda.core.seconds
 import net.corda.node.internal.Node
@@ -18,7 +18,7 @@ import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NOT
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.RPC_REQUESTS_QUEUE
-import net.corda.node.services.messaging.CordaRPCOps
+import net.corda.node.services.messaging.CordaRPCClientImpl
 import net.corda.node.services.messaging.NodeMessagingClient.Companion.RPC_QUEUE_REMOVALS_QUEUE
 import net.corda.testing.messaging.SimpleMQClient
 import net.corda.testing.node.NodeBasedTest

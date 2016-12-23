@@ -29,6 +29,8 @@ Richard Brown, R3 Chief Technology Officer, explains Corda's unique architecture
  
 Roger Willis, R3 Developer Relations Lead, provides an overview of Corda from a developer’s perspective and guidance on how to start building CorDapps. You may want to view [Webinar 1 - Introduction to Corda](https://vimeo.com/192757743/c2ec39c1e1) as preparation for this session. **NB. This was recorded for the M5 release.**
 
+## Building on Corda
+
 To build your own CorDapps:
 
 1. Clone the [CorDapp Template repository](https://github.com/corda/cordapp-template)
@@ -45,6 +47,7 @@ To look at the Corda source and run some sample applications:
 
 * [Project website](https://corda.net)
 * [Documentation](https://docs.corda.net)
+* [Slack channel] (https://slack.corda.net/)
 * [Forum](https://discourse.corda.net)
 
 ## Development State

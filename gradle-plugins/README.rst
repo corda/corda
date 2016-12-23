@@ -15,5 +15,10 @@ Installing
 
 If you need to bootstrap the corda repository you can install these plugins with
 
+.. code-block:: text
 
-     gradle install
+    cd publish-utils
+    ../../gradlew -u install
+    cd ../
+    ../gradlew install
+

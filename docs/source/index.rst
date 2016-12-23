@@ -107,6 +107,7 @@ Read on to learn:
    release-notes
    codestyle
    building-the-docs
+   publishing-corda
 
 .. toctree::
    :maxdepth: 2

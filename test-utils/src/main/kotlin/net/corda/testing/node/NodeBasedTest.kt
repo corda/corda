@@ -46,11 +46,11 @@ abstract class NodeBasedTest {
         ))
     }
 
-    private fun startNode(legalName: String, config: Map<String, Any>): Node {
+    private fun startNode(legalName: String, configOverrides: Map<String, Any>): Node {
         val config = ConfigHelper.loadConfig(
                 baseDirectoryPath = tempFolder.newFolder(legalName).toPath(),
                 allowMissingConfig = true,
-                configOverrides = config + mapOf(
+                configOverrides = configOverrides + mapOf(
                         "myLegalName" to legalName,
                         "artemisAddress" to freeLocalHostAndPort().toString(),
                         "extraAdvertisedServiceIds" to ""

@@ -8,10 +8,11 @@
             xmlns:fx="http://javafx.com/fxml/1">
     <center>
         <StackPane>
-            <ScrollPane fx:id="mapScrollPane" hbarPolicy="ALWAYS" pannable="true" vbarPolicy="ALWAYS">
-                <Pane fx:id="mapPane" styleClass="map">
-                    <ImageView fx:id="mapImageView" styleClass="worldMap"/>
-                </Pane>
+            <ScrollPane fx:id="mapScrollPane" hbarPolicy="NEVER" pannable="true" vbarPolicy="NEVER">
+                <StackPane>
+                    <ImageView fx:id="mapImageView" styleClass="worldMap" preserveRatio="true" fitHeight="2000"/>
+                    <Pane fx:id="mapPane" styleClass="map"/>
+                </StackPane>
             </ScrollPane>
             <VBox spacing="5" StackPane.alignment="TOP_LEFT" maxWidth="-Infinity" maxHeight="-Infinity">
                 <StackPane.margin>
@@ -40,6 +41,13 @@
                         </center>
                     </BorderPane>
                 </TitledPane>
+            </VBox>
+            <VBox StackPane.alignment="BOTTOM_RIGHT" maxWidth="-Infinity" maxHeight="-Infinity" spacing="10">
+                <StackPane.margin>
+                    <Insets bottom="10" right="10"/>
+                </StackPane.margin>
+                <Button fx:id="zoomInButton" text="+" maxWidth="Infinity"/>
+                <Button fx:id="zoomOutButton" text="-" maxWidth="Infinity"/>
             </VBox>
         </StackPane>
     </center>

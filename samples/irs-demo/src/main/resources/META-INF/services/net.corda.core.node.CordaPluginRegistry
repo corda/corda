@@ -1,4 +1,4 @@
-# Register a ServiceLoader service extending from net.corda.node.CordaPluginRegistry
+# Register a ServiceLoader service extending from net.corda.core.node.CordaPluginRegistry
 net.corda.irs.plugin.IRSPlugin
 net.corda.irs.api.NodeInterestRates$Plugin
 net.corda.irs.flows.AutoOfferFlow$Plugin

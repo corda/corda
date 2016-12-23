@@ -1,6 +1,7 @@
 package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.SettableFuture
 import kotlinx.support.jdk8.collections.compute
 import net.corda.core.ThreadBox
@@ -17,6 +18,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.*
+import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
@@ -87,6 +89,9 @@ class NodeSchedulerService(private val database: Database,
 
     private val mutex = ThreadBox(InnerState())
 
+    @VisibleForTesting
+    val unfinishedSchedules = ReusableLatch()
+
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
         mutex.locked {
@@ -98,7 +103,9 @@ class NodeSchedulerService(private val database: Database,
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
         mutex.locked {
-            scheduledStates[action.ref] = action
+            if (scheduledStates.put(action.ref, action) == null) {
+                unfinishedSchedules.countUp()
+            }
             if (action.scheduledAt.isBefore(earliestState?.scheduledAt ?: Instant.MAX)) {
                 // We are earliest
                 earliestState = action
@@ -115,6 +122,9 @@ class NodeSchedulerService(private val database: Database,
         log.trace { "Unschedule $ref" }
         mutex.locked {
             val removedAction = scheduledStates.remove(ref)
+            if (removedAction != null) {
+                unfinishedSchedules.countDown()
+            }
             if (removedAction == earliestState && removedAction != null) {
                 recomputeEarliest()
                 rescheduleWakeUp()
@@ -196,6 +206,7 @@ class NodeSchedulerService(private val database: Database,
                     if (value === scheduledState) {
                         if (scheduledActivity == null) {
                             logger.info("Scheduled state $scheduledState has rescheduled to never.")
+                            scheduler.unfinishedSchedules.countDown()
                             null
                         } else if (scheduledActivity.scheduledAt.isAfter(serviceHub.clock.instant())) {
                             logger.info("Scheduled state $scheduledState has rescheduled to ${scheduledActivity.scheduledAt}.")
@@ -207,6 +218,7 @@ class NodeSchedulerService(private val database: Database,
                             // FlowLogic will be checkpointed by the time this returns.
                             //scheduler.services.startFlowAndForget(logic)
                             scheduledLogic = logic
+                            scheduler.unfinishedSchedules.countDown()
                             null
                         }
                     } else {
