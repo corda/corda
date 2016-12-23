@@ -2,8 +2,6 @@
 
 package net.corda.node.driver
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -12,7 +10,6 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.core.*
 import net.corda.core.crypto.Party
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
@@ -22,21 +19,21 @@ import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeSSLConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent
-import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.utilities.JsonSupport
 import net.corda.node.utilities.ServiceIdentityGenerator
 import org.slf4j.Logger
 import java.io.File
 import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
@@ -87,6 +84,13 @@ interface DriverDSLExposedInterface {
             clusterSize: Int = 3,
             type: ServiceType = RaftValidatingNotaryService.type,
             rpcUsers: List<User> = emptyList()): Future<Pair<Party, List<NodeHandle>>>
+
+    /**
+     * Starts a web server for a node
+     *
+     * @param handle The handle for the node that this webserver connects to via RPC.
+     */
+    fun startWebserver(handle: NodeHandle): Future<HostAndPort>
 
     fun waitForAllNodesToFinish()
 }
@@ -322,16 +326,20 @@ open class DriverDSL(
         executorService.shutdown()
     }
 
-    private fun queryNodeInfo(webAddress: HostAndPort, sslConfig: NodeSSLConfiguration): NodeInfo? {
-        try {
-            val client = CordaRPCClient(webAddress, sslConfig)
+    private fun queryNodeInfo(nodeAddress: HostAndPort, sslConfig: NodeSSLConfiguration): NodeInfo? {
+        var retries = 0
+        while (retries < 5) try {
+            val client = CordaRPCClient(nodeAddress, sslConfig)
             client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
-            val rpcOps = client.proxy()
-        return rpcOps.nodeIdentity()
+            val rpcOps = client.proxy(timeout = Duration.of(15, ChronoUnit.SECONDS))
+            return rpcOps.nodeIdentity()
         } catch(e: Exception) {
-            log.error("Could not query node info at $webAddress due to an exception.", e)
-            return null
+            log.error("Retrying query node info at $nodeAddress")
+            retries++
         }
+
+        log.error("Could not query node info after $retries retries")
+        return null
     }
 
     override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>,
@@ -408,6 +416,15 @@ open class DriverDSL(
         }
     }
 
+    override fun startWebserver(handle: NodeHandle): Future<HostAndPort> {
+        val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
+
+        return future {
+            registerProcess(DriverDSL.startWebserver(executorService, handle.configuration, debugPort))
+            handle.configuration.webAddress
+        }
+    }
+
     override fun start() {
         startNetworkMapService()
     }
@@ -480,11 +497,37 @@ open class DriverDSL(
             builder.inheritIO()
             builder.directory(nodeConf.baseDirectory.toFile())
             val process = builder.start()
-            return Futures.allAsList(
-                    addressMustBeBound(executorService, nodeConf.artemisAddress),
-                    // TODO There is a race condition here. Even though the messaging address is bound it may be the case that
-                    // the handlers for the advertised services are not yet registered. Needs rethinking.
-            ).map { process }
+            // TODO There is a race condition here. Even though the messaging address is bound it may be the case that
+            // the handlers for the advertised services are not yet registered. Needs rethinking.
+            return addressMustBeBound(executorService, nodeConf.artemisAddress).map { process }
+        }
+
+        private fun startWebserver(
+                executorService: ScheduledExecutorService,
+                nodeConf: FullNodeConfiguration,
+                debugPort: Int?): ListenableFuture<Process> {
+            val className = "net.corda.node.webserver.MainKt" // cannot directly get class for this, so just use string
+            val separator = System.getProperty("file.separator")
+            val classpath = System.getProperty("java.class.path")
+            val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
+
+            val debugPortArg = if (debugPort != null)
+                listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
+            else
+                emptyList()
+
+            val javaArgs = listOf(path) +
+                    listOf("-Dname=node-${nodeConf.artemisAddress}-webserver") + debugPortArg +
+                    listOf(
+                            "-cp", classpath, className,
+                            "--base-directory", nodeConf.baseDirectory.toString(),
+                            "--web-address", nodeConf.webAddress.toString())
+            val builder = ProcessBuilder(javaArgs)
+            builder.redirectError(Paths.get("error.$className.log").toFile())
+            builder.inheritIO()
+            builder.directory(nodeConf.baseDirectory.toFile())
+            val process = builder.start()
+            return addressMustBeBound(executorService, nodeConf.webAddress).map { process }
         }
     }
 }

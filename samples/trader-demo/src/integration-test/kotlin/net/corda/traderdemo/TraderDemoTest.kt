@@ -8,6 +8,7 @@ import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.node.utilities.getHostAndPort
 import org.junit.Test
 
 class TraderDemoTest {

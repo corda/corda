@@ -14,6 +14,7 @@ import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.BOC_PARTY_REF
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
+import net.corda.node.utilities.getHostAndPort
 import net.corda.testing.sequence
 import org.junit.Test
 import kotlin.test.assertTrue

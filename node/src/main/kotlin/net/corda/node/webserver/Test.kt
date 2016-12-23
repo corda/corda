@@ -8,7 +8,7 @@ fun main(args: Array<String>) {
     System.setProperty("consoleLogLevel", "info")
     driver {
         val node = startNode().get()
-        val server = WebServer(FullNodeConfiguration(node.config)).start()
+        val server = WebServer(node.configuration).start()
         waitForAllNodesToFinish()
     }
 }
