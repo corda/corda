@@ -20,14 +20,25 @@ class UniquenessProviderTests {
         provider.commit(listOf(inputState), txID, identity)
     }
 
-    @Test fun `should report a conflict for a transaction with previously used inputs`() {
+    @Test fun `should be idempotent (allow re-committing identical transaction)`() {
         val provider = InMemoryUniquenessProvider()
         val inputState = generateStateRef()
 
         val inputs = listOf(inputState)
         provider.commit(inputs, txID, identity)
+        provider.commit(inputs, txID, identity)
+    }
 
-        val ex = assertFailsWith<UniquenessException> { provider.commit(inputs, txID, identity) }
+    @Test fun `should report a conflict for a transaction with previously used inputs`() {
+        val provider = InMemoryUniquenessProvider()
+        val inputState = generateStateRef()
+
+        val inputs = listOf(inputState)
+
+        provider.commit(inputs, txID, identity)
+
+        val txID2 = SecureHash.randomSHA256()
+        val ex = assertFailsWith<UniquenessException> { provider.commit(inputs, txID2, identity) }
 
         val consumingTx = ex.error.stateHistory[inputState]!!
         assertEquals(consumingTx.id, txID)
