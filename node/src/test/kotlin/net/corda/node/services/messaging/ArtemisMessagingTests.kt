@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.node.services.messaging
 
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
@@ -12,11 +12,11 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.createMessage
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.utilities.LogHelper
+import net.corda.node.services.RPCUserService
+import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
-import net.corda.node.services.messaging.ArtemisMessagingServer
-import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
@@ -163,8 +163,7 @@ class ArtemisMessagingTests {
     fun `client should be able to send large numbers of messages to itself before network map is available and survive restart, then receive messages`() {
         // Crank the iteration up as high as you want... just takes longer to run.
         val iterations = 100
-        val settableFuture: SettableFuture<Unit> = SettableFuture.create()
-        networkMapRegistrationFuture = settableFuture
+        networkMapRegistrationFuture = SettableFuture.create()
 
         val receivedMessages = LinkedBlockingQueue<Message>()
 

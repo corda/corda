@@ -26,7 +26,6 @@ import rx.Subscriber
 import java.net.ServerSocket
 import java.nio.file.Path
 import java.security.KeyPair
-import java.time.Duration
 import java.util.*
 import kotlin.reflect.KClass
 
@@ -162,13 +161,6 @@ inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
     smm.changes.subscribe(subscriber)
 
     return future
-}
-
-inline fun elapsedTime(block: () -> Unit): Duration {
-    val start = System.nanoTime()
-    block()
-    val end = System.nanoTime()
-    return Duration.ofNanos(end-start)
 }
 
 data class TestNodeConfiguration(

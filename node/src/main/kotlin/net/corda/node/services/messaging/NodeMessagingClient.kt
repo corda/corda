@@ -377,8 +377,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         } else {
             // Otherwise we send the message to an internal queue for the target residing on our broker. It's then the
             // broker's job to route the message to the target's P2P queue.
-            // TODO Make sure that if target is a service that we're part of and the broker routes the message back to us
-            // it doesn't cause any issues.
             val internalTargetQueue = (target as? ArtemisAddress)?.queueName ?: throw IllegalArgumentException("Not an Artemis address")
             createQueueIfAbsent(internalTargetQueue)
             internalTargetQueue
