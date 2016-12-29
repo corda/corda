@@ -18,16 +18,10 @@ class InMemoryUniquenessProvider() : UniquenessProvider {
     override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
         committedStates.locked {
             val conflictingStates = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
-            for (inputState in states) {
+            states.forEachIndexed { i, inputState ->
                 val consumingTx = get(inputState)
-                // If one or more inputs have been used as input for a transaction with a different ID we have a conflict.
-                // The ID is a SecureHash over the transaction, it can be seen as the "output". Identical states can not
-                // be used as input for multiple transactions (e.g. double spending is not allowed).
-                // TODO:
-                // - Only allow the same callerIdentity to re-commit the inputs?
-                // - Only allow re-commit for identical parameters?
-                // - Add a time limit to re-committing or restrict the number of attempts to re-commit the input states?
-                if (consumingTx != null && consumingTx.id != txId)
+                // Allow re-commit if consumingTx doesn't change.
+                if (consumingTx != null && consumingTx != UniquenessProvider.ConsumingTx(txId, i, callerIdentity))
                     conflictingStates[inputState] = consumingTx
             }
             if (conflictingStates.isNotEmpty()) {
