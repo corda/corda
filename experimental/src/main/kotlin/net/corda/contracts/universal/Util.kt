@@ -2,7 +2,6 @@ package net.corda.contracts.universal
 
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Sets
-import com.sun.tools.corba.se.idl.InvalidArgument
 import net.corda.core.contracts.Frequency
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
@@ -73,7 +72,7 @@ fun replaceParty(perceivable: Perceivable<Boolean>, from: Party, to: Party): Per
             is PerceivableAnd -> replaceParty(perceivable.left, from, to) and replaceParty(perceivable.right, from, to)
             is PerceivableOr -> replaceParty(perceivable.left, from, to) or replaceParty(perceivable.right, from, to)
             is TimePerceivable -> perceivable
-            else -> throw InvalidArgument("replaceParty " + perceivable)
+            else -> throw IllegalArgumentException("replaceParty " + perceivable)
         }
 
 fun replaceParty(action: Action, from: Party, to: Party): Action =
