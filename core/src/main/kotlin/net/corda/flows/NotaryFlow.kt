@@ -133,9 +133,18 @@ object NotaryFlow {
             try {
                 uniquenessProvider.commit(tx.inputs, tx.id, otherSide)
             } catch (e: UniquenessException) {
-                val conflictData = e.error.serialize()
-                val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
-                throw NotaryException(NotaryError.Conflict(tx, signedConflict))
+                // Allow re-committing the transaction to make the NotaryFlow idempotent. Alternatively, we could make
+                // the underlying UniquenessProviders idempotent.
+                val conflicts = tx.inputs.filterIndexed { i, stateRef ->
+                    val consumingTx = e.error.stateHistory[stateRef]
+                    consumingTx != null && consumingTx != UniquenessProvider.ConsumingTx(tx.id, i, otherSide)
+                }
+                if (conflicts.isNotEmpty()) {
+                    // TODO: Create a new UniquenessException that only contains the conflicts filtered above.
+                    val conflictData = e.error.serialize()
+                    val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
+                    throw NotaryException(NotaryError.Conflict(tx, signedConflict))
+                }
             }
         }
 
