@@ -164,6 +164,8 @@ class Cap {
 
     @Test
     fun issue() {
+        prettyPrint(contractInitial)
+
         transaction {
             output { stateInitial }
             timestamp(TEST_TX_TIME_1)
