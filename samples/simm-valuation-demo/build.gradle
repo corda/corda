@@ -1,5 +1,5 @@
 buildscript {
-    ext.strata_version = '1.0.0'
+    ext.strata_version = '1.1.2'
 }
 
 apply plugin: 'java'
@@ -38,7 +38,7 @@ sourceSets {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    testCompile group: 'junit', name: 'junit', version: '4.11'
+    testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
