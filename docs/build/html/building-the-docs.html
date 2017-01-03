@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -31,7 +35,7 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Glossary" href="glossary.html"/>
+        <link rel="next" title="Publishing Corda" href="publishing-corda.html"/>
         <link rel="prev" title="Code style guide" href="codestyle.html"/> 
 
   
@@ -78,6 +82,11 @@
           
 <br>
 <a href="api/index.html">API reference</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -107,8 +116,9 @@
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-cordapp-template">Running the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#interacting-with-the-cordapp-template">Interacting with the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#extending-the-cordapp-template">Extending the CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -165,6 +175,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#build">Build</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -229,7 +241,7 @@ is pre-generated, as well as code documentation, and this can be done automatica
 </ul>
 <p>The Dokka JAR file needs to be placed under the <code class="docutils literal"><span class="pre">lib</span></code> directory within the <code class="docutils literal"><span class="pre">r3prototyping</span></code> directory, in order for the
 script to find it, as in:</p>
-<div class="highlight-shell"><div class="highlight"><pre><span></span>r3prototyping/lib/dokka.jar
+<div class="highlight-shell"><div class="highlight"><pre><span></span>corda/lib/dokka.jar
 </pre></div>
 </div>
 <p>Note that to install under OS X El Capitan, you will need to tell pip to install under <code class="docutils literal"><span class="pre">/usr/local</span></code>, which can be
@@ -265,7 +277,7 @@ following to see a list of all available formats:</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="glossary.html" class="btn btn-neutral float-right" title="Glossary" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="publishing-corda.html" class="btn btn-neutral float-right" title="Publishing Corda" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="codestyle.html" class="btn btn-neutral" title="Code style guide" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

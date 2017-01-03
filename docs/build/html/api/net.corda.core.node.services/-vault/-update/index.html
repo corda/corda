@@ -24,7 +24,7 @@ other transactions observed, then the changes are observed "net" of those.</p>
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">Update</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.Vault.Update$<init>(kotlin.collections.Set((net.corda.core.contracts.StateRef)), kotlin.collections.Set((net.corda.core.contracts.StateAndRef((net.corda.core.contracts.ContractState)))))/consumed">consumed</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.services.Vault.Update$<init>(kotlin.collections.Set((net.corda.core.contracts.StateRef)), kotlin.collections.Set((net.corda.core.contracts.StateAndRef((net.corda.core.contracts.ContractState)))))/produced">produced</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span></code><p>Represents an update observed by the vault that will be notified to observers.  Include the <a href="../../../net.corda.core.contracts/-state-ref/index.html">StateRef</a>s of
+<code><span class="identifier">Update</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.Vault.Update$<init>(kotlin.collections.Set((net.corda.core.contracts.StateAndRef((net.corda.core.contracts.ContractState)))), kotlin.collections.Set((net.corda.core.contracts.StateAndRef((net.corda.core.contracts.ContractState)))))/consumed">consumed</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.services.Vault.Update$<init>(kotlin.collections.Set((net.corda.core.contracts.StateAndRef((net.corda.core.contracts.ContractState)))), kotlin.collections.Set((net.corda.core.contracts.StateAndRef((net.corda.core.contracts.ContractState)))))/produced">produced</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span></code><p>Represents an update observed by the vault that will be notified to observers.  Include the <a href="../../../net.corda.core.contracts/-state-ref/index.html">StateRef</a>s of
 transaction outputs that were consumed (inputs) and the <a href="../../../net.corda.core.contracts/-contract-state/index.html">ContractState</a>s produced (outputs) to/by the transaction
 or transactions observed and the vault.</p>
 </td>
@@ -38,7 +38,7 @@ or transactions observed and the vault.</p>
 <td>
 <a href="consumed.html">consumed</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">consumed</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">val </span><span class="identifier">consumed</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -51,6 +51,13 @@ or transactions observed and the vault.</p>
 <h3>Functions</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="contains-type.html">containsType</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span> <span class="identifier">containsType</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>Checks whether the update contains a state of the specified type.</p>
+</td>
+</tr>
 <tr>
 <td>
 <a href="plus.html">plus</a></td>

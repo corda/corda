@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -78,6 +82,11 @@
           
 <br>
 <a href="api/index.html">API reference</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -106,6 +115,7 @@
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">The CorDapp Template</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#background">Background</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#getting-started">Getting started</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#working-from-milestone-releases">Working from milestone releases</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#using-a-snapshot-release">Using a SNAPSHOT release</a></li>
@@ -113,19 +123,24 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#running-the-sample-cordapp">Running the Sample CorDapp</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#running-the-sample-cordapp-from-the-command-line">Running the Sample CorDapp from the command line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#running-the-cordapp-template">Running the CorDapp template</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#running-the-cordapp-template-from-the-command-line">Running the CorDapp template from the command line</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#running-cordapps-on-separate-machines">Running CorDapps on separate machines</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#running-the-example-cordapp-via-intellij">Running the example CorDapp via IntelliJ</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="#using-the-sample-cordapp">Using the sample CorDapp</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#background">Background</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#interfaces">Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#interacting-with-the-cordapp-template">Interacting with the CorDapp template</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#via-http">Via HTTP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-the-h2-web-console">Using the h2 web console</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-the-example-rpc-client">Using the Example RPC client</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#extending-the-cordapp-template">Extending the CorDapp template</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#cordapp-template-project-structure">CorDapp-template Project Structure</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#the-build-gradle-file">The build.gradle File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-build-gradle-file">The build.gradle file</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#service-provider-configuration-file">Service Provider Configuration File</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#re-deploying-your-nodes-locally">Re-Deploying Your Nodes Locally</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-nodes-across-machines">Running Nodes Across Machines</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#debugging-your-cordapp">Debugging your CorDapp</a></li>
 </ul>
 </li>
@@ -181,6 +196,8 @@
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -247,6 +264,23 @@ project exists and briefly compares it to alternative systems on the market.</li
 intended design from beginning to end. It is the kind of document that you should read, or at least, read parts of. Note
 that because the technical white paper describes the intended end state, it does not always align with the implementation.</li>
 </ol>
+<div class="section" id="background">
+<h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
+<p>The Example CorDapp implements a basic scenario where a buyer wishes to submit purchase orders to a seller. The scenario
+defines four nodes:</p>
+<ul class="simple">
+<li><strong>Controller</strong> which hosts the network map service and validating notary service.</li>
+<li><strong>NodeA</strong> who is the buyer.</li>
+<li><strong>NodeB</strong> who is the seller.</li>
+<li><strong>NodeC</strong> an unrelated third party.</li>
+</ul>
+<p>NodeA can generate purchase orders for lists and quantities of items and associated metadata such as delivery address
+and delivery date. The flows used to facilitate the agreement process always results in an agreement with the seller as
+long as the purchase order meets the contract constraints which are defined in <code class="docutils literal"><span class="pre">PurchaseOrderContract.kt</span></code>.</p>
+<p>All agreed purchase orders between NodeA and NodeB become &#8220;shared facts&#8221; between NodeA and NodeB. But note that NodeC
+won&#8217;t see any of these transactions or have copies of any of the resulting <code class="docutils literal"><span class="pre">PurchaseOrderState</span></code> objects. This is
+because data is only propagated on a need-to-know basis.</p>
+</div>
 <div class="section" id="getting-started">
 <h2>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
 <p>There are two ways to get started with the CorDapp template. You can either work from a milestone release of Corda or a
@@ -386,12 +420,12 @@ installed IntelliJ, lets now open the CorDapp Template with IntelliJ.</p>
 <p>Click open, then navigate to the folder where you cloned the <code class="docutils literal"><span class="pre">cordapp-template</span></code> and click OK.</p>
 <p>Next, IntelliJ will show a bunch of pop-up windows. One of which requires our attention:</p>
 <a class="reference internal image-reference" href="_images/unlinked-gradle-project.png"><img alt="_images/unlinked-gradle-project.png" src="_images/unlinked-gradle-project.png" style="width: 400px;" /></a>
-<p>Click the &#8216;import gradle project&#8217; link. A dialogue will pop-up. Press OK. Gradle will now begin obtianing all the
+<p>Click the &#8216;import gradle project&#8217; link. A dialogue will pop-up. Press OK. Gradle will now obtain all the
 project dependencies and perform some indexing. It usually takes a minute or so. If you miss the &#8216;import gradle project&#8217;
 dialogue, simply close and re-open IntelliJ again to see it again.</p>
 <p><strong>Alternative approach</strong></p>
 <p>Alternatively, one can instruct IntelliJ to create a new project through cloning a repository. From the IntelliJ welcome
-dialogue (shown above), opt to &#8216;check out from version control&#8217;, then select git and enter the git url for the CorDpp tempalte
+dialogue (shown above), opt to &#8216;check out from version control&#8217;, then select git and enter the git URL for the CorDapp template
 (<a class="reference external" href="https://github.com/corda/cordapp-template">https://github.com/corda/cordapp-template</a>). You&#8217;ll then need to import the Gradle project when prompted, as explained above.</p>
 <p><strong>If you already have IntelliJ open</strong></p>
 <p>From the <code class="docutils literal"><span class="pre">File</span></code> menu, navigate to <code class="docutils literal"><span class="pre">Open</span> <span class="pre">...</span></code> and then navigate to the directory where you cloned the <code class="docutils literal"><span class="pre">cordapp-template</span></code>.
@@ -421,12 +455,15 @@ reflect the version of the branch you are working from.</p>
 <p>To build the CorDapp template use the following command:</p>
 <p>Unix/Mac OSX: <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">deployNodes</span></code></p>
 <p>Windows: <code class="docutils literal"><span class="pre">gradlew.bat</span> <span class="pre">deployNodes</span></code></p>
-<p>Building straight away will build the example CorDapp defined the the CorDapp template source. For more information on the example
-CorDapp see &#8220;The Example CorDapp&#8221; section below. Gradle will then grab all the dependencies for you and build the
-example CorDapp.</p>
+<p>This build process will build the example CorDapp defined in the CorDapp template source. CorDapps can be written in
+any language targeting the JVM. In our case, we&#8217;ve provided the template source in both Kotlin (<code class="docutils literal"><span class="pre">/kotlin/src</span></code>) and
+Java (<code class="docutils literal"><span class="pre">/java/src</span></code>) Since both sets of source files are functionally identical, we will refer to the Kotlin build
+throughout the documentation.</p>
+<p>For more information on the example CorDapp see &#8220;The Example CorDapp&#8221; section below. Gradle will then grab all the
+dependencies for you and build the example CorDapp.</p>
 <p>The <code class="docutils literal"><span class="pre">deployNodes</span></code> Gradle task allows you easily create a formation of Corda nodes. In the case of the example CorDapp
 we are creating <code class="docutils literal"><span class="pre">four</span></code> nodes.</p>
-<p>After the building process has finished to see the newly built nodes, you can navigate to the <code class="docutils literal"><span class="pre">/build/nodes</span></code> folder
+<p>After the building process has finished to see the newly built nodes, you can navigate to the <code class="docutils literal"><span class="pre">kotlin/build/nodes</span></code> folder
 located in the <code class="docutils literal"><span class="pre">cordapp-template</span></code> root directory. You can ignore the other folders in <code class="docutils literal"><span class="pre">/build</span></code> for now. The <code class="docutils literal"><span class="pre">nodes</span></code>
 folder has the following structure:</p>
 <div class="highlight-none"><div class="highlight"><pre><span></span>. nodes
@@ -463,11 +500,11 @@ a node.conf file. See <a class="reference internal" href="corda-configuration-fi
 open on the right hand side of the IDE. Expand <cite>tasks</cite> and then expand <cite>other</cite>. Double click on <cite>deployNodes</cite>. Gradle will
 start the build process and output progress to a console window in the IDE.</p>
 </div>
-<div class="section" id="running-the-sample-cordapp">
-<h1>Running the Sample CorDapp<a class="headerlink" href="#running-the-sample-cordapp" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="running-the-sample-cordapp-from-the-command-line">
-<h2>Running the Sample CorDapp from the command line<a class="headerlink" href="#running-the-sample-cordapp-from-the-command-line" title="Permalink to this headline">¶</a></h2>
-<p>To run the sample CorDapp navigate to the <code class="docutils literal"><span class="pre">build/nodes</span></code> folder and execute the <code class="docutils literal"><span class="pre">runnodes</span></code> shell script with:</p>
+<div class="section" id="running-the-cordapp-template">
+<h1>Running the CorDapp template<a class="headerlink" href="#running-the-cordapp-template" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="running-the-cordapp-template-from-the-command-line">
+<h2>Running the CorDapp template from the command line<a class="headerlink" href="#running-the-cordapp-template-from-the-command-line" title="Permalink to this headline">¶</a></h2>
+<p>To run the sample CorDapp navigate to the <code class="docutils literal"><span class="pre">kotlin/build/nodes</span></code> folder and execute the <code class="docutils literal"><span class="pre">runnodes</span></code> shell script with:</p>
 <p>Unix: <code class="docutils literal"><span class="pre">./runnodes</span></code> or <code class="docutils literal"><span class="pre">sh</span> <span class="pre">runnodes</span></code></p>
 <p>Windows: <code class="docutils literal"><span class="pre">runnodes.bat</span></code></p>
 <p>The <code class="docutils literal"><span class="pre">runnodes</span></code> scripts should create a terminal tab for each node. In each terminal tab, you&#8217;ll see the Corda welcome
@@ -480,8 +517,8 @@ message and some pertinent config information, see below:</p>
 
 --- DEVELOPER SNAPSHOT ------------------------------------------------------------
 
-Logs can be found in                    : /Users/rogerwillis/Documents/Corda/cordapp-template/build/nodes/nodea/logs
-Database connection url is              : jdbc:h2:tcp://10.18.0.196:50661/node
+Logs can be found in                    : /Users/rogerwillis/Documents/Corda/cordapp-template/kotlin/build/nodes/nodea/logs
+Database connection URL is              : jdbc:h2:tcp://10.18.0.196:50661/node
 Node listening on address               : localhost:10004
 Loaded plugins                          : com.example.plugin.ExamplePlugin
 Embedded web server is listening on     : http://10.18.0.196:10005/
@@ -524,7 +561,7 @@ want to double check all the nodes are running you can query the &#8216;status&#
 <h2>Running CorDapps on separate machines<a class="headerlink" href="#running-cordapps-on-separate-machines" title="Permalink to this headline">¶</a></h2>
 <p>Corda nodes can be run on separate machines with little additional configuration to the above instructions.</p>
 <p>When you have successfully run the <code class="docutils literal"><span class="pre">deployNodes</span></code> gradle task, choose which nodes you would like to run on separate
-machines. Copy the folders for those nodes from <code class="docutils literal"><span class="pre">build/nodes</span></code> to the other machines. Make sure that you set the
+machines. Copy the folders for those nodes from <code class="docutils literal"><span class="pre">kotlin/build/nodes</span></code> to the other machines. Make sure that you set the
 <code class="docutils literal"><span class="pre">networkMapAddress</span></code> property in <code class="docutils literal"><span class="pre">node.conf</span></code> to the correct hostname:port where the network map service node is
 hosted.</p>
 <p>The nodes can be run on each machine with <code class="docutils literal"><span class="pre">java</span> <span class="pre">-jar</span> <span class="pre">corda.jar</span></code> from the node&#8217;s directory.</p>
@@ -554,31 +591,14 @@ and sets up an RPC user for all but the &#8220;Controller&#8221; node (which hos
 <p>The node driver can also be used to as a basis for <a class="reference internal" href="#debugging-your-cordapp">debugging your CorDapp</a></p>
 </div>
 </div>
-<div class="section" id="using-the-sample-cordapp">
-<h1>Using the sample CorDapp<a class="headerlink" href="#using-the-sample-cordapp" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="background">
-<h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
-<p>The Example CorDapp implements a basic scenario where a buyer wishes to submit purchase orders to a seller. The scenario
-defines four nodes:</p>
-<ul class="simple">
-<li><strong>Controller</strong> which hosts the network map service and validating notary service.</li>
-<li><strong>NodeA</strong> who is the buyer.</li>
-<li><strong>NodeB</strong> who is the seller.</li>
-<li><strong>NodeC</strong> an unrelated third party.</li>
-</ul>
-<p>NodeA can generate purchase orders for lists and quantities of items and associated metadata such as delivery address
-and delivery date. The flows used to facilitate the agreement process always results in an agreement with the seller as
-long as the purchase order meets the contract constraints which are defined in <code class="docutils literal"><span class="pre">PurchaseOrderContract.kt</span></code>.</p>
-<p>All agreed purchase orders between NodeA and NodeB become &#8220;shared facts&#8221; between NodeA and NodeB. But note that NodeC
-won&#8217;t see any of these transactions or have copies of any of the resulting <code class="docutils literal"><span class="pre">PurchaseOrderState</span></code> objects. This is
-because data is only propagated on a need-to-know basis.</p>
-</div>
-<div class="section" id="interfaces">
-<h2>Interfaces<a class="headerlink" href="#interfaces" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="interacting-with-the-cordapp-template">
+<h1>Interacting with the CorDapp template<a class="headerlink" href="#interacting-with-the-cordapp-template" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="via-http">
+<h2>Via HTTP<a class="headerlink" href="#via-http" title="Permalink to this headline">¶</a></h2>
 <p>The CorDapp defines a few HTTP API end-points and also serves some static web content. The end-points allow you to
 list purchase orders and add purchase orders.</p>
 <p>The nodes can be found using the following port numbers, defined in build.gradle and the respective node.conf file for
-each node found in <cite>build/nodes/NodeX`</cite> etc:</p>
+each node found in <cite>kotlin/build/nodes/NodeX`</cite> etc:</p>
 <ul class="simple">
 <li>Controller: <code class="docutils literal"><span class="pre">localhost:10003</span></code></li>
 <li>NodeA:      <code class="docutils literal"><span class="pre">localhost:10005</span></code></li>
@@ -606,7 +626,7 @@ anti-XSS, anti-XSRF or any other security techniques. Do not copy such code dire
 </div></blockquote>
 <p><strong>Submitting a purchase order via HTTP API:</strong></p>
 <p>To create a purchase order from NodeA to NodeB, use:</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">echo</span> <span class="s1">&#39;{&quot;orderNumber&quot;: &quot;1&quot;,&quot;deliveryDate&quot;: &quot;2018-09-15&quot;,&quot;deliveryAddress&quot;: {&quot;city&quot;: &quot;London&quot;,&quot;country&quot;: &quot;UK&quot;},&quot;items&quot; : [{&quot;name&quot;: &quot;widget&quot;,&quot;amount&quot;: &quot;3&quot;},{&quot;name&quot;: &quot;thing&quot;,&quot;amount&quot;: &quot;4&quot;}]}&#39;</span> <span class="p">|</span> curl -T - -H <span class="s1">&#39;Content-Type: application/json&#39;</span> http://localhost:10005/api/example/NodeB/create-purchase-order
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">echo</span> <span class="s1">&#39;{&quot;orderNumber&quot;: &quot;1&quot;,&quot;deliveryDate&quot;: &quot;2018-09-15&quot;,&quot;deliveryAddress&quot;: {&quot;city&quot;: &quot;London&quot;,&quot;country&quot;: &quot;UK&quot;},&quot;items&quot; : [{&quot;name&quot;: &quot;widget&quot;,&quot;amount&quot;: &quot;3&quot;},{&quot;name&quot;: &quot;thing&quot;,&quot;amount&quot;: &quot;4&quot;}]}&#39;</span> <span class="p">|</span> cURL -T - -H <span class="s1">&#39;Content-Type: application/json&#39;</span> http://localhost:10005/api/example/NodeB/create-purchase-order
 </pre></div>
 </div>
 <p>Note the port number <code class="docutils literal"><span class="pre">10005</span></code> (NodeA) and NodeB referenced in the API end-point path. This command instructs NodeA to
@@ -673,7 +693,9 @@ navigate to <a class="reference external" href="http://localhost:10007/api/examp
 <p><em>Via web/example:</em></p>
 <p>Navigate to <a class="reference external" href="http://localhost:10005/web/example">http://localhost:10005/web/example</a> the refresh button in the top left-hand side of the page. You should
 see the newly created agreement on the page.</p>
-<p><strong>Accessing the h2 database via h2 web console:</strong></p>
+</div>
+<div class="section" id="using-the-h2-web-console">
+<h2>Using the h2 web console<a class="headerlink" href="#using-the-h2-web-console" title="Permalink to this headline">¶</a></h2>
 <p>You can connect to the h2 database to see the current state of the ledger, among other data such as the current state of
 the network map cache. Firstly, navigate to the folder where you downloaded the h2 web console as part of the pre-requisites
 section, above. Change directories to the bin folder:</p>
@@ -686,11 +708,13 @@ section, above. Change directories to the bin folder:</p>
 <p>The h2 web console should start up in a web browser tab. To connect we first need to obtain a JDBC connection string. Each
 node outputs its connection string in the terminal window as it starts up. In a terminal window where a node is running,
 look for the following string:</p>
-<p><code class="docutils literal"><span class="pre">Database</span> <span class="pre">connection</span> <span class="pre">url</span> <span class="pre">is</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="pre">:</span> <span class="pre">jdbc:h2:tcp://10.18.0.150:56736/node</span></code></p>
+<p><code class="docutils literal"><span class="pre">Database</span> <span class="pre">connection</span> <span class="pre">URL</span> <span class="pre">is</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="pre">:</span> <span class="pre">jdbc:h2:tcp://10.18.0.150:56736/node</span></code></p>
 <p>you can use the string on the right to connect to the h2 database: just paste it in to the JDBC URL field and click Connect.
 You will be presented with a web application that enumerates all the available tables and provides an interface for you to
 query them using SQL.</p>
-<p><strong>Using the Example RPC client:</strong></p>
+</div>
+<div class="section" id="using-the-example-rpc-client">
+<h2>Using the Example RPC client<a class="headerlink" href="#using-the-example-rpc-client" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal"><span class="pre">/src/main/kotlin/com/example/client/ExampleClientRPC.kt</span></code> file is a simple utility which uses the client RPC library
 to connect to a node and log the &#8216;placed&#8217; purchase orders. It will log any existing purchase orders and listen for any future
 purchase orders. If you haven&#8217;t placed any purchase orders when you connect to to one of the Nodes via RPC then the client will log
@@ -710,6 +734,9 @@ application see:</p>
 <li><a class="reference internal" href="tutorial-clientrpc-api.html"><span class="doc">Client RPC tutorial</span></a></li>
 </ul>
 </div>
+</div>
+<div class="section" id="extending-the-cordapp-template">
+<h1>Extending the CorDapp template<a class="headerlink" href="#extending-the-cordapp-template" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="cordapp-template-project-structure">
 <h2>CorDapp-template Project Structure<a class="headerlink" href="#cordapp-template-project-structure" title="Permalink to this headline">¶</a></h2>
 <p>The CorDapp template has the following directory structure:</p>
@@ -727,48 +754,90 @@ application see:</p>
 ├── lib
 │   ├── ...
 ├── settings.gradle
-└── src
-    ├── main
-    │   ├── java
-    │   ├── kotlin
-    │   │   └── com
-    │   │       └── example
-    │   │           ├── Main.kt
-    │   │           ├── api
-    │   │           │   └── ExampleApi.kt
-    │   │           ├── client
-    │   │           │   └── ExampleClientRPC.kt
-    │   │           ├── contract
-    │   │           │   ├── PurchaseOrderContract.kt
-    │   │           │   └── PurchaseOrderState.kt
-    │   │           ├── model
-    │   │           │   └── PurchaseOrder.kt
-    │   │           ├── plugin
-    │   │           │   └── ExamplePlugin.kt
-    │   │           └── flow
-    │   │               └── ExampleFlow.kt
-    │   │           └── service
-    │   │               └── ExampleService.kt
-    │   ├── python
-    │   └── resources
-    │       ├── META-INF
-    │       │   └── services
-    │       │       └── net.corda.core.node.CordaPluginRegistry
-    │       ├── certificates
-    │       │   ├── readme.txt
-    │       │   ├── sslkeystore.jks
-    │       │   └── truststore.jks
-    │       └── exampleWeb
-    │           ├── index.html
-    │           └── js
-    │               └── example.js
-    └── test
-        ├── java
-        ├── kotlin
-        │   └── com
-        │       └── example
-        │           └── ExampleTest.kt
-        └── resources
+├── kotlin
+│   └── src
+│       ├── main
+│       │   ├── kotlin
+│       │   │   └── com
+│       │   │       └── example
+│       │   │           ├── Main.kt
+│       │   │           ├── api
+│       │   │           │   └── ExampleApi.kt
+│       │   │           ├── client
+│       │   │           │   └── ExampleClientRPC.kt
+│       │   │           ├── contract
+│       │   │           │   ├── PurchaseOrderContract.kt
+│       │   │           │   └── PurchaseOrderState.kt
+│       │   │           ├── model
+│       │   │           │   └── PurchaseOrder.kt
+│       │   │           ├── plugin
+│       │   │           │   └── ExamplePlugin.kt
+│       │   │           └── flow
+│       │   │               └── ExampleFlow.kt
+│       │   │           └── service
+│       │   │               └── ExampleService.kt
+│       │   ├── python
+│       │   └── resources
+│       │       ├── META-INF
+│       │       │   └── services
+│       │       │       └── net.corda.core.node.CordaPluginRegistry
+│       │       ├── certificates
+│       │       │   ├── readme.txt
+│       │       │   ├── sslkeystore.jks
+│       │       │   └── truststore.jks
+│       │       └── exampleWeb
+│       │           ├── index.html
+│       │           └── js
+│       │               └── example.js
+│       └── test
+│           ├── java
+│           ├── kotlin
+│           │   └── com
+│           │       └── example
+│           │           └── ExampleTest.kt
+│           └── resources
+└── java
+    └── src
+        ├── main
+        │   ├── java
+        │   │   └── com
+        │   │       └── example
+        │   │           ├── Main.java
+        │   │           ├── api
+        │   │           │   └── ExampleApi.java
+        │   │           ├── client
+        │   │           │   └── ExampleClientRPC.java
+        │   │           ├── contract
+        │   │           │   ├── PurchaseOrderContract.java
+        │   │           │   └── PurchaseOrderState.java
+        │   │           ├── model
+        │   │           │   └── PurchaseOrder.java
+        │   │           ├── plugin
+        │   │           │   └── ExamplePlugin.java
+        │   │           └── flow
+        │   │               └── ExampleFlow.java
+        │   │           └── service
+        │   │               └── ExampleService.java
+        │   ├── python
+        │   └── resources
+        │       ├── META-INF
+        │       │   └── services
+        │       │       └── net.corda.core.node.CordaPluginRegistry
+        │       ├── certificates
+        │       │   ├── readme.txt
+        │       │   ├── sslkeystore.jks
+        │       │   └── truststore.jks
+        │       └── exampleWeb
+        │           ├── index.html
+        │           └── js
+        │               └── example.js
+        └── test
+            ├── java
+            ├── kotlin
+            │   └── com
+            │       └── example
+            │           └── ExampleTest.kt
+            └── resources
 </pre></div>
 </div>
 <p>In the file structure above, the most important files and directories to note are:</p>
@@ -778,16 +847,25 @@ application see:</p>
 <li><strong>gradle</strong> contains the gradle wrapper, which allows the use of Gradle without installing it yourself and worrying
 about which version is required.</li>
 <li><strong>lib</strong> contains the Quasar.jar which is required for runtime instrumentation of classes by Quasar.</li>
-<li><strong>src/main/kotlin</strong> contains the source code for the example CorDapp.</li>
-<li><strong>src/main/python</strong> contains a python script which accesses nodes via RPC.</li>
-<li><strong>src/main/resources</strong> contains the certificate store, some static web content to be served by the nodes and the
+<li><strong>kotlin</strong> contains the source code for the example CorDapp written in Kotlin.</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li><strong>kotlin/src/main/kotlin</strong> contains the source code for the example CorDapp.</li>
+<li><strong>kotlin/src/main/python</strong> contains a python script which accesses nodes via RPC.</li>
+<li><strong>kotlin/src/main/resources</strong> contains the certificate store, some static web content to be served by the nodes and the
 PluginServiceRegistry file.</li>
-<li><strong>src/test/kotlin</strong> contains unit tests for protocols, contracts, etc.</li>
+<li><strong>kotlin/src/test/kotlin</strong> contains unit tests for protocols, contracts, etc.</li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li><strong>java</strong> contains the same source code, but written in java. This is an aid for users who do not want to develop in
+Kotlin, and serves as an example of how CorDapps can be developed in any language targeting the JVM.</li>
 </ul>
 <p>Some elements are covered in more detail below.</p>
 </div>
 <div class="section" id="the-build-gradle-file">
-<h2>The build.gradle File<a class="headerlink" href="#the-build-gradle-file" title="Permalink to this headline">¶</a></h2>
+<h2>The build.gradle file<a class="headerlink" href="#the-build-gradle-file" title="Permalink to this headline">¶</a></h2>
 <p>It is usually necessary to make a couple of changes to the <code class="docutils literal"><span class="pre">build.gradle</span></code> file. Here will cover the most pertinent bits.</p>
 <p><strong>The buildscript</strong></p>
 <p>The buildscript is always located at the top of the file. It determines which plugins, task classes, and other classes
@@ -843,7 +921,7 @@ debugging, and testing node configurations but not intended for production or te
 <p>In the CorDapp build.gradle file you&#8217;ll find a <code class="docutils literal"><span class="pre">deployNodes</span></code> task, this is where you configure the nodes you would
 like to deploy for testing. See further details below:</p>
 <div class="highlight-groovy"><div class="highlight"><pre><span></span><span class="n">task</span> <span class="nf">deployNodes</span><span class="o">(</span><span class="nl">type:</span> <span class="n">com</span><span class="o">.</span><span class="na">r3corda</span><span class="o">.</span><span class="na">plugins</span><span class="o">.</span><span class="na">Cordform</span><span class="o">,</span> <span class="nl">dependsOn:</span> <span class="o">[</span><span class="s1">&#39;build&#39;</span><span class="o">])</span> <span class="o">{</span>
-    <span class="n">directory</span> <span class="s2">&quot;./build/nodes&quot;</span>                            <span class="c1">// The output directory.</span>
+    <span class="n">directory</span> <span class="s2">&quot;./kotlin/build/nodes&quot;</span>                            <span class="c1">// The output directory.</span>
     <span class="n">networkMap</span> <span class="s2">&quot;Controller&quot;</span>                              <span class="c1">// The artemis address of the node to be used as the network map.</span>
     <span class="n">node</span> <span class="o">{</span>
         <span class="n">name</span> <span class="s2">&quot;Controller&quot;</span>                                <span class="c1">// Artemis name of node to be deployed.</span>
@@ -890,11 +968,41 @@ a reference to your sub-class of <code class="docutils literal"><span class="pre
 <h2>Re-Deploying Your Nodes Locally<a class="headerlink" href="#re-deploying-your-nodes-locally" title="Permalink to this headline">¶</a></h2>
 <p>If you need to create any additional nodes you can do it via the <code class="docutils literal"><span class="pre">build.gradle</span></code> file as discussed above in
 <code class="docutils literal"><span class="pre">the</span> <span class="pre">build.gradle</span> <span class="pre">file</span></code> and in more detail in the &#8220;cordFormation&#8221; section.</p>
-<p>You may also wish to edit the <code class="docutils literal"><span class="pre">/build/nodes/&lt;node</span> <span class="pre">name&gt;/node.conf</span></code> files for your nodes. For more information on
+<p>You may also wish to edit the <code class="docutils literal"><span class="pre">/kotlin/build/nodes/&lt;node</span> <span class="pre">name&gt;/node.conf</span></code> files for your nodes. For more information on
 doing this, see the <a class="reference internal" href="corda-configuration-file.html"><span class="doc">Corda configuration file</span></a> page.</p>
 <p>Once you have made some changes to your CorDapp you can redeploy it with the following command:</p>
 <p>Unix/Mac OSX: <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">deployNodes</span></code></p>
 <p>Windows: <code class="docutils literal"><span class="pre">gradlew.bat</span> <span class="pre">deployNodes</span></code></p>
+</div>
+<div class="section" id="running-nodes-across-machines">
+<h2>Running Nodes Across Machines<a class="headerlink" href="#running-nodes-across-machines" title="Permalink to this headline">¶</a></h2>
+<p>The nodes can also be set up to communicate between separate machines on the
+same subnet.</p>
+<p>After deploying the nodes, navigate to the build folder (<cite>kotlin/build/
+nodes</cite> or <cite>java/build/nodes</cite>) and move some of the individual node folders to
+separate machines on the same subnet (e.g. using a USB key). It is important
+that no nodes - including the controller node - end up on more than one
+machine. Each computer should also have a copy of <cite>runnodes</cite> and
+<cite>runnodes.bat</cite>.</p>
+<p>For example, you may end up with the following layout:</p>
+<ul class="simple">
+<li>Machine 1: <cite>controller</cite>, <cite>nodea</cite>, <cite>runnodes</cite>, <cite>runnodes.bat</cite></li>
+<li>Machine 2: <cite>nodeb</cite>, <cite>nodec</cite>, <cite>runnodes</cite>, <cite>runnodes.bat</cite></li>
+</ul>
+<p>You must now edit the configuration file for each node, including the
+controller. Open each node&#8217;s config file (<cite>[nodeName]/node.conf</cite>), and make
+the following changes:</p>
+<ul class="simple">
+<li>Change the artemis address to the machine&#8217;s ip address (e.g.</li>
+</ul>
+<p><cite>artemisAddress=&#8221;10.18.0.166:10006&#8221;</cite>)
+* Change the network map address to the ip address of the machine where the
+controller node is running (e.g. <cite>networkMapAddress=&#8221;10.18.0.166:10002&#8221;</cite>)
+(please note that the controller will not have a network map address)</p>
+<p>Each machine should now run its nodes using <cite>runnodes</cite> or <cite>runnodes.bat</cite>
+files. Once they are up and running, the nodes should be able to place
+purchase orders among themselves in the same way as when they were running on
+the same machine.</p>
 </div>
 <div class="section" id="debugging-your-cordapp">
 <h2>Debugging your CorDapp<a class="headerlink" href="#debugging-your-cordapp" title="Permalink to this headline">¶</a></h2>

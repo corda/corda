@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -78,6 +82,11 @@
           
 <br>
 <a href="api/index.html">API reference</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -107,8 +116,9 @@
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-cordapp-template">Running the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#interacting-with-the-cordapp-template">Interacting with the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#extending-the-cordapp-template">Extending the CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -165,6 +175,8 @@
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -257,60 +269,6 @@ fun main(args: Array&lt;String&gt;) {
 </pre></div>
 </div>
 <p>We start generating transactions in a different thread (<code class="docutils literal"><span class="pre">generateTransactions</span></code> to be defined later) using <code class="docutils literal"><span class="pre">proxy</span></code>, which exposes the full RPC interface of the node:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>    /**
-     * Returns a pair of currently in-progress state machine infos and an observable of future state machine adds/removes.
-     */
-    @RPCReturnsObservables
-    fun stateMachinesAndUpdates(): Pair&lt;List&lt;StateMachineInfo&gt;, Observable&lt;StateMachineUpdate&gt;&gt;
-
-    /**
-     * Returns a pair of head states in the vault and an observable of future updates to the vault.
-     */
-    @RPCReturnsObservables
-    fun vaultAndUpdates(): Pair&lt;List&lt;StateAndRef&lt;ContractState&gt;&gt;, Observable&lt;Vault.Update&gt;&gt;
-
-    /**
-     * Returns a pair of all recorded transactions and an observable of future recorded ones.
-     */
-    @RPCReturnsObservables
-    fun verifiedTransactions(): Pair&lt;List&lt;SignedTransaction&gt;, Observable&lt;SignedTransaction&gt;&gt;
-
-    /**
-     * Returns a snapshot list of existing state machine id - recorded transaction hash mappings, and a stream of future
-     * such mappings as well.
-     */
-    @RPCReturnsObservables
-    fun stateMachineRecordedTransactionMapping(): Pair&lt;List&lt;StateMachineTransactionMapping&gt;, Observable&lt;StateMachineTransactionMapping&gt;&gt;
-
-    /**
-     * Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.
-     */
-    @RPCReturnsObservables
-    fun networkMapUpdates(): Pair&lt;List&lt;NodeInfo&gt;, Observable&lt;NetworkMapCache.MapChange&gt;&gt;
-
-    /**
-     * Start the given flow with the given arguments, returning an [Observable] with a single observation of the
-     * result of running the flow.
-     */
-    @RPCReturnsObservables
-    fun &lt;T : Any&gt; startFlowDynamic(logicType: Class&lt;out FlowLogic&lt;T&gt;&gt;, vararg args: Any?): FlowHandle&lt;T&gt;
-
-    /**
-     * Returns Node&#39;s identity, assuming this will not change while the node is running.
-     */
-    fun nodeIdentity(): NodeInfo
-
-    /*
-     * Add note(s) to an existing Vault transaction
-     */
-    fun addVaultTransactionNote(txnId: SecureHash, txnNote: String)
-
-    /*
-     * Retrieve existing note(s) for a given Vault transaction
-     */
-    fun getVaultTransactionNotes(txnId: SecureHash): Iterable&lt;String&gt;
-</pre></div>
-</div>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">This API is evolving and will continue to grow as new functionality and features added to Corda are made available to RPC clients.</p>
