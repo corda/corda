@@ -1,9 +1,6 @@
 package net.corda.flows
 
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.testing.BOC
-import net.corda.testing.BOC_KEY
-import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.PartyAndReference
@@ -14,10 +11,8 @@ import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MEGA_CORP_KEY
-import net.corda.testing.initiateSingleShotFlow
-import net.corda.testing.ledger
+import net.corda.flows.IssuerFlow.IssuanceRequester
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import org.junit.Test
 import java.util.*
@@ -62,7 +57,7 @@ class IssuerFlowTest {
         }.map { it.fsm }
 
         val issueRequest = IssuanceRequester(amount, issueToPartyAndRef.party, issueToPartyAndRef.reference, bankOfCordaNode.info.legalIdentity)
-        val issueRequestResultFuture = bankClientNode.smm.add(issueRequest).resultFuture
+        val issueRequestResultFuture = bankClientNode.services.startFlow(issueRequest).resultFuture
 
         return IssuerFlowTest.RunResult(issuerFuture, issueRequestResultFuture)
     }

@@ -59,7 +59,6 @@ import kotlin.test.assertTrue
  * We assume that Alice and Bob already found each other via some market, and have agreed the details already.
  */
 class TwoPartyTradeFlowTests {
-
     lateinit var net: MockNetwork
     lateinit var notaryNode: MockNetwork.MockNode
     lateinit var aliceNode: MockNetwork.MockNode
@@ -418,7 +417,7 @@ class TwoPartyTradeFlowTests {
             Buyer(otherParty, notaryNode.info.notaryIdentity, 1000.DOLLARS, CommercialPaper.State::class.java)
         }.map { it.fsm }
         val seller = Seller(bobNode.info.legalIdentity, notaryNode.info, assetToSell, 1000.DOLLARS, ALICE_KEY)
-        val sellerResultFuture = aliceNode.smm.add(seller).resultFuture
+        val sellerResultFuture = aliceNode.services.startFlow(seller).resultFuture
         return RunResult(buyerFuture, sellerResultFuture, seller.fsm.id)
     }
 

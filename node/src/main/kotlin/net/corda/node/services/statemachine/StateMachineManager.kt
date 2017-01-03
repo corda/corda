@@ -381,8 +381,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * Kicks off a brand new state machine of the given class.
      * The state machine will be persisted when it suspends, with automated restart if the StateMachineManager is
      * restarted with checkpointed state machines in the storage service.
+     *
+     * Note that you must be on the [executor] thread.
      */
     fun <T> add(logic: FlowLogic<T>): FlowStateMachine<T> {
+        executor.checkOnThread()
         // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
         // on the flow completion future inside that context. The problem is that any progress checkpoints are
         // unable to acquire the table lock and move forward till the calling transaction finishes.

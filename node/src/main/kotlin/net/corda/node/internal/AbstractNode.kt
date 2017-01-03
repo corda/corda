@@ -6,7 +6,6 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.*
-import net.corda.core.contracts.Amount
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.flows.FlowLogic
@@ -17,12 +16,14 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
-import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.*
+import net.corda.flows.CashCommand
+import net.corda.flows.CashFlow
+import net.corda.flows.FinalityFlow
+import net.corda.flows.sendRequest
 import net.corda.node.api.APIServer
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
@@ -123,7 +124,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
         override val flowLogicRefFactory: FlowLogicRefFactory get() = flowLogicFactory
 
-        override fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = smm.add(logic)
+        override fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> {
+            return serverThread.fetchFrom { smm.add(logic) }
+        }
 
         override fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party) -> FlowLogic<*>) {
             require(markerClass !in flowFactories) { "${markerClass.java.name} has already been used to register a flow" }
