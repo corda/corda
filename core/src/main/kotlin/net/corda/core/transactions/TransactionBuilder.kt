@@ -159,7 +159,7 @@ open class TransactionBuilder(
         return outputs.size - 1
     }
 
-    fun addOutputState(state: ContractState, notary: Party) = addOutputState(TransactionState(state, notary))
+    fun addOutputState(state: ContractState, notary: Party, encumbrance: Int? = null) = addOutputState(TransactionState(state, notary, encumbrance))
 
     /** A default notary must be specified during builder construction to use this method */
     fun addOutputState(state: ContractState): Int {

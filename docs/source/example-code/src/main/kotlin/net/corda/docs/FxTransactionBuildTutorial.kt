@@ -84,12 +84,12 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, request: FxReques
     val (inputs, residual) = gatherOurInputs(serviceHub, sellAmount, request.notary)
 
     // Build and an output state for the counterparty
-    val transferedFundsOutput = Cash.State(sellAmount, request.counterparty.owningKey, null)
+    val transferedFundsOutput = Cash.State(sellAmount, request.counterparty.owningKey)
 
     if (residual > 0L) {
         // Build an output state for the residual change back to us
         val residualAmount = Amount(residual, sellAmount.token)
-        val residualOutput = Cash.State(residualAmount, serviceHub.myInfo.legalIdentity.owningKey, null)
+        val residualOutput = Cash.State(residualAmount, serviceHub.myInfo.legalIdentity.owningKey)
         return FxResponse(inputs, listOf(transferedFundsOutput, residualOutput))
     } else {
         return FxResponse(inputs, listOf(transferedFundsOutput))
