@@ -1,5 +1,5 @@
-Integration Test Tutorial
-=========================
+Integration testing
+===================
 
 Integration testing involves bringing up nodes locally and testing
 invariants about them by starting flows and inspecting their state.
@@ -46,7 +46,7 @@ Next we connect to Alice and Bob respectively from the test process
 using the test user we created. Then we establish RPC links that allow
 us to start flows and query state.
 
-Note that Driver nodes start up with test server certificiates, so
+Note that Driver nodes start up with test server certificates, so
 it's enough to pass in ``configureTestSSL()`` for the clients.
 
 .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/IntegrationTestingTutorial.kt

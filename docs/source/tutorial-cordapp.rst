@@ -4,7 +4,7 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-The CorDapp Template
+The CorDapp template
 ====================
 
 This guide covers how to get started with the `cordapp-template`. Please note there are two Corda repositories:
@@ -61,7 +61,7 @@ Firstly, follow the :doc:`getting set up <getting-set-up>` page to download the 
 already have it.
 
 Working from milestone releases
--------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you wish to build a CorDapp against a milestone release then please use these instructions.
 
@@ -98,7 +98,7 @@ where ``local_branch_name`` is a name of your choice and ``tag_name`` is the nam
 Gradle will handle all the dependencies for you. Now you are now ready to get started `building the CorDapp Template`_.
 
 Using a SNAPSHOT release
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you wish to build a CorDapp against the most current version of Corda, follow these instructions.
 
@@ -199,7 +199,7 @@ Once you have published the Corda JARs to your local Maven repository, you are r
 CorDapp using the latest Corda features.
 
 Opening the CorDapp Template with IntelliJ
-------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For those familiar with IntelliJ, you can skip this section.
 
@@ -252,7 +252,7 @@ see all available Gradle tasks.
 To execute a task, double click it. The output will be shown in a console window.
 
 Building the CorDapp template
-=============================
+-----------------------------
 
 **From the command line**
 
@@ -306,7 +306,7 @@ folder has the following structure:
     └── runnodes.bat
 
 There will be one folder generated for each node you build (more on later when we get into the detail of the
-``deployNodes`` Gradle task) and a ``runnodes`` shell script (batch file on Widnows).
+``deployNodes`` Gradle task) and a ``runnodes`` shell script (batch file on Windows).
 
 Each node folder contains the Corda JAR, a folder for dependencies and a folder for plugins (or CorDapps). There is also
 a node.conf file. See :doc:`Corda configuration files <corda-configuration-file>`.
@@ -318,10 +318,10 @@ open on the right hand side of the IDE. Expand `tasks` and then expand `other`. 
 start the build process and output progress to a console window in the IDE.
 
 Running the CorDapp template
-============================
+----------------------------
 
 Running the CorDapp template from the command line
---------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To run the sample CorDapp navigate to the ``kotlin/build/nodes`` folder and execute the ``runnodes`` shell script with:
 
@@ -385,20 +385,8 @@ Notably:
 
 Additional files and folders are added as the node is running.
 
-Running CorDapps on separate machines
--------------------------------------
-
-Corda nodes can be run on separate machines with little additional configuration to the above instructions.
-
-When you have successfully run the ``deployNodes`` gradle task, choose which nodes you would like to run on separate
-machines. Copy the folders for those nodes from ``kotlin/build/nodes`` to the other machines. Make sure that you set the
-``networkMapAddress`` property in ``node.conf`` to the correct hostname:port where the network map service node is
-hosted.
-
-The nodes can be run on each machine with ``java -jar corda.jar`` from the node's directory.
-
 Running the example CorDapp via IntelliJ
-----------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To run the example CorDapp via IntelliJ you can use the ``Run Example CorDapp`` run configuration. Select it from the drop
 down menu at the top right-hand side of the IDE and press the green arrow to start the nodes. See image below:
@@ -429,10 +417,10 @@ To stop the nodes, press the red "stop" button at the top right-hand side of the
 The node driver can also be used to as a basis for `debugging your CorDapp`_
 
 Interacting with the CorDapp template
-=====================================
+-------------------------------------
 
 Via HTTP
---------
+~~~~~~~~
 
 The CorDapp defines a few HTTP API end-points and also serves some static web content. The end-points allow you to
 list purchase orders and add purchase orders.
@@ -555,7 +543,7 @@ Navigate to http://localhost:10005/web/example the refresh button in the top lef
 see the newly created agreement on the page.
 
 Using the h2 web console
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can connect to the h2 database to see the current state of the ledger, among other data such as the current state of
 the network map cache. Firstly, navigate to the folder where you downloaded the h2 web console as part of the pre-requisites
@@ -584,11 +572,11 @@ You will be presented with a web application that enumerates all the available t
 query them using SQL.
 
 Using the Example RPC client
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``/src/main/kotlin/com/example/client/ExampleClientRPC.kt`` file is a simple utility which uses the client RPC library
 to connect to a node and log the 'placed' purchase orders. It will log any existing purchase orders and listen for any future
-purchase orders. If you haven't placed any purchase orders when you connect to to one of the Nodes via RPC then the client will log
+purchase orders. If you haven't placed any purchase orders when you connect to one of the Nodes via RPC then the client will log
 and future purchase orders which are agreed.
 
 To build the client use the following gradle task:
@@ -613,10 +601,10 @@ application see:
 * :doc:`Client RPC tutorial <tutorial-clientrpc-api>`
 
 Extending the CorDapp template
-==============================
+------------------------------
 
-CorDapp-template Project Structure
-----------------------------------
+CorDapp-template project structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The CorDapp template has the following directory structure:
 
@@ -740,7 +728,7 @@ In the file structure above, the most important files and directories to note ar
 Some elements are covered in more detail below.
 
 The build.gradle file
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 It is usually necessary to make a couple of changes to the ``build.gradle`` file. Here will cover the most pertinent bits.
 
@@ -846,14 +834,13 @@ only requirement is that you must specify a node to run as the network map servi
 When you are finished editing your *CordFormation* the changes will be reflected the next time you run ``./gradlew deployNodes``.
 
 Service Provider Configuration File
------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you are building a CorDapp from scratch or adding a new CorDapp to the CorDapp-template project then you must provide
-a reference to your sub-class of ``CordaPluginRegistry`` in the provider-configuration file in located in the the
-``resources/META-INF/services`` directory.
+a reference to your sub-class of ``CordaPluginRegistry`` in the provider-configuration file in located in the ``resources/META-INF/services`` directory.
 
 Re-Deploying Your Nodes Locally
--------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you need to create any additional nodes you can do it via the ``build.gradle`` file as discussed above in
 ``the build.gradle file`` and in more detail in the "cordFormation" section.
@@ -868,7 +855,7 @@ Unix/Mac OSX: ``./gradlew deployNodes``
 Windows: ``gradlew.bat deployNodes``
 
 Running Nodes Across Machines
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The nodes can also be set up to communicate between separate machines on the 
 same subnet.
@@ -901,7 +888,7 @@ purchase orders among themselves in the same way as when they were running on
 the same machine.
 
 Debugging your CorDapp
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 Debugging is done via IntelliJ and can be done using the following steps.
 
@@ -936,4 +923,3 @@ Debugging is done via IntelliJ and can be done using the following steps.
 
 5. Edit the “Debug CorDapp” run configuration with the port of the node you wish to connect to.
 6. Run the “Debug CorDapp” run configuration.
-

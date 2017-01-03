@@ -94,7 +94,7 @@ specifying each of the three ports above in different windows, e.g.
 
 You will be able to view the basic web interface identifying the different banks.
 
-Now lets take a look at a transaction between Bank A and B which is not visible to Bank C. This illustrates the restricted data sharing feature of Corda, i.e. data is shared on a need-to-know basis. Nodes provide the dependency graph of a transaction they are sending to another node on demand, but there is no global broadcast of all transactions. 
+Now let's take a look at a transaction between Bank A and B which is not visible to Bank C. This illustrates the restricted data sharing feature of Corda, i.e. data is shared on a need-to-know basis. Nodes provide the dependency graph of a transaction they are sending to another node on demand, but there is no global broadcast of all transactions. 
 
 1. In the browser tab for Bank A (the top right hand corner shows which bank you are administering) click 'Create New Trade' from the top navigation bar
 2. Select to trade with Bank B
@@ -121,12 +121,12 @@ Open two browser tabs and direct one to each of the following:
 	http://localhost:11005/web/irsdemo
 	http://localhost:11007/web/irsdemo
 	
-You will be able to see the the nodes' view of the ledger.
+You will be able to see the nodes' view of the ledger.
 
 .. image:: resources/azure_vm_10_52.png
   :width: 300px
 
-Now lets take a look at how the interest rates oracle provides interest rates for a deal with a semi-annual payment frequency, and how the two counterparties to the trade see the same deal information on their own nodes, i.e. you see what I see.
+Now let's take a look at how the interest rates oracle provides interest rates for a deal with a semi-annual payment frequency, and how the two counterparties to the trade see the same deal information on their own nodes, i.e. you see what I see.
 
 1. In the browser tab for Bank A click 'Create Deal' from the top navigation bar
 2. Modify the terms of the IRS deal, or leave as default

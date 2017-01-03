@@ -327,7 +327,7 @@ Using state groups
 ------------------
 
 The simplest way to write a smart contract would be to say that each transaction can have a single input state and a
-single output state of the kind govered by that contract. This would be easy for the developer, but would prevent many
+single output state of the kind covered by that contract. This would be easy for the developer, but would prevent many
 important use cases.
 
 The next easiest way to write a contract would be to iterate over each input state and expect it to have an output

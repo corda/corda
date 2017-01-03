@@ -5,7 +5,7 @@ One of the basic data structures in our platform is a transaction. It can be pas
 also by third parties. The construction of transactions assumes that they form a whole entity with input and output states,
 commands and attachments inside. However all sensitive data shouldn’t be revealed to other nodes that take part in
 the creation of transaction on validation level (a good example of this situation is the Oracle which validates only
-embedded commands). How to achive it in a way that convinces the other party the data they got for signing really did form
+embedded commands). How to achieve it in a way that convinces the other party the data they got for signing really did form
 a part of the transaction?
 
 We decided to use well known and described cryptographic scheme to provide proofs of inclusion and data integrity.
@@ -107,5 +107,5 @@ If you want to verify obtained ``FilteredTransaction`` all you need is the root 
 
 .. note:: The way the ``FilteredTransaction`` is constructed ensures that after signing of the root hash it's impossible to add or remove
     leaves. However, it can happen that having transaction with multiple commands one party reveals only subset of them to the Oracle.
-    As signing is done now over the merkle root hash, the service signs all commands of given type, even though it didn't see
+    As signing is done now over the Merkle root hash, the service signs all commands of given type, even though it didn't see
     all of them. This issue will be handled after implementing partial signatures.
