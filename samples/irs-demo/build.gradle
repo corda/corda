@@ -106,7 +106,7 @@ task integrationTest(type: Test, dependsOn: []) {
 tasks.withType(CreateStartScripts).each { task ->
     task.doLast {
         String text = task.windowsScript.text
-        // Replaces the per file classpath (which are all jars in "lib" with a wildcard on lib
+        // Replaces the per file classpath (which are all jars in "lib") with a wildcard on lib
         text = text.replaceFirst(/(set CLASSPATH=%APP_HOME%\\lib\\).*/, { "${it[1]}*" })
         task.windowsScript.write text
     }
