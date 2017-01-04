@@ -31,11 +31,11 @@ sourceSets {
 }
 
 dependencies {
-    testCompile 'junit:junit:4.12'
+    testCompile "junit:junit:$junit_version"
     testCompile "commons-fileupload:commons-fileupload:1.3.2"
 
     // Guava: Google test library (collections test suite)
-    testCompile "com.google.guava:guava-testlib:19.0"
+    testCompile "com.google.guava:guava-testlib:$guava_version"
 
     // Bring in the MockNode infrastructure for writing protocol unit tests.
     testCompile project(":node")
@@ -43,7 +43,7 @@ dependencies {
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.2"
+    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.3"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Thread safety annotations
@@ -56,18 +56,19 @@ dependencies {
     // AssertJ: for fluent assertions for testing
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
-    compile 'com.pholser:junit-quickcheck-core:0.6'
-    compile 'com.pholser:junit-quickcheck-generators:0.6'
+    compile "com.pholser:junit-quickcheck-core:$quickcheck_version"
+    compile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
 
     // Guava: Google utilities library.
-    compile "com.google.guava:guava:19.0"
+    compile "com.google.guava:guava:$guava_version"
 
     // RxJava: observable streams of events.
+    // TODO: We can't upgrade past 1.1.6 due to a behaviour change in RxJava breaking our code. See PR #99 for discussion. Resolve.
     compile "io.reactivex:rxjava:1.1.6"
 
     // Kryo: object graph serialization.
     compile "com.esotericsoftware:kryo:4.0.0"
-    compile "de.javakaffee:kryo-serializers:0.38"
+    compile "de.javakaffee:kryo-serializers:0.41"
 
     // Apache JEXL: An embeddable expression evaluation library.
     // This may be temporary until we experiment with other ways to do on-the-fly contract specialisation via an API.
