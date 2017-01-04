@@ -1,6 +1,7 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.services.TimestampChecker
@@ -129,21 +130,36 @@ object NotaryFlow {
         open fun beforeCommit(stx: SignedTransaction) {
         }
 
+        /** Throw NotaryException if inputs are not unique. */
+        private fun detectDuplicateInputs(tx: WireTransaction) {
+            var seenInputs = emptySet<StateRef>()
+            var conflicts = emptyMap<StateRef, UniquenessProvider.ConsumingTx>()
+            tx.inputs.forEachIndexed { i, stateRef ->
+                if (seenInputs.contains(stateRef)) {
+                    conflicts += stateRef.to(UniquenessProvider.ConsumingTx(tx.id, i, otherSide))
+                }
+                seenInputs += stateRef
+            }
+            if (conflicts.isNotEmpty()) {
+                throw notaryException(tx, UniquenessException(UniquenessProvider.Conflict(conflicts)))
+            }
+        }
+
+        /** A NotaryException is thrown if any of the states have been consumed by a different transaction or input
+         * states are present multiple times within this transaction.
+         */
         private fun commitInputStates(tx: WireTransaction) {
+            detectDuplicateInputs(tx)
             try {
                 uniquenessProvider.commit(tx.inputs, tx.id, otherSide)
             } catch (e: UniquenessException) {
-                // Allow re-committing the transaction to make the NotaryFlow idempotent. Alternatively, we could make
-                // the underlying UniquenessProviders idempotent.
                 val conflicts = tx.inputs.filterIndexed { i, stateRef ->
                     val consumingTx = e.error.stateHistory[stateRef]
                     consumingTx != null && consumingTx != UniquenessProvider.ConsumingTx(tx.id, i, otherSide)
                 }
                 if (conflicts.isNotEmpty()) {
                     // TODO: Create a new UniquenessException that only contains the conflicts filtered above.
-                    val conflictData = e.error.serialize()
-                    val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
-                    throw NotaryException(NotaryError.Conflict(tx, signedConflict))
+                    throw notaryException(tx, e)
                 }
             }
         }
@@ -151,6 +167,12 @@ object NotaryFlow {
         private fun sign(bits: ByteArray): DigitalSignature.WithKey {
             val mySigningKey = serviceHub.notaryIdentityKey
             return mySigningKey.signWithECDSA(bits)
+        }
+
+        private fun notaryException(tx: WireTransaction, e: UniquenessException): NotaryException {
+            val conflictData = e.error.serialize()
+            val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
+            return NotaryException(NotaryError.Conflict(tx, signedConflict))
         }
     }
 
