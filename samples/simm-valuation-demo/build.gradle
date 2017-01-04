@@ -34,6 +34,18 @@ sourceSets {
             srcDir "../../config/test"
         }
     }
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
+}
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
 }
 
 dependencies {
@@ -105,6 +117,10 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     }
 }
 
+task integrationTest(type: Test, dependsOn: []) {
+    testClassesDir = sourceSets.integrationTest.output.classesDir
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
 
 task npmInstall(type: Exec) {
     workingDir 'src/main/web'

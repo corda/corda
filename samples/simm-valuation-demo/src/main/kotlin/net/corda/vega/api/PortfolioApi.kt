@@ -98,11 +98,9 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     @Path("business-date")
     @Produces(MediaType.APPLICATION_JSON)
     fun getBusinessDate(): Any {
-        return json {
-            obj(
-                    "business-date" to  LocalDateTime.ofInstant(rpc.currentNodeTime(), ZoneId.systemDefault()).toLocalDate()
-            )
-        }
+        return mapOf(
+                "business-date" to LocalDateTime.ofInstant(rpc.currentNodeTime(), ZoneId.systemDefault()).toLocalDate()
+        )
     }
 
     /**
@@ -195,12 +193,10 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         return withParty(partyName) { party ->
             val trades = getTradesWith(party)
             val portfolio = Portfolio(trades)
-            val summary = json {
-                obj(
-                        "trades" to portfolio.trades.size,
-                        "notional" to portfolio.getNotionalForParty(ownParty).toDouble()
-                )
-            }
+            val summary = mapOf(
+                    "trades" to portfolio.trades.size,
+                    "notional" to portfolio.getNotionalForParty(ownParty).toDouble()
+            )
             Response.ok().entity(summary).build()
         }
     }
@@ -239,28 +235,23 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         }
     }
 
+    data class ApiParty(val id: String, val text: String)
+    data class AvailableParties(val self: ApiParty, val counterparties: List<ApiParty>)
+
     /**
      * Returns the identity of the current node as well as a list of other counterparties that it is aware of.
      */
     @GET
     @Path("whoami")
     @Produces(MediaType.APPLICATION_JSON)
-    fun getWhoAmI(): Any {
-        val counterParties = rpc.networkMapUpdates().first.filter { it.legalIdentity.name != "NetworkMapService" && it.legalIdentity.name != "Notary" && it.legalIdentity.name != ownParty.name }
-        return json {
-            obj(
-                    "self" to obj(
-                            "id" to ownParty.owningKey.toBase58String(),
-                            "text" to ownParty.name
-                    ),
-                    "counterparties" to counterParties.map {
-                        obj(
-                                "id" to it.legalIdentity.owningKey.toBase58String(),
-                                "text" to it.legalIdentity.name
-                        )
-                    }
-            )
+    fun getWhoAmI(): AvailableParties {
+        val counterParties = rpc.networkMapUpdates().first.filter {
+            it.legalIdentity.name != "NetworkMapService" && it.legalIdentity.name != "Notary" && it.legalIdentity.name != ownParty.name
         }
+
+        return AvailableParties(
+                self = ApiParty(ownParty.owningKey.toBase58String(), ownParty.name),
+                counterparties = counterParties.map { ApiParty(it.legalIdentity.owningKey.toBase58String(), it.legalIdentity.name) })
     }
 
     data class ValuationCreationParams(val valuationDate: LocalDate)
