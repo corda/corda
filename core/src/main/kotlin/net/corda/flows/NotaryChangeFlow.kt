@@ -59,21 +59,21 @@ object NotaryChangeFlow : AbstractStateReplacementFlow<Party>() {
 
         /**
          * Adds the notary change state transitions to the [tx] builder for the [originalState] and its encumbrance
-         * state chain (encumbrance states migh be themselves encumbered by other states).
+         * state chain (encumbrance states might be themselves encumbered by other states).
          *
          * @return union of all added states' participants
          */
         private fun resolveEncumbrances(tx: TransactionBuilder): Iterable<CompositeKey> {
             val stateRef = originalState.ref
             val txId = stateRef.txhash
-            val issuingTx = serviceHub.storageService.validatedTransactions.getTransaction(txId)
-            val outputs = issuingTx!!.tx.outputs
+            val issuingTx = serviceHub.storageService.validatedTransactions.getTransaction(txId) ?: throw IllegalStateException("Transaction $txId not found")
+            val outputs = issuingTx.tx.outputs
 
             val participants = mutableSetOf<CompositeKey>()
 
             var nextStateIndex = stateRef.index
-            var newOutputPosition = 0
-            while (nextStateIndex != -1) {
+            var newOutputPosition = tx.outputStates().size
+            while (true) {
                 val nextState = outputs[nextStateIndex]
                 tx.addInputState(StateAndRef(nextState, StateRef(txId, nextStateIndex)))
                 participants.addAll(nextState.data.participants)
@@ -81,7 +81,7 @@ object NotaryChangeFlow : AbstractStateReplacementFlow<Party>() {
                 if (nextState.encumbrance == null) {
                     val modifiedState = TransactionState(nextState.data, modification)
                     tx.addOutputState(modifiedState)
-                    nextStateIndex = -1
+                    break
                 } else {
                     val modifiedState = TransactionState(nextState.data, modification, newOutputPosition + 1)
                     tx.addOutputState(modifiedState)

@@ -97,18 +97,6 @@ sealed class TransactionType {
                             TransactionVerificationException.Direction.OUTPUT)
                 }
             }
-            // Verify encumbrance contracts
-            val encumbranceStates = tx.inputs.mapNotNull { it.state.encumbrance }.map { tx.inputs[it].state } +
-                    tx.outputs.mapNotNull { it.encumbrance }.map { tx.outputs[it] }
-            val contracts = encumbranceStates.map { it.data.contract }
-            val ctx = tx.toTransactionForContract()
-            for (contract in contracts.toSet()) {
-                try {
-                    contract.verify(ctx)
-                } catch(e: Throwable) {
-                    throw TransactionVerificationException.ContractRejection(tx, contract, e)
-                }
-            }
         }
 
         /**

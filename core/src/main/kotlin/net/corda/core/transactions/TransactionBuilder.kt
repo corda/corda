@@ -159,6 +159,7 @@ open class TransactionBuilder(
         return outputs.size - 1
     }
 
+    @JvmOverloads
     fun addOutputState(state: ContractState, notary: Party, encumbrance: Int? = null) = addOutputState(TransactionState(state, notary, encumbrance))
 
     /** A default notary must be specified during builder construction to use this method */
