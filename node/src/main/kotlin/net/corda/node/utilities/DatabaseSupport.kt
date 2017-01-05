@@ -116,7 +116,7 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
 
     data class Boundary(val txId: UUID)
 
-    private val _transactionBoundaries = PublishSubject.create<Boundary>().toSerialized()
+    private val _transactionBoundaries = PublishSubject.create<Boundary>()//.toSerialized()
 
     init {
         // Found a unit test that was forgetting to close the database transactions.  When you close() on the top level
