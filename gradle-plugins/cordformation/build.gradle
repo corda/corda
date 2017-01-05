@@ -12,6 +12,7 @@ dependencies {
     compile localGroovy()
 
     // TypeSafe Config: for simple and human friendly config files.
-    compile "com.typesafe:config:$typesafe_config_version"
+    // TODO: Add a common versions file between Corda and gradle plugins to de-duplicate this version number
+    compile "com.typesafe:config:1.3.1"
 }
 
