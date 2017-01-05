@@ -51,7 +51,7 @@ object UpdateBusinessDayFlow {
         @Suspendable
         override fun call(): Unit {
             progressTracker.currentStep = NOTIFYING
-            for (recipient in serviceHub.networkMapCache.partyNodes) {
+            for (recipient in serviceHub.networkMapCache.partyNodes.sortedBy { it.legalIdentity.name }) {
                 doNextRecipient(recipient)
             }
         }
