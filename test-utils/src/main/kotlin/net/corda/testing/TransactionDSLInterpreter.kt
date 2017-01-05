@@ -31,9 +31,10 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * Adds an output to the transaction.
      * @param label An optional label that may be later used to retrieve the output probably in other transactions.
      * @param notary The associated notary.
+     * @param encumbrance The position of the encumbrance state.
      * @param contractState The state itself.
      */
-    fun _output(label: String?, notary: Party, contractState: ContractState)
+    fun _output(label: String?, notary: Party, encumbrance: Int?, contractState: ContractState)
 
     /**
      * Adds an [Attachment] reference to the transaction.
@@ -85,16 +86,16 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
      * @see TransactionDSLInterpreter._output
      */
     @JvmOverloads
-    fun output(label: String? = null, notary: Party = DUMMY_NOTARY, contractStateClosure: () -> ContractState) =
-            _output(label, notary,  contractStateClosure())
+    fun output(label: String? = null, notary: Party = DUMMY_NOTARY, encumbrance: Int? = null, contractStateClosure: () -> ContractState) =
+            _output(label, notary, encumbrance, contractStateClosure())
     /**
      * @see TransactionDSLInterpreter._output
      */
     fun output(label: String, contractState: ContractState) =
-            _output(label, DUMMY_NOTARY, contractState)
+            _output(label, DUMMY_NOTARY, null, contractState)
 
     fun output(contractState: ContractState) =
-            _output(null, DUMMY_NOTARY, contractState)
+            _output(null, DUMMY_NOTARY, null, contractState)
 
     /**
      * @see TransactionDSLInterpreter._command
