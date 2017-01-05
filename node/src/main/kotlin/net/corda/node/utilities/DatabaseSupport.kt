@@ -185,7 +185,7 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
 fun <T : Any> rx.Observer<T>.bufferUntilDatabaseCommit(): rx.Observer<T> {
     val currentTxId = StrandLocalTransactionManager.transactionId
     val databaseTxBoundary: Observable<StrandLocalTransactionManager.Boundary> = StrandLocalTransactionManager.transactionBoundaries.filter { it.txId == currentTxId }.first()
-    val subject = UnicastSubject.create<T>().toSerialized()
+    val subject = UnicastSubject.create<T>()
     subject.delaySubscription(databaseTxBoundary).subscribe(this)
     databaseTxBoundary.doOnCompleted { subject.onCompleted() }
     return subject
