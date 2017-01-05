@@ -101,6 +101,7 @@ object NotaryFlow {
 
             val result = try {
                 validateTimestamp(wtx)
+                detectDuplicateInputs(wtx)
                 beforeCommit(stx)
                 commitInputStates(wtx)
                 val sig = sign(stx.id.bytes)
@@ -145,11 +146,10 @@ object NotaryFlow {
             }
         }
 
-        /** A NotaryException is thrown if any of the states have been consumed by a different transaction or input
-         * states are present multiple times within this transaction.
+        /** A NotaryException is thrown if any of the states have been consumed by a different transaction. Note that
+         * this method does not throw an exception when input states are present multiple times within the transaction.
          */
         private fun commitInputStates(tx: WireTransaction) {
-            detectDuplicateInputs(tx)
             try {
                 uniquenessProvider.commit(tx.inputs, tx.id, otherSide)
             } catch (e: UniquenessException) {
