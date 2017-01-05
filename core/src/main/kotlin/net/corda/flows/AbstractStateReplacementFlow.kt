@@ -67,10 +67,10 @@ abstract class AbstractStateReplacementFlow<T> {
         }
 
         abstract protected fun assembleProposal(stateRef: StateRef, modification: T, stx: SignedTransaction): Proposal<T>
-        abstract protected fun assembleTx(): Pair<SignedTransaction, List<CompositeKey>>
+        abstract protected fun assembleTx(): Pair<SignedTransaction, Iterable<CompositeKey>>
 
         @Suspendable
-        private fun collectSignatures(participants: List<CompositeKey>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
+        private fun collectSignatures(participants: Iterable<CompositeKey>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
             val parties = participants.map {
                 val participantNode = serviceHub.networkMapCache.getNodeByLegalIdentityKey(it) ?:
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")

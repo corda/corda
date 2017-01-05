@@ -1,13 +1,11 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionType
+import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.flows.NotaryChangeFlow.Acceptor
@@ -36,17 +34,66 @@ object NotaryChangeFlow : AbstractStateReplacementFlow<Party>() {
         override fun assembleProposal(stateRef: StateRef, modification: Party, stx: SignedTransaction): AbstractStateReplacementFlow.Proposal<Party>
                 = Proposal(stateRef, modification, stx)
 
-        override fun assembleTx(): Pair<SignedTransaction, List<CompositeKey>> {
+        override fun assembleTx(): Pair<SignedTransaction, Iterable<CompositeKey>> {
             val state = originalState.state
-            val newState = state.withNotary(modification)
-            val participants = state.data.participants
-            val tx = TransactionType.NotaryChange.Builder(originalState.state.notary).withItems(originalState, newState)
+            val tx = TransactionType.NotaryChange.Builder(originalState.state.notary)
+
+            val participants: Iterable<CompositeKey>
+
+            if (state.encumbrance == null) {
+                val modifiedState = TransactionState(state.data, modification)
+                tx.addInputState(originalState)
+                tx.addOutputState(modifiedState)
+                participants = state.data.participants
+            } else {
+                participants = resolveEncumbrances(tx)
+            }
+
             val myKey = serviceHub.legalIdentityKey
             tx.signWith(myKey)
 
             val stx = tx.toSignedTransaction(false)
+
             return Pair(stx, participants)
         }
+
+        /**
+         * Adds the notary change state transitions to the [tx] builder for the [originalState] and its encumbrance
+         * state chain (encumbrance states might be themselves encumbered by other states).
+         *
+         * @return union of all added states' participants
+         */
+        private fun resolveEncumbrances(tx: TransactionBuilder): Iterable<CompositeKey> {
+            val stateRef = originalState.ref
+            val txId = stateRef.txhash
+            val issuingTx = serviceHub.storageService.validatedTransactions.getTransaction(txId) ?: throw IllegalStateException("Transaction $txId not found")
+            val outputs = issuingTx.tx.outputs
+
+            val participants = mutableSetOf<CompositeKey>()
+
+            var nextStateIndex = stateRef.index
+            var newOutputPosition = tx.outputStates().size
+            while (true) {
+                val nextState = outputs[nextStateIndex]
+                tx.addInputState(StateAndRef(nextState, StateRef(txId, nextStateIndex)))
+                participants.addAll(nextState.data.participants)
+
+                if (nextState.encumbrance == null) {
+                    val modifiedState = TransactionState(nextState.data, modification)
+                    tx.addOutputState(modifiedState)
+                    break
+                } else {
+                    val modifiedState = TransactionState(nextState.data, modification, newOutputPosition + 1)
+                    tx.addOutputState(modifiedState)
+                    nextStateIndex = nextState.encumbrance
+                }
+
+                newOutputPosition++
+            }
+
+            return participants
+        }
+
     }
 
     class Acceptor(otherSide: Party,

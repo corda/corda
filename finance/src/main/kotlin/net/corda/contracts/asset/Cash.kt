@@ -82,8 +82,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             override val amount: Amount<Issued<Currency>>,
 
             /** There must be a MoveCommand signed by this key to claim the amount. */
-            override val owner: CompositeKey,
-            override val encumbrance: Int? = null
+            override val owner: CompositeKey
     ) : FungibleAsset<Currency>, QueryableState {
         constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: CompositeKey)
                 : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
@@ -103,7 +102,6 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
                 is CashSchemaV1 -> CashSchemaV1.PersistentCashState(
-                        encumbrance = this.encumbrance,
                         owner = this.owner.toBase58String(),
                         pennies = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,

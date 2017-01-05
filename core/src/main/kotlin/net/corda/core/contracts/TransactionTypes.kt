@@ -74,14 +74,14 @@ sealed class TransactionType {
 
         private fun verifyEncumbrances(tx: LedgerTransaction) {
             // Validate that all encumbrances exist within the set of input states.
-            val encumberedInputs = tx.inputs.filter { it.state.data.encumbrance != null }
+            val encumberedInputs = tx.inputs.filter { it.state.encumbrance != null }
             encumberedInputs.forEach { encumberedInput ->
                 val encumbranceStateExists = tx.inputs.any {
-                    it.ref.txhash == encumberedInput.ref.txhash && it.ref.index == encumberedInput.state.data.encumbrance
+                    it.ref.txhash == encumberedInput.ref.txhash && it.ref.index == encumberedInput.state.encumbrance
                 }
                 if (!encumbranceStateExists) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
-                            tx, encumberedInput.state.data.encumbrance!!,
+                            tx, encumberedInput.state.encumbrance!!,
                             TransactionVerificationException.Direction.INPUT
                     )
                 }
@@ -90,7 +90,7 @@ sealed class TransactionType {
             // Check that, in the outputs, an encumbered state does not refer to itself as the encumbrance,
             // and that the number of outputs can contain the encumbrance.
             for ((i, output) in tx.outputs.withIndex()) {
-                val encumbranceIndex = output.data.encumbrance ?: continue
+                val encumbranceIndex = output.encumbrance ?: continue
                 if (encumbranceIndex == i || encumbranceIndex >= tx.outputs.size) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
                             tx, encumbranceIndex,
