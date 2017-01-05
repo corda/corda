@@ -12,12 +12,12 @@ fun Instant.toLocalDate(): LocalDate = LocalDate.ofEpochDay(this.epochSecond / 6
 
 fun LocalDate.toInstant(): Instant = Instant.ofEpochSecond(this.toEpochDay() * 60 * 60 * 24)
 
-private fun signingParties(perceivable: Perceivable<Boolean>) : ImmutableSet<CompositeKey> =
+private fun signingParties(perceivable: Perceivable<Boolean>) : ImmutableSet<Party> =
     when (perceivable) {
-        is ActorPerceivable -> ImmutableSet.of( perceivable.actor.owningKey )
+        is ActorPerceivable -> ImmutableSet.of( perceivable.actor )
         is PerceivableAnd -> Sets.union( signingParties( perceivable.left ), signingParties(perceivable.right) ).immutableCopy()
         is PerceivableOr -> Sets.union( signingParties( perceivable.left ), signingParties(perceivable.right) ).immutableCopy()
-        is TimePerceivable -> ImmutableSet.of<CompositeKey>()
+        is TimePerceivable -> ImmutableSet.of<Party>()
         else -> throw IllegalArgumentException("signingParties " + perceivable)
     }
 
@@ -45,22 +45,24 @@ private fun liablePartiesVisitor(action: Action): ImmutableSet<CompositeKey> {
 /** Returns list of potentially liable parties for a given contract */
 fun liableParties(contract: Arrangement): Set<CompositeKey> = liablePartiesVisitor(contract)
 
-private fun involvedPartiesVisitor(action: Action): Set<CompositeKey> =
+private fun involvedPartiesVisitor(action: Action): Set<Party> =
     Sets.union(involvedPartiesVisitor(action.arrangement), signingParties(action.condition)).immutableCopy()
 
-private fun involvedPartiesVisitor(arrangement: Arrangement): ImmutableSet<CompositeKey> =
+private fun involvedPartiesVisitor(arrangement: Arrangement): ImmutableSet<Party> =
         when (arrangement) {
-            is Zero -> ImmutableSet.of<CompositeKey>()
-            is Obligation -> ImmutableSet.of(arrangement.from.owningKey)
+            is Zero -> ImmutableSet.of<Party>()
+            is Obligation -> ImmutableSet.of(arrangement.from)
+            is RollOut -> involvedPartiesVisitor(arrangement.template)
+            is Continuation -> ImmutableSet.of<Party>()
             is And ->
-                arrangement.arrangements.fold(ImmutableSet.builder<CompositeKey>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
+                arrangement.arrangements.fold(ImmutableSet.builder<Party>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
             is Actions ->
-                arrangement.actions.fold(ImmutableSet.builder<CompositeKey>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
-            else -> throw IllegalArgumentException()
+                arrangement.actions.fold(ImmutableSet.builder<Party>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
+            else -> throw IllegalArgumentException(arrangement.toString())
         }
 
 /** returns list of involved parties for a given contract */
-fun involvedParties(arrangement: Arrangement): Set<CompositeKey> = involvedPartiesVisitor(arrangement)
+fun involvedParties(arrangement: Arrangement): Set<Party> = involvedPartiesVisitor(arrangement)
 
 fun replaceParty(perceivable: Perceivable<Boolean>, from: Party, to: Party): Perceivable<Boolean> =
         when (perceivable) {

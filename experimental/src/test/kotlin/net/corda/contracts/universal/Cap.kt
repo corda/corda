@@ -6,6 +6,7 @@ import net.corda.core.contracts.Frequency
 import net.corda.core.contracts.Tenor
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.transaction
+import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
@@ -164,8 +165,6 @@ class Cap {
 
     @Test
     fun issue() {
-        prettyPrint(contractInitial)
-
         transaction {
             output { stateInitial }
             timestamp(TEST_TX_TIME_1)
@@ -310,5 +309,10 @@ class Cap {
 
             this.verifies()
         }
+    }
+
+    @Test @Ignore
+    fun `pretty print`() {
+        println ( prettyPrint(contractInitial) )
     }
 }

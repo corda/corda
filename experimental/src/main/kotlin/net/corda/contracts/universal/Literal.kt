@@ -40,6 +40,14 @@ class ActionsBuilder {
 
     infix fun Party.or(party: Party) = setOf(this, party)
     infix fun Set<Party>.or(party: Party) = this.plus(party)
+
+    fun String.givenThat(condition: Perceivable<Boolean>, init: ContractBuilder.() -> Arrangement): Action {
+        val b = ContractBuilder()
+        b.init()
+        val a = Action(this, condition, b.final())
+        actions.add(a)
+        return a
+    }
 }
 
 @Suppress("UNUSED")
@@ -145,7 +153,7 @@ interface GivenThatResolve {
 }
 
 class ActionBuilder(val actors: Set<Party>) {
-    val actions = mutableListOf<Action>()
+    internal val actions = mutableListOf<Action>()
 
     fun String.givenThat(condition: Perceivable<Boolean>, init: ContractBuilder.() -> Arrangement): Action {
         val b = ContractBuilder()

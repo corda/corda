@@ -1,126 +1,187 @@
 package net.corda.contracts.universal
 
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.Party
 import java.math.BigDecimal
 import java.time.Instant
 
-/**
- * Created by sofusmortensen on 30/12/2016.
- */
+private class PrettyPrint(arr : Arrangement) {
 
+    val parties = involvedParties(arr)
 
+    private val sb = StringBuilder()
+    private var indentLevel = 0
 
-class PrettyPrint
-{
-    val sb = StringBuilder()
-
-
-    // fun print
-}
-
-
-
-fun prettyPrintPerInstant(per: Perceivable<Instant>, indentArg : Int) {
-
-    val sb = StringBuilder()
-
-    var indent = indentArg
-
-    when (per) {
-        is Const -> {
-            print("\"${per.value}\"")
-        }
-        is StartDate -> {
-            print("startDate")
-        }
-        is EndDate -> {
-            print("endDate")
-        }
-        else -> print(per)
+    private var atStart = true
+    private fun print(msg: String) {
+        if (atStart)
+            repeat(indentLevel, { sb.append(' ') })
+        sb.append(msg)
+        atStart = false
     }
-}
 
-fun prettyPrintPerBD(per: Perceivable<BigDecimal>, indentArg : Int) {
-    var indent = indentArg
+    private fun println(message: Any?) {
+        if (atStart)
+            repeat(indentLevel, { sb.append(' ') })
+        sb.appendln(message)
+        atStart = true
+    }
 
-    fun println(message: Any?)
+    private fun print(msg: Any?) {
+        if (atStart)
+            repeat(indentLevel, { sb.append(' ') })
+        sb.append(msg)
+        atStart = false
+    }
+
+    fun <T> indent(body: () -> T): T {
+        indentLevel += 2
+        val rv = body()
+        indentLevel -= 2
+        return rv
+    }
+
+    val partyMap = mutableMapOf<CompositeKey, String>()
+    val usedPartyNames = mutableSetOf<String>()
+
+    fun createPartyName(party : Party) : String
     {
-        repeat(indent, { print(' ')})
-        System.out.println(message)
+        val parts = party.name.toLowerCase().split(' ')
+
+        var camelName = parts.drop(1).fold(parts.first()) {
+            s, i -> s + i.first().toUpperCase() + i.drop(1)
+        }
+
+        if (usedPartyNames.contains(camelName)) {
+            camelName += "_" + partyMap.size.toString()
+        }
+
+        partyMap.put(party.owningKey, camelName)
+        usedPartyNames.add(camelName)
+
+        return camelName
+     }
+
+    init {
+        parties.forEach {
+            println( "val ${createPartyName(it)} = Party(\"${it.name}\", \"${it.owningKey}\")" )
+        }
     }
 
-    when (per) {
-        is PerceivableOperation<BigDecimal> -> {
-            prettyPrintPerBD(per.left, indent + 2)
-            when (per.op)
-            {
-                Operation.PLUS -> print(" + ")
-                Operation.MINUS -> print(" - ")
-                Operation.DIV -> print(" / ")
-                Operation.TIMES -> print(" * ")
-                else -> print(per.op)
+    fun prettyPrintPerBoolean(per: Perceivable<Boolean>) {
+        when (per) {
+            is Const -> {
+                print("\"${per.value}\"")
             }
-            prettyPrintPerBD(per.right, indent + 2)
+            is PerceivableOr -> {
+                prettyPrintPerBoolean(per.left)
+                print(" or ")
+                prettyPrintPerBoolean(per.right)
+            }
+            is ActorPerceivable -> {
+                print("signedBy(${partyMap[per.actor.owningKey]})")
+            }
+            else -> print(per)
         }
-        is Const -> {
-            print(per.value)
+    }
+
+    fun prettyPrintPerInstant(per: Perceivable<Instant>) {
+        when (per) {
+            is Const -> {
+                print("\"${per.value}\"")
+            }
+            is StartDate -> {
+                print("startDate")
+            }
+            is EndDate -> {
+                print("endDate")
+            }
+            else -> print(per)
         }
-        is Interest -> {
-            println("Interest(")
-            prettyPrintPerBD(per.amount, indent + 2)
-            print(", \"${per.dayCountConvention}\", ")
-            prettyPrintPerBD(per.amount, indent)
-            print(", ")
-            prettyPrintPerInstant(per.start, indent)
-            print(", ")
-            prettyPrintPerInstant(per.end, indent)
-            print(")")
+    }
+
+    fun prettyPrintPerBD(per: Perceivable<BigDecimal>) {
+        when (per) {
+            is PerceivableOperation<BigDecimal> -> {
+                prettyPrintPerBD(per.left)
+                when (per.op) {
+                    Operation.PLUS -> print(" + ")
+                    Operation.MINUS -> print(" - ")
+                    Operation.DIV -> print(" / ")
+                    Operation.TIMES -> print(" * ")
+                    else -> print(per.op)
+                }
+                prettyPrintPerBD(per.right)
+            }
+            is Const -> {
+                print(per.value)
+            }
+            is Interest -> {
+                print("Interest(")
+                prettyPrintPerBD(per.amount)
+                print(", \"${per.dayCountConvention}\", ")
+                prettyPrintPerBD(per.amount)
+                print(", ")
+                prettyPrintPerInstant(per.start)
+                print(", ")
+                prettyPrintPerInstant(per.end)
+                print(")")
+            }
+            else -> println(per)
         }
-        else -> println(per)
+    }
+
+    fun prettyPrint(arr: Arrangement) {
+
+        when (arr) {
+            is Zero -> print("zero")
+            is RollOut -> {
+                println("rollOut(\"${arr.startDate}\".ld, \"${arr.endDate}\".ld, Frequency.${arr.frequency}) { ")
+                indent {
+                    prettyPrint(arr.template)
+                }
+                println("}")
+            }
+            is And -> {
+                for (it in arr.arrangements) {
+                    prettyPrint(it)
+                }
+            }
+            is Continuation -> {
+                println("next()")
+            }
+            is Obligation -> {
+                print("${partyMap[arr.from.owningKey]}.gives( ${partyMap[arr.to.owningKey]}, ")
+                prettyPrintPerBD(arr.amount)
+                println(", ${arr.currency})")
+            }
+            is Actions -> {
+                println("actions {")
+                indent {
+                    for ((name, condition, arrangement) in arr.actions) {
+                        print("\"$name\".givenThat(")
+                        prettyPrintPerBoolean(condition)
+                        println(") {")
+                        indent {
+                            prettyPrint(arrangement)
+                        }
+                        println("}")
+                    }
+                }
+                println("}")
+            }
+            else -> println(arr)
+        }
+    }
+
+    override fun toString(): String {
+        return sb.toString()
     }
 }
 
-fun prettyPrint(arr: Arrangement, indentArg: Int = 0) {
-
-    var indent = indentArg
-
-    fun println(message: Any?)
-    {
-        repeat(indent, { print(' ')})
-        System.out.println(message)
-    }
-
-    when (arr) {
-        is Zero -> print("zero")
-        is RollOut -> {
-            println("rollout(\"${arr.startDate}\", \"${arr.endDate}\", Frequency.${arr.frequency}) { ")
-            prettyPrint(arr.template, indent + 2)
-            println("}")
-        }
-        is And -> {
-            for (it in arr.arrangements) {
-                prettyPrint(it, indent + 2)
-            }
-        }
-        is Continuation -> {
-            println("next()")
-        }
-
-        is Obligation -> {
-            println( "\"${arr.from.name}\".gives( \"${arr.to.name}\", ")
-            prettyPrintPerBD(arr.amount, indent)
-            println( ", ${arr.currency})" )
-        }
-        is Actions -> {
-            println("actions {")
-            indent += 2
-            for (it in arr.actions) {
-                println( "\"" + it.name + "\" anytime {")
-                prettyPrint(it.arrangement, indent + 2)
-                println( "}" )
-            }
-            indent -= 2
-            println("}")
-        }
-        else -> println(arr)
-    }
+fun prettyPrint(arr: Arrangement): String {
+    val pb = PrettyPrint(arr)
+    pb.prettyPrint(arr)
+    return pb.toString()
 }
+

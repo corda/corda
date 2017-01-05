@@ -82,9 +82,6 @@ fun signedByOneOf(actors: Collection<Party>): Perceivable<Boolean> =
         else
             actors.drop(1).fold(signedBy(actors.first())) { total, next -> total or signedBy(next) }
 
-
-
-
 /**
  * Perceivable based on time
  */
