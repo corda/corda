@@ -12,7 +12,7 @@ so far. We have:
 4. The attachment demo, which demonstrates uploading attachments to nodes.
 5. The SIMM valuation demo, a large demo which shows two nodes agreeing on a portfolio and valuing the initial margin
    using the Standard Initial Margin Model.
-6. The distributed notary demo, which demonstrates a single node getting multiple transactions notarised by a distributed (Raft-based) notary.
+6. The raft notary demo, which demonstrates a single node getting multiple transactions notarised by a distributed (Raft-based) notary.
 7. The Bank of Corda demo, which demonstrates a node acting as an issuer of assets (the Bank of Corda) and remote client
    applications requesting issuance (via RPC, HTTP) of some cash on behalf of a node called Big Corporation.
 
@@ -114,8 +114,8 @@ message "File received - we're happy!" should be printed.
 
 .. _notary-demo:
 
-Distributed Notary demo
------------------------
+Raft Notary demo
+----------------
 
 This is a simple demonstration showing a party getting transactions notarised by a distributed `Raft <https://raft.github.io/>`_-based notary service.
 The demo will start three distributed notary nodes, and two counterparty nodes. One of the parties will generate transactions
@@ -127,9 +127,9 @@ You will notice that subsequent transactions get signed by different members of 
 
 To run from IntelliJ:
 
-1. Open the Corda samples project in IntelliJ and run the ``Notary Demo: Run Nodes`` configuration to start the nodes.
+1. Open the Corda samples project in IntelliJ and run the ``Raft Notary Demo: Run Nodes`` configuration to start the nodes.
    Once all nodes are started you will see several "Node started up and registered in ..." messages.
-2. Run ``Notary Demo: Run Notarisation`` to make a call to the "Party" node to initiate notarisation requests.
+2. Run ``Raft Notary Demo: Run Notarisation`` to make a call to the "Party" node to initiate notarisation requests.
    In a few seconds you will see a message "Notarised 10 transactions" with a list of transaction ids and the signer public keys.
 
 To run from the command line:
