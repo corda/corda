@@ -21,7 +21,7 @@ dependencies {
     compile project(':core')
 
     testCompile project(':test-utils')
-    testCompile 'junit:junit:4.12'
+    testCompile "junit:junit:$junit_version"
 }
 
 sourceSets {
