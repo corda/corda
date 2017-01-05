@@ -19,6 +19,8 @@ sealed class TransactionType {
      */
     fun verify(tx: LedgerTransaction) {
         require(tx.notary != null || tx.timestamp == null) { "Transactions with timestamps must be notarised." }
+        val duplicates = detectDuplicateInputs(tx)
+        if (duplicates.isNotEmpty()) throw TransactionVerificationException.DuplicateInputStates(tx, duplicates)
         val missing = verifySigners(tx)
         if (missing.isNotEmpty()) throw TransactionVerificationException.SignersMissing(tx, missing.toList())
         verifyTransaction(tx)
@@ -33,6 +35,19 @@ sealed class TransactionType {
         val missing = requiredKeys - tx.mustSign
 
         return missing
+    }
+
+    /** Check that the inputs are unique. */
+    private fun detectDuplicateInputs(tx: LedgerTransaction): Set<StateRef> {
+        var seenInputs = emptySet<StateRef>()
+        var duplicates = emptySet<StateRef>()
+        tx.inputs.forEach { state ->
+            if (seenInputs.contains(state.ref)) {
+                duplicates += state.ref
+            }
+            seenInputs += state.ref
+        }
+        return duplicates
     }
 
     /**

@@ -103,25 +103,6 @@ class NotaryServiceTests {
         assertEquals(f1.resultFuture.getOrThrow(), f2.resultFuture.getOrThrow())
     }
 
-    @Test fun `should report conflict when inputs are reused within a single transactions`() {
-        val stx = run {
-            val inputState = issueState(clientNode)
-            // Use inputState twice as input of a single transaction.
-            val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState, inputState)
-            tx.signWith(clientNode.keyPair!!)
-            tx.toSignedTransaction(false)
-        }
-
-        val future = clientNode.services.startFlow(NotaryFlow.Client(stx))
-
-        net.runNetwork()
-
-        val ex = assertFailsWith(NotaryException::class) { future.resultFuture.getOrThrow() }
-        val notaryError = ex.error as NotaryError.Conflict
-        assertEquals(notaryError.tx, stx.tx)
-        notaryError.conflict.verified()
-    }
-
     @Test fun `should report conflict when inputs are reused across transactions`() {
         val inputState = issueState(clientNode)
         val stx = run {
