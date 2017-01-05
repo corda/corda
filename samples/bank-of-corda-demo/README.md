@@ -35,7 +35,8 @@ Similar to 3 above, but using RPC as the remote communications mechanism.
 ## Developer notes
 
 Testing of the Bank of Corda application is demonstrated at two levels:
-1. Unit testing the flow uses the [LedgerDSL] and [MockServices]
+1. Unit testing the flow uses the [LedgerDSL] and [MockServices]. Please see [IssuerFlowTest]
+   The IssuerFlow is one of several reusable flows defined in the finance package.
 2. Integration testing via RPC and HTTP uses the [Driver] DSL to launch standalone node instances
 
 Security
@@ -48,9 +49,9 @@ which are validated on the Bank of Corda node against those configured at node s
 Notary
 We are using a [SimpleNotaryService] in this example, but could easily switch to a [ValidatingNotaryService]
 
-## Future
+## Integration with other Demos and Tools
 
-The Bank of Corda node will become an integral part of other Corda samples that require initial issuance of some asset.
+The Bank of Corda issuer node concept has been integrated into the Explorer tool (simulation nodes) and Trader Demo.
 
 ## Further Reading
 

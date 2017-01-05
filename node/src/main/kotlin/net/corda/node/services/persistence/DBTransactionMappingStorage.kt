@@ -58,7 +58,7 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
         mutex.locked {
             return Pair(
                     stateMachineTransactionMap.map { StateMachineTransactionMapping(it.value, it.key) },
-                    updates.bufferUntilSubscribed()
+                    updates.bufferUntilSubscribed().wrapWithDatabaseTransaction()
             )
         }
     }

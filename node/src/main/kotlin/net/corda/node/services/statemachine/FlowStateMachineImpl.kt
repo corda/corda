@@ -154,9 +154,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun createSessionData(session: FlowSession, payload: Any): SessionData {
-        val otherPartySessionId = session.otherPartySessionId
-                ?: throw IllegalStateException("We've somehow held onto an unconfirmed session: $session")
-        return SessionData(otherPartySessionId, payload)
+        val sessionState = session.state
+        val peerSessionId = when (sessionState) {
+            is StateMachineManager.FlowSessionState.Initiating -> throw IllegalStateException("We've somehow held onto an unconfirmed session: $session")
+            is StateMachineManager.FlowSessionState.Initiated -> sessionState.peerSessionId
+        }
+        return SessionData(peerSessionId, payload)
     }
 
     @Suspendable
@@ -166,10 +169,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     private inline fun <reified M : SessionMessage> receiveInternal(session: FlowSession): M {
-        return suspendAndExpectReceive(ReceiveOnly(session, M::class.java))
+        return suspendAndExpectReceive(ReceiveOnly(session, M::class.java)).message
     }
 
     private inline fun <reified M : SessionMessage> sendAndReceiveInternal(session: FlowSession, message: SessionMessage): M {
+        return suspendAndExpectReceive(SendAndReceive(session, message, M::class.java)).message
+    }
+
+    private inline fun <reified M : SessionMessage> sendAndReceiveInternalWithParty(session: FlowSession, message: SessionMessage): ReceivedSessionMessage<M> {
         return suspendAndExpectReceive(SendAndReceive(session, message, M::class.java))
     }
 
@@ -191,26 +198,25 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      */
     @Suspendable
     private fun startNewSession(otherParty: Party, sessionFlow: FlowLogic<*>, firstPayload: Any?): FlowSession {
-        val node = serviceHub.networkMapCache.getRepresentativeNode(otherParty) ?: throw IllegalArgumentException("Don't know about party $otherParty")
-        val nodeIdentity = node.legalIdentity
-        logger.trace { "Initiating a new session with $nodeIdentity (representative of $otherParty)" }
-        val session = FlowSession(sessionFlow, nodeIdentity, random63BitValue(), null)
-        openSessions[Pair(sessionFlow, nodeIdentity)] = session
-        val counterpartyFlow = sessionFlow.getCounterpartyMarker(nodeIdentity).name
+        logger.trace { "Initiating a new session with $otherParty" }
+        val session = FlowSession(sessionFlow, random63BitValue(), FlowSessionState.Initiating(otherParty))
+        openSessions[Pair(sessionFlow, otherParty)] = session
+        val counterpartyFlow = sessionFlow.getCounterpartyMarker(otherParty).name
         val sessionInit = SessionInit(session.ourSessionId, counterpartyFlow, firstPayload)
-        val sessionInitResponse = sendAndReceiveInternal<SessionInitResponse>(session, sessionInit)
+        val (peerParty, sessionInitResponse) = sendAndReceiveInternalWithParty<SessionInitResponse>(session, sessionInit)
         if (sessionInitResponse is SessionConfirm) {
-            session.otherPartySessionId = sessionInitResponse.initiatedSessionId
+            require(session.state is FlowSessionState.Initiating)
+            session.state = FlowSessionState.Initiated(peerParty, sessionInitResponse.initiatedSessionId)
             return session
         } else {
             sessionInitResponse as SessionReject
-            throw FlowSessionException("Party $nodeIdentity rejected session attempt: ${sessionInitResponse.errorMessage}")
+            throw FlowSessionException("Party $otherParty rejected session attempt: ${sessionInitResponse.errorMessage}")
         }
     }
 
     @Suspendable
-    private fun <M : SessionMessage> suspendAndExpectReceive(receiveRequest: ReceiveRequest<M>): M {
-        fun getReceivedMessage(): ExistingSessionMessage? = receiveRequest.session.receivedMessages.poll()
+    private fun <M : SessionMessage> suspendAndExpectReceive(receiveRequest: ReceiveRequest<M>): ReceivedSessionMessage<M> {
+        fun getReceivedMessage(): ReceivedSessionMessage<ExistingSessionMessage>? = receiveRequest.session.receivedMessages.poll()
 
         val polledMessage = getReceivedMessage()
         val receivedMessage = if (polledMessage != null) {
@@ -226,11 +232,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     ?: throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but got nothing: $receiveRequest")
         }
 
-        if (receivedMessage is SessionEnd) {
+        if (receivedMessage.message is SessionEnd) {
             openSessions.values.remove(receiveRequest.session)
-            throw FlowSessionException("Counterparty on ${receiveRequest.session.otherParty} has prematurely ended on $receiveRequest")
-        } else if (receiveRequest.receiveType.isInstance(receivedMessage)) {
-            return receiveRequest.receiveType.cast(receivedMessage)
+            throw FlowSessionException("Counterparty on ${receiveRequest.session.state.sendToParty} has prematurely ended on $receiveRequest")
+        } else if (receiveRequest.receiveType.isInstance(receivedMessage.message)) {
+            return ReceivedSessionMessage(receivedMessage.sendingParty, receiveRequest.receiveType.cast(receivedMessage.message))
         } else {
             throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but got $receivedMessage: $receiveRequest")
         }

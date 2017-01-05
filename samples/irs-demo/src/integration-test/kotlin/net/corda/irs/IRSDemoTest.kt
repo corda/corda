@@ -32,7 +32,7 @@ class IRSDemoTest: IntegrationTestCategory {
 
 private fun runDateChange(nodeAddr: HostAndPort) {
     val url = URL("http://$nodeAddr/api/irs/demodate")
-    assert(putJson(url, "\"2017-01-02\""))
+    assert(putJson(url, "\"2017-06-05\""))
 }
 
 private fun runTrade(nodeAddr: HostAndPort) {

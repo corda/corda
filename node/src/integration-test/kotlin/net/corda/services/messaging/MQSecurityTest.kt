@@ -17,9 +17,9 @@ import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NET
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.PEERS_PREFIX
+import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.RPC_QUEUE_REMOVALS_QUEUE
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.RPC_REQUESTS_QUEUE
 import net.corda.node.services.messaging.CordaRPCClientImpl
-import net.corda.node.services.messaging.NodeMessagingClient.Companion.RPC_QUEUE_REMOVALS_QUEUE
 import net.corda.testing.messaging.SimpleMQClient
 import net.corda.testing.node.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException

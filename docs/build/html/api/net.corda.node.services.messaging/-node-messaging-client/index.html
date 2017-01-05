@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <title>NodeMessagingClient - </title>
-<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="..\..\style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href=".">NodeMessagingClient</a><br/>
@@ -14,7 +14,7 @@ Artemis is a message queue broker and here we run a client connecting to the spe
 <p>Message handlers are run on the provided <a href="../../net.corda.node.utilities/-affinity-executor/index.html">AffinityExecutor</a> synchronously, that is, the Artemis callback threads
 are blocked until the handler is scheduled and completed. This allows backpressure to propagate from the given
 executor through into Artemis and from there, back through to senders.</p>
-<p>An implementation of <a href="../-corda-r-p-c-ops/index.html">CordaRPCOps</a> can be provided. If given, clients using the CordaMQClient RPC library can
+<p>An implementation of <a href="../../net.corda.core.messaging/-corda-r-p-c-ops/index.html">CordaRPCOps</a> can be provided. If given, clients using the CordaMQClient RPC library can
 invoke methods on the provided implementation. There is more documentation on this in the docsite and the
 CordaRPCClient class.</p>
 <br/>
@@ -75,12 +75,6 @@ Artemis is a message queue broker and here we run a client connecting to the spe
 </tr>
 <tr>
 <td>
-<a href="dispatcher.html">dispatcher</a></td>
-<td>
-<code><span class="keyword">var </span><span class="identifier">dispatcher</span><span class="symbol">: </span><a href="../-r-p-c-dispatcher/index.html"><span class="identifier">RPCDispatcher</span></a><span class="symbol">?</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="executor.html">executor</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">executor</span><span class="symbol">: </span><a href="../../net.corda.node.utilities/-affinity-executor/index.html"><span class="identifier">AffinityExecutor</span></a></code></td>
@@ -119,9 +113,9 @@ Artemis is a message queue broker and here we run a client connecting to the spe
 <td>
 <a href="add-message-handler.html">addMessageHandler</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(kotlin.String, kotlin.Long, kotlin.Function2((net.corda.core.messaging.Message, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(kotlin.String, kotlin.Long, kotlin.Function2((net.corda.core.messaging.Message, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(kotlin.String, kotlin.Long, kotlin.Function2((net.corda.core.messaging.Message, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code><p>The provided function will be invoked for each received message whose topic matches the given string.  The callback
+<code><span class="keyword">fun </span><span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(kotlin.String, kotlin.Long, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(kotlin.String, kotlin.Long, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(kotlin.String, kotlin.Long, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-received-message/index.html"><span class="identifier">ReceivedMessage</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code><p>The provided function will be invoked for each received message whose topic matches the given string.  The callback
 will run on threads provided by the messaging service, and the callback is expected to be thread safe as a result.</p>
-<code><span class="keyword">fun </span><span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(net.corda.core.messaging.TopicSession, kotlin.Function2((net.corda.core.messaging.Message, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(net.corda.core.messaging.TopicSession, kotlin.Function2((net.corda.core.messaging.Message, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code><p>The provided function will be invoked for each received message whose topic and session matches.  The callback
+<code><span class="keyword">fun </span><span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(net.corda.core.messaging.TopicSession, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(net.corda.core.messaging.TopicSession, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-received-message/index.html"><span class="identifier">ReceivedMessage</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code><p>The provided function will be invoked for each received message whose topic and session matches.  The callback
 will run on threads provided by the messaging service, and the callback is expected to be thread safe as a result.</p>
 </td>
 </tr>
@@ -130,6 +124,13 @@ will run on threads provided by the messaging service, and the callback is expec
 <a href="create-message.html">createMessage</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">createMessage</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$createMessage(net.corda.core.messaging.TopicSession, kotlin.ByteArray, java.util.UUID)/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$createMessage(net.corda.core.messaging.TopicSession, kotlin.ByteArray, java.util.UUID)/data">data</span><span class="symbol">:</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$createMessage(net.corda.core.messaging.TopicSession, kotlin.ByteArray, java.util.UUID)/uuid">uuid</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/UUID.html"><span class="identifier">UUID</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a></code><p>Returns an initialised <a href="../../net.corda.core.messaging/-message/index.html">Message</a> with the current time, etc, already filled in.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="get-address-of-party.html">getAddressOfParty</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getAddressOfParty</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$getAddressOfParty(net.corda.core.node.services.PartyInfo)/partyInfo">partyInfo</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-party-info/index.html"><span class="identifier">PartyInfo</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a></code><p>Given information about either a specific node or a service returns its corresponding address</p>
 </td>
 </tr>
 <tr>
@@ -161,7 +162,7 @@ delivered: if the recipients are offline then the message could be queued hours 
 <td>
 <a href="start.html">start</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">start</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$start(net.corda.node.services.messaging.RPCOps, net.corda.node.services.RPCUserService)/rpcOps">rpcOps</span><span class="symbol">:</span>&nbsp;<a href="../-r-p-c-ops/index.html"><span class="identifier">RPCOps</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$start(net.corda.node.services.messaging.RPCOps, net.corda.node.services.RPCUserService)/userService">userService</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services/-r-p-c-user-service/index.html"><span class="identifier">RPCUserService</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">start</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$start(net.corda.core.messaging.RPCOps, net.corda.node.services.RPCUserService)/rpcOps">rpcOps</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-r-p-c-ops/index.html"><span class="identifier">RPCOps</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$start(net.corda.core.messaging.RPCOps, net.corda.node.services.RPCUserService)/userService">userService</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services/-r-p-c-user-service/index.html"><span class="identifier">RPCUserService</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>
@@ -188,21 +189,9 @@ unfortunately Artemis tends to bury the exception when the password is wrong.</p
 </tr>
 <tr>
 <td>
-<a href="../-artemis-messaging-component/configure-with-dev-s-s-l-certificate.html">configureWithDevSSLCertificate</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">configureWithDevSSLCertificate</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="../-artemis-messaging-component/expected-on-default-file-system.html">expectedOnDefaultFileSystem</a></td>
 <td>
 <code><span class="keyword">fun </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">.</span><span class="identifier">expectedOnDefaultFileSystem</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../-artemis-messaging-component/parse-key-from-queue-name.html">parseKeyFromQueueName</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">parseKeyFromQueueName</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$parseKeyFromQueueName(kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -219,19 +208,13 @@ unfortunately Artemis tends to bury the exception when the password is wrong.</p
 <td>
 <a href="-s-e-s-s-i-o-n_-i-d_-p-r-o-p-e-r-t-y.html">SESSION_ID_PROPERTY</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">SESSION_ID_PROPERTY</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">SESSION_ID_PROPERTY</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="-t-o-p-i-c_-p-r-o-p-e-r-t-y.html">TOPIC_PROPERTY</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">TOPIC_PROPERTY</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="log.html">log</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">log</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">TOPIC_PROPERTY</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -271,11 +254,11 @@ The payload is deserilaized to an object of type <a href="#">M</a>. Any exceptio
 <td>
 <a href="../../net.corda.core.messaging/run-on-next-message.html">runOnNextMessage</a></td>
 <td>
-<code><span class="keyword">fun </span><a href="../../net.corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">runOnNextMessage</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Function1((net.corda.core.messaging.Message, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Function1((net.corda.core.messaging.Message, kotlin.Unit)))/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Function1((net.corda.core.messaging.Message, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Registers a handler for the given topic and session ID that runs the given callback with the message and then removes
+<code><span class="keyword">fun </span><a href="../../net.corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">runOnNextMessage</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Function1((net.corda.core.messaging.ReceivedMessage, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Function1((net.corda.core.messaging.ReceivedMessage, kotlin.Unit)))/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Function1((net.corda.core.messaging.ReceivedMessage, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-received-message/index.html"><span class="identifier">ReceivedMessage</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Registers a handler for the given topic and session ID that runs the given callback with the message and then removes
 itself. This is useful for one-shot handlers that arent supposed to stick around permanently. Note that this callback
 doesnt take the registration object, unlike the callback to <a href="../../net.corda.core.messaging/-messaging-service/add-message-handler.html">MessagingService.addMessageHandler</a>, as the handler is
 automatically deregistered before the callback runs.</p>
-<code><span class="keyword">fun </span><a href="../../net.corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">runOnNextMessage</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, net.corda.core.messaging.TopicSession, kotlin.Function1((net.corda.core.messaging.Message, kotlin.Unit)))/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, net.corda.core.messaging.TopicSession, kotlin.Function1((net.corda.core.messaging.Message, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Registers a handler for the given topic and session that runs the given callback with the message and then removes
+<code><span class="keyword">fun </span><a href="../../net.corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">runOnNextMessage</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, net.corda.core.messaging.TopicSession, kotlin.Function1((net.corda.core.messaging.ReceivedMessage, kotlin.Unit)))/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, net.corda.core.messaging.TopicSession, kotlin.Function1((net.corda.core.messaging.ReceivedMessage, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-received-message/index.html"><span class="identifier">ReceivedMessage</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Registers a handler for the given topic and session that runs the given callback with the message and then removes
 itself. This is useful for one-shot handlers that arent supposed to stick around permanently. Note that this callback
 doesnt take the registration object, unlike the callback to <a href="../../net.corda.core.messaging/-messaging-service/add-message-handler.html">MessagingService.addMessageHandler</a>.</p>
 </td>

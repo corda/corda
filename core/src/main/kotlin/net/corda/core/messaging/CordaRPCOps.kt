@@ -23,8 +23,12 @@ data class StateMachineInfo(
 )
 
 sealed class StateMachineUpdate(val id: StateMachineRunId) {
-    class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate(stateMachineInfo.id)
-    class Removed(id: StateMachineRunId) : StateMachineUpdate(id)
+    class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate(stateMachineInfo.id) {
+        override fun toString() = "Added($id, ${stateMachineInfo.flowLogicClassName})"
+    }
+    class Removed(id: StateMachineRunId) : StateMachineUpdate(id) {
+        override fun toString() = "Removed($id)"
+    }
 }
 
 /**

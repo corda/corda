@@ -5,6 +5,7 @@ import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
 import net.corda.core.*
 import net.corda.core.crypto.Party
+import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PhysicalLocation
@@ -15,7 +16,6 @@ import net.corda.node.internal.AbstractNode
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.keys.E2ETestKeyManagementService
-import net.corda.core.messaging.RPCOps
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.InMemoryUniquenessProvider
@@ -47,10 +47,12 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   private val threadPerNode: Boolean = false,
+                  private val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy =
+                      InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
     private var nextNodeId = 0
     val filesystem: FileSystem = Jimfs.newFileSystem(unix())
-    val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped)
+    val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped, servicePeerAllocationStrategy)
 
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
@@ -118,7 +120,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // through the java.nio API which we are already mocking via Jimfs.
         override fun makeMessagingService(): MessagingServiceInternal {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
-            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, serverThread, configuration.myLegalName, database).start().getOrThrow()
+            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, serverThread, makeServiceEntries(), configuration.myLegalName, database).start().getOrThrow()
         }
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
@@ -268,8 +270,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return BasketOfNodes(nodes, notaryNode, mapNode)
     }
 
-    fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null): MockNode {
-        return createNode(null, -1, defaultFactory, true, legalName, keyPair, ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type))
+    fun createNotaryNode(networkMapAddr: SingleMessageRecipient? = null, legalName: String? = null, keyPair: KeyPair? = null, serviceName: String? = null): MockNode {
+        return createNode(networkMapAddr, -1, defaultFactory, true, legalName, keyPair, ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type, serviceName))
     }
 
     fun createPartyNode(networkMapAddr: SingleMessageRecipient, legalName: String? = null, keyPair: KeyPair? = null): MockNode {

@@ -5,12 +5,13 @@ package net.corda.node.driver
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.common.net.HostAndPort
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
-import net.corda.core.ThreadBox
+import net.corda.core.*
 import net.corda.core.crypto.Party
-import net.corda.core.div
-import net.corda.core.future
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
@@ -33,7 +34,10 @@ import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.util.*
+import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
@@ -43,11 +47,6 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * The process the driver is run in behaves as an Artemis client and starts up other processes. Namely it first
  * bootstraps a network map service to allow the specified nodes to connect to, then starts up the actual nodes.
- *
- * TODO The driver actually starts up as an Artemis server now that may route traffic. Fix this once the client MessagingService is done.
- * TODO The nodes are started up sequentially which is quite slow. Either speed up node startup or make startup parallel somehow.
- * TODO The driver now polls the network map cache for info about newly started up nodes, this could be done asynchronously(?).
- * TODO The network map service bootstrap is hacky (needs to fake the service's public key in order to retrieve the true one), needs some thought.
  */
 
 private val log: Logger = loggerFor<DriverDSL>()
@@ -68,7 +67,7 @@ interface DriverDSLExposedInterface {
     fun startNode(providedName: String? = null,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
-                  customOverrides: Map<String, Any?> = emptyMap()): Future<NodeInfoAndConfig>
+                  customOverrides: Map<String, Any?> = emptyMap()): ListenableFuture<NodeHandle>
 
     /**
      * Starts a distributed notary cluster.
@@ -76,8 +75,14 @@ interface DriverDSLExposedInterface {
      * @param notaryName The legal name of the advertised distributed notary service.
      * @param clusterSize Number of nodes to create for the cluster.
      * @param type The advertised notary service type. Currently the only supported type is [RaftValidatingNotaryService.type].
+     * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
+     * @return The [Party] identity of the distributed notary service, and the [NodeInfo]s of the notaries in the cluster.
      */
-    fun startNotaryCluster(notaryName: String, clusterSize: Int = 3, type: ServiceType = RaftValidatingNotaryService.type)
+    fun startNotaryCluster(
+            notaryName: String,
+            clusterSize: Int = 3,
+            type: ServiceType = RaftValidatingNotaryService.type,
+            rpcUsers: List<User> = emptyList()): Future<Pair<Party, List<NodeHandle>>>
 
     fun waitForAllNodesToFinish()
 }
@@ -87,7 +92,11 @@ interface DriverDSLInternalInterface : DriverDSLExposedInterface {
     fun shutdown()
 }
 
-data class NodeInfoAndConfig(val nodeInfo: NodeInfo, val config: Config)
+data class NodeHandle(
+        val nodeInfo: NodeInfo,
+        val config: Config,
+        val process: Process
+)
 
 sealed class PortAllocation {
     abstract fun nextPort(): Int
@@ -120,7 +129,7 @@ sealed class PortAllocation {
  * Note that [DriverDSL.startNode] does not wait for the node to start up synchronously, but rather returns a [Future]
  * of the [NodeInfo] that may be waited on, which completes when the new node registered with the network map service.
  *
- * The driver implicitly bootstraps a [NetworkMapService] that may be accessed through a local cache [DriverDSL.networkMapCache].
+ * The driver implicitly bootstraps a [NetworkMapService].
  *
  * @param driverDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
  *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
@@ -132,15 +141,13 @@ sealed class PortAllocation {
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
-
-// TODO: Add an @JvmOverloads annotation
-
+@JvmOverloads
 fun <A> driver(
+        isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         useTestClock: Boolean = false,
-        isDebug: Boolean = false,
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
         driverDsl = DriverDSL(
@@ -176,6 +183,9 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         })
         Runtime.getRuntime().addShutdownHook(shutdownHook)
         return returnValue
+    } catch (exception: Throwable) {
+        println("Driver shutting down because of exception $exception")
+        throw exception
     } finally {
         driverDsl.shutdown()
         if (shutdownHook != null) {
@@ -184,12 +194,12 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     }
 }
 
-private fun getTimestampAsDirectoryName(): String {
+fun getTimestampAsDirectoryName(): String {
     return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(UTC).format(Instant.now())
 }
 
-fun addressMustBeBound(hostAndPort: HostAndPort) {
-    poll("address $hostAndPort to bind") {
+fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort): ListenableFuture<Unit> {
+    return poll(executorService, "address $hostAndPort to bind") {
         try {
             Socket(hostAndPort.hostText, hostAndPort.port).close()
             Unit
@@ -199,8 +209,8 @@ fun addressMustBeBound(hostAndPort: HostAndPort) {
     }
 }
 
-fun addressMustNotBeBound(hostAndPort: HostAndPort) {
-    poll("address $hostAndPort to unbind") {
+fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort): ListenableFuture<Unit> {
+    return poll(executorService, "address $hostAndPort to unbind") {
         try {
             Socket(hostAndPort.hostText, hostAndPort.port).close()
             null
@@ -210,18 +220,36 @@ fun addressMustNotBeBound(hostAndPort: HostAndPort) {
     }
 }
 
-fun <A> poll(pollName: String, pollIntervalMs: Long = 500, warnCount: Int = 120, f: () -> A?): A {
+private fun <A> poll(
+        executorService: ScheduledExecutorService,
+        pollName: String,
+        pollIntervalMs: Long = 500,
+        warnCount: Int = 120,
+        check: () -> A?
+): ListenableFuture<A> {
+    val initialResult = check()
+    val resultFuture = SettableFuture.create<A>()
+    if (initialResult != null) {
+        resultFuture.set(initialResult)
+        return resultFuture
+    }
     var counter = 0
-    var result = f()
-    while (result == null) {
-        if (counter == warnCount) {
-            log.warn("Been polling $pollName for ${pollIntervalMs * warnCount / 1000.0} seconds...")
-        }
-        counter = (counter % warnCount) + 1
-        Thread.sleep(pollIntervalMs)
-        result = f()
+    fun schedulePoll() {
+        executorService.schedule({
+            counter++
+            if (counter == warnCount) {
+                log.warn("Been polling $pollName for ${pollIntervalMs * warnCount / 1000.0} seconds...")
+            }
+            val result = check()
+            if (result == null) {
+                schedulePoll()
+            } else {
+                resultFuture.set(result)
+            }
+        }, pollIntervalMs, MILLISECONDS)
     }
-    return result
+    schedulePoll()
+    return resultFuture
 }
 
 open class DriverDSL(
@@ -231,13 +259,13 @@ open class DriverDSL(
         val useTestClock: Boolean,
         val isDebug: Boolean
 ) : DriverDSLInternalInterface {
+    private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
     private val networkMapName = "NetworkMapService"
     private val networkMapAddress = portAllocation.nextHostAndPort()
 
     class State {
-        val registeredProcesses = LinkedList<Process>()
+        val registeredProcesses = LinkedList<ListenableFuture<Process>>()
         val clients = LinkedList<NodeMessagingClient>()
-        var localServer: ArtemisMessagingServer? = null
     }
 
     private val state = ThreadBox(State())
@@ -251,12 +279,12 @@ open class DriverDSL(
         Paths.get(quasarFileUrl.toURI()).toString()
     }
 
-    fun registerProcess(process: Process) = state.locked { registeredProcesses.push(process) }
+    fun registerProcess(process: ListenableFuture<Process>) = state.locked { registeredProcesses.push(process) }
 
     override fun waitForAllNodesToFinish() {
         state.locked {
             registeredProcesses.forEach {
-                it.waitFor()
+                it.getOrThrow().waitFor()
             }
         }
     }
@@ -266,11 +294,12 @@ open class DriverDSL(
             clients.forEach {
                 it.stop()
             }
-            localServer?.stop()
-            registeredProcesses.forEach(Process::destroy)
+            registeredProcesses.forEach {
+                it.get().destroy()
+            }
         }
         /** Wait 5 seconds, then [Process.destroyForcibly] */
-        val finishedFuture = future {
+        val finishedFuture = executorService.submit {
             waitForAllNodesToFinish()
         }
         try {
@@ -279,16 +308,14 @@ open class DriverDSL(
             finishedFuture.cancel(true)
             state.locked {
                 registeredProcesses.forEach {
-                    it.destroyForcibly()
+                    it.get().destroyForcibly()
                 }
             }
         }
 
         // Check that we shut down properly
-        state.locked {
-            localServer?.run { addressMustNotBeBound(myHostPort) }
-        }
-        addressMustNotBeBound(networkMapAddress)
+        addressMustNotBeBound(executorService, networkMapAddress).get()
+        executorService.shutdown()
     }
 
     private fun queryNodeInfo(webAddress: HostAndPort): NodeInfo? {
@@ -313,7 +340,7 @@ open class DriverDSL(
     }
 
     override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>,
-                           rpcUsers: List<User>, customOverrides: Map<String, Any?>): Future<NodeInfoAndConfig> {
+                           rpcUsers: List<User>, customOverrides: Map<String, Any?>): ListenableFuture<NodeHandle> {
         val messagingAddress = portAllocation.nextHostAndPort()
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
@@ -343,13 +370,19 @@ open class DriverDSL(
                 configOverrides = configOverrides
         )
 
-        return future {
-            registerProcess(DriverDSL.startNode(FullNodeConfiguration(config), quasarJarPath, debugPort))
-            NodeInfoAndConfig(queryNodeInfo(apiAddress)!!, config)
+        val startNode = startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort)
+        registerProcess(startNode)
+        return startNode.map {
+            NodeHandle(queryNodeInfo(apiAddress)!!, config, it)
         }
     }
 
-    override fun startNotaryCluster(notaryName: String, clusterSize: Int, type: ServiceType) {
+    override fun startNotaryCluster(
+            notaryName: String,
+            clusterSize: Int,
+            type: ServiceType,
+            rpcUsers: List<User>
+    ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
         val nodeNames = (1..clusterSize).map { "Notary Node $it" }
         val paths = nodeNames.map { driverDirectory / it }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
@@ -359,12 +392,19 @@ open class DriverDSL(
         val notaryClusterAddress = portAllocation.nextHostAndPort()
 
         // Start the first node that will bootstrap the cluster
-        startNode(nodeNames.first(), advertisedService, emptyList(), mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
+        val firstNotaryFuture = startNode(nodeNames.first(), advertisedService, rpcUsers, mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
         // All other nodes will join the cluster
-        nodeNames.drop(1).forEach {
+        val restNotaryFutures = nodeNames.drop(1).map {
             val nodeAddress = portAllocation.nextHostAndPort()
             val configOverride = mapOf("notaryNodeAddress" to nodeAddress.toString(), "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))
-            startNode(it, advertisedService, emptyList(), configOverride)
+            startNode(it, advertisedService, rpcUsers, configOverride)
+        }
+
+        return firstNotaryFuture.flatMap { firstNotary ->
+            val notaryParty = firstNotary.nodeInfo.notaryIdentity
+            Futures.allAsList(restNotaryFutures).map { restNotaries ->
+                Pair(notaryParty, listOf(firstNotary) + restNotaries)
+            }
         }
     }
 
@@ -372,7 +412,7 @@ open class DriverDSL(
         startNetworkMapService()
     }
 
-    private fun startNetworkMapService() {
+    private fun startNetworkMapService(): ListenableFuture<Process> {
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
@@ -391,7 +431,9 @@ open class DriverDSL(
         )
 
         log.info("Starting network-map-service")
-        registerProcess(startNode(FullNodeConfiguration(config), quasarJarPath, debugPort))
+        val startNode = startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort)
+        registerProcess(startNode)
+        return startNode
     }
 
     companion object {
@@ -405,10 +447,11 @@ open class DriverDSL(
         fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]
 
         private fun startNode(
+                executorService: ScheduledExecutorService,
                 nodeConf: FullNodeConfiguration,
                 quasarJarPath: String,
                 debugPort: Int?
-        ): Process {
+        ): ListenableFuture<Process> {
             // Write node.conf
             writeConfig(nodeConf.basedir, "node.conf", nodeConf.config)
 
@@ -431,13 +474,13 @@ open class DriverDSL(
             builder.inheritIO()
             builder.directory(nodeConf.basedir.toFile())
             val process = builder.start()
-            addressMustBeBound(nodeConf.artemisAddress)
-            // TODO There is a race condition here. Even though the messaging address is bound it may be the case that
-            // the handlers for the advertised services are not yet registered. A hacky workaround is that we wait for
-            // the web api address to be bound as well, as that starts after the services. Needs rethinking.
-            addressMustBeBound(nodeConf.webAddress)
-
-            return process
+            return Futures.allAsList(
+                    addressMustBeBound(executorService, nodeConf.artemisAddress),
+                    // TODO There is a race condition here. Even though the messaging address is bound it may be the case that
+                    // the handlers for the advertised services are not yet registered. A hacky workaround is that we wait for
+                    // the web api address to be bound as well, as that starts after the services. Needs rethinking.
+                    addressMustBeBound(executorService, nodeConf.webAddress)
+            ).map { process }
         }
     }
 }
@@ -446,4 +489,3 @@ fun writeConfig(path: Path, filename: String, config: Config) {
     path.toFile().mkdirs()
     File("$path/$filename").writeText(config.root().render(ConfigRenderOptions.concise()))
 }
-

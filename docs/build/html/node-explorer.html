@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -78,6 +82,11 @@
           
 <br>
 <a href="api/index.html">API reference</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -107,8 +116,9 @@
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-cordapp-template">Running the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#interacting-with-the-cordapp-template">Interacting with the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#extending-the-cordapp-template">Extending the CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul class="current">
@@ -166,6 +176,8 @@
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -216,8 +228,8 @@
             
   <div class="section" id="node-explorer">
 <h1>Node Explorer<a class="headerlink" href="#node-explorer" title="Permalink to this headline">¶</a></h1>
-<p>The node explorer provide views to the node&#8217;s vault and transaction data using Corda&#8217;s RPC framework.
-The user can execute cash transaction commands to issue and move cash to other party on the network or exit cash using the user interface.</p>
+<p>The node explorer provides views into a node&#8217;s vault and transaction data using Corda&#8217;s RPC framework.
+The user can execute cash transaction commands to issue and move cash to other parties on the network or exit cash (eg. remove from the ledger)</p>
 <div class="section" id="running-the-ui">
 <h2>Running the UI<a class="headerlink" href="#running-the-ui" title="Permalink to this headline">¶</a></h2>
 <p><strong>Windows</strong>:</p>
@@ -231,6 +243,24 @@ The user can execute cash transaction commands to issue and move cash to other p
 </div>
 <div class="section" id="running-demo-nodes">
 <h2>Running demo nodes<a class="headerlink" href="#running-demo-nodes" title="Permalink to this headline">¶</a></h2>
+<p>A demonstration Corda network topology is configured with 5 nodes playing the following roles:</p>
+<ol class="arabic simple">
+<li>Notary</li>
+<li>Issuer nodes, representing two fictional central banks (UK Bank Plc issuer of GBP and USA Bank Corp issuer of USD)</li>
+<li>Participant nodes, representing two users (Alice and Bob)</li>
+</ol>
+<p>When connected to an <em>Issuer</em> node, a user can execute cash transaction commands to issue and move cash to itself or other
+parties on the network or to exit cash (for itself only).</p>
+<p>When connected to a <em>Participant</em> node a user can only execute cash transaction commands to move cash to other parties on the network.</p>
+<p>The Demo Nodes can be started in one of two modes:</p>
+<ol class="arabic">
+<li><p class="first">Normal</p>
+<p>Fresh clean environment empty of transactions.
+Firstly, launch an Explorer instance to login to one of the Issuer nodes and issue some cash to the other participants (Bob and Alice).
+Then launch another Explorer instance to login to a participant node and start making payments (eg. move cash).
+You will only be able to exit (eg. redeem from the ledger) cash as an issuer node.</p>
+</li>
+</ol>
 <p><strong>Windows</strong>:</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">gradlew</span><span class="p">.</span><span class="n">bat</span> <span class="n">tools</span><span class="p">:</span><span class="n">explorer</span><span class="p">:</span><span class="n">runDemoNodes</span>
 </pre></div>
@@ -239,14 +269,43 @@ The user can execute cash transaction commands to issue and move cash to other p
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">gradlew</span> <span class="n">tools</span><span class="p">:</span><span class="n">explorer</span><span class="p">:</span><span class="n">runDemoNodes</span>
 </pre></div>
 </div>
+<ol class="arabic" start="2">
+<li><p class="first">Simulation</p>
+<p>In this mode Nodes will automatically commence executing commands as part of a random generation process.
+Issuer nodes will randomly issue, move and exit cash.
+Participant nodes will randomly generate spends (eg. move cash to other nodes, including issuers)</p>
+</li>
+</ol>
+<p><strong>Windows</strong>:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">gradlew</span><span class="p">.</span><span class="n">bat</span> <span class="n">tools</span><span class="p">:</span><span class="n">explorer</span><span class="p">:</span><span class="n">runSimulationNodes</span>
+</pre></div>
+</div>
+<p><strong>Other</strong>:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">gradlew</span> <span class="n">tools</span><span class="p">:</span><span class="n">explorer</span><span class="p">:</span><span class="n">runSimulationNodes</span>
+</pre></div>
+</div>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p>3 Corda nodes will be created on the following port on localhost by default.</p>
+<p>5 Corda nodes will be created on the following port on localhost by default.</p>
 <ul class="last simple">
 <li>Notary -&gt; 20002</li>
 <li>Alice -&gt; 20004</li>
 <li>Bob -&gt; 20006</li>
+<li>UK Bank Plc -&gt; 20008       (<em>Issuer node</em>)</li>
+<li>USA Bank Corp -&gt; 20010     (<em>Issuer node</em>)</li>
 </ul>
+</div>
+<p>Explorer login credentials to the Issuer nodes are defaulted to <code class="docutils literal"><span class="pre">manager</span></code> and <code class="docutils literal"><span class="pre">test</span></code>.
+Explorer login credentials to the Participants nodes are defaulted to <code class="docutils literal"><span class="pre">user1</span></code> and <code class="docutils literal"><span class="pre">test</span></code>.
+Please note you are not allowed to connect to the notary.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Alternatively, you may start the demo nodes from within IntelliJ using either of the run configurations
+<code class="docutils literal"><span class="pre">Explorer</span> <span class="pre">-</span> <span class="pre">demo</span> <span class="pre">nodes</span></code> or <code class="docutils literal"><span class="pre">Explorer</span> <span class="pre">-</span> <span class="pre">demo</span> <span class="pre">nodes</span> <span class="pre">(simulation)</span></code></p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Use the Explorer in conjunction with the Trader Demo and Bank of Corda samples to use other <em>Issuer</em> nodes.</p>
 </div>
 </div>
 <div class="section" id="interface">
@@ -255,12 +314,8 @@ The user can execute cash transaction commands to issue and move cash to other p
 <dt>Login</dt>
 <dd>User can login to any Corda node using the explorer. Alternatively, <code class="docutils literal"><span class="pre">gradlew</span> <span class="pre">explorer:runDemoNodes</span></code> can be used to start up demo nodes for testing.
 Corda node address, username and password are required for login, the address is defaulted to localhost:0 if leave blank.
-Username and password can be configured via the <code class="docutils literal"><span class="pre">rpcUsers</span></code> field in node&#8217;s configuration file; for demo nodes, it is defaulted to <code class="docutils literal"><span class="pre">user1</span></code> and <code class="docutils literal"><span class="pre">test</span></code>.</dd>
+Username and password can be configured via the <code class="docutils literal"><span class="pre">rpcUsers</span></code> field in node&#8217;s configuration file.</dd>
 </dl>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">If you are connecting to the demo nodes, only Alice and Bob (20004, 20006) are accessible using user1 credential, you won&#8217;t be able to connect to the notary.</p>
-</div>
 <a class="reference internal image-reference" href="_images/login.png"><img alt="_images/login.png" class="align-center" src="_images/login.png" style="width: 520.0px; height: 599.0px;" /></a>
 <dl class="docutils">
 <dt>Dashboard</dt>
@@ -276,12 +331,19 @@ Individual cash transactions can be viewed by clicking on the table row. The use
 </dl>
 <img alt="_images/vault.png" src="_images/vault.png" />
 <dl class="docutils">
-<dt>New cash transaction</dt>
-<dd>This is where you can create new cash transactions.
-The user can choose from three transaction types (issue, pay and exit) and any party visible on the network.
+<dt>New Transactions</dt>
+<dd><p class="first">This is where you can create new cash transactions.
+The user can choose from three transaction types (issue, pay and exit) and any party visible on the network.</p>
+<p class="last">General nodes can only execute pay commands to any other party on the network.</p>
+</dd>
+</dl>
+<img alt="_images/newTransactionCash.png" src="_images/newTransactionCash.png" />
+<dl class="docutils">
+<dt>Issuer Nodes</dt>
+<dd>Issuer nodes can execute issue (to itself or to any other party), pay and exit transactions.
 The result of the transaction will be visible in the transaction screen when executed.</dd>
 </dl>
-<img alt="_images/newTransaction.png" src="_images/newTransaction.png" />
+<img alt="_images/newTransactionIssuer.png" src="_images/newTransactionIssuer.png" />
 <dl class="docutils">
 <dt>Transactions</dt>
 <dd>The transaction view contains all transactions handled by the node in a table view. It shows basic information on the table e.g. Transaction ID,

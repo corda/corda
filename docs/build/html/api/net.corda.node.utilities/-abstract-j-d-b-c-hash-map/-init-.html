@@ -1,13 +1,13 @@
 <HTML>
 <HEAD>
 <title>AbstractJDBCHashMap.<init> - </title>
-<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="..\..\style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">net.corda.node.utilities</a>&nbsp;/&nbsp;<a href="index.html">AbstractJDBCHashMap</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
 <br/>
 <h1>&lt;init&gt;</h1>
-<code><span class="identifier">AbstractJDBCHashMap</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean, kotlin.Int)/table">table</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean, kotlin.Int)/loadOnInit">loadOnInit</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean, kotlin.Int)/maxBuckets">maxBuckets</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;256<span class="symbol">)</span></code><br/>
+<code><span class="identifier">AbstractJDBCHashMap</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean, kotlin.Int)/table">table</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean, kotlin.Int)/loadOnInit">loadOnInit</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean, kotlin.Int)/maxBuckets">maxBuckets</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;DEFAULT_MAX_BUCKETS<span class="symbol">)</span></code><br/>
 <p>A base class for a JDBC table backed hash map that iterates in insertion order by using
 an ever increasing sequence number on entries.  Iterators supports remove() but entries are not really mutable and
 do not support setValue() method from <a href="#">MutableMap.MutableEntry</a>.</p>

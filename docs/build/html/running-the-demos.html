@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -78,6 +82,11 @@
           
 <br>
 <a href="api/index.html">API reference</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -96,6 +105,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#irs-demo">IRS demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#attachment-demo">Attachment demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#distributed-notary-demo">Distributed Notary demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bank-of-corda-demo">Bank Of Corda demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#simm-and-portfolio-demo-aka-the-initial-margin-agreement-demo">SIMM and Portfolio Demo - aka the Initial Margin Agreement Demo</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#background-and-simm-introduction">Background and SIMM Introduction</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#what-happens-in-the-demo-notionally">What happens in the demo (notionally)</a></li>
@@ -120,8 +130,9 @@
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-cordapp-template">Running the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#interacting-with-the-cordapp-template">Interacting with the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#extending-the-cordapp-template">Extending the CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -174,6 +185,8 @@
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -236,6 +249,8 @@ rates oracle, all driven via the HTTP API.</li>
 <li>The SIMM valuation demo, a large demo which shows two nodes agreeing on a portfolio and valuing the initial margin
 using the Standard Initial Margin Model.</li>
 <li>The distributed notary demo, which demonstrates a single node getting multiple transactions notarised by a distributed (Raft-based) notary.</li>
+<li>The Bank of Corda demo, which demonstrates a node acting as an issuer of assets (the Bank of Corda) and remote client
+applications requesting issuance (via RPC, HTTP) of some cash on behalf of a node called Big Corporation.</li>
 </ol>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
@@ -250,14 +265,14 @@ develop the demos themselves. For more details about running via the command lin
 </div>
 <div class="section" id="trader-demo">
 <h2>Trader demo<a class="headerlink" href="#trader-demo" title="Permalink to this headline">¶</a></h2>
-<p>This demo brings up three nodes: Bank A, Bank B and a notary/network map node that they both use. Bank A will
-be the buyer, and self-issues some cash in order to acquire commercial paper from Bank B, the seller.</p>
+<p>This demo brings up four nodes: Bank A, Bank B, Bank Of Corda and a notary/network map node that they both use. Bank A will
+be the buyer, and requests some cash from the Bank of Corda in order to acquire commercial paper from Bank B, the seller.</p>
 <p>To run from the command line:</p>
 <ol class="arabic simple">
 <li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:trader-demo:deployNodes</span></code> to create a set of configs and installs under <code class="docutils literal"><span class="pre">samples/trader-demo/build/nodes</span></code></li>
-<li>Run <code class="docutils literal"><span class="pre">./samples/trader-demo/build/nodes/runnodes</span></code> (or <code class="docutils literal"><span class="pre">runnodes.bat</span></code> on Windows) to open up three new terminals with the three nodes.</li>
-<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:trader-demo:runBuyer</span></code> to set up the buyer node with some self-issued cash. This step
-is not expected to print much.</li>
+<li>Run <code class="docutils literal"><span class="pre">./samples/trader-demo/build/nodes/runnodes</span></code> (or <code class="docutils literal"><span class="pre">runnodes.bat</span></code> on Windows) to open up four new terminals with the four nodes.</li>
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:trader-demo:runBuyer</span></code> to instruct the buyer node to request issuance of some cash from the Bank of Corda node.
+This step will display progress information related to the cash issuance process (in the bank of corda node log output).</li>
 <li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:trader-demo:runSeller</span></code> to trigger the transaction. You can see both sides of the
 trade print their progress and final transaction state in the bank node tabs/windows.</li>
 </ol>
@@ -366,6 +381,67 @@ You will be presented with a web application that enumerates all the available t
 but we&#8217;re only interested in the row count for this demo.</p>
 </li>
 </ul>
+</div>
+<div class="section" id="bank-of-corda-demo">
+<h2>Bank Of Corda demo<a class="headerlink" href="#bank-of-corda-demo" title="Permalink to this headline">¶</a></h2>
+<p>This demo brings up three nodes: a notary, a node acting as the Bank of Corda that accepts requests for issuance of some asset
+and a node acting as Big Corporation which requests issuance of an asset (cash in this example).
+Upon receipt of a request the Bank of Corda node self-issues the asset and then transfers ownership to the requester
+after successful notarisation and recording of the issue transaction on the ledger.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The Bank of Corda is somewhat like the &#8220;Bitcoin faucet&#8221;, that used to dispense free bitcoins to developers for
+testing and experimentation purposes.</p>
+</div>
+<p>To run from the command line (recommended for Mac/UNIX users!):</p>
+<ol class="arabic simple">
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:bank-of-corda-demo:deployNodes</span></code> to create a set of configs and installs under <code class="docutils literal"><span class="pre">samples/bank-of-corda-demo/build/nodes</span></code></li>
+<li>Run <code class="docutils literal"><span class="pre">./samples/bank-of-corda-demo/build/nodes/runnodes</span></code> to open up three new terminal tabs/windows with the three nodes.</li>
+</ol>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">to verify the Bank of Corda node is alive and running navigate to the following URL
+<a class="reference external" href="http://localhost:10005/api/bank/date">http://localhost:10005/api/bank/date</a></p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">the Bank of Corda node explicitly advertises with a node service type as follows:
+<code class="docutils literal"><span class="pre">advertisedServices</span> <span class="pre">=</span> <span class="pre">setOf(ServiceInfo(ServiceType.corda.getSubType(&quot;issuer&quot;))))</span></code>
+This allows for 3rd party applications to perform actions based on Node Type.
+For example, the Explorer tool only allows nodes of this type to issue and exit cash.</p>
+</div>
+<ol class="arabic simple" start="3">
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:bank-of-corda-demo:runRPCCashIssue</span></code> in another terminal window to trigger a cash issuance request</li>
+<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">samples:bank-of-corda-demo:runWebCashIssue</span></code> in another terminal window to trigger another cash issuance request
+Now look at the other windows to see the output of the demo.</li>
+</ol>
+<p>Or you can run them from inside IntelliJ as follows:</p>
+<ol class="arabic simple">
+<li>Open the Corda project in IntelliJ and run the &#8220;Install&#8221; configuration</li>
+<li>Open the Corda samples project in IntelliJ and run the &#8220;Bank Of Corda Demo: Run Issuer&#8221; configuration</li>
+<li>Run &#8220;Bank Of Corda Demo: Run RPC Cash Issue&#8221; - requests issuance of some cash on behalf of Big Corporation via RPC</li>
+<li>Run &#8220;Bank Of Corda Demo: Run Web Cash Issue&#8221; - requests issuance of some cash on behalf of Big Corporation via HTTP</li>
+</ol>
+<p>In the &#8220;Bank Of Corda Demo: Run Issuer&#8221; window you should see the following information lines displayed:</p>
+<ul class="simple">
+<li>Awaiting issuance request</li>
+<li>Self issuing asset</li>
+<li>Transferring asset to issuance requester</li>
+<li>Confirming asset issuance to requester</li>
+</ul>
+<p>In the the client issue request window you should see the following printed:</p>
+<ul class="simple">
+<li>Successfully processed Cash Issue request</li>
+</ul>
+<p>Launch the Explorer application to visualize the issuance and transfer of cash on each node:</p>
+<blockquote>
+<div><code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">tools:explorer:run</span></code></div></blockquote>
+<p>And use the following logon details:</p>
+<ul class="simple">
+<li>for the Bank of Corda node specify localhost, port 10004, username user1, password test</li>
+<li>for the Big Corporation node specify localhost, port 10006, username user1, password test</li>
+</ul>
+<p>See <a class="reference external" href="https://docs.corda.net/node-explorer.html">https://docs.corda.net/node-explorer.html</a> for further details on usage.</p>
 </div>
 <div class="section" id="simm-and-portfolio-demo-aka-the-initial-margin-agreement-demo">
 <h2>SIMM and Portfolio Demo - aka the Initial Margin Agreement Demo<a class="headerlink" href="#simm-and-portfolio-demo-aka-the-initial-margin-agreement-demo" title="Permalink to this headline">¶</a></h2>

@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.messaging.*
+import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.opaque
 import net.corda.core.success
@@ -66,8 +67,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         const val TOPIC_PROPERTY = "platform-topic"
         const val SESSION_ID_PROPERTY = "session-id"
 
-        const val RPC_QUEUE_REMOVALS_QUEUE = "rpc.qremovals"
-
         /**
          * This should be the only way to generate an ArtemisAddress and that only of the remote NetworkMapService node.
          * All other addresses come from the NetworkMapCache, or myAddress below.
@@ -96,7 +95,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     /**
      * Apart from the NetworkMapService this is the only other address accessible to the node outside of lookups against the NetworkMapCache.
      */
-    override val myAddress: SingleMessageRecipient = if (myIdentity != null) NodeAddress(myIdentity, serverHostPort) else NetworkMapAddress(serverHostPort)
+    override val myAddress: SingleMessageRecipient = if (myIdentity != null) NodeAddress.asPeer(myIdentity, serverHostPort) else NetworkMapAddress(serverHostPort)
 
     private val state = ThreadBox(InnerState())
     private val handlers = CopyOnWriteArrayList<Handler>()
@@ -135,7 +134,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             producer = session.createProducer()
 
             // Create a queue, consumer and producer for handling P2P network messages.
-            createQueueIfAbsent(SimpleString(P2P_QUEUE))
             p2pConsumer = makeP2PConsumer(session, true)
             networkMapRegistrationFuture.success {
                 state.locked {
@@ -149,13 +147,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                 }
             }
 
-            // Create an RPC queue and consumer: this will service locally connected clients only (not via a
-            // bridge) and those clients must have authenticated. We could use a single consumer for everything
-            // and perhaps we should, but these queues are not worth persisting.
-            session.createTemporaryQueue(RPC_REQUESTS_QUEUE, RPC_REQUESTS_QUEUE)
-            // The custom name for the queue is intentional - we may wish other things to subscribe to the
-            // NOTIFICATIONS_ADDRESS with different filters in future
-            session.createTemporaryQueue(NOTIFICATIONS_ADDRESS, RPC_QUEUE_REMOVALS_QUEUE, "_AMQ_NotifType = 1")
             rpcConsumer = session.createConsumer(RPC_REQUESTS_QUEUE)
             rpcNotificationConsumer = session.createConsumer(RPC_QUEUE_REMOVALS_QUEUE)
             rpcDispatcher = createRPCDispatcher(rpcOps, userService, config.myLegalName)
@@ -378,7 +369,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                 putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString()))
             }
 
-            log.info("Send to: $mqAddress topic: ${message.topicSession.topic} sessionID: ${message.topicSession.sessionID} uuid: ${message.uniqueMessageId}")
+            log.info("Send to: $mqAddress topic: ${message.topicSession.topic} sessionID: ${message.topicSession.sessionID} " +
+                    "uuid: ${message.uniqueMessageId}")
             producer!!.send(mqAddress, artemisMessage)
         }
     }
@@ -390,6 +382,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         } else {
             // Otherwise we send the message to an internal queue for the target residing on our broker. It's then the
             // broker's job to route the message to the target's P2P queue.
+            // TODO Make sure that if target is a service that we're part of and the broker routes the message back to us
+            // it doesn't cause any issues.
             val internalTargetQueue = (target as? ArtemisAddress)?.queueName ?: throw IllegalArgumentException("Not an Artemis address")
             createQueueIfAbsent(internalTargetQueue)
             internalTargetQueue
@@ -449,4 +443,11 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                     }
                 }
             }
+
+    override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
+        return when (partyInfo) {
+            is PartyInfo.Node -> partyInfo.node.address
+            is PartyInfo.Service -> ArtemisMessagingComponent.ServiceAddress(partyInfo.service.identity.owningKey)
+        }
+    }
 }

@@ -1,6 +1,9 @@
 package net.corda.testing.http
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.core.utilities.loggerFor
+import net.corda.node.utilities.JsonSupport
 import okhttp3.*
 import java.net.URL
 import java.util.concurrent.TimeUnit
@@ -15,6 +18,9 @@ object HttpUtils {
                 .connectTimeout(5, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS).build()
     }
+    val defaultMapper: ObjectMapper by lazy {
+        ObjectMapper().registerModule(JsonSupport.javaTimeModule).registerModule(KotlinModule())
+    }
 
     fun putJson(url: URL, data: String) : Boolean {
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
@@ -26,12 +32,19 @@ object HttpUtils {
         return makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").post(body).build())
     }
 
+    inline fun<reified T: Any> getJson(url: URL, params: Map<String, String> = mapOf()) : T {
+        val paramString = if(params.isEmpty()) "" else "?" + params.map { "${it.key}=${it.value}" }.joinToString("&")
+        val parameterisedUrl = URL(url.toExternalForm() + paramString)
+        return defaultMapper.readValue(parameterisedUrl, T::class.java)
+    }
+
     private fun makeRequest(request: Request): Boolean {
         val response = client.newCall(request).execute()
 
         if (!response.isSuccessful) {
             logger.error("Could not fulfill HTTP request of type ${request.method()} to ${request.url()}. Status Code: ${response.code()}. Message: ${response.body().string()}")
         }
+
         return response.isSuccessful
     }
 }

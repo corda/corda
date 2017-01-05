@@ -200,11 +200,11 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(ArtemisMessagingComponent.NodeAddress::class.java,
                 read = { kryo, input ->
                     ArtemisMessagingComponent.NodeAddress(
-                            CompositeKey.parseFromBase58(kryo.readObject(input, String::class.java)),
+                            kryo.readObject(input, SimpleString::class.java),
                             kryo.readObject(input, HostAndPort::class.java))
                 },
                 write = { kryo, output, nodeAddress ->
-                    kryo.writeObject(output, nodeAddress.identity.toBase58String())
+                    kryo.writeObject(output, nodeAddress.queueName)
                     kryo.writeObject(output, nodeAddress.hostAndPort)
                 }
         )

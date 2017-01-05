@@ -12,10 +12,12 @@ import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.utilities.ANSIProgressObserver
 import org.fusesource.jansi.Ansi
+import org.fusesource.jansi.AnsiConsole
 import org.slf4j.LoggerFactory
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Paths
+import java.time.LocalDate
 import kotlin.system.exitProcess
 
 private var renderBasicInfoToConsole = true
@@ -32,6 +34,8 @@ fun printBasicNodeInfo(description: String, info: String? = null) {
 }
 
 fun main(args: Array<String>) {
+    checkJavaVersion()
+
     val startTime = System.currentTimeMillis()
 
     val parser = OptionParser()
@@ -113,14 +117,36 @@ fun main(args: Array<String>) {
     exitProcess(0)
 }
 
+private fun checkJavaVersion() {
+    // Check we're not running a version of Java with a known bug: https://github.com/corda/corda/issues/83
+    try {
+        Paths.get("").normalize()
+    } catch (e: ArrayIndexOutOfBoundsException) {
+        println("""
+        You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.
+        Corda will now exit...""")
+        exitProcess(1)
+    }
+}
+
 private fun printPluginsAndServices(node: Node) {
     node.configuration.extraAdvertisedServiceIds.let { if (it.isNotEmpty()) printBasicNodeInfo("Providing network services", it) }
-    val plugins = node.pluginRegistries.map { it.javaClass.name }.filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") }.map { it.substringBefore('$') }
+    val plugins = node.pluginRegistries
+            .map { it.javaClass.name }
+            .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") }
+            .map { it.substringBefore('$') }
     if (plugins.isNotEmpty())
         printBasicNodeInfo("Loaded plugins", plugins.joinToString())
 }
 
 private fun messageOfTheDay(): Pair<String, String> {
+    // TODO: Remove this next year.
+    val today = LocalDate.now()
+    if (today.isAfter(LocalDate.of(2016, 12, 20)) && today.isBefore(LocalDate.of(2017, 1, 3))) {
+        val claus = if (Emoji.hasEmojiTerminal) Emoji.santaClaus else ""
+        return Pair("The Corda team wishes you a very merry", "christmas and a happy new year! $claus")
+    }
+
     val messages = arrayListOf(
             "The only distributed ledger that pays\nhomage to Pac Man in its logo.",
             "You know, I was a banker once ...\nbut I lost interest. ${Emoji.bagOfCash}",
@@ -139,6 +165,9 @@ private fun messageOfTheDay(): Pair<String, String> {
 }
 
 private fun drawBanner() {
+    // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
+    AnsiConsole.systemInstall()
+
     val (msg1, msg2) = Emoji.renderIfSupported { messageOfTheDay() }
 
     println(Ansi.ansi().fgBrightRed().a(
@@ -147,7 +176,7 @@ private fun drawBanner() {
   / ____/     _________/ /___ _
  / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
 "/ /___  /_/ / /  / /_/ / /_/ /          ").fgBrightBlue().a(msg2).newline().fgBrightRed().a(
-"""\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().
+"""\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
 a("--- DEVELOPER SNAPSHOT ------------------------------------------------------------").newline().reset())
 }
 

@@ -1,6 +1,7 @@
 package net.corda.node.services.transactions
 
 import com.google.common.net.HostAndPort
+import io.atomix.catalyst.serializer.Serializer
 import io.atomix.catalyst.transport.Address
 import io.atomix.catalyst.transport.Transport
 import io.atomix.catalyst.transport.netty.NettyTransport
@@ -62,11 +63,13 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
         val address = Address(myAddress.hostText, myAddress.port)
         val storage = buildStorage(storagePath)
         val transport = buildTransport(config)
+        val serializer = Serializer()
 
         val server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)
                 .withStorage(storage)
                 .withServerTransport(transport)
+                .withSerializer(serializer)
                 .build()
 
         val serverFuture = if (clusterAddresses.isNotEmpty()) {
@@ -81,6 +84,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
         val client = CopycatClient.builder(address)
                 .withTransport(transport) // TODO: use local transport for client-server communications
                 .withConnectionStrategy(ConnectionStrategies.EXPONENTIAL_BACKOFF)
+                .withSerializer(serializer)
                 .build()
         _clientFuture = serverFuture.thenCompose { client.connect(address) }
     }

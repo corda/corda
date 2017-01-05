@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -78,6 +82,11 @@
           
 <br>
 <a href="api/index.html">API reference</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -107,8 +116,9 @@
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-cordapp-template">Running the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#interacting-with-the-cordapp-template">Interacting with the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#extending-the-cordapp-template">Extending the CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -172,6 +182,8 @@
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -390,11 +402,7 @@ in the right workflow state over the RPC interface. The RPC will then
 initiate the relevant flow using <code class="docutils literal"><span class="pre">StateRef</span></code>, or <code class="docutils literal"><span class="pre">linearId</span></code> values as
 parameters to the flow to identify the states being operated upon. Thus
 code to gather the latest input state would be:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>// Helper method to access the StorageService and expand a StateRef into a StateAndRef
-fun &lt;T : ContractState&gt; ServiceHub.toStateAndRef(ref: StateRef): StateAndRef&lt;T&gt; {
-    return storageService.validatedTransactions.getTransaction(ref.txhash)!!.tx.outRef&lt;T&gt;(ref.index)
-}
-
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>
 // Helper method to locate the latest Vault version of a LinearState from a possibly out of date StateRef
 inline fun &lt;reified T : LinearState&gt; ServiceHub.latest(ref: StateRef): StateAndRef&lt;T&gt; {
     val linearHeads = vaultService.linearHeadsOfType&lt;T&gt;()

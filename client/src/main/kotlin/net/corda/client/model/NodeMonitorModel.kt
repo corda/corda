@@ -48,9 +48,6 @@ class NodeMonitorModel {
     val progressTracking: Observable<ProgressTrackingEvent> = progressTrackingSubject
     val networkMap: Observable<MapChange> = networkMapSubject
 
-    private val clientToServiceSource = PublishSubject.create<CashCommand>()
-    val clientToService: PublishSubject<CashCommand> = clientToServiceSource
-
     val proxyObservable = SimpleObjectProperty<CordaRPCOps?>()
 
     /**
@@ -98,10 +95,6 @@ class NodeMonitorModel {
         val (parties, futurePartyUpdate) = proxy.networkMapUpdates()
         futurePartyUpdate.startWith(parties.map { MapChange.Added(it) }).subscribe(networkMapSubject)
 
-        // Client -> Service
-        clientToServiceSource.subscribe {
-            proxy.startFlow(::CashFlow, it)
-        }
         proxyObservable.set(proxy)
     }
 }

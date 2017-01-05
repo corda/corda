@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <title>net.corda.node.utilities - </title>
-<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="..\style.css">
 </HEAD>
 <BODY>
 <a href=".">net.corda.node.utilities</a><br/>
@@ -210,6 +210,13 @@ our environment:</p>
 <tbody>
 <tr>
 <td>
+<a href="-d-e-f-a-u-l-t_-m-a-x_-b-u-c-k-e-t-s.html">DEFAULT_MAX_BUCKETS</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DEFAULT_MAX_BUCKETS</span><span class="symbol">: </span><span class="identifier">Int</span></code><p>The default maximum size of the LRU cache.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-n-o-d-e_-d-a-t-a-b-a-s-e_-p-r-e-f-i-x.html">NODE_DATABASE_PREFIX</a></td>
 <td>
 <code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">NODE_DATABASE_PREFIX</span><span class="symbol">: </span><span class="identifier">String</span></code><p>Table prefix for all tables owned by the node module.</p>
@@ -220,6 +227,14 @@ our environment:</p>
 <h3>Functions</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="buffer-until-database-commit.html">bufferUntilDatabaseCommit</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">bufferUntilDatabaseCommit</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Buffer observations until after the current database transaction has been closed.  Observations are never
+dropped, simply delayed.</p>
+</td>
+</tr>
 <tr>
 <td>
 <a href="bytes-from-blob.html">bytesFromBlob</a></td>
@@ -334,6 +349,15 @@ our environment:</p>
 <a href="uuid-string.html">uuidString</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">uuidString</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$uuidString(, kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="wrap-with-database-transaction.html">wrapWithDatabaseTransaction</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">wrapWithDatabaseTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$wrapWithDatabaseTransaction(((net.corda.node.utilities.wrapWithDatabaseTransaction.T)), )/db">db</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Wrap delivery of observations in a database transaction.  Multiple subscribers will receive the observations inside
+the same database transaction.  This also lazily subscribes to the source <a href="#">rx.Observable</a> to preserve any buffering
+that might be in place.</p>
+</td>
 </tr>
 </tbody>
 </table>

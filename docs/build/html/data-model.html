@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -78,6 +82,11 @@
           
 <br>
 <a href="api/index.html">API reference</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -116,8 +125,9 @@
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-cordapp-template">Running the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#interacting-with-the-cordapp-template">Interacting with the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#extending-the-cordapp-template">Extending the CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -170,6 +180,8 @@
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -221,8 +233,7 @@
   <div class="section" id="data-model">
 <h1>Data model<a class="headerlink" href="#data-model" title="Permalink to this headline">¶</a></h1>
 <p>This article covers the data model: how <em>states</em>, <em>transactions</em> and <em>code contracts</em> interact with each other and
-how they are represented in software. It doesn&#8217;t attempt to give detailed design rationales or information on future
-design elements: please refer to the R3 wiki for background information.</p>
+how they are represented in software.</p>
 <div class="section" id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
 <p>We begin with the idea of a global ledger. In our model although the ledger is shared, it is not always the case that
@@ -287,9 +298,7 @@ a special type of transaction is provided that moves a state (or set of states) 
 a mismatch. This is a future planned feature.</p>
 </div>
 <p>As the same terminology often crops up in different distributed ledger designs, let&#8217;s compare this to other
-systems you may be familiar with. You can find more detailed design rationales for why the platform
-differs from existing systems in <a class="reference external" href="https://r3-cev.atlassian.net/wiki/display/AWG/Platform+Stream%3A+Corda">the R3 wiki</a>,
-but to summarise, the driving factors are:</p>
+systems you may be familiar with. The key differences are:</p>
 <ul class="simple">
 <li>Improved contract flexibility vs Bitcoin</li>
 <li>Improved scalability vs Ethereum, as well as ability to keep parts of the transaction graph private (yet still uniquely addressable)</li>

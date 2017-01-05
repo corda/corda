@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <title>StrandLocalTransactionManager.<init> - </title>
-<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="..\..\style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">net.corda.node.utilities</a>&nbsp;/&nbsp;<a href="index.html">StrandLocalTransactionManager</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
@@ -15,6 +15,9 @@ our tests involving two <a href="#">MockNode</a>s effectively replace the databa
 over each other.  So here we use a companion object to hold them as <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/ThreadLocal.html">ThreadLocal</a> and <a href="index.html">StrandLocalTransactionManager</a>
 is otherwise effectively stateless so its replacement does not matter.  The <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/ThreadLocal.html">ThreadLocal</a> is then set correctly and
 explicitly just prior to initiating a transaction in <a href="../database-transaction.html">databaseTransaction</a> and <a href="../create-database-transaction.html">createDatabaseTransaction</a> above.</p>
+<p>The <a href="index.html">StrandLocalTransactionManager</a> instances have an <a href="http://docs.oracle.com/javase/6/docs/api/java/util/Observable.html">Observable</a> of the transaction close <a href="-boundary/index.html">Boundary</a>s which
+facilitates the use of <a href="#">Observable.afterDatabaseCommit</a> to create event streams that only emit once the database
+transaction is closed and the data has been persisted and becomes visible to other observers.</p>
 <br/>
 <br/>
 <br/>

@@ -10,6 +10,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
@@ -66,6 +67,11 @@ val CHARLIE: Party get() = Party("Charlie", CHARLIE_PUBKEY)
 
 val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP: Party get() = Party("MiniCorp", MINI_CORP_PUBKEY)
+
+val BOC_KEY: KeyPair by lazy { generateKeyPair() }
+val BOC_PUBKEY: CompositeKey get() = BOC_KEY.public.composite
+val BOC: Party get() = Party("BankOfCorda", BOC_PUBKEY)
+val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 

@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <title>NodeVaultService - </title>
-<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="..\..\style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">net.corda.node.services.vault</a>&nbsp;/&nbsp;<a href=".">NodeVaultService</a><br/>
@@ -37,6 +37,14 @@ we add further functionality as the design for the vault and vault service matur
 <tbody>
 <tr>
 <td>
+<a href="cash-balances.html">cashBalances</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+which we have no cash evaluate to null (not present in map), not 0.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="current-vault.html">currentVault</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">currentVault</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-vault/index.html"><span class="identifier">Vault</span></a></code><p>Returns a read-only snapshot of the vault at the time the call is made. Note that if you consume states or
@@ -52,23 +60,17 @@ keys in this vault, you must inform the vault service so it can update its inter
 </tr>
 <tr>
 <td>
+<a href="raw-updates.html">rawUpdates</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">rawUpdates</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Prefer the use of <a href="updates.html">updates</a> unless you know why you want to use this instead.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="updates.html">updates</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">updates</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Vault will already incorporate
-the update.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3>Inherited Properties</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="../../net.corda.core.node.services/-vault-service/cash-balances.html">cashBalances</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
-which we have no cash evaluate to null (not present in map), not 0.</p>
+the update, and the database transaction associated with the update will have been committed and closed.</p>
 </td>
 </tr>
 </tbody>
@@ -103,7 +105,7 @@ using a semi-colon separator</p>
 <td>
 <a href="notify-all.html">notifyAll</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">notifyAll</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.vault.NodeVaultService$notifyAll(kotlin.collections.Iterable((net.corda.core.transactions.WireTransaction)))/txns">txns</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-vault/index.html"><span class="identifier">Vault</span></a></code><p>Possibly update the vault by marking as spent states that these transactions consume, and adding any relevant
+<code><span class="keyword">fun </span><span class="identifier">notifyAll</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.vault.NodeVaultService$notifyAll(kotlin.collections.Iterable((net.corda.core.transactions.WireTransaction)))/txns">txns</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Possibly update the vault by marking as spent states that these transactions consume, and adding any relevant
 new states that they create. You should only insert transactions that have been successfully verified here</p>
 </td>
 </tr>
@@ -131,7 +133,7 @@ first subscriber is registered so as to avoid racing with early updates.</p>
 <td>
 <a href="../../net.corda.core.node.services/-vault-service/notify.html">notify</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">notify</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$notify(net.corda.core.transactions.WireTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-vault/index.html"><span class="identifier">Vault</span></a></code><p>Same as notifyAll but with a single transaction.</p>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">notify</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$notify(net.corda.core.transactions.WireTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Same as notifyAll but with a single transaction.</p>
 </td>
 </tr>
 <tr>

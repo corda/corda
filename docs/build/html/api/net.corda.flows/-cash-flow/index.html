@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <title>CashFlow - </title>
-<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="..\..\style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href=".">CashFlow</a><br/>
@@ -14,6 +14,29 @@
 <code>command</code> - Indicates what Cash transaction to create with what parameters.<br/>
 <br/>
 <br/>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-e-x-i-t-i-n-g.html">EXITING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">EXITING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-i-s-s-u-i-n-g.html">ISSUING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">ISSUING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-p-a-y-i-n-g.html">PAYING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">PAYING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
+</tr>
+</tbody>
+</table>
 <h3>Constructors</h3>
 <table>
 <tbody>
@@ -21,7 +44,7 @@
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">CashFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.CashFlow$<init>(net.corda.flows.CashCommand)/command">command</span><span class="symbol">:</span>&nbsp;<a href="../-cash-command/index.html"><span class="identifier">CashCommand</span></a><span class="symbol">)</span></code><p>Initiates a flow that produces an Issue/Move or Exit Cash transaction.</p>
+<code><span class="identifier">CashFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.CashFlow$<init>(net.corda.flows.CashCommand)/command">command</span><span class="symbol">:</span>&nbsp;<a href="../-cash-command/index.html"><span class="identifier">CashCommand</span></a><span class="symbol">)</span></code><code><span class="identifier">CashFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.CashFlow$<init>(net.corda.flows.CashCommand, net.corda.core.utilities.ProgressTracker)/command">command</span><span class="symbol">:</span>&nbsp;<a href="../-cash-command/index.html"><span class="identifier">CashCommand</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.flows.CashFlow$<init>(net.corda.flows.CashCommand, net.corda.core.utilities.ProgressTracker)/progressTracker">progressTracker</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a><span class="symbol">)</span></code><p>Initiates a flow that produces an Issue/Move or Exit Cash transaction.</p>
 </td>
 </tr>
 </tbody>
@@ -34,6 +57,16 @@
 <a href="command.html">command</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">command</span><span class="symbol">: </span><a href="../-cash-command/index.html"><span class="identifier">CashCommand</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="progress-tracker.html">progressTracker</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">progressTracker</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a></code><p>Override this to provide a <a href="../../net.corda.core.utilities/-progress-tracker/index.html">ProgressTracker</a>. If one is provided and stepped, the framework will do something
+helpful with the progress reports. If this flow is invoked as a sub-flow of another, then the
+tracker will be made a child of the current step in the parent. If its null, this flow doesnt track
+progress.</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -52,16 +85,6 @@
 <a href="../../net.corda.core.flows/-flow-logic/logger.html">logger</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">logger</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>This is where you should log things to.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../../net.corda.core.flows/-flow-logic/progress-tracker.html">progressTracker</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">progressTracker</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a><span class="symbol">?</span></code><p>Override this to provide a <a href="../../net.corda.core.utilities/-progress-tracker/index.html">ProgressTracker</a>. If one is provided and stepped, the framework will do something
-helpful with the progress reports. If this flow is invoked as a sub-flow of another, then the
-tracker will be made a child of the current step in the parent. If its null, this flow doesnt track
-progress.</p>
 </td>
 </tr>
 <tr>
@@ -103,7 +126,7 @@ will do as long as the other side registers with it.</p>
 <td>
 <a href="../../net.corda.core.flows/-flow-logic/receive.html">receive</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$receive(net.corda.core.crypto.Party, java.lang.Class((net.corda.core.flows.FlowLogic.receive.T)))/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$receive(net.corda.core.crypto.Party, java.lang.Class((net.corda.core.flows.FlowLogic.receive.T)))/receiveType">receiveType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.T)), net.corda.core.crypto.Party)/receiveType">receiveType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.T)), net.corda.core.crypto.Party)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$receive(net.corda.core.crypto.Party)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
@@ -117,7 +140,7 @@ will do as long as the other side registers with it.</p>
 <a href="../../net.corda.core.flows/-flow-logic/send-and-receive.html">sendAndReceive</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$sendAndReceive(net.corda.core.crypto.Party, kotlin.Any)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$sendAndReceive(net.corda.core.crypto.Party, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$sendAndReceive(net.corda.core.crypto.Party, kotlin.Any, java.lang.Class((net.corda.core.flows.FlowLogic.sendAndReceive.T)))/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$sendAndReceive(net.corda.core.crypto.Party, kotlin.Any, java.lang.Class((net.corda.core.flows.FlowLogic.sendAndReceive.T)))/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$sendAndReceive(net.corda.core.crypto.Party, kotlin.Any, java.lang.Class((net.corda.core.flows.FlowLogic.sendAndReceive.T)))/receiveType">receiveType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$sendAndReceive(java.lang.Class((net.corda.core.flows.FlowLogic.sendAndReceive.T)), net.corda.core.crypto.Party, kotlin.Any)/receiveType">receiveType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$sendAndReceive(java.lang.Class((net.corda.core.flows.FlowLogic.sendAndReceive.T)), net.corda.core.crypto.Party, kotlin.Any)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$sendAndReceive(java.lang.Class((net.corda.core.flows.FlowLogic.sendAndReceive.T)), net.corda.core.crypto.Party, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -132,6 +155,17 @@ will do as long as the other side registers with it.</p>
 <a href="../../net.corda.core.flows/-flow-logic/track.html">track</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">track</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">?</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="tracker.html">tracker</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">tracker</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a></code></td>
 </tr>
 </tbody>
 </table>

@@ -3,6 +3,7 @@ package net.corda.node.services.messaging
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.net.HostAndPort
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.read
@@ -34,13 +35,15 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
 
         const val INTERNAL_PREFIX = "internal."
         const val PEERS_PREFIX = "${INTERNAL_PREFIX}peers."
+        const val SERVICES_PREFIX = "${INTERNAL_PREFIX}services."
         const val CLIENTS_PREFIX = "clients."
         const val P2P_QUEUE = "p2p.inbound"
         const val RPC_REQUESTS_QUEUE = "rpc.requests"
+        const val RPC_QUEUE_REMOVALS_QUEUE = "rpc.qremovals"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
 
         @JvmStatic
-        val NETWORK_MAP_ADDRESS = SimpleString("${INTERNAL_PREFIX}networkmap")
+        val NETWORK_MAP_ADDRESS = "${INTERNAL_PREFIX}networkmap"
 
         /**
          * Assuming the passed in target address is actually an ArtemisAddress will extract the host and port of the node. This should
@@ -50,28 +53,57 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
         @JvmStatic
         @VisibleForTesting
         fun toHostAndPort(target: MessageRecipients): HostAndPort {
-            val addr = target as? ArtemisMessagingComponent.ArtemisAddress ?: throw IllegalArgumentException("Not an Artemis address")
+            val addr = target as? ArtemisMessagingComponent.ArtemisPeerAddress ?: throw IllegalArgumentException("Not an Artemis address")
             return addr.hostAndPort
         }
     }
 
-    protected interface ArtemisAddress {
+    interface ArtemisAddress : MessageRecipients {
         val queueName: SimpleString
+    }
+
+    interface ArtemisPeerAddress : ArtemisAddress, SingleMessageRecipient {
         val hostAndPort: HostAndPort
     }
 
-    data class NetworkMapAddress(override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
-        override val queueName: SimpleString get() = NETWORK_MAP_ADDRESS
+    data class NetworkMapAddress(override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisPeerAddress {
+        override val queueName = SimpleString(NETWORK_MAP_ADDRESS)
     }
 
     /**
      * This is the class used to implement [SingleMessageRecipient], for now. Note that in future this class
      * may change or evolve and code that relies upon it being a simple host/port may not function correctly.
      * For instance it may contain onion routing data.
+     *
+     * [NodeAddress] identifies a specific peer node and an associated queue. The queue may be the peer's p2p queue or
+     *     an advertised service's queue.
+     *
+     * @param queueName The name of the queue this address is associated with.
+     * @param hostAndPort The address of the node.
      */
-    data class NodeAddress(val identity: CompositeKey, override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
-        override val queueName: SimpleString = SimpleString("$PEERS_PREFIX${identity.toBase58String()}")
-        override fun toString(): String = "${javaClass.simpleName}(identity = $queueName, $hostAndPort)"
+    data class NodeAddress(override val queueName: SimpleString, override val hostAndPort: HostAndPort) : ArtemisPeerAddress {
+        companion object {
+            fun asPeer(peerIdentity: CompositeKey, hostAndPort: HostAndPort): NodeAddress {
+                return NodeAddress(SimpleString("$PEERS_PREFIX${peerIdentity.toBase58String()}"), hostAndPort)
+            }
+            fun asService(serviceIdentity: CompositeKey, hostAndPort: HostAndPort): NodeAddress {
+                return NodeAddress(SimpleString("$SERVICES_PREFIX${serviceIdentity.toBase58String()}"), hostAndPort)
+            }
+        }
+        override fun toString(): String = "${javaClass.simpleName}(queue = $queueName, $hostAndPort)"
+    }
+
+    /**
+     * [ServiceAddress] implements [MessageRecipientGroup]. It holds a queue associated with a service advertised by
+     * zero or more nodes. Each advertising node has an associated consumer.
+     *
+     * By sending to such an address Artemis will pick a consumer (uses Round Robin by default) and sends the message
+     * there. We use this to establish sessions involving service counterparties.
+     *
+     * @param identity The service identity's owning key.
+     */
+    data class ServiceAddress(val identity: CompositeKey) : ArtemisAddress, MessageRecipientGroup {
+        override val queueName: SimpleString = SimpleString("$SERVICES_PREFIX${identity.toBase58String()}")
     }
 
     /** The config object is used to pass in the passwords for the certificate KeyStore and TrustStore */

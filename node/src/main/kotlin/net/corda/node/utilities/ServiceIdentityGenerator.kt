@@ -6,6 +6,7 @@ import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.trace
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -24,7 +25,7 @@ object ServiceIdentityGenerator {
      * @param threshold The threshold for the generated group [CompositeKey.Node].
      */
     fun generateToDisk(dirs: List<Path>, serviceId: String, serviceName: String, threshold: Int = 1) {
-        log.trace("Generating a group identity \"serviceName\" for nodes: ${dirs.joinToString()}")
+        log.trace { "Generating a group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
 
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
         val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public.composite }).build(threshold)
@@ -32,8 +33,8 @@ object ServiceIdentityGenerator {
 
         keyPairs.zip(dirs) { keyPair, dir ->
             Files.createDirectories(dir)
-            val privateKeyFile = serviceId + "-private-key"
-            val publicKeyFile = serviceId + "-public"
+            val privateKeyFile = "$serviceId-private-key"
+            val publicKeyFile = "$serviceId-public"
             notaryParty.writeToFile(dir.resolve(publicKeyFile))
             keyPair.serialize().writeToFile(dir.resolve(privateKeyFile))
         }

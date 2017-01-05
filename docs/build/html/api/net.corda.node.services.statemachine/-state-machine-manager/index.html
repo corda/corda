@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <title>StateMachineManager - </title>
-<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="..\..\style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">net.corda.node.services.statemachine</a>&nbsp;/&nbsp;<a href=".">StateMachineManager</a><br/>
@@ -54,6 +54,19 @@ TODO: Implement stub/skel classes that provide a basic RPC framework on top of t
 <a href="-flow-session/index.html">FlowSession</a></td>
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">FlowSession</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-flow-session-state/index.html">FlowSessionState</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">FlowSessionState</span></code><p><a href="-flow-session-state/index.html">FlowSessionState</a> describes the sessions state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-received-session-message/index.html">ReceivedSessionMessage</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ReceivedSessionMessage</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">M</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-session-message.html"><span class="identifier">SessionMessage</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -158,6 +171,12 @@ which may change across restarts.</p>
 <a href="service-hub.html">serviceHub</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">serviceHub</span><span class="symbol">: </span><a href="../../net.corda.node.services.api/-service-hub-internal/index.html"><span class="identifier">ServiceHubInternal</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="unfinished-fibers.html">unfinishedFibers</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">unfinishedFibers</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

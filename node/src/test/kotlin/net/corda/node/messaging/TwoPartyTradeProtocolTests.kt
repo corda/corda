@@ -59,7 +59,6 @@ import kotlin.test.assertTrue
  * We assume that Alice and Bob already found each other via some market, and have agreed the details already.
  */
 class TwoPartyTradeFlowTests {
-
     lateinit var net: MockNetwork
     lateinit var notaryNode: MockNetwork.MockNode
     lateinit var aliceNode: MockNetwork.MockNode
@@ -85,7 +84,7 @@ class TwoPartyTradeFlowTests {
         net = MockNetwork(false, true)
 
         ledger {
-            notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+            notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
             aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
             bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
             val aliceKey = aliceNode.services.legalIdentityKey
@@ -125,7 +124,7 @@ class TwoPartyTradeFlowTests {
     @Test
     fun `shutdown and restore`() {
         ledger {
-            notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+            notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
             aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
             bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
             aliceNode.disableDBCloseOnStop()
@@ -133,7 +132,7 @@ class TwoPartyTradeFlowTests {
             val aliceKey = aliceNode.services.legalIdentityKey
             val notaryKey = notaryNode.services.notaryIdentityKey
 
-            val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.Handle
+            val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.PeerHandle
             val networkMapAddr = notaryNode.info.address
 
             net.runNetwork() // Clear network map registration messages
@@ -235,7 +234,7 @@ class TwoPartyTradeFlowTests {
 
     @Test
     fun `check dependencies of sale asset are resolved`() {
-        notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name, ALICE_KEY)
         bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name, BOB_KEY)
         val aliceKey = aliceNode.services.legalIdentityKey
@@ -327,7 +326,7 @@ class TwoPartyTradeFlowTests {
     @Test
     fun `track() works`() {
 
-        notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name, ALICE_KEY)
         bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name, BOB_KEY)
         val aliceKey = aliceNode.services.legalIdentityKey
@@ -418,7 +417,7 @@ class TwoPartyTradeFlowTests {
             Buyer(otherParty, notaryNode.info.notaryIdentity, 1000.DOLLARS, CommercialPaper.State::class.java)
         }.map { it.fsm }
         val seller = Seller(bobNode.info.legalIdentity, notaryNode.info, assetToSell, 1000.DOLLARS, ALICE_KEY)
-        val sellerResultFuture = aliceNode.smm.add(seller).resultFuture
+        val sellerResultFuture = aliceNode.services.startFlow(seller).resultFuture
         return RunResult(buyerFuture, sellerResultFuture, seller.fsm.id)
     }
 
@@ -427,7 +426,7 @@ class TwoPartyTradeFlowTests {
             aliceError: Boolean,
             expectedMessageSubstring: String
     ) {
-        notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
         bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
         val aliceKey = aliceNode.services.legalIdentityKey

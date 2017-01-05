@@ -18,7 +18,12 @@ class HttpApi(val root: URL) {
      */
     fun postJson(path: String, data: Any = Unit) = HttpUtils.postJson(URL(root, path), toJson(data))
 
-    private fun toJson(any: Any) = if (any is String) any else ObjectMapper().writeValueAsString(any)
+    /**
+     * Send a GET request to the path on the API specified.
+     */
+    inline fun<reified T: Any> getJson(path: String, params: Map<String, String> = mapOf()) = HttpUtils.getJson<T>(URL(root, path), params)
+
+    private fun toJson(any: Any) = any as? String ?: HttpUtils.defaultMapper.writeValueAsString(any)
 
     companion object {
         fun fromHostAndPort(hostAndPort: HostAndPort, base: String, protocol: String = "http"): HttpApi
