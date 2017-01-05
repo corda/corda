@@ -14,6 +14,7 @@ import org.jetbrains.exposed.sql.transactions.TransactionManager
 import rx.Observable
 import rx.Subscriber
 import rx.subjects.PublishSubject
+import rx.subjects.Subject
 import rx.subjects.UnicastSubject
 import java.io.Closeable
 import java.security.PublicKey
@@ -109,13 +110,13 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
 
         val manager: StrandLocalTransactionManager get() = databaseToInstance[database]!!
 
-        val transactionBoundaries: PublishSubject<Boundary> get() = manager._transactionBoundaries
+        val transactionBoundaries: Subject<Boundary, Boundary> get() = manager._transactionBoundaries
     }
 
 
     data class Boundary(val txId: UUID)
 
-    private val _transactionBoundaries = PublishSubject.create<Boundary>()
+    private val _transactionBoundaries = PublishSubject.create<Boundary>().toSerialized()
 
     init {
         // Found a unit test that was forgetting to close the database transactions.  When you close() on the top level
@@ -140,7 +141,7 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
     override fun currentOrNull(): Transaction? = threadLocalTx.get()
 
     // Direct copy of [ThreadLocalTransaction].
-    private class StrandLocalTransaction(override val db: Database, isolation: Int, val threadLocal: ThreadLocal<Transaction>, val transactionBoundaries: PublishSubject<Boundary>) : TransactionInterface {
+    private class StrandLocalTransaction(override val db: Database, isolation: Int, val threadLocal: ThreadLocal<Transaction>, val transactionBoundaries: Subject<Boundary, Boundary>) : TransactionInterface {
         val id = UUID.randomUUID()
 
         override val connection: Connection by lazy(LazyThreadSafetyMode.NONE) {
@@ -184,12 +185,11 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
 fun <T : Any> rx.Observer<T>.bufferUntilDatabaseCommit(): rx.Observer<T> {
     val currentTxId = StrandLocalTransactionManager.transactionId
     val databaseTxBoundary: Observable<StrandLocalTransactionManager.Boundary> = StrandLocalTransactionManager.transactionBoundaries.filter { it.txId == currentTxId }.first()
-    val subject = UnicastSubject.create<T>()
+    val subject = UnicastSubject.create<T>().toSerialized()
     subject.delaySubscription(databaseTxBoundary).subscribe(this)
     databaseTxBoundary.doOnCompleted { subject.onCompleted() }
     return subject
 }
-
 
 // A subscriber that delegates to multiple others, wrapping a database transaction around the combination.
 private class DatabaseTransactionWrappingSubscriber<U>(val db: Database?) : Subscriber<U>() {
