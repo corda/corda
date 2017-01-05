@@ -58,6 +58,7 @@ interface ServiceHub {
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
+     * Note that you must be on the server thread to call this method.
      *
      * @throws IllegalFlowLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
      */

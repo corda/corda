@@ -38,7 +38,6 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertTrue
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
-
     val realClock: Clock = Clock.systemUTC()
     val stoppedClock = Clock.fixed(realClock.instant(), realClock.zone)
     val testClock = TestClock(stoppedClock)
