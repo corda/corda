@@ -81,7 +81,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         rpcUsers = [
                 ['user' : "user1",
                  'password' : "test",
-                 'permissions' : ["StartFlow.net.corda.flows.CashFlow"]]
+                 'permissions' : ["StartFlow.net.corda.flows.CashFlow",
+                                  "StartFlow.net.corda.flows.IssuerFlow\$IssuanceRequester"]]
         ]
     }
     node {
