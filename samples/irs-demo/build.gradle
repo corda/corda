@@ -101,6 +101,17 @@ task integrationTest(type: Test, dependsOn: []) {
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
+// This fixes the "line too long" error when running this demo with windows CLI
+// TODO: Automatically apply to all projects via a plugin
+tasks.withType(CreateStartScripts).each { task ->
+    task.doLast {
+        String text = task.windowsScript.text
+        // Replaces the per file classpath (which are all jars in "lib") with a wildcard on lib
+        text = text.replaceFirst(/(set CLASSPATH=%APP_HOME%\\lib\\).*/, { "${it[1]}*" })
+        task.windowsScript.write text
+    }
+}
+
 idea {
     module {
         downloadJavadoc = true // defaults to false
