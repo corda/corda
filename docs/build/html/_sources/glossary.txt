@@ -62,7 +62,7 @@ SIMM
 Service Hub
     A hub in each Corda node that manages the services upon which other components of the node depend. Services may include facilities for identity management, storage management, network map management etc.
 Signed Transaction
-    A signed transaction is a transaction that has been agreed by all parties relevant to that transacation as well as optionally a notary if relevant.
+    A signed transaction is a transaction that has been agreed by all parties relevant to that transaction as well as optionally a notary if relevant.
 State
     An element of data that is output from one transaction and then used / consumed in another transaction. States can only be consumed once and this confirmation is performed by the Notary service.
 Transaction

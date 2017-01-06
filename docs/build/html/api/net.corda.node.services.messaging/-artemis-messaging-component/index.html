@@ -1,14 +1,14 @@
 <HTML>
 <HEAD>
 <title>ArtemisMessagingComponent - </title>
-<link rel="stylesheet" href="..\..\style.css">
+<link rel="stylesheet" href="../../style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href=".">ArtemisMessagingComponent</a><br/>
 <br/>
 <h1>ArtemisMessagingComponent</h1>
 <code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ArtemisMessagingComponent</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code><br/>
-<p>The base class for Artemis services that defines shared data structures and transport configuration</p>
+<p>The base class for Artemis services that defines shared data structures and SSL transport configuration.</p>
 <br/>
 <br/>
 <h3>Types</h3>
@@ -30,7 +30,7 @@
 <td>
 <a href="-connection-direction/index.html">ConnectionDirection</a></td>
 <td>
-<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">ConnectionDirection</span></code></td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">ConnectionDirection</span></code></td>
 </tr>
 <tr>
 <td>
@@ -64,7 +64,7 @@ zero or more nodes. Each advertising node has an associated consumer.</p>
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">ArtemisMessagingComponent</span><span class="symbol">(</span><span class="symbol">)</span></code><p>The base class for Artemis services that defines shared data structures and transport configuration</p>
+<code><span class="identifier">ArtemisMessagingComponent</span><span class="symbol">(</span><span class="symbol">)</span></code><p>The base class for Artemis services that defines shared data structures and SSL transport configuration.</p>
 </td>
 </tr>
 </tbody>
@@ -76,7 +76,7 @@ zero or more nodes. Each advertising node has an associated consumer.</p>
 <td>
 <a href="config.html">config</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">config</span><span class="symbol">: </span><a href="../../net.corda.node.services.config/-node-s-s-l-configuration/index.html"><span class="identifier">NodeSSLConfiguration</span></a></code><p>The config object is used to pass in the passwords for the certificate KeyStore and TrustStore</p>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">config</span><span class="symbol">: </span><a href="../../net.corda.node.services.config/-node-s-s-l-configuration/index.html"><span class="identifier">NodeSSLConfiguration</span></a><span class="symbol">?</span></code><p>The config object is used to pass in the passwords for the certificate KeyStore and TrustStore</p>
 </td>
 </tr>
 </tbody>
@@ -134,9 +134,9 @@ unfortunately Artemis tends to bury the exception when the password is wrong.</p
 </tr>
 <tr>
 <td>
-<a href="-n-e-t-w-o-r-k_-m-a-p_-a-d-d-r-e-s-s.html">NETWORK_MAP_ADDRESS</a></td>
+<a href="-n-e-t-w-o-r-k_-m-a-p_-q-u-e-u-e.html">NETWORK_MAP_QUEUE</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">NETWORK_MAP_ADDRESS</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">NETWORK_MAP_QUEUE</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
 </tr>
 <tr>
 <td>
@@ -185,6 +185,12 @@ unfortunately Artemis tends to bury the exception when the password is wrong.</p
 <a href="-s-e-r-v-i-c-e-s_-p-r-e-f-i-x.html">SERVICES_PREFIX</a></td>
 <td>
 <code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">SERVICES_PREFIX</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-v-e-r-i-f-y_-p-e-e-r_-c-o-m-m-o-n_-n-a-m-e.html">VERIFY_PEER_COMMON_NAME</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">VERIFY_PEER_COMMON_NAME</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
 </tr>
 </tbody>
 </table>
