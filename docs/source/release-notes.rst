@@ -4,61 +4,52 @@ Release notes
 Here are brief summaries of what's changed between each snapshot release.
 
 Milestone 7
+-----------
 
-* Developer experience
+* Developer experience:
 
-    * Setup TeamCity for continuous integration with pull request building to ensure that master is more stable
-      on both repos
-    * Improve Java interop with more annotations on ``Utils.kt``
-    * Improved API to ``NetworkMapCache``
-    * Improved client observable API
-    * CorDapp types can be used in parameters to ``startFlowDynamic``
+    * Improved API to ``NetworkMapCache`` by removing the duplicated gte() and moved many getter implementations from
+      the ``InMemoryNetworkMapCache`` to the ``NetworkMapCache`` because they were generic implementations. ``regulators``.
+      also renamed ``regulatorNodes`` to be consistent.
+    * Improved client observable API by merging two specific folds into a general fold function and added a buffer to
+      the rx observable to avoid flooding the UI thread.
+    * CorDapp types can be used in parameters to ``startFlowDynamic``.
+    * The CorDapp template now has a Java example that parallels the Kotlin one for developers more comfortable with
+      Java. ORM support added to the pair of examples.
 
-* Security
+* Security:
 
     * MQ broker of the node now requires authentication which means that third parties cannot connect to and
       listen to queues on the Node. RPC and P2P between nodes is now authenticated as a result of this change.
-      This also means that nodes or RPC users cannot pretend to be other nodes or RPC users
-    * The node now does host verification of any node that connects to it and prevents Man in the Middle Attacks
+      This also means that nodes or RPC users cannot pretend to be other nodes or RPC users.
+    * The node now does host verification of any node that connects to it and prevents man in the middle attacks.
 
-* Demos
+* Demos:
 
     * Demos now use RPC to communicate with the node from the webserver. This brings the demos more in line with how
       interaction with nodes is expected to be. The demos now treat their webservers like clients. This will also allow
       for the splitting of the webserver from the node for milestone 8.
     * Added the Bank of Corda demo - a demo showing a node (Bank of Corda) acting as an issuer of Cash, and a client
-      driver providing both Web and RPC access to request issuance of cash
-    * SIMM valuation demo is fixed - previously had Kryo errors if running from command line.
-    * Added a SIMM valuation demo integration test to catch regressions
+      driver providing both Web and RPC access to request issuance of cash.
+    * Added a SIMM valuation demo integration test to catch regressions.
 
-* Explorer
+* Explorer:
 
-    * The GUI for the explorer now shows other nodes on the network map
-    * Map resolution increased and allows zooming and panning
-    * Transactions between nodes on the map now visualise transactions between nodes
+    * The GUI for the explorer now shows other nodes on the network map and the transactions between them.
+    * Map resolution increased and allows zooming and panning.
+    * Video demonstration of the Node Explorer: `https://www.corda.net/2017/01/03/the-node-explorer/`_.
 
-* Improvements
+* Improvements:
 
-    * With thanks to *Thomas Schroeter* ``NotaryFlow`` is now idempotent
-    * Added a custom serialiser for CompositeKey
-    * Added commonName extension method to X500Name and helper class for x509 cert factories
+    * With thanks to *Thomas Schroeter* ``NotaryFlow`` is now idempotent.
+    * Added a custom serialiser for CompositeKey.
+    * Added commonName extension method to X500Name and helper class for x509 cert factories.
     * Vault updates now contain full StateAndRef which allows subscribers to check whether the update contains
       relevant states.
     * Cash balances are calculated using aggregate values to prevent iterating through all states in the vault, which
-      improves performance
-    * Multi-party services, such as notaries, are now load balanced and represented as a single ``Party`` object
-    * The Notary Chagnge flow now supports encumberances
-
-* Fixes
-
-    * Fixed ``runnodes`` on all platforms
-    * Fixed file cleanup of sandbox unit tests on Windows
-    * Fix errors with multi-thread InMemoryMessagingNetwork
-    * Fixed an issue with node startup where if nodes startup in a certain order (before the network map service)
-      there could be a hang.
-    * Fixed ANSI logging on Windows
-    * observers of vault updates and other node activity streamed via rx.Observables will now only see those updates
-      once they are globally visible and committed to the h2 database
+      improves performance.
+    * Multi-party services, such as notaries, are now load balanced and represented as a single ``Party`` object.
+    * The Notary Change flow now supports encumberances.
 
 Milestone 6
 -----------
