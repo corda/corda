@@ -14,7 +14,7 @@ repositories {
 }
 
 task buildCertSignerJAR(type: FatCapsule, dependsOn: 'jar') {
-    applicationClass 'com.r3corda.netpermission.MainKt'
+    applicationClass 'com.r3.corda.netpermission.MainKt'
     archiveName 'certSigner.jar'
 
     capsuleManifest {
