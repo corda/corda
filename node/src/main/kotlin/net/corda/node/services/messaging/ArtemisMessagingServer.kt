@@ -445,6 +445,8 @@ class NodeLoginModule : LoginModule {
         const val PEER_ROLE = "SystemRoles/Peer"
         const val NODE_ROLE = "SystemRoles/Node"
         const val RPC_ROLE = "SystemRoles/RPC"
+
+        val log = loggerFor<NodeLoginModule>()
     }
 
     private var loginSucceeded: Boolean = false
@@ -478,6 +480,8 @@ class NodeLoginModule : LoginModule {
 
         val username = nameCallback.name ?: throw FailedLoginException("Username not provided")
         val password = String(passwordCallback.password ?: throw FailedLoginException("Password not provided"))
+
+        log.info("Processing login for $username")
 
         val validatedUser = if (username == PEER_USER || username == NODE_USER) {
             val certificates = certificateCallback.certificates ?: throw FailedLoginException("No TLS?")
