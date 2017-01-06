@@ -7,7 +7,6 @@ import net.corda.node.driver.NodeHandle
 import net.corda.node.driver.driver
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.IntegrationTestCategory
-import net.corda.testing.getHostAndPort
 import net.corda.testing.http.HttpApi
 import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
@@ -45,7 +44,7 @@ class SimmValuationTest: IntegrationTestCategory {
     }
 
     private fun getSimmNodeApi(futureNode: Future<NodeHandle>): HttpApi {
-        val nodeAddr = futureNode.getOrThrow().config.getHostAndPort("webAddress")
+        val nodeAddr = futureNode.getOrThrow().configuration.webAddress
         return HttpApi.fromHostAndPort(nodeAddr, "api/simmvaluationdemo")
     }
 

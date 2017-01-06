@@ -53,7 +53,7 @@ class DriverTests {
 
     @Test
     fun randomFreePortAllocationWorks() {
-        val nodeInfo = driver(portAllocation = PortAllocation.RandomFree()) {
+        val nodeInfo = driver(portAllocation = PortAllocation.RandomFree) {
             val nodeInfo = startNode("NoService")
             nodeMustBeUp(nodeInfo.getOrThrow().nodeInfo)
             nodeInfo.getOrThrow()

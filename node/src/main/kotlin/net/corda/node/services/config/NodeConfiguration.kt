@@ -61,6 +61,8 @@ class FullNodeConfiguration(val config: Config) : NodeConfiguration {
     val useHTTPS: Boolean by config
     val artemisAddress: HostAndPort by config
     val webAddress: HostAndPort by config
+    // TODO This field is slightly redundant as artemisAddress is sufficient to hold the address of the node's MQ broker.
+    // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
     val messagingServerAddress: HostAndPort? by config.getOrElse { null }
     val extraAdvertisedServiceIds: String by config
     val useTestClock: Boolean by config.getOrElse { false }

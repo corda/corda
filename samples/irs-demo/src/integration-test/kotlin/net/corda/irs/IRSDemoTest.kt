@@ -1,7 +1,7 @@
 package net.corda.irs
 
 import com.google.common.net.HostAndPort
-import com.typesafe.config.Config
+import com.google.common.util.concurrent.Futures
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.irs.api.NodeInterestRates
@@ -15,17 +15,18 @@ import org.apache.commons.io.IOUtils
 import org.junit.Test
 import java.net.URL
 
-class IRSDemoTest: IntegrationTestCategory {
-    fun Config.getHostAndPort(name: String): HostAndPort = HostAndPort.fromString(getString(name))!!
-
-    @Test fun `runs IRS demo`() {
+class IRSDemoTest : IntegrationTestCategory {
+    @Test
+    fun `runs IRS demo`() {
         driver(dsl = {
-            val controller = startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.type))).getOrThrow()
-            val nodeA = startNode("Bank A").getOrThrow()
-            val nodeB = startNode("Bank B").getOrThrow()
-            runUploadRates(controller.config.getHostAndPort("webAddress"))
-            runTrade(nodeA.config.getHostAndPort("webAddress"))
-            runDateChange(nodeB.config.getHostAndPort("webAddress"))
+            val (controller, nodeA, nodeB) = Futures.allAsList(
+                    startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.type))),
+                    startNode("Bank A"),
+                    startNode("Bank B")
+            ).getOrThrow()
+            runUploadRates(controller.configuration.webAddress)
+            runTrade(nodeA.configuration.webAddress)
+            runDateChange(nodeB.configuration.webAddress)
         }, useTestClock = true, isDebug = true)
     }
 }

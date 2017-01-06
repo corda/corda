@@ -19,6 +19,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
@@ -93,9 +94,11 @@ interface DriverDSLInternalInterface : DriverDSLExposedInterface {
 
 data class NodeHandle(
         val nodeInfo: NodeInfo,
-        val config: Config,
+        val configuration: FullNodeConfiguration,
         val process: Process
-)
+) {
+    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.artemisAddress, configuration)
+}
 
 sealed class PortAllocation {
     abstract fun nextPort(): Int
@@ -106,7 +109,7 @@ sealed class PortAllocation {
         override fun nextPort() = portCounter.andIncrement
     }
 
-    class RandomFree() : PortAllocation() {
+    object RandomFree : PortAllocation() {
         override fun nextPort(): Int {
             return ServerSocket().use {
                 it.bind(InetSocketAddress(0))
@@ -364,16 +367,16 @@ open class DriverDSL(
                 }
         ) + customOverrides
 
-        val config = ConfigHelper.loadConfig(
+        val configuration = FullNodeConfiguration(ConfigHelper.loadConfig(
                 baseDirectoryPath = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = configOverrides
-        )
+        ))
 
-        val startNode = startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort)
+        val startNode = startNode(executorService, configuration, quasarJarPath, debugPort)
         registerProcess(startNode)
         return startNode.map {
-            NodeHandle(queryNodeInfo(apiAddress)!!, config, it)
+            NodeHandle(queryNodeInfo(apiAddress)!!, configuration, it)
         }
     }
 
