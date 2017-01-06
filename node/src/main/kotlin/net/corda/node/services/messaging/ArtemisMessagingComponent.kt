@@ -19,10 +19,9 @@ import java.nio.file.Path
 import java.security.KeyStore
 
 /**
- * The base class for Artemis services that defines shared data structures and transport configuration
+ * The base class for Artemis services that defines shared data structures and SSL transport configuration.
  */
 abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
-
     companion object {
         init {
             System.setProperty("org.jboss.logging.provider", "slf4j")
@@ -106,7 +105,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
     }
 
     /** The config object is used to pass in the passwords for the certificate KeyStore and TrustStore */
-    abstract val config: NodeSSLConfiguration
+    abstract val config: NodeSSLConfiguration?
 
     // Restrict enabled Cipher Suites to AES and GCM as minimum for the bulk cipher.
     // Our self-generated certificates all use ECDSA for handshakes, but we allow classical RSA certificates to work
@@ -126,6 +125,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      * unfortunately Artemis tends to bury the exception when the password is wrong.
      */
     fun checkStorePasswords() {
+        val config = config ?: return
         config.keyStorePath.read {
             KeyStore.getInstance("JKS").load(it, config.keyStorePassword.toCharArray())
         }
@@ -135,39 +135,44 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
     }
 
     protected fun tcpTransport(direction: ConnectionDirection, host: String, port: Int): TransportConfiguration {
-        config.keyStorePath.expectedOnDefaultFileSystem()
-        config.trustStorePath.expectedOnDefaultFileSystem()
-        return TransportConfiguration(
-                when (direction) {
-                    is Inbound -> NettyAcceptorFactory::class.java.name
-                    is Outbound -> VerifyingNettyConnectorFactory::class.java.name
-                },
-                mapOf(
-                        // Basic TCP target details
-                        TransportConstants.HOST_PROP_NAME to host,
-                        TransportConstants.PORT_PROP_NAME to port,
+        val config = config
+        val options = mutableMapOf<String, Any?>(
+                // Basic TCP target details
+                TransportConstants.HOST_PROP_NAME to host,
+                TransportConstants.PORT_PROP_NAME to port,
 
-                        // Turn on AMQP support, which needs the protocol jar on the classpath.
-                        // Unfortunately we cannot disable core protocol as artemis only uses AMQP for interop
-                        // It does not use AMQP messages for its own messages e.g. topology and heartbeats
-                        // TODO further investigate how to ensure we use a well defined wire level protocol for Node to Node communications
-                        TransportConstants.PROTOCOLS_PROP_NAME to "CORE,AMQP",
-
-                        // Enable TLS transport layer with client certs and restrict to at least SHA256 in handshake
-                        // and AES encryption
-                        TransportConstants.SSL_ENABLED_PROP_NAME to true,
-                        TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
-                        TransportConstants.KEYSTORE_PATH_PROP_NAME to config.keyStorePath,
-                        TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to config.keyStorePassword, // TODO proper management of keystores and password
-                        TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
-                        TransportConstants.TRUSTSTORE_PATH_PROP_NAME to config.trustStorePath,
-                        TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to config.trustStorePassword,
-                        TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
-                        TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
-                        TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true,
-                        VERIFY_PEER_COMMON_NAME to (direction as? Outbound)?.expectedCommonName
-                )
+                // Turn on AMQP support, which needs the protocol jar on the classpath.
+                // Unfortunately we cannot disable core protocol as artemis only uses AMQP for interop
+                // It does not use AMQP messages for its own messages e.g. topology and heartbeats
+                // TODO further investigate how to ensure we use a well defined wire level protocol for Node to Node communications
+                TransportConstants.PROTOCOLS_PROP_NAME to "CORE,AMQP"
         )
+
+        if (config != null) {
+            config.keyStorePath.expectedOnDefaultFileSystem()
+            config.trustStorePath.expectedOnDefaultFileSystem()
+            val tlsOptions = mapOf<String, Any?>(
+                    // Enable TLS transport layer with client certs and restrict to at least SHA256 in handshake
+                    // and AES encryption
+                    TransportConstants.SSL_ENABLED_PROP_NAME to true,
+                    TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
+                    TransportConstants.KEYSTORE_PATH_PROP_NAME to config.keyStorePath,
+                    TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to config.keyStorePassword, // TODO proper management of keystores and password
+                    TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
+                    TransportConstants.TRUSTSTORE_PATH_PROP_NAME to config.trustStorePath,
+                    TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to config.trustStorePassword,
+                    TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
+                    TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
+                    TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true,
+                    VERIFY_PEER_COMMON_NAME to (direction as? Outbound)?.expectedCommonName
+            )
+            options.putAll(tlsOptions)
+        }
+        val factoryName = when (direction) {
+            is Inbound -> NettyAcceptorFactory::class.java.name
+            is Outbound -> VerifyingNettyConnectorFactory::class.java.name
+        }
+        return TransportConfiguration(factoryName, options)
     }
 
     protected fun Path.expectedOnDefaultFileSystem() {
