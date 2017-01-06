@@ -203,7 +203,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         initialiseDatabasePersistence {
-            val storageServices = initialiseStorageService(configuration.basedir)
+            val storageServices = initialiseStorageService(configuration.baseDirectory)
             storage = storageServices.first
             checkpointStorage = storageServices.second
             netMapCache = InMemoryNetworkMapCache()
@@ -285,7 +285,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return advertisedServices.map {
             val serviceId = it.type.id
             val serviceName = it.name ?: "$serviceId|${configuration.myLegalName}"
-            val identity = obtainKeyPair(configuration.basedir, serviceId + "-private-key", serviceId + "-public", serviceName).first
+            val identity = obtainKeyPair(configuration.baseDirectory, serviceId + "-private-key", serviceId + "-public", serviceName).first
             ServiceEntry(it, identity)
         }
     }
@@ -495,8 +495,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                                                stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage) =
             StorageServiceImpl(attachments, transactionStorage, stateMachineRecordedTransactionMappingStorage)
 
-    protected fun obtainLegalIdentity(): Party = obtainKeyPair(configuration.basedir, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).first
-    protected fun obtainLegalIdentityKey(): KeyPair = obtainKeyPair(configuration.basedir, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).second
+    protected fun obtainLegalIdentity(): Party = obtainKeyPair(configuration.baseDirectory, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).first
+    protected fun obtainLegalIdentityKey(): KeyPair = obtainKeyPair(configuration.baseDirectory, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).second
 
     private fun obtainKeyPair(dir: Path, privateKeyFileName: String, publicKeyFileName: String, serviceName: String? = null): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
@@ -545,6 +545,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     protected fun createNodeDir() {
-        configuration.basedir.createDirectories()
+        configuration.baseDirectory.createDirectories()
     }
 }

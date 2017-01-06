@@ -199,7 +199,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             (path / "attachments").createDirectories()
 
         val config = TestNodeConfiguration(
-                basedir = path,
+                baseDirectory = path,
                 myLegalName = legalName ?: "Mock Company $id",
                 networkMapService = null,
                 dataSourceProperties = makeTestDataSourceProperties("node_${id}_net_$networkId"))

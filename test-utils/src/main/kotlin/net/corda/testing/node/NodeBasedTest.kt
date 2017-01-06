@@ -114,8 +114,9 @@ abstract class NodeBasedTest {
                                   advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
                                   configOverrides: Map<String, Any>): Node {
+        val baseDirectory = (tempFolder.root.toPath() / legalName).createDirectories()
         val config = ConfigHelper.loadConfig(
-                baseDirectoryPath = (tempFolder.root.toPath() / legalName).createDirectories(),
+                baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = mapOf(
                         "myLegalName" to legalName,
@@ -131,7 +132,7 @@ abstract class NodeBasedTest {
                 ) + configOverrides
         )
 
-        val node = FullNodeConfiguration(config).createNode()
+        val node = FullNodeConfiguration(baseDirectory, config).createNode()
         node.start()
         nodes += node
         thread(name = legalName) {

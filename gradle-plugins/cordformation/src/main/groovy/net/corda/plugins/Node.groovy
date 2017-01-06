@@ -42,7 +42,6 @@ class Node {
      */
     protected List<Map<String, Object>> rpcUsers = []
 
-    private String dirName
     private Config config = ConfigFactory.empty()
     private File nodeDir
     private Project project
@@ -55,16 +54,6 @@ class Node {
     void name(String name) {
         this.name = name
         config = config.withValue("myLegalName", ConfigValueFactory.fromAnyRef(name))
-    }
-
-    /**
-     * Set the directory the node will be installed to relative to the directory specified in Cordform task.
-     *
-     * @param dirName Subdirectory name for node to be installed to. Must be valid directory name on all OSes.
-     */
-    void dirName(String dirName) {
-        this.dirName = dirName
-        config = config.withValue("basedir", ConfigValueFactory.fromAnyRef(dirName))
     }
 
     /**
@@ -136,13 +125,8 @@ class Node {
         this.project = project
     }
 
-    /**
-     * Install the nodes to the given base directory.
-     *
-     * @param baseDir The base directory for this node. All other paths are relative to it + this nodes dir name.
-     */
-    void build(File baseDir) {
-        nodeDir = new File(baseDir, dirName)
+    void build(File rootDir) {
+        nodeDir = new File(rootDir, name.replaceAll("\\s",""))
         configureRpcUsers()
         installCordaJAR()
         installBuiltPlugin()

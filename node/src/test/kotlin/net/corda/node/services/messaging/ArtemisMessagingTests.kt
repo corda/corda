@@ -4,7 +4,7 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigFactory.empty
 import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.Message
@@ -67,9 +67,10 @@ class ArtemisMessagingTests {
 
     @Before
     fun setUp() {
-        userService = RPCUserServiceImpl(FullNodeConfiguration(ConfigFactory.empty()))
+        val baseDirectory = temporaryFolder.root.toPath()
+        userService = RPCUserServiceImpl(FullNodeConfiguration(baseDirectory, empty()))
         config = TestNodeConfiguration(
-                basedir = temporaryFolder.newFolder().toPath(),
+                baseDirectory = baseDirectory,
                 myLegalName = "me",
                 networkMapService = null)
         LogHelper.setLevel(PersistentUniquenessProvider::class)

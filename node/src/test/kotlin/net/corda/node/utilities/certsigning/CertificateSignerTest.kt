@@ -35,7 +35,7 @@ class CertificateSignerTest {
         }
 
         val config = TestNodeConfiguration(
-                basedir = tempFolder.root.toPath(),
+                baseDirectory = tempFolder.root.toPath(),
                 myLegalName = "me",
                 networkMapService = null)
 
@@ -65,6 +65,6 @@ class CertificateSignerTest {
             assertFalse(containsAlias(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY))
         }
 
-        assertEquals(id, (config.certificatesPath / "certificate-request-id.txt").readLines { it.findFirst().get() })
+        assertEquals(id, (config.certificatesDirectory / "certificate-request-id.txt").readLines { it.findFirst().get() })
     }
 }

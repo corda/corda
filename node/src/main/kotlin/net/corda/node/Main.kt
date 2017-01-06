@@ -1,11 +1,9 @@
 package net.corda.node
 
 import com.typesafe.config.ConfigException
-import joptsimple.OptionParser
 import net.corda.core.*
 import net.corda.core.utilities.Emoji
 import net.corda.node.internal.Node
-import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.utilities.ANSIProgressObserver
 import org.fusesource.jansi.Ansi
@@ -14,7 +12,6 @@ import org.slf4j.LoggerFactory
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Paths
-import java.time.LocalDate
 import kotlin.system.exitProcess
 
 private var renderBasicInfoToConsole = true
@@ -31,33 +28,26 @@ fun printBasicNodeInfo(description: String, info: String? = null) {
 }
 
 fun main(args: Array<String>) {
+    val startTime = System.currentTimeMillis()
     checkJavaVersion()
 
-    val startTime = System.currentTimeMillis()
-
-    val parser = OptionParser()
-    // The intent of allowing a command line configurable directory and config path is to allow deployment flexibility.
-    // Other general configuration should live inside the config file unless we regularly need temporary overrides on the command line
-    val baseDirectoryArg = parser.accepts("base-directory", "The directory to put all files under").withOptionalArg()
-    val configFileArg = parser.accepts("config-file", "The path to the config file").withOptionalArg()
-    val logToConsoleArg = parser.accepts("log-to-console", "If set, prints logging to the console as well as to a file.")
-    val helpArg = parser.accepts("help").forHelp()
+    val argsParser = ArgsParser()
 
     val cmdlineOptions = try {
-        parser.parse(*args)
+        argsParser.parse(*args)
     } catch (ex: Exception) {
         println("Unknown command line arguments: ${ex.message}")
         exitProcess(1)
     }
 
     // Maybe render command line help.
-    if (cmdlineOptions.has(helpArg)) {
-        parser.printHelpOn(System.out)
+    if (cmdlineOptions.help) {
+        argsParser.printHelp(System.out)
         exitProcess(0)
     }
 
     // Set up logging.
-    if (cmdlineOptions.has(logToConsoleArg)) {
+    if (cmdlineOptions.logToConsole) {
         // This property is referenced from the XML config file.
         System.setProperty("consoleLogLevel", "info")
         renderBasicInfoToConsole = false
@@ -65,19 +55,17 @@ fun main(args: Array<String>) {
 
     drawBanner()
 
-    val baseDirectoryPath = if (cmdlineOptions.has(baseDirectoryArg)) Paths.get(cmdlineOptions.valueOf(baseDirectoryArg)) else Paths.get(".").normalize()
-    System.setProperty("log-path", (baseDirectoryPath / "logs").toAbsolutePath().toString())
+    System.setProperty("log-path", (cmdlineOptions.baseDirectory / "logs").toString())
 
     val log = LoggerFactory.getLogger("Main")
     printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
-    val configFile = if (cmdlineOptions.has(configFileArg)) Paths.get(cmdlineOptions.valueOf(configFileArg)) else null
+
     val conf = try {
-        FullNodeConfiguration(ConfigHelper.loadConfig(baseDirectoryPath, configFile))
+        FullNodeConfiguration(cmdlineOptions.baseDirectory, cmdlineOptions.loadConfig())
     } catch (e: ConfigException) {
         println("Unable to load the configuration file: ${e.rootCause.message}")
         exitProcess(2)
     }
-    val dir = conf.basedir.toAbsolutePath().normalize()
 
     log.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
     val info = ManagementFactory.getRuntimeMXBean()
@@ -87,13 +75,12 @@ fun main(args: Array<String>) {
     log.info("classpath: ${info.classPath}")
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
-    log.info("Working Directory: $dir")
+    log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
 
     try {
-        dir.createDirectories()
+        cmdlineOptions.baseDirectory.createDirectories()
 
         val node = conf.createNode()
-
         node.start()
         printPluginsAndServices(node)
 
@@ -121,8 +108,8 @@ private fun checkJavaVersion() {
         Paths.get("").normalize()
     } catch (e: ArrayIndexOutOfBoundsException) {
         println("""
-        You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.
-        Corda will now exit...""")
+You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.
+Corda will now exit...""")
         exitProcess(1)
     }
 }
@@ -138,13 +125,6 @@ private fun printPluginsAndServices(node: Node) {
 }
 
 private fun messageOfTheDay(): Pair<String, String> {
-    // TODO: Remove this next year.
-    val today = LocalDate.now()
-    if (today.isAfter(LocalDate.of(2016, 12, 20)) && today.isBefore(LocalDate.of(2017, 1, 3))) {
-        val claus = if (Emoji.hasEmojiTerminal) Emoji.santaClaus else ""
-        return Pair("The Corda team wishes you a very merry", "christmas and a happy new year! $claus")
-    }
-
     val messages = arrayListOf(
             "The only distributed ledger that pays\nhomage to Pac Man in its logo.",
             "You know, I was a banker once ...\nbut I lost interest. ${Emoji.bagOfCash}",
@@ -153,7 +133,6 @@ private fun messageOfTheDay(): Pair<String, String> {
             "\"It's OK computer, I go to sleep after\ntwenty minutes of inactivity too!\"",
             "It's kind of like a block chain but\ncords sounded healthier than chains.",
             "Computer science and finance together.\nYou should see our crazy Christmas parties!"
-
     )
     if (Emoji.hasEmojiTerminal)
         messages +=
@@ -177,5 +156,3 @@ private fun drawBanner() {
 """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
 a("--- DEVELOPER SNAPSHOT ------------------------------------------------------------").newline().reset())
 }
-
-

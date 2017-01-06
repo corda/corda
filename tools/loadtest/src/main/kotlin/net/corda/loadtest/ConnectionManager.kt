@@ -155,7 +155,7 @@ class NodeConnection(
 ) : Closeable {
 
     private val sslConfig = object : NodeSSLConfiguration {
-        override val certificatesPath = certificatesDirectory
+        override val certificatesDirectory = this@NodeConnection.certificatesDirectory
         override val keyStorePassword: String get() = "cordacadevpass"
         override val trustStorePassword: String get() = "trustpass"
     }

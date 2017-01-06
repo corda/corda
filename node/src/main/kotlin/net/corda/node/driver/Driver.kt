@@ -155,7 +155,7 @@ fun <A> driver(
         driverDsl = DriverDSL(
                 portAllocation = portAllocation,
                 debugPortAllocation = debugPortAllocation,
-                driverDirectory = driverDirectory,
+                driverDirectory = driverDirectory.toAbsolutePath(),
                 useTestClock = useTestClock,
                 isDebug = isDebug
         ),
@@ -349,7 +349,6 @@ open class DriverDSL(
         val baseDirectory = driverDirectory / name
         val configOverrides = mapOf(
                 "myLegalName" to name,
-                "basedir" to baseDirectory.normalize().toString(),
                 "artemisAddress" to messagingAddress.toString(),
                 "webAddress" to apiAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
@@ -367,11 +366,14 @@ open class DriverDSL(
                 }
         ) + customOverrides
 
-        val configuration = FullNodeConfiguration(ConfigHelper.loadConfig(
-                baseDirectoryPath = baseDirectory,
-                allowMissingConfig = true,
-                configOverrides = configOverrides
-        ))
+        val configuration = FullNodeConfiguration(
+                baseDirectory,
+                ConfigHelper.loadConfig(
+                        baseDirectory = baseDirectory,
+                        allowMissingConfig = true,
+                        configOverrides = configOverrides
+                )
+        )
 
         val startNode = startNode(executorService, configuration, quasarJarPath, debugPort)
         registerProcess(startNode)
@@ -421,11 +423,10 @@ open class DriverDSL(
 
         val baseDirectory = driverDirectory / networkMapLegalName
         val config = ConfigHelper.loadConfig(
-                baseDirectoryPath = baseDirectory,
+                baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = mapOf(
                         "myLegalName" to networkMapLegalName,
-                        "basedir" to baseDirectory.normalize().toString(),
                         "artemisAddress" to networkMapAddress.toString(),
                         "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to "",
@@ -434,7 +435,7 @@ open class DriverDSL(
         )
 
         log.info("Starting network-map-service")
-        val startNode = startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort)
+        val startNode = startNode(executorService, FullNodeConfiguration(baseDirectory, config), quasarJarPath, debugPort)
         registerProcess(startNode)
         return startNode
     }
@@ -456,7 +457,7 @@ open class DriverDSL(
                 debugPort: Int?
         ): ListenableFuture<Process> {
             // Write node.conf
-            writeConfig(nodeConf.basedir, "node.conf", nodeConf.config)
+            writeConfig(nodeConf.baseDirectory, "node.conf", nodeConf.config)
 
             val className = "net.corda.node.MainKt" // cannot directly get class for this, so just use string
             val separator = System.getProperty("file.separator")
@@ -471,11 +472,11 @@ open class DriverDSL(
             val javaArgs = listOf(path) +
                     listOf("-Dname=${nodeConf.myLegalName}", "-javaagent:$quasarJarPath") + debugPortArg +
                     listOf("-cp", classpath, className) +
-                    "--base-directory=${nodeConf.basedir}"
+                    "--base-directory=${nodeConf.baseDirectory}"
             val builder = ProcessBuilder(javaArgs)
             builder.redirectError(Paths.get("error.$className.log").toFile())
             builder.inheritIO()
-            builder.directory(nodeConf.basedir.toFile())
+            builder.directory(nodeConf.baseDirectory.toFile())
             val process = builder.start()
             return Futures.allAsList(
                     addressMustBeBound(executorService, nodeConf.artemisAddress),

@@ -270,7 +270,7 @@ class Node(override val configuration: FullNodeConfiguration,
     override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider {
         return when (type) {
             RaftValidatingNotaryService.type -> with(configuration) {
-                RaftUniquenessProvider(basedir, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
+                RaftUniquenessProvider(baseDirectory, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
             }
             else -> PersistentUniquenessProvider()
         }
@@ -393,7 +393,7 @@ class Node(override val configuration: FullNodeConfiguration,
         // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
         // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
         // twice with the same directory: that's a user error and we should bail out.
-        val pidPath = configuration.basedir / "process-id"
+        val pidPath = configuration.baseDirectory / "process-id"
         val file = pidPath.toFile()
         if (!file.exists()) {
             file.createNewFile()
@@ -402,7 +402,7 @@ class Node(override val configuration: FullNodeConfiguration,
         val f = RandomAccessFile(file, "rw")
         val l = f.channel.tryLock()
         if (l == null) {
-            log.error("It appears there is already a node running with the specified data directory ${configuration.basedir}")
+            log.error("It appears there is already a node running with the specified data directory ${configuration.baseDirectory}")
             log.error("Shut that other node down and try again. It may have process ID ${file.readText()}")
             System.exit(1)
         }

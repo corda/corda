@@ -103,7 +103,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private var networkChangeHandle: Subscription? = null
 
     init {
-        config.basedir.expectedOnDefaultFileSystem()
+        config.baseDirectory.expectedOnDefaultFileSystem()
     }
 
     /**
@@ -143,7 +143,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     }
 
     private fun createArtemisConfig(): Configuration = ConfigurationImpl().apply {
-        val artemisDir = config.basedir / "artemis"
+        val artemisDir = config.baseDirectory / "artemis"
         bindingsDirectory = (artemisDir / "bindings").toString()
         journalDirectory = (artemisDir / "journal").toString()
         largeMessagesDirectory = (artemisDir / "large-messages").toString()

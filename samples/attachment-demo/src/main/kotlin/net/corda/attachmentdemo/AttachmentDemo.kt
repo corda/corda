@@ -116,6 +116,6 @@ private fun sslConfigFor(nodename: String, certsPath: String?): NodeSSLConfigura
     return object : NodeSSLConfiguration {
         override val keyStorePassword: String = "cordacadevpass"
         override val trustStorePassword: String = "trustpass"
-        override val certificatesPath: Path = if (certsPath != null) Paths.get(certsPath) else Paths.get("build") / "nodes" / nodename / "certificates"
+        override val certificatesDirectory: Path = if (certsPath != null) Paths.get(certsPath) else Paths.get("build") / "nodes" / nodename / "certificates"
     }
 }

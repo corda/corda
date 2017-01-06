@@ -52,7 +52,7 @@ class P2PSecurityTest : NodeBasedTest() {
 
     private fun startSimpleNode(legalName: String): SimpleNode {
         val config = TestNodeConfiguration(
-                basedir = tempFolder.root.toPath() / legalName,
+                baseDirectory = tempFolder.root.toPath() / legalName,
                 myLegalName = legalName,
                 networkMapService = NetworkMapInfo(networkMapNode.configuration.artemisAddress, networkMapNode.info.legalIdentity.name))
         config.configureWithDevSSLCertificate() // This creates the node's TLS cert with the CN as the legal name
