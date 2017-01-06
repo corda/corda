@@ -15,7 +15,6 @@ import java.util.function.Function
 import javax.annotation.concurrent.ThreadSafe
 
 object DataVending {
-
     class Plugin : CordaPluginRegistry() {
         override val servicePlugins = listOf(Function(::Service))
     }

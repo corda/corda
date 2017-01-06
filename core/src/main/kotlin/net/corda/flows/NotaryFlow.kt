@@ -16,7 +16,6 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 
 object NotaryFlow {
-
     /**
      * A flow to be used for obtaining a signature from a [NotaryService] ascertaining the transaction
      * timestamp is correct and none of its inputs have been used in another completed transaction.

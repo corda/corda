@@ -6,11 +6,13 @@ import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.Kryo
+import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.support.jdk8.collections.removeIf
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.commonName
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
@@ -62,7 +64,7 @@ import javax.annotation.concurrent.ThreadSafe
  * TODO: Timeouts
  * TODO: Surfacing of exceptions via an API and/or management UI
  * TODO: Ability to control checkpointing explicitly, for cases where you know replaying a message can't hurt
- * TODO: Implement stub/skel classes that provide a basic RPC framework on top of this.
+ * TODO: Don't store all active flows in memory, load from the database on demand.
  */
 @ThreadSafe
 class StateMachineManager(val serviceHub: ServiceHubInternal,
@@ -89,15 +91,17 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
-    private val mutex = ThreadBox(object {
+    private class InnerState {
         var started = false
         val stateMachines = LinkedHashMap<FlowStateMachineImpl<*>, Checkpoint>()
-        val changesPublisher = PublishSubject.create<Change>()
+        val changesPublisher = PublishSubject.create<Change>()!!
+        val fibersWaitingForLedgerCommit = HashMultimap.create<SecureHash,  FlowStateMachineImpl<*>>()!!
 
         fun notifyChangeObservers(fiber: FlowStateMachineImpl<*>, addOrRemove: AddOrRemove) {
             changesPublisher.bufferUntilDatabaseCommit().onNext(Change(fiber.logic, addOrRemove, fiber.id))
         }
-    })
+    }
+    private val mutex = ThreadBox(InnerState())
 
     // True if we're shutting down, so don't resume anything.
     @Volatile private var stopping = false
@@ -152,7 +156,25 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     fun start() {
         restoreFibersFromCheckpoints()
+        listenToLedgerTransactions()
         serviceHub.networkMapCache.mapServiceRegistered.then(executor) { resumeRestoredFibers() }
+    }
+
+    private fun listenToLedgerTransactions() {
+        // Observe the stream of committed, validated transactions and resume fibers that are waiting for them.
+        serviceHub.storageService.validatedTransactions.updates.subscribe { stx ->
+            val hash = stx.id
+            val flows: Set<FlowStateMachineImpl<*>> = mutex.locked { fibersWaitingForLedgerCommit.removeAll(hash) }
+            if (flows.isNotEmpty()) {
+                executor.executeASAP {
+                    for (flow in flows) {
+                        logger.info("Resuming ${flow.id} because it was waiting for tx ${flow.waitingForLedgerCommitOf!!} which is now committed.")
+                        flow.waitingForLedgerCommitOf = null
+                        resumeFiber(flow)
+                    }
+                }
+            }
+        }
     }
 
     private fun decrementLiveFibers() {
@@ -217,8 +239,20 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun resumeRestoredFiber(fiber: FlowStateMachineImpl<*>) {
         fiber.openSessions.values.forEach { openSessions[it.ourSessionId] = it }
+        val waitingForHash = fiber.waitingForLedgerCommitOf
         if (fiber.openSessions.values.any { it.waitingForResponse }) {
             fiber.logger.info("Restored, pending on receive")
+        } else if (waitingForHash != null) {
+            val stx = databaseTransaction(database) {
+                serviceHub.storageService.validatedTransactions.getTransaction(waitingForHash)
+            }
+            if (stx != null) {
+                fiber.logger.info("Resuming fiber as tx $waitingForHash has committed.")
+                resumeFiber(fiber)
+            } else {
+                fiber.logger.info("Restored, pending on ledger commit of $waitingForHash")
+                mutex.locked { fibersWaitingForLedgerCommit.put(waitingForHash, fiber) }
+            }
         } else {
             resumeFiber(fiber)
         }
@@ -424,6 +458,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * Note that you must be on the [executor] thread.
      */
     fun <T> add(logic: FlowLogic<T>): FlowStateMachine<T> {
+        // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
         // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
         // on the flow completion future inside that context. The problem is that any progress checkpoints are
@@ -457,8 +492,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private fun resumeFiber(fiber: FlowStateMachineImpl<*>) {
         // Avoid race condition when setting stopping to true and then checking liveFibers
         incrementLiveFibers()
-        if (!stopping) executor.executeASAP {
-            fiber.resume(scheduler)
+        if (!stopping) {
+            executor.executeASAP {
+                fiber.resume(scheduler)
+            }
         } else {
             fiber.logger.debug("Not resuming as SMM is stopping.")
             decrementLiveFibers()
@@ -466,6 +503,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun processIORequest(ioRequest: FlowIORequest) {
+        executor.checkOnThread()
         if (ioRequest is SendRequest) {
             if (ioRequest.message is SessionInit) {
                 openSessions[ioRequest.session.ourSessionId] = ioRequest.session
@@ -474,6 +512,24 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             if (ioRequest !is ReceiveRequest<*>) {
                 // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
                 resumeFiber(ioRequest.session.fiber)
+            }
+        } else if (ioRequest is WaitForLedgerCommit) {
+            // Is it already committed?
+            val stx = databaseTransaction(database) {
+                serviceHub.storageService.validatedTransactions.getTransaction(ioRequest.hash)
+            }
+            if (stx != null) {
+                resumeFiber(ioRequest.fiber)
+            } else {
+                // No, then register to wait.
+                //
+                // We assume this code runs on the server thread, which is the only place transactions are committed
+                // currently. When we liberalise our threading somewhat, handing of wait requests will need to be
+                // reworked to make the wait atomic in another way. Otherwise there is a race between checking the
+                // database and updating the waiting list.
+                mutex.locked {
+                    fibersWaitingForLedgerCommit[ioRequest.hash] += ioRequest.fiber
+                }
             }
         }
     }
