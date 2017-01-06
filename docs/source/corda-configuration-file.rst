@@ -47,8 +47,8 @@ NetworkMapService plus Simple Notary configuration file.
 Fields
 ------
 
-:basedir: This specifies the node workspace folder either as an absolute path, or relative to the current working directory.
-    It can be overidden by the ``--base-directory`` command line option, in which case the the value in the file is ignored
+:basedir: This specifies the node workspace folder either as an absolute path, or relative to the current working directory. 
+    It can be overridden by the ``--base-directory`` command line option, in which case the value in the file is ignored 
     and a ``node.conf`` file is expected in that workspace directory as the configuration source.
 
 :myLegalName: The legal identity of the node acts as a human readable alias to the node's public key and several demos use
@@ -98,8 +98,8 @@ Fields
     joining them to the same cluster to replicate the committed state log. Note that the Raft cluster uses a separate transport
      layer for communication that does not integrate with ArtemisMQ messaging services.
 
-:notaryClusterAddresses: List of Raft cluster member addresses used to joining the cluster. At least one of the specified
-    members must be active and be able to communicate with the cluster leader for joining. If empty, a new cluster will be
+:notaryClusterAddresses: List of Raft cluster member addresses used to join the cluster. At least one of the specified 
+    members must be active and be able to communicate with the cluster leader for joining. If empty, a new cluster will be 
     bootstrapped. Required only when running a distributed notary service.
 
 :networkMapService: If `null`, or missing the node is declaring itself as the NetworkMapService host. Otherwise this is

@@ -1,5 +1,5 @@
-Clauses key concepts
-====================
+Clauses
+=======
 
 Basic clause structure
 ----------------------
@@ -34,7 +34,7 @@ is no different than normal contract verification but using clauses it's split i
 When writing a contract you need to override the contract's ``verify`` function which should call ``verifyClause``. See: :ref:`verify_ref`.
 
 .. note:: A clause ``verify`` function returns the set of processed commands, at the end of ``verifyClause`` execution
-    there is a check if all of transaction's commands were matched. If not then an exception is raised. This is done to
+    there is a check if all of transaction's commands were matched. If not, then an exception is raised. This is done to
     enforce that spurious commands cannot be included in a transaction, ensuring that the transaction is as clear as
     possible. As an example imagine a transaction with two commands: ``Move`` and ``Issue`` included, with verification written
     using ``FirstComposition`` on clauses that require single command set. Thus only one of transaction's commands will match

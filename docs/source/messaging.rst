@@ -38,7 +38,7 @@ The network map currently supports:
 * Looking up nodes by service
 * Looking up node for a party
 * Suggesting a node providing a specific service, based on suitability for a contract and parties, for example suggesting
-  an appropriate interest rates oracle for a interest rate swap contract. Currently no recommendation logic is in place.
+  an appropriate interest rates oracle for an interest rate swap contract. Currently no recommendation logic is in place.
 
 Message queues
 --------------

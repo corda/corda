@@ -1,7 +1,7 @@
 .. _log4j2: http://logging.apache.org/log4j/2.x/
 
-Introduction - What is a corda network?
-=======================================
+What is a corda network?
+========================
 
 A Corda network consists of a number of machines running nodes, including a single node operating as the network map
 service. These nodes communicate using persistent protocols in order to create and validate transactions.
@@ -15,10 +15,10 @@ services, and one node may run several of them.
 * Regular node: All nodes have a vault and may start protocols communicating with other nodes, notaries and oracles and evolve their private ledger.
 
 Setting up your own network
-===========================
+---------------------------
 
 Certificates
-------------
+~~~~~~~~~~~~
 
 All nodes belonging to the same Corda network must have the same root CA. For testing purposes you can
 use ``certSigningRequestUtility.jar`` to generate a node certificate with a fixed test root:
@@ -31,7 +31,7 @@ use ``certSigningRequestUtility.jar`` to generate a node certificate with a fixe
     java -jar build/libs/certSigningRequestUtility.jar --base-dir NODE_DIRECTORY/
 
 Configuration
--------------
+~~~~~~~~~~~~~
 
 A node can be configured by adding/editing ``node.conf`` in the node's directory. For details see :doc:`corda-configuration-file`.
 
@@ -50,7 +50,7 @@ The most important fields regarding network configuration are:
   then this field must not be specified.
 
 Starting the nodes
-------------------
+~~~~~~~~~~~~~~~~~~
 
 You may now start the nodes in any order. Note that the node is not fully started until it has successfully registered with the network map!
 
@@ -61,7 +61,7 @@ You should see a banner, some log lines and eventually ``Node started up and reg
 In terms of process management there is no prescribed method. You may start the jars by hand or perhaps use systemd and friends.
 
 Logging
--------
+~~~~~~~
 
 Only a handful of important lines are printed to the console. For
 details/diagnosing problems check the logs.
@@ -71,7 +71,7 @@ are by default redirected to files in ``NODE_DIRECTORY/logs/``.
 
 
 Connecting to the nodes
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Once a node has started up successfully you may connect to it as a client to initiate protocols/query state etc.
 Depending on your network setup you may need to tunnel to do this remotely.

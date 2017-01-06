@@ -63,7 +63,7 @@ other obligation commands in the same transaction, as it applies to state object
 as such applies across multiple terms.
 
 All other obligation contract commands specify obligation terms (what is to be delivered, by whom and by when)
-which are used as a grouping key for input/output states and commands. Issuance and lifecyle commands are mutually
+which are used as a grouping key for input/output states and commands. Issuance and lifecycle commands are mutually
 exclusive of other commands (move/exit) which apply to the same obligation terms, but multiple commands can be present
 in a single transaction if they apply to different terms. For example, a contract can have two different ``Issue``
 commands as long as they apply to different terms, but could not have an ``Issue`` and a ``Net``, or an ``Issue`` and

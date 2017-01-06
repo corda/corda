@@ -116,7 +116,7 @@ As a result, we need to ensure that the notary either has to also sign the trans
 or perform timestamping *and* notarisation at the same time, which is the chosen behaviour for this model.
 
 There will never be exact clock synchronisation between the party creating the transaction and the notary.
-This is not only due to physics, network latencies etc but because between inserting the command and getting the
+This is not only due to physics, network latencies, etc., but because between inserting the command and getting the
 notary to sign there may be many other steps, like sending the transaction to other parties involved in the trade
 as well, or even requesting human signoff. Thus the time observed by the notary may be quite different to the
 time observed in step 1.
