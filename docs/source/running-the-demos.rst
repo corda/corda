@@ -66,27 +66,27 @@ To run from the command line in Unix:
 
 1. Run ``./gradlew samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples/irs-demo/build``
 2. Run ``./gradlew samples:irs-demo:installDist``
-2. Move to the ``samples/irs-demo/build`` directory
-3. Run ``./nodes/runnodes`` to open up three new terminals with the three nodes
-4. Run ``./install/irs-demo/bin/irs-demo --role UploadRates``. You should see a
+3. Move to the ``samples/irs-demo/build`` directory
+4. Run ``./nodes/runnodes`` to open up three new terminals with the three nodes
+5. Run ``./install/irs-demo/bin/irs-demo --role UploadRates``. You should see a
    message be printed to the first node (the notary/oracle/network map node) saying that it has accepted the new
    interest rates
-5. Now run ``./install/irs-demo/bin/irs-demo --role Trade 1``. The number is a trade ID. You should
+6. Now run ``./install/irs-demo/bin/irs-demo --role Trade 1``. The number is a trade ID. You should
    see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
-6. Now run ``./install/irs-demo/bin/irs-demo --role Date 2017-12-12`` to roll the simulated clock forward and see some fixings take place
+7. Now run ``./install/irs-demo/bin/irs-demo --role Date 2017-12-12`` to roll the simulated clock forward and see some fixings take place
 
 To run from the command line in Windows:
 
 1. Run ``gradlew samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples\irs-demo\build``
 2. Run ``gradlew samples:irs-demo:installDist``
-2. Move to the ``samples\irs-demo\build`` directory
-3. Run ``nodes\runnodes`` to open up three new terminals with the three nodes.
-4. Run ``install\irs-demo\bin\irs-demo --role UploadRates``. You should see a
+3. Move to the ``samples\irs-demo\build`` directory
+4. Run ``nodes\runnodes`` to open up three new terminals with the three nodes.
+5. Run ``install\irs-demo\bin\irs-demo --role UploadRates``. You should see a
    message be printed to the first node (the notary/oracle/network map node) saying that it has accepted the new
    interest rates
-5. Now run ``install\irs-demo\bin\irs-demo --role Trade 1``. The number is a trade ID. You should
+6. Now run ``install\irs-demo\bin\irs-demo --role Trade 1``. The number is a trade ID. You should
    see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
-6. Now run ``install\irs-demo\bin\irs-demo --role Date 2017-12-12`` to roll the simulated clock forward and see some fixings take place
+7. Now run ``install\irs-demo\bin\irs-demo --role Date 2017-12-12`` to roll the simulated clock forward and see some fixings take place
 
 To run from IntelliJ:
 
