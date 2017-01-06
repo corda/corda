@@ -15,7 +15,7 @@ Milestone 7
     * Video demonstration of the Node Explorer: `https://www.corda.net/2017/01/03/the-node-explorer/`_.
 
 * The CorDapp template now has a Java example that parallels the Kotlin one for developers more comfortable with Java.
-  ORM support added to the pair of examples.
+  ORM support added to the Kotlin example.
 
 * Demos:
 
@@ -33,11 +33,11 @@ Milestone 7
       This also means that nodes or RPC users cannot pretend to be other nodes or RPC users.
     * The node now does host verification of any node that connects to it and prevents man in the middle attacks.
 
-
 * Improvements:
-    * Added a custom serialiser for CompositeKey.
-    * Added commonName extension method to X500Name and helper class for x509 cert factories.
-    * Vault updates now contain full StateAndRef which allows subscribers to check whether the update contains
+
+    * Added a custom serialiser for ``CompositeKey``.
+    * Added ``commonName`` extension method to ``X500Name`` and helper class for x509 cert factories.
+    * Vault updates now contain full ``StateAndRef`` which allows subscribers to check whether the update contains
       relevant states.
     * Cash balances are calculated using aggregate values to prevent iterating through all states in the vault, which
       improves performance.
