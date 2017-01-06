@@ -17,9 +17,12 @@ import javax.annotation.concurrent.ThreadSafe
 /**
  * An RPC client connects to the specified server and allows you to make calls to the server that perform various
  * useful tasks. See the documentation for [proxy] or review the docsite to learn more about how this API works.
+ *
+ * @param host The hostname and messaging port of the node.
+ * @param config If specified, the SSL configuration to use. If not specified, SSL will be disabled and the node will not be authenticated, nor will RPC traffic be encrypted.
  */
 @ThreadSafe
-class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfiguration) : Closeable, ArtemisMessagingComponent() {
+class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfiguration?) : Closeable, ArtemisMessagingComponent() {
     // TODO: Certificate handling for clients needs more work.
     private inner class State {
         var running = false
@@ -106,6 +109,7 @@ class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfigur
         }
     }
 
+    @Suppress("UNUSED")
     private fun finalize() {
         state.locked {
             if (running) {
