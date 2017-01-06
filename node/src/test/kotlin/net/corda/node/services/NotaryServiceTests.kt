@@ -85,7 +85,7 @@ class NotaryServiceTests {
         assertThat(ex.error).isInstanceOf(NotaryError.TimestampInvalid::class.java)
     }
 
-    @Test fun `should report conflict for a duplicate transaction`() {
+    @Test fun `should sign identical transaction multiple times (signing is idempotent)`() {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
@@ -93,10 +93,26 @@ class NotaryServiceTests {
             tx.toSignedTransaction(false)
         }
 
-        val firstSpend = NotaryFlow.Client(stx)
-        val secondSpend = NotaryFlow.Client(stx)
-        clientNode.services.startFlow(firstSpend)
-        val future = clientNode.services.startFlow(secondSpend)
+        val firstAttempt = NotaryFlow.Client(stx)
+        val secondAttempt = NotaryFlow.Client(stx)
+        val f1 = clientNode.services.startFlow(firstAttempt)
+        val f2 = clientNode.services.startFlow(secondAttempt)
+
+        net.runNetwork()
+
+        assertEquals(f1.resultFuture.getOrThrow(), f2.resultFuture.getOrThrow())
+    }
+
+    @Test fun `should report conflict when inputs are reused within a single transactions`() {
+        val stx = run {
+            val inputState = issueState(clientNode)
+            // Use inputState twice as input of a single transaction.
+            val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState, inputState)
+            tx.signWith(clientNode.keyPair!!)
+            tx.toSignedTransaction(false)
+        }
+
+        val future = clientNode.services.startFlow(NotaryFlow.Client(stx))
 
         net.runNetwork()
 
@@ -106,6 +122,32 @@ class NotaryServiceTests {
         notaryError.conflict.verified()
     }
 
+    @Test fun `should report conflict when inputs are reused across transactions`() {
+        val inputState = issueState(clientNode)
+        val stx = run {
+            val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
+            tx.signWith(clientNode.keyPair!!)
+            tx.toSignedTransaction(false)
+        }
+        val stx2 = run {
+            val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
+            tx.addInputState(issueState(clientNode))
+            tx.signWith(clientNode.keyPair!!)
+            tx.toSignedTransaction(false)
+        }
+
+        val firstSpend = NotaryFlow.Client(stx)
+        val secondSpend = NotaryFlow.Client(stx2) // Double spend the inputState in a second transaction.
+        clientNode.services.startFlow(firstSpend)
+        val future = clientNode.services.startFlow(secondSpend)
+
+        net.runNetwork()
+
+        val ex = assertFailsWith(NotaryException::class) { future.resultFuture.getOrThrow() }
+        val notaryError = ex.error as NotaryError.Conflict
+        assertEquals(notaryError.tx, stx2.tx)
+        notaryError.conflict.verified()
+    }
 
     private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.WithKey> {
         val flow = NotaryFlow.Client(stx)
