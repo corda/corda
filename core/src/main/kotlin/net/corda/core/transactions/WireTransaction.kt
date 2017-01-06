@@ -107,6 +107,9 @@ class WireTransaction(
         val entries = listOf(inputs, outputs, attachments, commands)
         entries.forEach { it.mapTo(resultHashes, { x -> serializedHash(x) }) }
         if (timestamp != null) resultHashes.add(serializedHash(timestamp))
+        if (notary != null) resultHashes.add(serializedHash(notary))
+        resultHashes.add(serializedHash(mustSign.sortedBy { it.hashCode() }))
+        resultHashes.add(serializedHash(type))
         return resultHashes
     }
 

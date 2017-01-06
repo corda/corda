@@ -6,8 +6,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
-import net.corda.core.utilities.DUMMY_PUBKEY_1
-import net.corda.core.utilities.TEST_TX_TIME
+import net.corda.core.utilities.*
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
 import net.corda.testing.ledger
@@ -106,10 +105,27 @@ class PartialMerkleTreeTest {
         assertEquals(testTx.id, d.id)
         assertEquals(1, leaves.commands.size)
         assertEquals(1, leaves.outputs.size)
-        println(leaves.inputs[0])
         assertEquals(1, leaves.inputs.size)
         assertTrue(mt.filteredLeaves.timestamp != null)
         assert(mt.verify(testTx.id))
+    }
+
+    @Test
+    fun `transactions with different notaries have different ids`() {
+        fun makeWtx(notary: Party): WireTransaction =
+                WireTransaction(
+                        inputs = listOf(StateRef(SecureHash.sha256("0"), 0)),
+                        attachments = emptyList(),
+                        outputs = emptyList(),
+                        commands = emptyList(),
+                        notary = notary,
+                        signers = listOf(DUMMY_KEY_1.public.composite, DUMMY_KEY_2.public.composite),
+                        type = TransactionType.General(),
+                        timestamp = null
+                )
+        val wtx1 = makeWtx(DUMMY_NOTARY)
+        val wtx2 = makeWtx(MEGA_CORP)
+        assertNotEquals(wtx1.id, wtx2.id)
     }
 
     @Test
@@ -210,7 +226,7 @@ class PartialMerkleTreeTest {
     }
 
     @Test
-    fun `transactions with the same ids`() {
+    fun `transactions with the same ids, duplicated last node bug`() {
         val tx1 = txs[1]
         val tx2 = txs[2]
         assertFalse(tx1.id == tx2.id)
