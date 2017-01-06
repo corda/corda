@@ -101,6 +101,7 @@ object NotaryFlow {
 
             val result = try {
                 validateTimestamp(wtx)
+                // TODO:  Move the duplicate input detection to `TransactionType.verify()`.
                 detectDuplicateInputs(wtx)
                 beforeCommit(stx)
                 commitInputStates(wtx)
