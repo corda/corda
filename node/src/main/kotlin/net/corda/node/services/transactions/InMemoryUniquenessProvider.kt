@@ -18,15 +18,18 @@ class InMemoryUniquenessProvider() : UniquenessProvider {
     override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
         committedStates.locked {
             val conflictingStates = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
-            for (inputState in states) {
+            states.forEachIndexed { i, inputState ->
                 val consumingTx = get(inputState)
-                if (consumingTx != null) conflictingStates[inputState] = consumingTx
+                // Allow re-commit if consumingTx doesn't change.
+                if (consumingTx != null && consumingTx != UniquenessProvider.ConsumingTx(txId, i, callerIdentity))
+                    conflictingStates[inputState] = consumingTx
             }
             if (conflictingStates.isNotEmpty()) {
                 val conflict = UniquenessProvider.Conflict(conflictingStates)
                 throw UniquenessException(conflict)
             } else {
                 states.forEachIndexed { i, stateRef ->
+                    // TODO: Put is a noop in the re-commit case.
                     put(stateRef, UniquenessProvider.ConsumingTx(txId, i, callerIdentity))
                 }
             }

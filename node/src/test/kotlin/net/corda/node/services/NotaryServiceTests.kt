@@ -85,7 +85,7 @@ class NotaryServiceTests {
         assertThat(ex.error).isInstanceOf(NotaryError.TimestampInvalid::class.java)
     }
 
-    @Test fun `should report conflict for a duplicate transaction`() {
+    @Test fun `should sign identical transaction multiple times (signing is idempotent)`() {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
@@ -93,8 +93,32 @@ class NotaryServiceTests {
             tx.toSignedTransaction(false)
         }
 
+        val firstAttempt = NotaryFlow.Client(stx)
+        val secondAttempt = NotaryFlow.Client(stx)
+        clientNode.services.startFlow(firstAttempt)
+        val future = clientNode.services.startFlow(secondAttempt)
+
+        net.runNetwork()
+
+        future.resultFuture.getOrThrow()
+    }
+
+    @Test fun `should report conflict when inputs are reused accross transactions`() {
+        val inputState = issueState(clientNode)
+        val stx = run {
+            val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
+            tx.signWith(clientNode.keyPair!!)
+            tx.toSignedTransaction(false)
+        }
+        val stx2 = run {
+            val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
+            tx.addInputState(issueState(clientNode))
+            tx.signWith(clientNode.keyPair!!)
+            tx.toSignedTransaction(false)
+        }
+
         val firstSpend = NotaryFlow.Client(stx)
-        val secondSpend = NotaryFlow.Client(stx)
+        val secondSpend = NotaryFlow.Client(stx2) // Double spend the inputState in a second transaction.
         clientNode.services.startFlow(firstSpend)
         val future = clientNode.services.startFlow(secondSpend)
 
@@ -102,10 +126,9 @@ class NotaryServiceTests {
 
         val ex = assertFailsWith(NotaryException::class) { future.resultFuture.getOrThrow() }
         val notaryError = ex.error as NotaryError.Conflict
-        assertEquals(notaryError.tx, stx.tx)
+        assertEquals(notaryError.tx, stx2.tx)
         notaryError.conflict.verified()
     }
-
 
     private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.WithKey> {
         val flow = NotaryFlow.Client(stx)
