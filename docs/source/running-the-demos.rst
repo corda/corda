@@ -46,7 +46,7 @@ To run from the command line in Windows:
 To run from IntelliJ:
 
 1. Open the Corda project in IntelliJ and import the Gradle project
-2. Run the ``Trader Demo: Run Nodes`` configuration, which will start four nodes. Once all nodes are started you will see several 
+2. Run the ``Trader Demo: Run Nodes`` configuration, which will start four nodes. Once all nodes are started you will see several
    "Node started up and registered in ..." messages
 3. Run ``Trader Demo: Run Buyer`` to instruct the buyer node to request issuance of some cash from the Bank of Corda node
 4. Run ``Trader Demo: Run Seller`` to trigger the transaction
@@ -87,7 +87,7 @@ To run from the command line in Windows:
 To run from IntelliJ:
 
 1. Open the Corda project in IntelliJ and import the Gradle project
-2. Run the ``IRS Demo: Run Nodes`` configuration to start three nodes. Once all nodes are started you will see several 
+2. Run the ``IRS Demo: Run Nodes`` configuration to start three nodes. Once all nodes are started you will see several
    "Node started up and registered in ..." messages
 3. Run ``IRS Demo: Run Upload Rates`` to upload the new interest rates to the oracle
 4. Run ``IRS Demo: Run Trade`` to have the nodes agree on a trade
@@ -98,7 +98,7 @@ To run from IntelliJ:
 This demo also has a web app. To use this, set up the trades and then navigate to
 http://localhost:10005/web/irsdemo and http://localhost:10007/web/irsdemo to see each node's view of the ledger.
 
-To use the web app, click the "Create Deal" button, fill in the form, then click the "Submit" button. You can then 
+To use the web app, click the "Create Deal" button, fill in the form, then click the "Submit" button. You can then
 use the time controls at the top left of the home page to run the fixings. Click any individual trade in the blotter to view it.
 
 Attachment demo
@@ -111,7 +111,7 @@ To run from the command line in Unix:
 1. Run ``./gradlew samples:attachment-demo:deployNodes`` to create a set of configs and installs under ``samples/attachment-demo/build/nodes``
 2. Run ``./samples/attachment-demo/build/nodes/runnodes`` to open up three new terminal tabs/windows with the three nodes
 3. Run ``./gradlew samples:attachment-demo:runRecipient``, which will block waiting for a trade to start
-4. Run ``./gradlew samples:attachment-demo:runSender`` in another terminal window to send the attachment. Now look at the other windows to 
+4. Run ``./gradlew samples:attachment-demo:runSender`` in another terminal window to send the attachment. Now look at the other windows to
    see the output of the demo
 
 To run from the command line in Windows:
@@ -119,13 +119,13 @@ To run from the command line in Windows:
 1. Run ``gradlew samples:attachment-demo:deployNodes`` to create a set of configs and installs under ``samples\attachment-demo\build\nodes``
 2. Run ``samples\attachment-demo\build\nodes\runnodes`` to open up three new terminal tabs/windows with the three nodes
 3. Run ``gradlew samples:attachment-demo:runRecipient``, which will block waiting for a trade to start
-4. Run ``gradlew samples:attachment-demo:runSender`` in another terminal window to send the attachment. Now look at the other windows to 
+4. Run ``gradlew samples:attachment-demo:runSender`` in another terminal window to send the attachment. Now look at the other windows to
    see the output of the demo
 
 To run from IntelliJ:
 
 1. Open the Corda project in IntelliJ and import the Gradle project
-2. Run the ``Attachment Demo: Run Nodes`` configuration to start three nodes. Once all nodes are started you will see several 
+2. Run the ``Attachment Demo: Run Nodes`` configuration to start three nodes. Once all nodes are started you will see several
    "Node started up and registered in ..." messages
 3. Run ``Attachment Demo: Run Recipient``, which will wait for a trade to start
 4. Run ``Attachment Demo: Run Sender`` to send the attachment
@@ -162,7 +162,7 @@ To run from the command line in Windows:
 To run from IntelliJ:
 
 1. Open the Corda project in IntelliJ and import the Gradle project
-2. Run the ``Notary Demo: Run Nodes`` configuration to start the nodes. Once all nodes are started you will see several 
+2. Run the ``Notary Demo: Run Nodes`` configuration to start the nodes. Once all nodes are started you will see several
    "Node started up and registered in ..." messages
 3. Run the ``Notary Demo: Run Notarisation`` configuration to make a call to the "Party" node to initiate notarisation requests
    In a few seconds you will see a message "Notarised 10 transactions" with a list of transaction ids and the signer public keys
@@ -217,7 +217,7 @@ To run from the command line in Windows:
 To run from IntelliJ:
 
 1. Open the Corda project in IntelliJ and import the Gradle project
-2. Run the ``Bank Of Corda Demo: Run Issuer`` configuration to start three nodes. Once all nodes are started you will see several 
+2. Run the ``Bank Of Corda Demo: Run Issuer`` configuration to start three nodes. Once all nodes are started you will see several
    "Node started up and registered in ..." messages
 3. Run ``Bank Of Corda Demo: Run RPC Cash Issue`` to request issuance of some cash on behalf of Big Corporation via RPC
 4. Run ``Bank Of Corda Demo: Run Web Cash Issue`` to request issuance of some cash on behalf of Big Corporation via HTTP
@@ -310,7 +310,7 @@ Demo execution (step by step)
 *****************************
 
 To run from the command line in Unix:
-  
+
 1. Deploy the nodes using ``./gradlew samples:simm-valuation-demo:deployNodes``
 2. Run the nodes using ``cd samples/simm-valuation-demo/build/nodes && ./runnodes``
 
@@ -331,6 +331,7 @@ Then, for both:
 5. Enter at least 3 trades - via the "Create New Trade" tab
 6. On the "Agree Valuations" tab, click the "Start Calculations" button
 
-Additionally, you can confirm that these trades are not visible from `Bank C's node <http://localhost:10009/web/simmvaluationdemo/>`_.
+Additionally, you can confirm that these trades are not visible from `Bank C's node <http://localhost:10009/web/simmvaluationdemo/>`_
+and are visible to `Bank B <http://localhost:10007/web/simmvaluationdemo/>`_.
 
 Please note that any URL path information after `simmvaluationdemo` should not be bookmarked or navigated to directly, as it is only provided for aesthetic purposes.
