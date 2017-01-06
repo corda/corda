@@ -64,9 +64,7 @@ abstract class ServiceHubInternal : PluginServiceHub {
     }
 
     /**
-     * TODO: borrowing this method from service manager work in another branch.  It's required to avoid circular dependency
-     *       between SMM and the scheduler.  That particular problem should also be resolved by the service manager work
-     *       itself, at which point this method would not be needed (by the scheduler).
+     * Starts an already constructed flow. Note that you must be on the server thread to call this method.
      */
     abstract fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T>
 

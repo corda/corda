@@ -23,6 +23,7 @@ import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
+import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
@@ -35,7 +36,6 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.Closeable
 import java.net.ServerSocket
-import java.nio.file.Path
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import kotlin.concurrent.thread
@@ -68,17 +68,10 @@ class ArtemisMessagingTests {
     @Before
     fun setUp() {
         userService = RPCUserServiceImpl(FullNodeConfiguration(ConfigFactory.empty()))
-        // TODO: create a base class that provides a default implementation
-        config = object : NodeConfiguration {
-            override val basedir: Path = temporaryFolder.newFolder().toPath()
-            override val myLegalName: String = "me"
-            override val nearestCity: String = "London"
-            override val emailAddress: String = ""
-            override val devMode: Boolean = true
-            override val exportJMXto: String = ""
-            override val keyStorePassword: String = "testpass"
-            override val trustStorePassword: String = "trustpass"
-        }
+        config = TestNodeConfiguration(
+                basedir = temporaryFolder.newFolder().toPath(),
+                myLegalName = "me",
+                networkMapService = null)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
         dataSource = dataSourceAndDatabase.first

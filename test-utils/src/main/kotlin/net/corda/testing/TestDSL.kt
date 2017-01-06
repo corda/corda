@@ -115,8 +115,8 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.addInputState(StateAndRef(state, stateRef))
     }
 
-    override fun _output(label: String?, notary: Party, contractState: ContractState) {
-        val outputIndex = transactionBuilder.addOutputState(contractState, notary)
+    override fun _output(label: String?, notary: Party, encumbrance: Int?, contractState: ContractState) {
+        val outputIndex = transactionBuilder.addOutputState(contractState, notary, encumbrance)
         if (label != null) {
             if (label in labelToIndexMap) {
                 throw DuplicateOutputLabel(label)

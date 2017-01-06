@@ -24,7 +24,7 @@ consumed by someone else first</p>
 <td>
 <a href="cash-balances.html">cashBalances</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
 which we have no cash evaluate to null (not present in map), not 0.</p>
 </td>
 </tr>
@@ -99,14 +99,14 @@ Note: an <a href="../../net.corda.core.contracts/-amount/index.html">Amount</a> 
 <td>
 <a href="notify.html">notify</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">notify</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$notify(net.corda.core.transactions.WireTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-vault/index.html"><span class="identifier">Vault</span></a></code><p>Same as notifyAll but with a single transaction.</p>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">notify</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$notify(net.corda.core.transactions.WireTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Same as notifyAll but with a single transaction.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="notify-all.html">notifyAll</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">notifyAll</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$notifyAll(kotlin.collections.Iterable((net.corda.core.transactions.WireTransaction)))/txns">txns</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-vault/index.html"><span class="identifier">Vault</span></a></code><p>Possibly update the vault by marking as spent states that these transactions consume, and adding any relevant
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">notifyAll</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$notifyAll(kotlin.collections.Iterable((net.corda.core.transactions.WireTransaction)))/txns">txns</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Possibly update the vault by marking as spent states that these transactions consume, and adding any relevant
 new states that they create. You should only insert transactions that have been successfully verified here</p>
 </td>
 </tr>

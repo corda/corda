@@ -209,7 +209,7 @@ is a three node example;
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         directory "./build/nodes" // The output directory
-        networkMap "Controller" // The artemis address of the node named here will be used as the networkMapAddress on all other nodes.
+        networkMap "Controller" // The artemis address of the node named here will be used as the networkMapService.address on all other nodes.
         node {
             name "Controller"
             dirName "controller"

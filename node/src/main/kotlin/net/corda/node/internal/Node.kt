@@ -1,15 +1,18 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
+import com.google.common.net.HostAndPort
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.div
-import net.corda.core.getOrThrow
+import net.corda.core.flatMap
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.success
 import net.corda.core.utilities.loggerFor
 import net.corda.node.printBasicNodeInfo
 import net.corda.node.serialization.NodeClock
@@ -17,11 +20,11 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.node.services.messaging.ArtemisMessagingComponent.NetworkMapAddress
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.messaging.NodeMessagingClient
-import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
@@ -53,24 +56,21 @@ import java.util.*
 import javax.management.ObjectName
 import javax.servlet.*
 import kotlin.concurrent.thread
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
-
-class ConfigurationException(message: String) : Exception(message)
 
 /**
  * A Node manages a standalone server that takes part in the P2P network. It creates the services found in [ServiceHub],
  * loads important data off disk and starts listening for connections.
  *
  * @param configuration This is typically loaded from a TypeSafe HOCON configuration file.
- * @param networkMapAddress An external network map service to use. Should only ever be null when creating the first
- * network map service, while bootstrapping a network.
  * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
  * but nodes are not required to advertise services they run (hence subset).
  * @param clock The clock used within the node and by all flows etc.
  */
-class Node(override val configuration: FullNodeConfiguration, networkMapAddress: SingleMessageRecipient?,
-           advertisedServices: Set<ServiceInfo>, clock: Clock = NodeClock()) : AbstractNode(configuration, networkMapAddress, advertisedServices, clock) {
+class Node(override val configuration: FullNodeConfiguration,
+           advertisedServices: Set<ServiceInfo>,
+           clock: Clock = NodeClock()) : AbstractNode(configuration, advertisedServices, clock) {
     override val log = loggerFor<Node>()
+    override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
 
     // DISCUSSION
     //
@@ -125,30 +125,36 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
     override fun makeMessagingService(): MessagingServiceInternal {
         userService = RPCUserServiceImpl(configuration)
 
-        val serverAddr = with(configuration) {
+        val serverAddress = with(configuration) {
             messagingServerAddress ?: {
                 messageBroker = ArtemisMessagingServer(this, artemisAddress, services.networkMapCache, userService)
                 artemisAddress
             }()
         }
-        val legalIdentity = obtainLegalIdentity()
-        val myIdentityOrNullIfNetworkMapService = if (networkMapService != null) legalIdentity.owningKey else null
-        return NodeMessagingClient(configuration, serverAddr, myIdentityOrNullIfNetworkMapService, serverThread, database, networkMapRegistrationFuture)
+        val myIdentityOrNullIfNetworkMapService = if (networkMapAddress != null) obtainLegalIdentity().owningKey else null
+        return NodeMessagingClient(configuration, serverAddress, myIdentityOrNullIfNetworkMapService, serverThread, database,
+                networkMapRegistrationFuture)
     }
 
     override fun startMessagingService(rpcOps: RPCOps) {
         // Start up the embedded MQ server
         messageBroker?.apply {
-            runOnStop += Runnable { messageBroker?.stop() }
+            runOnStop += Runnable { stop() }
             start()
-            if (networkMapService is NetworkMapAddress) {
-                deployBridgeIfAbsent(networkMapService.queueName, networkMapService.hostAndPort)
-            }
         }
 
         // Start up the MQ client.
         val net = net as NodeMessagingClient
         net.start(rpcOps, userService)
+    }
+
+    /**
+     * Insert an initial step in the registration process which will throw an exception if a non-recoverable error is
+     * encountered when trying to connect to the network map node.
+     */
+    override fun registerWithNetworkMap(): ListenableFuture<Unit> {
+        val networkMapConnection = messageBroker?.networkMapConnectionFuture ?: Futures.immediateFuture(Unit)
+        return networkMapConnection.flatMap { super.registerWithNetworkMap() }
     }
 
     // TODO: add flag to enable/disable webserver
@@ -308,32 +314,36 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
     override fun start(): Node {
         alreadyRunningNodeCheck()
         super.start()
-        // Only start the service API requests once the network map registration is complete
-        thread(name = "WebServer") {
-            networkMapRegistrationFuture.getOrThrow()
-            try {
-                webServer = initWebServer(connectLocalRpcAsNodeUser())
-            } catch(ex: Exception) {
-                // TODO: We need to decide if this is a fatal error, given the API is unavailable, or whether the API
-                //       is not critical and we continue anyway.
-                log.error("Web server startup failed", ex)
+
+        // Only start the service API requests once the network map registration is successfully complete
+        networkMapRegistrationFuture.success {
+            // This needs to be in a seperate thread so that we can reply to our own request to become RPC clients
+            thread(name = "WebServer") {
+                try {
+                    webServer = initWebServer(connectLocalRpcAsNodeUser())
+                } catch(ex: Exception) {
+                    // TODO: We need to decide if this is a fatal error, given the API is unavailable, or whether the API
+                    //       is not critical and we continue anyway.
+                    log.error("Web server startup failed", ex)
+                }
+                // Begin exporting our own metrics via JMX.
+                JmxReporter.
+                        forRegistry(services.monitoringService.metrics).
+                        inDomain("net.corda").
+                        createsObjectNamesWith { type, domain, name ->
+                            // Make the JMX hierarchy a bit better organised.
+                            val category = name.substringBefore('.')
+                            val subName = name.substringAfter('.', "")
+                            if (subName == "")
+                                ObjectName("$domain:name=$category")
+                            else
+                                ObjectName("$domain:type=$category,name=$subName")
+                        }.
+                        build().
+                        start()
             }
-            // Begin exporting our own metrics via JMX.
-            JmxReporter.
-                    forRegistry(services.monitoringService.metrics).
-                    inDomain("net.corda").
-                    createsObjectNamesWith { type, domain, name ->
-                        // Make the JMX hierarchy a bit better organised.
-                        val category = name.substringBefore('.')
-                        val subName = name.substringAfter('.', "")
-                        if (subName == "")
-                            ObjectName("$domain:name=$category")
-                        else
-                            ObjectName("$domain:type=$category,name=$subName")
-                    }.
-                    build().
-                    start()
         }
+
         shutdownThread = thread(start = false) {
             stop()
         }
@@ -405,16 +415,16 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
 
     // Servlet filter to wrap API requests with a database transaction.
     private class DatabaseTransactionFilter(val database: Database) : Filter {
-        override fun init(filterConfig: FilterConfig?) {
-        }
-
-        override fun destroy() {
-        }
-
         override fun doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) {
             databaseTransaction(database) {
                 chain.doFilter(request, response)
             }
         }
+        override fun init(filterConfig: FilterConfig?) {}
+        override fun destroy() {}
     }
 }
+
+class ConfigurationException(message: String) : Exception(message)
+
+data class NetworkMapInfo(val address: HostAndPort, val legalName: String)

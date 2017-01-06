@@ -6,6 +6,7 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.flows.NotaryChangeFlow.Instigator
@@ -22,6 +23,7 @@ import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class NotaryChangeTests {
     lateinit var net: MockNetwork
@@ -84,6 +86,60 @@ class NotaryChangeTests {
 
         val ex = assertFailsWith(StateReplacementException::class) { future.resultFuture.getOrThrow() }
         assertThat(ex.error).isInstanceOf(StateReplacementRefused::class.java)
+    }
+
+    @Test
+    fun `should not break encumbrance links`() {
+        val issueTx = issueEncumberedState(clientNodeA, oldNotaryNode)
+
+        val state = StateAndRef(issueTx.outputs.first(), StateRef(issueTx.id, 0))
+        val newNotary = newNotaryNode.info.notaryIdentity
+        val flow = Instigator(state, newNotary)
+        val future = clientNodeA.services.startFlow(flow)
+        net.runNetwork()
+        val newState = future.resultFuture.getOrThrow()
+        assertEquals(newState.state.notary, newNotary)
+
+        val notaryChangeTx = clientNodeA.services.storageService.validatedTransactions.getTransaction(newState.ref.txhash)!!.tx
+
+        // Check that all encumbrances have been propagated to the outputs
+        val originalOutputs = issueTx.outputs.map { it.data }
+        val newOutputs = notaryChangeTx.outputs.map { it.data }
+        assertTrue(originalOutputs.minus(newOutputs).isEmpty())
+
+        // Check that encumbrance links aren't broken after notary change
+        val encumbranceLink = HashMap<ContractState, ContractState?>()
+        issueTx.outputs.forEach {
+            val currentState = it.data
+            val encumbranceState = it.encumbrance?.let { issueTx.outputs[it].data }
+            encumbranceLink[currentState] = encumbranceState
+        }
+        notaryChangeTx.outputs.forEach {
+            val currentState = it.data
+            val encumbranceState = it.encumbrance?.let { notaryChangeTx.outputs[it].data }
+            assertEquals(encumbranceLink[currentState], encumbranceState)
+        }
+    }
+
+    private fun issueEncumberedState(node: AbstractNode, notaryNode: AbstractNode): WireTransaction {
+        val owner = node.info.legalIdentity.ref(0)
+        val notary = notaryNode.info.notaryIdentity
+
+        val stateA = DummyContract.SingleOwnerState(Random().nextInt(), owner.party.owningKey)
+        val stateB = DummyContract.SingleOwnerState(Random().nextInt(), owner.party.owningKey)
+        val stateC = DummyContract.SingleOwnerState(Random().nextInt(), owner.party.owningKey)
+
+        val tx = TransactionType.General.Builder(null).apply {
+            addCommand(Command(DummyContract.Commands.Create(), owner.party.owningKey))
+            addOutputState(stateA, notary, encumbrance = 2) // Encumbered by stateB
+            addOutputState(stateC, notary)
+            addOutputState(stateB, notary, encumbrance = 1) // Encumbered by stateC
+        }
+        val nodeKey = node.services.legalIdentityKey
+        tx.signWith(nodeKey)
+        val stx = tx.toSignedTransaction()
+        node.services.recordTransactions(listOf(stx))
+        return tx.toWireTransaction()
     }
 
     // TODO: Add more test cases once we have a general flow/service exception handling mechanism:

@@ -32,6 +32,7 @@ import net.corda.flows.CashFlowResult
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.User
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.node.services.messaging.ArtemisMessagingComponent.NetworkMapAddress
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -197,18 +198,8 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(NetworkMapCache.MapChange.Added::class.java)
         register(NetworkMapCache.MapChange.Removed::class.java)
         register(NetworkMapCache.MapChange.Modified::class.java)
-        register(ArtemisMessagingComponent.NodeAddress::class.java,
-                read = { kryo, input ->
-                    ArtemisMessagingComponent.NodeAddress(
-                            kryo.readObject(input, SimpleString::class.java),
-                            kryo.readObject(input, HostAndPort::class.java))
-                },
-                write = { kryo, output, nodeAddress ->
-                    kryo.writeObject(output, nodeAddress.queueName)
-                    kryo.writeObject(output, nodeAddress.hostAndPort)
-                }
-        )
-        register(NodeMessagingClient.makeNetworkMapAddress(HostAndPort.fromString("localhost:0")).javaClass)
+        register(ArtemisMessagingComponent.NodeAddress::class.java)
+        register(NetworkMapAddress::class.java)
         register(ServiceInfo::class.java)
         register(ServiceType.getServiceType("ab", "ab").javaClass)
         register(ServiceType.parse("ab").javaClass)

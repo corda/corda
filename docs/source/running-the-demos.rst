@@ -132,8 +132,8 @@ To run from IntelliJ:
 5. In the "Attachment Demo: Run Nodes" window you should see some log lines scroll past. Within a few seconds, the
    message "File received - we're happy!" should be printed.
 
-Distributed Notary demo
------------------------
+Raft Notary demo
+----------------
 
 This demo shows a party getting transactions notarised by a distributed `Raft <https://raft.github.io/>`_-based notary service.
 The demo will start three distributed notary nodes, and two counterparty nodes. One of the counterparties will generate transactions

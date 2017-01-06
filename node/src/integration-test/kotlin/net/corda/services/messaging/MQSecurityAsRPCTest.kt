@@ -6,7 +6,7 @@ import net.corda.testing.messaging.SimpleMQClient
 /**
  * Runs the security tests with the attacker being a valid RPC user of Alice.
  */
-class RPCSecurityTest : MQSecurityTest() {
+class MQSecurityAsRPCTest : MQSecurityTest() {
     override val extraRPCUsers = listOf(User("evil", "pass", permissions = emptySet()))
 
     override fun startAttacker(attacker: SimpleMQClient) {

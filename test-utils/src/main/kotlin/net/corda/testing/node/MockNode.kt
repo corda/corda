@@ -3,6 +3,7 @@ package net.corda.testing.node
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
 import net.corda.core.crypto.Party
 import net.corda.core.messaging.RPCOps
@@ -24,9 +25,9 @@ import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
+import net.corda.testing.TestNodeConfiguration
 import org.slf4j.Logger
 import java.nio.file.FileSystem
-import java.nio.file.Path
 import java.security.KeyPair
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -47,7 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   private val threadPerNode: Boolean = false,
-                  private val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy =
+                  servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy =
                       InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
     private var nextNodeId = 0
@@ -105,8 +106,12 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                 }
             }
 
-    open class MockNode(config: NodeConfiguration, val mockNet: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                        advertisedServices: Set<ServiceInfo>, val id: Int, val keyPair: KeyPair?) : AbstractNode(config, networkMapAddr, advertisedServices, TestClock()) {
+    open class MockNode(config: NodeConfiguration,
+                        val mockNet: MockNetwork,
+                        override val networkMapAddress: SingleMessageRecipient?,
+                        advertisedServices: Set<ServiceInfo>,
+                        val id: Int,
+                        val keyPair: KeyPair?) : AbstractNode(config, advertisedServices, TestClock()) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
@@ -140,7 +145,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         override fun generateKeyPair(): KeyPair = keyPair ?: super.generateKeyPair()
 
         // It's OK to not have a network map service in the mock network.
-        override fun noNetworkMapConfigured() = Futures.immediateFuture(Unit)
+        override fun noNetworkMapConfigured(): ListenableFuture<Unit> = Futures.immediateFuture(Unit)
 
         // There is no need to slow down the unit tests by initialising CityDatabase
         override fun findMyLocation(): PhysicalLocation? = null
@@ -193,18 +198,11 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         if (newNode)
             (path / "attachments").createDirectories()
 
-        // TODO: create a base class that provides a default implementation
-        val config = object : NodeConfiguration {
-            override val basedir: Path = path
-            override val myLegalName: String = legalName ?: "Mock Company $id"
-            override val nearestCity: String = "Atlantis"
-            override val emailAddress: String = ""
-            override val devMode: Boolean = true
-            override val exportJMXto: String = ""
-            override val keyStorePassword: String = "dummy"
-            override val trustStorePassword: String = "trustpass"
-            override val dataSourceProperties: Properties get() = makeTestDataSourceProperties("node_${id}_net_$networkId")
-        }
+        val config = TestNodeConfiguration(
+                basedir = path,
+                myLegalName = legalName ?: "Mock Company $id",
+                networkMapService = null,
+                dataSourceProperties = makeTestDataSourceProperties("node_${id}_net_$networkId"))
         val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair)
         if (start) {
             node.setup().start()

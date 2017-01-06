@@ -350,6 +350,15 @@ dropped, simply delayed.</p>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">uuidString</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$uuidString(, kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
+<tr>
+<td>
+<a href="wrap-with-database-transaction.html">wrapWithDatabaseTransaction</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">wrapWithDatabaseTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$wrapWithDatabaseTransaction(((net.corda.node.utilities.wrapWithDatabaseTransaction.T)), )/db">db</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Wrap delivery of observations in a database transaction.  Multiple subscribers will receive the observations inside
+the same database transaction.  This also lazily subscribes to the source <a href="#">rx.Observable</a> to preserve any buffering
+that might be in place.</p>
+</td>
+</tr>
 </tbody>
 </table>
 </BODY>

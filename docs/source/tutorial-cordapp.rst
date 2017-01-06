@@ -878,9 +878,9 @@ the following changes:
 
 * Change the artemis address to the machine's ip address (e.g. 
 `artemisAddress="10.18.0.166:10006"`)
-* Change the network map address to the ip address of the machine where the 
-controller node is running (e.g. `networkMapAddress="10.18.0.166:10002"`) 
-(please note that the controller will not have a network map address)
+* Change the network map service details to the ip address of the machine where the
+controller node is running and to its legal name (e.g. `networkMapService.address="10.18.0.166:10002"` and
+`networkMapService.legalName=controller`) (please note that the controller will not have the `networkMapService` config)
 
 Each machine should now run its nodes using `runnodes` or `runnodes.bat` 
 files. Once they are up and running, the nodes should be able to place 

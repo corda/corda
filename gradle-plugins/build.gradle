@@ -16,7 +16,7 @@ buildscript {
 
     dependencies {
         classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
     }
 }
 

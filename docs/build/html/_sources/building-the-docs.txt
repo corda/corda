@@ -20,7 +20,7 @@ script to find it, as in:
 
 .. sourcecode:: shell
 
-    r3prototyping/lib/dokka.jar
+    corda/lib/dokka.jar
 
 Note that to install under OS X El Capitan, you will need to tell pip to install under ``/usr/local``, which can be
 done by specifying the installation target on the command line:

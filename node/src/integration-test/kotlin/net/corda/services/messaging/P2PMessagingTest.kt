@@ -1,6 +1,7 @@
 package net.corda.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
+import com.google.common.util.concurrent.Futures
 import net.corda.core.crypto.Party
 import net.corda.core.div
 import net.corda.core.flows.FlowLogic
@@ -21,9 +22,7 @@ class P2PMessagingTest : NodeBasedTest() {
     @Test
     fun `network map will work after restart`() {
         fun startNodes() {
-            startNode("NodeA")
-            startNode("NodeB")
-            startNode("Notary")
+            Futures.allAsList(startNode("NodeA"), startNode("NodeB"), startNode("Notary")).getOrThrow()
         }
 
         startNodes()
@@ -41,7 +40,8 @@ class P2PMessagingTest : NodeBasedTest() {
         startNetworkMapNode(advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         networkMapNode.services.registerFlowInitiator(ReceiveFlow::class) { SendFlow(it, "Hello") }
         val serviceParty = networkMapNode.services.networkMapCache.getAnyNotary()!!
-        val received = startNode("Alice").services.startFlow(ReceiveFlow(serviceParty)).resultFuture.getOrThrow(10.seconds)
+        val alice = startNode("Alice").getOrThrow()
+        val received = alice.services.startFlow(ReceiveFlow(serviceParty)).resultFuture.getOrThrow(10.seconds)
         assertThat(received).isEqualTo("Hello")
     }
 
@@ -63,13 +63,15 @@ class P2PMessagingTest : NodeBasedTest() {
                 "NetworkMap",
                 advertisedServices = setOf(distributedService),
                 configOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
-        val alice = startNode(
+        val (alice, bob) = Futures.allAsList(
+            startNode(
                 "Alice",
                 advertisedServices = setOf(distributedService),
                 configOverrides = mapOf(
                         "notaryNodeAddress" to freeLocalHostAndPort().toString(),
-                        "notaryClusterAddresses" to listOf(notaryClusterAddress.toString())))
-        val bob = startNode("Bob")
+                        "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))),
+            startNode("Bob")
+        ).getOrThrow()
 
         // Setup each node in the distributed service to return back it's Party so that we can know which node is being used
         val serviceNodes = listOf(networkMapNode, alice)

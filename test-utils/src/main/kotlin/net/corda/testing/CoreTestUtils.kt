@@ -15,14 +15,20 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.node.internal.AbstractNode
+import net.corda.node.internal.NetworkMapInfo
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager.Change
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.testing.node.MockIdentityService
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.makeTestDataSourceProperties
 import rx.Subscriber
 import java.net.ServerSocket
+import java.nio.file.Path
 import java.security.KeyPair
+import java.time.Duration
+import java.util.*
 import kotlin.reflect.KClass
 
 /**
@@ -160,3 +166,22 @@ inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
 }
 
 fun Config.getHostAndPort(name: String) = HostAndPort.fromString(getString(name))
+
+inline fun elapsedTime(block: () -> Unit): Duration {
+    val start = System.nanoTime()
+    block()
+    val end = System.nanoTime()
+    return Duration.ofNanos(end-start)
+}
+
+data class TestNodeConfiguration(
+    override val basedir: Path,
+    override val myLegalName: String,
+    override val networkMapService: NetworkMapInfo?,
+    override val keyStorePassword: String = "cordacadevpass",
+    override val trustStorePassword: String = "trustpass",
+    override val dataSourceProperties: Properties = makeTestDataSourceProperties(myLegalName),
+    override val nearestCity: String = "Null Island",
+    override val emailAddress: String = "",
+    override val exportJMXto: String = "",
+    override val devMode: Boolean = true) : NodeConfiguration

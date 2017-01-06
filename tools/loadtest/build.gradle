@@ -35,7 +35,8 @@ dependencies {
     // https://mvnrepository.com/artifact/de.danielbechler/java-object-diff
     compile group: 'de.danielbechler', name: 'java-object-diff', version: '0.10.2'
 
-    compile "com.typesafe:config:1.3.0"
+    // TypeSafe Config: for simple and human friendly config files.
+    compile "com.typesafe:config:$typesafe_config_version"
 }
 
 run {

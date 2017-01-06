@@ -19,7 +19,7 @@ objects of the correct value are received by the beneficiary as part of the sett
 The cash contract supports issuing, moving and exiting (destroying) states. Note, however, that issuance cannot be part
 of the same transaction as other cash commands, in order to minimise complexity in balance verification.
 
-Cash shares a common superclass, ``OnChainAsset``, with the Commodity contract. This implements common behaviour of
+Cash shares a common superclass, ``OnLedgerAsset``, with the Commodity contract. This implements common behaviour of
 assets which can be issued, moved and exited on chain, with the subclasses handling asset-specific data types and
 behaviour.
 

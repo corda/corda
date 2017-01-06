@@ -39,7 +39,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class StateMachineManagerTests {
-
     private val net = MockNetwork(servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin())
     private val sessionTransfers = ArrayList<SessionTransfer>()
     private lateinit var node1: MockNode
@@ -69,7 +68,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `newly added flow is preserved on restart`() {
-        node1.smm.add(NoOpFlow(nonTerminating = true))
+        node1.services.startFlow(NoOpFlow(nonTerminating = true))
         node1.acceptableLiveFiberCountOnStop = 1
         val restoredFlow = node1.restartAndGetRestoredFlow<NoOpFlow>()
         assertThat(restoredFlow.flowStarted).isTrue()
@@ -82,7 +81,7 @@ class StateMachineManagerTests {
             @Suspendable
             override fun call() = Unit
         }
-        node1.smm.add(flow)
+        node1.services.startFlow(flow)
         assertThat(flow.lazyTime).isNotNull()
     }
 
@@ -90,7 +89,7 @@ class StateMachineManagerTests {
     fun `flow restarted just after receiving payload`() {
         node2.services.registerFlowInitiator(SendFlow::class) { ReceiveThenSuspendFlow(it) }
         val payload = random63BitValue()
-        node1.smm.add(SendFlow(payload, node2.info.legalIdentity))
+        node1.services.startFlow(SendFlow(payload, node2.info.legalIdentity))
 
         // We push through just enough messages to get only the payload sent
         node2.pumpReceive()
@@ -106,7 +105,7 @@ class StateMachineManagerTests {
     fun `flow added before network map does run after init`() {
         val node3 = net.createNode(node1.info.address) //create vanilla node
         val flow = NoOpFlow()
-        node3.smm.add(flow)
+        node3.services.startFlow(flow)
         assertEquals(false, flow.flowStarted) // Not started yet as no network activity has been allowed yet
         net.runNetwork() // Allow network map messages to flow
         assertEquals(true, flow.flowStarted) // Now we should have run the flow
@@ -116,7 +115,7 @@ class StateMachineManagerTests {
     fun `flow added before network map will be init checkpointed`() {
         var node3 = net.createNode(node1.info.address) //create vanilla node
         val flow = NoOpFlow()
-        node3.smm.add(flow)
+        node3.services.startFlow(flow)
         assertEquals(false, flow.flowStarted) // Not started yet as no network activity has been allowed yet
         node3.disableDBCloseOnStop()
         node3.stop()
@@ -141,7 +140,7 @@ class StateMachineManagerTests {
     fun `flow loaded from checkpoint will respond to messages from before start`() {
         val payload = random63BitValue()
         node1.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { SendFlow(payload, it) }
-        node2.smm.add(ReceiveThenSuspendFlow(node1.info.legalIdentity)) // Prepare checkpointed receive flow
+        node2.services.startFlow(ReceiveThenSuspendFlow(node1.info.legalIdentity)) // Prepare checkpointed receive flow
         // Make sure the add() has finished initial processing.
         node2.smm.executor.flush()
         node2.disableDBCloseOnStop()
@@ -163,7 +162,7 @@ class StateMachineManagerTests {
         net.runNetwork()
 
         // Kick off first send and receive
-        node2.smm.add(PingPongFlow(node3.info.legalIdentity, payload))
+        node2.services.startFlow(PingPongFlow(node3.info.legalIdentity, payload))
         databaseTransaction(node2.database) {
             assertEquals(1, node2.checkpointStorage.checkpoints().size)
         }
@@ -207,7 +206,7 @@ class StateMachineManagerTests {
         node2.services.registerFlowInitiator(SendFlow::class) { ReceiveThenSuspendFlow(it) }
         node3.services.registerFlowInitiator(SendFlow::class) { ReceiveThenSuspendFlow(it) }
         val payload = random63BitValue()
-        node1.smm.add(SendFlow(payload, node2.info.legalIdentity, node3.info.legalIdentity))
+        node1.services.startFlow(SendFlow(payload, node2.info.legalIdentity, node3.info.legalIdentity))
         net.runNetwork()
         val node2Flow = node2.getSingleFlow<ReceiveThenSuspendFlow>().first
         val node3Flow = node3.getSingleFlow<ReceiveThenSuspendFlow>().first
@@ -241,7 +240,7 @@ class StateMachineManagerTests {
         node2.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { SendFlow(node2Payload, it) }
         node3.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { SendFlow(node3Payload, it) }
         val multiReceiveFlow = ReceiveThenSuspendFlow(node2.info.legalIdentity, node3.info.legalIdentity)
-        node1.smm.add(multiReceiveFlow)
+        node1.services.startFlow(multiReceiveFlow)
         node1.acceptableLiveFiberCountOnStop = 1
         net.runNetwork()
         assertThat(multiReceiveFlow.receivedPayloads[0]).isEqualTo(node2Payload)
@@ -265,7 +264,7 @@ class StateMachineManagerTests {
     @Test
     fun `both sides do a send as their first IO request`() {
         node2.services.registerFlowInitiator(PingPongFlow::class) { PingPongFlow(it, 20L) }
-        node1.smm.add(PingPongFlow(node2.info.legalIdentity, 10L))
+        node1.services.startFlow(PingPongFlow(node2.info.legalIdentity, 10L))
         net.runNetwork()
 
         assertSessionTransfers(
@@ -332,7 +331,7 @@ class StateMachineManagerTests {
     @Test
     fun `exception thrown on other side`() {
         node2.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { ExceptionFlow }
-        val future = node1.smm.add(ReceiveThenSuspendFlow(node2.info.legalIdentity)).resultFuture
+        val future = node1.services.startFlow(ReceiveThenSuspendFlow(node2.info.legalIdentity)).resultFuture
         net.runNetwork()
         assertThatThrownBy { future.getOrThrow() }.isInstanceOf(FlowSessionException::class.java)
         assertSessionTransfers(
@@ -413,7 +412,6 @@ class StateMachineManagerTests {
 
 
     private class NoOpFlow(val nonTerminating: Boolean = false) : FlowLogic<Unit>() {
-
         @Transient var flowStarted = false
 
         @Suspendable
@@ -427,7 +425,6 @@ class StateMachineManagerTests {
 
 
     private class SendFlow(val payload: Any, vararg val otherParties: Party) : FlowLogic<Unit>() {
-
         init {
             require(otherParties.isNotEmpty())
         }
@@ -438,7 +435,6 @@ class StateMachineManagerTests {
 
 
     private class ReceiveThenSuspendFlow(vararg val otherParties: Party) : FlowLogic<Unit>() {
-
         init {
             require(otherParties.isNotEmpty())
         }
@@ -453,7 +449,6 @@ class StateMachineManagerTests {
     }
 
     private class PingPongFlow(val otherParty: Party, val payload: Long) : FlowLogic<Unit>() {
-
         @Transient var receivedPayload: Long? = null
         @Transient var receivedPayload2: Long? = null
 

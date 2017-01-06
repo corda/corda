@@ -19,7 +19,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
@@ -260,11 +259,11 @@ open class DriverDSL(
         val isDebug: Boolean
 ) : DriverDSLInternalInterface {
     private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
-    private val networkMapName = "NetworkMapService"
+    private val networkMapLegalName = "NetworkMapService"
     private val networkMapAddress = portAllocation.nextHostAndPort()
 
     class State {
-        val registeredProcesses = LinkedList<Process>()
+        val registeredProcesses = LinkedList<ListenableFuture<Process>>()
         val clients = LinkedList<NodeMessagingClient>()
     }
 
@@ -279,22 +278,22 @@ open class DriverDSL(
         Paths.get(quasarFileUrl.toURI()).toString()
     }
 
-    fun registerProcess(process: Process) = state.locked { registeredProcesses.push(process) }
+    fun registerProcess(process: ListenableFuture<Process>) = state.locked { registeredProcesses.push(process) }
 
     override fun waitForAllNodesToFinish() {
         state.locked {
             registeredProcesses.forEach {
-                it.waitFor()
+                it.getOrThrow().waitFor()
             }
         }
     }
 
     override fun shutdown() {
         state.locked {
-            clients.forEach {
-                it.stop()
+            clients.forEach(NodeMessagingClient::stop)
+            registeredProcesses.forEach {
+                it.get().destroy()
             }
-            registeredProcesses.forEach(Process::destroy)
         }
         /** Wait 5 seconds, then [Process.destroyForcibly] */
         val finishedFuture = executorService.submit {
@@ -306,7 +305,7 @@ open class DriverDSL(
             finishedFuture.cancel(true)
             state.locked {
                 registeredProcesses.forEach {
-                    it.destroyForcibly()
+                    it.get().destroyForcibly()
                 }
             }
         }
@@ -351,7 +350,10 @@ open class DriverDSL(
                 "artemisAddress" to messagingAddress.toString(),
                 "webAddress" to apiAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
-                "networkMapAddress" to networkMapAddress.toString(),
+                "networkMapService" to mapOf(
+                        "address" to networkMapAddress.toString(),
+                        "legalName" to networkMapLegalName
+                ),
                 "useTestClock" to useTestClock,
                 "rpcUsers" to rpcUsers.map {
                     mapOf(
@@ -368,8 +370,9 @@ open class DriverDSL(
                 configOverrides = configOverrides
         )
 
-        return startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort).map {
-            registerProcess(it)
+        val startNode = startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort)
+        registerProcess(startNode)
+        return startNode.map {
             NodeHandle(queryNodeInfo(apiAddress)!!, config, it)
         }
     }
@@ -409,16 +412,16 @@ open class DriverDSL(
         startNetworkMapService()
     }
 
-    private fun startNetworkMapService(): ListenableFuture<Unit> {
+    private fun startNetworkMapService(): ListenableFuture<Process> {
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
-        val baseDirectory = driverDirectory / networkMapName
+        val baseDirectory = driverDirectory / networkMapLegalName
         val config = ConfigHelper.loadConfig(
                 baseDirectoryPath = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = mapOf(
-                        "myLegalName" to networkMapName,
+                        "myLegalName" to networkMapLegalName,
                         "basedir" to baseDirectory.normalize().toString(),
                         "artemisAddress" to networkMapAddress.toString(),
                         "webAddress" to apiAddress.toString(),
@@ -428,9 +431,9 @@ open class DriverDSL(
         )
 
         log.info("Starting network-map-service")
-        return startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort).map {
-            registerProcess(it)
-        }
+        val startNode = startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort)
+        registerProcess(startNode)
+        return startNode
     }
 
     companion object {
