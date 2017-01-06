@@ -63,8 +63,7 @@ dependencies {
     compile "com.google.guava:guava:$guava_version"
 
     // RxJava: observable streams of events.
-    // TODO: We can't upgrade past 1.1.6 due to a behaviour change in RxJava breaking our code. See PR #99 for discussion. Resolve.
-    compile "io.reactivex:rxjava:1.1.6"
+    compile "io.reactivex:rxjava:1.2.4"
 
     // Kryo: object graph serialization.
     compile "com.esotericsoftware:kryo:4.0.0"
