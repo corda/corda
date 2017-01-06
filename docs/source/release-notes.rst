@@ -3,6 +3,73 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
+Milestone 7
+
+A special thanks to contributors:
+
+*  (@thschroeter on GitHub)
+* @karnauskas on GitHub
+
+* Developer experience:
+
+    * Improve Java intero with more annotations on ``Utils.kt``
+
+    * Setup TeamCity for continuous integration with pull request building to ensure that master is more stable
+      on both repos
+
+* Security
+
+    * MQ broker of the node now requires authentication which means that third parties cannot connect to and
+      listen to queues on the Node. RPC and P2P between nodes is now authenticated as a result of this change.
+      This also means that nodes or RPC users cannot pretend to be other nodes or RPC users
+
+    * The node now does host verification of any node that connects to it and prevents Man in the Middle Attacks
+
+* Demos
+
+    * Demos now use RPC to communicate with the node from the webserver. This brings the demos more in line with how
+      interaction with nodes is expected to be. The demos now treat their webservers like clients. This will also allow
+      for the splitting of the webserver from the node for milestone 8.
+
+    * Added the Bank of Corda demo - a demo showing a node (Bank of Corda) acting as an issuer of Cash, and a client
+      driver providing both Web and RPC access to request issuance of cash
+
+    * SIMM valuation demo is fixed - previously had Kryo errors if running from command line.
+
+    * Added a SIMM valuation demo integration test to catch regressions
+
+* Improvements
+
+    * Added a custom serialiser for CompositeKey
+    * Improved API to ``NetworkMapCache``
+    * CorDapp types can be used in parameters to ``startFlowDynamic``
+    * Added commonName extension method to X500Name and helper class for x509 cert factories
+    * Improved client observable API
+    * Vault updates now contain full StateAndRef which allows subscribers to check whether the update contains
+      relevant states.
+    * Cash balances are calculated using aggregate values to prevent iterating through all states in the vault, which
+      improves performance
+    * Multi-party services, such as notaries, are now load balanced and represented as a single ``Party`` object
+    * The Notary Chagnge flow now supports encumberances
+    * With thanks to *Thomas Schroeter* ``NotaryFlow`` is now idempotent
+
+* Fixes
+
+    * Fixed ``runnodes`` on all platforms
+    * Fixed file cleanup of sandbox unit tests on Windows
+    * Fix errors with multi-thread InMemoryMessagingNetwork
+    * Fixed an issue with node startup where if nodes startup in a certain order (before the network map service)
+      there could be a hang.
+    * Fixed ANSI logging on Windows
+    * observers of vault updates and other node activity streamed via rx.Observables will now only see those updates
+      once they are globally visible and committed to the h2 database
+
+* Explorer
+
+    * The GUI for the explorer now shows other nodes on the network map
+    * Map resolution increased and allows zooming and panning
+    * Transactions between nodes on the map now visualise transactions between nodes
+
 Milestone 6
 -----------
 
