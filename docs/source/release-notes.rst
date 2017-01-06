@@ -6,7 +6,7 @@ Here are brief summaries of what's changed between each snapshot release.
 Milestone 7
 -----------
 
-* With thanks to *Thomas Schroeter* ``NotaryFlow`` is now idempotent.
+* With thanks to *Thomas Schroeter* (`https://github.com/thschroeter`_) ``NotaryFlow`` is now idempotent.
 
 * Explorer:
 
@@ -35,8 +35,6 @@ Milestone 7
 
 * Improvements:
 
-    * Added a custom serialiser for ``CompositeKey``.
-    * Added ``commonName`` extension method to ``X500Name`` and helper class for x509 cert factories.
     * Vault updates now contain full ``StateAndRef`` which allows subscribers to check whether the update contains
       relevant states.
     * Cash balances are calculated using aggregate values to prevent iterating through all states in the vault, which
