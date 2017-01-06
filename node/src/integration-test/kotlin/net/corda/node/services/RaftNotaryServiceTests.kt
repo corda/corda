@@ -36,52 +36,51 @@ class RaftNotaryServiceTests : NodeBasedTest() {
         val (masterNode, alice) = Futures.allAsList(createNotaryCluster(), startNode("Alice")).getOrThrow()
 
         val notaryParty = alice.netMapCache.getNotary(notaryName)!!
+        val notaryNodeKeyPair = databaseTransaction(masterNode.database) { masterNode.services.notaryIdentityKey }
+        val aliceKey = databaseTransaction(alice.database) { alice.services.legalIdentityKey }
 
-        val stx = run {
-            val notaryNodeKeyPair = databaseTransaction(masterNode.database) {
-                masterNode.services.notaryIdentityKey
-            }
-            val inputState = issueState(alice, notaryParty, notaryNodeKeyPair)
-            val tx = TransactionType.General.Builder(notaryParty).withItems(inputState)
-            val aliceKey = databaseTransaction(alice.database) {
-                alice.services.legalIdentityKey
-            }
-            tx.signWith(aliceKey)
-            tx.toSignedTransaction(false)
+        val inputState = issueState(alice, notaryParty, notaryNodeKeyPair)
+
+        val firstSpendTx = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
+            signWith(aliceKey)
+            toSignedTransaction(false)
         }
-
-        val buildFlow = { NotaryFlow.Client(stx) }
-
-        val firstSpend = alice.services.startFlow(buildFlow())
+        val firstSpend = alice.services.startFlow(NotaryFlow.Client(firstSpendTx))
         firstSpend.resultFuture.getOrThrow()
 
-        val secondSpend = alice.services.startFlow(buildFlow())
+        val secondSpendTx = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
+            val dummyState = DummyContract.SingleOwnerState(0, alice.info.legalIdentity.owningKey)
+            addOutputState(dummyState)
+            signWith(aliceKey)
+            toSignedTransaction(false)
+        }
+        val secondSpend = alice.services.startFlow(NotaryFlow.Client(secondSpendTx))
 
         val ex = assertFailsWith(NotaryException::class) { secondSpend.resultFuture.getOrThrow() }
         val error = ex.error as NotaryError.Conflict
-        assertEquals(error.tx, stx.tx)
+        assertEquals(error.tx, secondSpendTx.tx)
     }
 
     private fun createNotaryCluster(): ListenableFuture<Node> {
         val notaryService = ServiceInfo(RaftValidatingNotaryService.type, notaryName)
         val notaryAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
         ServiceIdentityGenerator.generateToDisk(
-            (0 until clusterSize).map { tempFolder.root.toPath() / "Notary$it" },
-            notaryService.type.id,
-            notaryName)
+                (0 until clusterSize).map { tempFolder.root.toPath() / "Notary$it" },
+                notaryService.type.id,
+                notaryName)
 
         val masterNode = startNode(
-            "Notary0",
-            advertisedServices = setOf(notaryService),
-            configOverrides = mapOf("notaryNodeAddress" to notaryAddresses[0]))
+                "Notary0",
+                advertisedServices = setOf(notaryService),
+                configOverrides = mapOf("notaryNodeAddress" to notaryAddresses[0]))
 
         val remainingNodes = (1 until clusterSize).map {
             startNode(
-                "Notary$it",
-                advertisedServices = setOf(notaryService),
-                configOverrides = mapOf(
-                    "notaryNodeAddress" to notaryAddresses[it],
-                    "notaryClusterAddresses" to listOf(notaryAddresses[0])))
+                    "Notary$it",
+                    advertisedServices = setOf(notaryService),
+                    configOverrides = mapOf(
+                            "notaryNodeAddress" to notaryAddresses[it],
+                            "notaryClusterAddresses" to listOf(notaryAddresses[0])))
         }
 
         return Futures.allAsList(remainingNodes).flatMap { masterNode }
