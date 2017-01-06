@@ -205,15 +205,20 @@ val RunOnCallerThread: Executor = MoreExecutors.directExecutor()
 // TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
 // returns in the IRSSimulationTest. If not, commit the inline back.
 fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
-    val now = System.currentTimeMillis()
-    val r = body()
-    val elapsed = System.currentTimeMillis() - now
-    if (logger != null)
-        logger.info("$label took $elapsed msec")
-    else
-        println("$label took $elapsed msec")
-    return r
+    // Use nanoTime as it's monotonic.
+    val now = System.nanoTime()
+    try {
+        return body()
+    } finally {
+        val elapsed = Duration.ofNanos(System.nanoTime() - now).toMillis()
+        if (logger != null)
+            logger.info("$label took $elapsed msec")
+        else
+            println("$label took $elapsed msec")
+    }
 }
+
+fun <T> Logger.logElapsedTime(label: String, body: () -> T): T = logElapsedTime(label, this, body)
 
 /**
  * A threadbox is a simple utility that makes it harder to forget to take a lock before accessing some shared state.
