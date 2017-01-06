@@ -36,11 +36,11 @@ To run from the command line in Unix:
 
 To run from the command line in Windows:
 
-1. Run ``gradlew.bat samples:trader-demo:deployNodes`` to create a set of configs and installs under ``samples/trader-demo/build/nodes``
-2. Run ``./samples/trader-demo/build/nodes/runnodes.bat`` to open up four new terminals with the four nodes
-3. Run ``gradlew.bat samples:trader-demo:runBuyer`` to instruct the buyer node to request issuance of some cash from the Bank of Corda node.
+1. Run ``gradlew samples:trader-demo:deployNodes`` to create a set of configs and installs under ``samples\trader-demo\build\nodes``
+2. Run ``samples\trader-demo\build\nodes\runnodes`` to open up four new terminals with the four nodes
+3. Run ``gradlew samples:trader-demo:runBuyer`` to instruct the buyer node to request issuance of some cash from the Bank of Corda node.
    This step will display progress information related to the cash issuance process (in the Bank of Corda node log output)
-4. Run ``gradlew.bat samples:trader-demo:runSeller`` to trigger the transaction. You can see both sides of the
+4. Run ``gradlew samples:trader-demo:runSeller`` to trigger the transaction. You can see both sides of the
    trade print their progress and final transaction state in the bank node tabs/windows
 
 To run from IntelliJ:
@@ -74,15 +74,15 @@ To run from the command line in Unix:
 
 To run from the command line in Windows:
 
-1. Run ``gradlew.bat samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples/irs-demo/build``
-2. Move to the ``samples/irs-demo/build`` directory
-3. Run ``./nodes/runnodes.bat`` to open up three new terminals with the three nodes.
-4. Run ``./install/irs-demo/bin/irs-demo.bat --role UploadRates``. You should see a
+1. Run ``gradlew samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples\irs-demo\build``
+2. Move to the ``samples\irs-demo\build`` directory
+3. Run ``nodes\runnodes`` to open up three new terminals with the three nodes.
+4. Run ``install\irs-demo\bin\irs-demo --role UploadRates``. You should see a
    message be printed to the first node (the notary/oracle/network map node) saying that it has accepted the new
    interest rates
-5. Now run ``./install/irs-demo/bin/irs-demo.bat --role Trade 1``. The number is a trade ID. You should
+5. Now run ``install\irs-demo\bin\irs-demo --role Trade 1``. The number is a trade ID. You should
    see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
-6. Now run ``./install/irs-demo/bin/irs-demo.bat --role Date 2016-12-12`` to roll the simulated clock forward and see some fixings take place
+6. Now run ``install\irs-demo\bin\irs-demo --role Date 2016-12-12`` to roll the simulated clock forward and see some fixings take place
 
 To run from IntelliJ:
 
@@ -116,10 +116,10 @@ To run from the command line in Unix:
 
 To run from the command line in Windows:
 
-1. Run ``gradlew.bat samples:attachment-demo:deployNodes`` to create a set of configs and installs under ``samples/attachment-demo/build/nodes``
-2. Run ``./samples/attachment-demo/build/nodes/runnodes.bat`` to open up three new terminal tabs/windows with the three nodes
-3. Run ``gradlew.bat samples:attachment-demo:runRecipient``, which will block waiting for a trade to start
-4. Run ``gradlew.bat samples:attachment-demo:runSender`` in another terminal window to send the attachment. Now look at the other windows to 
+1. Run ``gradlew samples:attachment-demo:deployNodes`` to create a set of configs and installs under ``samples\attachment-demo\build\nodes``
+2. Run ``samples\attachment-demo\build\nodes\runnodes`` to open up three new terminal tabs/windows with the three nodes
+3. Run ``gradlew samples:attachment-demo:runRecipient``, which will block waiting for a trade to start
+4. Run ``gradlew samples:attachment-demo:runSender`` in another terminal window to send the attachment. Now look at the other windows to 
    see the output of the demo
 
 To run from IntelliJ:
@@ -153,10 +153,10 @@ To run from the command line in Unix:
 
 To run from the command line in Windows:
 
-1. Run ``gradlew.bat samples:raft-notary-demo:deployNodes``, which will create node directories with configs under ``samples/raft-notary-demo/build/nodes``.
-2. Run ``./samples/raft-notary-demo/build/nodes/runnodes.bat``, which will start the nodes in separate terminal windows/tabs
+1. Run ``gradlew samples:raft-notary-demo:deployNodes``, which will create node directories with configs under ``samples\raft-notary-demo\build\nodes``.
+2. Run ``samples\raft-notary-demo\build\nodes\runnodes``, which will start the nodes in separate terminal windows/tabs
    Wait until a "Node started up and registered in ..." appears on each of the terminals
-3. Run ``gradlew.bat samples:raft-notary-demo:notarise`` to make a call to the "Party" node to initiate notarisation requests
+3. Run ``gradlew samples:raft-notary-demo:notarise`` to make a call to the "Party" node to initiate notarisation requests
    In a few seconds you will see a message "Notarised 10 transactions" with a list of transaction ids and the signer public keys
 
 To run from IntelliJ:
@@ -172,7 +172,7 @@ You can ascertain that the commit log is synchronised across the cluster by acce
 by using the H2 web console:
 
 - Firstly, download `H2 web console <http://www.h2database.com/html/download.html>`_ (download the "platform-independent zip"),
-  and start it using a script in the extracted folder: ``h2/bin/h2.sh`` (or ``h2.bat`` for Windows)
+  and start it using a script in the extracted folder: ``h2/bin/h2.sh`` (or ``h2\bin\h2`` for Windows)
 
 - The H2 web console should start up in a web browser tab. To connect we first need to obtain a JDBC connection string.
   Each node outputs its connection string in the terminal window as it starts up. In a terminal window where a node is running,
@@ -208,10 +208,10 @@ To run from the command line in Unix:
 
 To run from the command line in Windows:
 
-1. Run ``gradlew.bat samples:bank-of-corda-demo:deployNodes`` to create a set of configs and installs under ``samples/bank-of-corda-demo/build/nodes``
-2. Run ``./samples/bank-of-corda-demo/build/nodes/runnodes.bat`` to open up three new terminal tabs/windows with the three nodes
-3. Run ``gradlew.bat samples:bank-of-corda-demo:runRPCCashIssue`` in another terminal window to trigger a cash issuance request
-4. Run ``gradlew.bat samples:bank-of-corda-demo:runWebCashIssue`` in another terminal window to trigger another cash issuance request
+1. Run ``gradlew samples:bank-of-corda-demo:deployNodes`` to create a set of configs and installs under ``samples\bank-of-corda-demo\build\nodes``
+2. Run ``samples\bank-of-corda-demo\build\nodes\runnodes`` to open up three new terminal tabs/windows with the three nodes
+3. Run ``gradlew samples:bank-of-corda-demo:runRPCCashIssue`` in another terminal window to trigger a cash issuance request
+4. Run ``gradlew samples:bank-of-corda-demo:runWebCashIssue`` in another terminal window to trigger another cash issuance request
    Now look at the other windows to see the output of the demo
 
 To run from IntelliJ:
@@ -241,9 +241,9 @@ In the client issue request window, you should see the following printed:
 
 - Successfully processed Cash Issue request
 
-Launch the Explorer application to visualize the issuance and transfer of cash on each node:
+Launch the Explorer application to visualize the issuance and transfer of cash for each node:
 
-    ``./gradlew tools:explorer:run``
+    ``./gradlew tools:explorer:run`` (on Unix) or ``gradlew tools:explorer:run`` (on Windows)
 
 Using the following login details:
 
@@ -316,8 +316,8 @@ To run from the command line in Unix:
 
 To run from the command line in Windows:
 
-1. Deploy the nodes using ``gradlew.bat samples:simm-valuation-demo:deployNodes``
-2. Run the nodes using ``cd samples/simm-valuation-demo/build/nodes && runnodes.bat``
+1. Deploy the nodes using ``gradlew samples:simm-valuation-demo:deployNodes``
+2. Run the nodes using ``cd samples\simm-valuation-demo\build\nodes && runnodes``
 
 To run from IntelliJ:
 
