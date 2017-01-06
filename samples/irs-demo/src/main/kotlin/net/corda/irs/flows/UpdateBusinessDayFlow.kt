@@ -51,9 +51,20 @@ object UpdateBusinessDayFlow {
         @Suspendable
         override fun call(): Unit {
             progressTracker.currentStep = NOTIFYING
-            for (recipient in serviceHub.networkMapCache.partyNodes.sortedBy { it.legalIdentity.name }) {
+            for (recipient in getRecipients()) {
                 doNextRecipient(recipient)
             }
+        }
+
+        /**
+         * Returns recipients ordered by legal name, with notary nodes taking priority over party nodes.
+         * Ordering is required so that we avoid situations where on clock update a party starts a scheduled flow, but
+         * the notary or counterparty still use the old clock, so the timestamp on the transaction does not validate.
+         */
+        private fun getRecipients(): Iterable<NodeInfo> {
+            val notaryNodes = serviceHub.networkMapCache.notaryNodes
+            val partyNodes = (serviceHub.networkMapCache.partyNodes - notaryNodes).sortedBy { it.legalIdentity.name }
+            return notaryNodes + partyNodes
         }
 
         @Suspendable
