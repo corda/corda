@@ -2,7 +2,7 @@ Welcome to the Corda documentation!
 ===================================
 
 .. warning:: This build of the docs is from the "|version|" branch, not a milestone release. It may not reflect the
-   current state of the code. `Read the docs for M6 <https://docs.corda.net/releases/release-M6.0/>`_.
+   current state of the code. `Read the docs for M7 <https://docs.corda.net/releases/release-M7.0/>`_.
 
 This is the developer guide for Corda, a proposed architecture for distributed ledgers. Here are the sources
 of documentation you may find useful, from highest level to lowest:

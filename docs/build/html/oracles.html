@@ -98,7 +98,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
-<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
@@ -108,17 +108,12 @@
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-cordapp-template">Running the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#interacting-with-the-cordapp-template">Interacting with the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#extending-the-cordapp-template">Extending the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -137,35 +132,36 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Writing oracle services</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#the-two-basic-approaches">The two basic approaches</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#asserting-continuously-varying-data">Asserting continuously varying data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#hiding-transaction-data-from-the-oracle">Hiding transaction data from the oracle</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#pay-per-play-oracles">Pay-per-play oracles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#introduction-to-oracles">Introduction to oracles</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#the-two-basic-approaches">The two basic approaches</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#asserting-continuously-varying-data">Asserting continuously varying data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#hiding-transaction-data-from-the-oracle">Hiding transaction data from the oracle</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pay-per-play-oracles">Pay-per-play oracles</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#implement-the-core-classes">Implement the core classes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#binding-to-the-network-via-cordapp-plugin">Binding to the network via CorDapp plugin</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#providing-client-sub-flows-for-querying-and-signing">Providing client sub-flows for querying and signing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#implement-the-core-classes">Implement the core classes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#binding-to-the-network-via-a-cordapp-plugin">Binding to the network via a CorDapp plugin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#providing-client-sub-flows-for-querying-and-signing">Providing client sub-flows for querying and signing</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="#using-an-oracle">Using an oracle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-an-oracle">Using an oracle</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
@@ -175,11 +171,9 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
-<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
@@ -240,14 +234,14 @@
 affect the validity of transactions.</p>
 <p>The current prototype includes an example oracle that provides an interest rate fixing service. It is used by the
 IRS trading demo app.</p>
-<div class="section" id="introduction">
-<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="introduction-to-oracles">
+<h2>Introduction to oracles<a class="headerlink" href="#introduction-to-oracles" title="Permalink to this headline">¶</a></h2>
 <p>Oracles are a key concept in the block chain/decentralised ledger space. They can be essential for many kinds of
 application, because we often wish to condition a transaction on some fact being true or false, but the ledger itself
 has a design that is essentially functional: all transactions are <em>pure</em> and <em>immutable</em>. Phrased another way, a
 smart contract cannot perform any input/output or depend on any state outside of the transaction itself. There is no
 way to download a web page or interact with the user, in a smart contract. It must be this way because everyone must
-be able to independently check a transaction and arrive at an identical conclusion for the ledger to maintan its
+be able to independently check a transaction and arrive at an identical conclusion for the ledger to maintain its
 integrity: if a transaction could evaluate to &#8220;valid&#8221; on one computer and then &#8220;invalid&#8221; a few minutes later on a
 different computer, the entire shared ledger concept wouldn&#8217;t work.</p>
 <p>But it is often essential that transactions do depend on data from the outside world, for example, verifying that an
@@ -260,9 +254,8 @@ the statements are themselves immutable and signed, it is impossible for an orac
 invalidate transactions that were previously found to be valid. In contrast, consider what would happen if a contract
 could do an HTTP request: it&#8217;s possible that an answer would change after being downloaded, resulting in loss of
 consensus (breaks).</p>
-</div>
 <div class="section" id="the-two-basic-approaches">
-<h2>The two basic approaches<a class="headerlink" href="#the-two-basic-approaches" title="Permalink to this headline">¶</a></h2>
+<h3>The two basic approaches<a class="headerlink" href="#the-two-basic-approaches" title="Permalink to this headline">¶</a></h3>
 <p>The architecture provides two ways of implementing oracles with different tradeoffs:</p>
 <ol class="arabic simple">
 <li>Using commands</li>
@@ -296,7 +289,7 @@ attachment.</li>
 </ul>
 </div>
 <div class="section" id="asserting-continuously-varying-data">
-<h2>Asserting continuously varying data<a class="headerlink" href="#asserting-continuously-varying-data" title="Permalink to this headline">¶</a></h2>
+<h3>Asserting continuously varying data<a class="headerlink" href="#asserting-continuously-varying-data" title="Permalink to this headline">¶</a></h3>
 <p>Let&#8217;s look at the interest rates oracle that can be found in the <code class="docutils literal"><span class="pre">NodeInterestRates</span></code> file. This is an example of
 an oracle that uses a command because the current interest rate fix is a constantly changing fact.</p>
 <p>The obvious way to implement such a service is like this:</p>
@@ -343,7 +336,7 @@ We can schedule for the expected announcement (or publish) time and give a suita
 information being available and the delay to processing becomes significant and may need to be escalated.</p>
 </div>
 <div class="section" id="hiding-transaction-data-from-the-oracle">
-<h2>Hiding transaction data from the oracle<a class="headerlink" href="#hiding-transaction-data-from-the-oracle" title="Permalink to this headline">¶</a></h2>
+<h3>Hiding transaction data from the oracle<a class="headerlink" href="#hiding-transaction-data-from-the-oracle" title="Permalink to this headline">¶</a></h3>
 <p>Because the transaction is sent to the oracle for signing, ordinarily the oracle would be able to see the entire contents
 of that transaction including the inputs, output contract states and all the commands, not just the one (in this case)
 relevant command.  This is an obvious privacy leak for the other participants.  We currently solve this with
@@ -352,7 +345,7 @@ oracle but still allow it to sign it by providing the Merkle hashes for the rema
 more details.</p>
 </div>
 <div class="section" id="pay-per-play-oracles">
-<h2>Pay-per-play oracles<a class="headerlink" href="#pay-per-play-oracles" title="Permalink to this headline">¶</a></h2>
+<h3>Pay-per-play oracles<a class="headerlink" href="#pay-per-play-oracles" title="Permalink to this headline">¶</a></h3>
 <p>Because the signature covers the transaction, and transactions may end up being forwarded anywhere, the fact itself
 is independently checkable. However, this approach can still be useful when the data itself costs money, because the act
 of issuing the signature in the first place can be charged for (e.g. by requiring the submission of a fresh
@@ -365,9 +358,9 @@ punishment.</p>
 </div>
 </div>
 <div class="section" id="implementing-an-oracle-with-continuously-varying-data">
-<h1>Implementing an oracle with continuously varying data<a class="headerlink" href="#implementing-an-oracle-with-continuously-varying-data" title="Permalink to this headline">¶</a></h1>
+<h2>Implementing an oracle with continuously varying data<a class="headerlink" href="#implementing-an-oracle-with-continuously-varying-data" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="implement-the-core-classes">
-<h2>Implement the core classes<a class="headerlink" href="#implement-the-core-classes" title="Permalink to this headline">¶</a></h2>
+<h3>Implement the core classes<a class="headerlink" href="#implement-the-core-classes" title="Permalink to this headline">¶</a></h3>
 <p>The key is to implement your oracle in a similar way to the <code class="docutils literal"><span class="pre">NodeInterestRates.Oracle</span></code> outline we gave above with
 both <code class="docutils literal"><span class="pre">query</span></code> and <code class="docutils literal"><span class="pre">sign</span></code> methods.  Typically you would want one class that encapsulates the parameters to the <code class="docutils literal"><span class="pre">query</span></code>
 method (<code class="docutils literal"><span class="pre">FixOf</span></code> above), and a <code class="docutils literal"><span class="pre">CommandData</span></code> implementation (<code class="docutils literal"><span class="pre">Fix</span></code> above) that encapsulates both an instance of
@@ -434,13 +427,13 @@ exactly our data source.  The final step, assuming we have got this far, is to g
 transaction and return it.</li>
 </ol>
 </div>
-<div class="section" id="binding-to-the-network-via-cordapp-plugin">
-<h2>Binding to the network via CorDapp plugin<a class="headerlink" href="#binding-to-the-network-via-cordapp-plugin" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="binding-to-the-network-via-a-cordapp-plugin">
+<h3>Binding to the network via a CorDapp plugin<a class="headerlink" href="#binding-to-the-network-via-a-cordapp-plugin" title="Permalink to this headline">¶</a></h3>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">Before reading any further, we advise that you understand the concept of flows and how to write them and use
 them. See <a class="reference internal" href="flow-state-machines.html"><span class="doc">Writing flows</span></a>.  Likewise some understanding of Cordapps, plugins and services will be helpful.
-See <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">CorDapps Background</span></a>.</p>
+See <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">CorDapp basics</span></a>.</p>
 </div>
 <p>The first step is to create a service to host the oracle on the network.  Let&#8217;s see how that&#8217;s implemented:</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span>    class Service(val services: PluginServiceHub) : AcceptsFileUpload, SingletonSerializeAsToken() {
@@ -508,7 +501,7 @@ implementing a plugin.  Don&#8217;t forget the resources file to register it wit
 </div>
 </div>
 <div class="section" id="providing-client-sub-flows-for-querying-and-signing">
-<h2>Providing client sub-flows for querying and signing<a class="headerlink" href="#providing-client-sub-flows-for-querying-and-signing" title="Permalink to this headline">¶</a></h2>
+<h3>Providing client sub-flows for querying and signing<a class="headerlink" href="#providing-client-sub-flows-for-querying-and-signing" title="Permalink to this headline">¶</a></h3>
 <p>We mentioned the client sub-flow briefly above.  They are the mechanism that clients, in the form of other flows, will
 interact with your oracle.  Typically there will be one for querying and one for signing.  Let&#8217;s take a look at
 those for <code class="docutils literal"><span class="pre">NodeInterestRates.Oracle</span></code>.</p>
@@ -550,9 +543,9 @@ the <code class="docutils literal"><span class="pre">Fix</span></code> commands.
 </div>
 </div>
 <div class="section" id="using-an-oracle">
-<h1>Using an oracle<a class="headerlink" href="#using-an-oracle" title="Permalink to this headline">¶</a></h1>
+<h2>Using an oracle<a class="headerlink" href="#using-an-oracle" title="Permalink to this headline">¶</a></h2>
 <p>The oracle is invoked through sub-flows to query for values, add them to the transaction as commands and then get
-the transaction signed by the the oracle.  Following on from the above examples, this is all encapsulated in a sub-flow
+the transaction signed by the oracle.  Following on from the above examples, this is all encapsulated in a sub-flow
 called <code class="docutils literal"><span class="pre">RatesFixFlow</span></code>.  Here&#8217;s the <code class="docutils literal"><span class="pre">call</span></code> method of that flow.</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span>    <span class="n">@Suspendable</span>
     <span class="k">override</span> <span class="k">fun</span> <span class="nf">call</span><span class="p">()</span> <span class="p">{</span>
@@ -593,6 +586,7 @@ called <code class="docutils literal"><span class="pre">RatesFixFlow</span></cod
             }
             subFlow(addFixing)
 </pre></div>
+</div>
 </div>
 </div>
 
