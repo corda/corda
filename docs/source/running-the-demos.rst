@@ -64,10 +64,10 @@ on a simulated clock passes.
 
 To run from the command line in Unix:
 
-1. Run ``./gradlew samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples/irs-demo/build``
+1. Run ``./gradlew samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples/irs-demo/build``.
 2. Run ``./gradlew samples:irs-demo:installDist``
 3. Move to the ``samples/irs-demo/build`` directory
-4. Run ``./nodes/runnodes`` to open up three new terminals with the three nodes
+4. Run ``./nodes/runnodes`` to open up three new terminals with the three nodes (you may have to install xterm).
 5. Run ``./install/irs-demo/bin/irs-demo --role UploadRates``. You should see a
    message be printed to the first node (the notary/oracle/network map node) saying that it has accepted the new
    interest rates
