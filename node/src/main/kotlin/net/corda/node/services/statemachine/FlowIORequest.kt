@@ -1,5 +1,6 @@
 package net.corda.node.services.statemachine
 
+import net.corda.core.crypto.SecureHash
 import net.corda.node.services.statemachine.StateMachineManager.FlowSession
 
 // TODO revisit when Kotlin 1.1 is released and data classes can extend other classes
@@ -7,14 +8,17 @@ interface FlowIORequest {
     // This is used to identify where we suspended, in case of message mismatch errors and other things where we
     // don't have the original stack trace because it's in a suspended fiber.
     val stackTraceInCaseOfProblems: StackSnapshot
+}
+
+interface SessionedFlowIORequest : FlowIORequest {
     val session: FlowSession
 }
 
-interface SendRequest : FlowIORequest {
+interface SendRequest : SessionedFlowIORequest {
     val message: SessionMessage
 }
 
-interface ReceiveRequest<T : SessionMessage> : FlowIORequest {
+interface ReceiveRequest<T : SessionMessage> : SessionedFlowIORequest {
     val receiveType: Class<T>
 }
 
@@ -32,6 +36,11 @@ data class ReceiveOnly<T : SessionMessage>(override val session: FlowSession,
 }
 
 data class SendOnly(override val session: FlowSession, override val message: SessionMessage) : SendRequest {
+    @Transient
+    override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
+}
+
+data class WaitForLedgerCommit(val hash: SecureHash, val fiber: FlowStateMachineImpl<*>) : FlowIORequest {
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }

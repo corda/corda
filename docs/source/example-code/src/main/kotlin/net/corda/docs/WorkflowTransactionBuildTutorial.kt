@@ -27,6 +27,7 @@ inline fun <reified T : LinearState> ServiceHub.latest(ref: StateRef): StateAndR
     val original = toStateAndRef<T>(ref)
     return linearHeads.get(original.state.data.linearId)!!
 }
+
 // DOCEND 1
 
 // Minimal state model of a manual approval process
@@ -121,18 +122,14 @@ class SubmitTradeApprovalFlow(val tradeId: String,
         // identify a notary. This might also be done external to the flow
         val notary = serviceHub.networkMapCache.getAnyNotary()
         // Create the TransactionBuilder and populate with the new state.
-        val tx = TransactionType.
-                General.
-                Builder(notary).
-                withItems(tradeProposal,
-                        Command(TradeApprovalContract.Commands.Issue(),
-                                listOf(tradeProposal.source.owningKey)))
+        val tx = TransactionType.General.Builder(notary)
+                .withItems(tradeProposal, Command(TradeApprovalContract.Commands.Issue(), listOf(tradeProposal.source.owningKey)))
         tx.setTime(serviceHub.clock.instant(), Duration.ofSeconds(60))
         // We can automatically sign as there is no untrusted data.
         tx.signWith(serviceHub.legalIdentityKey)
         // Convert to a SignedTransaction that we can send to the notary
         val signedTx = tx.toSignedTransaction(false)
-        // Run the FinalityFlow to notarise and distribute the SignedTransaction to the counterparty
+        // Notarise and distribute.
         subFlow(FinalityFlow(signedTx, setOf(serviceHub.myInfo.legalIdentity, counterparty)))
         // Return the initial state
         return signedTx.tx.outRef<TradeApprovalContract.State>(0)
@@ -210,10 +207,8 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
             agreedTx
         }
         // DOCSTART 4
-        // Run the FinalityFlow to notarise and distribute the completed transaction.
-        subFlow(FinalityFlow(allPartySignedTx,
-                setOf(latestRecord.state.data.source, latestRecord.state.data.counterparty)))
-
+        // Notarise and distribute the completed transaction.
+        subFlow(FinalityFlow(allPartySignedTx, setOf(latestRecord.state.data.source, latestRecord.state.data.counterparty)))
         // DOCEND 4
         // Return back the details of the completed state/transaction.
         return allPartySignedTx.tx.outRef<TradeApprovalContract.State>(0)

@@ -43,7 +43,8 @@ interface MessagingService {
 
     /**
      * The provided function will be invoked for each received message whose topic and session matches.  The callback
-     * will run on threads provided by the messaging service, and the callback is expected to be thread safe as a result.
+     * will run on the main server thread provided when the messaging service is constructed, and a database
+     * transaction is set up for you automatically.
      *
      * The returned object is an opaque handle that may be used to un-register handlers later with [removeMessageHandler].
      * The handle is passed to the callback as well, to avoid race conditions whereby the callback wants to unregister

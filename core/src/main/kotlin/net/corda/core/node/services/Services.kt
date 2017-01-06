@@ -178,10 +178,22 @@ interface VaultService {
     fun getTransactionNotes(txnId: SecureHash): Iterable<String>
 
     /**
-     *  [InsufficientBalanceException] is thrown when a Cash Spending transaction fails because
-     *  there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
-     *  Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
-     **/
+     * Generate a transaction that moves an amount of currency to the given pubkey.
+     *
+     * Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
+     *
+     * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
+     *           to move the cash will be added on top.
+     * @param amount How much currency to send.
+     * @param to a key of the recipient.
+     * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
+     *                        of given parties. This can be useful if the party you're trying to pay has expectations
+     *                        about which type of asset claims they are willing to accept.
+     * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
+     *         the resulting transaction for it to be valid.
+     * @throws InsufficientBalanceException when a cash spending transaction fails because
+     *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
+     */
     @Throws(InsufficientBalanceException::class)
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,

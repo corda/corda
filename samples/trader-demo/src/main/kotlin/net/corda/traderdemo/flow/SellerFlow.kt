@@ -55,10 +55,7 @@ class SellerFlow(val otherParty: Party,
                 amount,
                 cpOwnerKey,
                 progressTracker.getChildProgressTracker(TRADING)!!)
-        val tradeTX: SignedTransaction = subFlow(seller, shareParentSessions = true)
-        serviceHub.recordTransactions(listOf(tradeTX))
-
-        return tradeTX
+        return subFlow(seller, shareParentSessions = true)
     }
 
     @Suspendable
