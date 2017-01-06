@@ -174,7 +174,7 @@ class ForeignExchangeFlow(val tradeId: String,
             withNewSignature // return the almost complete transaction
         }
 
-        // Initiate the standard protocol to notarise and distribute to the involved parties
+        // Initiate the standard protocol to notarise and distribute to the involved parties.
         subFlow(FinalityFlow(allPartySignedTx, setOf(baseCurrencyBuyer, baseCurrencySeller)))
 
         return allPartySignedTx.id
