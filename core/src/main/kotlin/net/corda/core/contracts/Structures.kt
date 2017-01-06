@@ -120,7 +120,7 @@ interface ContractState {
  * A wrapper for [ContractState] containing additional platform-level state information.
  * This is the definitive state that is stored on the ledger and used in transaction outputs.
  */
-data class TransactionState<out T : ContractState>(
+data class TransactionState<out T : ContractState> @JvmOverloads constructor(
         /** The custom contract state */
         val data: T,
         /** Identity of the notary that ensures the state is not used as an input to a transaction more than once */
