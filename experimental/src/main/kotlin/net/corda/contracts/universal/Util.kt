@@ -51,7 +51,7 @@ private fun involvedPartiesVisitor(action: Action): Set<Party> =
 private fun involvedPartiesVisitor(arrangement: Arrangement): ImmutableSet<Party> =
         when (arrangement) {
             is Zero -> ImmutableSet.of<Party>()
-            is Obligation -> ImmutableSet.of(arrangement.from)
+            is Obligation -> ImmutableSet.of(arrangement.from, arrangement.to)
             is RollOut -> involvedPartiesVisitor(arrangement.template)
             is Continuation -> ImmutableSet.of<Party>()
             is And ->

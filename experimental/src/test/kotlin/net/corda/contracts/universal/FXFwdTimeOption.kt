@@ -2,6 +2,7 @@ package net.corda.contracts.universal
 
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.transaction
+import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
 
@@ -132,4 +133,14 @@ class FXFwdTimeOption
             this.verifies()
         }
     }
+
+    @Test @Ignore
+    fun `pretty print`() {
+        println ( prettyPrint(initialContract) )
+
+        println ( prettyPrint(outContract1) )
+
+        println ( prettyPrint(outContract2) )
+    }
+
 }

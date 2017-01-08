@@ -78,6 +78,25 @@ private class PrettyPrint(arr : Arrangement) {
                 print(" or ")
                 prettyPrintPerBoolean(per.right)
             }
+            is PerceivableAnd -> {
+                prettyPrintPerBoolean(per.left)
+                print(" and ")
+                prettyPrintPerBoolean(per.right)
+            }
+            is TimePerceivable -> {
+                when (per.cmp) {
+                    Comparison.GT, Comparison.GTE ->  {
+                        print("after(")
+                        prettyPrintPerInstant(per.instant)
+                        print(")")
+                    }
+                    Comparison.LT, Comparison.LTE -> {
+                        print("before(")
+                        prettyPrintPerInstant(per.instant)
+                        print(")")
+                    }
+                }
+            }
             is ActorPerceivable -> {
                 print("signedBy(${partyMap[per.actor.owningKey]})")
             }
@@ -112,6 +131,11 @@ private class PrettyPrint(arr : Arrangement) {
                     else -> print(per.op)
                 }
                 prettyPrintPerBD(per.right)
+            }
+            is UnaryPlus -> {
+                print("(")
+                prettyPrintPerBD(per.arg)
+                print(".).plus()")
             }
             is Const -> {
                 print(per.value)

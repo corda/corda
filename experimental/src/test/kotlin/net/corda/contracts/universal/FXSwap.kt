@@ -2,6 +2,7 @@ package net.corda.contracts.universal
 
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.transaction
+import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
 
@@ -175,4 +176,10 @@ class FXSwap {
             this `fails with` "output states must match action result state"
         }
     }
+
+    @Test @Ignore
+    fun `pretty print`() {
+        println ( prettyPrint(contract) )
+    }
+
 }

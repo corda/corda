@@ -314,5 +314,11 @@ class Cap {
     @Test @Ignore
     fun `pretty print`() {
         println ( prettyPrint(contractInitial) )
+
+        println ( prettyPrint(contractAfterFixingFirst) )
+
+        println ( prettyPrint(contractAfterExecutionFirst) )
+
+        println ( prettyPrint(contractAfterFixingFinal) )
     }
 }

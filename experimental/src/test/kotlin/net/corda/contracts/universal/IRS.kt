@@ -5,6 +5,7 @@ import net.corda.core.contracts.Frequency
 import net.corda.core.contracts.Tenor
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.transaction
+import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
@@ -213,5 +214,13 @@ class IRS {
         }
     }
 
+    @Test @Ignore
+    fun `pretty print`() {
+        println ( prettyPrint(contractInitial) )
+
+        println ( prettyPrint(contractAfterFixingFirst) )
+
+        println ( prettyPrint(contractAfterExecutionFirst) )
+    }
 
 }

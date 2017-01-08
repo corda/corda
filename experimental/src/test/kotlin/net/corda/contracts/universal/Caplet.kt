@@ -4,6 +4,7 @@ import net.corda.core.contracts.FixOf
 import net.corda.core.contracts.Tenor
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.transaction
+import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
@@ -130,5 +131,15 @@ class Caplet {
             this.verifies()
         }
     }
+
+    @Test @Ignore
+    fun `pretty print`() {
+        println ( prettyPrint(contract) )
+
+        println ( prettyPrint(contractFixed) )
+
+        println ( prettyPrint(contractFinal) )
+    }
+
 
 }
