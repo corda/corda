@@ -44,7 +44,7 @@ There are two other basic composite clauses that you should be aware of:
    * ``AnyComposition``, whereby any number of clauses (0+) may match, but each matched clause must verify
    * ``FirstComposition``, whereby at least one clause must match, and the first such clause must verify
 
-In turn, composite clauses are themselves ``Clause``s, and can, for example, be wrapped in the special ``GroupClauseVerifier`` grouping clause. 
+In turn, composite clauses are themselves ``Clause`` s, and can, for example, be wrapped in the special ``GroupClauseVerifier`` grouping clause. 
 For ``CommercialPaper``, this would look as follows:
 
 .. image:: resources/commPaperClauses.png
