@@ -27,6 +27,7 @@ fun main(args: Array<String>) {
     val parser = OptionParser()
 
     val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).required()
+    val certsPath = parser.accepts("certificates").withRequiredArg()
     val options = try {
         parser.parse(*args)
     } catch (e: Exception) {
@@ -40,14 +41,14 @@ fun main(args: Array<String>) {
         Role.SENDER -> {
             val host = HostAndPort.fromString("localhost:10004")
             println("Connecting to sender node ($host)")
-            CordaRPCClient(host, sslConfigFor("nodea")).use("demo", "demo") {
+            CordaRPCClient(host, sslConfigFor("nodea", options.valueOf(certsPath))).use("demo", "demo") {
                 sender(this)
             }
         }
         Role.RECIPIENT -> {
             val host = HostAndPort.fromString("localhost:10006")
             println("Connecting to the recipient node ($host)")
-            CordaRPCClient(host, sslConfigFor("nodeb")).use("demo", "demo") {
+            CordaRPCClient(host, sslConfigFor("nodeb", options.valueOf(certsPath))).use("demo", "demo") {
                 recipient(this)
             }
         }
@@ -111,10 +112,10 @@ private fun printHelp(parser: OptionParser) {
 
 
 // TODO: Take this out once we have a dedicated RPC port and allow SSL on it to be optional.
-private fun sslConfigFor(nodename: String): NodeSSLConfiguration {
+private fun sslConfigFor(nodename: String, certsPath: String?): NodeSSLConfiguration {
     return object : NodeSSLConfiguration {
         override val keyStorePassword: String = "cordacadevpass"
         override val trustStorePassword: String = "trustpass"
-        override val certificatesPath: Path = Paths.get("build") / "nodes" / nodename / "certificates"
+        override val certificatesPath: Path = if (certsPath != null) Paths.get(certsPath) else Paths.get("build") / "nodes" / nodename / "certificates"
     }
 }
