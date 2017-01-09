@@ -6,13 +6,13 @@ Here are brief summaries of what's changed between each snapshot release.
 Milestone 7
 -----------
 
-* With thanks to *Thomas Schroeter* (`https://github.com/thschroeter`_) ``NotaryFlow`` is now idempotent.
+* With thanks to `Thomas Schroeter <https://github.com/thschroeter>`_ ``NotaryFlow`` is now idempotent.
 
 * Explorer:
 
     * The GUI for the explorer now shows other nodes on the network map and the transactions between them.
     * Map resolution increased and allows zooming and panning.
-    * Video demonstration of the Node Explorer: `https://www.corda.net/2017/01/03/the-node-explorer/`_.
+    * `Video demonstration <https://www.corda.net/2017/01/03/the-node-explorer/>`_ of the Node Explorer.
 
 * The CorDapp template now has a Java example that parallels the Kotlin one for developers more comfortable with Java.
   ORM support added to the Kotlin example.
