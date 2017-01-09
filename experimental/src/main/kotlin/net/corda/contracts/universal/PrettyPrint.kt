@@ -158,7 +158,7 @@ private class PrettyPrint(arr : Arrangement) {
     fun prettyPrint(arr: Arrangement) {
 
         when (arr) {
-            is Zero -> print("zero")
+            is Zero -> println("zero")
             is RollOut -> {
                 println("rollOut(\"${arr.startDate}\".ld, \"${arr.endDate}\".ld, Frequency.${arr.frequency}) { ")
                 indent {
