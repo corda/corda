@@ -44,7 +44,7 @@ There are two other basic composite clauses that you should be aware of:
    * ``AnyComposition``, whereby any number of clauses (0+) may match, but each matched clause must verify
    * ``FirstComposition``, whereby at least one clause must match, and the first such clause must verify
 
-In turn, composite clauses are themselves clauses, which can be wrapped in the special grouping clause called ``GroupClauseVerifier``. 
+In turn, composite clauses are themselves ``Clause``s, and can, for example, be wrapped in the special ``GroupClauseVerifier`` grouping clause. 
 For ``CommercialPaper``, this would look as follows:
 
 .. image:: resources/commPaperClauses.png
@@ -181,7 +181,7 @@ and is included in the ``CommercialPaper.kt`` code.
             }
             ...
 
-We took part of code for ``Command.Move`` verification from the previous tutorial and put it into the verify function
+We took part of the code for ``Command.Move`` verification from the previous tutorial and put it into the verify function
 of ``Move`` class. Notice that this class must extend the ``Clause`` abstract class, which defines
 the ``verify`` function and the ``requiredCommands`` property used to determine the conditions under which a clause
 is triggered. In the above example, this means that the clause will run its verification logic when ``Commands.Move`` is present in a transaction.
@@ -218,7 +218,7 @@ makes sense to check the ``Move`` command on groups of related inputs and output
 relevant states together.
 For this, we extend the standard ``GroupClauseVerifier`` and specify how to group input/output states, as well as the top-level
 clause to run on each group. In our example, the top level is a composite clause - ``AnyCompostion`` - that delegates verification to
-its subclasses (wrapped move, issue, redeem). "Any" in this case means that it will take 0 or more clauses that match the transaction commands.
+its subclauses (wrapped move, issue, redeem). "Any" in this case means that it will take 0 or more clauses that match the transaction commands.
 
 .. container:: codeset
 
@@ -261,7 +261,7 @@ Summary
 In summary, the top-level contract ``CommercialPaper`` specifies a single grouping clause of type
 ``CommercialPaper.Clauses.Group``, which in turn specifies ``GroupClause`` implementations for each type of command
 (``Redeem``, ``Move`` and ``Issue``). This reflects the verification flow: in order to verify ``CommercialPaper``, 
-we first group states, then wecheck which commands are specified, and finally we run command-specific verification logic accordingly.
+we first group states, then we check which commands are specified, and finally we run command-specific verification logic accordingly.
 
 .. image:: resources/commPaperExecution.png
 
