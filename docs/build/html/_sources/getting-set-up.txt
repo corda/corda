@@ -9,12 +9,12 @@ A JVM
 -----
 
 Corda runs in a JVM and is written predominantly in Kotlin with some example use cases demonstrated in Java that we have
-incorporated to demonstrate that Kotlin and Java can work seemlessly together. We recommend the most recent production
+incorporated to demonstrate that Kotlin and Java can work seamlessly together. We recommend the most recent production
 version of Java 8. The JDK can be obtained `from Oracle <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_.
 Other implementations of the JVM are not actively supported, but as mentioned, we are interested in finding out any issues you
 do have with them.
 
-.. note:: If you are using a JVM implementation other than Oracle's you may get errors similiar to ``Unresolved reference: javafx``.
+.. note:: If you are using a JVM implementation other than Oracle's you may get errors similar to ``Unresolved reference: javafx``.
    This means JavaFX is not bundled with the JVM and you will need to install it separately (e.g. OpenJFX is needed
    with OpenJDK).
 
@@ -22,7 +22,7 @@ IntelliJ
 --------
 We strongly recommend the use of IntelliJ's Development Environment known as IDEA. Download it for free from
 `JetBrains <https://www.jetbrains.com/idea/download/>`_. The primary reason we recommend this particular IDE is that it integrates
-very well with our choice of language for Corda, "Kotlin", as Jetbrains also support the development of Kotlin.
+very well with our choice of language for Corda, "Kotlin", as JetBrains also support the development of Kotlin.
 
 .. warning:: When opening the Corda project for the first time from the IntelliJ splash screen, please use "Open"
    and then agree to import the Gradle project from the popup bubble. Don't pick "Import" on the splash screen,
@@ -42,14 +42,14 @@ of the tutorials (known as "koans") as well. Also see our :doc:`further-notes-on
 Version control via Git
 -----------------------
 
-We use git to version control Corda. The authorative place to obtain git is from the main `git website <https://git-scm.com/downloads>`_
+We use git to version control Corda. The authoritative place to obtain git is from the main `git website <https://git-scm.com/downloads>`_
 but it may be the case that your operating system provides git with a supported utility (e.g. for Apple, git is provided along
 with XCode - their free development environment). If this is the case, we would recommend you obtain git via that
 supported route.
 
 You will need the command line package installed which you can then use natively (via the command line) or via IntelliJ
 (in which case you may need to configure IntelliJ to recognise where git has been installed on your system). IntelliJ and
-git configuration are quite seemless although the first time you use it, you will have to configure IntelliJ the location
+git configuration are quite seamless although the first time you use it, you will have to configure IntelliJ the location
 of your git command installation. More details regarding this can be found
 on the `JetBrains website <https://www.jetbrains.com/help/idea/2016.2/using-git-integration.html>`_
 

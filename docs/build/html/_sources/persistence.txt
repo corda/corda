@@ -63,7 +63,7 @@ The ``SchemaService`` is also responsible for the ``SchemaOptions`` that can be 
 which allow the configuration of a database schema or table name prefixes to avoid any clash with other ``MappedSchema``.
 
 .. note:: It is intended that there should be plugin support for the ``SchemaService`` to offer the version upgrading and
-   additional schemas as part of Cordapps, and that the active schemas be confgurable.  However the present implementation
+   additional schemas as part of Cordapps, and that the active schemas be configurable.  However the present implementation
    offers none of this and simply results in all versions of all schemas supported by a ``QueryableState`` being persisted.
    This will change in due course.  Similarly, it does not currently support configuring ``SchemaOptions`` but will do so in
    the future.

@@ -133,7 +133,7 @@ Party and PublicKey
 Entities using the network are called *parties*. Parties can sign structures using keys, and a party may have many
 keys under their control.
 
-Parties may sometimes be identified pseudonomously, for example, in a transaction sent to your node as part of a
+Parties may sometimes be identified pseudonymously, for example, in a transaction sent to your node as part of a
 chain of custody it is important you can convince yourself of the transaction's validity, but equally important that
 you don't learn anything about who was involved in that transaction. In these cases a public key may be present
 without any identifying information about who owns it.

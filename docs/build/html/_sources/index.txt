@@ -87,7 +87,6 @@ Read on to learn:
    :caption: Other
 
    network-simulator
-   initial-margin-agreement
 
 .. toctree::
    :maxdepth: 2

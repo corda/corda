@@ -49,7 +49,7 @@ Java and took over a month of full time work to develop. Most of that code is co
 message passing, lifecycle management, error handling and callback management. Because the business logic is quite
 spread out the code can be difficult to read and debug.
 
-As small contract-specific trading flows are a common occurence in finance, we provide a framework for the
+As small contract-specific trading flows are a common occurrence in finance, we provide a framework for the
 construction of them that automatically handles many of the concerns outlined above.
 
 Theory
@@ -93,7 +93,7 @@ Our flow has two parties (B and S for buyer and seller) and will proceed as foll
 
 You can find the implementation of this flow in the file ``finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt``.
 
-Assuming no malicious termination, they both end the flow being in posession of a valid, signed transaction that
+Assuming no malicious termination, they both end the flow being in possession of a valid, signed transaction that
 represents an atomic asset swap.
 
 Note that it's the *seller* who initiates contact with the buyer, not vice-versa as you might imagine.

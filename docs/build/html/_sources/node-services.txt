@@ -53,7 +53,7 @@ and remote ``Parties``. It is automatically populated from the
 ``NetworkMapCache`` updates and is used when translating ``CompositeKey`` 
 exposed in transactions into fully populated ``Party`` identities. This 
 service is also used in the default JSON mapping of parties in the web 
-server, thus allowing the party names to be used to refer to other node 
+server, thus allowing the party names to be used to refer to other nodes' 
 legal identities. In the future the Identity service will be made 
 persistent and extended to allow anonymised session keys to be used in 
 flows where the well-known ``CompositeKey`` of nodes need to be hidden 

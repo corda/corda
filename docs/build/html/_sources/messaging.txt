@@ -38,7 +38,7 @@ The network map currently supports:
 * Looking up nodes by service
 * Looking up node for a party
 * Suggesting a node providing a specific service, based on suitability for a contract and parties, for example suggesting
-  an appropriate interest rates oracle for a interest rate swap contract. Currently no recommendation logic is in place.
+  an appropriate interest rates oracle for an interest rate swap contract. Currently no recommendation logic is in place.
 
 Message queues
 --------------
@@ -106,6 +106,9 @@ the validated user is the username itself and the RPC framework uses this to det
 
 .. note:: ``Party`` lookup is currently done by the legal name which isn't guaranteed to be unique. A future version will
    use the full X.500 name as it can provide additional structures for uniqueness.
+
+The broker also does host verification when connecting to another peer. It checks that the TLS certificate common name
+matches with the advertised legal name from the network map service.
 
 Messaging types
 ---------------

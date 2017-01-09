@@ -87,30 +87,6 @@ contained within.</p>
 </tr>
 <tr>
 <td>
-<a href="-whitelist-trust-manager/index.html">WhitelistTrustManager</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">WhitelistTrustManager</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/javax/net/ssl/X509ExtendedTrustManager.html"><span class="identifier">X509ExtendedTrustManager</span></a></code><p>Our TrustManager extension takes the standard certificate checker and first delegates all the
-chain checking to that. If everything is well formed we then simply add a check against our whitelist</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="-whitelist-trust-manager-provider/index.html">WhitelistTrustManagerProvider</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">WhitelistTrustManagerProvider</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/Provider.html"><span class="identifier">Provider</span></a></code><p>Custom Security Provider that forces the TrustManagerFactory to be our custom one.
-Also holds the identity of the original TrustManager algorithm so
-that we can delegate most of the checking to the proper Java code. We simply add some more checks.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="-whitelist-trust-manager-spi/index.html">WhitelistTrustManagerSpi</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">WhitelistTrustManagerSpi</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/javax/net/ssl/TrustManagerFactorySpi.html"><span class="identifier">TrustManagerFactorySpi</span></a></code><p>Registered TrustManagerFactorySpi</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="-x509-utilities/index.html">X509Utilities</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">X509Utilities</span></code></td>
@@ -215,17 +191,6 @@ you want hard-coded private keys.</p>
 <a href="parse-public-key-base58.html">parsePublicKeyBase58</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">parsePublicKeyBase58</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto$parsePublicKeyBase58(kotlin.String)/base58String">base58String</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="register-whitelist-trust-manager.html">registerWhitelistTrustManager</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">registerWhitelistTrustManager</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Call this to change the default verification algorithm and this use the WhitelistTrustManager
-implementation. This is a work around to the fact that ArtemisMQ and probably many other libraries
-dont correctly configure the SSLParameters with setEndpointIdentificationAlgorithm and thus dont check
-that the certificate matches with the DNS entry requested. This exposes us to man in the middle attacks.
-The issue has been raised with ArtemisMQ: https://issues.apache.org/jira/browse/ARTEMIS-656</p>
-</td>
 </tr>
 <tr>
 <td>
