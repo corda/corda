@@ -101,7 +101,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         @Suspendable
         override fun call(): DigitalSignature.LegallyIdentifiable {
             val wtx = tx.toWireTransaction()
-            val partialMerkleTx = FilteredTransaction.buildMerkleTransaction(wtx, filterFuns)
+            val partialMerkleTx = wtx.buildFilteredTransaction(filterFuns)
             val rootHash = wtx.id
 
             val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(oracle, SignRequest(rootHash, partialMerkleTx))

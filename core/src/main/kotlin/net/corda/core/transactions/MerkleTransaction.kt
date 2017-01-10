@@ -17,35 +17,62 @@ fun <T : Any> serializedHash(x: T): SecureHash {
     return x.serialize(kryo).hash
 }
 
+val zeroHash = SecureHash.SHA256(ByteArray(32, { 0.toByte() }))
+
 /**
  * Creation and verification of a Merkle Tree for a Wire Transaction.
  *
  * See: https://en.wikipedia.org/wiki/Merkle_tree
  *
- * Transaction is split into following blocks: inputs, outputs, commands, attachments' refs. Merkle Tree is kept in
- * a recursive data structure. Building is done bottom up, from all leaves' hashes.
- * If a row in a tree has an odd number of elements - the final hash is hashed with itself.
+ * Transaction is split into following blocks: inputs, outputs, commands, attachments' refs, timestamp, notary,
+ * signers (as whole - sorted), tx type. Merkle Tree is kept in a recursive data structure. Building is done bottom up,
+ * from all leaves' hashes. If number of leaves is not a power of two, the tree is padded with zero hashes.
  */
 sealed class MerkleTree(val hash: SecureHash) {
     class Leaf(val value: SecureHash) : MerkleTree(value)
     class Node(val value: SecureHash, val left: MerkleTree, val right: MerkleTree) : MerkleTree(value)
-    // DuplicatedLeaf is storing a hash of the rightmost node that had to be duplicated to obtain the tree.
-    // That duplication can cause problems while building and verifying partial tree (especially for trees with duplicate
-    // attachments or commands).
-    class DuplicatedLeaf(val value: SecureHash) : MerkleTree(value)
 
-    fun hashNodes(right: MerkleTree): MerkleTree {
+    private fun hashNodes(right: MerkleTree): MerkleTree {
         val newHash = this.hash.hashConcat(right.hash)
         return Node(newHash, this, right)
     }
 
+    // Check if a tree is full binary tree. Returns the height of the tree if full, otherwise throws exception.
+    @Throws(MerkleTreeException::class)
+    fun checkFull(level: Int = 0): Int {
+        return when (this) {
+            is Leaf -> level
+            is Node -> {
+                val l1 = this.left.checkFull(level+1)
+                val l2 = this.right.checkFull(level+1)
+                if (l1 != l2) throw MerkleTreeException("Got not full binary tree.")
+                l1
+            }
+        }
+    }
+
     companion object {
+        private fun isPow2(num: Int): Boolean = num and (num-1) == 0
+
         /**
-         * Merkle tree building using hashes.
+         * Merkle tree building using hashes, with zero hash padding to full power of 2.
          */
+        @Throws(IllegalArgumentException::class)
         fun getMerkleTree(allLeavesHashes: List<SecureHash>): MerkleTree {
-            val leaves = allLeavesHashes.map { MerkleTree.Leaf(it) }
+            val leaves = padWithZeros(allLeavesHashes).map { MerkleTree.Leaf(it) }
             return buildMerkleTree(leaves)
+        }
+
+        // If number of leaves in the tree is not a power of 2, we need to pad it with zero hashes.
+        fun padWithZeros(allLeavesHashes: List<SecureHash>): List<SecureHash> {
+            var n = allLeavesHashes.size
+            if (isPow2(n)) return allLeavesHashes
+            val paddedHashes = ArrayList<SecureHash>(allLeavesHashes)
+            while (!isPow2(n)) {
+                paddedHashes.add(zeroHash)
+                n++
+            }
+            return paddedHashes
         }
 
         /**
@@ -64,12 +91,8 @@ sealed class MerkleTree(val hash: SecureHash) {
                 val n = lastNodesList.size
                 while (i < n) {
                     val left = lastNodesList[i]
-                    // If there is an odd number of elements at this level,
-                    // the last element is hashed with hash(itself + index at this level in the tree) and stored as a Leaf.
-                    val right = when {
-                        i + 1 > n - 1 -> MerkleTree.DuplicatedLeaf((lastNodesList[n - 1].hash.bytes + n.toByte()).sha256())
-                        else -> lastNodesList[i + 1]
-                    }
+                    require(i+1 <= n-1) { "Sanity check: number of nodes should be even." }
+                    val right = lastNodesList[i+1]
                     val combined = left.hashNodes(right)
                     newLevelHashes.add(combined)
                     i += 2
@@ -82,6 +105,8 @@ sealed class MerkleTree(val hash: SecureHash) {
 
 /**
  * Class that holds filtered leaves for a partial Merkle transaction. We assume mixed leaves types.
+ * Notice that we include only certain parts of wire transaction (no type, signers, notary). Timestamp is always added,
+ * if present.
  */
 class FilteredLeaves(
         val inputs: List<StateRef>,

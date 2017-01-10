@@ -17,7 +17,7 @@ import kotlin.test.*
 class PartialMerkleTreeTest {
     val nodes = "abcdef"
     val hashed = nodes.map { it.serialize().sha256() }
-    val root = SecureHash.parse("28B0EBAED5FD550AE90D4F477323EB4F9C1F90553C70DD279F4AD6B43E5A873D")
+    val expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash)).hash
     val merkleTree = MerkleTree.getMerkleTree(hashed)
 
     val testLedger = ledger {
@@ -43,23 +43,6 @@ class PartialMerkleTreeTest {
             timestamp(TEST_TX_TIME)
             this.verifies()
         }
-
-        // 3 leaves transaction.
-        transaction {
-            input("MEGA_CORP cash")
-            input("dummy cash 1")
-            output("MEGA_CORP cash".output<Cash.State>().copy(owner = DUMMY_PUBKEY_1))
-            this.fails()
-        }
-
-        // 4 leaves transaction with two the same outputs.
-        transaction {
-            input("MEGA_CORP cash")
-            input("dummy cash 1")
-            output("MEGA_CORP cash".output<Cash.State>().copy(owner = DUMMY_PUBKEY_1))
-            output("MEGA_CORP cash".output<Cash.State>().copy(owner = DUMMY_PUBKEY_1))
-            this.fails()
-        }
     }
 
     val txs = testLedger.interpreter.transactionsToVerify
@@ -68,7 +51,7 @@ class PartialMerkleTreeTest {
     // Building full Merkle Tree tests.
     @Test
     fun `building Merkle tree with 6 nodes - no rightmost nodes`() {
-        assertEquals(root, merkleTree.hash)
+        assertEquals(expectedRoot, merkleTree.hash)
     }
 
     @Test
@@ -87,10 +70,36 @@ class PartialMerkleTreeTest {
     fun `building Merkle tree odd number of nodes`() {
         val odd = hashed.subList(0, 3)
         val h1 = hashed[0].hashConcat(hashed[1])
-        val h2 = hashed[2].hashConcat((hashed[2].bytes + 3.toByte()).sha256())
+        val h2 = hashed[2].hashConcat(zeroHash)
         val expected = h1.hashConcat(h2)
         val mt = MerkleTree.getMerkleTree(odd)
         assertEquals(mt.hash, expected)
+    }
+
+    @Test
+    fun `check full tree`() {
+        val h = SecureHash.randomSHA256()
+        val left = MerkleTree.Node(h, MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h)),
+                    MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h)))
+        val right = MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h))
+        val tree = MerkleTree.Node(h, left, right)
+        assertFailsWith<MerkleTreeException> { tree.checkFull() }
+        assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(tree, listOf(h)) }
+        MerkleTree.Leaf(h).checkFull() // Just leaf.
+        right.checkFull() // Node and two leaves.
+    }
+
+    @Test
+    fun `zero padding tests`() {
+        val h = SecureHash.randomSHA256()
+        val hashes = Array<SecureHash>(8, { h } ).toList()
+        val padded = MerkleTree.padWithZeros(hashes.subList(0,5))
+        assert(MerkleTree.padWithZeros(emptyList<SecureHash>()).isEmpty())
+        assertEquals(1, MerkleTree.padWithZeros(hashes.subList(0,1)).size)
+        assertEquals(8, padded.size)
+        assertNotEquals(hashes, padded)
+        assertEquals(zeroHash, padded[5])
+        assertEquals(8, MerkleTree.padWithZeros(hashes).size)
     }
 
     @Test
@@ -111,20 +120,9 @@ class PartialMerkleTreeTest {
     }
 
     @Test
-    fun `transactions with different notaries have different ids`() {
-        fun makeWtx(notary: Party): WireTransaction =
-                WireTransaction(
-                        inputs = listOf(StateRef(SecureHash.sha256("0"), 0)),
-                        attachments = emptyList(),
-                        outputs = emptyList(),
-                        commands = emptyList(),
-                        notary = notary,
-                        signers = listOf(DUMMY_KEY_1.public.composite, DUMMY_KEY_2.public.composite),
-                        type = TransactionType.General(),
-                        timestamp = null
-                )
-        val wtx1 = makeWtx(DUMMY_NOTARY)
-        val wtx2 = makeWtx(MEGA_CORP)
+    fun `same transactions with different notaries have different ids`() {
+        val wtx1 = makeSimpleCashWtx(DUMMY_NOTARY)
+        val wtx2 = makeSimpleCashWtx(MEGA_CORP)
         assertNotEquals(wtx1.id, wtx2.id)
     }
 
@@ -225,10 +223,16 @@ class PartialMerkleTreeTest {
         assert(hm1.hashCode() == hm2.hashCode())
     }
 
-    @Test
-    fun `transactions with the same ids, duplicated last node bug`() {
-        val tx1 = txs[1]
-        val tx2 = txs[2]
-        assertFalse(tx1.id == tx2.id)
+    private fun makeSimpleCashWtx(notary: Party, timestamp: Timestamp? = null, attachments: List<SecureHash> = emptyList()): WireTransaction {
+        return WireTransaction(
+                inputs = testTx.inputs,
+                attachments = attachments,
+                outputs = testTx.outputs,
+                commands = testTx.commands,
+                notary = notary,
+                signers = testTx.mustSign,
+                type = TransactionType.General(),
+                timestamp = timestamp
+        )
     }
 }
