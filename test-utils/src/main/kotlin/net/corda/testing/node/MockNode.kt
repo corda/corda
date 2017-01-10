@@ -163,7 +163,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun stop() {
             synchronized(this) {
-                check(!stopped)
+                if (stopped) return
                 stopped = true
             }
             super.stop()
