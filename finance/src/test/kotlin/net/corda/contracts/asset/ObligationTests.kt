@@ -66,7 +66,7 @@ class ObligationTests {
             tweak {
                 output { outState }
                 command(DUMMY_PUBKEY_2) { Obligation.Commands.Move() }
-                this `fails with` "the owning keys are the same as the signing keys"
+                this `fails with` "the owning keys are a subset of the signing keys"
             }
             tweak {
                 output { outState }
