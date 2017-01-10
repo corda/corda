@@ -405,7 +405,7 @@ class Obligation<P> : Contract {
         val owningPubKeys = inputs.filter { it is State<P> }.map { (it as State<P>).beneficiary }.toSet()
         val keysThatSigned = setLifecycleCommand.signers.toSet()
         requireThat {
-            "the owning keys are the same as the signing keys" by keysThatSigned.containsAll(owningPubKeys)
+            "the owning keys are a subset of the signing keys" by keysThatSigned.containsAll(owningPubKeys)
         }
     }
 

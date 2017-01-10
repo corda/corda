@@ -119,7 +119,7 @@ inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState
     val command = commands.requireSingleCommand<T>()
     val keysThatSigned = command.signers.toSet()
     requireThat {
-        "the owning keys are the same as the signing keys" by keysThatSigned.containsAll(owningPubKeys)
+        "the owning keys are a subset of the signing keys" by keysThatSigned.containsAll(owningPubKeys)
     }
     return command.value
 }

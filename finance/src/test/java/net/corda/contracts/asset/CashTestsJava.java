@@ -38,7 +38,7 @@ public class CashTestsJava {
                 tx.tweak(tw -> {
                     tw.output(outState);
                     tw.command(getDUMMY_PUBKEY_2(), new Cash.Commands.Move());
-                    return tw.failsWith("the owning keys are the same as the signing keys");
+                    return tw.failsWith("the owning keys are a subset of the signing keys");
                 });
                 tx.tweak(tw -> {
                     tw.output(outState);
