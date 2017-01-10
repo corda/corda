@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.CordaPluginRegistry
@@ -97,7 +96,7 @@ class ScheduledFlowTests {
 
     @Before
     fun setup() {
-        net = MockNetwork(threadPerNode = true)
+        net = MockNetwork(threadPerNode = false)
         notaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
                 keyPair = DUMMY_NOTARY_KEY,
@@ -107,6 +106,7 @@ class ScheduledFlowTests {
         nodeA.testPluginRegistries.add(ScheduledFlowTestPlugin())
         nodeB.testPluginRegistries.add(ScheduledFlowTestPlugin())
         net.startNodes()
+        net.runNetworkAsyncUntilNodesStopped()
     }
 
     @After

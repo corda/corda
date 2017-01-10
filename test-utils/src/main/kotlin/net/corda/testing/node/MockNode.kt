@@ -32,6 +32,7 @@ import java.security.KeyPair
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
@@ -121,6 +122,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     mockNet.sharedServerThread
                 }
 
+        var stopped = false
+
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
         override fun makeMessagingService(): MessagingServiceInternal {
@@ -158,6 +161,14 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             return this
         }
 
+        override fun stop() {
+            synchronized(this) {
+                check(!stopped)
+                stopped = true
+            }
+            super.stop()
+        }
+
         // Allow unit tests to modify the plugin list before the node start,
         // so they don't have to ServiceLoad test plugins into all unit tests.
         val testPluginRegistries = super.pluginRegistries.toMutableList()
@@ -185,6 +196,12 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         var acceptableLiveFiberCountOnStop: Int = 0
 
         override fun acceptableLiveFiberCountOnStop(): Int = acceptableLiveFiberCountOnStop
+
+        val isIdle: Boolean get() = serverThread.fetchFrom {
+            smm.unfinishedFibers.count == 0
+                    && scheduler.unfinishedSchedules.count == 0
+                    && mockNet.messagingNetwork.messagesInFlight.count == 0
+        }
     }
 
     /** Returns a node, optionally created by the passed factory method. */
@@ -231,6 +248,13 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                 pumpAll()
             }
         }
+    }
+
+    /**
+     * Runs the network in the background until you stop all the nodes.
+     */
+    fun runNetworkAsyncUntilNodesStopped() {
+        thread { while (nodes.any { !it.stopped }) runNetwork() }
     }
 
     // TODO: Move this to using createSomeNodes which doesn't conflate network services with network users.
@@ -294,9 +318,10 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     // TODO This is not perfect in that certain orderings my skip over the scanning loop.
     // However, in practice it works well for testing of scheduled flows.
     fun waitQuiescent() {
-        while(nodes.any { it.smm.unfinishedFibers.count > 0
-                            || it.scheduler.unfinishedSchedules.count > 0}
-                || messagingNetwork.messagesInFlight.count > 0) {
+        if (nodes.size > 1 && threadPerNode) {
+            throw UnsupportedOperationException("Cannot waitQuiescent() if multiple server threads")
+        }
+        while (sharedServerThread.fetchFrom { nodes.any { !it.isIdle } }) {
             for (node in nodes) {
                 node.smm.unfinishedFibers.await()
                 node.scheduler.unfinishedSchedules.await()

@@ -124,10 +124,10 @@ class NodeSchedulerService(private val database: Database,
             val removedAction = scheduledStates.remove(ref)
             if (removedAction != null) {
                 unfinishedSchedules.countDown()
-            }
-            if (removedAction == earliestState && removedAction != null) {
-                recomputeEarliest()
-                rescheduleWakeUp()
+                if (removedAction == earliestState) {
+                    recomputeEarliest()
+                    rescheduleWakeUp()
+                }
             }
         }
     }
@@ -182,6 +182,7 @@ class NodeSchedulerService(private val database: Database,
             val scheduledLogic: FlowLogic<*>? = getScheduledLogic()
             if (scheduledLogic != null) {
                 subFlow(scheduledLogic)
+                scheduler.unfinishedSchedules.countDown()
             }
         }
 
@@ -215,10 +216,7 @@ class NodeSchedulerService(private val database: Database,
                             // TODO: FlowLogicRefFactory needs to sort out the class loader etc
                             val logic = scheduler.flowLogicRefFactory.toFlowLogic(scheduledActivity.logicRef)
                             logger.trace { "Scheduler starting FlowLogic $logic" }
-                            // FlowLogic will be checkpointed by the time this returns.
-                            //scheduler.services.startFlowAndForget(logic)
                             scheduledLogic = logic
-                            scheduler.unfinishedSchedules.countDown()
                             null
                         }
                     } else {
