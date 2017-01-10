@@ -50,7 +50,7 @@ private class BankOfCordaDriver {
             driver(dsl = {
                 val user = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>(), startFlowPermission<IssuerFlow.IssuanceRequester>()))
                 startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.type)))
-                startNode("BankOfCorda", rpcUsers = listOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer"))))
+                startNode("BankOfCorda", rpcUsers = listOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
                 startNode("BigCorporation", rpcUsers = listOf(user))
                 waitForAllNodesToFinish()
             }, isDebug = true)
