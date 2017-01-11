@@ -1,3 +1,4 @@
+@file:JvmName("Corda")
 package net.corda.node
 
 import com.typesafe.config.ConfigException
