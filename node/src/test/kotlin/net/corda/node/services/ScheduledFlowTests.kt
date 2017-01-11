@@ -96,7 +96,7 @@ class ScheduledFlowTests {
 
     @Before
     fun setup() {
-        net = MockNetwork(threadPerNode = false)
+        net = MockNetwork(threadPerNode = true)
         notaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
                 keyPair = DUMMY_NOTARY_KEY,
@@ -106,7 +106,6 @@ class ScheduledFlowTests {
         nodeA.testPluginRegistries.add(ScheduledFlowTestPlugin())
         nodeB.testPluginRegistries.add(ScheduledFlowTestPlugin())
         net.startNodes()
-        net.runNetworkAsyncUntilNodesStopped()
     }
 
     @After

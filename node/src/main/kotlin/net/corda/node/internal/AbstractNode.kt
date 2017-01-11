@@ -49,6 +49,7 @@ import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
+import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
@@ -74,7 +75,8 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
 abstract class AbstractNode(open val configuration: NodeConfiguration,
                             val advertisedServices: Set<ServiceInfo>,
-                            val platformClock: Clock) : SingletonSerializeAsToken() {
+                            val platformClock: Clock,
+                            @VisibleForTesting val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
@@ -219,7 +221,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             keyManagement = makeKeyManagementService()
             api = APIServerImpl(this@AbstractNode)
             flowLogicFactory = initialiseFlowLogicFactory()
-            scheduler = NodeSchedulerService(database, services, flowLogicFactory)
+            scheduler = NodeSchedulerService(database, services, flowLogicFactory, unfinishedSchedulesLatch = busyNodeLatch)
 
             val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
 
@@ -237,7 +239,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     listOf(tokenizableServices),
                     checkpointStorage,
                     serverThread,
-                    database)
+                    database,
+                    busyNodeLatch)
             if (serverThread is ExecutorService) {
                 runOnStop += Runnable {
                     // We wait here, even though any in-flight messages should have been drained away because the
