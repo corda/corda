@@ -54,8 +54,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
     private var nextNodeId = 0
     val filesystem: FileSystem = Jimfs.newFileSystem(unix())
-    private val busyNetworkLatch: ReusableLatch = ReusableLatch()
-    val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped, servicePeerAllocationStrategy, busyNetworkLatch)
+    private val busyLatch: ReusableLatch = ReusableLatch()
+    val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped, servicePeerAllocationStrategy, busyLatch)
 
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
@@ -113,7 +113,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                         override val networkMapAddress: SingleMessageRecipient?,
                         advertisedServices: Set<ServiceInfo>,
                         val id: Int,
-                        val keyPair: KeyPair?) : AbstractNode(config, advertisedServices, TestClock(), mockNet.busyNetworkLatch) {
+                        val keyPair: KeyPair?) : AbstractNode(config, advertisedServices, TestClock(), mockNet.busyLatch) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
@@ -294,6 +294,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     // Test method to block until all scheduled activity, active flows
     // and network activity has ceased.
     fun waitQuiescent() {
-        busyNetworkLatch.await()
+        busyLatch.await()
     }
 }

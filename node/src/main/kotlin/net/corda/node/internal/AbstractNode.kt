@@ -221,7 +221,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             keyManagement = makeKeyManagementService()
             api = APIServerImpl(this@AbstractNode)
             flowLogicFactory = initialiseFlowLogicFactory()
-            scheduler = NodeSchedulerService(database, services, flowLogicFactory, unfinishedSchedulesLatch = busyNodeLatch)
+            scheduler = NodeSchedulerService(database, services, flowLogicFactory, unfinishedSchedules = busyNodeLatch)
 
             val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
 

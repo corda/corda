@@ -45,7 +45,7 @@ import kotlin.concurrent.thread
 class InMemoryMessagingNetwork(
         val sendManuallyPumped: Boolean,
         val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
-        val messagesInFlight: ReusableLatch = ReusableLatch()
+        private val messagesInFlight: ReusableLatch = ReusableLatch()
 ) : SingletonSerializeAsToken() {
     companion object {
         val MESSAGES_LOG_NAME = "messages"
