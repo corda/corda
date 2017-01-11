@@ -18,6 +18,8 @@ private fun signingParties(perceivable: Perceivable<Boolean>) : ImmutableSet<Par
         is PerceivableAnd -> Sets.union( signingParties( perceivable.left ), signingParties(perceivable.right) ).immutableCopy()
         is PerceivableOr -> Sets.union( signingParties( perceivable.left ), signingParties(perceivable.right) ).immutableCopy()
         is TimePerceivable -> ImmutableSet.of<Party>()
+        is TerminalEvent -> ImmutableSet.of( perceivable.reference )
+        is PerceivableComparison<*> -> ImmutableSet.of<Party>() // todo
         else -> throw IllegalArgumentException("signingParties " + perceivable)
     }
 

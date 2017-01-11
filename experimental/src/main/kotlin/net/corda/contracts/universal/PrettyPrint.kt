@@ -97,6 +97,27 @@ private class PrettyPrint(arr : Arrangement) {
                     }
                 }
             }
+            is PerceivableComparison<*> -> {
+                when (per.type) {
+                    BigDecimal::class.java -> prettyPrintPerBD(per.left as Perceivable<BigDecimal>)
+                    Instant::class.java -> prettyPrintPerInstant(per.left as Perceivable<Instant>)
+                    Boolean::class.java -> prettyPrintPerBoolean(per.left as Perceivable<Boolean>)
+                }
+                when (per.cmp) {
+                    Comparison.GT -> print(" > ")
+                    Comparison.LT -> print(" < ")
+                    Comparison.GTE -> print(" >= ")
+                    Comparison.LTE -> print(" <= ")
+                }
+                when (per.type) {
+                    BigDecimal::class.java -> prettyPrintPerBD(per.right as Perceivable<BigDecimal>)
+                    Instant::class.java -> prettyPrintPerInstant(per.right as Perceivable<Instant>)
+                    Boolean::class.java -> prettyPrintPerBoolean(per.right as Perceivable<Boolean>)
+                }
+            }
+            is TerminalEvent -> {
+                print("TerminalEvent(${partyMap[per.reference.owningKey]}, \"${per.source}\")")
+            }
             is ActorPerceivable -> {
                 print("signedBy(${partyMap[per.actor.owningKey]})")
             }
@@ -150,6 +171,9 @@ private class PrettyPrint(arr : Arrangement) {
                 print(", ")
                 prettyPrintPerInstant(per.end)
                 print(")")
+            }
+            is CurrencyCross -> {
+                print("${per.foreign}/${per.domestic}")
             }
             else -> println(per)
         }

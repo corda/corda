@@ -2,7 +2,9 @@ package net.corda.contracts.universal
 
 import net.corda.core.contracts.BusinessCalendar
 import net.corda.core.contracts.Tenor
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import java.lang.reflect.Type
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
@@ -110,17 +112,20 @@ data class CurrencyCross(val foreign: Currency, val domestic: Currency) : Percei
 
 operator fun Currency.div(currency: Currency) = CurrencyCross(this, currency)
 
-data class PerceivableComparison<T>(val left: Perceivable<T>, val cmp: Comparison, val right: Perceivable<T>) : Perceivable<Boolean>
+data class PerceivableComparison<T>(val left: Perceivable<T>, val cmp: Comparison, val right: Perceivable<T>, val type: Type) : Perceivable<Boolean>
 
-infix fun Perceivable<BigDecimal>.lt(n: BigDecimal) = PerceivableComparison(this, Comparison.LT, const(n))
-infix fun Perceivable<BigDecimal>.gt(n: BigDecimal) = PerceivableComparison(this, Comparison.GT, const(n))
-infix fun Perceivable<BigDecimal>.lt(n: Double) = PerceivableComparison(this, Comparison.LT, const(BigDecimal(n)))
-infix fun Perceivable<BigDecimal>.gt(n: Double) = PerceivableComparison(this, Comparison.GT, const(BigDecimal(n)))
+inline fun<reified T : Any> perceivableComparison(left: Perceivable<T>, cmp: Comparison, right: Perceivable<T>) =
+    PerceivableComparison(left, cmp, right, T::class.java)
 
-infix fun Perceivable<BigDecimal>.lte(n: BigDecimal) = PerceivableComparison(this, Comparison.LTE, const(n))
-infix fun Perceivable<BigDecimal>.gte(n: BigDecimal) = PerceivableComparison(this, Comparison.GTE, const(n))
-infix fun Perceivable<BigDecimal>.lte(n: Double) = PerceivableComparison(this, Comparison.LTE, const(BigDecimal(n)))
-infix fun Perceivable<BigDecimal>.gte(n: Double) = PerceivableComparison(this, Comparison.GTE, const(BigDecimal(n)))
+infix fun Perceivable<BigDecimal>.lt(n: BigDecimal) = perceivableComparison(this, Comparison.LT, const(n))
+infix fun Perceivable<BigDecimal>.gt(n: BigDecimal) = perceivableComparison(this, Comparison.GT, const(n))
+infix fun Perceivable<BigDecimal>.lt(n: Double) = perceivableComparison(this, Comparison.LT, const(BigDecimal(n)))
+infix fun Perceivable<BigDecimal>.gt(n: Double) = perceivableComparison(this, Comparison.GT, const(BigDecimal(n)))
+
+infix fun Perceivable<BigDecimal>.lte(n: BigDecimal) = perceivableComparison(this, Comparison.LTE, const(n))
+infix fun Perceivable<BigDecimal>.gte(n: BigDecimal) = perceivableComparison(this, Comparison.GTE, const(n))
+infix fun Perceivable<BigDecimal>.lte(n: Double) = perceivableComparison(this, Comparison.LTE, const(BigDecimal(n)))
+infix fun Perceivable<BigDecimal>.gte(n: Double) = perceivableComparison(this, Comparison.GTE, const(BigDecimal(n)))
 
 enum class Operation {
     PLUS, MINUS, TIMES, DIV
@@ -144,8 +149,7 @@ operator fun Perceivable<BigDecimal>.div(n: Double) = PerceivableOperation(this,
 operator fun Perceivable<Int>.plus(n: Int) = PerceivableOperation(this, Operation.PLUS, const(n))
 operator fun Perceivable<Int>.minus(n: Int) = PerceivableOperation(this, Operation.MINUS, const(n))
 
-class DummyPerceivable<T> : Perceivable<T>
-
+data class TerminalEvent(val reference: Party, val source: CompositeKey) : Perceivable<Boolean>
 
 // todo: holidays
 data class Interest(val amount: Perceivable<BigDecimal>, val dayCountConvention: String,
