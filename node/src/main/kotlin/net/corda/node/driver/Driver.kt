@@ -441,7 +441,6 @@ open class DriverDSL(
     }
 
     companion object {
-
         val name = arrayOf(
                 "Alice",
                 "Bob",
@@ -459,20 +458,28 @@ open class DriverDSL(
             // Write node.conf
             writeConfig(nodeConf.baseDirectory, "node.conf", nodeConf.config)
 
-            val className = "net.corda.node.MainKt" // cannot directly get class for this, so just use string
+            val className = "net.corda.node.Corda" // cannot directly get class for this, so just use string
             val separator = System.getProperty("file.separator")
             val classpath = System.getProperty("java.class.path")
             val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
 
             val debugPortArg = if (debugPort != null)
-                listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
+                "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort"
             else
-                emptyList()
+                ""
 
-            val javaArgs = listOf(path) +
-                    listOf("-Dname=${nodeConf.myLegalName}", "-javaagent:$quasarJarPath") + debugPortArg +
-                    listOf("-cp", classpath, className) +
+            val javaArgs = listOf(
+                    path,
+                    "-Dname=${nodeConf.myLegalName}",
+                    "-javaagent:$quasarJarPath",
+                    debugPortArg,
+                    "-Dvisualvm.display.name=Corda",
+                    "-Xmx200m",
+                    "-XX:+UseG1GC",
+                    "-cp", classpath,
+                    className,
                     "--base-directory=${nodeConf.baseDirectory}"
+            ).filter(String::isNotEmpty)
             val builder = ProcessBuilder(javaArgs)
             builder.redirectError(Paths.get("error.$className.log").toFile())
             builder.inheritIO()

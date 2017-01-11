@@ -49,15 +49,25 @@ dependencies {
 }
 
 task buildCordaJAR(type: FatCapsule, dependsOn: ['buildCertSigningRequestUtilityJAR']) {
-    applicationClass 'net.corda.node.MainKt'
+    applicationClass 'net.corda.node.Corda'
     archiveName "corda-${corda_version}.jar"
     applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
 
     capsuleManifest {
         appClassPath = ["jolokia-agent-war-${project.rootProject.ext.jolokia_version}.war"]
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
+        systemProperties['visualvm.display.name'] = 'Corda'
         minJavaVersion = '1.8.0'
+        // This version is known to work and avoids earlier 8u versions that have bugs.
+        minUpdateVersion['1.8'] = '102'
         caplets = ['CordaCaplet']
+
+        // JVM configuration:
+        // - Constrain to small heap sizes to ease development on low end devices.
+        // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
+        //
+        // If you change these flags, please also update Driver.kt
+        jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
     }
 }
 

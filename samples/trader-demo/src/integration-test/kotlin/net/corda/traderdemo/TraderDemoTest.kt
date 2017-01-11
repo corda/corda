@@ -12,7 +12,7 @@ import org.junit.Test
 
 class TraderDemoTest {
     @Test fun `runs trader demo`() {
-        driver(dsl = {
+        driver(isDebug = true) {
             val user = User("user1", "test", permissions = setOf(startFlowPermission<IssuerFlow.IssuanceRequester>()))
             val (nodeA, nodeB) = Futures.allAsList(
                 startNode("Bank A"),
@@ -23,6 +23,6 @@ class TraderDemoTest {
 
             assert(TraderDemoClientApi(nodeA.configuration.webAddress).runBuyer())
             assert(TraderDemoClientApi(nodeB.configuration.webAddress).runSeller(counterparty = nodeA.nodeInfo.legalIdentity.name))
-        }, isDebug = true)
+        }
     }
 }
