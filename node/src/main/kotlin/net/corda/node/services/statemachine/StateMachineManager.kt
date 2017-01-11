@@ -335,13 +335,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 fiber.logic.progressTracker?.currentStep = ProgressTracker.DONE
                 mutex.locked {
                     stateMachines.remove(fiber)?.let { checkpointStorage.removeCheckpoint(it) }
-                    totalFinishedFlows.inc()
-                    unfinishedFibers.countDown()
                     notifyChangeObservers(fiber, AddOrRemove.REMOVE)
                 }
                 endAllFiberSessions(fiber)
             } finally {
+                fiber.commitTransaction()
                 decrementLiveFibers()
+                totalFinishedFlows.inc()
+                unfinishedFibers.countDown()
             }
         }
         mutex.locked {
