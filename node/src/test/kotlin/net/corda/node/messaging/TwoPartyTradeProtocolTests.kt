@@ -415,10 +415,10 @@ class TwoPartyTradeFlowTests {
     private fun runBuyerAndSeller(assetToSell: StateAndRef<OwnableState>): RunResult {
         val buyerFuture = bobNode.initiateSingleShotFlow(Seller::class) { otherParty ->
             Buyer(otherParty, notaryNode.info.notaryIdentity, 1000.DOLLARS, CommercialPaper.State::class.java)
-        }.map { it.fsm }
+        }.map { it.stateMachine }
         val seller = Seller(bobNode.info.legalIdentity, notaryNode.info, assetToSell, 1000.DOLLARS, ALICE_KEY)
         val sellerResultFuture = aliceNode.services.startFlow(seller).resultFuture
-        return RunResult(buyerFuture, sellerResultFuture, seller.fsm.id)
+        return RunResult(buyerFuture, sellerResultFuture, seller.stateMachine.id)
     }
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.runWithError(

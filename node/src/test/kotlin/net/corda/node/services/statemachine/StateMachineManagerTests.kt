@@ -7,8 +7,8 @@ import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.issuedBy
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSessionException
 import net.corda.core.getOrThrow
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.OpaqueBytes
@@ -17,7 +17,6 @@ import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.flows.NotaryFlow
 import net.corda.node.services.persistence.checkpoints
-import net.corda.node.services.statemachine.StateMachineManager.*
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
@@ -215,15 +214,15 @@ class StateMachineManagerTests {
 
         assertSessionTransfers(node2,
                 node1 sent sessionInit(SendFlow::class, payload) to node2,
-                node2 sent sessionConfirm() to node1,
-                node1 sent sessionEnd() to node2
+                node2 sent sessionConfirm to node1,
+                node1 sent sessionEnd to node2
                 //There's no session end from the other flows as they're manually suspended
         )
 
         assertSessionTransfers(node3,
                 node1 sent sessionInit(SendFlow::class, payload) to node3,
-                node3 sent sessionConfirm() to node1,
-                node1 sent sessionEnd() to node3
+                node3 sent sessionConfirm to node1,
+                node1 sent sessionEnd to node3
                 //There's no session end from the other flows as they're manually suspended
         )
 
@@ -248,16 +247,16 @@ class StateMachineManagerTests {
 
         assertSessionTransfers(node2,
                 node1 sent sessionInit(ReceiveThenSuspendFlow::class) to node2,
-                node2 sent sessionConfirm() to node1,
+                node2 sent sessionConfirm to node1,
                 node2 sent sessionData(node2Payload) to node1,
-                node2 sent sessionEnd() to node1
+                node2 sent sessionEnd to node1
         )
 
         assertSessionTransfers(node3,
                 node1 sent sessionInit(ReceiveThenSuspendFlow::class) to node3,
-                node3 sent sessionConfirm() to node1,
+                node3 sent sessionConfirm to node1,
                 node3 sent sessionData(node3Payload) to node1,
-                node3 sent sessionEnd() to node1
+                node3 sent sessionEnd to node1
         )
     }
 
@@ -269,11 +268,11 @@ class StateMachineManagerTests {
 
         assertSessionTransfers(
                 node1 sent sessionInit(PingPongFlow::class, 10L) to node2,
-                node2 sent sessionConfirm() to node1,
+                node2 sent sessionConfirm to node1,
                 node2 sent sessionData(20L) to node1,
                 node1 sent sessionData(11L) to node2,
                 node2 sent sessionData(21L) to node1,
-                node1 sent sessionEnd() to node2
+                node1 sent sessionEnd to node2
         )
     }
 
@@ -333,11 +332,11 @@ class StateMachineManagerTests {
         node2.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { ExceptionFlow }
         val future = node1.services.startFlow(ReceiveThenSuspendFlow(node2.info.legalIdentity)).resultFuture
         net.runNetwork()
-        assertThatThrownBy { future.getOrThrow() }.isInstanceOf(FlowSessionException::class.java)
+        assertThatThrownBy { future.getOrThrow() }.isInstanceOf(FlowException::class.java)
         assertSessionTransfers(
                 node1 sent sessionInit(ReceiveThenSuspendFlow::class) to node2,
-                node2 sent sessionConfirm() to node1,
-                node2 sent sessionEnd() to node1
+                node2 sent sessionConfirm to node1,
+                node2 sent sessionEnd to node1
         )
     }
 
@@ -358,11 +357,11 @@ class StateMachineManagerTests {
 
     private fun sessionInit(flowMarker: KClass<*>, payload: Any? = null) = SessionInit(0, flowMarker.java.name, payload)
 
-    private fun sessionConfirm() = SessionConfirm(0, 0)
+    private val sessionConfirm = SessionConfirm(0, 0)
 
     private fun sessionData(payload: Any) = SessionData(0, payload)
 
-    private fun sessionEnd() = SessionEnd(0)
+    private val sessionEnd = SessionEnd(0)
 
     private fun assertSessionTransfers(vararg expected: SessionTransfer) {
         assertThat(sessionTransfers).containsExactly(*expected)
@@ -462,5 +461,4 @@ class StateMachineManagerTests {
     private object ExceptionFlow : FlowLogic<Nothing>() {
         override fun call(): Nothing = throw Exception()
     }
-
 }

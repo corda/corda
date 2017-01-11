@@ -27,18 +27,18 @@ import rx.Observable
  */
 abstract class FlowLogic<out T> {
 
-    /** Reference to the [Fiber] instance that is the top level controller for the entire flow. */
-    lateinit var fsm: FlowStateMachine<*>
+    /** Reference to the [FlowStateMachine] instance that is the top level controller for the entire flow. */
+    lateinit var stateMachine: FlowStateMachine<*>
 
     /** This is where you should log things to. */
-    val logger: Logger get() = fsm.logger
+    val logger: Logger get() = stateMachine.logger
 
     /**
      * Provides access to big, heavy classes that may be reconstructed from time to time, e.g. across restarts. It is
      * only available once the flow has started, which means it cannnot be accessed in the constructor. Either
      * access this lazily or from inside [call].
      */
-    val serviceHub: ServiceHub get() = fsm.serviceHub
+    val serviceHub: ServiceHub get() = stateMachine.serviceHub
 
     private var sessionFlow: FlowLogic<*> = this
 
@@ -56,19 +56,19 @@ abstract class FlowLogic<out T> {
 
     @Suspendable
     fun <T : Any> sendAndReceive(receiveType: Class<T>, otherParty: Party, payload: Any): UntrustworthyData<T> {
-        return fsm.sendAndReceive(otherParty, payload, receiveType, sessionFlow)
+        return stateMachine.sendAndReceive(receiveType, otherParty, payload, sessionFlow)
     }
 
     inline fun <reified T : Any> receive(otherParty: Party): UntrustworthyData<T> = receive(T::class.java, otherParty)
 
     @Suspendable
     fun <T : Any> receive(receiveType: Class<T>, otherParty: Party): UntrustworthyData<T> {
-        return fsm.receive(otherParty, receiveType, sessionFlow)
+        return stateMachine.receive(receiveType, otherParty, sessionFlow)
     }
 
     @Suspendable
     fun send(otherParty: Party, payload: Any) {
-        fsm.send(otherParty, payload, sessionFlow)
+        stateMachine.send(otherParty, payload, sessionFlow)
     }
 
     /**
@@ -82,7 +82,7 @@ abstract class FlowLogic<out T> {
     // TODO shareParentSessions is a bit too low-level and perhaps can be expresed in a better way
     @Suspendable
     fun <R> subFlow(subLogic: FlowLogic<R>, shareParentSessions: Boolean = false): R {
-        subLogic.fsm = fsm
+        subLogic.stateMachine = stateMachine
         maybeWireUpProgressTracking(subLogic)
         if (shareParentSessions) {
             subLogic.sessionFlow = this
@@ -127,5 +127,4 @@ abstract class FlowLogic<out T> {
             Pair(it.currentStep.toString(), it.changes.map { it.toString() })
         }
     }
-
 }

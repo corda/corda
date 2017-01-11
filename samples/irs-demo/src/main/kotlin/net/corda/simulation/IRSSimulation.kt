@@ -120,7 +120,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         @Suppress("UNCHECKED_CAST")
         val acceptorTx = node2.initiateSingleShotFlow(Instigator::class) { Acceptor(it) }.flatMap {
-            (it.fsm as FlowStateMachine<SignedTransaction>).resultFuture
+            (it.stateMachine as FlowStateMachine<SignedTransaction>).resultFuture
         }
 
         showProgressFor(listOf(node1, node2))

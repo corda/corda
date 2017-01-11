@@ -59,7 +59,7 @@ class CashFlow(val command: CashCommand, override val progressTracker: ProgressT
             val flow = FinalityFlow(tx, setOf(req.recipient))
             subFlow(flow)
             return CashFlowResult.Success(
-                    fsm.id,
+                    stateMachine.id,
                     tx,
                     "Cash payment transaction generated"
             )
@@ -95,7 +95,7 @@ class CashFlow(val command: CashCommand, override val progressTracker: ProgressT
             val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
             subFlow(FinalityFlow(tx, participants))
             return CashFlowResult.Success(
-                    fsm.id,
+                    stateMachine.id,
                     tx,
                     "Cash destruction transaction generated"
             )
@@ -116,7 +116,7 @@ class CashFlow(val command: CashCommand, override val progressTracker: ProgressT
         // Issuance transactions do not need to be notarised, so we can skip directly to broadcasting it
         subFlow(BroadcastTransactionFlow(tx, setOf(req.recipient)))
         return CashFlowResult.Success(
-                fsm.id,
+                stateMachine.id,
                 tx,
                 "Cash issuance completed"
         )

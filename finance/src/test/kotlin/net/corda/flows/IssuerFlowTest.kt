@@ -54,7 +54,7 @@ class IssuerFlowTest {
     private fun runIssuerAndIssueRequester(amount: Amount<Currency>, issueToPartyAndRef: PartyAndReference) : RunResult {
         val issuerFuture = bankOfCordaNode.initiateSingleShotFlow(IssuerFlow.IssuanceRequester::class) {
             otherParty -> IssuerFlow.Issuer(issueToPartyAndRef.party)
-        }.map { it.fsm }
+        }.map { it.stateMachine }
 
         val issueRequest = IssuanceRequester(amount, issueToPartyAndRef.party, issueToPartyAndRef.reference, bankOfCordaNode.info.legalIdentity)
         val issueRequestResultFuture = bankClientNode.services.startFlow(issueRequest).resultFuture

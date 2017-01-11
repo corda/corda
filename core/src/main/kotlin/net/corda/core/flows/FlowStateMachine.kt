@@ -28,13 +28,13 @@ data class StateMachineRunId private constructor(val uuid: UUID) {
  */
 interface FlowStateMachine<R> {
     @Suspendable
-    fun <T : Any> sendAndReceive(otherParty: Party,
+    fun <T : Any> sendAndReceive(receiveType: Class<T>,
+                                 otherParty: Party,
                                  payload: Any,
-                                 receiveType: Class<T>,
                                  sessionFlow: FlowLogic<*>): UntrustworthyData<T>
 
     @Suspendable
-    fun <T : Any> receive(otherParty: Party, receiveType: Class<T>, sessionFlow: FlowLogic<*>): UntrustworthyData<T>
+    fun <T : Any> receive(receiveType: Class<T>, otherParty: Party, sessionFlow: FlowLogic<*>): UntrustworthyData<T>
 
     @Suspendable
     fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>)
@@ -48,4 +48,4 @@ interface FlowStateMachine<R> {
     val resultFuture: ListenableFuture<R>
 }
 
-class FlowSessionException(message: String) : Exception(message)
+class FlowException(message: String) : RuntimeException(message)

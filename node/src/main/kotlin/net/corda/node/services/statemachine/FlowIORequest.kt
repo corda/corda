@@ -1,7 +1,6 @@
 package net.corda.node.services.statemachine
 
 import net.corda.node.services.statemachine.StateMachineManager.FlowSession
-import net.corda.node.services.statemachine.StateMachineManager.SessionMessage
 
 // TODO revisit when Kotlin 1.1 is released and data classes can extend other classes
 interface FlowIORequest {
