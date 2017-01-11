@@ -9,6 +9,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.DUMMY_NOTARY
 import java.time.Duration
 import java.time.Instant
+import java.util.*
 
 /**
  * This interface defines the bare bone functionality that a Transaction DSL interpreter should implement.
@@ -77,6 +78,9 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
     fun input(state: ContractState) {
         val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder(notary = DUMMY_NOTARY)) {
             output { state }
+            // Add a dummy randomised output so that the transaction id differs when issuing the same state multiple times
+            val nonceState = DummyContract.SingleOwnerState(Random().nextInt(), DUMMY_NOTARY.owningKey)
+            output { nonceState }
         }
         input(transaction.outRef<ContractState>(0).ref)
     }
