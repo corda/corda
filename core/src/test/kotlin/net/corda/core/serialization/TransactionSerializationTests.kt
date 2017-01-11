@@ -69,7 +69,7 @@ class TransactionSerializationTests {
         signedTX.verifySignatures()
 
         // Corrupt the data and ensure the signature catches the problem.
-        signedTX.id.bytes[5] = 0
+        signedTX.id.bytes[5] = signedTX.id.bytes[5].inc()
         assertFailsWith(SignatureException::class) {
             signedTX.verifySignatures()
         }
