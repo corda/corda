@@ -122,7 +122,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     mockNet.sharedServerThread
                 }
 
-        var stopped = false
+        private var _stopped = true
+        val stopped: Boolean get() = _stopped
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
@@ -156,6 +157,10 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider = InMemoryUniquenessProvider()
 
         override fun start(): MockNode {
+            synchronized(this) {
+                if (!_stopped) return this
+                _stopped = false
+            }
             super.start()
             mockNet.identities.add(info.legalIdentity)
             return this
@@ -163,8 +168,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun stop() {
             synchronized(this) {
-                if (stopped) return
-                stopped = true
+                if (_stopped) return
+                _stopped = true
             }
             super.stop()
         }
