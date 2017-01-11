@@ -68,40 +68,38 @@ private class PrettyPrint(arr : Arrangement) {
         }
     }
 
-    fun prettyPrintPerBoolean(per: Perceivable<Boolean>) {
+    fun prettyPrint(per: Perceivable<Boolean>, x: Boolean? = null) {
         when (per) {
-            is Const -> {
-                print("\"${per.value}\"")
-            }
+            is Const -> print("\"${per.value}\"")
             is PerceivableOr -> {
-                prettyPrintPerBoolean(per.left)
+                prettyPrint(per.left)
                 print(" or ")
-                prettyPrintPerBoolean(per.right)
+                prettyPrint(per.right)
             }
             is PerceivableAnd -> {
-                prettyPrintPerBoolean(per.left)
+                prettyPrint(per.left)
                 print(" and ")
-                prettyPrintPerBoolean(per.right)
+                prettyPrint(per.right)
             }
             is TimePerceivable -> {
                 when (per.cmp) {
                     Comparison.GT, Comparison.GTE ->  {
                         print("after(")
-                        prettyPrintPerInstant(per.instant)
+                        prettyPrint(per.instant)
                         print(")")
                     }
                     Comparison.LT, Comparison.LTE -> {
                         print("before(")
-                        prettyPrintPerInstant(per.instant)
+                        prettyPrint(per.instant)
                         print(")")
                     }
                 }
             }
             is PerceivableComparison<*> -> {
                 when (per.type) {
-                    BigDecimal::class.java -> prettyPrintPerBD(per.left as Perceivable<BigDecimal>)
-                    Instant::class.java -> prettyPrintPerInstant(per.left as Perceivable<Instant>)
-                    Boolean::class.java -> prettyPrintPerBoolean(per.left as Perceivable<Boolean>)
+                    BigDecimal::class.java -> prettyPrint(per.left as Perceivable<BigDecimal>)
+                    Instant::class.java -> prettyPrint(per.left as Perceivable<Instant>)
+                    Boolean::class.java -> prettyPrint(per.left as Perceivable<Boolean>)
                 }
                 when (per.cmp) {
                     Comparison.GT -> print(" > ")
@@ -110,40 +108,30 @@ private class PrettyPrint(arr : Arrangement) {
                     Comparison.LTE -> print(" <= ")
                 }
                 when (per.type) {
-                    BigDecimal::class.java -> prettyPrintPerBD(per.right as Perceivable<BigDecimal>)
-                    Instant::class.java -> prettyPrintPerInstant(per.right as Perceivable<Instant>)
-                    Boolean::class.java -> prettyPrintPerBoolean(per.right as Perceivable<Boolean>)
+                    BigDecimal::class.java -> prettyPrint(per.right as Perceivable<BigDecimal>)
+                    Instant::class.java -> prettyPrint(per.right as Perceivable<Instant>)
+                    Boolean::class.java -> prettyPrint(per.right as Perceivable<Boolean>)
                 }
             }
-            is TerminalEvent -> {
-                print("TerminalEvent(${partyMap[per.reference.owningKey]}, \"${per.source}\")")
-            }
-            is ActorPerceivable -> {
-                print("signedBy(${partyMap[per.actor.owningKey]})")
-            }
+            is TerminalEvent -> print("TerminalEvent(${partyMap[per.reference.owningKey]}, \"${per.source}\")")
+            is ActorPerceivable -> print("signedBy(${partyMap[per.actor.owningKey]})")
             else -> print(per)
         }
     }
 
-    fun prettyPrintPerInstant(per: Perceivable<Instant>) {
+    fun prettyPrint(per: Perceivable<Instant>, x: Instant? = null) {
         when (per) {
-            is Const -> {
-                print("\"${per.value}\"")
-            }
-            is StartDate -> {
-                print("startDate")
-            }
-            is EndDate -> {
-                print("endDate")
-            }
+            is Const -> print("\"${per.value}\"")
+            is StartDate -> print("startDate")
+            is EndDate -> print("endDate")
             else -> print(per)
         }
     }
 
-    fun prettyPrintPerBD(per: Perceivable<BigDecimal>) {
+    fun prettyPrint(per: Perceivable<BigDecimal>, x: BigDecimal? = null) {
         when (per) {
             is PerceivableOperation<BigDecimal> -> {
-                prettyPrintPerBD(per.left)
+                prettyPrint(per.left)
                 when (per.op) {
                     Operation.PLUS -> print(" + ")
                     Operation.MINUS -> print(" - ")
@@ -151,30 +139,26 @@ private class PrettyPrint(arr : Arrangement) {
                     Operation.TIMES -> print(" * ")
                     else -> print(per.op)
                 }
-                prettyPrintPerBD(per.right)
+                prettyPrint(per.right)
             }
             is UnaryPlus -> {
                 print("(")
-                prettyPrintPerBD(per.arg)
+                prettyPrint(per.arg)
                 print(".).plus()")
             }
-            is Const -> {
-                print(per.value)
-            }
+            is Const -> print(per.value)
             is Interest -> {
                 print("Interest(")
-                prettyPrintPerBD(per.amount)
+                prettyPrint(per.amount)
                 print(", \"${per.dayCountConvention}\", ")
-                prettyPrintPerBD(per.amount)
+                prettyPrint(per.amount)
                 print(", ")
-                prettyPrintPerInstant(per.start)
+                prettyPrint(per.start)
                 print(", ")
-                prettyPrintPerInstant(per.end)
+                prettyPrint(per.end)
                 print(")")
             }
-            is CurrencyCross -> {
-                print("${per.foreign}/${per.domestic}")
-            }
+            is CurrencyCross -> print("${per.foreign}/${per.domestic}")
             else -> println(per)
         }
     }
@@ -195,12 +179,10 @@ private class PrettyPrint(arr : Arrangement) {
                     prettyPrint(it)
                 }
             }
-            is Continuation -> {
-                println("next()")
-            }
+            is Continuation -> println("next()")
             is Obligation -> {
                 print("${partyMap[arr.from.owningKey]}.gives( ${partyMap[arr.to.owningKey]}, ")
-                prettyPrintPerBD(arr.amount)
+                prettyPrint(arr.amount)
                 println(", ${arr.currency})")
             }
             is Actions -> {
@@ -208,7 +190,7 @@ private class PrettyPrint(arr : Arrangement) {
                 indent {
                     for ((name, condition, arrangement) in arr.actions) {
                         print("\"$name\".givenThat(")
-                        prettyPrintPerBoolean(condition)
+                        prettyPrint(condition)
                         println(") {")
                         indent {
                             prettyPrint(arrangement)
