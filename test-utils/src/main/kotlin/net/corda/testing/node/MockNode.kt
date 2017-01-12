@@ -26,6 +26,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.testing.TestNodeConfiguration
+import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import java.nio.file.FileSystem
 import java.security.KeyPair
@@ -53,7 +54,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
     private var nextNodeId = 0
     val filesystem: FileSystem = Jimfs.newFileSystem(unix())
-    val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped, servicePeerAllocationStrategy)
+    private val busyLatch: ReusableLatch = ReusableLatch()
+    val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped, servicePeerAllocationStrategy, busyLatch)
 
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
@@ -111,7 +113,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                         override val networkMapAddress: SingleMessageRecipient?,
                         advertisedServices: Set<ServiceInfo>,
                         val id: Int,
-                        val keyPair: KeyPair?) : AbstractNode(config, advertisedServices, TestClock()) {
+                        val keyPair: KeyPair?) : AbstractNode(config, advertisedServices, TestClock(), mockNet.busyLatch) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
@@ -291,17 +293,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
     // Test method to block until all scheduled activity, active flows
     // and network activity has ceased.
-    // TODO This is not perfect in that certain orderings my skip over the scanning loop.
-    // However, in practice it works well for testing of scheduled flows.
     fun waitQuiescent() {
-        while(nodes.any { it.smm.unfinishedFibers.count > 0
-                            || it.scheduler.unfinishedSchedules.count > 0}
-                || messagingNetwork.messagesInFlight.count > 0) {
-            for (node in nodes) {
-                node.smm.unfinishedFibers.await()
-                node.scheduler.unfinishedSchedules.await()
-            }
-            messagingNetwork.messagesInFlight.await()
-        }
+        busyLatch.await()
     }
 }

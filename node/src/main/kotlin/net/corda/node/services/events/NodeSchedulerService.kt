@@ -1,7 +1,6 @@
 package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.SettableFuture
 import kotlinx.support.jdk8.collections.compute
 import net.corda.core.ThreadBox
@@ -48,7 +47,8 @@ import javax.annotation.concurrent.ThreadSafe
 class NodeSchedulerService(private val database: Database,
                            private val services: ServiceHubInternal,
                            private val flowLogicRefFactory: FlowLogicRefFactory,
-                           private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor())
+                           private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor(),
+                           private val unfinishedSchedules: ReusableLatch = ReusableLatch())
     : SchedulerService, SingletonSerializeAsToken() {
 
     private val log = loggerFor<NodeSchedulerService>()
@@ -89,9 +89,6 @@ class NodeSchedulerService(private val database: Database,
 
     private val mutex = ThreadBox(InnerState())
 
-    @VisibleForTesting
-    val unfinishedSchedules = ReusableLatch()
-
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
         mutex.locked {
@@ -124,10 +121,10 @@ class NodeSchedulerService(private val database: Database,
             val removedAction = scheduledStates.remove(ref)
             if (removedAction != null) {
                 unfinishedSchedules.countDown()
-            }
-            if (removedAction == earliestState && removedAction != null) {
-                recomputeEarliest()
-                rescheduleWakeUp()
+                if (removedAction == earliestState) {
+                    recomputeEarliest()
+                    rescheduleWakeUp()
+                }
             }
         }
     }
@@ -182,6 +179,7 @@ class NodeSchedulerService(private val database: Database,
             val scheduledLogic: FlowLogic<*>? = getScheduledLogic()
             if (scheduledLogic != null) {
                 subFlow(scheduledLogic)
+                scheduler.unfinishedSchedules.countDown()
             }
         }
 
@@ -215,10 +213,7 @@ class NodeSchedulerService(private val database: Database,
                             // TODO: FlowLogicRefFactory needs to sort out the class loader etc
                             val logic = scheduler.flowLogicRefFactory.toFlowLogic(scheduledActivity.logicRef)
                             logger.trace { "Scheduler starting FlowLogic $logic" }
-                            // FlowLogic will be checkpointed by the time this returns.
-                            //scheduler.services.startFlowAndForget(logic)
                             scheduledLogic = logic
-                            scheduler.unfinishedSchedules.countDown()
                             null
                         }
                     } else {

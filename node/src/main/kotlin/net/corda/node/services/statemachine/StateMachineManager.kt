@@ -6,7 +6,6 @@ import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.Kryo
-import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.support.jdk8.collections.removeIf
 import net.corda.core.ThreadBox
@@ -69,7 +68,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                           tokenizableServices: List<Any>,
                           val checkpointStorage: CheckpointStorage,
                           val executor: AffinityExecutor,
-                          val database: Database) {
+                          val database: Database,
+                          private val unfinishedFibers: ReusableLatch = ReusableLatch()) {
 
     inner class FiberScheduler : FiberExecutorScheduler("Same thread scheduler", executor)
 
@@ -102,8 +102,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     @Volatile private var stopping = false
     // How many Fibers are running and not suspended.  If zero and stopping is true, then we are halted.
     private val liveFibers = ReusableLatch()
-    @VisibleForTesting
-    val unfinishedFibers = ReusableLatch()
+
 
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
@@ -336,13 +335,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 fiber.logic.progressTracker?.currentStep = ProgressTracker.DONE
                 mutex.locked {
                     stateMachines.remove(fiber)?.let { checkpointStorage.removeCheckpoint(it) }
-                    totalFinishedFlows.inc()
-                    unfinishedFibers.countDown()
                     notifyChangeObservers(fiber, AddOrRemove.REMOVE)
                 }
                 endAllFiberSessions(fiber)
             } finally {
+                fiber.commitTransaction()
                 decrementLiveFibers()
+                totalFinishedFlows.inc()
+                unfinishedFibers.countDown()
             }
         }
         mutex.locked {

@@ -19,7 +19,6 @@ import net.corda.node.services.statemachine.StateMachineManager.FlowSession
 import net.corda.node.services.statemachine.StateMachineManager.FlowSessionState
 import net.corda.node.utilities.StrandLocalTransactionManager
 import net.corda.node.utilities.createDatabaseTransaction
-import net.corda.node.utilities.databaseTransaction
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -87,14 +86,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             logic.call()
         } catch (t: Throwable) {
             actionOnEnd()
-            commitTransaction()
             _resultFuture?.setException(t)
             throw ExecutionException(t)
         }
 
         // This is to prevent actionOnEnd being called twice if it throws an exception
         actionOnEnd()
-        commitTransaction()
         _resultFuture?.set(result)
         return result
     }
@@ -270,9 +267,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     private fun processException(t: Throwable) {
         // This can get called in actionOnSuspend *after* we commit the database transaction, so optionally open a new one here.
-        databaseTransaction(database) {
-            actionOnEnd()
-        }
+        createDatabaseTransaction(database)
+        actionOnEnd()
         _resultFuture?.setException(t)
     }
 
