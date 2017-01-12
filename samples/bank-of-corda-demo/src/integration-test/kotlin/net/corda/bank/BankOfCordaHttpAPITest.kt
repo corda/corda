@@ -18,7 +18,7 @@ class BankOfCordaHttpAPITest {
                 startNode("BankOfCorda", setOf(ServiceInfo(SimpleNotaryService.type))),
                 startNode("BigCorporation")
             ).getOrThrow()
-            val nodeBankOfCordaApiAddr = nodeBankOfCorda.configuration.webAddress
+            val nodeBankOfCordaApiAddr = startWebserver(nodeBankOfCorda).getOrThrow()
             assert(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", "BigCorporation", "1", "BankOfCorda")))
         }, isDebug = true)
     }

@@ -1,4 +1,4 @@
-package net.corda.node.servlets
+package net.corda.node.webserver.servlets
 
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.Node

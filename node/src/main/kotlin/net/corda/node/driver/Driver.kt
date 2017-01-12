@@ -2,6 +2,8 @@
 
 package net.corda.node.driver
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -13,6 +15,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
+import net.corda.core.utilities.ApiUtils
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
@@ -23,7 +26,9 @@ import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.node.utilities.JsonSupport
 import net.corda.node.utilities.ServiceIdentityGenerator
+import okhttp3.OkHttpClient
 import org.slf4j.Logger
 import java.io.File
 import java.net.*
@@ -35,13 +40,14 @@ import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.*
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
-import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.*
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
+import com.sun.corba.se.spi.presentation.rmi.StubAdapter.request
+import org.bouncycastle.crypto.tls.ConnectionEnd.client
+import okhttp3.Request
+
 
 /**
  * This file defines a small "Driver" DSL for starting up nodes that is only intended for development, demos and tests.
@@ -90,7 +96,7 @@ interface DriverDSLExposedInterface {
      *
      * @param handle The handle for the node that this webserver connects to via RPC.
      */
-    fun startWebserver(handle: NodeHandle): Future<HostAndPort>
+    fun startWebserver(handle: NodeHandle): ListenableFuture<HostAndPort>
 
     fun waitForAllNodesToFinish()
 }
@@ -334,7 +340,7 @@ open class DriverDSL(
             val rpcOps = client.proxy(timeout = Duration.of(15, ChronoUnit.SECONDS))
             return rpcOps.nodeIdentity()
         } catch(e: Exception) {
-            log.error("Retrying query node info at $nodeAddress")
+            log.debug("Retrying query node info at $nodeAddress")
             retries++
         }
 
@@ -416,12 +422,33 @@ open class DriverDSL(
         }
     }
 
-    override fun startWebserver(handle: NodeHandle): Future<HostAndPort> {
+    private fun queryWebserver(configuration: FullNodeConfiguration): HostAndPort? {
+        val protocol = if(configuration.useHTTPS) { "https://" } else { "http://" }
+        val url = URL(protocol + configuration.webAddress.toString() + "/api/status")
+        val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
+        val retries = 5
+
+        for(i in 0..retries) {
+            try {
+                val response = client.newCall(Request.Builder().url(url).build()).execute()
+                if (response.isSuccessful && (response.body().string() == "started")) {
+                    return configuration.webAddress
+                }
+            } catch(e: ConnectException) {
+                log.debug("Retrying webserver info at ${ configuration.webAddress}")
+            }
+        }
+
+        log.error("Could not query node info after $retries retries")
+        return null
+    }
+
+    override fun startWebserver(handle: NodeHandle): ListenableFuture<HostAndPort> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
         return future {
             registerProcess(DriverDSL.startWebserver(executorService, handle.configuration, debugPort))
-            handle.configuration.webAddress
+            queryWebserver(handle.configuration)!!
         }
     }
 

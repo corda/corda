@@ -11,6 +11,7 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flatMap
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.map
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.success
 import net.corda.core.transactions.SignedTransaction
@@ -18,6 +19,7 @@ import net.corda.flows.TwoPartyDealFlow.Acceptor
 import net.corda.flows.TwoPartyDealFlow.AutoOffer
 import net.corda.flows.TwoPartyDealFlow.Instigator
 import net.corda.irs.contract.InterestRateSwap
+import net.corda.node.internal.CordaRPCOpsImpl
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.node.InMemoryMessagingNetwork
@@ -30,7 +32,7 @@ import java.util.*
  * A simulation in which banks execute interest rate swaps with each other, including the fixing events.
  */
 class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(networkSendManuallyPumped, runAsync, latencyInjector) {
-    val om = net.corda.node.utilities.JsonSupport.createDefaultMapper(MockIdentityService(network.identities))
+    val om = net.corda.node.utilities.JsonSupport.createInMemoryMapper(MockIdentityService(network.identities))
 
     init {
         currentDateAndTime = LocalDate.of(2016, 3, 8).atStartOfDay()

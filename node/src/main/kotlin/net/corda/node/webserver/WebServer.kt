@@ -6,9 +6,10 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.messaging.CordaRPCClient
-import net.corda.node.servlets.AttachmentDownloadServlet
-import net.corda.node.servlets.DataUploadServlet
-import net.corda.node.servlets.ResponseFilter
+import net.corda.node.webserver.servlets.AttachmentDownloadServlet
+import net.corda.node.webserver.servlets.ObjectMapperConfig
+import net.corda.node.webserver.servlets.DataUploadServlet
+import net.corda.node.webserver.servlets.ResponseFilter
 import net.corda.node.webserver.internal.APIServerImpl
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -32,7 +33,10 @@ class WebServer(val config: FullNodeConfiguration) {
     val address = config.webAddress
 
     fun start() {
-        initWebServer(connectLocalRpcAsNodeUser())
+        val server = initWebServer(connectLocalRpcAsNodeUser())
+        while(server.isRunning) {
+            Thread.sleep(100) // TODO: Redesign
+        }
     }
 
     private fun initWebServer(localRpc: CordaRPCOps): Server {
@@ -90,6 +94,7 @@ class WebServer(val config: FullNodeConfiguration) {
         server.handler = handlerCollection
         //runOnStop += Runnable { server.stop() }
         server.start()
+        println("Server started")
         log.info("Embedded web server is listening on", "http://${InetAddress.getLocalHost().hostAddress}:${connector.port}/")
         return server
     }
@@ -101,6 +106,7 @@ class WebServer(val config: FullNodeConfiguration) {
             addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
 
             val resourceConfig = ResourceConfig()
+            resourceConfig.register(ObjectMapperConfig(localRpc))
             resourceConfig.register(ResponseFilter())
             resourceConfig.register(APIServerImpl(localRpc))
 
