@@ -121,8 +121,6 @@ class CashFlow(val command: CashCommand, override val progressTracker: ProgressT
                 "Cash issuance completed"
         )
     }
-
-
 }
 
 /**
