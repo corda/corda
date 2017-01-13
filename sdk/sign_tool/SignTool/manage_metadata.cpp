@@ -172,6 +172,7 @@ bool parse_metadata_file(const char *xmlpath, xml_parameter_t *parameter, int pa
 CMetadata::CMetadata(metadata_t *metadata, BinParser *parser)
     : m_metadata(metadata)
     , m_parser(parser)
+    , m_heap_executable(false)
 {
     memset(m_metadata, 0, sizeof(metadata_t));
     memset(&m_create_param, 0, sizeof(m_create_param));
@@ -235,6 +236,8 @@ bool CMetadata::modify_metadata(const xml_parameter_t *parameter)
     m_create_param.stack_max_size = parameter[STACKMAXSIZE].value;
     m_create_param.tcs_max_num = (uint32_t)parameter[TCSNUM].value;
     m_create_param.tcs_policy = m_metadata->tcs_policy;
+
+    m_heap_executable = parameter[HEAPEXECUTABLE].value;
     return true;
 }
 
@@ -325,7 +328,7 @@ bool CMetadata::build_layout_table()
     layout.entry.id = LAYOUT_ID_HEAP;
     layout.entry.page_count = (uint32_t)(m_create_param.heap_max_size >> SE_PAGE_SHIFT);
     layout.entry.attributes = ADD_PAGE_ONLY;
-    layout.entry.si_flags = SI_FLAGS_RW;
+    layout.entry.si_flags = m_heap_executable ? SI_FLAGS_RWX : SI_FLAGS_RW;
     layouts.push_back(layout);
 
     // thread context memory layout

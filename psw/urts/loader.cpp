@@ -758,8 +758,9 @@ int CLoader::set_context_protection(layout_t *layout_start, layout_t *layout_end
             }
             else
             {
-                prot = SI_FLAGS_RW & SI_MASK_MEM_ATTRIBUTE;
+                prot = SI_FLAGS_RWX & SI_MASK_MEM_ATTRIBUTE;
             }
+
             ret = mprotect(GET_PTR(void, m_start_addr, layout->entry.rva + delta), 
                                (size_t)layout->entry.page_count << SE_PAGE_SHIFT,
                                prot); 

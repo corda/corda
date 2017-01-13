@@ -1111,6 +1111,7 @@ int main(int argc, char* argv[])
                                    {"TCSPolicy",TCS_POLICY_UNBIND,TCS_POLICY_BIND,TCS_POLICY_UNBIND,0},
                                    {"StackMaxSize",0x1FFFFFFFFF,STACK_SIZE_MIN,0x40000,0},
                                    {"HeapMaxSize",0x1FFFFFFFFF,HEAP_SIZE_MIN,0x100000,0},
+                                   {"HeapExecutable",1,0,0,0},
                                    {"MiscSelect", 0xFFFFFFFF, 0, DEFAULT_MISC_SELECT, 0},
                                    {"MiscMask", 0xFFFFFFFF, 0, DEFAULT_MISC_MASK, 0}};
 
