@@ -10,7 +10,7 @@ buildscript {
     // Dependency versions. Can run 'gradle dependencyUpdates' to find new versions of things.
     //
     // TODO: Sort this alphabetically.
-    ext.kotlin_version = '1.0.5-2'
+    ext.kotlin_version = '1.0.6'
     ext.quasar_version = '0.7.6'    // TODO: Upgrade to 0.7.7+ when Quasar bug 238 is resolved.
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.5.1'
@@ -29,6 +29,8 @@ buildscript {
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
+    ext.rxjava_version = '1.2.4'
+    ext.requery_version = '1.1.1'
     ext.dokka_version = '0.9.13'
 
     repositories {
@@ -43,6 +45,7 @@ buildscript {
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.13.0'
+        classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
     }
 }

@@ -48,7 +48,7 @@ class CordaRPCOpsImpl(
     override fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>> {
         return databaseTransaction(database) {
             val (vault, updates) = services.vaultService.track()
-            Pair(vault.states, updates)
+            Pair(vault.states.toList(), updates)
         }
     }
 

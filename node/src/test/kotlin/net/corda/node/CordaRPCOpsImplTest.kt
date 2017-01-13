@@ -7,6 +7,7 @@ import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.CashIssueFlow
@@ -67,7 +68,7 @@ class CordaRPCOpsImplTest {
 
         // Check the monitoring service wallet is empty
         databaseTransaction(aliceNode.database) {
-            assertFalse(aliceNode.services.vaultService.currentVault.states.iterator().hasNext())
+            assertFalse(aliceNode.services.vaultService.unconsumedStates<ContractState>().iterator().hasNext())
         }
 
         // Tell the monitoring service node to issue some cash
