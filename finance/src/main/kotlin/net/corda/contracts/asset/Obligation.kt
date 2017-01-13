@@ -47,13 +47,13 @@ class Obligation<P> : Contract {
          * Parent clause for clauses that operate on grouped states (those which are fungible).
          */
         class Group<P> : GroupClauseVerifier<State<P>, Commands, Issued<Terms<P>>>(
-                AllComposition(
+                AllOf(
                         NoZeroSizedOutputs<State<P>, Commands, Terms<P>>(),
-                        FirstComposition(
+                        FirstOf(
                                 SetLifecycle<P>(),
-                                AllComposition(
+                                AllOf(
                                         VerifyLifecycle<State<P>, Commands, Issued<Terms<P>>, P>(),
-                                        FirstComposition(
+                                        FirstOf(
                                                 Settle<P>(),
                                                 Issue(),
                                                 ConserveAmount()
@@ -364,7 +364,7 @@ class Obligation<P> : Contract {
         data class Exit<P>(override val amount: Amount<Issued<Terms<P>>>) : Commands, FungibleAsset.Commands.Exit<Terms<P>>
     }
 
-    override fun verify(tx: TransactionForContract) = verifyClause<Commands>(tx, FirstComposition<ContractState, Commands, Unit>(
+    override fun verify(tx: TransactionForContract) = verifyClause<Commands>(tx, FirstOf<ContractState, Commands, Unit>(
             Clauses.Net<Commands, P>(),
             Clauses.Group<P>()
     ), tx.commands.select<Obligation.Commands>())

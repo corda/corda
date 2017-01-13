@@ -36,20 +36,20 @@ to be considered valid. We refer to a clause as being "matched" when the transac
 in question to trigger. Meanwhile, we talk about a clause "verifying" when its ``verify()`` function returns ``True``.
 
 As an example, let's say we want a transaction to be valid only when every single one of its clauses matches and verifies. We implement this 
-by wrapping the individual clauses into an ``AllComposition`` composite clause, which ensures that a transaction is 
+by wrapping the individual clauses into an ``AllOf`` composite clause, which ensures that a transaction is 
 only considered valid if all of its clauses are both matched and verify.
 
 There are two other basic composite clauses that you should be aware of:
 
-   * ``AnyComposition``, whereby any number of clauses (0+) may match, but each matched clause must verify
-   * ``FirstComposition``, whereby at least one clause must match, and the first such clause must verify
+   * ``AnyOf``, whereby 1 or more clauses may match, and every matched clause must verify
+   * ``FirstOf``, whereby at least one clause must match, and the first such clause must verify
 
 In turn, composite clauses are themselves ``Clause`` s, and can, for example, be wrapped in the special ``GroupClauseVerifier`` grouping clause. 
 For ``CommercialPaper``, this would look as follows:
 
 .. image:: resources/commPaperClauses.png
 
-For this tutorial, we will be using ``GroupClauseVerifier`` and ``AnyComposition``. Since it's important to understand how these work,
+For this tutorial, we will be using ``GroupClauseVerifier`` and ``AnyOf``. Since it's important to understand how these work,
 charts showing their execution and other details can be found in :doc:`clauses`.
 
 .. _verify_ref:
@@ -225,7 +225,7 @@ its subclauses (wrapped move, issue, redeem). "Any" in this case means that it w
    .. sourcecode:: kotlin
 
         class Group : GroupClauseVerifier<State, Commands, Issued<Terms>>(
-            AnyComposition(
+            AnyOf(
                 Redeem(),
                 Move(),
                 Issue())) {
@@ -237,7 +237,7 @@ its subclauses (wrapped move, issue, redeem). "Any" in this case means that it w
 
         class Group extends GroupClauseVerifier<State, Commands, State> {
             public Group() {
-                super(new AnyComposition<>(
+                super(new AnyOf<>(
                     new Clauses.Redeem(),
                     new Clauses.Move(),
                     new Clauses.Issue()

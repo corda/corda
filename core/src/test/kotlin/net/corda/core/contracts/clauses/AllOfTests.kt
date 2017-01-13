@@ -9,12 +9,12 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class AllCompositionTests {
+class AllOfTests {
 
     @Test
     fun minimal() {
         val counter = AtomicInteger(0)
-        val clause = AllComposition(matchedClause(counter), matchedClause(counter))
+        val clause = AllOf(matchedClause(counter), matchedClause(counter))
         val tx = TransactionForContract(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256())
         verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>())
 
@@ -24,7 +24,7 @@ class AllCompositionTests {
 
     @Test
     fun `not all match`() {
-        val clause = AllComposition(matchedClause(), unmatchedClause())
+        val clause = AllOf(matchedClause(), unmatchedClause())
         val tx = TransactionForContract(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256())
         assertFailsWith<IllegalStateException> { verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>()) }
     }
