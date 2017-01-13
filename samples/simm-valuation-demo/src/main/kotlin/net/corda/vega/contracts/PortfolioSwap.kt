@@ -10,7 +10,7 @@ import net.corda.core.crypto.SecureHash
  * of the portfolio arbitrarily.
  */
 data class PortfolioSwap(override val legalContractReference: SecureHash = SecureHash.sha256("swordfish")) : Contract {
-    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllComposition(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
+    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllOf(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
 
     interface Commands : CommandData {
         class Agree : TypeOnlyCommandData(), Commands  // Both sides agree to portfolio
@@ -30,7 +30,7 @@ data class PortfolioSwap(override val legalContractReference: SecureHash = Secur
             }
         }
 
-        class Group : GroupClauseVerifier<PortfolioState, Commands, UniqueIdentifier>(FirstComposition(Agree(), Update())) {
+        class Group : GroupClauseVerifier<PortfolioState, Commands, UniqueIdentifier>(FirstOf(Agree(), Update())) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<PortfolioState, UniqueIdentifier>>
                     // Group by Trade ID for in / out states
                     = tx.groupStates() { state -> state.linearId }

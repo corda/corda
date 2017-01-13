@@ -9,8 +9,7 @@ import java.util.*
 /**
  * Compose a number of clauses, such that all of the clauses must run for verification to pass.
  */
-@Deprecated("Use AllOf")
-class AllComposition<S : ContractState, C : CommandData, K : Any>(firstClause: Clause<S, C, K>, vararg remainingClauses: Clause<S, C, K>) : CompositeClause<S, C, K>() {
+class AllOf<S : ContractState, C : CommandData, K : Any>(firstClause: Clause<S, C, K>, vararg remainingClauses: Clause<S, C, K>) : CompositeClause<S, C, K>() {
     override val clauses = ArrayList<Clause<S, C, K>>()
 
     init {

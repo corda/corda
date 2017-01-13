@@ -7,13 +7,16 @@ import net.corda.core.contracts.TransactionForContract
 import java.util.*
 
 /**
- * Compose a number of clauses, such that any number of the clauses can run.
+ * Compose a number of clauses, such that one or more of the clauses can run.
  */
-@Deprecated("Use AnyOf instead, although note that any of requires at least one matched clause")
-class AnyComposition<in S : ContractState, C : CommandData, in K : Any>(vararg rawClauses: Clause<S, C, K>) : CompositeClause<S, C, K>() {
+class AnyOf<in S : ContractState, C : CommandData, in K : Any>(vararg rawClauses: Clause<S, C, K>) : CompositeClause<S, C, K>() {
     override val clauses: List<Clause<S, C, K>> = rawClauses.asList()
 
-    override fun matchedClauses(commands: List<AuthenticatedObject<C>>): List<Clause<S, C, K>> = clauses.filter { it.matches(commands) }
+    override fun matchedClauses(commands: List<AuthenticatedObject<C>>): List<Clause<S, C, K>> {
+        val matched = clauses.filter { it.matches(commands) }
+        require(matched.isNotEmpty()) { "At least one clause must match" }
+        return matched
+    }
 
     override fun verify(tx: TransactionForContract, inputs: List<S>, outputs: List<S>, commands: List<AuthenticatedObject<C>>, groupingKey: K?): Set<C> {
         return matchedClauses(commands).flatMapTo(HashSet<C>()) { clause ->

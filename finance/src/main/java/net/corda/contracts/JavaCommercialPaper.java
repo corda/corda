@@ -131,10 +131,10 @@ public class JavaCommercialPaper implements Contract {
             // warning.
             @SuppressWarnings("unchecked")
             Group() {
-                super(new AnyComposition<>(
-                        new Clauses.Redeem(),
-                        new Clauses.Move(),
-                        new Clauses.Issue()
+                super(new AnyOf<>(
+                    new Clauses.Redeem(),
+                    new Clauses.Move(),
+                    new Clauses.Issue()
                 ));
             }
 

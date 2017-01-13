@@ -4,8 +4,8 @@ import net.corda.contracts.clause.AbstractConserveAmount
 import net.corda.contracts.clause.AbstractIssue
 import net.corda.contracts.clause.NoZeroSizedOutputs
 import net.corda.core.contracts.*
-import net.corda.core.contracts.clauses.AllComposition
-import net.corda.core.contracts.clauses.FirstComposition
+import net.corda.core.contracts.clauses.AllOf
+import net.corda.core.contracts.clauses.FirstOf
 import net.corda.core.contracts.clauses.GroupClauseVerifier
 import net.corda.core.contracts.clauses.verifyClause
 import net.corda.core.crypto.*
@@ -56,9 +56,9 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             = commands.select<Cash.Commands>()
 
     interface Clauses {
-        class Group : GroupClauseVerifier<State, Commands, Issued<Currency>>(AllComposition<State, Commands, Issued<Currency>>(
+        class Group : GroupClauseVerifier<State, Commands, Issued<Currency>>(AllOf<State, Commands, Issued<Currency>>(
                 NoZeroSizedOutputs<State, Commands, Currency>(),
-                FirstComposition<State, Commands, Issued<Currency>>(
+                FirstOf<State, Commands, Issued<Currency>>(
                         Issue(),
                         ConserveAmount())
         )

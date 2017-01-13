@@ -7,12 +7,13 @@ import net.corda.core.crypto.SecureHash
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
-class AnyCompositionTests {
+class AnyOfTests {
     @Test
     fun minimal() {
         val counter = AtomicInteger(0)
-        val clause = AnyComposition(matchedClause(counter), matchedClause(counter))
+        val clause = AnyOf(matchedClause(counter), matchedClause(counter))
         val tx = TransactionForContract(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256())
         verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>())
 
@@ -23,7 +24,7 @@ class AnyCompositionTests {
     @Test
     fun `not all match`() {
         val counter = AtomicInteger(0)
-        val clause = AnyComposition(matchedClause(counter), unmatchedClause(counter))
+        val clause = AnyOf(matchedClause(counter), unmatchedClause(counter))
         val tx = TransactionForContract(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256())
         verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>())
 
@@ -34,11 +35,10 @@ class AnyCompositionTests {
     @Test
     fun `none match`() {
         val counter = AtomicInteger(0)
-        val clause = AnyComposition(unmatchedClause(counter), unmatchedClause(counter))
+        val clause = AnyOf(unmatchedClause(counter), unmatchedClause(counter))
         val tx = TransactionForContract(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256())
-        verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>())
-
-        // Check that we've run the verify() function of neither clause
-        assertEquals(0, counter.get())
+        assertFailsWith(IllegalArgumentException::class) {
+            verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>())
+        }
     }
 }

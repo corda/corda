@@ -4,7 +4,7 @@ import net.corda.contracts.clause.AbstractConserveAmount
 import net.corda.contracts.clause.AbstractIssue
 import net.corda.contracts.clause.NoZeroSizedOutputs
 import net.corda.core.contracts.*
-import net.corda.core.contracts.clauses.AnyComposition
+import net.corda.core.contracts.clauses.AnyOf
 import net.corda.core.contracts.clauses.GroupClauseVerifier
 import net.corda.core.contracts.clauses.verifyClause
 import net.corda.core.crypto.CompositeKey
@@ -62,7 +62,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
          * Grouping clause to extract input and output states into matched groups and then run a set of clauses over
          * each group.
          */
-        class Group : GroupClauseVerifier<State, Commands, Issued<Commodity>>(AnyComposition(
+        class Group : GroupClauseVerifier<State, Commands, Issued<Commodity>>(AnyOf(
                 NoZeroSizedOutputs<State, Commands, Commodity>(),
                 Issue(),
                 ConserveAmount())) {
