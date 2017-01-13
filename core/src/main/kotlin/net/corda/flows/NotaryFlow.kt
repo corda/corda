@@ -101,8 +101,6 @@ object NotaryFlow {
 
             val result = try {
                 validateTimestamp(wtx)
-                // TODO:  Move the duplicate input detection to `TransactionType.verify()`.
-                detectDuplicateInputs(wtx)
                 beforeCommit(stx)
                 commitInputStates(wtx)
                 val sig = sign(stx.id.bytes)
@@ -130,21 +128,6 @@ object NotaryFlow {
          */
         @Suspendable
         open fun beforeCommit(stx: SignedTransaction) {
-        }
-
-        /** Throw NotaryException if inputs are not unique. */
-        private fun detectDuplicateInputs(tx: WireTransaction) {
-            var seenInputs = emptySet<StateRef>()
-            var conflicts = emptyMap<StateRef, UniquenessProvider.ConsumingTx>()
-            tx.inputs.forEachIndexed { i, stateRef ->
-                if (seenInputs.contains(stateRef)) {
-                    conflicts += stateRef.to(UniquenessProvider.ConsumingTx(tx.id, i, otherSide))
-                }
-                seenInputs += stateRef
-            }
-            if (conflicts.isNotEmpty()) {
-                throw notaryException(tx, UniquenessException(UniquenessProvider.Conflict(conflicts)))
-            }
         }
 
         /**
