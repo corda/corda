@@ -24,5 +24,5 @@ open class AnyOf<in S : ContractState, C : CommandData, in K : Any>(vararg rawCl
         }
     }
 
-    override fun toString(): String = "Or: ${clauses.toList()}"
+    override fun toString(): String = "Any: ${clauses.toList()}"
 }
