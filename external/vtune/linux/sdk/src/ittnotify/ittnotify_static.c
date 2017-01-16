@@ -284,7 +284,7 @@ __itt_global _N_(_ittapi_global) = {
     __itt_collection_normal                        /* collection state */
 };
 
-ITT_EXTERN_C __itt_global* _N_(get_ittapi_global)() { return &_N_(_ittapi_global); }
+ITT_EXTERN_C __itt_global* _N_(get_ittapi_global)(void) { return &_N_(_ittapi_global); }
 typedef void (__itt_api_init_t)(__itt_global*, __itt_group_id);
 typedef void (__itt_api_fini_t)(__itt_global*);
 
@@ -829,12 +829,12 @@ static __itt_group_id __itt_get_groups(void)
 
     if (group_str != NULL)
     {
-        int len;
+        unsigned int len;
         char gr[255];
         const char* chunk;
-        while ((group_str = __itt_fsplit(group_str, ",; ", &chunk, &len)) != NULL)
+        while ((group_str = __itt_fsplit(group_str, ",; ", &chunk, (int *)&len)) != NULL)
         {
-            int min_len = min(len, (int)(sizeof(gr) - 1));
+            unsigned int min_len = min(len, (int)(sizeof(gr) - 1));
             __itt_fstrcpyn(gr, sizeof(gr) - 1, chunk,  min_len);
             gr[min_len] = 0;
 

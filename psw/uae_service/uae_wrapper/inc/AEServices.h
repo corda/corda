@@ -56,7 +56,6 @@ struct PlainData
 
     bool operator==(const PlainData& other) const {
         if (this == &other)                 return true;
-        if (this == NULL || &other == NULL) return false;
 
         if (length != other.length || errorCode != other.errorCode)
              return false;
