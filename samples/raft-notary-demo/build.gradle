@@ -77,7 +77,7 @@ publishing {
 task generateNotaryIdentity(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = "net.corda.node.utilities.ServiceIdentityGeneratorKt"
-    def nodeDirs = ["$deployTo/notary1", "$deployTo/notary2", "$deployTo/notary3"].join(",")
+    def nodeDirs = ["$deployTo/Notary1", "$deployTo/Notary2", "$deployTo/Notary3"].join(",")
     args = [nodeDirs, notaryType, notaryName]
 }
 
