@@ -10,7 +10,7 @@ fi
 if [ ! -e lib/dokka.jar ]; then
     echo "Downloading Dokka tool ... "
     echo
-    wget -O lib/dokka.jar https://github.com/Kotlin/dokka/releases/download/0.9.8/dokka-fatjar.jar
+    curl -L -o lib/dokka.jar https://github.com/Kotlin/dokka/releases/download/0.9.8/dokka-fatjar.jar
 fi
 
 (
