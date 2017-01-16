@@ -12,13 +12,20 @@ import java.util.*
  */
 class FirstOf<S : ContractState, C : CommandData, K : Any>(val firstClause: Clause<S, C, K>, vararg remainingClauses: Clause<S, C, K>) : CompositeClause<S, C, K>() {
     companion object {
-        val logger = loggerFor<FirstComposition<*, *, *>>()
+        val logger = loggerFor<FirstOf<*, *, *>>()
     }
 
     override val clauses = ArrayList<Clause<S, C, K>>()
-    fun matchedClause(commands: List<AuthenticatedObject<C>>): Clause<S, C, K> {
+
+    /**
+     * Get the single matched clause from the set this composes, based on the given commands. This is provided as
+     * helper method for internal use, rather than using the exposed [matchedClauses] function which unnecessarily
+     * wraps the clause in a list.
+     */
+    private fun matchedClause(commands: List<AuthenticatedObject<C>>): Clause<S, C, K> {
         return clauses.firstOrNull { it.matches(commands) } ?: throw IllegalStateException("No delegate clause matched in first composition")
     }
+
     override fun matchedClauses(commands: List<AuthenticatedObject<C>>) = listOf(matchedClause(commands))
 
     init {
