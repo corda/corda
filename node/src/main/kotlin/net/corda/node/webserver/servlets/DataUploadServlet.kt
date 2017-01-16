@@ -1,5 +1,6 @@
 package net.corda.node.webserver.servlets
 
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.Node
 import net.corda.node.services.api.AcceptsFileUpload
@@ -12,23 +13,16 @@ import javax.servlet.http.HttpServletResponse
 /**
  * Accepts binary streams, finds the right [AcceptsFileUpload] implementor and hands the stream off to it.
  */
-class DataUploadServlet : HttpServlet() {
+class DataUploadServlet: HttpServlet() {
     private val log = loggerFor<DataUploadServlet>()
 
     override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
-        val node = servletContext.getAttribute("node") as Node
-
         @Suppress("DEPRECATION") // Bogus warning due to superclass static method being deprecated.
         val isMultipart = ServletFileUpload.isMultipartContent(req)
+        val rpc = servletContext.getAttribute("rpc") as CordaRPCOps
 
         if (!isMultipart) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "This end point is for data uploads only.")
-            return
-        }
-
-        val acceptor: AcceptsFileUpload? = findAcceptor(node, req)
-        if (acceptor == null) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Got a file upload request for an unknown data type")
             return
         }
 
@@ -43,27 +37,20 @@ class DataUploadServlet : HttpServlet() {
 
         while (iterator.hasNext()) {
             val item = iterator.next()
-            if (item.name != null && !acceptor.acceptableFileExtensions.any { item.name.endsWith(it) }) {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST,
-                        "${item.name}: Must be have a filename ending in one of: ${acceptor.acceptableFileExtensions}")
-                return
-            }
-
             log.info("Receiving ${item.name}")
 
-            item.openStream().use {
-                val message = acceptor.upload(it)
-                log.info("${item.name} successfully accepted: $message")
-                messages += message
+            try {
+                val dataType = req.pathInfo.substring(1).substringBefore('/')
+                messages += rpc.uploadFile(dataType, item.name, item.openStream())
+                log.info("${item.name} successfully accepted: ${messages.last()}")
+            } catch(e: RuntimeException) {
+                println(e)
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Got a file upload request for an unknown data type")
             }
         }
 
         // Send back the hashes as a convenience for the user.
         val writer = resp.writer
         messages.forEach { writer.println(it) }
-    }
-
-    private fun findAcceptor(node: Node, req: HttpServletRequest): AcceptsFileUpload? {
-        return node.servicesThatAcceptUploads.firstOrNull { req.pathInfo.substring(1).substringBefore('/') == it.dataTypePrefix }
     }
 }

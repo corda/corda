@@ -2,8 +2,6 @@
 
 package net.corda.node.driver
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -15,7 +13,6 @@ import net.corda.core.crypto.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.ApiUtils
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
@@ -26,9 +23,9 @@ import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.utilities.JsonSupport
 import net.corda.node.utilities.ServiceIdentityGenerator
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.slf4j.Logger
 import java.io.File
 import java.net.*
@@ -44,9 +41,6 @@ import java.util.concurrent.*
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
-import com.sun.corba.se.spi.presentation.rmi.StubAdapter.request
-import org.bouncycastle.crypto.tls.ConnectionEnd.client
-import okhttp3.Request
 
 
 /**
@@ -201,6 +195,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         return returnValue
     } catch (exception: Throwable) {
         println("Driver shutting down because of exception $exception")
+        exception.printStackTrace()
         throw exception
     } finally {
         driverDsl.shutdown()
@@ -423,19 +418,23 @@ open class DriverDSL(
     }
 
     private fun queryWebserver(configuration: FullNodeConfiguration): HostAndPort? {
-        val protocol = if(configuration.useHTTPS) { "https://" } else { "http://" }
+        val protocol = if (configuration.useHTTPS) {
+            "https://"
+        } else {
+            "http://"
+        }
         val url = URL(protocol + configuration.webAddress.toString() + "/api/status")
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
         val retries = 5
 
-        for(i in 0..retries) {
+        for (i in 0..retries) {
             try {
                 val response = client.newCall(Request.Builder().url(url).build()).execute()
                 if (response.isSuccessful && (response.body().string() == "started")) {
                     return configuration.webAddress
                 }
             } catch(e: ConnectException) {
-                log.debug("Retrying webserver info at ${ configuration.webAddress}")
+                log.debug("Retrying webserver info at ${configuration.webAddress}")
             }
         }
 
@@ -467,7 +466,6 @@ open class DriverDSL(
                 configOverrides = mapOf(
                         "myLegalName" to networkMapLegalName,
                         "artemisAddress" to networkMapAddress.toString(),
-                        "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to "",
                         "useTestClock" to useTestClock
                 )
@@ -533,7 +531,7 @@ open class DriverDSL(
                 executorService: ScheduledExecutorService,
                 nodeConf: FullNodeConfiguration,
                 debugPort: Int?): ListenableFuture<Process> {
-            val className = "net.corda.node.webserver.MainKt" // cannot directly get class for this, so just use string
+            val className = "net.corda.node.Corda" // cannot directly get class for this, so just use string
             val separator = System.getProperty("file.separator")
             val classpath = System.getProperty("java.class.path")
             val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
@@ -548,7 +546,7 @@ open class DriverDSL(
                     listOf(
                             "-cp", classpath, className,
                             "--base-directory", nodeConf.baseDirectory.toString(),
-                            "--web-address", nodeConf.webAddress.toString())
+                            "--webserver")
             val builder = ProcessBuilder(javaArgs)
             builder.redirectError(Paths.get("error.$className.log").toFile())
             builder.inheritIO()

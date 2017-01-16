@@ -36,6 +36,7 @@ import net.corda.node.services.messaging.ArtemisMessagingComponent.NetworkMapAdd
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.apache.activemq.artemis.api.core.SimpleString
+import org.apache.commons.fileupload.MultipartStream
 import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -146,6 +147,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
 
         register(BufferedInputStream::class.java, InputStreamSerializer)
         register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
+        register(MultipartStream.ItemInputStream::class.java, InputStreamSerializer)
 
         noReferencesWithin<WireTransaction>()
 
@@ -208,6 +210,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(SimpleString::class.java)
         register(ServiceEntry::class.java)
         // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
+        register(RuntimeException::class.java)
         register(IllegalArgumentException::class.java)
         register(ArrayIndexOutOfBoundsException::class.java)
         register(IndexOutOfBoundsException::class.java)

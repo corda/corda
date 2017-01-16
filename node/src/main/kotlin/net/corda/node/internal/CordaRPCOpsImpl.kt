@@ -108,6 +108,10 @@ class CordaRPCOpsImpl(
     override fun attachmentExists(id: SecureHash) = services.storageService.attachments.openAttachment(id) != null
     override fun uploadAttachment(jar: InputStream) = services.storageService.attachments.importAttachment(jar)
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
+    override fun uploadFile(dataType: String, name: String?, file: InputStream): String {
+        val acceptor = services.storageService.uploaders.firstOrNull { it.accepts(dataType) }
+        return acceptor?.upload(file) ?: throw RuntimeException("Cannot find file upload acceptor for $dataType")
+    }
 
     override fun partyFromKey(key: CompositeKey) = services.identityService.partyFromKey(key)
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)

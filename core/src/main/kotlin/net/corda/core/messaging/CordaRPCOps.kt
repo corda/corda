@@ -108,6 +108,11 @@ interface CordaRPCOps : RPCOps {
     fun uploadAttachment(jar: InputStream): SecureHash
 
     /**
+     * Uploads a file by data type to the node and returns a meaningful string to the user
+     */
+    fun uploadFile(dataType: String, name: String?, file: InputStream): String
+
+    /**
      * Returns the node-local current time.
      */
     fun currentNodeTime(): Instant

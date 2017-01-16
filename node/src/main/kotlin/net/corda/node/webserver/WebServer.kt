@@ -102,6 +102,7 @@ class WebServer(val config: FullNodeConfiguration) {
     private fun buildServletContextHandler(localRpc: CordaRPCOps): ServletContextHandler {
         return ServletContextHandler().apply {
             contextPath = "/"
+            setAttribute("rpc", localRpc)
             addServlet(DataUploadServlet::class.java, "/upload/*")
             addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
 
@@ -111,8 +112,6 @@ class WebServer(val config: FullNodeConfiguration) {
             resourceConfig.register(APIServerImpl(localRpc))
 
             val webAPIsOnClasspath = pluginRegistries.flatMap { x -> x.webApis }
-            println("NUM PLUGINS: ${pluginRegistries.size}")
-            println("NUM WEBAPIS: ${webAPIsOnClasspath.size}")
             for (webapi in webAPIsOnClasspath) {
                 log.info("Add plugin web API from attachment $webapi")
                 val customAPI = try {

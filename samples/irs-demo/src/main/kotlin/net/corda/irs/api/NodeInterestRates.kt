@@ -23,6 +23,7 @@ import net.corda.node.utilities.JDBCHashedTable
 import net.corda.node.utilities.localDate
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
+import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.InputStream
 import java.math.BigDecimal
 import java.security.KeyPair
@@ -110,7 +111,10 @@ object NodeInterestRates {
 
         override fun upload(data: InputStream): String {
             val fixes = parseFile(data.bufferedReader().readText())
-            oracle.knownFixes = fixes
+            // TODO: Look into why knownFixes requires a transaction
+            transaction {
+                oracle.knownFixes = fixes
+            }
             val msg = "Interest rates oracle accepted ${fixes.size} new interest rate fixes"
             println(msg)
             return msg

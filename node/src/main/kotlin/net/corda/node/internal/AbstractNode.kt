@@ -51,6 +51,7 @@ import net.corda.node.utilities.databaseTransaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
+import java.io.File
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.security.KeyPair
@@ -102,11 +103,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     // We will run as much stuff in this single thread as possible to keep the risk of thread safety bugs low during the
     // low-performance prototyping period.
     protected abstract val serverThread: AffinityExecutor
-
-    // Objects in this list will be scanned by the DataUploadServlet and can be handed new data via HTTP.
-    // Don't mutate this after startup.
-    protected val _servicesThatAcceptUploads = ArrayList<AcceptsFileUpload>()
-    val servicesThatAcceptUploads: List<AcceptsFileUpload> = _servicesThatAcceptUploads
 
     private val flowFactories = ConcurrentHashMap<Class<*>, (Party) -> FlowLogic<*>>()
     protected val partyKeys = mutableSetOf<KeyPair>()
@@ -224,6 +220,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
             customServices.clear()
             customServices.addAll(buildPluginServices(tokenizableServices))
+
+            val uploaders: List<FileUploader> = listOf(storageServices.first.attachments as NodeAttachmentService) +
+                    customServices.filter { it is AcceptsFileUpload }.map { it as AcceptsFileUpload }
+            (storage as StorageServiceImpl).initUploaders(uploaders)
 
             // TODO: uniquenessProvider creation should be inside makeNotaryService(), but notary service initialisation
             //       depends on smm, while smm depends on tokenizableServices, which uniquenessProvider is part of
@@ -350,9 +350,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             val service = serviceConstructor.apply(services)
             serviceList.add(service)
             tokenizableServices.add(service)
-            if (service is AcceptsFileUpload) {
-                _servicesThatAcceptUploads += service
-            }
         }
         return serviceList
     }
@@ -482,7 +479,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val attachments = makeAttachmentStorage(dir)
         val checkpointStorage = DBCheckpointStorage()
         val transactionStorage = DBTransactionStorage()
-        _servicesThatAcceptUploads += attachments
         val stateMachineTransactionMappingStorage = DBTransactionMappingStorage()
         return Pair(
                 constructStorageService(attachments, transactionStorage, stateMachineTransactionMappingStorage),

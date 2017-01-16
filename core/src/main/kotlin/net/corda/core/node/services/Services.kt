@@ -10,6 +10,8 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import rx.Observable
+import java.io.File
+import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -216,6 +218,16 @@ interface KeyManagementService {
     fun freshKey(): KeyPair
 }
 
+// TODO: Move and document
+interface FileUploader {
+    /**
+     * Accepts the data in the given input stream, and returns some sort of useful return message that will be sent
+     * back to the user in the response.
+     */
+    fun upload(file: InputStream): String
+    fun accepts(prefix: String): Boolean
+}
+
 /**
  * A sketch of an interface to a simple key/value storage system. Intended for persistence of simple blobs like
  * transactions, serialised flow state machines and so on. Again, this isn't intended to imply lack of SQL or
@@ -231,6 +243,9 @@ interface StorageService {
 
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage
+
+    /** Provides file uploads of arbitrary files to services **/
+    val uploaders: List<FileUploader>
 
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage
 }
