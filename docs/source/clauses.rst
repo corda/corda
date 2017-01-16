@@ -96,7 +96,7 @@ Composes a number of clauses, such that 1 or more of the clauses can be run.
 
 Short description:
 
-- Checks if zero or more clauses that compose AnyOf have associated commands in a command set.
+- Checks if one or more clauses that compose AnyOf have associated commands in a command set.
 - After success runs verification logic specific for every *matched* (in this case *Cl2, Cl4, Cl5*) clause from composition.
 
 **Usage**
