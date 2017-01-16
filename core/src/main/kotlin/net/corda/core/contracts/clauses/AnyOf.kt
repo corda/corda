@@ -9,9 +9,7 @@ import java.util.*
 /**
  * Compose a number of clauses, such that one or more of the clauses can run.
  */
-open class AnyOf<in S : ContractState, C : CommandData, in K : Any>(rawClauses: Iterable<Clause<S, C, K>>) : CompositeClause<S, C, K>() {
-    constructor(vararg rawClauses: Clause<S, C, K>) : this(rawClauses.asIterable())
-
+open class AnyOf<in S : ContractState, C : CommandData, in K : Any>(vararg rawClauses: Clause<S, C, K>) : CompositeClause<S, C, K>() {
     override val clauses: List<Clause<S, C, K>> = rawClauses.toList()
 
     override fun matchedClauses(commands: List<AuthenticatedObject<C>>): List<Clause<S, C, K>> {
