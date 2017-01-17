@@ -13,16 +13,22 @@ import org.junit.Test
 class TraderDemoTest {
     @Test fun `runs trader demo`() {
         driver(isDebug = true) {
+            val permissions = setOf(
+                    startFlowPermission<IssuerFlow.IssuanceRequester>(),
+                    startFlowPermission<net.corda.traderdemo.flow.SellerFlow>())
+            val demoUser = listOf(User("demo", "demo", permissions))
             val user = User("user1", "test", permissions = setOf(startFlowPermission<IssuerFlow.IssuanceRequester>()))
             val (nodeA, nodeB) = Futures.allAsList(
-                startNode("Bank A"),
-                startNode("Bank B"),
+                startNode("Bank A", rpcUsers = demoUser),
+                startNode("Bank B", rpcUsers = demoUser),
                 startNode("BankOfCorda", rpcUsers = listOf(user)),
                 startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.type)))
             ).getOrThrow()
+            val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB)
+                    .map { it.rpcClientToNode().start(demoUser[0].username, demoUser[0].password).proxy() }
 
-            assert(TraderDemoClientApi(nodeA.configuration.webAddress).runBuyer())
-            assert(TraderDemoClientApi(nodeB.configuration.webAddress).runSeller(counterparty = nodeA.nodeInfo.legalIdentity.name))
+            assert(TraderDemoClientApi(nodeARpc).runBuyer())
+            assert(TraderDemoClientApi(nodeBRpc).runSeller(counterparty = nodeA.nodeInfo.legalIdentity.name))
         }
     }
 }
