@@ -47,12 +47,12 @@ private class TraderDemo {
         val role = options.valueOf(roleArg)!!
         if (role == Role.BUYER) {
             val host = HostAndPort.fromString("localhost:10004")
-            CordaRPCClient(host, sslConfigFor("nodea", options.valueOf(certsPath))).use("demo", "demo") {
+            CordaRPCClient(host, sslConfigFor("BankA", options.valueOf(certsPath))).use("demo", "demo") {
                 TraderDemoClientApi(this).runBuyer()
             }
         } else {
             val host = HostAndPort.fromString("localhost:10006")
-            CordaRPCClient(host, sslConfigFor("nodeb", options.valueOf(certsPath))).use("demo", "demo") {
+            CordaRPCClient(host, sslConfigFor("BankB", options.valueOf(certsPath))).use("demo", "demo") {
                 TraderDemoClientApi(this).runSeller(1000.DOLLARS, "Bank A")
             }
         }
