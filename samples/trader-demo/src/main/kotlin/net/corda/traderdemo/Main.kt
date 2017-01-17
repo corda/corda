@@ -19,12 +19,12 @@ fun main(args: Array<String>) {
             startFlowPermission<IssuerFlow.IssuanceRequester>(),
             startFlowPermission<net.corda.traderdemo.flow.SellerFlow>())
     val demoUser = listOf(User("demo", "demo", permissions))
-    driver(driverDirectory = Paths.get("build") / "trader-demo-nodes", dsl = {
+    driver(driverDirectory = Paths.get("build") / "trader-demo-nodes", isDebug = true) {
         val user = User("user1", "test", permissions = setOf(startFlowPermission<IssuerFlow.IssuanceRequester>()))
         startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.type)))
         startNode("Bank A", rpcUsers = demoUser)
         startNode("Bank B", rpcUsers = demoUser)
         startNode(BOC.name, rpcUsers = listOf(user))
         waitForAllNodesToFinish()
-    }, isDebug = true)
+    }
 }
