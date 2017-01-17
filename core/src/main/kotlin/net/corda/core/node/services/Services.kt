@@ -1,12 +1,12 @@
 package net.corda.core.node.services
 
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
+import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import rx.Observable
@@ -162,11 +162,7 @@ interface VaultService {
      * Provide a [Future] for when a [StateRef] is consumed, which can be very useful in building tests.
      */
     fun whenConsumed(ref: StateRef): ListenableFuture<Vault.Update> {
-        val future = SettableFuture.create<Vault.Update>()
-        updates.filter { it.consumed.any { it.ref == ref } }.first().subscribe {
-            future.set(it)
-        }
-        return future
+        return updates.filter { it.consumed.any { it.ref == ref } }.toFuture()
     }
 
     /**

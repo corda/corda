@@ -4,12 +4,12 @@ package net.corda.testing
 
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
@@ -17,12 +17,10 @@ import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.services.statemachine.StateMachineManager.Change
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.testing.node.MockIdentityService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
-import rx.Subscriber
 import java.net.ServerSocket
 import java.nio.file.Path
 import java.security.KeyPair
@@ -141,25 +139,8 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
 inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
         markerClass: KClass<out FlowLogic<*>>,
         noinline flowFactory: (Party) -> P): ListenableFuture<P> {
+    val future = smm.changes.filter { it.addOrRemove == ADD && it.logic is P }.map { it.logic as P }.toFuture()
     services.registerFlowInitiator(markerClass, flowFactory)
-
-    val future = SettableFuture.create<P>()
-
-    val subscriber = object : Subscriber<Change>() {
-        override fun onNext(change: Change) {
-            if (change.addOrRemove == ADD) {
-                unsubscribe()
-                future.set(change.logic as P)
-            }
-        }
-        override fun onError(e: Throwable) {
-            future.setException(e)
-        }
-        override fun onCompleted() {}
-    }
-
-    smm.changes.subscribe(subscriber)
-
     return future
 }
 

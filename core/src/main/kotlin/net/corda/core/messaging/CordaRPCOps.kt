@@ -176,5 +176,6 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow
 data class FlowHandle<A>(
         val id: StateMachineRunId,
         val progress: Observable<String>,
+        // TODO This should be ListenableFuture<A>
         val returnValue: Observable<A>
 )

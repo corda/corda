@@ -363,8 +363,7 @@ data class ErrorOr<out A> private constructor(val value: A?, val error: Throwabl
 }
 
 /**
- * Returns an observable that buffers events until subscribed.
- *
+ * Returns an Observable that buffers events until subscribed.
  * @see UnicastSubject
  */
 fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
@@ -383,5 +382,18 @@ fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
     return subject
 }
 
-/** Allows summing big decimals that are in iterable collections */
+/**
+ * Returns a [ListenableFuture] bound to the *first* item emitted by this Observable. The future will complete with a
+ * NoSuchElementException if no items are emitted or any other error thrown by the Observable.
+ */
+fun <T> Observable<T>.toFuture(): ListenableFuture<T> {
+    val future = SettableFuture.create<T>()
+    first().subscribe(
+            { future.set(it) },
+            { future.setException(it) }
+    )
+    return future
+}
+
+/** Return the sum of an Iterable of [BigDecimal]s. */
 fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a + b }

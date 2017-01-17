@@ -1,10 +1,10 @@
 package net.corda.docs
 
-import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.*
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.toFuture
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.flows.CashCommand
@@ -66,14 +66,9 @@ class FxTransactionBuildTutorialTest {
         printBalances()
 
         // Setup some futures on the vaults to await the arrival of the exchanged funds at both nodes
-        val done2 = SettableFuture.create<Unit>()
-        val done3 = SettableFuture.create<Unit>()
-        val subs2 = nodeA.services.vaultService.updates.subscribe {
-            done2.set(Unit)
-        }
-        val subs3 = nodeB.services.vaultService.updates.subscribe {
-            done3.set(Unit)
-        }
+        val nodeAVaultUpdate = nodeA.services.vaultService.updates.toFuture()
+        val nodeBVaultUpdate = nodeB.services.vaultService.updates.toFuture()
+
         // Now run the actual Fx exchange
         val doIt = nodeA.services.startFlow(ForeignExchangeFlow("trade1",
                 POUNDS(100).issuedBy(nodeB.info.legalIdentity.ref(0x01)),
@@ -83,16 +78,14 @@ class FxTransactionBuildTutorialTest {
         // wait for the flow to finish and the vault updates to be done
         doIt.resultFuture.getOrThrow()
         // Get the balances when the vault updates
-        done2.get()
+        nodeAVaultUpdate.get()
         val balancesA = databaseTransaction(nodeA.database) {
             nodeA.services.vaultService.cashBalances
         }
-        done3.get()
+        nodeBVaultUpdate.get()
         val balancesB = databaseTransaction(nodeB.database) {
             nodeB.services.vaultService.cashBalances
         }
-        subs2.unsubscribe()
-        subs3.unsubscribe()
         println("BalanceA\n" + balancesA)
         println("BalanceB\n" + balancesB)
         // Verify the transfers occurred as expected

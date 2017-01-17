@@ -144,7 +144,7 @@ class NodeSchedulerService(private val database: Database,
             Pair(earliestState, rescheduled!!)
         }
         if (scheduledState != null) {
-            schedulerTimerExecutor.execute() {
+            schedulerTimerExecutor.execute {
                 log.trace { "Scheduling as next $scheduledState" }
                 // This will block the scheduler single thread until the scheduled time (returns false) OR
                 // the Future is cancelled due to rescheduling (returns true).
@@ -152,7 +152,7 @@ class NodeSchedulerService(private val database: Database,
                     log.trace { "Invoking as next $scheduledState" }
                     onTimeReached(scheduledState)
                 } else {
-                    log.trace { "Recheduled $scheduledState" }
+                    log.trace { "Rescheduled $scheduledState" }
                 }
             }
         }
