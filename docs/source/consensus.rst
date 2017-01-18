@@ -46,8 +46,8 @@ Multiple notaries
 
 More than one notary can exist in the network. This gives the following benefits:
 
-* **Custom behaviour**. We can have both validating and privacy preserving Notaries -- parties can make a choice based on their specific requirements
-* **Load balancing**. Spreading the transaction load over multiple Notaries will allow higher transaction throughput in the platform overall
+* **Custom behaviour**. We can have both validating and privacy preserving notaries -- parties can make a choice based on their specific requirements
+* **Load balancing**. Spreading the transaction load over multiple notaries will allow higher transaction throughput in the platform overall
 * **Low latency**. Latency could be minimised by choosing a notary physically closer the transacting parties
 
 A transaction should only be signed by a notary if all of its input states point to it.
