@@ -7,12 +7,6 @@ if [ ! -e ./gradlew ]; then
     exit 1
 fi
 
-if [ ! -e lib/dokka.jar ]; then
-    echo "Downloading Dokka tool ... "
-    echo
-    curl -L -o lib/dokka.jar https://github.com/Kotlin/dokka/releases/download/0.9.8/dokka-fatjar.jar
-fi
-
 (
     cd docs
 
@@ -43,13 +37,13 @@ fi
     echo "Generating docsite ..."
     echo
 
-    make html
+    make clean html
 )
 
 echo
 echo "Generating API docs ..."
 echo
-java -jar lib/dokka.jar -output docs/build/html/api core/src/main/kotlin finance/src/main/kotlin node/src/main/kotlin client/src/main/kotlin  | grep -v "No documentation for"
+./gradlew apidocs
 
 echo
 echo "Writing robots.txt"

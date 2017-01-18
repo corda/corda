@@ -29,6 +29,7 @@ buildscript {
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
+    ext.dokka_version = '0.9.13'
 
     repositories {
         mavenLocal()
@@ -46,6 +47,7 @@ buildscript {
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.13.0'
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
     }
 }
 
@@ -61,6 +63,7 @@ apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'org.jetbrains.dokka'
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
@@ -185,3 +188,22 @@ bintrayConfig {
         email = 'dev@corda.net'
     }
 }
+
+// API docs
+
+dokka {
+    moduleName = 'corda'
+    outputDirectory = 'docs/build/html/api/kotlin'
+    processConfigurations = ['compile']
+    sourceDirs = files('core/src/main/kotlin', 'client/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin')
+}
+
+task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
+    moduleName = 'corda'
+    outputFormat = "javadoc"
+    outputDirectory = 'docs/build/html/api/javadoc'
+    processConfigurations = ['compile']
+    sourceDirs = files('core/src/main/kotlin', 'client/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin')
+}
+
+task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
