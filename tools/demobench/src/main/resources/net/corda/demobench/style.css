@@ -1,0 +1,23 @@
+/*
+ * https://r3-cev.atlassian.net/wiki/display/RH/Color+Palettes
+ */
+
+.header {
+    -fx-background-color:  #505050;
+    -fx-padding: 15px;
+}
+
+.header Label {
+    -fx-font-size: 14pt;
+    -fx-text-fill: white;
+}
+
+.add-node-button {
+    -fx-base: red;
+}
+
+.big-button {
+    -fx-base: #009759;
+    -fx-background-radius: 5px;
+    -fx-opacity: 80%;
+}
