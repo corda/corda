@@ -1,0 +1,21 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TransactionBuilder.checkSignature - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.transactions</a>&nbsp;/&nbsp;<a href="index.html">TransactionBuilder</a>&nbsp;/&nbsp;<a href=".">checkSignature</a><br/>
+<br/>
+<h1>checkSignature</h1>
+<a name="net.corda.core.transactions.TransactionBuilder$checkSignature(net.corda.core.crypto.DigitalSignature.WithKey)"></a>
+<code><span class="keyword">fun </span><span class="identifier">checkSignature</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions.TransactionBuilder$checkSignature(net.corda.core.crypto.DigitalSignature.WithKey)/sig">sig</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Checks that the given signature matches one of the commands and that it is a correct signature over the tx.</p>
+<h3>Exceptions</h3>
+
+<p><a name="SignatureException"></a>
+<code>SignatureException</code> - if the signature didn't match the transaction contents.
+<p><a name="IllegalArgumentException"></a>
+<code>IllegalArgumentException</code> - if the signature key doesn't appear in any command.
+</BODY>
+</HTML>

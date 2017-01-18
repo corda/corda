@@ -1,0 +1,28 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ServiceIdentityGenerator - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.utilities</a>&nbsp;/&nbsp;<a href=".">ServiceIdentityGenerator</a><br/>
+<br/>
+<h1>ServiceIdentityGenerator</h1>
+<code><span class="keyword">object </span><span class="identifier">ServiceIdentityGenerator</span></code>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="generate-to-disk.html">generateToDisk</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">generateToDisk</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.ServiceIdentityGenerator$generateToDisk(kotlin.collections.List((java.nio.file.Path)), kotlin.String, kotlin.String, kotlin.Int)/dirs">dirs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.ServiceIdentityGenerator$generateToDisk(kotlin.collections.List((java.nio.file.Path)), kotlin.String, kotlin.String, kotlin.Int)/serviceId">serviceId</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.ServiceIdentityGenerator$generateToDisk(kotlin.collections.List((java.nio.file.Path)), kotlin.String, kotlin.String, kotlin.Int)/serviceName">serviceName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.ServiceIdentityGenerator$generateToDisk(kotlin.collections.List((java.nio.file.Path)), kotlin.String, kotlin.String, kotlin.Int)/threshold">threshold</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;1<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Generates signing key pairs and a common distributed service identity for a set of nodes.
+The key pairs and the group identity get serialized to disk in the corresponding node directories.
+This method should be called <emph>before</emph> any of the nodes are started.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

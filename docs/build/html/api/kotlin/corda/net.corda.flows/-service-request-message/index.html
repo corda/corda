@@ -1,0 +1,60 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ServiceRequestMessage - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href=".">ServiceRequestMessage</a><br/>
+<br/>
+<h1>ServiceRequestMessage</h1>
+<code><span class="keyword">interface </span><span class="identifier">ServiceRequestMessage</span></code>
+<p>Abstract superclass for request messages sent to services which expect a reply.</p>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="reply-to.html">replyTo</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">replyTo</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="session-i-d.html">sessionID</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">sessionID</span><span class="symbol">: </span><span class="identifier">Long</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.node.services.network/-network-map-service/-fetch-map-request/index.html">FetchMapRequest</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FetchMapRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ServiceRequestMessage</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.node.services.network/-network-map-service/-query-identity-request/index.html">QueryIdentityRequest</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">QueryIdentityRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ServiceRequestMessage</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.node.services.network/-network-map-service/-registration-request/index.html">RegistrationRequest</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">RegistrationRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ServiceRequestMessage</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.node.services.network/-network-map-service/-subscribe-request/index.html">SubscribeRequest</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">SubscribeRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ServiceRequestMessage</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

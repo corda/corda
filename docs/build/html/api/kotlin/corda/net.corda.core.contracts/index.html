@@ -1,0 +1,708 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.core.contracts - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.core.contracts</a><br/>
+<br/>
+<h2>Package net.corda.core.contracts</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-accrual-adjustment/index.html">AccrualAdjustment</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">AccrualAdjustment</span></code>
+<p>Simple enum for returning accurals adjusted or unadjusted.
+We don't actually do anything with this yet though, so it's ignored for now.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-amount/index.html">Amount</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Comparable</span><span class="symbol">&lt;</span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Amount represents a positive quantity of some token (currency, asset, etc.), measured in quantity of the smallest
+representable units. Note that quantity is not necessarily 1/100ths of a currency unit, but are the actual smallest
+amount used in whatever underlying thing the amount represents.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-attachment/index.html">Attachment</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">Attachment</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-named-by-hash/index.html"><span class="identifier">NamedByHash</span></a></code>
+<p>An attachment is a ZIP (or an optionally signed JAR) that contains one or more files. Attachments are meant to
+contain public static data which can be referenced from transactions and utilised from contracts. Good examples
+of how attachments are meant to be used include:</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-authenticated-object/index.html">AuthenticatedObject</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">AuthenticatedObject</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span></code>
+<p>Wraps an object that was signed by a public key, which may be a well known/recognised institutional key.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-bilateral-nettable-state/index.html">BilateralNettableState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">BilateralNettableState</span><span class="symbol">&lt;</span><span class="identifier">N</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-bilateral-nettable-state/index.html"><span class="identifier">BilateralNettableState</span></a><span class="symbol">&lt;</span><span class="identifier">N</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Interface for state objects that support being netted with other state objects.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-business-calendar/index.html">BusinessCalendar</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">BusinessCalendar</span></code>
+<p>A business calendar performs date calculations that take into account national holidays and weekends. This is a
+typical feature of financial contracts, in which a business may not want a payment event to fall on a day when
+no staff are around to handle problems.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-command/index.html">Command</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Command</span></code>
+<p>Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-command-data.html">CommandData</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">CommandData</span></code>
+<p>Marker interface for classes that represent commands</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-commodity/index.html">Commodity</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Commodity</span></code>
+<p>Class representing a commodity, as an equivalent to the <a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html">Currency</a> class. This exists purely to enable the
+<a href="#">CommodityContract</a> contract, and is likely to change in future.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-contract/index.html">Contract</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">Contract</span></code>
+<p>Implemented by a program that implements business logic on the shared ledger. All participants run this code for
+every <a href="#">LedgerTransaction</a> they see on the network, for every input and output state. All contracts must accept the
+transaction for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted
+timestamp attached to the transaction itself i.e. it is NOT necessarily the current time.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-contract-state/index.html">ContractState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">ContractState</span></code>
+<p>A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
+file that the program can use to persist data across transactions. States are immutable: once created they are never
+updated, instead, any changes must generate a new successor state. States can be updated (consumed) only once: the
+notary is responsible for ensuring there is no "double spending" by only signing a transaction if the input states
+are all free.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-date-roll-convention/index.html">DateRollConvention</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">DateRollConvention</span></code>
+<p>This reflects what happens if a date on which a business event is supposed to happen actually falls upon a non-working day.
+Depending on the accounting requirement, we can move forward until we get to a business day, or backwards.
+There are some additional rules which are explained in the individual cases below.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-date-roll-direction/index.html">DateRollDirection</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">DateRollDirection</span></code>
+<p>This is utilised in the <a href="-date-roll-convention/index.html">DateRollConvention</a> class to determine which way we should initially step when
+finding a business day.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-day-count-basis-day/index.html">DayCountBasisDay</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">DayCountBasisDay</span></code>
+<p>This forms the day part of the "Day Count Basis" used for interest calculation.
+Note that the first character cannot be a number (enum naming constraints), so we drop that
+in the toString lest some people get confused.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-day-count-basis-year/index.html">DayCountBasisYear</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">DayCountBasisYear</span></code>
+<p>This forms the year part of the "Day Count Basis" used for interest calculation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-deal-state/index.html">DealState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">DealState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-linear-state/index.html"><span class="identifier">LinearState</span></a></code>
+<p>Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
+implementation of general flows that manipulate many agreement types.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-dummy-contract/index.html">DummyContract</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">DummyContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract/index.html"><span class="identifier">Contract</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-dummy-state/index.html">DummyState</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">DummyState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a></code>
+<p>Dummy state for use in testing. Not part of any contract, not even the <a href="-dummy-contract/index.html">DummyContract</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-expression/index.html">Expression</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Expression</span></code>
+<p>Represents a textual expression of e.g. a formula</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-expression-deserializer/index.html">ExpressionDeserializer</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">ExpressionDeserializer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">JsonDeserializer</span><span class="symbol">&lt;</span><a href="-expression/index.html"><span class="identifier">Expression</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-expression-serializer/index.html">ExpressionSerializer</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">ExpressionSerializer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">JsonSerializer</span><span class="symbol">&lt;</span><a href="-expression/index.html"><span class="identifier">Expression</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-fix/index.html">Fix</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Fix</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a></code>
+<p>A <a href="-fix/index.html">Fix</a> represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-fix-of/index.html">FixOf</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">FixOf</span></code>
+<p>A <a href="-fix-of/index.html">FixOf</a> identifies the question side of a fix: what day, tenor and type of fix ("LIBOR", "EURIBOR" etc)</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-fixable-deal-state/index.html">FixableDealState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">FixableDealState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-deal-state/index.html"><span class="identifier">DealState</span></a></code>
+<p>Interface adding fixing specific methods.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-frequency/index.html">Frequency</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">Frequency</span></code>
+<p>Frequency at which an event occurs - the enumerator also casts to an integer specifying the number of times per year
+that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-fungible-asset/index.html">FungibleAsset</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">FungibleAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-ownable-state/index.html"><span class="identifier">OwnableState</span></a></code>
+<p>Interface for contract states representing assets which are fungible, countable and issued by a
+specific party. States contain assets which are equivalent (such as cash of the same currency),
+so records of their existence can be merged or split as needed where the issuer is the same. For
+instance, dollars issued by the Fed are fungible and countable (in cents), barrels of West Texas
+crude are fungible and countable (oil from two small containers can be poured into one large
+container), shares of the same class in a specific company are fungible and countable, and so on.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-issuance-definition.html">IssuanceDefinition</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">IssuanceDefinition</span></code>
+<p>Marker interface for data classes that represent the issuance state for a contract. These are intended as templates
+from which the state object is initialised.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-issue-command/index.html">IssueCommand</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">IssueCommand</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a></code>
+<p>A common issue command, to enforce that issue commands have a nonce value.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-issued/index.html">Issued</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Issued</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">P</span><span class="symbol">&gt;</span></code>
+<p>Definition for an issued product, which can be cash, a cash-like thing, assets, or generally anything else that's
+quantifiable with integer quantities.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-linear-state/index.html">LinearState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">LinearState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a></code>
+<p>A state that evolves by superseding itself, all of which share the common "linearId".</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-move-command/index.html">MoveCommand</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MoveCommand</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a></code>
+<p>A common move command for contracts which can change owner.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-multilateral-nettable-state/index.html">MultilateralNettableState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MultilateralNettableState</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span></code>
+<p>Interface for state objects that support being netted with other state objects.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-named-by-hash/index.html">NamedByHash</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">NamedByHash</span></code>
+<p>Implemented by anything that can be named by a secure hash value (e.g. transactions, attachments).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-net-command/index.html">NetCommand</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">NetCommand</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a></code>
+<p>A common netting command for contracts whose states can be netted.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-net-type/index.html">NetType</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">NetType</span></code>
+<p>Enum for the types of netting that can be applied to state objects. Exact behaviour
+for each type of netting is left to the contract to determine.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-nettable-state.html">NettableState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">NettableState</span><span class="symbol">&lt;</span><span class="identifier">N</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-bilateral-nettable-state/index.html"><span class="identifier">BilateralNettableState</span></a><span class="symbol">&lt;</span><span class="identifier">N</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-bilateral-nettable-state/index.html"><span class="identifier">BilateralNettableState</span></a><span class="symbol">&lt;</span><span class="identifier">N</span><span class="symbol">&gt;</span><span class="symbol">, </span><a href="-multilateral-nettable-state/index.html"><span class="identifier">MultilateralNettableState</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-ownable-state/index.html">OwnableState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">OwnableState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a></code>
+<p>A contract state that can have a single owner.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-party-and-reference/index.html">PartyAndReference</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">PartyAndReference</span></code>
+<p>Reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
+ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the party.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-payment-rule/index.html">PaymentRule</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">PaymentRule</span></code>
+<p>Whether the payment should be made before the due date, or after it.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-requirements/index.html">Requirements</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">Requirements</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-schedulable-state/index.html">SchedulableState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">SchedulableState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-scheduled/index.html">Scheduled</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">Scheduled</span></code>
+<p>Something which is scheduled to happen at a point in time</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-scheduled-activity/index.html">ScheduledActivity</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ScheduledActivity</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-scheduled/index.html"><span class="identifier">Scheduled</span></a></code>
+<p>This class represents the lifecycle activity that a contract state of type <a href="-linear-state/index.html">LinearState</a> would like to perform at a given point in time.
+e.g. run a fixing flow.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-scheduled-state-ref/index.html">ScheduledStateRef</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ScheduledStateRef</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-scheduled/index.html"><span class="identifier">Scheduled</span></a></code>
+<p>Represents a contract state (unconsumed output) of type <a href="-linear-state/index.html">LinearState</a> and a point in time that a lifecycle event is expected to take place
+for that contract state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-state-and-ref/index.html">StateAndRef</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">StateAndRef</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span></code>
+<p>A StateAndRef is simply a (state, ref) pair. For instance, a vault (which holds available assets) contains these.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-state-ref/index.html">StateRef</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">StateRef</span></code>
+<p>A stateref is a pointer (reference) to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which
+transaction defined the state and where in that transaction it was.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-tenor/index.html">Tenor</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Tenor</span></code>
+<p>Placeholder class for the Tenor datatype - which is a standardised duration of time until maturity</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-timestamp/index.html">Timestamp</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Timestamp</span></code>
+<p>If present in a transaction, contains a time that was verified by the uniqueness service. The true time must be
+between (after, before).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-transaction-for-contract/index.html">TransactionForContract</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TransactionForContract</span></code>
+<p>A transaction to be passed as input to a contract verification function. Defines helper methods to
+simplify verification logic in contracts.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-transaction-graph-search/index.html">TransactionGraphSearch</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TransactionGraphSearch</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Callable.html"><span class="identifier">Callable</span></a><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Given a map of transaction id to <a href="../net.corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>, performs a breadth first search of the dependency graph from
+the starting point down in order to find transactions that match the given query criteria.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-transaction-state/index.html">TransactionState</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TransactionState</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span></code>
+<p>A wrapper for <a href="-contract-state/index.html">ContractState</a> containing additional platform-level state information.
+This is the definitive state that is stored on the ledger and used in transaction outputs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-transaction-type/index.html">TransactionType</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">TransactionType</span></code>
+<p>Defines transaction build &amp; validation logic for a specific transaction type</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-type-only-command-data/index.html">TypeOnlyCommandData</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">TypeOnlyCommandData</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a></code>
+<p>Commands that inherit from this are intended to have no data items: it's only their presence that matters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-unique-identifier/index.html">UniqueIdentifier</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">UniqueIdentifier</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Comparable</span><span class="symbol">&lt;</span><a href="-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a><span class="symbol">&gt;</span></code>
+<p>This class provides a truly unique identifier of a trade, state, or other business object, bound to any existing
+external ID. Equality and comparison are based on the unique ID only; if two states somehow have the same UUID but
+different external IDs, it would indicate a problem with handling of IDs.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-insufficient-balance-exception/index.html">InsufficientBalanceException</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InsufficientBalanceException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-transaction-conflict-exception/index.html">TransactionConflictException</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TransactionConflictException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-transaction-resolution-exception/index.html">TransactionResolutionException</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TransactionResolutionException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-transaction-verification-exception/index.html">TransactionVerificationException</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">TransactionVerificationException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extensions for External Classes</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="java.time.-local-date/index.html">java.time.LocalDate</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="java.util.-currency/index.html">java.util.Currency</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.-double/index.html">kotlin.Double</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.-int/index.html">kotlin.Int</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.collections.-collection/index.html">kotlin.collections.Collection</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.collections.-iterable/index.html">kotlin.collections.Iterable</a></td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-c-h-f.html">CHF</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">CHF</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-p-r-o-g-r-a-m_-i-d.html">DUMMY_PROGRAM_ID</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_PROGRAM_ID</span><span class="symbol">: </span><a href="-dummy-contract/index.html"><span class="identifier">DummyContract</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-e-u-r.html">EUR</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">EUR</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-f-c-o-j.html">FCOJ</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">FCOJ</span><span class="symbol">: </span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-g-b-p.html">GBP</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">GBP</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-u-s-d.html">USD</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">USD</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-d-o-l-l-a-r-s.html">DOLLARS</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">DOLLARS</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$DOLLARS(kotlin.Int)/amount">amount</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">fun </span><span class="identifier">DOLLARS</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$DOLLARS(kotlin.Double)/amount">amount</span><span class="symbol">:</span>&nbsp;<span class="identifier">Double</span><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-f-c-o-j.html">FCOJ</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">FCOJ</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$FCOJ(kotlin.Int)/amount">amount</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-p-o-u-n-d-s.html">POUNDS</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">POUNDS</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$POUNDS(kotlin.Int)/amount">amount</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-s-w-i-s-s_-f-r-a-n-c-s.html">SWISS_FRANCS</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">SWISS_FRANCS</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$SWISS_FRANCS(kotlin.Int)/amount">amount</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="calculate-days-between.html">calculateDaysBetween</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">calculateDaysBetween</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$calculateDaysBetween(java.time.LocalDate, java.time.LocalDate, net.corda.core.contracts.DayCountBasisYear, net.corda.core.contracts.DayCountBasisDay)/startDate">startDate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts$calculateDaysBetween(java.time.LocalDate, java.time.LocalDate, net.corda.core.contracts.DayCountBasisYear, net.corda.core.contracts.DayCountBasisDay)/endDate">endDate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts$calculateDaysBetween(java.time.LocalDate, java.time.LocalDate, net.corda.core.contracts.DayCountBasisYear, net.corda.core.contracts.DayCountBasisDay)/dcbYear">dcbYear</span><span class="symbol">:</span>&nbsp;<a href="-day-count-basis-year/index.html"><span class="identifier">DayCountBasisYear</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts$calculateDaysBetween(java.time.LocalDate, java.time.LocalDate, net.corda.core.contracts.DayCountBasisYear, net.corda.core.contracts.DayCountBasisDay)/dcbDay">dcbDay</span><span class="symbol">:</span>&nbsp;<a href="-day-count-basis-day/index.html"><span class="identifier">DayCountBasisDay</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="commodity.html">commodity</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">commodity</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$commodity(kotlin.String)/code">code</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="currency.html">currency</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">currency</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$currency(kotlin.String)/code">code</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a></code>
+<p>Defines a simple domain specific language for the specification of financial contracts. Currently covers:</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="hash.html">hash</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">.</span><span class="identifier">hash</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code>
+<p>Returns the SHA-256 hash of the serialised contents of this state (not cached!)</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="issued by.html">issued by</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$issued by(net.corda.core.contracts.Commodity, net.corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$issued by(net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="issued-by.html">issuedBy</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">.</span><span class="identifier">issuedBy</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$issuedBy(net.corda.core.contracts.Commodity, net.corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">issuedBy</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$issuedBy(net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="require-that.html">requireThat</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span> <span class="identifier">requireThat</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$requireThat(kotlin.Function1((net.corda.core.contracts.Requirements, net.corda.core.contracts.requireThat.R)))/body">body</span><span class="symbol">:</span>&nbsp;<a href="-requirements/index.html"><span class="identifier">Requirements</span></a><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">R</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="to-decimal.html">toDecimal</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">toDecimal</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a></code>
+<p>Convert a currency <a href="-amount/index.html">Amount</a> to a decimal representation. For example, with an amount with a quantity
+of "1234" GBP, returns "12.34".</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="verify-move-command.html">verifyMoveCommand</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-move-command/index.html"><span class="identifier">MoveCommand</span></a><span class="symbol">&gt;</span> <span class="identifier">verifyMoveCommand</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$verifyMoveCommand(kotlin.collections.List((net.corda.core.contracts.OwnableState)), net.corda.core.contracts.TransactionForContract)/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts$verifyMoveCommand(kotlin.collections.List((net.corda.core.contracts.OwnableState)), net.corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-move-command/index.html"><span class="identifier">MoveCommand</span></a></code><br/>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-move-command/index.html"><span class="identifier">MoveCommand</span></a><span class="symbol">&gt;</span> <span class="identifier">verifyMoveCommand</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$verifyMoveCommand(kotlin.collections.List((net.corda.core.contracts.OwnableState)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.core.contracts.CommandData)))))/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts$verifyMoveCommand(kotlin.collections.List((net.corda.core.contracts.OwnableState)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.core.contracts.CommandData)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="-move-command/index.html"><span class="identifier">MoveCommand</span></a></code>
+<p>Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="with notary.html">with notary</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span> <span class="identifier">T</span><span class="symbol">.</span><span class="identifier">with notary</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$with notary(net.corda.core.contracts.with notary.T, net.corda.core.crypto.Party)/newNotary">newNotary</span><span class="symbol">:</span>&nbsp;<a href="../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Wraps the <a href="-contract-state/index.html">ContractState</a> in a <a href="-transaction-state/index.html">TransactionState</a> object</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="with-notary.html">withNotary</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span> <span class="identifier">T</span><span class="symbol">.</span><span class="identifier">withNotary</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts$withNotary(net.corda.core.contracts.withNotary.T, net.corda.core.crypto.Party)/newNotary">newNotary</span><span class="symbol">:</span>&nbsp;<a href="../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="without-issuer.html">withoutIssuer</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">withoutIssuer</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Strips the issuer and returns an <a href="-amount/index.html">Amount</a> of the raw token directly. This is useful when you are mixing code that
+cares about specific issuers with code that will accept any, or which is imposing issuer constraints via some
+other mechanism and the additional type safety is not wanted.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

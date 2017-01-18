@@ -1,0 +1,105 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>PartialMerkleTree - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.crypto</a>&nbsp;/&nbsp;<a href=".">PartialMerkleTree</a><br/>
+<br/>
+<h1>PartialMerkleTree</h1>
+<code><span class="keyword">class </span><span class="identifier">PartialMerkleTree</span></code>
+<p>Building and verification of Partial Merkle Tree.
+Partial Merkle Tree is a minimal tree needed to check that a given set of leaves belongs to a full Merkle Tree.</p>
+<p>Example of Merkle tree with 5 leaves.</p>
+<pre><code><pre><code>             h15</code></pre>
+<pre><code>          /       \</code></pre>
+<pre><code>         h14       h55</code></pre>
+<pre><code>        /  \      /  \</code></pre>
+<pre><code>      h12  h34   h5-&gt;d(h5)</code></pre>
+<pre><code>     / \   / \   / \</code></pre>
+<pre><code>    l1 l2 l3 l4 l5-&gt;d(l5)</code></pre></code></pre>
+<p>l* denote hashes of leaves, h* - hashes of nodes below.
+h5-&gt;d(h5) denotes duplication of the left hand side node. These nodes are kept in a full tree as DuplicatedLeaf.
+When filtering the tree for l5, we don't want to keep both l5 and its duplicate (it can also be solved using null
+values in a tree, but this solution is clearer).</p>
+<p>Example of Partial tree based on the tree above.</p>
+<pre><code><pre><code>           ___</code></pre>
+<pre><code>        /       \</code></pre>
+<pre><code>        _        _</code></pre>
+<pre><code>      /  \      /  \</code></pre>
+<pre><code>    h12   _     _   d(h5)</code></pre>
+<pre><code>         / \   / \</code></pre>
+<pre><code>        I3 l4 I5 d(l5)</code></pre></code></pre>
+<p>We want to check l3 and l5 - now turned into IncudedLeaf (I3 and I5 above). To verify that these two leaves belong to
+the tree with a hash root h15 we need to provide a Merkle branch (or partial tree). In our case we need hashes:
+h12, l4, d(l5) and d(h5). Verification is done by hashing the partial tree to obtain the root and checking it against
+the obtained h15 hash. Additionally we store included hashes used in calculation and compare them to leaves hashes we got
+(there can be a difference in obtained leaves ordering - that's why it's a set comparison not hashing leaves into a tree).
+If both equalities hold, we can assume that l3 and l5 belong to the transaction with root h15.</p>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-partial-tree/index.html">PartialTree</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">PartialTree</span></code>
+<p>The structure is a little different than that of Merkle Tree.
+Partial Tree might not be a full binary tree. Leaves represent either original Merkle tree leaves
+or cut subtree node with stored hash. We differentiate between the leaves that are included in a filtered
+transaction and leaves that just keep hashes needed for calculation. Reason for this approach: during verification
+it's easier to extract hashes used as a base for this tree.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">PartialMerkleTree</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.PartialMerkleTree$<init>(net.corda.core.crypto.PartialMerkleTree.PartialTree)/root">root</span><span class="symbol">:</span>&nbsp;<a href="-partial-tree/index.html"><span class="identifier">PartialTree</span></a><span class="symbol">)</span></code>
+<p>Building and verification of Partial Merkle Tree.
+Partial Merkle Tree is a minimal tree needed to check that a given set of leaves belongs to a full Merkle Tree.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="root.html">root</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">root</span><span class="symbol">: </span><a href="-partial-tree/index.html"><span class="identifier">PartialTree</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="verify.html">verify</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.PartialMerkleTree$verify(net.corda.core.crypto.SecureHash, kotlin.collections.List((net.corda.core.crypto.SecureHash)))/merkleRootHash">merkleRootHash</span><span class="symbol">:</span>&nbsp;<a href="../-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.crypto.PartialMerkleTree$verify(net.corda.core.crypto.SecureHash, kotlin.collections.List((net.corda.core.crypto.SecureHash)))/hashesToCheck">hashesToCheck</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="build.html">build</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">build</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.PartialMerkleTree.Companion$build(net.corda.core.transactions.MerkleTree, kotlin.collections.List((net.corda.core.crypto.SecureHash)))/merkleRoot">merkleRoot</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-merkle-tree/index.html"><span class="identifier">MerkleTree</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.crypto.PartialMerkleTree.Companion$build(net.corda.core.transactions.MerkleTree, kotlin.collections.List((net.corda.core.crypto.SecureHash)))/includeHashes">includeHashes</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">PartialMerkleTree</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

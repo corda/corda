@@ -1,0 +1,20 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>GroupClauseVerifier.getExecutionPath - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts.clauses</a>&nbsp;/&nbsp;<a href="index.html">GroupClauseVerifier</a>&nbsp;/&nbsp;<a href=".">getExecutionPath</a><br/>
+<br/>
+<h1>getExecutionPath</h1>
+<a name="net.corda.core.contracts.clauses.GroupClauseVerifier$getExecutionPath(kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.core.contracts.clauses.GroupClauseVerifier.C)))))"></a>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">getExecutionPath</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.clauses.GroupClauseVerifier$getExecutionPath(kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.core.contracts.clauses.GroupClauseVerifier.C)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">,</span>&nbsp;<span class="identifier">*</span><span class="symbol">,</span>&nbsp;<span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Determine the subclauses which will be verified as a result of verifying this clause.</p>
+<h3>Exceptions</h3>
+
+<p><a name="IllegalStateException"></a>
+<code>IllegalStateException</code> - if the given commands do not result in a valid execution (for example no match
+with <a href="../-first-of/index.html">FirstOf</a>).
+</BODY>
+</HTML>

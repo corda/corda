@@ -1,0 +1,18 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>AbstractJDBCHashMap.addKeyToInsert - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.utilities</a>&nbsp;/&nbsp;<a href="index.html">AbstractJDBCHashMap</a>&nbsp;/&nbsp;<a href=".">addKeyToInsert</a><br/>
+<br/>
+<h1>addKeyToInsert</h1>
+<a name="net.corda.node.utilities.AbstractJDBCHashMap$addKeyToInsert(org.jetbrains.exposed.sql.statements.InsertStatement, kotlin.collections.Map.Entry((net.corda.node.utilities.AbstractJDBCHashMap.K, net.corda.node.utilities.AbstractJDBCHashMap.V)), kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))"></a>
+<code><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addKeyToInsert</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$addKeyToInsert(org.jetbrains.exposed.sql.statements.InsertStatement, kotlin.collections.Map.Entry((net.corda.node.utilities.AbstractJDBCHashMap.K, net.corda.node.utilities.AbstractJDBCHashMap.V)), kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/insert">insert</span><span class="symbol">:</span>&nbsp;<span class="identifier">InsertStatement</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$addKeyToInsert(org.jetbrains.exposed.sql.statements.InsertStatement, kotlin.collections.Map.Entry((net.corda.node.utilities.AbstractJDBCHashMap.K, net.corda.node.utilities.AbstractJDBCHashMap.V)), kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/entry">entry</span><span class="symbol">:</span>&nbsp;<span class="identifier">Entry</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$addKeyToInsert(org.jetbrains.exposed.sql.statements.InsertStatement, kotlin.collections.Map.Entry((net.corda.node.utilities.AbstractJDBCHashMap.K, net.corda.node.utilities.AbstractJDBCHashMap.V)), kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/finalizables">finalizables</span><span class="symbol">:</span>&nbsp;<span class="identifier">MutableList</span><span class="symbol">&lt;</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Implementation should marshall the key to the insert statement.</p>
+<p>If some cleanup is required after the insert statement is executed, such as closing a Blob, then add a closure
+to the finalizables to do so.</p>
+<p>See example implementations in <a href="../-j-d-b-c-hash-map/index.html">JDBCHashMap</a>.</p>
+</BODY>
+</HTML>

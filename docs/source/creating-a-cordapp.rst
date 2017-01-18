@@ -91,9 +91,9 @@ The user name and password for the login are as per the node data source configu
 The name and column layout of the internal node tables is in a state of flux and should not be relied upon to remain static
 at the present time, and should certainly be treated as read-only.
 
-.. _CordaPluginRegistry: api/net.corda.core.node/-corda-plugin-registry/index.html
-.. _PluginServiceHub: api/net.corda.core.node/-plugin-service-hub/index.html
-.. _ServiceHub: api/net.corda.core.node/-service-hub/index.html
+.. _CordaPluginRegistry: api/kotlin/corda/net.corda.core.node/-corda-plugin-registry/index.html
+.. _PluginServiceHub: api/kotlin/corda/net.corda.core.node/-plugin-service-hub/index.html
+.. _ServiceHub: api/kotlin/corda/net.corda.core.node/-service-hub/index.html
 
 Building against Corda
 ----------------------

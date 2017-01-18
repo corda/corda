@@ -1,0 +1,19 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>DealState.generateAgreement - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href="index.html">DealState</a>&nbsp;/&nbsp;<a href=".">generateAgreement</a><br/>
+<br/>
+<h1>generateAgreement</h1>
+<a name="net.corda.core.contracts.DealState$generateAgreement(net.corda.core.crypto.Party)"></a>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">generateAgreement</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.DealState$generateAgreement(net.corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></code>
+<p>Generate a partial transaction representing an agreement (command) to this deal, allowing a general
+deal/agreement flow to generate the necessary transaction for potential implementations.</p>
+<p>TODO: Currently this is the "inception" transaction but in future an offer of some description might be an input state ref</p>
+<p>TODO: This should more likely be a method on the Contract (on a common interface) and the changes to reference a
+Contract instance from a ContractState are imminent, at which point we can move this out of here.</p>
+</BODY>
+</HTML>

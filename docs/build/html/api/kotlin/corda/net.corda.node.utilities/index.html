@@ -1,0 +1,328 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.node.utilities - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.node.utilities</a><br/>
+<br/>
+<h2>Package net.corda.node.utilities</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-a-n-s-i-progress-observer/index.html">ANSIProgressObserver</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ANSIProgressObserver</span></code>
+<p>This observes the <a href="../net.corda.node.services.statemachine/-state-machine-manager/index.html">StateMachineManager</a> and follows the progress of <a href="../net.corda.core.flows/-flow-logic/index.html">FlowLogic</a>s until they complete in the order
+they are added to the <a href="../net.corda.node.services.statemachine/-state-machine-manager/index.html">StateMachineManager</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-a-n-s-i-progress-renderer/index.html">ANSIProgressRenderer</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">ANSIProgressRenderer</span></code>
+<p>Knows how to render a <a href="../net.corda.core.utilities/-progress-tracker/index.html">ProgressTracker</a> to the terminal using coloured, emoji-fied output. Useful when writing small
+command line tools, demos, tests etc. Just set the <a href="-a-n-s-i-progress-renderer/progress-tracker.html">progressTracker</a> field and it will go ahead and start drawing
+if the terminal supports it. Otherwise it just prints out the name of the step whenever it changes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-abstract-j-d-b-c-hash-map/index.html">AbstractJDBCHashMap</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractJDBCHashMap</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">V</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-j-d-b-c-hashed-table/index.html"><span class="identifier">JDBCHashedTable</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">, </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/AbstractMap.html"><span class="identifier">AbstractMap</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span></code>
+<p>A base class for a JDBC table backed hash map that iterates in insertion order by using
+an ever increasing sequence number on entries.  Iterators supports remove() but entries are not really mutable and
+do not support setValue() method from <a href="#">MutableMap.MutableEntry</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-abstract-j-d-b-c-hash-set/index.html">AbstractJDBCHashSet</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractJDBCHashSet</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-j-d-b-c-hashed-table/index.html"><span class="identifier">JDBCHashedTable</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableSet</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">&gt;</span><span class="symbol">, </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/AbstractSet.html"><span class="identifier">AbstractSet</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">&gt;</span></code>
+<p>Base class for JDBC backed hash set that delegates to a JDBC backed hash map where the values are all
+<a href="#">Unit</a> and not actually persisted.  Iteration order is order of insertion.  Iterators can remove().</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-add-or-remove/index.html">AddOrRemove</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">AddOrRemove</span></code>
+<p>Enum for when adding/removing something, for example adding or removing an entry in a directory.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-affinity-executor/index.html">AffinityExecutor</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">AffinityExecutor</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a></code>
+<p>An extended executor interface that supports thread affinity assertions and short circuiting. This can be useful
+for ensuring code runs on the right thread, and also for unit testing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-composite-key-column-type/index.html">CompositeKeyColumnType</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">CompositeKeyColumnType</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ColumnType</span></code>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="../net.corda.core.crypto/-composite-key/index.html">CompositeKey</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-fiber-box/index.html">FiberBox</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FiberBox</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Modelled on <a href="#">ThreadBox</a>, but with support for waiting that is compatible with Quasar <a href="#">Fiber</a>s and <a href="-mutable-clock/index.html">MutableClock</a>s.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-instant-column-type/index.html">InstantColumnType</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">InstantColumnType</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ColumnType</span></code>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html">java.time.Instant</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-j-d-b-c-hash-map/index.html">JDBCHashMap</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">JDBCHashMap</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">V</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-j-d-b-c-hash-map/index.html"><span class="identifier">AbstractJDBCHashMap</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">,</span>&nbsp;<a href="-j-d-b-c-hash-map/-blob-map-table/index.html"><span class="identifier">BlobMapTable</span></a><span class="symbol">&gt;</span></code>
+<p>A convenient JDBC table backed hash map with iteration order based on insertion order.
+See <a href="-abstract-j-d-b-c-hash-map/index.html">AbstractJDBCHashMap</a> for further implementation details.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-j-d-b-c-hash-set/index.html">JDBCHashSet</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">JDBCHashSet</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-j-d-b-c-hash-set/index.html"><span class="identifier">AbstractJDBCHashSet</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<a href="-j-d-b-c-hash-set/-blob-set-table/index.html"><span class="identifier">BlobSetTable</span></a><span class="symbol">&gt;</span></code>
+<p>A convenient JDBC table backed hash set with iteration order based on insertion order.
+See <a href="-abstract-j-d-b-c-hash-set/index.html">AbstractJDBCHashSet</a> and <a href="-abstract-j-d-b-c-hash-map/index.html">AbstractJDBCHashMap</a> for further implementation details.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-j-d-b-c-hashed-table/index.html">JDBCHashedTable</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">JDBCHashedTable</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Table</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-json-support/index.html">JsonSupport</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">JsonSupport</span></code>
+<p>Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
+the java.time API, some core types, and Kotlin data classes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-local-date-column-type/index.html">LocalDateColumnType</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">LocalDateColumnType</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ColumnType</span></code>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html">java.time.LocalDate</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-local-date-time-column-type/index.html">LocalDateTimeColumnType</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">LocalDateTimeColumnType</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ColumnType</span></code>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDateTime.html">java.time.LocalDateTime</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-mutable-clock/index.html">MutableClock</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">MutableClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a></code>
+<p>An abstract class with helper methods for a type of Clock that might have it's concept of "now"
+adjusted externally.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-party-columns/index.html">PartyColumns</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">PartyColumns</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-public-key-column-type/index.html">PublicKeyColumnType</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">PublicKeyColumnType</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ColumnType</span></code>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html">PublicKey</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-secure-hash-column-type/index.html">SecureHashColumnType</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SecureHashColumnType</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ColumnType</span></code>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="../net.corda.core.crypto/-secure-hash/index.html">SecureHash</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-service-identity-generator/index.html">ServiceIdentityGenerator</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">ServiceIdentityGenerator</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-state-ref-columns/index.html">StateRefColumns</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">StateRefColumns</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-strand-local-transaction-manager/index.html">StrandLocalTransactionManager</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">StrandLocalTransactionManager</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">TransactionManager</span></code>
+<p>A relatively close copy of the <a href="#">ThreadLocalTransactionManager</a> in Exposed but with the following adjustments to suit
+our environment:</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-test-clock/index.html">TestClock</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TestClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-mutable-clock/index.html"><span class="identifier">MutableClock</span></a><span class="symbol">, </span><a href="../net.corda.core.serialization/-serialize-as-token/index.html"><span class="identifier">SerializeAsToken</span></a></code>
+<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the date advanced for use in demos.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-txn-note-columns/index.html">TxnNoteColumns</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TxnNoteColumns</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-u-u-i-d-string-column-type/index.html">UUIDStringColumnType</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">UUIDStringColumnType</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ColumnType</span></code>
+<p><a href="#">ColumnType</a> for marshalling to/from database on behalf of <a href="http://docs.oracle.com/javase/6/docs/api/java/util/UUID.html">UUID</a>, always using a string representation.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extensions for External Classes</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="java.time.-clock/index.html">java.time.Clock</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="org.jetbrains.exposed.sql.-table/index.html">org.jetbrains.exposed.sql.Table</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="rx.-observable/index.html">rx.Observable</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="rx.-observer/index.html">rx.Observer</a></td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-d-e-f-a-u-l-t_-m-a-x_-b-u-c-k-e-t-s.html">DEFAULT_MAX_BUCKETS</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DEFAULT_MAX_BUCKETS</span><span class="symbol">: </span><span class="identifier">Int</span></code>
+<p>The default maximum size of the LRU cache.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-n-o-d-e_-d-a-t-a-b-a-s-e_-p-r-e-f-i-x.html">NODE_DATABASE_PREFIX</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">NODE_DATABASE_PREFIX</span><span class="symbol">: </span><span class="identifier">String</span></code>
+<p>Table prefix for all tables owned by the node module.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="bytes-from-blob.html">bytesFromBlob</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">bytesFromBlob</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$bytesFromBlob(java.sql.Blob)/blob">blob</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/sql/Blob.html"><span class="identifier">Blob</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../net.corda.core.serialization/-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="bytes-to-blob.html">bytesToBlob</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">bytesToBlob</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$bytesToBlob(net.corda.core.serialization.SerializedBytes((kotlin.Any)), kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/value">value</span><span class="symbol">:</span>&nbsp;<a href="../net.corda.core.serialization/-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities$bytesToBlob(net.corda.core.serialization.SerializedBytes((kotlin.Any)), kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/finalizables">finalizables</span><span class="symbol">:</span>&nbsp;<span class="identifier">MutableList</span><span class="symbol">&lt;</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/sql/Blob.html"><span class="identifier">Blob</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="configure-database.html">configureDatabase</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">configureDatabase</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$configureDatabase(java.util.Properties)/props">props</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Properties.html"><span class="identifier">Properties</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/io/Closeable.html"><span class="identifier">Closeable</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">Database</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="create-database-transaction.html">createDatabaseTransaction</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">createDatabaseTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$createDatabaseTransaction(org.jetbrains.exposed.sql.Database)/db">db</span><span class="symbol">:</span>&nbsp;<span class="identifier">Database</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Transaction</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="database-transaction.html">databaseTransaction</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">databaseTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$databaseTransaction(org.jetbrains.exposed.sql.Database, kotlin.Function1((org.jetbrains.exposed.sql.Transaction, net.corda.node.utilities.databaseTransaction.T)))/db">db</span><span class="symbol">:</span>&nbsp;<span class="identifier">Database</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities$databaseTransaction(org.jetbrains.exposed.sql.Database, kotlin.Function1((org.jetbrains.exposed.sql.Transaction, net.corda.node.utilities.databaseTransaction.T)))/statement">statement</span><span class="symbol">:</span>&nbsp;<span class="identifier">Transaction</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="deserialize-from-blob.html">deserializeFromBlob</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">deserializeFromBlob</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$deserializeFromBlob(java.sql.Blob)/blob">blob</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/sql/Blob.html"><span class="identifier">Blob</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="isolated-transaction.html">isolatedTransaction</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">isolatedTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$isolatedTransaction(org.jetbrains.exposed.sql.Database, kotlin.Function1((org.jetbrains.exposed.sql.Transaction, net.corda.node.utilities.isolatedTransaction.T)))/database">database</span><span class="symbol">:</span>&nbsp;<span class="identifier">Database</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities$isolatedTransaction(org.jetbrains.exposed.sql.Database, kotlin.Function1((org.jetbrains.exposed.sql.Transaction, net.corda.node.utilities.isolatedTransaction.T)))/block">block</span><span class="symbol">:</span>&nbsp;<span class="identifier">Transaction</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="main.html">main</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">main</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$main(kotlin.Array((kotlin.String)))/args">args</span><span class="symbol">:</span>&nbsp;<span class="identifier">Array</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="serialize-to-blob.html">serializeToBlob</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">serializeToBlob</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$serializeToBlob(kotlin.Any, kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities$serializeToBlob(kotlin.Any, kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/finalizables">finalizables</span><span class="symbol">:</span>&nbsp;<span class="identifier">MutableList</span><span class="symbol">&lt;</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/sql/Blob.html"><span class="identifier">Blob</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

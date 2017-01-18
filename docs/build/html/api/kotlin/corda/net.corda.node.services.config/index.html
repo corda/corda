@@ -1,0 +1,82 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.node.services.config - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.node.services.config</a><br/>
+<br/>
+<h2>Package net.corda.node.services.config</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-config-helper/index.html">ConfigHelper</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">ConfigHelper</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-full-node-configuration/index.html">FullNodeConfiguration</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FullNodeConfiguration</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></code>
+<p><a href="-full-node-configuration/base-directory.html">baseDirectory</a> is not retrieved from the config file but rather from a command line argument.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-node-configuration/index.html">NodeConfiguration</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">NodeConfiguration</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-node-s-s-l-configuration/index.html"><span class="identifier">NodeSSLConfiguration</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-node-s-s-l-configuration/index.html">NodeSSLConfiguration</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">NodeSSLConfiguration</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-optional-config/index.html">OptionalConfig</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">OptionalConfig</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Helper class for optional configurations</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extensions for External Classes</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="com.typesafe.config.-config/index.html">com.typesafe.config.Config</a></td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="configure-test-s-s-l.html">configureTestSSL</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">configureTestSSL</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.config$configureTestSSL(kotlin.String)/legalName">legalName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span>&nbsp;<span class="symbol">=</span>&nbsp;"Mega Corp."<span class="symbol">)</span><span class="symbol">: </span><a href="-node-s-s-l-configuration/index.html"><span class="identifier">NodeSSLConfiguration</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="configure-with-dev-s-s-l-certificate.html">configureWithDevSSLCertificate</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">.</span><span class="identifier">configureWithDevSSLCertificate</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Strictly for dev only automatically construct a server certificate/private key signed from
+the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

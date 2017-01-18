@@ -1,0 +1,70 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NodeClock - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.serialization</a>&nbsp;/&nbsp;<a href=".">NodeClock</a><br/>
+<br/>
+<h1>NodeClock</h1>
+<code><span class="identifier">@ThreadSafe</span> <span class="keyword">class </span><span class="identifier">NodeClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a><span class="symbol">, </span><a href="../../net.corda.core.serialization/-serialize-as-token/index.html"><span class="identifier">SerializeAsToken</span></a></code>
+<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that tokenizes itself when serialized, and delegates to an underlying <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> implementation.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">NodeClock</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.serialization.NodeClock$<init>(java.time.Clock)/delegateClock">delegateClock</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Clock.systemUTC()<span class="symbol">)</span></code>
+<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that tokenizes itself when serialized, and delegates to an underlying <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> implementation.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="get-zone.html">getZone</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getZone</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/ZoneId.html"><span class="identifier">ZoneId</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="instant.html">instant</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">instant</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="to-token.html">toToken</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toToken</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.serialization.NodeClock$toToken(net.corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.serialization/-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="with-zone.html">withZone</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">withZone</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.serialization.NodeClock$withZone(java.time.ZoneId)/zone">zone</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/ZoneId.html"><span class="identifier">ZoneId</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.node.utilities/java.time.-clock/await-with-deadline.html">awaitWithDeadline</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a><span class="symbol">.</span><span class="identifier">awaitWithDeadline</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$awaitWithDeadline(java.time.Clock, java.time.Instant, java.util.concurrent.Future((kotlin.Any)))/deadline">deadline</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities$awaitWithDeadline(java.time.Clock, java.time.Instant, java.util.concurrent.Future((kotlin.Any)))/future">future</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;GuavaSettableFuture.create&lt;Any&gt;()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Wait until the given <a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html">Future</a> is complete or the deadline is reached, with support for <a href="../../net.corda.node.utilities/-mutable-clock/index.html">MutableClock</a> implementations
+used in demos or testing.  This will substitute a Fiber compatible Future so the current <a href="#">Strand</a> is not blocked.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

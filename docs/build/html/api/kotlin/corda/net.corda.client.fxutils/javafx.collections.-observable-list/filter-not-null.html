@@ -1,0 +1,17 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>filterNotNull - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.client.fxutils</a>&nbsp;/&nbsp;<a href="index.html">javafx.collections.ObservableList</a>&nbsp;/&nbsp;<a href=".">filterNotNull</a><br/>
+<br/>
+<h1>filterNotNull</h1>
+<a name="net.corda.client.fxutils$filterNotNull(javafx.collections.ObservableList((net.corda.client.fxutils.filterNotNull.A)))"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span> <span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">A</span><span class="symbol">?</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">filterNotNull</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span></code>
+<p>data class Dog(val owner: Person?)
+val dogs: ObservableList = (..)
+val owners: ObservableList = dogs.map(Dog::owner).filterNotNull()</p>
+</BODY>
+</HTML>

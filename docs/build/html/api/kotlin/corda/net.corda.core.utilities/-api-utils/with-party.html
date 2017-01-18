@@ -1,0 +1,16 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ApiUtils.withParty - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.utilities</a>&nbsp;/&nbsp;<a href="index.html">ApiUtils</a>&nbsp;/&nbsp;<a href=".">withParty</a><br/>
+<br/>
+<h1>withParty</h1>
+<a name="net.corda.core.utilities.ApiUtils$withParty(kotlin.String, kotlin.Function1((kotlin.String, javax.ws.rs.core.Response)), kotlin.Function1((net.corda.core.crypto.Party, javax.ws.rs.core.Response)))"></a>
+<code><span class="keyword">fun </span><span class="identifier">withParty</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.utilities.ApiUtils$withParty(kotlin.String, kotlin.Function1((kotlin.String, javax.ws.rs.core.Response)), kotlin.Function1((net.corda.core.crypto.Party, javax.ws.rs.core.Response)))/partyKeyStr">partyKeyStr</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.utilities.ApiUtils$withParty(kotlin.String, kotlin.Function1((kotlin.String, javax.ws.rs.core.Response)), kotlin.Function1((net.corda.core.crypto.Party, javax.ws.rs.core.Response)))/notFound">notFound</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">String</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/javax/ws/rs/core/Response.html"><span class="identifier">Response</span></a>&nbsp;<span class="symbol">=</span>&nbsp;defaultNotFound<span class="symbol">, </span><span class="identifier" id="net.corda.core.utilities.ApiUtils$withParty(kotlin.String, kotlin.Function1((kotlin.String, javax.ws.rs.core.Response)), kotlin.Function1((net.corda.core.crypto.Party, javax.ws.rs.core.Response)))/found">found</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/javax/ws/rs/core/Response.html"><span class="identifier">Response</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/javax/ws/rs/core/Response.html"><span class="identifier">Response</span></a></code>
+<p>Get a party and then execute the passed function with the party public key as a parameter.
+Usage: withParty(key) { doSomethingWith(it) }</p>
+</BODY>
+</HTML>

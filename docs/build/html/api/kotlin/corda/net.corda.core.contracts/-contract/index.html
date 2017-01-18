@@ -1,0 +1,92 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>Contract - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href=".">Contract</a><br/>
+<br/>
+<h1>Contract</h1>
+<code><span class="keyword">interface </span><span class="identifier">Contract</span></code>
+<p>Implemented by a program that implements business logic on the shared ledger. All participants run this code for
+every <a href="#">LedgerTransaction</a> they see on the network, for every input and output state. All contracts must accept the
+transaction for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted
+timestamp attached to the transaction itself i.e. it is NOT necessarily the current time.</p>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="legal-contract-reference.html">legalContractReference</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">legalContractReference</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code>
+<p>Unparsed reference to the natural language contract that this code is supposed to express (usually a hash of
+the contract's contents).</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="verify.html">verify</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.Contract$verify(net.corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.
+Must throw an exception if there's a problem that should prevent state transition. Takes a single object
+rather than an argument so that additional data can be added without breaking binary compatibility with
+existing contract code.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.contracts/-commercial-paper/index.html">CommercialPaper</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">CommercialPaper</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.contracts/-commercial-paper-legacy/index.html">CommercialPaperLegacy</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">CommercialPaperLegacy</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-dummy-contract/index.html">DummyContract</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">DummyContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.contracts.asset/-obligation/index.html">Obligation</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Obligation</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code>
+<p>An obligation contract commits the obligor to delivering a specified amount of a fungible asset (for example the
+<a href="../../net.corda.contracts.asset/-cash/index.html">Cash</a> contract) at a specified future point in time. Settlement transactions may split and merge contracts across
+multiple input and output states. The goal of this design is to handle amounts owed, and these contracts are expected
+to be netted/merged, with settlement only for any remainder amount.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.contracts.asset/-on-ledger-asset/index.html">OnLedgerAsset</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">OnLedgerAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code>
+<p>An asset transaction may split and merge assets represented by a set of (issuer, depositRef) pairs, across multiple
+input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour (a blend of
+issuer+depositRef) and you couldn't merge outputs of two colours together, but you COULD put them in the same
+transaction.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,0 +1,195 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>AbstractNetworkMapService - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.network</a>&nbsp;/&nbsp;<a href=".">AbstractNetworkMapService</a><br/>
+<br/>
+<h1>AbstractNetworkMapService</h1>
+<code><span class="identifier">@ThreadSafe</span> <span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a><span class="symbol">, </span><a href="../../net.corda.node.services.api/-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code>
+<p>Abstracted out core functionality as the basis for a persistent implementation, as well as existing in-memory implementation.</p>
+<p>Design is slightly refactored to track time and map version of last acknowledge per subscriber to facilitate
+subscriber clean up and is simpler to persist than the previous implementation based on a set of missing messages acks.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">AbstractNetworkMapService</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.network.AbstractNetworkMapService$<init>(net.corda.node.services.api.ServiceHubInternal)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.api/-service-hub-internal/index.html"><span class="identifier">ServiceHubInternal</span></a><span class="symbol">)</span></code>
+<p>Abstracted out core functionality as the basis for a persistent implementation, as well as existing in-memory implementation.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="_map-version.html">_mapVersion</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">_mapVersion</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/atomic/AtomicInteger.html"><span class="identifier">AtomicInteger</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="map-version.html">mapVersion</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">mapVersion</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="max-size-registration-request-bytes.html">maxSizeRegistrationRequestBytes</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">maxSizeRegistrationRequestBytes</span><span class="symbol">: </span><span class="identifier">Int</span></code>
+<p>Maximum credible size for a registration request. Generally requests are around 500-600 bytes, so this gives a
+10 times overhead.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="max-unacknowledged-updates.html">maxUnacknowledgedUpdates</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">maxUnacknowledgedUpdates</span><span class="symbol">: </span><span class="identifier">Int</span></code>
+<p>Maximum number of unacknowledged updates to send to a node before automatically unregistering them for updates</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="nodes.html">nodes</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">nodes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="registered-nodes.html">registeredNodes</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">registeredNodes</span><span class="symbol">: </span><span class="identifier">MutableMap</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">,</span>&nbsp;<a href="../-node-registration-info/index.html"><span class="identifier">NodeRegistrationInfo</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="subscribers.html">subscribers</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">subscribers</span><span class="symbol">: </span><a href="../../net.corda.core/-thread-box/index.html"><span class="identifier">ThreadBox</span></a><span class="symbol">&lt;</span><span class="identifier">MutableMap</span><span class="symbol">&lt;</span><a href="../../net.corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">,</span>&nbsp;<a href="../-last-acknowledge-info/index.html"><span class="identifier">LastAcknowledgeInfo</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.node.services.api/-abstract-node-service/net.html">net</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">net</span><span class="symbol">: </span><a href="../../net.corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.node.services.api/-abstract-node-service/services.html">services</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">services</span><span class="symbol">: </span><a href="../../net.corda.node.services.api/-service-hub-internal/index.html"><span class="identifier">ServiceHubInternal</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="get-unacknowledged-count.html">getUnacknowledgedCount</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getUnacknowledgedCount</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.network.AbstractNetworkMapService$getUnacknowledgedCount(net.corda.core.messaging.SingleMessageRecipient, kotlin.Int)/subscriber">subscriber</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.network.AbstractNetworkMapService$getUnacknowledgedCount(net.corda.core.messaging.SingleMessageRecipient, kotlin.Int)/mapVersion">mapVersion</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="notify-subscribers.html">notifySubscribers</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">notifySubscribers</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.network.AbstractNetworkMapService$notifySubscribers(net.corda.node.services.network.WireNodeRegistration, kotlin.Int)/wireReg">wireReg</span><span class="symbol">:</span>&nbsp;<a href="../-wire-node-registration/index.html"><span class="identifier">WireNodeRegistration</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.network.AbstractNetworkMapService$notifySubscribers(net.corda.node.services.network.WireNodeRegistration, kotlin.Int)/mapVersion">mapVersion</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="process-acknowledge.html">processAcknowledge</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">processAcknowledge</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.network.AbstractNetworkMapService$processAcknowledge(net.corda.node.services.network.NetworkMapService.UpdateAcknowledge)/req">req</span><span class="symbol">:</span>&nbsp;<a href="../-network-map-service/-update-acknowledge/index.html"><span class="identifier">UpdateAcknowledge</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="process-fetch-all-request.html">processFetchAllRequest</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">processFetchAllRequest</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.network.AbstractNetworkMapService$processFetchAllRequest(net.corda.node.services.network.NetworkMapService.FetchMapRequest)/req">req</span><span class="symbol">:</span>&nbsp;<a href="../-network-map-service/-fetch-map-request/index.html"><span class="identifier">FetchMapRequest</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-network-map-service/-fetch-map-response/index.html"><span class="identifier">FetchMapResponse</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="process-query-request.html">processQueryRequest</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">processQueryRequest</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.network.AbstractNetworkMapService$processQueryRequest(net.corda.node.services.network.NetworkMapService.QueryIdentityRequest)/req">req</span><span class="symbol">:</span>&nbsp;<a href="../-network-map-service/-query-identity-request/index.html"><span class="identifier">QueryIdentityRequest</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-network-map-service/-query-identity-response/index.html"><span class="identifier">QueryIdentityResponse</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="process-registration-change-request.html">processRegistrationChangeRequest</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">processRegistrationChangeRequest</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.network.AbstractNetworkMapService$processRegistrationChangeRequest(net.corda.node.services.network.NetworkMapService.RegistrationRequest)/req">req</span><span class="symbol">:</span>&nbsp;<a href="../-network-map-service/-registration-request/index.html"><span class="identifier">RegistrationRequest</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-network-map-service/-registration-response/index.html"><span class="identifier">RegistrationResponse</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="process-subscription-request.html">processSubscriptionRequest</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">processSubscriptionRequest</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.network.AbstractNetworkMapService$processSubscriptionRequest(net.corda.node.services.network.NetworkMapService.SubscribeRequest)/req">req</span><span class="symbol">:</span>&nbsp;<a href="../-network-map-service/-subscribe-request/index.html"><span class="identifier">SubscribeRequest</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-network-map-service/-subscribe-response/index.html"><span class="identifier">SubscribeResponse</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="setup.html">setup</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">setup</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="unregister-network-handlers.html">unregisterNetworkHandlers</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">unregisterNetworkHandlers</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.node.services.api/-abstract-node-service/add-message-handler.html">addMessageHandler</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.flows/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((net.corda.node.services.api.AbstractNodeService.addMessageHandler.Q, net.corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((net.corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((net.corda.node.services.api.AbstractNodeService.addMessageHandler.Q, net.corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((net.corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((net.corda.node.services.api.AbstractNodeService.addMessageHandler.Q, net.corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((net.corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/exceptionConsumer">exceptionConsumer</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code>
+<p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
+common boilerplate code. Exceptions are caught and passed to the provided consumer.  If you just want a simple
+acknowledgement response with no content, use <a href="#">Ack</a>.</p>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.flows/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((net.corda.node.services.api.AbstractNodeService.addMessageHandler.Q, net.corda.node.services.api.AbstractNodeService.addMessageHandler.R)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((net.corda.node.services.api.AbstractNodeService.addMessageHandler.Q, net.corda.node.services.api.AbstractNodeService.addMessageHandler.R)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code>
+<p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
+common boilerplate code. Exceptions are propagated to the messaging layer.  If you just want a simple
+acknowledgement response with no content, use <a href="#">Ack</a>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-in-memory-network-map-service/index.html">InMemoryNetworkMapService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InMemoryNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNetworkMapService</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-persistent-network-map-service/index.html">PersistentNetworkMapService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">PersistentNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNetworkMapService</span></code>
+<p>A network map service backed by a database to survive restarts of the node hosting it.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

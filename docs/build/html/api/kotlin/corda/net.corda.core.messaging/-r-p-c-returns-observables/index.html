@@ -1,0 +1,31 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>RPCReturnsObservables - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.messaging</a>&nbsp;/&nbsp;<a href=".">RPCReturnsObservables</a><br/>
+<br/>
+<h1>RPCReturnsObservables</h1>
+<code><span class="identifier">@Target</span><span class="symbol">(</span>[AnnotationTarget.FUNCTION]<span class="symbol">)</span> <span class="keyword">annotation</span> <span class="keyword">class </span><span class="identifier">RPCReturnsObservables</span></code>
+<p>If an RPC is tagged with this annotation it may return one or more observables anywhere in its response graph.
+Calling such a method comes with consequences: it's slower, and consumes server side resources as observations
+will buffer up on the server until they're consumed by the client.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">RPCReturnsObservables</span><span class="symbol">(</span><span class="symbol">)</span></code>
+<p>If an RPC is tagged with this annotation it may return one or more observables anywhere in its response graph.
+Calling such a method comes with consequences: it's slower, and consumes server side resources as observations
+will buffer up on the server until they're consumed by the client.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

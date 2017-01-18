@@ -1,0 +1,30 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>Party.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.crypto</a>&nbsp;/&nbsp;<a href="index.html">Party</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+
+<p><code><span class="identifier">Party</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.Party$<init>(kotlin.String, java.security.PublicKey)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.crypto.Party$<init>(kotlin.String, java.security.PublicKey)/owningKey">owningKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span></code>
+<p>A helper constructor that converts the given <a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html">PublicKey</a> in to a <a href="../-composite-key/index.html">CompositeKey</a> with a single node</p>
+
+<p><code><span class="identifier">Party</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.Party$<init>(kotlin.String, net.corda.core.crypto.CompositeKey)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.crypto.Party$<init>(kotlin.String, net.corda.core.crypto.CompositeKey)/owningKey">owningKey</span><span class="symbol">:</span>&nbsp;<a href="../-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span></code>
+<p>The <a href="index.html">Party</a> class represents an entity on the network, which is typically identified by a legal <a href="-init-.html#net.corda.core.crypto.Party$<init>(kotlin.String, net.corda.core.crypto.CompositeKey)/name">name</a> and public key
+that it can sign transactions under. As parties may use multiple keys for signing and, for example, have offline backup
+keys, the "public key" of a party is represented by a composite construct – a <a href="../-composite-key/index.html">CompositeKey</a>, which combines multiple
+cryptographic public key primitives into a tree structure.</p>
+<p>For example: Alice has two key pairs (pub1/priv1 and pub2/priv2), and wants to be able to sign transactions with either of them.
+Her advertised <a href="index.html">Party</a> then has a legal <a href="-init-.html#net.corda.core.crypto.Party$<init>(kotlin.String, net.corda.core.crypto.CompositeKey)/name">name</a> "Alice" and an <a href="#">owingKey</a> "pub1 or pub2".</p>
+<p><a href="index.html">Party</a> is also used for service identities. E.g. Alice may also be running an interest rate oracle on her Corda node,
+which requires a separate signing key (and an identifying name). Services can also be distributed – run by a coordinated
+cluster of Corda nodes. A <a href="index.html">Party</a> representing a distributed service will use a composite key containing all
+individual cluster nodes' public keys. Each of the nodes in the cluster will advertise the same group <a href="index.html">Party</a>.</p>
+<p><strong>See Also</strong><br/>
+<p><a href="../-composite-key/index.html">CompositeKey</a></p>
+</p>
+</BODY>
+</HTML>

@@ -1,0 +1,75 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ImmutableClassSerializer - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.serialization</a>&nbsp;/&nbsp;<a href=".">ImmutableClassSerializer</a><br/>
+<br/>
+<h1>ImmutableClassSerializer</h1>
+<code><span class="keyword">class </span><span class="identifier">ImmutableClassSerializer</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Serializer</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Serializes properties and deserializes by using the constructor. This assumes that all backed properties are
+set via the constructor and the class is immutable.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">ImmutableClassSerializer</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.ImmutableClassSerializer$<init>(kotlin.reflect.KClass((net.corda.core.serialization.ImmutableClassSerializer.T)))/klass">klass</span><span class="symbol">:</span>&nbsp;<span class="identifier">KClass</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>Serializes properties and deserializes by using the constructor. This assumes that all backed properties are
+set via the constructor and the class is immutable.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="constructor.html">constructor</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">constructor</span><span class="symbol">: </span><span class="identifier">KFunction</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="klass.html">klass</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">klass</span><span class="symbol">: </span><span class="identifier">KClass</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="props.html">props</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">props</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">KProperty1</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">,</span>&nbsp;<span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="props-by-name.html">propsByName</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">propsByName</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">KProperty1</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">,</span>&nbsp;<span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="read.html">read</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">read</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.ImmutableClassSerializer$read(com.esotericsoftware.kryo.Kryo, com.esotericsoftware.kryo.io.Input, java.lang.Class((net.corda.core.serialization.ImmutableClassSerializer.T)))/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.serialization.ImmutableClassSerializer$read(com.esotericsoftware.kryo.Kryo, com.esotericsoftware.kryo.io.Input, java.lang.Class((net.corda.core.serialization.ImmutableClassSerializer.T)))/input">input</span><span class="symbol">:</span>&nbsp;<span class="identifier">Input</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.serialization.ImmutableClassSerializer$read(com.esotericsoftware.kryo.Kryo, com.esotericsoftware.kryo.io.Input, java.lang.Class((net.corda.core.serialization.ImmutableClassSerializer.T)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="write.html">write</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">write</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.ImmutableClassSerializer$write(com.esotericsoftware.kryo.Kryo, com.esotericsoftware.kryo.io.Output, net.corda.core.serialization.ImmutableClassSerializer.T)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.serialization.ImmutableClassSerializer$write(com.esotericsoftware.kryo.Kryo, com.esotericsoftware.kryo.io.Output, net.corda.core.serialization.ImmutableClassSerializer.T)/output">output</span><span class="symbol">:</span>&nbsp;<span class="identifier">Output</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.serialization.ImmutableClassSerializer$write(com.esotericsoftware.kryo.Kryo, com.esotericsoftware.kryo.io.Output, net.corda.core.serialization.ImmutableClassSerializer.T)/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

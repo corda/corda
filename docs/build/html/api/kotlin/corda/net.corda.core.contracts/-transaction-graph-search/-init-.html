@@ -1,0 +1,23 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TransactionGraphSearch.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href="index.html">TransactionGraphSearch</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">TransactionGraphSearch</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.TransactionGraphSearch$<init>(net.corda.core.node.services.ReadOnlyTransactionStorage, kotlin.collections.List((net.corda.core.transactions.WireTransaction)))/transactions">transactions</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-read-only-transaction-storage/index.html"><span class="identifier">ReadOnlyTransactionStorage</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.TransactionGraphSearch$<init>(net.corda.core.node.services.ReadOnlyTransactionStorage, kotlin.collections.List((net.corda.core.transactions.WireTransaction)))/startPoints">startPoints</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>Given a map of transaction id to <a href="../../net.corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>, performs a breadth first search of the dependency graph from
+the starting point down in order to find transactions that match the given query criteria.</p>
+<p>Currently, only one kind of query is supported: find any transaction that contains a command of the given type.</p>
+<p>In future, this should support restricting the search by time, and other types of useful query.</p>
+<h3>Parameters</h3>
+
+<p><a name="transactions"></a>
+<code>transactions</code> - map of transaction id to <a href="../../net.corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>.
+<p><a name="startPoints"></a>
+<code>startPoints</code> - transactions to use as starting points for the search.
+</BODY>
+</HTML>

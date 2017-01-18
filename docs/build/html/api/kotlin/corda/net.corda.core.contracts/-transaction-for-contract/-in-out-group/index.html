@@ -1,0 +1,58 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TransactionForContract.InOutGroup - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href="../index.html">TransactionForContract</a>&nbsp;/&nbsp;<a href=".">InOutGroup</a><br/>
+<br/>
+<h1>InOutGroup</h1>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">InOutGroup</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="keyword">out</span>&nbsp;<span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span></code>
+<p>A set of related inputs and outputs that are connected by some common attributes. An InOutGroup is calculated
+using <a href="../group-states.html">groupStates</a> and is useful for handling cases where a transaction may contain similar but unrelated
+state evolutions, for example, a transaction that moves cash in two different currencies. The numbers must add
+up on both sides of the transaction, but the values must be summed independently per currency. Grouping can
+be used to simplify this logic.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">InOutGroup</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.TransactionForContract.InOutGroup$<init>(kotlin.collections.List((net.corda.core.contracts.TransactionForContract.InOutGroup.T)), kotlin.collections.List((net.corda.core.contracts.TransactionForContract.InOutGroup.T)), net.corda.core.contracts.TransactionForContract.InOutGroup.K)/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.TransactionForContract.InOutGroup$<init>(kotlin.collections.List((net.corda.core.contracts.TransactionForContract.InOutGroup.T)), kotlin.collections.List((net.corda.core.contracts.TransactionForContract.InOutGroup.T)), net.corda.core.contracts.TransactionForContract.InOutGroup.K)/outputs">outputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.TransactionForContract.InOutGroup$<init>(kotlin.collections.List((net.corda.core.contracts.TransactionForContract.InOutGroup.T)), kotlin.collections.List((net.corda.core.contracts.TransactionForContract.InOutGroup.T)), net.corda.core.contracts.TransactionForContract.InOutGroup.K)/groupingKey">groupingKey</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">)</span></code>
+<p>A set of related inputs and outputs that are connected by some common attributes. An InOutGroup is calculated
+using <a href="../group-states.html">groupStates</a> and is useful for handling cases where a transaction may contain similar but unrelated
+state evolutions, for example, a transaction that moves cash in two different currencies. The numbers must add
+up on both sides of the transaction, but the values must be summed independently per currency. Grouping can
+be used to simplify this logic.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="grouping-key.html">groupingKey</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">groupingKey</span><span class="symbol">: </span><span class="identifier">K</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="inputs.html">inputs</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">inputs</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="outputs.html">outputs</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">outputs</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,0 +1,21 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>sumAmountsDue - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href="index.html">net.corda.contracts.asset</a>&nbsp;/&nbsp;<a href=".">sumAmountsDue</a><br/>
+<br/>
+<h1>sumAmountsDue</h1>
+<a name="net.corda.contracts.asset$sumAmountsDue(kotlin.collections.Map((kotlin.Pair((net.corda.core.crypto.CompositeKey, )), net.corda.core.contracts.Amount((net.corda.contracts.asset.sumAmountsDue.P)))))"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span> <span class="identifier">sumAmountsDue</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset$sumAmountsDue(kotlin.collections.Map((kotlin.Pair((net.corda.core.crypto.CompositeKey, )), net.corda.core.contracts.Amount((net.corda.contracts.asset.sumAmountsDue.P)))))/balances">balances</span><span class="symbol">:</span>&nbsp;<span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">Pair</span><span class="symbol">&lt;</span><a href="../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">,</span>&nbsp;<a href="../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">Long</span><span class="symbol">&gt;</span></code>
+<p>Calculate the total balance movement for each party in the transaction, based off a summary of balances between
+each obligor and beneficiary.</p>
+<h3>Parameters</h3>
+
+<p><a name="balances"></a>
+<code>balances</code> - payments due, indexed by obligor and beneficiary. Zero balances are stripped from the map before being
+returned.
+</BODY>
+</HTML>

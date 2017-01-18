@@ -1,0 +1,68 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>DriverDSLInternalInterface - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.driver</a>&nbsp;/&nbsp;<a href=".">DriverDSLInternalInterface</a><br/>
+<br/>
+<h1>DriverDSLInternalInterface</h1>
+<code><span class="keyword">interface </span><span class="identifier">DriverDSLInternalInterface</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-driver-d-s-l-exposed-interface/index.html"><span class="identifier">DriverDSLExposedInterface</span></a></code>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="shutdown.html">shutdown</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">shutdown</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="start.html">start</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">start</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-driver-d-s-l-exposed-interface/start-node.html">startNode</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">startNode</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.driver.DriverDSLExposedInterface$startNode(kotlin.String, kotlin.collections.Set((net.corda.core.node.services.ServiceInfo)), kotlin.collections.List((net.corda.node.services.User)), kotlin.collections.Map((kotlin.String, kotlin.Any)))/providedName">providedName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver.DriverDSLExposedInterface$startNode(kotlin.String, kotlin.collections.Set((net.corda.core.node.services.ServiceInfo)), kotlin.collections.List((net.corda.node.services.User)), kotlin.collections.Map((kotlin.String, kotlin.Any)))/advertisedServices">advertisedServices</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-service-info/index.html"><span class="identifier">ServiceInfo</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;emptySet()<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver.DriverDSLExposedInterface$startNode(kotlin.String, kotlin.collections.Set((net.corda.core.node.services.ServiceInfo)), kotlin.collections.List((net.corda.node.services.User)), kotlin.collections.Map((kotlin.String, kotlin.Any)))/rpcUsers">rpcUsers</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.node.services/-user/index.html"><span class="identifier">User</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;emptyList()<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver.DriverDSLExposedInterface$startNode(kotlin.String, kotlin.collections.Set((net.corda.core.node.services.ServiceInfo)), kotlin.collections.List((net.corda.node.services.User)), kotlin.collections.Map((kotlin.String, kotlin.Any)))/customOverrides">customOverrides</span><span class="symbol">:</span>&nbsp;<span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;emptyMap()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><a href="../-node-handle/index.html"><span class="identifier">NodeHandle</span></a><span class="symbol">&gt;</span></code>
+<p>Starts a <a href="#">Node</a> in a separate process.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-driver-d-s-l-exposed-interface/start-notary-cluster.html">startNotaryCluster</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">startNotaryCluster</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.driver.DriverDSLExposedInterface$startNotaryCluster(kotlin.String, kotlin.Int, net.corda.core.node.services.ServiceType, kotlin.collections.List((net.corda.node.services.User)))/notaryName">notaryName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.driver.DriverDSLExposedInterface$startNotaryCluster(kotlin.String, kotlin.Int, net.corda.core.node.services.ServiceType, kotlin.collections.List((net.corda.node.services.User)))/clusterSize">clusterSize</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;3<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver.DriverDSLExposedInterface$startNotaryCluster(kotlin.String, kotlin.Int, net.corda.core.node.services.ServiceType, kotlin.collections.List((net.corda.node.services.User)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a>&nbsp;<span class="symbol">=</span>&nbsp;RaftValidatingNotaryService.type<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver.DriverDSLExposedInterface$startNotaryCluster(kotlin.String, kotlin.Int, net.corda.core.node.services.ServiceType, kotlin.collections.List((net.corda.node.services.User)))/rpcUsers">rpcUsers</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.node.services/-user/index.html"><span class="identifier">User</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;emptyList()<span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><span class="identifier">Pair</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-node-handle/index.html"><span class="identifier">NodeHandle</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Starts a distributed notary cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-driver-d-s-l-exposed-interface/wait-for-all-nodes-to-finish.html">waitForAllNodesToFinish</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">waitForAllNodesToFinish</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-driver-d-s-l/index.html">DriverDSL</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">DriverDSL</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">DriverDSLInternalInterface</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

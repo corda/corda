@@ -1,0 +1,18 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NodeMessagingClient.run - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href="index.html">NodeMessagingClient</a>&nbsp;/&nbsp;<a href=".">run</a><br/>
+<br/>
+<h1>run</h1>
+<a name="net.corda.node.services.messaging.NodeMessagingClient$run()"></a>
+<code><span class="keyword">fun </span><span class="identifier">run</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Starts the p2p event loop: this method only returns once <a href="stop.html">stop</a> has been called.</p>
+<p>This actually runs as two sequential loops. The first subscribes for and receives only network map messages until
+we get our network map fetch response.  At that point the filtering consumer is closed and we proceed to the second loop and
+consume all messages via a new consumer without a filter applied.</p>
+</BODY>
+</HTML>

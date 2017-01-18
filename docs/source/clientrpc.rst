@@ -92,5 +92,5 @@ This will require some familiarity with Kryo.  An example is shown in :doc:`tuto
 .. warning:: We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin
    customisation point will either go away completely or change.
 
-.. _CordaRPCClient: api/net.corda.client/-corda-r-p-c-client/index.html
-.. _CordaRPCOps: api/net.corda.node.services.messaging/-corda-r-p-c-ops/index.html
+.. _CordaRPCClient: api/kotlin/corda/net.corda.client/-corda-r-p-c-client/index.html
+.. _CordaRPCOps: api/kotlin/corda/net.corda.node.services.messaging/-corda-r-p-c-ops/index.html

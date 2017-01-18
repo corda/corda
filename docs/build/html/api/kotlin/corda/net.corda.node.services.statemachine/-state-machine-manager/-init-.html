@@ -1,0 +1,29 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>StateMachineManager.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.statemachine</a>&nbsp;/&nbsp;<a href="index.html">StateMachineManager</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">StateMachineManager</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.statemachine.StateMachineManager$<init>(net.corda.node.services.api.ServiceHubInternal, kotlin.collections.List((kotlin.Any)), net.corda.node.services.api.CheckpointStorage, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, org.apache.activemq.artemis.utils.ReusableLatch)/serviceHub">serviceHub</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.api/-service-hub-internal/index.html"><span class="identifier">ServiceHubInternal</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.statemachine.StateMachineManager$<init>(net.corda.node.services.api.ServiceHubInternal, kotlin.collections.List((kotlin.Any)), net.corda.node.services.api.CheckpointStorage, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, org.apache.activemq.artemis.utils.ReusableLatch)/tokenizableServices">tokenizableServices</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">Any</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.statemachine.StateMachineManager$<init>(net.corda.node.services.api.ServiceHubInternal, kotlin.collections.List((kotlin.Any)), net.corda.node.services.api.CheckpointStorage, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, org.apache.activemq.artemis.utils.ReusableLatch)/checkpointStorage">checkpointStorage</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.api/-checkpoint-storage/index.html"><span class="identifier">CheckpointStorage</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.statemachine.StateMachineManager$<init>(net.corda.node.services.api.ServiceHubInternal, kotlin.collections.List((kotlin.Any)), net.corda.node.services.api.CheckpointStorage, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, org.apache.activemq.artemis.utils.ReusableLatch)/executor">executor</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.utilities/-affinity-executor/index.html"><span class="identifier">AffinityExecutor</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.statemachine.StateMachineManager$<init>(net.corda.node.services.api.ServiceHubInternal, kotlin.collections.List((kotlin.Any)), net.corda.node.services.api.CheckpointStorage, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, org.apache.activemq.artemis.utils.ReusableLatch)/database">database</span><span class="symbol">:</span>&nbsp;<span class="identifier">Database</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.statemachine.StateMachineManager$<init>(net.corda.node.services.api.ServiceHubInternal, kotlin.collections.List((kotlin.Any)), net.corda.node.services.api.CheckpointStorage, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, org.apache.activemq.artemis.utils.ReusableLatch)/unfinishedFibers">unfinishedFibers</span><span class="symbol">:</span>&nbsp;<span class="identifier">ReusableLatch</span>&nbsp;<span class="symbol">=</span>&nbsp;ReusableLatch()<span class="symbol">)</span></code>
+<p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="../../net.corda.core.flows/-flow-state-machine/index.html">FlowStateMachine</a> objects.
+Each such object represents an instantiation of a (two-party) flow that has reached a particular point.</p>
+<p>An implementation of this class will persist state machines to long term storage so they can survive process restarts
+and, if run with a single-threaded executor, will ensure no two state machines run concurrently with each other
+(bad for performance, good for programmer mental health!).</p>
+<p>A "state machine" is a class with a single call method. The call method and any others it invokes are rewritten by
+a bytecode rewriting engine called Quasar, to ensure the code can be suspended and resumed at any point.</p>
+<p>The SMM will always invoke the flow fibers on the given <a href="../../net.corda.node.utilities/-affinity-executor/index.html">AffinityExecutor</a>, regardless of which thread actually
+starts them via <a href="add.html">add</a>.</p>
+<p>TODO: Consider the issue of continuation identity more deeply: is it a safe assumption that a serialised
+    continuation is always unique?
+TODO: Think about how to bring the system to a clean stop so it can be upgraded without any serialised stacks on disk
+TODO: Timeouts
+TODO: Surfacing of exceptions via an API and/or management UI
+TODO: Ability to control checkpointing explicitly, for cases where you know replaying a message can't hurt
+TODO: Implement stub/skel classes that provide a basic RPC framework on top of this.</p>
+</BODY>
+</HTML>

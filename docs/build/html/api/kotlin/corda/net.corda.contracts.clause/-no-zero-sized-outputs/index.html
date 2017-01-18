@@ -1,0 +1,76 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NoZeroSizedOutputs - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.contracts.clause</a>&nbsp;/&nbsp;<a href=".">NoZeroSizedOutputs</a><br/>
+<br/>
+<h1>NoZeroSizedOutputs</h1>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">NoZeroSizedOutputs</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts.clauses/-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Clause for fungible asset contracts, which enforces that no output state should have
+a balance of zero.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">NoZeroSizedOutputs</span><span class="symbol">(</span><span class="symbol">)</span></code>
+<p>Clause for fungible asset contracts, which enforces that no output state should have
+a balance of zero.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.contracts.clauses/-clause/required-commands.html">requiredCommands</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">requiredCommands</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../../net.corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Determine whether this clause runs or not</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="to-string.html">toString</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="verify.html">verify</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.clause.NoZeroSizedOutputs$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.contracts.clause.NoZeroSizedOutputs.S)), kotlin.collections.List((net.corda.contracts.clause.NoZeroSizedOutputs.S)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.contracts.clause.NoZeroSizedOutputs.C)))), net.corda.core.contracts.Issued((net.corda.contracts.clause.NoZeroSizedOutputs.T)))/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.clause.NoZeroSizedOutputs$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.contracts.clause.NoZeroSizedOutputs.S)), kotlin.collections.List((net.corda.contracts.clause.NoZeroSizedOutputs.S)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.contracts.clause.NoZeroSizedOutputs.C)))), net.corda.core.contracts.Issued((net.corda.contracts.clause.NoZeroSizedOutputs.T)))/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.clause.NoZeroSizedOutputs$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.contracts.clause.NoZeroSizedOutputs.S)), kotlin.collections.List((net.corda.contracts.clause.NoZeroSizedOutputs.S)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.contracts.clause.NoZeroSizedOutputs.C)))), net.corda.core.contracts.Issued((net.corda.contracts.clause.NoZeroSizedOutputs.T)))/outputs">outputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.clause.NoZeroSizedOutputs$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.contracts.clause.NoZeroSizedOutputs.S)), kotlin.collections.List((net.corda.contracts.clause.NoZeroSizedOutputs.S)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.contracts.clause.NoZeroSizedOutputs.C)))), net.corda.core.contracts.Issued((net.corda.contracts.clause.NoZeroSizedOutputs.T)))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.clause.NoZeroSizedOutputs$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.contracts.clause.NoZeroSizedOutputs.S)), kotlin.collections.List((net.corda.contracts.clause.NoZeroSizedOutputs.S)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.contracts.clause.NoZeroSizedOutputs.C)))), net.corda.core.contracts.Issued((net.corda.contracts.clause.NoZeroSizedOutputs.T)))/groupingKey">groupingKey</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span></code>
+<p>Verify the transaction matches the conditions from this clause. For example, a "no zero amount output" clause
+would check each of the output states that it applies to, looking for a zero amount, and throw IllegalStateException
+if any matched.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.contracts.clauses/matches.html">matches</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span> <a href="../../net.corda.core.contracts.clauses/-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">matches</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.clauses$matches(net.corda.core.contracts.clauses.Clause((net.corda.core.contracts.ContractState, net.corda.core.contracts.clauses.matches.C, kotlin.Any)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.core.contracts.clauses.matches.C)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Determine if the given list of commands matches the required commands for a clause to trigger.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

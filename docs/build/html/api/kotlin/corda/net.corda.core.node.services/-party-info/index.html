@@ -1,0 +1,59 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>PartyInfo - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.node.services</a>&nbsp;/&nbsp;<a href=".">PartyInfo</a><br/>
+<br/>
+<h1>PartyInfo</h1>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">PartyInfo</span></code>
+<p>Holds information about a <a href="../../net.corda.core.crypto/-party/index.html">Party</a>, which may refer to either a specific node or a service.</p>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-node/index.html">Node</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Node</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PartyInfo</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PartyInfo</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="party.html">party</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">party</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-node/index.html">Node</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Node</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PartyInfo</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PartyInfo</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

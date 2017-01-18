@@ -1,0 +1,17 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NotaryFlow.Service.<init> - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href="../index.html">NotaryFlow</a>&nbsp;/&nbsp;<a href="index.html">Service</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">Service</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.NotaryFlow.Service$<init>(net.corda.core.crypto.Party, net.corda.core.node.services.TimestampChecker, net.corda.core.node.services.UniquenessProvider)/otherSide">otherSide</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.flows.NotaryFlow.Service$<init>(net.corda.core.crypto.Party, net.corda.core.node.services.TimestampChecker, net.corda.core.node.services.UniquenessProvider)/timestampChecker">timestampChecker</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.node.services/-timestamp-checker/index.html"><span class="identifier">TimestampChecker</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.flows.NotaryFlow.Service$<init>(net.corda.core.crypto.Party, net.corda.core.node.services.TimestampChecker, net.corda.core.node.services.UniquenessProvider)/uniquenessProvider">uniquenessProvider</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a><span class="symbol">)</span></code>
+<p>Checks that the timestamp command is valid (if present) and commits the input state, or returns a conflict
+if any of the input states have been previously committed.</p>
+<p>Extend this class, overriding <emph>beforeCommit</emph> to add custom transaction processing/validation logic.</p>
+<p>TODO: the notary service should only be able to see timestamp commands and inputs</p>
+</BODY>
+</HTML>

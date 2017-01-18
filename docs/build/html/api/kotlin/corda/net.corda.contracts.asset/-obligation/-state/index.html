@@ -1,0 +1,212 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>Obligation.State - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.contracts.asset</a>&nbsp;/&nbsp;<a href="../index.html">Obligation</a>&nbsp;/&nbsp;<a href=".">State</a><br/>
+<br/>
+<h1>State</h1>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><a href="../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><a href="../../../net.corda.core.contracts/-nettable-state.html"><span class="identifier">NettableState</span></a><span class="symbol">&lt;</span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../../../net.corda.contracts.clause/-multilateral-net-state/index.html"><span class="identifier">MultilateralNetState</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>A state representing the obligation of one party (obligor) to deliver a specified number of
+units of an underlying asset (described as token.acceptableIssuedProducts) to the beneficiary
+no later than the specified time.</p>
+<h3>Parameters</h3>
+
+<p><a name="P"></a>
+<code>P</code> - the product the obligation is for payment of.
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">State</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset.Obligation.State$<init>(net.corda.contracts.asset.Obligation.Lifecycle, net.corda.core.crypto.Party, net.corda.contracts.asset.Obligation.Terms((net.corda.contracts.asset.Obligation.State.P)), kotlin.Long, net.corda.core.crypto.CompositeKey)/lifecycle">lifecycle</span><span class="symbol">:</span>&nbsp;<a href="../-lifecycle/index.html"><span class="identifier">Lifecycle</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Lifecycle.NORMAL<span class="symbol">, </span><span class="identifier" id="net.corda.contracts.asset.Obligation.State$<init>(net.corda.contracts.asset.Obligation.Lifecycle, net.corda.core.crypto.Party, net.corda.contracts.asset.Obligation.Terms((net.corda.contracts.asset.Obligation.State.P)), kotlin.Long, net.corda.core.crypto.CompositeKey)/obligor">obligor</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.asset.Obligation.State$<init>(net.corda.contracts.asset.Obligation.Lifecycle, net.corda.core.crypto.Party, net.corda.contracts.asset.Obligation.Terms((net.corda.contracts.asset.Obligation.State.P)), kotlin.Long, net.corda.core.crypto.CompositeKey)/template">template</span><span class="symbol">:</span>&nbsp;<a href="../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.asset.Obligation.State$<init>(net.corda.contracts.asset.Obligation.Lifecycle, net.corda.core.crypto.Party, net.corda.contracts.asset.Obligation.Terms((net.corda.contracts.asset.Obligation.State.P)), kotlin.Long, net.corda.core.crypto.CompositeKey)/quantity">quantity</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.asset.Obligation.State$<init>(net.corda.contracts.asset.Obligation.Lifecycle, net.corda.core.crypto.Party, net.corda.contracts.asset.Obligation.Terms((net.corda.contracts.asset.Obligation.State.P)), kotlin.Long, net.corda.core.crypto.CompositeKey)/beneficiary">beneficiary</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span></code>
+<p>A state representing the obligation of one party (obligor) to deliver a specified number of
+units of an underlying asset (described as token.acceptableIssuedProducts) to the beneficiary
+no later than the specified time.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="amount.html">amount</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">amount</span><span class="symbol">: </span><a href="../../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="beneficiary.html">beneficiary</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">beneficiary</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a></code>
+<p>The public key of the entity the contract pays to</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="bilateral-net-state.html">bilateralNetState</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">bilateralNetState</span><span class="symbol">: </span><a href="../../../net.corda.contracts.clause/-bilateral-net-state/index.html"><span class="identifier">BilateralNetState</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code>
+<p>Returns an object used to determine if two states can be subject to close-out netting. If two states return
+equal objects, they can be close out netted together.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="contract.html">contract</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">contract</span><span class="symbol">: </span><a href="../index.html"><span class="identifier">Obligation</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code>
+<p>An instance of the contract class that will verify this state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="due-before.html">dueBefore</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">dueBefore</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="exit-keys.html">exitKeys</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">exitKeys</span><span class="symbol">: </span><span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span></code>
+<p>There must be an ExitCommand signed by these keys to destroy the amount. While all states require their
+owner to sign, some (i.e. cash) also require the issuer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="lifecycle.html">lifecycle</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">lifecycle</span><span class="symbol">: </span><a href="../-lifecycle/index.html"><span class="identifier">Lifecycle</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="multilateral-net-state.html">multilateralNetState</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">multilateralNetState</span><span class="symbol">: </span><a href="../../../net.corda.contracts.clause/-multilateral-net-state/index.html"><span class="identifier">MultilateralNetState</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code>
+<p>Returns an object used to determine if two states can be subject to close-out netting. If two states return
+equal objects, they can be close out netted together.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="obligor.html">obligor</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">obligor</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code>
+<p>Where the debt originates from (obligor)</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="owner.html">owner</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">owner</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a></code>
+<p>There must be a MoveCommand signed by this key to claim the amount</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="participants.html">participants</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">participants</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span></code>
+<p>A <emph>participant</emph> is any party that is able to consume this state in a valid transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="quantity.html">quantity</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">quantity</span><span class="symbol">: </span><span class="identifier">Long</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="template.html">template</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">template</span><span class="symbol">: </span><a href="../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="move.html">move</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">move</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset.Obligation.State$move(net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((net.corda.contracts.asset.Obligation.Terms((net.corda.contracts.asset.Obligation.State.P)))))), net.corda.core.crypto.CompositeKey)/newAmount">newAmount</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.asset.Obligation.State$move(net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((net.corda.contracts.asset.Obligation.Terms((net.corda.contracts.asset.Obligation.State.P)))))), net.corda.core.crypto.CompositeKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="net.html">net</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">net</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset.Obligation.State$net(net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.Obligation.State.P)))/other">other</span><span class="symbol">:</span>&nbsp;<span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code>
+<p>Perform bilateral netting of this state with another state. The two states must be compatible (as in
+bilateralNetState objects are equal).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="to-string.html">toString</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="with-new-owner.html">withNewOwner</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">withNewOwner</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset.Obligation.State$withNewOwner(net.corda.core.crypto.CompositeKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><a href="../-commands/-move/index.html"><span class="identifier">Move</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../at.html">at</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">at</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset$at(net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.at.T)), java.time.Instant)/dueBefore">dueBefore</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../between.html">between</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">between</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset$between(net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.between.T)), kotlin.Pair((net.corda.core.crypto.Party, net.corda.core.crypto.CompositeKey)))/parties">parties</span><span class="symbol">:</span>&nbsp;<span class="identifier">Pair</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">,</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../issued by.html">issued by</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset$issued by(net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.issued by.T)), net.corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../issued-by.html">issuedBy</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">issuedBy</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset$issuedBy(net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.issuedBy.T)), net.corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../owned by.html">owned by</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset$owned by(net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.owned by.T)), net.corda.core.crypto.CompositeKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../owned-by.html">ownedBy</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">ownedBy</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset$ownedBy(net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.ownedBy.T)), net.corda.core.crypto.CompositeKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

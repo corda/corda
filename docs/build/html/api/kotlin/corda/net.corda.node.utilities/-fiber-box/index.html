@@ -1,0 +1,69 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>FiberBox - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.utilities</a>&nbsp;/&nbsp;<a href=".">FiberBox</a><br/>
+<br/>
+<h1>FiberBox</h1>
+<code><span class="keyword">class </span><span class="identifier">FiberBox</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Modelled on <a href="#">ThreadBox</a>, but with support for waiting that is compatible with Quasar <a href="#">Fiber</a>s and <a href="../-mutable-clock/index.html">MutableClock</a>s.</p>
+<p>It supports 3 main operations, all of which operate in a similar context to the <a href="#">locked</a> method
+of <a href="#">ThreadBox</a>.  i.e. in the context of the content.</p>
+<ul><li><a href="read.html">read</a> operations which acquire the associated lock but do not notify any waiters (see <a href="read-with-deadline.html">readWithDeadline</a>)
+and is a direct equivalent of <a href="#">ThreadBox.locked</a>.</li>
+<li><a href="write.html">write</a> operations which are the same as <a href="read.html">read</a> operations but additionally notify any waiters that the content may have changed.</li>
+<li><a href="read-with-deadline.html">readWithDeadline</a> operations acquire the lock and are evaluated repeatedly until they no longer throw any subclass
+of <a href="../../net.corda.core/-retryable-exception/index.html">RetryableException</a>.  Between iterations it will wait until woken by a <a href="write.html">write</a> or the deadline is reached.  It will eventually
+re-throw a <a href="../../net.corda.core/-retryable-exception/index.html">RetryableException</a> if the deadline passes without any successful iterations.</li>
+</ul>
+<p>The construct also supports <a href="../-mutable-clock/index.html">MutableClock</a>s so it can cope with artificial progress towards the deadline, for simulations
+or testing.</p>
+<p>Currently this is intended for use within a node as a simplified way for Oracles to implement subscriptions for changing
+data by running a flow internally to implement the request handler (see <a href="#">NodeInterestRates.Oracle</a>), which can then
+effectively relinquish control until the data becomes available.  This isn't the most scalable design and is intended
+to be temporary.  In addition, it's enitrely possible to envisage a time when we want public <a href="#">FlowLogic</a>
+implementations to be able to wait for some condition to become true outside of message send/receive.  At that point
+we may revisit this implementation and indeed the whole model for this, when we understand that requirement more fully.</p>
+<p>TODO: We should consider using a <a href="#">Semaphore</a> or <a href="#">CountDownLatch</a> here to make it a little easier to understand, but it seems
+    as though the current version of Qasar does not support suspending on either of their implementations.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">FiberBox</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.FiberBox$<init>(net.corda.node.utilities.FiberBox.T, java.util.concurrent.locks.Lock)/content">content</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.FiberBox$<init>(net.corda.node.utilities.FiberBox.T, java.util.concurrent.locks.Lock)/lock">lock</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/locks/Lock.html"><span class="identifier">Lock</span></a>&nbsp;<span class="symbol">=</span>&nbsp;ReentrantLock()<span class="symbol">)</span></code>
+<p>Modelled on <a href="#">ThreadBox</a>, but with support for waiting that is compatible with Quasar <a href="#">Fiber</a>s and <a href="../-mutable-clock/index.html">MutableClock</a>s.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="read.html">read</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span> <span class="identifier">read</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.FiberBox$read(kotlin.Function1((net.corda.node.utilities.FiberBox.T, net.corda.node.utilities.FiberBox.read.R)))/body">body</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">R</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="read-with-deadline.html">readWithDeadline</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span> <span class="identifier">readWithDeadline</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.FiberBox$readWithDeadline(java.time.Clock, java.time.Instant, kotlin.Function1((net.corda.node.utilities.FiberBox.T, net.corda.node.utilities.FiberBox.readWithDeadline.R)))/clock">clock</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.FiberBox$readWithDeadline(java.time.Clock, java.time.Instant, kotlin.Function1((net.corda.node.utilities.FiberBox.T, net.corda.node.utilities.FiberBox.readWithDeadline.R)))/deadline">deadline</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.FiberBox$readWithDeadline(java.time.Clock, java.time.Instant, kotlin.Function1((net.corda.node.utilities.FiberBox.T, net.corda.node.utilities.FiberBox.readWithDeadline.R)))/body">body</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">R</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="write.html">write</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span> <span class="identifier">write</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.FiberBox$write(kotlin.Function1((net.corda.node.utilities.FiberBox.T, net.corda.node.utilities.FiberBox.write.R)))/body">body</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">R</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

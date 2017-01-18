@@ -7,7 +7,7 @@ These provide a common language for states and contracts.
 Amount
 ------
 
-The `Amount <api/net.corda.core.contracts/-amount/index.html>`_ class is used to represent an amount of some
+The `Amount <api/kotlin/corda/net.corda.core.contracts/-amount/index.html>`_ class is used to represent an amount of some
 fungible asset. It is a generic class which wraps around a type used to define the underlying product, called
 the *token*. For instance it can be the standard JDK type ``Currency``, or an ``Issued`` instance, or this can be
 a more complex type such as an obligation contract issuance definition (which in turn contains a token definition
@@ -203,4 +203,4 @@ The ``SecureHash`` class represents a secure hash of unknown algorithm. We curre
 ``SecureHash.SHA256``. There are utility methods to create them, parse them and so on.
 
 We also provide some mathematical utilities, in particular a set of interpolators and classes for working with
-splines. These can be found in the `maths package <api/net.corda.core.math/index.html>`_.
+splines. These can be found in the `maths package <api/kotlin/corda/net.corda.core.math/index.html>`_.

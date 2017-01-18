@@ -1,0 +1,22 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>genericDriver - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href="index.html">net.corda.node.driver</a>&nbsp;/&nbsp;<a href=".">genericDriver</a><br/>
+<br/>
+<h1>genericDriver</h1>
+<a name="net.corda.node.driver$genericDriver(net.corda.node.driver.genericDriver.D, kotlin.Function1((net.corda.node.driver.genericDriver.D, net.corda.node.driver.genericDriver.DI)), kotlin.Function1((net.corda.node.driver.genericDriver.DI, net.corda.node.driver.genericDriver.A)))"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">DI</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-driver-d-s-l-exposed-interface/index.html"><span class="identifier">DriverDSLExposedInterface</span></a><span class="symbol">, </span><span class="identifier">D</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-driver-d-s-l-internal-interface/index.html"><span class="identifier">DriverDSLInternalInterface</span></a><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">&gt;</span> <span class="identifier">genericDriver</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.driver$genericDriver(net.corda.node.driver.genericDriver.D, kotlin.Function1((net.corda.node.driver.genericDriver.D, net.corda.node.driver.genericDriver.DI)), kotlin.Function1((net.corda.node.driver.genericDriver.DI, net.corda.node.driver.genericDriver.A)))/driverDsl">driverDsl</span><span class="symbol">:</span>&nbsp;<span class="identifier">D</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$genericDriver(net.corda.node.driver.genericDriver.D, kotlin.Function1((net.corda.node.driver.genericDriver.D, net.corda.node.driver.genericDriver.DI)), kotlin.Function1((net.corda.node.driver.genericDriver.DI, net.corda.node.driver.genericDriver.A)))/coerce">coerce</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">D</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">DI</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$genericDriver(net.corda.node.driver.genericDriver.D, kotlin.Function1((net.corda.node.driver.genericDriver.D, net.corda.node.driver.genericDriver.DI)), kotlin.Function1((net.corda.node.driver.genericDriver.DI, net.corda.node.driver.genericDriver.A)))/dsl">dsl</span><span class="symbol">:</span>&nbsp;<span class="identifier">DI</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">A</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">A</span></code>
+<p>This is a helper method to allow extending of the DSL, along the lines of
+interface SomeOtherExposedDSLInterface : DriverDSLExposedInterface
+interface SomeOtherInternalDSLInterface : DriverDSLInternalInterface, SomeOtherExposedDSLInterface
+class SomeOtherDSL(val driverDSL : DriverDSL) : DriverDSLInternalInterface by driverDSL, SomeOtherInternalDSLInterface</p>
+<h3>Parameters</h3>
+
+<p><a name="coerce"></a>
+<code>coerce</code> - We need this explicit coercion witness because we can't put an extra DI : D bound in a <code>where</code> clause.
+</BODY>
+</HTML>
