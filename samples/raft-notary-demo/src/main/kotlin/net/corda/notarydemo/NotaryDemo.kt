@@ -63,10 +63,10 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     }
 
     /**
-     * For every transactions invokes the notary flow and obtains a notary signature.
+     * For every transaction invoke the notary flow and obtains a notary signature.
      * The signer can be any of the nodes in the notary cluster.
      *
-     * @return a list of encoded signer public keys – one for every transaction
+     * @return a list of encoded signer public keys - one for every transaction
      */
     private fun notariseTransactions(transactions: List<SignedTransaction>): List<String> {
         val signatureFutures = transactions.map {
