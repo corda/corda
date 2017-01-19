@@ -4,6 +4,7 @@ package net.corda.core.crypto
 import com.esotericsoftware.kryo.serializers.MapSerializer
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
 import net.corda.core.utilities.*
@@ -83,39 +84,35 @@ class PartialMerkleTreeTest {
                     MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h)))
         val right = MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h))
         val tree = MerkleTree.Node(h, left, right)
-        assertFailsWith<MerkleTreeException> { tree.checkFull() }
         assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(tree, listOf(h)) }
-        MerkleTree.Leaf(h).checkFull() // Just leaf.
-        right.checkFull() // Node and two leaves.
-    }
-
-    @Test
-    fun `zero padding tests`() {
-        val h = SecureHash.randomSHA256()
-        val hashes = Array<SecureHash>(8, { h } ).toList()
-        val padded = MerkleTree.padWithZeros(hashes.subList(0,5))
-        assert(MerkleTree.padWithZeros(emptyList<SecureHash>()).isEmpty())
-        assertEquals(1, MerkleTree.padWithZeros(hashes.subList(0,1)).size)
-        assertEquals(8, padded.size)
-        assertNotEquals(hashes, padded)
-        assertEquals(zeroHash, padded[5])
-        assertEquals(8, MerkleTree.padWithZeros(hashes).size)
+        PartialMerkleTree.build(right, listOf(h, h)) // Node and two leaves.
+        PartialMerkleTree.build(MerkleTree.Leaf(h), listOf(h)) // Just a leaf.
     }
 
     @Test
     fun `building Merkle tree for a transaction`() {
-        val filterFuns = FilterFuns(
-                filterCommands = { x -> MEGA_CORP_PUBKEY in x.signers },
-                filterOutputs = { it.data.participants[0].keys == DUMMY_PUBKEY_1.keys },
-                filterInputs = { true })
-        val mt = testTx.buildFilteredTransaction(filterFuns)
+        fun filtering(elem: Any): Boolean {
+            return when (elem) {
+                is StateRef -> true
+                is TransactionState<*> -> elem.data.participants[0].keys == DUMMY_PUBKEY_1.keys
+                is Command -> MEGA_CORP_PUBKEY in elem.signers
+                is Timestamp -> true
+                is CompositeKey -> elem == MEGA_CORP_PUBKEY
+                else -> false
+            }
+        }
+        val mt = testTx.buildFilteredTransaction(::filtering)
         val leaves = mt.filteredLeaves
         val d = WireTransaction.deserialize(testTx.serialized)
         assertEquals(testTx.id, d.id)
         assertEquals(1, leaves.commands.size)
         assertEquals(1, leaves.outputs.size)
         assertEquals(1, leaves.inputs.size)
+        assertEquals(1, leaves.mustSign.size)
+        assertEquals(0, leaves.attachments.size)
         assertTrue(mt.filteredLeaves.timestamp != null)
+        assertEquals(null, mt.filteredLeaves.type)
+        assertEquals(null, mt.filteredLeaves.notary)
         assert(mt.verify(testTx.id))
     }
 
@@ -127,15 +124,14 @@ class PartialMerkleTreeTest {
     }
 
     @Test
-    fun `only timestamp`() {
-        val filterFuns = FilterFuns()
-        val mt = testTx.buildFilteredTransaction(filterFuns)
+    fun `nothing filtered`() {
+        val mt = testTx.buildFilteredTransaction( {false} )
         assertTrue(mt.filteredLeaves.attachments.isEmpty())
         assertTrue(mt.filteredLeaves.commands.isEmpty())
         assertTrue(mt.filteredLeaves.inputs.isEmpty())
         assertTrue(mt.filteredLeaves.outputs.isEmpty())
-        assertTrue(mt.filteredLeaves.timestamp != null)
-        assert(mt.verify(testTx.id))
+        assertTrue(mt.filteredLeaves.timestamp == null)
+        assertFailsWith<MerkleTreeException> { mt.verify(testTx.id) }
     }
 
     // Partial Merkle Tree building tests
@@ -230,7 +226,7 @@ class PartialMerkleTreeTest {
                 outputs = testTx.outputs,
                 commands = testTx.commands,
                 notary = notary,
-                signers = testTx.mustSign,
+                signers = listOf(MEGA_CORP_PUBKEY, DUMMY_PUBKEY_1),
                 type = TransactionType.General(),
                 timestamp = timestamp
         )

@@ -25,15 +25,15 @@ class WireTransaction(
         /** Pointers to the input states on the ledger, identified by (tx identity hash, output index). */
         override val inputs: List<StateRef>,
         /** Hashes of the ZIP/JAR files that are needed to interpret the contents of this wire transaction. */
-        val attachments: List<SecureHash>,
+        override val attachments: List<SecureHash>,
         outputs: List<TransactionState<ContractState>>,
         /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
-        val commands: List<Command>,
+        override val commands: List<Command>,
         notary: Party?,
         signers: List<CompositeKey>,
         type: TransactionType,
         timestamp: Timestamp?
-) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp) {
+) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp), TraversableTx {
     init {
         checkInvariants()
     }
@@ -87,22 +87,34 @@ class WireTransaction(
     /**
      * Build filtered transaction using provided filtering functions.
      */
-    fun buildFilteredTransaction(filterFuns: FilterFuns): FilteredTransaction {
-        return FilteredTransaction.buildMerkleTransaction(this, filterFuns)
+    fun buildFilteredTransaction(filtering: (Any) -> Boolean): FilteredTransaction {
+        return FilteredTransaction.buildMerkleTransaction(this, filtering)
     }
 
     /**
-     * Calculation of all leaves hashes that are needed for calculation of transaction id and partial Merkle branches.
+     * Builds whole Merkle tree for a transaction.
      */
-    fun calculateLeavesHashes(): List<SecureHash> {
-        val resultHashes = ArrayList<SecureHash>()
-        val entries = listOf(inputs, outputs, attachments, commands)
-        entries.forEach { it.mapTo(resultHashes, { x -> serializedHash(x) }) }
-        if (timestamp != null) resultHashes.add(serializedHash(timestamp))
-        if (notary != null) resultHashes.add(serializedHash(notary))
-        resultHashes.add(serializedHash(mustSign.sortedBy { it.hashCode() }))
-        resultHashes.add(serializedHash(type))
-        return resultHashes
+    fun getMerkleTree(): MerkleTree {
+        return MerkleTree.getMerkleTree(calculateLeavesHashes())
+    }
+
+    /**
+     * Construction of partial transaction from WireTransaction based on filtering.
+     * @param filtering filtering over the whole WireTransaction
+     * @returns FilteredLeaves used in PartialMerkleTree calculation and verification.
+     */
+    fun filterWithFun(filtering: (Any) -> Boolean): FilteredLeaves {
+        fun notNullFalse(elem: Any?): Any? = if(elem == null || !filtering(elem)) null else elem
+        return FilteredLeaves(
+                inputs.filter { filtering(it) },
+                attachments.filter { filtering(it) },
+                outputs.filter { filtering(it) },
+                commands.filter { filtering(it) },
+                notNullFalse(notary) as Party?,
+                mustSign.filter { filtering(it) }, // TODO Do we want to keep it as one or also filter over it?
+                notNullFalse(type) as TransactionType?,
+                notNullFalse(timestamp) as Timestamp?
+        )
     }
 
     override fun toString(): String {
