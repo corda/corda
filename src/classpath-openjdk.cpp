@@ -4880,9 +4880,8 @@ uint64_t jvmGetClassDeclaredConstructors(Thread* t, uintptr_t* arguments)
       GcMethod* vmMethod = cast<GcMethod>(t, table->body()[i]);
       PROTECT(t, vmMethod);
 
-      if (((not publicOnly) or (vmMethod->flags() & ACC_PUBLIC))
-          and strcmp(reinterpret_cast<char*>(vmMethod->name()->body().begin()),
-                     "<init>") == 0) {
+      bool isCtor = strcmp(reinterpret_cast<char*>(vmMethod->name()->body().begin()), "<init>") == 0;
+      if (((not publicOnly) or (vmMethod->flags() & ACC_PUBLIC)) and isCtor) {
         object method = makeJconstructor(t, vmMethod, i);
 
         assertT(t, ai < objectArrayLength(t, array));

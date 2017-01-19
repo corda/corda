@@ -258,6 +258,7 @@ const unsigned ACC_SUPER = 1 << 5;
 const unsigned ACC_SYNCHRONIZED = ACC_SUPER;
 const unsigned ACC_VOLATILE = 1 << 6;
 const unsigned ACC_TRANSIENT = 1 << 7;
+const unsigned ACC_VARARGS = 1 << 7;
 const unsigned ACC_NATIVE = 1 << 8;
 const unsigned ACC_INTERFACE = 1 << 9;
 const unsigned ACC_ABSTRACT = 1 << 10;

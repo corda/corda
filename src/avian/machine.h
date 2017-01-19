@@ -125,10 +125,15 @@ using namespace avian::util;
     type2 name2;                                                     \
   } MAKE_NAME(resource_)(t, name1, name2);
 
+AVIAN_EXPORT void vmPrintTrace(vm::Thread* t);
+
+AVIAN_EXPORT void vmfPrintTrace(vm::Thread* t, FILE* out);
+
 namespace vm {
 
 const bool Verbose = false;
 const bool DebugRun = false;
+const bool DebugCalls = false;
 const bool DebugStack = false;
 const bool DebugMonitors = false;
 const bool DebugReferences = false;
@@ -2558,10 +2563,6 @@ inline GcThrowable* makeThrowable(Thread* t,
 void popResources(Thread* t);
 
 }  // namespace vm
-
-AVIAN_EXPORT void vmPrintTrace(vm::Thread* t);
-
-AVIAN_EXPORT void vmfPrintTrace(vm::Thread* t, FILE* out);
 
 namespace vm {
 

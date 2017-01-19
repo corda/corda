@@ -574,10 +574,11 @@ unsigned invokeNativeSlow(Thread* t, GcMethod* method, void* function)
   uint64_t result;
 
   if (DebugRun) {
+    signed char *cname = method->class_() && method->class_()->name() ? method->class_()->name()->body().begin() : (signed char*) "?";
+    signed char *mname = method->name() ? method->name()->body().begin() : (signed char*) "?";
     fprintf(stderr,
             "invoke native method %s.%s\n",
-            method->class_()->name()->body().begin(),
-            method->name()->body().begin());
+            cname, mname);
   }
 
   {
@@ -785,12 +786,13 @@ loop:
   instruction = code->body()[ip++];
 
   if (DebugRun) {
+    GcMethod *method_ = frameMethod(t, frame);
+    signed char *cname = method_->class_() && method_->class_()->name() ? method_->class_()->name()->body().begin() : (signed char*) "?";
+    signed char *mname = method_->name() ? method_->name()->body().begin() : (signed char*) "?";
     fprintf(stderr,
             "ip: %d; instruction: 0x%x in %s.%s ",
             ip - 1,
-            instruction,
-            frameMethod(t, frame)->class_()->name()->body().begin(),
-            frameMethod(t, frame)->name()->body().begin());
+            instruction, cname, mname);
 
     int line = findLineNumber(t, frameMethod(t, frame), ip);
     switch (line) {
@@ -2989,6 +2991,12 @@ invoke : {
   if (method->flags() & ACC_NATIVE) {
     invokeNative(t, method);
   } else {
+    if (DebugCalls && method) {
+      printf("invoke %s.%s\n", 
+                method->class_() && method->class_()->name() ? (const char *)method->class_()->name()->body().begin() : "<?>",
+                method->name() ? (const char *)method->name()->body().begin() : "<?>"
+      );
+    }
     checkStack(t, method);
     pushFrame(t, method);
   }
@@ -2996,8 +3004,8 @@ invoke : {
   goto loop;
 
 throw_:
-  if (DebugRun) {
-    fprintf(stderr, "throw\n");
+  if (DebugRun || DebugCalls) {
+    fprintf(stderr, "throw @ %s\n", frameMethod(t, frame)->name()->body().begin());
   }
 
   pokeInt(t, t->frame + FrameIpOffset, t->ip);
