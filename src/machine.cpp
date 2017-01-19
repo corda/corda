@@ -3541,6 +3541,7 @@ void doCollect(Thread* t, Heap::CollectionType type, int pendingAllocation)
     function(t, finalizeQueue->target());
   }
 
+#ifndef SGX
   if ((roots(t)->objectsToFinalize() or roots(t)->objectsToClean())
       and m->finalizeThread == 0 and t->state != Thread::ExitState) {
     m->finalizeThread = m->processor->makeThread(
@@ -3553,6 +3554,7 @@ void doCollect(Thread* t, Heap::CollectionType type, int pendingAllocation)
       m->finalizeThread = 0;
     }
   }
+#endif
 }
 
 uint64_t invokeLoadClass(Thread* t, uintptr_t* arguments)

@@ -524,6 +524,10 @@ build-system = posix
 system = posix
 asm = x86
 
+ifeq ($(system),sgx)
+    cflags += -DSGX
+endif
+
 pointer-size = 8
 
 so-prefix = lib

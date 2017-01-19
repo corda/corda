@@ -232,6 +232,8 @@ static inline void releaseChars(JNIEnv* e, jstring path, string_t chars)
   e->RELEASE_CHARS(path, chars);
 }
 
+#ifndef SGX
+
 extern "C" JNIEXPORT jstring JNICALL
     Java_java_io_File_toCanonicalPath(JNIEnv* /*e*/, jclass, jstring path)
 {
@@ -802,6 +804,8 @@ extern "C" JNIEXPORT jint JNICALL
   }
 }
 
+#endif // !SGX
+
 extern "C" JNIEXPORT void JNICALL
     Java_java_io_FileOutputStream_write__II(JNIEnv* e, jclass, jint fd, jint c)
 {
@@ -837,6 +841,8 @@ extern "C" JNIEXPORT void JNICALL
 {
   doClose(e, fd);
 }
+
+#ifndef SGX
 
 extern "C" JNIEXPORT void JNICALL
     Java_java_io_RandomAccessFile_open(JNIEnv* e,
@@ -1005,3 +1011,5 @@ extern "C" JNIEXPORT void JNICALL
   CloseHandle(hFile);
 #endif
 }
+
+#endif  // !SGX

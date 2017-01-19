@@ -8,6 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#ifndef SGX
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
@@ -1096,3 +1098,5 @@ extern "C" JNIEXPORT jboolean JNICALL
     return JNI_TRUE;
   return JNI_FALSE;
 }
+
+#endif  // !SGX

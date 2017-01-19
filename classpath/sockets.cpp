@@ -13,6 +13,8 @@
  * It is used from different classes of the default Avian classpath
  */
 
+#ifndef SGX
+
 #include "sockets.h"
 
 namespace avian {
@@ -199,3 +201,5 @@ void close_output(JNIEnv* e, SOCKET sock)
 }
 }
 }
+
+#endif

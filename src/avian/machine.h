@@ -1831,6 +1831,15 @@ inline uint64_t runThread(Thread* t, uintptr_t*)
 inline bool startThread(Thread* t, Thread* p)
 {
   p->setFlag(Thread::JoinFlag);
+#ifdef SGX
+  static const char16_t *nameToSkip = u"Reference Handler";
+  if (p->javaThread->name()->length(t) == 17) {
+    if (!memcmp(nameToSkip, cast<GcCharArray>(t, p->javaThread->name()->data())->body().begin(), 17 * 2)) {
+      printf("Skipping start of reference handler thread\n");
+      return true;
+    }
+  }
+#endif
   return t->m->system->success(t->m->system->start(&(p->runnable)));
 }
 

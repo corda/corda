@@ -8,6 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#ifndef SGX
+
 #include "jni.h"
 #include "avian/machine.h"
 #include "sockets.h"
@@ -139,3 +141,5 @@ extern "C" JNIEXPORT jint JNICALL
     return 0;
   }
 }
+
+#endif  // !SGX
