@@ -1,8 +1,9 @@
 package net.corda.core.contracts
 
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.flows.FlowException
 
-class InsufficientBalanceException(val amountMissing: Amount<*>) : Exception() {
+class InsufficientBalanceException(val amountMissing: Amount<*>) : FlowException() {
     override fun toString() = "Insufficient balance, missing $amountMissing"
 }
 

@@ -1,5 +1,7 @@
 package net.corda.core.utilities
 
+import net.corda.core.flows.FlowException
+
 /**
  * A small utility to approximate taint tracking: if a method gives you back one of these, it means the data came from
  * a remote source that may be incentivised to pass us junk that violates basic assumptions and thus must be checked
@@ -17,6 +19,7 @@ class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
         get() = fromUntrustedWorld
 
     @Suppress("DEPRECATION")
+    @Throws(FlowException::class)
     inline fun <R> unwrap(validator: (T) -> R) = validator(data)
 
     @Suppress("DEPRECATION")

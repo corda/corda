@@ -30,7 +30,7 @@ import java.util.concurrent.ExecutionException
 
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               val logic: FlowLogic<R>,
-                              scheduler: FiberScheduler) : Fiber<R>("flow", scheduler), FlowStateMachine<R> {
+                              scheduler: FiberScheduler) : Fiber<Unit>("flow", scheduler), FlowStateMachine<R> {
     companion object {
         // Used to work around a small limitation in Quasar.
         private val QUASAR_UNBLOCKER = run {
@@ -49,7 +49,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient override lateinit var serviceHub: ServiceHubInternal
     @Transient internal lateinit var database: Database
     @Transient internal lateinit var actionOnSuspend: (FlowIORequest) -> Unit
-    @Transient internal lateinit var actionOnEnd: () -> Unit
+    @Transient internal lateinit var actionOnEnd: (FlowException?) -> Unit
     @Transient internal var fromCheckpoint: Boolean = false
     @Transient private var txTrampoline: Transaction? = null
 
@@ -80,29 +80,41 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun run(): R {
+    override fun run() {
         createTransaction()
         val result = try {
             logic.call()
+        } catch (e: FlowException) {
+            if (e.stackTrace[0].className == javaClass.name) {
+                // FlowException was propagated to us as it's stack trace points to this internal class (see suspendAndExpectReceive).
+                // If we've got to here then the flow doesn't want to handle it and so we end, but we don't propagate
+                // the exception further as it's not relevant to anyone else.
+                actionOnEnd(null)
+            } else {
+                // FLowException came from this flow
+                actionOnEnd(e)
+            }
+            _resultFuture?.setException(e)
+            return
         } catch (t: Throwable) {
-            actionOnEnd()
+            actionOnEnd(null)
             _resultFuture?.setException(t)
             throw ExecutionException(t)
         }
-        // Wait for sessions with unconfirmed session state.
-        openSessions.values.filter { it.state is FlowSessionState.Initiating }.forEach {
-            it.waitForConfirmation()
-        }
+
+        // Only sessions which have a single send and nothing else will block here
+        openSessions.values
+                .filter { it.state is FlowSessionState.Initiating }
+                .forEach { it.waitForConfirmation() }
         // This is to prevent actionOnEnd being called twice if it throws an exception
-        actionOnEnd()
+        actionOnEnd(null)
         _resultFuture?.set(result)
-        return result
     }
 
     private fun createTransaction() {
         // Make sure we have a database transaction
         createDatabaseTransaction(database)
-        logger.trace { "Starting database transaction ${TransactionManager.currentOrNull()} on ${Strand.currentStrand()}." }
+        logger.trace { "Starting database transaction ${TransactionManager.currentOrNull()} on ${Strand.currentStrand()}" }
     }
 
     internal fun commitTransaction() {
@@ -221,6 +233,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
+    @Suppress("UNCHECKED_CAST", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     private fun <M : ExistingSessionMessage> suspendAndExpectReceive(receiveRequest: ReceiveRequest<M>): ReceivedSessionMessage<M> {
         val session = receiveRequest.session
         fun getReceivedMessage(): ReceivedSessionMessage<ExistingSessionMessage>? = session.receivedMessages.poll()
@@ -237,19 +250,23 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             suspend(receiveRequest)
             getReceivedMessage() ?:
                     throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but instead " +
-                            "got nothing: $receiveRequest")
+                            "got nothing for $receiveRequest")
         }
 
-        if (receivedMessage.message is SessionEnd) {
-            openSessions.values.remove(session)
-            throw FlowException("Party ${session.state.sendToParty} has ended their flow but we were expecting to " +
-                    "receive ${receiveRequest.receiveType.simpleName} from them")
-        } else if (receiveRequest.receiveType.isInstance(receivedMessage.message)) {
-            @Suppress("UNCHECKED_CAST")
+        if (receiveRequest.receiveType.isInstance(receivedMessage.message)) {
             return receivedMessage as ReceivedSessionMessage<M>
+        } else if (receivedMessage.message is SessionEnd) {
+            openSessions.values.remove(session)
+            if (receivedMessage.message.errorResponse != null) {
+                (receivedMessage.message.errorResponse as java.lang.Throwable).fillInStackTrace()
+                throw receivedMessage.message.errorResponse
+            } else {
+                throw FlowSessionException("${session.state.sendToParty} has ended their flow but we were expecting " +
+                        "to receive ${receiveRequest.receiveType.simpleName} from them")
+            }
         } else {
             throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but instead got " +
-                    "${receivedMessage.message}: $receiveRequest")
+                    "${receivedMessage.message} for $receiveRequest")
         }
     }
 

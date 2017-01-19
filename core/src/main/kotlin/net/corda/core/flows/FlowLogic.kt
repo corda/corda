@@ -73,7 +73,7 @@ abstract class FlowLogic<out T> {
      * @returns an [UntrustworthyData] wrapper around the received object.
      */
     @Suspendable
-    open fun <T : Any> sendAndReceive(receiveType: Class<T>, otherParty: Party, payload: Any): UntrustworthyData<T> {
+    open fun <R : Any> sendAndReceive(receiveType: Class<R>, otherParty: Party, payload: Any): UntrustworthyData<R> {
         return stateMachine.sendAndReceive(receiveType, otherParty, payload, sessionFlow)
     }
 
@@ -92,9 +92,11 @@ abstract class FlowLogic<out T> {
      * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
      * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
      * corrupted data in order to exploit your code.
+     *
+     * @returns an [UntrustworthyData] wrapper around the received object.
      */
     @Suspendable
-    open fun <T : Any> receive(receiveType: Class<T>, otherParty: Party): UntrustworthyData<T> {
+    open fun <R : Any> receive(receiveType: Class<R>, otherParty: Party): UntrustworthyData<R> {
         return stateMachine.receive(receiveType, otherParty, sessionFlow)
     }
 
@@ -116,11 +118,15 @@ abstract class FlowLogic<out T> {
      * @param shareParentSessions In certain situations the need arises to use the same sessions the parent flow has
      * already established. However this also prevents the subflow from creating new sessions with those parties.
      * For this reason the default value is false.
+     *
+     * @throws FlowException This is either thrown by [subLogic] itself or propagated from any of the remote
+     * [FlowLogic]s it communicated with. A subflow retry can be done by catching this exception.
      */
     // TODO Rethink the default value for shareParentSessions
     // TODO shareParentSessions is a bit too low-level and perhaps can be expresed in a better way
     @Suspendable
     @JvmOverloads
+    @Throws(FlowException::class)
     open fun <R> subFlow(subLogic: FlowLogic<R>, shareParentSessions: Boolean = false): R {
         subLogic.stateMachine = stateMachine
         maybeWireUpProgressTracking(subLogic)
@@ -149,6 +155,7 @@ abstract class FlowLogic<out T> {
      * helpful if this flow is meant to be used as a subflow.
      */
     @Suspendable
+    @Throws(FlowException::class)
     abstract fun call(): T
 
     /**
@@ -181,7 +188,6 @@ abstract class FlowLogic<out T> {
 
     private fun maybeWireUpProgressTracking(subLogic: FlowLogic<*>) {
         val ours = progressTracker
-
         val theirs = subLogic.progressTracker
         if (ours != null && theirs != null) {
             if (ours.currentStep == ProgressTracker.UNSTARTED) {

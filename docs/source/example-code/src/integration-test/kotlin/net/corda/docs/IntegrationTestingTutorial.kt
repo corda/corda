@@ -9,9 +9,9 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.toFuture
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
-import net.corda.flows.CashFlowResult
 import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.startFlowPermission
@@ -87,7 +87,7 @@ class IntegrationTestingTutorial {
                         amount = i.DOLLARS.issuedBy(alice.nodeInfo.legalIdentity.ref(issueRef)),
                         recipient = alice.nodeInfo.legalIdentity
                 ))
-                assert(flowHandle.returnValue.toBlocking().first() is CashFlowResult.Success)
+                flowHandle.returnValue.toFuture().getOrThrow()
             }
 
             aliceVaultUpdates.expectEvents {

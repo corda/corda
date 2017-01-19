@@ -1,13 +1,11 @@
 package net.corda.flows
 
-import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.UntrustworthyData
 import net.corda.flows.NotaryChangeFlow.Acceptor
 import net.corda.flows.NotaryChangeFlow.Instigator
 
@@ -20,19 +18,12 @@ import net.corda.flows.NotaryChangeFlow.Instigator
  * Finally, [Instigator] sends the transaction containing all signatures back to each participant so they can record it and
  * use the new updated state for future transactions.
  */
-object NotaryChangeFlow : AbstractStateReplacementFlow<Party>() {
+object NotaryChangeFlow : AbstractStateReplacementFlow() {
 
-    data class Proposal(override val stateRef: StateRef,
-                        override val modification: Party,
-                        override val stx: SignedTransaction) : AbstractStateReplacementFlow.Proposal<Party>
-
-    class Instigator<T : ContractState>(originalState: StateAndRef<T>,
-                                        newNotary: Party,
-                                        progressTracker: ProgressTracker = tracker())
-        : AbstractStateReplacementFlow.Instigator<T, Party>(originalState, newNotary, progressTracker) {
-
-        override fun assembleProposal(stateRef: StateRef, modification: Party, stx: SignedTransaction): AbstractStateReplacementFlow.Proposal<Party>
-                = Proposal(stateRef, modification, stx)
+    class Instigator<out T : ContractState>(
+            originalState: StateAndRef<T>,
+            newNotary: Party,
+            progressTracker: ProgressTracker = tracker()) : AbstractStateReplacementFlow.Instigator<T, Party>(originalState, newNotary, progressTracker) {
 
         override fun assembleTx(): Pair<SignedTransaction, Iterable<CompositeKey>> {
             val state = originalState.state
@@ -66,7 +57,8 @@ object NotaryChangeFlow : AbstractStateReplacementFlow<Party>() {
         private fun resolveEncumbrances(tx: TransactionBuilder): Iterable<CompositeKey> {
             val stateRef = originalState.ref
             val txId = stateRef.txhash
-            val issuingTx = serviceHub.storageService.validatedTransactions.getTransaction(txId) ?: throw IllegalStateException("Transaction $txId not found")
+            val issuingTx = serviceHub.storageService.validatedTransactions.getTransaction(txId)
+                    ?: throw StateReplacementException("Transaction $txId not found")
             val outputs = issuingTx.tx.outputs
 
             val participants = mutableSetOf<CompositeKey>()
@@ -97,8 +89,7 @@ object NotaryChangeFlow : AbstractStateReplacementFlow<Party>() {
     }
 
     class Acceptor(otherSide: Party,
-                   override val progressTracker: ProgressTracker = tracker())
-        : AbstractStateReplacementFlow.Acceptor<Party>(otherSide) {
+                   override val progressTracker: ProgressTracker = tracker()) : AbstractStateReplacementFlow.Acceptor<Party>(otherSide) {
 
         /**
          * Check the notary change proposal.
@@ -107,26 +98,28 @@ object NotaryChangeFlow : AbstractStateReplacementFlow<Party>() {
          * and is also in a geographically convenient location we can just automatically approve the change.
          * TODO: In more difficult cases this should call for human attention to manually verify and approve the proposal
          */
-        @Suspendable
-        override fun verifyProposal(maybeProposal: UntrustworthyData<AbstractStateReplacementFlow.Proposal<Party>>): AbstractStateReplacementFlow.Proposal<Party> {
-            return maybeProposal.unwrap { proposal ->
-                val newNotary = proposal.modification
-                val isNotary = serviceHub.networkMapCache.notaryNodes.any { it.notaryIdentity == newNotary }
-                require(isNotary) { "The proposed node $newNotary does not run a Notary service " }
+        override fun verifyProposal(proposal: AbstractStateReplacementFlow.Proposal<Party>): Unit {
+            val state = proposal.stateRef
+            val proposedTx = proposal.stx.tx
 
-                val state = proposal.stateRef
-                val proposedTx = proposal.stx.tx
-                require(state in proposedTx.inputs) { "The proposed state $state is not in the proposed transaction inputs" }
-                require(proposedTx.type.javaClass == TransactionType.NotaryChange::class.java) {
-                    "The proposed transaction is not a notary change transaction."
-                }
-
-                // An example requirement
-                val blacklist = listOf("Evil Notary")
-                require(!blacklist.contains(newNotary.name)) { "The proposed new notary $newNotary is not trusted by the party" }
-
-                proposal
+            if (proposedTx.type !is TransactionType.NotaryChange) {
+                throw StateReplacementException("The proposed transaction is not a notary change transaction.")
             }
+
+            val newNotary = proposal.modification
+            val isNotary = serviceHub.networkMapCache.notaryNodes.any { it.notaryIdentity == newNotary }
+            if (!isNotary) {
+                throw StateReplacementException("The proposed node $newNotary does not run a Notary service")
+            }
+            if (state !in proposedTx.inputs) {
+                throw StateReplacementException("The proposed state $state is not in the proposed transaction inputs")
+            }
+
+//            // An example requirement
+//            val blacklist = listOf("Evil Notary")
+//            checkProposal(newNotary.name !in blacklist) {
+//                "The proposed new notary $newNotary is not trusted by the party"
+//            }
         }
     }
 }

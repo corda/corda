@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
@@ -42,8 +43,8 @@ import java.util.*
 // and [AbstractStateReplacementFlow].
 object TwoPartyTradeFlow {
 
-    class UnacceptablePriceException(val givenPrice: Amount<Currency>) : Exception("Unacceptable price: $givenPrice")
-    class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
+    class UnacceptablePriceException(givenPrice: Amount<Currency>) : FlowException("Unacceptable price: $givenPrice")
+    class AssetMismatchException(val expectedTypeName: String, val typeName: String) : FlowException() {
         override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
     }
 
@@ -66,39 +67,39 @@ object TwoPartyTradeFlow {
 
         companion object {
             object AWAITING_PROPOSAL : ProgressTracker.Step("Awaiting transaction proposal")
-
             object VERIFYING : ProgressTracker.Step("Verifying transaction proposal")
-
             object SIGNING : ProgressTracker.Step("Signing transaction")
-
             // DOCSTART 3
             object NOTARY : ProgressTracker.Step("Getting notary signature") {
                 override fun childProgressTracker() = FinalityFlow.tracker()
             }
             // DOCEND 3
-
             object SENDING_SIGS : ProgressTracker.Step("Sending transaction signatures to buyer")
 
             fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, NOTARY, SENDING_SIGS)
         }
 
+        // DOCSTART 4
         @Suspendable
         override fun call(): SignedTransaction {
             val partialTX: SignedTransaction = receiveAndCheckProposedTransaction()
-
-            // These two steps could be done in parallel, in theory. Our framework doesn't support that yet though.
-            val ourSignature = calculateOurSignature(partialTX)
-            val allPartySignedTx = partialTX + ourSignature
-            val notarySignature = getNotarySignature(allPartySignedTx)
-            return sendSignatures(allPartySignedTx, ourSignature, notarySignature)
+            val ourSignature: DigitalSignature.WithKey = calculateOurSignature(partialTX)
+            val allPartySignedTx: SignedTransaction = partialTX + ourSignature
+            val notarySignature: DigitalSignature.WithKey = getNotarySignature(allPartySignedTx)
+            val result: SignedTransaction = sendSignatures(allPartySignedTx, ourSignature, notarySignature)
+            return result
         }
+        // DOCEND 4
 
+        // DOCSTART 6
         @Suspendable
         private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = NOTARY
             return subFlow(NotaryFlow.Client(stx))
         }
+        // DOCEND 6
 
+        // DOCSTART 5
         @Suspendable
         private fun receiveAndCheckProposedTransaction(): SignedTransaction {
             progressTracker.currentStep = AWAITING_PROPOSAL
@@ -122,30 +123,36 @@ object TwoPartyTradeFlow {
                 // even though it is missing signatures.
                 subFlow(ResolveTransactionsFlow(wtx, otherParty))
 
-                if (wtx.outputs.map { it.data }.sumCashBy(myPublicKey).withoutIssuer() != price)
-                    throw IllegalArgumentException("Transaction is not sending us the right amount of cash")
-
-                // There are all sorts of funny games a malicious secondary might play here, we should fix them:
-                //
-                // - This tx may attempt to send some assets we aren't intending to sell to the secondary, if
-                //   we're reusing keys! So don't reuse keys!
-                // - This tx may include output states that impose odd conditions on the movement of the cash,
-                //   once we implement state pairing.
-                //
-                // but the goal of this code is not to be fully secure (yet), but rather, just to find good ways to
-                // express flow state machines on top of the messaging layer.
+                if (wtx.outputs.map { it.data }.sumCashBy(myPublicKey).withoutIssuer() != price) {
+                    throw FlowException("Transaction is not sending us the right amount of cash")
+                }
 
                 return it
             }
         }
+        // DOCEND 5
 
+        // Following comment moved here so that it doesn't appear in the docsite:
+        // There are all sorts of funny games a malicious secondary might play with it sends maybeSTX (in
+        // receiveAndCheckProposedTransaction), we should fix them:
+        //
+        // - This tx may attempt to send some assets we aren't intending to sell to the secondary, if
+        //   we're reusing keys! So don't reuse keys!
+        // - This tx may include output states that impose odd conditions on the movement of the cash,
+        //   once we implement state pairing.
+        //
+        // but the goal of this code is not to be fully secure (yet), but rather, just to find good ways to
+        // express flow state machines on top of the messaging layer.
+
+        // DOCSTART 7
         open fun calculateOurSignature(partialTX: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = SIGNING
             return myKeyPair.signWithECDSA(partialTX.id)
         }
 
         @Suspendable
-        private fun sendSignatures(allPartySignedTx: SignedTransaction, ourSignature: DigitalSignature.WithKey,
+        private fun sendSignatures(allPartySignedTx: SignedTransaction,
+                                   ourSignature: DigitalSignature.WithKey,
                                    notarySignature: DigitalSignature.WithKey): SignedTransaction {
             progressTracker.currentStep = SENDING_SIGS
             val fullySigned = allPartySignedTx + notarySignature
@@ -155,6 +162,7 @@ object TwoPartyTradeFlow {
             send(otherParty, SignaturesFromSeller(ourSignature, notarySignature))
             return fullySigned
         }
+        // DOCEND 7
     }
 
     // DOCSTART 2
@@ -164,11 +172,8 @@ object TwoPartyTradeFlow {
                      val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
 
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
-
         object VERIFYING : ProgressTracker.Step("Verifying seller assets")
-
         object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal")
-
         object SWAPPING_SIGNATURES : ProgressTracker.Step("Swapping signatures with the seller")
 
         override val progressTracker = ProgressTracker(RECEIVING, VERIFYING, SIGNING, SWAPPING_SIGNATURES)

@@ -18,6 +18,8 @@ import net.corda.core.messaging.Ack
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.dealsWith
 import net.corda.core.transactions.SignedTransaction
+import net.corda.flows.AbstractStateReplacementFlow.Proposal
+import net.corda.flows.StateReplacementException
 import net.corda.flows.TwoPartyDealFlow
 import net.corda.vega.analytics.*
 import net.corda.vega.contracts.*
@@ -299,9 +301,12 @@ object SimmFlow {
         private fun updatePortfolio(portfolio: Portfolio) {
             logger.info("Handshake finished, awaiting Simm update")
             send(replyToParty, Ack) // Hack to state that this party is ready
-            subFlow(StateRevisionFlow.Receiver<PortfolioState.Update>(replyToParty, {
-                it.portfolio == portfolio.refs
-            }), shareParentSessions = true)
+            subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToParty) {
+                override fun verifyProposal(proposal: Proposal<PortfolioState.Update>) {
+                    super.verifyProposal(proposal)
+                    if (proposal.modification.portfolio != portfolio.refs) throw StateReplacementException()
+                }
+            }, shareParentSessions = true)
         }
 
         @Suspendable
@@ -309,11 +314,12 @@ object SimmFlow {
             val portfolio = stateRef.state.data.portfolio.toStateAndRef<IRSState>(serviceHub).toPortfolio()
             val valuer = stateRef.state.data.valuer
             val valuation = agreeValuation(portfolio, offer.valuationDate, valuer)
-
-            subFlow(StateRevisionFlow.Receiver<PortfolioState.Update>(replyToParty) {
-                it.valuation == valuation
+            subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToParty) {
+                override fun verifyProposal(proposal: Proposal<PortfolioState.Update>) {
+                    super.verifyProposal(proposal)
+                    if (proposal.modification.valuation != valuation) throw StateReplacementException()
+                }
             }, shareParentSessions = true)
         }
-
     }
 }

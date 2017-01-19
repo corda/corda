@@ -7,11 +7,13 @@ import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.Party
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.toFuture
 import net.corda.flows.CashCommand
+import net.corda.flows.CashException
 import net.corda.flows.CashFlow
-import net.corda.flows.CashFlowResult
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeHandle
 import org.slf4j.LoggerFactory
@@ -205,14 +207,11 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
         },
 
         execute = { command ->
-            val result = command.node.connection.proxy.startFlow(::CashFlow, command.command).returnValue.toBlocking().first()
-            when (result) {
-                is CashFlowResult.Success -> {
-                    log.info(result.message)
-                }
-                is CashFlowResult.Failed -> {
-                    log.error(result.message)
-                }
+            try {
+                val result = command.node.connection.proxy.startFlow(::CashFlow, command.command).returnValue.toFuture().getOrThrow()
+                log.info("Success: $result")
+            } catch (e: CashException) {
+                log.error("Failure", e)
             }
         },
 

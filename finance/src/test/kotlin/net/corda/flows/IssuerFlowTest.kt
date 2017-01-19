@@ -5,7 +5,9 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.currency
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowStateMachine
+import net.corda.core.getOrThrow
 import net.corda.core.map
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
@@ -39,8 +41,8 @@ class IssuerFlowTest {
             assertEquals(issuerResult.get(), issuer.get().resultFuture.get())
 
             // try to issue an amount of a restricted currency
-            assertFailsWith<Exception> {
-                runIssuerAndIssueRequester(Amount(100000L, currency("BRL")), issueToPartyAndRef).issueRequestResult.get()
+            assertFailsWith<FlowException> {
+                runIssuerAndIssueRequester(Amount(100000L, currency("BRL")), issueToPartyAndRef).issueRequestResult.getOrThrow()
             }
 
             bankOfCordaNode.stop()

@@ -2,16 +2,17 @@ package net.corda.node.services.persistence
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.recordTransactions
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.loggerFor
+import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.*
-import net.corda.core.node.CordaPluginRegistry
-import java.io.InputStream
-import javax.annotation.concurrent.ThreadSafe
 import java.util.function.Function
+import javax.annotation.concurrent.ThreadSafe
 
 object DataVending {
 
@@ -33,55 +34,40 @@ object DataVending {
      */
     @ThreadSafe
     class Service(services: PluginServiceHub) : SingletonSerializeAsToken() {
-
-        companion object {
-            val logger = loggerFor<DataVending.Service>()
-        }
-
         init {
             services.registerFlowInitiator(FetchTransactionsFlow::class, ::FetchTransactionsHandler)
             services.registerFlowInitiator(FetchAttachmentsFlow::class, ::FetchAttachmentsHandler)
             services.registerFlowInitiator(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
         }
 
-
-        private class FetchTransactionsHandler(val otherParty: Party) : FlowLogic<Unit>() {
-            @Suspendable
-            override fun call() {
-                val request = receive<FetchDataFlow.Request>(otherParty).unwrap {
-                    require(it.hashes.isNotEmpty())
-                    it
-                }
-                val txs = request.hashes.map {
-                    val tx = serviceHub.storageService.validatedTransactions.getTransaction(it)
-                    if (tx == null)
-                        logger.info("Got request for unknown tx $it")
-                    tx
-                }
-                send(otherParty, txs)
+        private class FetchTransactionsHandler(otherParty: Party) : FetchDataHandler<SignedTransaction>(otherParty) {
+            override fun getData(id: SecureHash): SignedTransaction? {
+                return serviceHub.storageService.validatedTransactions.getTransaction(id)
             }
         }
 
-
         // TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
-        private class FetchAttachmentsHandler(val otherParty: Party) : FlowLogic<Unit>() {
+        private class FetchAttachmentsHandler(otherParty: Party) : FetchDataHandler<ByteArray>(otherParty) {
+            override fun getData(id: SecureHash): ByteArray? {
+                return serviceHub.storageService.attachments.openAttachment(id)?.open()?.readBytes()
+            }
+        }
+
+        private abstract class FetchDataHandler<out T>(val otherParty: Party) : FlowLogic<Unit>() {
             @Suspendable
+            @Throws(FetchDataFlow.HashNotFound::class)
             override fun call() {
                 val request = receive<FetchDataFlow.Request>(otherParty).unwrap {
-                    require(it.hashes.isNotEmpty())
+                    if (it.hashes.isEmpty()) throw FlowException("Empty hash list")
                     it
                 }
-                val attachments = request.hashes.map {
-                    val jar: InputStream? = serviceHub.storageService.attachments.openAttachment(it)?.open()
-                    if (jar == null) {
-                        logger.info("Got request for unknown attachment $it")
-                        null
-                    } else {
-                        jar.readBytes()
-                    }
+                val response = request.hashes.map {
+                    getData(it) ?: throw FetchDataFlow.HashNotFound(it)
                 }
-                send(otherParty, attachments)
+                send(otherParty, response)
             }
+
+            protected abstract fun getData(id: SecureHash): T?
         }
 
 
