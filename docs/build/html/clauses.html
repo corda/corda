@@ -81,7 +81,7 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
 <br>
 <a href="https://discourse.corda.net">Discourse Forums</a>
 <br>
@@ -111,9 +111,9 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Clauses</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#basic-clause-structure">Basic clause structure</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#composition-clauses">Composition clauses</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#allcomposition">AllComposition</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#anycomposition">AnyComposition</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#firstcomposition">FirstComposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#allof">AllOf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#anyof">AnyOf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#firstof">FirstOf</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#other-types-of-clauses">Other types of clauses</a><ul>
@@ -263,13 +263,13 @@ is no different than normal contract verification but using clauses it&#8217;s s
 there is a check if all of transaction&#8217;s commands were matched. If not, then an exception is raised. This is done to
 enforce that spurious commands cannot be included in a transaction, ensuring that the transaction is as clear as
 possible. As an example imagine a transaction with two commands: <code class="docutils literal"><span class="pre">Move</span></code> and <code class="docutils literal"><span class="pre">Issue</span></code> included, with verification written
-using <code class="docutils literal"><span class="pre">FirstComposition</span></code> on clauses that require single command set. Thus only one of transaction&#8217;s commands will match
+using <code class="docutils literal"><span class="pre">FirstOf</span></code> on clauses that require single command set. Thus only one of transaction&#8217;s commands will match
 leaving the second unprocessed. It should raise an error - we want to ensure that commands set is minimal to simplify
 analysis of intent of a transaction.</p>
 </div>
 <p>An example <code class="docutils literal"><span class="pre">verify</span></code> from <code class="docutils literal"><span class="pre">Obligation</span></code> contract:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">override</span> <span class="k">fun</span> <span class="nf">verify</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForContract</span><span class="p">)</span> <span class="p">=</span> <span class="n">verifyClause</span><span class="p">&lt;</span><span class="n">Commands</span><span class="p">&gt;(</span><span class="n">tx</span><span class="p">,</span> <span class="n">FirstComposition</span><span class="p">&lt;</span><span class="n">ContractState</span><span class="p">,</span> <span class="n">Commands</span><span class="p">,</span> <span class="n">Unit</span><span class="p">&gt;(</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">override</span> <span class="k">fun</span> <span class="nf">verify</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForContract</span><span class="p">)</span> <span class="p">=</span> <span class="n">verifyClause</span><span class="p">&lt;</span><span class="n">Commands</span><span class="p">&gt;(</span><span class="n">tx</span><span class="p">,</span> <span class="n">FirstOf</span><span class="p">&lt;</span><span class="n">ContractState</span><span class="p">,</span> <span class="n">Commands</span><span class="p">,</span> <span class="n">Unit</span><span class="p">&gt;(</span>
     <span class="n">Clauses</span><span class="p">.</span><span class="n">Net</span><span class="p">&lt;</span><span class="n">Commands</span><span class="p">,</span> <span class="n">P</span><span class="p">&gt;(),</span>
     <span class="n">Clauses</span><span class="p">.</span><span class="n">Group</span><span class="p">&lt;</span><span class="n">P</span><span class="p">&gt;()</span>
 <span class="p">),</span> <span class="n">tx</span><span class="p">.</span><span class="n">commands</span><span class="p">.</span><span class="n">select</span><span class="p">&lt;</span><span class="n">Obligation</span><span class="p">.</span><span class="n">Commands</span><span class="p">&gt;())</span>
@@ -277,8 +277,8 @@ analysis of intent of a transaction.</p>
 </div>
 </div>
 <p>It takes transaction to be verified, and passes it along with a top-level clause and commands to the <code class="docutils literal"><span class="pre">verifyClause</span></code>
-function. As you can see above we have used <code class="docutils literal"><span class="pre">FirstComposition</span></code> which is a special type of clause, which extends the
-<code class="docutils literal"><span class="pre">CompositeClause</span></code> abstract class (in that particular case, it ensures that either <code class="docutils literal"><span class="pre">Net</span></code> or <code class="docutils literal"><span class="pre">Group</span></code> will run - for explanation see <a class="reference internal" href="#firstcomposition">FirstComposition</a>).
+function. As you can see above we have used <code class="docutils literal"><span class="pre">FirstOf</span></code> which is a special type of clause, which extends the
+<code class="docutils literal"><span class="pre">CompositeClause</span></code> abstract class (in that particular case, it ensures that either <code class="docutils literal"><span class="pre">Net</span></code> or <code class="docutils literal"><span class="pre">Group</span></code> will run - for explanation see <a class="reference internal" href="#firstof">FirstOf</a>).
 It&#8217;s a type of clause that adds support for encapsulating multiple clauses and defines common behaviour for that composition.
 There is also a <code class="docutils literal"><span class="pre">GroupClauseVerifier</span></code> special clause, which specifies how to group transaction input/output states
 together and passes them to adequate clause for further processing.</p>
@@ -288,35 +288,35 @@ together and passes them to adequate clause for further processing.</p>
 <p>One of the most important concepts of clauses - composition clauses which extend <code class="docutils literal"><span class="pre">CompositeClause</span></code> abstract class,
 providing a range of ways of assembling clauses together. They define a logic of verification execution specifying which clauses
 will be run.</p>
-<div class="section" id="allcomposition">
-<h3>AllComposition<a class="headerlink" href="#allcomposition" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="allof">
+<h3>AllOf<a class="headerlink" href="#allof" title="Permalink to this headline">¶</a></h3>
 <p><strong>Description</strong></p>
 <p>Composes a number of clauses, such that all of the clauses must run for verification to pass.</p>
-<img alt="_images/allCompositionChart.png" src="_images/allCompositionChart.png" />
+<img alt="_images/allOfChart.png" src="_images/allOfChart.png" />
 <p>Short description:</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">AllComposition</span></code> holds clauses <em>Cl1,..,Cl5</em>.</li>
-<li>Check if all clauses that compose <code class="docutils literal"><span class="pre">AllComposition</span></code> have associated commands in a command set - if not, verification fails.</li>
+<li><code class="docutils literal"><span class="pre">AllOf</span></code> holds clauses <em>Cl1,..,Cl5</em>.</li>
+<li>Check if all clauses that compose <code class="docutils literal"><span class="pre">AllOf</span></code> have associated commands in a command set - if not, verification fails.</li>
 <li>After successful check runs verification logic specific for every clause <em>Cl1,..,Cl5</em> from that composition.</li>
 </ul>
 <p><strong>Usage</strong></p>
 <p>See code in <a class="reference internal" href="#groupclauseverifier">GroupClauseVerifier</a>.</p>
 </div>
-<div class="section" id="anycomposition">
-<h3>AnyComposition<a class="headerlink" href="#anycomposition" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="anyof">
+<h3>AnyOf<a class="headerlink" href="#anyof" title="Permalink to this headline">¶</a></h3>
 <p><strong>Description</strong></p>
-<p>Composes a number of clauses, such that 0 or more of the clauses can be run.</p>
-<img alt="_images/anyCompositionChart.png" src="_images/anyCompositionChart.png" />
+<p>Composes a number of clauses, such that 1 or more of the clauses can be run.</p>
+<img alt="_images/anyOfChart.png" src="_images/anyOfChart.png" />
 <p>Short description:</p>
 <ul class="simple">
-<li>Checks if zero or more clauses that compose AnyComposition have associated commands in a command set.</li>
+<li>Checks if one or more clauses that compose AnyOf have associated commands in a command set.</li>
 <li>After success runs verification logic specific for every <em>matched</em> (in this case <em>Cl2, Cl4, Cl5</em>) clause from composition.</li>
 </ul>
 <p><strong>Usage</strong></p>
 <p>Example from <code class="docutils literal"><span class="pre">CommercialPaper.kt</span></code>:</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Group</span> <span class="p">:</span> <span class="n">GroupClauseVerifier</span><span class="p">&lt;</span><span class="n">State</span><span class="p">,</span> <span class="n">Commands</span><span class="p">,</span> <span class="n">Issued</span><span class="p">&lt;</span><span class="n">Terms</span><span class="p">&gt;&gt;(</span>
-    <span class="n">AnyComposition</span><span class="p">(</span>
+    <span class="n">AnyOf</span><span class="p">(</span>
         <span class="n">Redeem</span><span class="p">(),</span>
         <span class="n">Move</span><span class="p">(),</span>
         <span class="n">Issue</span><span class="p">()))</span> <span class="p">{</span>
@@ -327,11 +327,11 @@ will be run.</p>
 </div>
 </div>
 </div>
-<div class="section" id="firstcomposition">
-<h3>FirstComposition<a class="headerlink" href="#firstcomposition" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="firstof">
+<h3>FirstOf<a class="headerlink" href="#firstof" title="Permalink to this headline">¶</a></h3>
 <p><strong>Description</strong></p>
 <p>Composes a number of clauses, such that the first match is run, and it errors if none is run.</p>
-<img alt="_images/firstCompositionChart.png" src="_images/firstCompositionChart.png" />
+<img alt="_images/firstOfChart.png" src="_images/firstOfChart.png" />
 <p>Short description:</p>
 <ul class="simple">
 <li>Takes first clause that matches and if none found throws an exception.</li>
@@ -360,13 +360,13 @@ group in turn.</p>
 grouped input and output states with a grouping key used for each group. Example from <code class="docutils literal"><span class="pre">Obligation.kt</span></code> contract:</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Group</span><span class="p">&lt;</span><span class="n">P</span><span class="p">&gt;</span> <span class="p">:</span> <span class="n">GroupClauseVerifier</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&lt;</span><span class="n">P</span><span class="p">&gt;,</span> <span class="n">Commands</span><span class="p">,</span> <span class="n">Issued</span><span class="p">&lt;</span><span class="n">Terms</span><span class="p">&lt;</span><span class="n">P</span><span class="p">&gt;&gt;&gt;(</span>
-    <span class="n">AllComposition</span><span class="p">(</span>
+    <span class="n">AllOf</span><span class="p">(</span>
         <span class="n">NoZeroSizedOutputs</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&lt;</span><span class="n">P</span><span class="p">&gt;,</span> <span class="n">Commands</span><span class="p">,</span> <span class="n">Terms</span><span class="p">&lt;</span><span class="n">P</span><span class="p">&gt;&gt;(),</span>
-        <span class="n">FirstComposition</span><span class="p">(</span>
+        <span class="n">FirstOf</span><span class="p">(</span>
             <span class="n">SetLifecycle</span><span class="p">&lt;</span><span class="n">P</span><span class="p">&gt;(),</span>
-            <span class="n">AllComposition</span><span class="p">(</span>
+            <span class="n">AllOf</span><span class="p">(</span>
                 <span class="n">VerifyLifecycle</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&lt;</span><span class="n">P</span><span class="p">&gt;,</span> <span class="n">Commands</span><span class="p">,</span> <span class="n">Issued</span><span class="p">&lt;</span><span class="n">Terms</span><span class="p">&lt;</span><span class="n">P</span><span class="p">&gt;&gt;,</span> <span class="n">P</span><span class="p">&gt;(),</span>
-                <span class="n">FirstComposition</span><span class="p">(</span>
+                <span class="n">FirstOf</span><span class="p">(</span>
                     <span class="n">Settle</span><span class="p">&lt;</span><span class="n">P</span><span class="p">&gt;(),</span>
                     <span class="n">Issue</span><span class="p">(),</span>
                     <span class="n">ConserveAmount</span><span class="p">()</span>

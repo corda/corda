@@ -81,7 +81,7 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
 <br>
 <a href="https://discourse.corda.net">Discourse Forums</a>
 <br>
@@ -226,8 +226,8 @@
 compatible language the easiest way to do so is using the client library. The library connects to your running
 node using a message queue protocol and then provides a simple RPC interface to interact with it. You make calls
 on a Java object as normal, and the marshalling back and forth is handled for you.</p>
-<p>The starting point for the client library is the <a class="reference external" href="api/net.corda.client/-corda-r-p-c-client/index.html">CordaRPCClient</a> class. This provides a <code class="docutils literal"><span class="pre">proxy</span></code> method that
-returns an implementation of the <a class="reference external" href="api/net.corda.node.services.messaging/-corda-r-p-c-ops/index.html">CordaRPCOps</a> interface. A timeout parameter can be specified, and observables that
+<p>The starting point for the client library is the <a class="reference external" href="api/kotlin/corda/net.corda.client/-corda-r-p-c-client/index.html">CordaRPCClient</a> class. This provides a <code class="docutils literal"><span class="pre">proxy</span></code> method that
+returns an implementation of the <a class="reference external" href="api/kotlin/corda/net.corda.node.services.messaging/-corda-r-p-c-ops/index.html">CordaRPCOps</a> interface. A timeout parameter can be specified, and observables that
 are returned by RPCs can be subscribed to in order to receive an ongoing stream of updates from the node. More
 detail on how to use this is provided in the docs for the proxy method.</p>
 <div class="admonition warning">

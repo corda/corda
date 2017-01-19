@@ -81,7 +81,7 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
 <br>
 <a href="https://discourse.corda.net">Discourse Forums</a>
 <br>
@@ -159,6 +159,7 @@
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Release notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-7">Milestone 7</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-6">Milestone 6</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-5">Milestone 5</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-4">Milestone 4</a></li>
@@ -223,6 +224,59 @@
   <div class="section" id="release-notes">
 <h1>Release notes<a class="headerlink" href="#release-notes" title="Permalink to this headline">¶</a></h1>
 <p>Here are brief summaries of what&#8217;s changed between each snapshot release.</p>
+<div class="section" id="milestone-7">
+<h2>Milestone 7<a class="headerlink" href="#milestone-7" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">With thanks to <a class="reference external" href="https://github.com/thschroeter">Thomas Schroeter</a> <code class="docutils literal"><span class="pre">NotaryFlow</span></code> is now idempotent.</p>
+</li>
+<li><p class="first">Explorer:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The GUI for the explorer now shows other nodes on the network map and the transactions between them.</li>
+<li>Map resolution increased and allows zooming and panning.</li>
+<li><a class="reference external" href="https://www.corda.net/2017/01/03/the-node-explorer/">Video demonstration</a> of the Node Explorer.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">The CorDapp template now has a Java example that parallels the Kotlin one for developers more comfortable with Java.
+ORM support added to the Kotlin example.</p>
+</li>
+<li><p class="first">Demos:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Added the Bank of Corda demo - a demo showing a node (Bank of Corda) acting as an issuer of Cash, and a client
+driver providing both Web and RPC access to request issuance of cash.</li>
+<li>Demos now use RPC to communicate with the node from the webserver. This brings the demos more in line with how
+interaction with nodes is expected to be. The demos now treat their webservers like clients. This will also allow
+for the splitting of the webserver from the node for milestone 8.</li>
+<li>Added a SIMM valuation demo integration test to catch regressions.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Security:</p>
+<blockquote>
+<div><ul class="simple">
+<li>MQ broker of the node now requires authentication which means that third parties cannot connect to and
+listen to queues on the Node. RPC and P2P between nodes is now authenticated as a result of this change.
+This also means that nodes or RPC users cannot pretend to be other nodes or RPC users.</li>
+<li>The node now does host verification of any node that connects to it and prevents man in the middle attacks.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Improvements:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Vault updates now contain full <code class="docutils literal"><span class="pre">StateAndRef</span></code> which allows subscribers to check whether the update contains
+relevant states.</li>
+<li>Cash balances are calculated using aggregate values to prevent iterating through all states in the vault, which
+improves performance.</li>
+<li>Multi-party services, such as notaries, are now load balanced and represented as a single <code class="docutils literal"><span class="pre">Party</span></code> object.</li>
+<li>The Notary Change flow now supports encumbrances.</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div>
 <div class="section" id="milestone-6">
 <h2>Milestone 6<a class="headerlink" href="#milestone-6" title="Permalink to this headline">¶</a></h2>
 <ul>

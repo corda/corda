@@ -81,7 +81,7 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
 <br>
 <a href="https://discourse.corda.net">Discourse Forums</a>
 <br>
@@ -910,7 +910,6 @@ like to deploy for testing. See further details below:</p>
     <span class="n">networkMap</span> <span class="s2">&quot;Controller&quot;</span>                              <span class="c1">// The artemis address of the node to be used as the network map.</span>
     <span class="n">node</span> <span class="o">{</span>
         <span class="n">name</span> <span class="s2">&quot;Controller&quot;</span>                                <span class="c1">// Artemis name of node to be deployed.</span>
-        <span class="n">dirName</span> <span class="s2">&quot;controller&quot;</span>                             <span class="c1">// Directory to which the node will</span>
         <span class="n">nearestCity</span> <span class="s2">&quot;London&quot;</span>                             <span class="c1">// For use with the network visualiser.</span>
         <span class="n">advertisedServices</span> <span class="o">=</span> <span class="o">[</span><span class="s2">&quot;corda.notary.validating&quot;</span><span class="o">]</span> <span class="c1">// A list of services you wish the node to offer.</span>
         <span class="n">artemisPort</span> <span class="mi">10002</span>
@@ -919,7 +918,6 @@ like to deploy for testing. See further details below:</p>
     <span class="o">}</span>
     <span class="n">node</span> <span class="o">{</span>                                               <span class="c1">// Create an additional node.</span>
         <span class="n">name</span> <span class="s2">&quot;NodeA&quot;</span>
-        <span class="n">dirName</span> <span class="s2">&quot;nodea&quot;</span>
         <span class="n">nearestCity</span> <span class="s2">&quot;London&quot;</span>
         <span class="n">advertisedServices</span> <span class="o">=</span> <span class="o">[]</span>
         <span class="n">artemisPort</span> <span class="mi">10004</span>

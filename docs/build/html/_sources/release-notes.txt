@@ -3,6 +3,45 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
+Milestone 7
+-----------
+
+* With thanks to `Thomas Schroeter <https://github.com/thschroeter>`_ ``NotaryFlow`` is now idempotent.
+
+* Explorer:
+
+    * The GUI for the explorer now shows other nodes on the network map and the transactions between them.
+    * Map resolution increased and allows zooming and panning.
+    * `Video demonstration <https://www.corda.net/2017/01/03/the-node-explorer/>`_ of the Node Explorer.
+
+* The CorDapp template now has a Java example that parallels the Kotlin one for developers more comfortable with Java.
+  ORM support added to the Kotlin example.
+
+* Demos:
+
+    * Added the Bank of Corda demo - a demo showing a node (Bank of Corda) acting as an issuer of Cash, and a client
+      driver providing both Web and RPC access to request issuance of cash.
+    * Demos now use RPC to communicate with the node from the webserver. This brings the demos more in line with how
+      interaction with nodes is expected to be. The demos now treat their webservers like clients. This will also allow
+      for the splitting of the webserver from the node for milestone 8.
+    * Added a SIMM valuation demo integration test to catch regressions.
+
+* Security:
+
+    * MQ broker of the node now requires authentication which means that third parties cannot connect to and
+      listen to queues on the Node. RPC and P2P between nodes is now authenticated as a result of this change.
+      This also means that nodes or RPC users cannot pretend to be other nodes or RPC users.
+    * The node now does host verification of any node that connects to it and prevents man in the middle attacks.
+
+* Improvements:
+
+    * Vault updates now contain full ``StateAndRef`` which allows subscribers to check whether the update contains
+      relevant states.
+    * Cash balances are calculated using aggregate values to prevent iterating through all states in the vault, which
+      improves performance.
+    * Multi-party services, such as notaries, are now load balanced and represented as a single ``Party`` object.
+    * The Notary Change flow now supports encumbrances.
+
 Milestone 6
 -----------
 

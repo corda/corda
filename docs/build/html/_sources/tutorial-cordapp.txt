@@ -804,7 +804,6 @@ like to deploy for testing. See further details below:
       networkMap "Controller"                              // The artemis address of the node to be used as the network map.
       node {
           name "Controller"                                // Artemis name of node to be deployed.
-          dirName "controller"                             // Directory to which the node will
           nearestCity "London"                             // For use with the network visualiser.
           advertisedServices = ["corda.notary.validating"] // A list of services you wish the node to offer.
           artemisPort 10002
@@ -813,7 +812,6 @@ like to deploy for testing. See further details below:
       }
       node {                                               // Create an additional node.
           name "NodeA"
-          dirName "nodea"
           nearestCity "London"
           advertisedServices = []
           artemisPort 10004

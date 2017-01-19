@@ -81,7 +81,7 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
 <br>
 <a href="https://discourse.corda.net">Discourse Forums</a>
 <br>
@@ -238,7 +238,7 @@ contained in separate JARs from the node server JAR that are created and distrib
 <p class="first admonition-title">Note</p>
 <p class="last">Currently apps are only supported for JVM languages.</p>
 </div>
-<p>To create an app plugin you must you must extend from <a class="reference external" href="api/net.corda.core.node/-corda-plugin-registry/index.html">CordaPluginRegistry</a>. The JavaDoc contains
+<p>To create an app plugin you must you must extend from <a class="reference external" href="api/kotlin/corda/net.corda.core.node/-corda-plugin-registry/index.html">CordaPluginRegistry</a>. The JavaDoc contains
 specific details of the implementation, but you can extend the server in the following ways:</p>
 <ol class="arabic simple">
 <li>Required flows: Specify which flows will be whitelisted for use in your web APIs.</li>
@@ -250,8 +250,8 @@ specific details of the implementation, but you can extend the server in the fol
 </div>
 <div class="section" id="services">
 <h2>Services<a class="headerlink" href="#services" title="Permalink to this headline">¶</a></h2>
-<p>Services are classes which are constructed after the node has started. It is provided a <a class="reference external" href="api/net.corda.core.node/-plugin-service-hub/index.html">PluginServiceHub</a> which
-allows a richer API than the <a class="reference external" href="api/net.corda.core.node/-service-hub/index.html">ServiceHub</a> exposed to contracts. It enables adding flows, registering
+<p>Services are classes which are constructed after the node has started. It is provided a <a class="reference external" href="api/kotlin/corda/net.corda.core.node/-plugin-service-hub/index.html">PluginServiceHub</a> which
+allows a richer API than the <a class="reference external" href="api/kotlin/corda/net.corda.core.node/-service-hub/index.html">ServiceHub</a> exposed to contracts. It enables adding flows, registering
 message handlers and more. The service does not run in a separate thread, so the only entry point to the service is during
 construction, where message handlers should be registered and threads started.</p>
 </div>
@@ -261,9 +261,8 @@ construction, where message handlers should be registered and threads started.</
 <p>This will output the node JAR to <code class="docutils literal"><span class="pre">build/libs/corda.jar</span></code> and several sample/standard
 node setups to <code class="docutils literal"><span class="pre">build/nodes</span></code>. For now you can use the <code class="docutils literal"><span class="pre">build/nodes/nodea</span></code> configuration as a template.</p>
 <p>Each node server by default must have a <code class="docutils literal"><span class="pre">node.conf</span></code> file in the current working directory. After first
-execution of the node server there will be many other configuration and persistence files created in a node
-workspace directory. This is specified as the basedir property of the node.conf file, or else can be overidden
-using <code class="docutils literal"><span class="pre">--base-directory=&lt;workspace&gt;</span></code>.</p>
+execution of the node server there will be many other configuration and persistence files created in this
+workspace directory. The directory can be overridden by the <code class="docutils literal"><span class="pre">--base-directory=&lt;workspace&gt;</span></code> command line argument.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">Outside of development environments do not store your node directories in the build folder.</p>
@@ -296,7 +295,7 @@ case the <code class="docutils literal"><span class="pre">node_dir</span></code>
 </div>
 <p>The configuration file and workspace paths can be overidden on the command line e.g.</p>
 <p><code class="docutils literal"><span class="pre">java</span> <span class="pre">-jar</span> <span class="pre">corda.jar</span> <span class="pre">--config-file=test.conf</span> <span class="pre">--base-directory=/opt/r3corda/nodes/test</span></code>.</p>
-<p>Otherwise the workspace folder for the node is created based upon the <code class="docutils literal"><span class="pre">basedir</span></code> property in the <code class="docutils literal"><span class="pre">node.conf</span></code> file and if this is relative it is applied relative to the current working path.</p>
+<p>Otherwise the workspace folder for the node is the current working path.</p>
 </div>
 <div class="section" id="debugging-your-node">
 <h2>Debugging your node<a class="headerlink" href="#debugging-your-node" title="Permalink to this headline">¶</a></h2>
@@ -413,7 +412,6 @@ is a three node example;</p>
     networkMap &quot;Controller&quot; // The artemis address of the node named here will be used as the networkMapService.address on all other nodes.
     node {
         name &quot;Controller&quot;
-        dirName &quot;controller&quot;
         nearestCity &quot;London&quot;
         advertisedServices = [ &quot;corda.notary.validating&quot; ]
         artemisPort 12345
@@ -422,7 +420,6 @@ is a three node example;</p>
     }
     node {
         name &quot;NodeA&quot;
-        dirName &quot;nodea&quot;
         nearestCity &quot;London&quot;
         advertisedServices = []
         artemisPort 31337
@@ -431,7 +428,6 @@ is a three node example;</p>
     }
     node {
         name &quot;NodeB&quot;
-        dirName &quot;nodeb&quot;
         nearestCity &quot;New York&quot;
         advertisedServices = []
         artemisPort 31338

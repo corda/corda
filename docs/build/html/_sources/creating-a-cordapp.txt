@@ -36,9 +36,8 @@ This will output the node JAR to ``build/libs/corda.jar`` and several sample/sta
 node setups to ``build/nodes``. For now you can use the ``build/nodes/nodea`` configuration as a template.
 
 Each node server by default must have a ``node.conf`` file in the current working directory. After first
-execution of the node server there will be many other configuration and persistence files created in a node
-workspace directory. This is specified as the basedir property of the node.conf file, or else can be overidden
-using ``--base-directory=<workspace>``.
+execution of the node server there will be many other configuration and persistence files created in this
+workspace directory. The directory can be overridden by the ``--base-directory=<workspace>`` command line argument.
 
 .. note:: Outside of development environments do not store your node directories in the build folder.
 
@@ -69,7 +68,7 @@ The configuration file and workspace paths can be overidden on the command line 
 
 ``java -jar corda.jar --config-file=test.conf --base-directory=/opt/r3corda/nodes/test``.
 
-Otherwise the workspace folder for the node is created based upon the ``basedir`` property in the ``node.conf`` file and if this is relative it is applied relative to the current working path.
+Otherwise the workspace folder for the node is the current working path.
 
 Debugging your node
 -------------------
@@ -92,9 +91,9 @@ The user name and password for the login are as per the node data source configu
 The name and column layout of the internal node tables is in a state of flux and should not be relied upon to remain static
 at the present time, and should certainly be treated as read-only.
 
-.. _CordaPluginRegistry: api/net.corda.core.node/-corda-plugin-registry/index.html
-.. _PluginServiceHub: api/net.corda.core.node/-plugin-service-hub/index.html
-.. _ServiceHub: api/net.corda.core.node/-service-hub/index.html
+.. _CordaPluginRegistry: api/kotlin/corda/net.corda.core.node/-corda-plugin-registry/index.html
+.. _PluginServiceHub: api/kotlin/corda/net.corda.core.node/-plugin-service-hub/index.html
+.. _ServiceHub: api/kotlin/corda/net.corda.core.node/-service-hub/index.html
 
 Building against Corda
 ----------------------
@@ -212,7 +211,6 @@ is a three node example;
         networkMap "Controller" // The artemis address of the node named here will be used as the networkMapService.address on all other nodes.
         node {
             name "Controller"
-            dirName "controller"
             nearestCity "London"
             advertisedServices = [ "corda.notary.validating" ]
             artemisPort 12345
@@ -221,7 +219,6 @@ is a three node example;
         }
         node {
             name "NodeA"
-            dirName "nodea"
             nearestCity "London"
             advertisedServices = []
             artemisPort 31337
@@ -230,7 +227,6 @@ is a three node example;
         }
         node {
             name "NodeB"
-            dirName "nodeb"
             nearestCity "New York"
             advertisedServices = []
             artemisPort 31338

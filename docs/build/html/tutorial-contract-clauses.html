@@ -81,7 +81,7 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
 <br>
 <a href="https://discourse.corda.net">Discourse Forums</a>
 <br>
@@ -131,8 +131,8 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Writing a contract using clauses</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#what-are-clauses-and-why-to-use-them">What are clauses and why to use them?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#how-clauses-work">How clauses work?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#what-are-clauses-and-why-use-them">What are clauses and why use them?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-do-clauses-work">How do clauses work?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#commercial-paper-class">Commercial paper class</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#simple-clauses">Simple Clauses</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#group-clause">Group clause</a></li>
@@ -223,41 +223,49 @@
   <script type="text/javascript" src="_static/jquery.js"></script>
 <script type="text/javascript" src="_static/codesets.js"></script><div class="section" id="writing-a-contract-using-clauses">
 <h1>Writing a contract using clauses<a class="headerlink" href="#writing-a-contract-using-clauses" title="Permalink to this headline">¶</a></h1>
-<p>This tutorial will take you through restructuring the commercial paper contract to use clauses. You should have
-already completed &#8220;<a class="reference internal" href="tutorial-contract.html"><span class="doc">Writing a contract</span></a>&#8221;.
-As before, the example is focused on basic implementation of commercial paper, which is essentially a simpler version of a corporate
-bond. A company issues CP with a particular face value, say $100, but sells it for less, say $90. The paper can be redeemed
-for cash at a given date in the future. Thus this example would have a 10% interest rate with a single repayment.
-Whole Kotlin code can be found in <code class="docutils literal"><span class="pre">CommercialPaper.kt</span></code>.</p>
-<div class="section" id="what-are-clauses-and-why-to-use-them">
-<h2>What are clauses and why to use them?<a class="headerlink" href="#what-are-clauses-and-why-to-use-them" title="Permalink to this headline">¶</a></h2>
+<p>In this tutorial, we will restructure the commercial paper contract to use clauses. You should have
+already completed &#8220;<a class="reference internal" href="tutorial-contract.html"><span class="doc">Writing a contract</span></a>&#8221;.</p>
+<p>As before, this example is focused on a basic implementation of commercial paper (CP), which is essentially a simpler version of a corporate
+bond. A company issues commercial paper with a particular face value, say $100, but sells it for less, say $90. The paper can be redeemed
+for cash at a given future date. In our example, the commercial paper has a 10% interest rate, with a single repayment.
+The full Kotlin code can be found in <code class="docutils literal"><span class="pre">CommercialPaper.kt</span></code>.</p>
+<div class="section" id="what-are-clauses-and-why-use-them">
+<h2>What are clauses and why use them?<a class="headerlink" href="#what-are-clauses-and-why-use-them" title="Permalink to this headline">¶</a></h2>
 <p>Clauses are essentially micro-contracts which contain independent verification logic, and can be logically composed
-together to form a contract. Clauses are designed to enable re-use of common verification parts, for example issuing state objects
-is generally the same for all fungible contracts, so a common issuance clause can be inherited for each contract&#8217;s
+to form a complete contract. Clauses are designed to enable re-use of common verification parts. For example, issuing state objects
+is generally the same for all fungible contracts, so a common issuance clause can be used for each contract&#8217;s
 issue clause. This cuts down on scope for error, and improves consistency of behaviour. By splitting verification logic
-into smaller chunks, they can also be readily tested in isolation.</p>
+into smaller chunks, these can also be readily tested in isolation.</p>
 </div>
-<div class="section" id="how-clauses-work">
-<h2>How clauses work?<a class="headerlink" href="#how-clauses-work" title="Permalink to this headline">¶</a></h2>
-<p>We have different types of clauses, the most basic are the ones that define verification logic for particular command set.
-We will see them later as elementary building blocks that commercial paper consist of - <code class="docutils literal"><span class="pre">Move</span></code>, <code class="docutils literal"><span class="pre">Issue</span></code> and <code class="docutils literal"><span class="pre">Redeem</span></code>.
-As a developer you need to identify reusable parts of your contract and decide how they should be combined. It is where
-composite clauses become useful. They gather many clause subcomponents and resolve how and which of them should be checked.</p>
-<p>For example, assume that we want to verify a transaction using all constraints defined in separate clauses. We need to
-wrap classes that define them into <code class="docutils literal"><span class="pre">AllComposition</span></code> composite clause. It assures that all clauses from that combination
-match with commands in a transaction - only then verification logic can be executed.
-It may be a little confusing, but composite clause is also a clause and you can even wrap it in the special grouping clause.
-In <code class="docutils literal"><span class="pre">CommercialPaper</span></code> it looks like that:</p>
+<div class="section" id="how-do-clauses-work">
+<h2>How do clauses work?<a class="headerlink" href="#how-do-clauses-work" title="Permalink to this headline">¶</a></h2>
+<p>There are different types of clauses. The most basic are those that define the verification logic for a single command
+(e.g. <code class="docutils literal"><span class="pre">Move</span></code>, <code class="docutils literal"><span class="pre">Issue</span></code> and <code class="docutils literal"><span class="pre">Redeem</span></code>, in the case of commercial paper), or even run without any commands at all (e.g. <code class="docutils literal"><span class="pre">Timestamp</span></code>).</p>
+<p>These basic clauses can then be combined using a <code class="docutils literal"><span class="pre">CompositeClause</span></code>. The goal of composite clauses is to determine
+which individual clauses need to be matched and verified for a given transaction
+to be considered valid. We refer to a clause as being &#8220;matched&#8221; when the transaction has the required commands present for the clause
+in question to trigger. Meanwhile, we talk about a clause &#8220;verifying&#8221; when its <code class="docutils literal"><span class="pre">verify()</span></code> function returns <code class="docutils literal"><span class="pre">True</span></code>.</p>
+<p>As an example, let&#8217;s say we want a transaction to be valid only when every single one of its clauses matches and verifies. We implement this
+by wrapping the individual clauses into an <code class="docutils literal"><span class="pre">AllOf</span></code> composite clause, which ensures that a transaction is
+only considered valid if all of its clauses are both matched and verify.</p>
+<p>There are two other basic composite clauses that you should be aware of:</p>
+<blockquote>
+<div><ul class="simple">
+<li><code class="docutils literal"><span class="pre">AnyOf</span></code>, whereby 1 or more clauses may match, and every matched clause must verify</li>
+<li><code class="docutils literal"><span class="pre">FirstOf</span></code>, whereby at least one clause must match, and the first such clause must verify</li>
+</ul>
+</div></blockquote>
+<p>In turn, composite clauses are themselves <code class="docutils literal"><span class="pre">Clause</span></code> s, and can, for example, be wrapped in the special <code class="docutils literal"><span class="pre">GroupClauseVerifier</span></code> grouping clause.
+For <code class="docutils literal"><span class="pre">CommercialPaper</span></code>, this would look as follows:</p>
 <img alt="_images/commPaperClauses.png" src="_images/commPaperClauses.png" />
-<p>The most basic types of composite clauses are <code class="docutils literal"><span class="pre">AllComposition</span></code>, <code class="docutils literal"><span class="pre">AnyComposition</span></code> and <code class="docutils literal"><span class="pre">FirstComposition</span></code>.
-In this tutorial we will use <code class="docutils literal"><span class="pre">GroupClauseVerifier</span></code> and <code class="docutils literal"><span class="pre">AnyComposition</span></code>. It&#8217;s important to understand how they work.
-Charts showing execution and more detailed information can be found in <a class="reference internal" href="clauses.html"><span class="doc">Clauses</span></a>.</p>
+<p>For this tutorial, we will be using <code class="docutils literal"><span class="pre">GroupClauseVerifier</span></code> and <code class="docutils literal"><span class="pre">AnyOf</span></code>. Since it&#8217;s important to understand how these work,
+charts showing their execution and other details can be found in <a class="reference internal" href="clauses.html"><span class="doc">Clauses</span></a>.</p>
 </div>
 <div class="section" id="commercial-paper-class">
 <span id="verify-ref"></span><h2>Commercial paper class<a class="headerlink" href="#commercial-paper-class" title="Permalink to this headline">¶</a></h2>
-<p>We start from defining <code class="docutils literal"><span class="pre">CommercialPaper</span></code> class. As in previous tutorial we need some elementary parts: <code class="docutils literal"><span class="pre">Commands</span></code> interface,
-<code class="docutils literal"><span class="pre">generateMove</span></code>, <code class="docutils literal"><span class="pre">generateIssue</span></code>, <code class="docutils literal"><span class="pre">generateRedeem</span></code> - so far so good that stays the same. The new part is verification and
-<code class="docutils literal"><span class="pre">Clauses</span></code> interface (you will see them later in code). Let&#8217;s start from the basic structure:</p>
+<p>We start by defining the <code class="docutils literal"><span class="pre">CommercialPaper</span></code> class. As in the previous tutorial, we need some elementary parts: a <code class="docutils literal"><span class="pre">Commands</span></code> interface,
+<code class="docutils literal"><span class="pre">generateMove</span></code>, <code class="docutils literal"><span class="pre">generateIssue</span></code>, <code class="docutils literal"><span class="pre">generateRedeem</span></code>. So far, so good - these stay the same. The new part is verification and the
+<code class="docutils literal"><span class="pre">Clauses</span></code> interface (which we will see later in code). Let&#8217;s start from the basic structure:</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CommercialPaper</span> <span class="p">:</span> <span class="n">Contract</span> <span class="p">{</span>
     <span class="k">override</span> <span class="k">val</span> <span class="py">legalContractReference</span><span class="p">:</span> <span class="n">SecureHash</span> <span class="p">=</span> <span class="n">SecureHash</span><span class="p">.</span><span class="n">sha256</span><span class="p">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="p">)</span>
@@ -301,17 +309,17 @@ Charts showing execution and more detailed information can be found in <a class=
 </pre></div>
 </div>
 </div>
-<p>As you can see we used <code class="docutils literal"><span class="pre">verifyClause</span></code> function with <code class="docutils literal"><span class="pre">Clauses.Group()</span></code> in place of previous verification.
+<p>As you can see, we used <code class="docutils literal"><span class="pre">verifyClause</span></code> function with <code class="docutils literal"><span class="pre">Clauses.Group()</span></code> in place of our previous verification logic.
 It&#8217;s an entry point to running clause logic. <code class="docutils literal"><span class="pre">verifyClause</span></code> takes the transaction, a clause (usually a composite one)
-to verify, and a collection of commands the clause is expected to handle all of. This list of commands is important because
-<code class="docutils literal"><span class="pre">verifyClause</span></code> checks that none of the commands are left unprocessed at the end, and raises an error if they are.</p>
+to verify, and all of the commands the clause is expected to handle. This list of commands is important because
+<code class="docutils literal"><span class="pre">verifyClause</span></code> checks that none of the commands are left unprocessed at the end, raising an error if they are.</p>
 </div>
 <div class="section" id="simple-clauses">
 <h2>Simple Clauses<a class="headerlink" href="#simple-clauses" title="Permalink to this headline">¶</a></h2>
-<p>Let&#8217;s move to constructing contract logic in terms of clauses language. Commercial paper contract has three commands and
+<p>Let&#8217;s move to constructing contract logic in terms of clauses. The commercial paper contract has three commands and
 three corresponding behaviours: <code class="docutils literal"><span class="pre">Issue</span></code>, <code class="docutils literal"><span class="pre">Move</span></code> and <code class="docutils literal"><span class="pre">Redeem</span></code>. Each of them has a specific set of requirements that must be satisfied -
-perfect material for defining clauses. For brevity we will show only <code class="docutils literal"><span class="pre">Move</span></code> clause, rest is constructed in similar manner
-and included in the <code class="docutils literal"><span class="pre">CommercialPaper.kt</span></code> code.</p>
+perfect material for defining clauses. For brevity, we will only show the <code class="docutils literal"><span class="pre">Move</span></code> clause. The rest is constructed in similar manner,
+and is included in the <code class="docutils literal"><span class="pre">CommercialPaper.kt</span></code> code.</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">interface</span> <span class="nc">Clauses</span> <span class="p">{</span>
     <span class="k">class</span> <span class="nc">Move</span><span class="p">:</span> <span class="n">Clause</span><span class="p">&lt;</span><span class="n">State</span><span class="p">,</span> <span class="n">Commands</span><span class="p">,</span> <span class="n">Issued</span><span class="p">&lt;</span><span class="n">Terms</span><span class="p">&gt;&gt;()</span> <span class="p">{</span>
@@ -372,44 +380,45 @@ and included in the <code class="docutils literal"><span class="pre">CommercialP
 </pre></div>
 </div>
 </div>
-<p>We took part of code for <code class="docutils literal"><span class="pre">Command.Move</span></code> verification from previous tutorial and put it into the verify function
+<p>We took part of the code for <code class="docutils literal"><span class="pre">Command.Move</span></code> verification from the previous tutorial and put it into the verify function
 of <code class="docutils literal"><span class="pre">Move</span></code> class. Notice that this class must extend the <code class="docutils literal"><span class="pre">Clause</span></code> abstract class, which defines
-the <code class="docutils literal"><span class="pre">verify</span></code> function, and the <code class="docutils literal"><span class="pre">requiredCommands</span></code> property used to determine the conditions under which a clause
-is triggered. In the above example it means that the clause will run verification when the <code class="docutils literal"><span class="pre">Commands.Move</span></code> is present in a transaction.</p>
+the <code class="docutils literal"><span class="pre">verify</span></code> function and the <code class="docutils literal"><span class="pre">requiredCommands</span></code> property used to determine the conditions under which a clause
+is triggered. In the above example, this means that the clause will run its verification logic when <code class="docutils literal"><span class="pre">Commands.Move</span></code> is present in a transaction.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">Notice that commands refer to all input and output states in a transaction. For clause to be executed, transaction has
-to include all commands from <code class="docutils literal"><span class="pre">requiredCommands</span></code> set.</p>
+<p class="last">Notice that commands refer to all input and output states in a transaction. For a clause to be executed, the transaction has
+to include all commands from the <code class="docutils literal"><span class="pre">requiredCommands</span></code> set.</p>
 </div>
-<p>Few important changes:</p>
+<p>A few important changes:</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">verify</span></code> function returns the set of commands which it has processed. Normally this returned set is identical to the
-<code class="docutils literal"><span class="pre">requiredCommands</span></code> used to trigger the clause, however in some cases the clause may process further optional commands
+<li>The <code class="docutils literal"><span class="pre">verify</span></code> function returns the set of commands which it has processed. Normally this set is identical to the
+<code class="docutils literal"><span class="pre">requiredCommands</span></code> used to trigger the clause. However, in some cases, the clause may process further optional commands
 which it needs to report that it has handled.</li>
 <li>Verification takes new parameters. Usually inputs and outputs are some subset of the original transaction entries
 passed to the clause by outer composite or grouping clause. <code class="docutils literal"><span class="pre">groupingKey</span></code> is a key used to group original states.</li>
 </ul>
-<p>As a simple example imagine input states:</p>
+<p>As a simple example, imagine the following input states:</p>
 <ol class="arabic simple">
 <li>1000 GBP issued by Bank of England</li>
 <li>500 GBP issued by Bank of England</li>
 <li>1000 GBP issued by Bank of Scotland</li>
 </ol>
-<p>We will group states by Issuer so in the first group we have inputs 1 and 2, in second group input number 3. Grouping keys are:
+<p>We will group states by Issuer, meaning that we have inputs 1 and 2 in one group, and input 3 in another group. The grouping keys are
 &#8216;GBP issued by Bank of England&#8217; and &#8216;GBP issued by Bank of Scotland&#8217;.</p>
-<p>How the states can be grouped and passed in that form to the <code class="docutils literal"><span class="pre">Move</span></code> clause? That leads us to the concept of <code class="docutils literal"><span class="pre">GroupClauseVerifier</span></code>.</p>
+<p>How are the states grouped and passed in this form to the <code class="docutils literal"><span class="pre">Move</span></code> clause? Answering that question leads us to the concept of
+<code class="docutils literal"><span class="pre">GroupClauseVerifier</span></code>.</p>
 </div>
 <div class="section" id="group-clause">
 <h2>Group clause<a class="headerlink" href="#group-clause" title="Permalink to this headline">¶</a></h2>
 <p>We may have a transaction with similar but unrelated state evolutions which need to be validated independently. It
-makes sense to check <code class="docutils literal"><span class="pre">Move</span></code> command on groups of related inputs and outputs (see example above). Thus, we need to collect
+makes sense to check the <code class="docutils literal"><span class="pre">Move</span></code> command on groups of related inputs and outputs (see example above). Thus, we need to collect
 relevant states together.
-For this we extend the standard <code class="docutils literal"><span class="pre">GroupClauseVerifier</span></code> and specify how to group input/output states, as well as the top-level
-clause to run on each group. In our example a top-level is a composite clause - <code class="docutils literal"><span class="pre">AnyCompostion</span></code> that delegates verification to
-it&#8217;s subclasses (wrapped move, issue, redeem). Any in this case means that it will take 0 or more clauses that match transaction commands.</p>
+For this, we extend the standard <code class="docutils literal"><span class="pre">GroupClauseVerifier</span></code> and specify how to group input/output states, as well as the top-level
+clause to run on each group. In our example, the top level is a composite clause - <code class="docutils literal"><span class="pre">AnyCompostion</span></code> - that delegates verification to
+its subclauses (wrapped move, issue, redeem). &#8220;Any&#8221; in this case means that it will take 0 or more clauses that match the transaction commands.</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Group</span> <span class="p">:</span> <span class="n">GroupClauseVerifier</span><span class="p">&lt;</span><span class="n">State</span><span class="p">,</span> <span class="n">Commands</span><span class="p">,</span> <span class="n">Issued</span><span class="p">&lt;</span><span class="n">Terms</span><span class="p">&gt;&gt;(</span>
-    <span class="n">AnyComposition</span><span class="p">(</span>
+    <span class="n">AnyOf</span><span class="p">(</span>
         <span class="n">Redeem</span><span class="p">(),</span>
         <span class="n">Move</span><span class="p">(),</span>
         <span class="n">Issue</span><span class="p">()))</span> <span class="p">{</span>
@@ -420,7 +429,7 @@ it&#8217;s subclasses (wrapped move, issue, redeem). Any in this case means that
 </div>
 <div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">class</span> <span class="nc">Group</span> <span class="kd">extends</span> <span class="n">GroupClauseVerifier</span><span class="o">&lt;</span><span class="n">State</span><span class="o">,</span> <span class="n">Commands</span><span class="o">,</span> <span class="n">State</span><span class="o">&gt;</span> <span class="o">{</span>
     <span class="kd">public</span> <span class="nf">Group</span><span class="o">()</span> <span class="o">{</span>
-        <span class="kd">super</span><span class="o">(</span><span class="k">new</span> <span class="n">AnyComposition</span><span class="o">&lt;&gt;(</span>
+        <span class="kd">super</span><span class="o">(</span><span class="k">new</span> <span class="n">AnyOf</span><span class="o">&lt;&gt;(</span>
             <span class="k">new</span> <span class="n">Clauses</span><span class="o">.</span><span class="na">Redeem</span><span class="o">(),</span>
             <span class="k">new</span> <span class="n">Clauses</span><span class="o">.</span><span class="na">Move</span><span class="o">(),</span>
             <span class="k">new</span> <span class="n">Clauses</span><span class="o">.</span><span class="na">Issue</span><span class="o">()</span>
@@ -437,15 +446,15 @@ it&#8217;s subclasses (wrapped move, issue, redeem). Any in this case means that
 </div>
 </div>
 <p>For the <code class="docutils literal"><span class="pre">CommercialPaper</span></code> contract, <code class="docutils literal"><span class="pre">Group</span></code> is the main clause for the contract, and is passed directly into
-<code class="docutils literal"><span class="pre">verifyClause</span></code> (see the example code at the top of this tutorial). We used <code class="docutils literal"><span class="pre">groupStates</span></code> function here, it&#8217;s worth reminding
-how it works: <a class="reference internal" href="tutorial-contract.html#state-ref"><span class="std std-ref">Using state groups</span></a>.</p>
+<code class="docutils literal"><span class="pre">verifyClause</span></code> (see the example code at the top of this tutorial). We also used <code class="docutils literal"><span class="pre">groupStates</span></code> function here - it
+may be worth reminding yourself how it works here: <a class="reference internal" href="tutorial-contract.html#state-ref"><span class="std std-ref">Using state groups</span></a>.</p>
 </div>
 <div class="section" id="summary">
 <h2>Summary<a class="headerlink" href="#summary" title="Permalink to this headline">¶</a></h2>
-<p>In summary the top level contract <code class="docutils literal"><span class="pre">CommercialPaper</span></code> specifies a single grouping clause of type
-<code class="docutils literal"><span class="pre">CommercialPaper.Clauses.Group</span></code> which in turn specifies <code class="docutils literal"><span class="pre">GroupClause</span></code> implementations for each type of command
-(<code class="docutils literal"><span class="pre">Redeem</span></code>, <code class="docutils literal"><span class="pre">Move</span></code> and <code class="docutils literal"><span class="pre">Issue</span></code>). This reflects the flow of verification: in order to verify a <code class="docutils literal"><span class="pre">CommercialPaper</span></code>
-we first group states, check which commands are specified, and run command-specific verification logic accordingly.</p>
+<p>In summary, the top-level contract <code class="docutils literal"><span class="pre">CommercialPaper</span></code> specifies a single grouping clause of type
+<code class="docutils literal"><span class="pre">CommercialPaper.Clauses.Group</span></code>, which in turn specifies <code class="docutils literal"><span class="pre">GroupClause</span></code> implementations for each type of command
+(<code class="docutils literal"><span class="pre">Redeem</span></code>, <code class="docutils literal"><span class="pre">Move</span></code> and <code class="docutils literal"><span class="pre">Issue</span></code>). This reflects the verification flow: in order to verify <code class="docutils literal"><span class="pre">CommercialPaper</span></code>,
+we first group states, then we check which commands are specified, and finally we run command-specific verification logic accordingly.</p>
 <img alt="_images/commPaperExecution.png" src="_images/commPaperExecution.png" />
 </div>
 <div class="section" id="debugging">

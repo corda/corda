@@ -80,7 +80,7 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
 <br>
 <a href="https://discourse.corda.net">Discourse Forums</a>
 <br>
@@ -215,22 +215,31 @@
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">This build of the docs is from the &#8220;latest&#8221; branch, not a milestone release. It may not reflect the
-current state of the code. <a class="reference external" href="https://docs.corda.net/releases/release-M7.0/">Read the docs for M7</a>.</p>
+current state of the code. <a class="reference external" href="https://docs.corda.net/releases/release-M7.0/">Read the docs for milestone release M7</a>.</p>
 </div>
-<p>This is the developer guide for Corda, a proposed architecture for distributed ledgers. Here are the sources
-of documentation you may find useful, from highest level to lowest:</p>
-<ol class="arabic simple">
-<li>The <a class="reference external" href="_static/corda-introductory-whitepaper.pdf">Introductory white paper</a> describes the motivating vision and background of the project. It is the kind
-of document your boss should read. It describes why the project exists and briefly compares it to alternative
-systems on the market.</li>
-<li>The <a class="reference external" href="_static/corda-technical-whitepaper.pdf">Technical white paper</a> describes the entire intended design from beginning to end. It is the kind of
-document that you should read, or at least, read parts of. Note that because the technical white paper
-describes the intended end state, it does not always align with the implementation.</li>
-<li>This user guide. It describes <em>how</em> to use the system to write apps, as currently implemented. It assumes
-you already have read the relevant sections of the technology white paper and now wish to learn how to use it.</li>
-<li>The <a class="reference external" href="api/index.html">API docs</a>.</li>
-</ol>
-<p>Read on to learn:</p>
+<p><a class="reference external" href="https://www.corda.net/">Corda</a> is an open-source distributed ledger platform. The latest <em>milestone</em> (i.e. stable)
+release is M7. The codebase is on <a class="reference external" href="https://github.com/corda">GitHub</a>, and our community can be found on
+<a class="reference external" href="https://slack.corda.net/">Slack</a> and in our <a class="reference external" href="https://discourse.corda.net/">forum</a>.</p>
+<p>If you&#8217;re new to Corda, you should start by learning about its motivating vision and architecture. A good introduction
+is the <a class="reference external" href="https://vimeo.com/192757743/c2ec39c1e1">Introduction to Corda webinar</a> and the <a class="reference external" href="_static/corda-introductory-whitepaper.pdf">Introductory white paper</a>. As
+they become more familiar with Corda, readers with a technical background will also want to dive into the <a class="reference external" href="_static/corda-technical-whitepaper.pdf">Technical white paper</a>,
+which describes the platform&#8217;s envisioned end-state.</p>
+<p>Corda is designed so that developers can easily extend its functionality by writing CorDapps
+(<strong>Cor</strong>da <strong>D</strong>istributed <strong>App</strong>lication<strong>s</strong>). An example CorDapp is available on
+<a class="reference external" href="https://github.com/corda/cordapp-template">Github</a>. To get it running, follow the instructions in the
+<a class="reference external" href="https://github.com/corda/cordapp-template/blob/master/README.md">readme</a>, or watch the
+<a class="reference external" href="https://vimeo.com/192797322/aab499b152">Corda Developers Tutorial</a>.</p>
+<p>Additional CorDapp samples are available in the Corda repo&#8217;s <a class="reference external" href="https://github.com/corda/corda/tree/master/samples">samples</a>
+directory. These are sophisticated CorDapps that implement more complex functionality. You can find directions for
+running these samples <a class="reference external" href="https://docs.corda.net/running-the-demos.html">here</a>.</p>
+<p>From there, you&#8217;ll be in a position to start extending the example CorDapp yourself (e.g. by writing new states, contracts,
+and/or flows). For this, you&#8217;ll want to refer to this docsite, and to the <a class="reference external" href="https://docs.corda.net/#tutorials">tutorials</a>
+in particular. If you get stuck, get in touch on <a class="reference external" href="https://slack.corda.net/">Slack</a> or the <a class="reference external" href="https://discourse.corda.net/">forum</a>.</p>
+<p>Once you&#8217;re familiar with Corda and CorDapp development, we&#8217;d encourage you to get involved in the development of the
+platform itself. Find out more about <a class="reference external" href="https://github.com/corda/corda/wiki/Corda's-Open-Source-Approach">contributing to Corda</a>.</p>
+</div>
+<div class="section" id="documentation-contents">
+<h1>Documentation Contents:<a class="headerlink" href="#documentation-contents" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound" id="getting-started">
 <p class="caption"><span class="caption-text">Getting started</span><a class="headerlink" href="#getting-started" title="Permalink to this toctree">¶</a></p>
 <ul>
@@ -369,6 +378,7 @@ you already have read the relevant sections of the technology white paper and no
 <li class="toctree-l2"><a class="reference internal" href="node-administration.html#logging">Logging</a></li>
 <li class="toctree-l2"><a class="reference internal" href="node-administration.html#database-access">Database access</a></li>
 <li class="toctree-l2"><a class="reference internal" href="node-administration.html#monitoring-your-node">Monitoring your node</a></li>
+<li class="toctree-l2"><a class="reference internal" href="node-administration.html#memory-usage-and-tuning">Memory usage and tuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="node-administration.html#uploading-and-downloading-attachments">Uploading and downloading attachments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="node-administration.html#uploading-interest-rate-fixes">Uploading interest rate fixes</a></li>
 </ul>
@@ -405,8 +415,8 @@ you already have read the relevant sections of the technology white paper and no
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound" id="tutorials">
-<p class="caption"><span class="caption-text">Tutorials</span><a class="headerlink" href="#tutorials" title="Permalink to this toctree">¶</a></p>
+<div class="toctree-wrapper compound" id="id4">
+<p class="caption"><span class="caption-text">Tutorials</span><a class="headerlink" href="#id4" title="Permalink to this toctree">¶</a></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#where-to-put-your-code">Where to put your code</a></li>
@@ -426,8 +436,8 @@ you already have read the relevant sections of the technology white paper and no
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#what-are-clauses-and-why-to-use-them">What are clauses and why to use them?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#how-clauses-work">How clauses work?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#what-are-clauses-and-why-use-them">What are clauses and why use them?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#how-do-clauses-work">How do clauses work?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#commercial-paper-class">Commercial paper class</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#simple-clauses">Simple Clauses</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#group-clause">Group clause</a></li>
@@ -549,6 +559,7 @@ you already have read the relevant sections of the technology white paper and no
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-7">Milestone 7</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-6">Milestone 6</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-5">Milestone 5</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-4">Milestone 4</a></li>
