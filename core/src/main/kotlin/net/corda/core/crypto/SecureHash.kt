@@ -19,6 +19,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     override fun toString() = BaseEncoding.base16().encode(bytes)
 
     fun prefixChars(prefixLen: Int = 6) = toString().substring(0, prefixLen)
+    fun hashConcat(other: SecureHash) = (this.bytes + other.bytes).sha256()
 
     // Like static methods in Java, except the 'companion' is a singleton that can have state.
     companion object {
@@ -35,6 +36,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         @JvmStatic fun sha256(str: String) = sha256(str.toByteArray())
 
         @JvmStatic fun randomSHA256() = sha256(newSecureRandom().generateSeed(32))
+        val zeroHash = SecureHash.SHA256(ByteArray(32, { 0.toByte() }))
     }
 
     // In future, maybe SHA3, truncated hashes etc.

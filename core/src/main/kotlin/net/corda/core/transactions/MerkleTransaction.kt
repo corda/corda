@@ -1,55 +1,30 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.MerkleTreeException
-import net.corda.core.crypto.PartialMerkleTree
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
+import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.serialization.createKryo
 import net.corda.core.serialization.extendKryoHash
 import net.corda.core.serialization.serialize
 import java.util.*
-
-fun SecureHash.hashConcat(other: SecureHash) = (this.bytes + other.bytes).sha256()
 
 fun <T : Any> serializedHash(x: T): SecureHash {
     val kryo = extendKryoHash(createKryo()) // Dealing with HashMaps inside states.
     return x.serialize(kryo).hash
 }
 
-val zeroHash = SecureHash.SHA256(ByteArray(32, { 0.toByte() }))
-
 /**
  * Creation and verification of a Merkle Tree for a Wire Transaction.
  *
  * See: https://en.wikipedia.org/wiki/Merkle_tree
  *
- * Transaction is split into following blocks: inputs, outputs, commands, attachments' refs, timestamp, notary,
- * signers (as whole - sorted), tx type. Merkle Tree is kept in a recursive data structure. Building is done bottom up,
+ * Transaction is split into following blocks: inputs, attachments' refs, outputs, commands, notary,
+ * signers, tx type, timestamp. Merkle Tree is kept in a recursive data structure. Building is done bottom up,
  * from all leaves' hashes. If number of leaves is not a power of two, the tree is padded with zero hashes.
  */
 sealed class MerkleTree(val hash: SecureHash) {
     class Leaf(val value: SecureHash) : MerkleTree(value)
     class Node(val value: SecureHash, val left: MerkleTree, val right: MerkleTree) : MerkleTree(value)
-
-    private fun hashNodes(right: MerkleTree): MerkleTree {
-        val newHash = this.hash.hashConcat(right.hash)
-        return Node(newHash, this, right)
-    }
-
-    // Check if a tree is full binary tree. Returns the height of the tree if full, otherwise throws exception.
-    @Throws(MerkleTreeException::class)
-    fun checkFull(level: Int = 0): Int {
-        return when (this) {
-            is Leaf -> level
-            is Node -> {
-                val l1 = this.left.checkFull(level+1)
-                val l2 = this.right.checkFull(level+1)
-                if (l1 != l2) throw MerkleTreeException("Got not full binary tree.")
-                l1
-            }
-        }
-    }
 
     companion object {
         private fun isPow2(num: Int): Boolean = num and (num-1) == 0
@@ -64,7 +39,7 @@ sealed class MerkleTree(val hash: SecureHash) {
         }
 
         // If number of leaves in the tree is not a power of 2, we need to pad it with zero hashes.
-        fun padWithZeros(allLeavesHashes: List<SecureHash>): List<SecureHash> {
+        private fun padWithZeros(allLeavesHashes: List<SecureHash>): List<SecureHash> {
             var n = allLeavesHashes.size
             if (isPow2(n)) return allLeavesHashes
             val paddedHashes = ArrayList<SecureHash>(allLeavesHashes)
@@ -93,7 +68,8 @@ sealed class MerkleTree(val hash: SecureHash) {
                     val left = lastNodesList[i]
                     require(i+1 <= n-1) { "Sanity check: number of nodes should be even." }
                     val right = lastNodesList[i+1]
-                    val combined = left.hashNodes(right)
+                    val newHash = left.hash.hashConcat(right.hash)
+                    val combined = Node(newHash, left, right)
                     newLevelHashes.add(combined)
                     i += 2
                 }

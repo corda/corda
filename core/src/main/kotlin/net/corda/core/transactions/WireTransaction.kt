@@ -14,7 +14,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Emoji
 import java.io.FileNotFoundException
 import java.security.PublicKey
-import java.util.*
 
 /**
  * A transaction ready for serialisation, without any signatures attached. A WireTransaction is usually wrapped
@@ -43,14 +42,7 @@ class WireTransaction(
     @Volatile @Transient private var cachedBytes: SerializedBytes<WireTransaction>? = null
     val serialized: SerializedBytes<WireTransaction> get() = cachedBytes ?: serialize().apply { cachedBytes = this }
 
-    // We need cashed leaves hashes and whole tree for an id and Partial Merkle Tree calculation.
-    @Volatile @Transient private var cachedLeavesHashes: List<SecureHash>? = null
-    val allLeavesHashes: List<SecureHash> get() = cachedLeavesHashes ?: calculateLeavesHashes().apply { cachedLeavesHashes = this }
-
-    @Volatile @Transient var cachedTree: MerkleTree? = null
-    val merkleTree: MerkleTree get() = cachedTree ?: MerkleTree.getMerkleTree(allLeavesHashes).apply { cachedTree = this }
-
-    override val id: SecureHash get() = merkleTree.hash
+    override val id: SecureHash by lazy { getMerkleTree().hash }
 
     companion object {
         fun deserialize(data: SerializedBytes<WireTransaction>, kryo: Kryo = THREAD_LOCAL_KRYO.get()): WireTransaction {

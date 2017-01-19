@@ -1,8 +1,7 @@
 package net.corda.core.crypto
 
 import net.corda.core.transactions.MerkleTree
-import net.corda.core.transactions.hashConcat
-import net.corda.core.transactions.zeroHash
+import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import java.util.*
 
 
@@ -69,12 +68,25 @@ class PartialMerkleTree(val root: PartialTree) {
         fun build(merkleRoot: MerkleTree, includeHashes: List<SecureHash>): PartialMerkleTree {
             val usedHashes = ArrayList<SecureHash>()
             require(zeroHash !in includeHashes) { "Zero hashes shouldn't be included in partial tree." }
-            merkleRoot.checkFull() // Throws MerkleTreeException if it is not a full binary tree.
+            checkFull(merkleRoot) // Throws MerkleTreeException if it is not a full binary tree.
             val tree = buildPartialTree(merkleRoot, includeHashes, usedHashes)
             // Too much included hashes or different ones.
             if (includeHashes.size != usedHashes.size)
                 throw MerkleTreeException("Some of the provided hashes are not in the tree.")
             return PartialMerkleTree(tree.second)
+        }
+
+        // Check if a MerkleTree is full binary tree. Returns the height of the tree if full, otherwise throws exception.
+        private fun checkFull(tree: MerkleTree, level: Int = 0): Int {
+            return when (tree) {
+                is MerkleTree.Leaf -> level
+                is MerkleTree.Node -> {
+                    val l1 = checkFull(tree.left, level+1)
+                    val l2 = checkFull(tree.right, level+1)
+                    if (l1 != l2) throw MerkleTreeException("Got not full binary tree.")
+                    l1
+                }
+            }
         }
 
         /**
