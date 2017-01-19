@@ -71,7 +71,11 @@ object TwoPartyTradeFlow {
 
             object SIGNING : ProgressTracker.Step("Signing transaction")
 
-            object NOTARY : ProgressTracker.Step("Getting notary signature")
+            // DOCSTART 3
+            object NOTARY : ProgressTracker.Step("Getting notary signature") {
+                override fun childProgressTracker() = FinalityFlow.tracker()
+            }
+            // DOCEND 3
 
             object SENDING_SIGS : ProgressTracker.Step("Sending transaction signatures to buyer")
 
@@ -153,6 +157,7 @@ object TwoPartyTradeFlow {
         }
     }
 
+    // DOCSTART 2
     open class Buyer(val otherParty: Party,
                      val notary: Party,
                      val acceptablePrice: Amount<Currency>,
