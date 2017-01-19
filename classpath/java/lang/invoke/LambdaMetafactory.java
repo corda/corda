@@ -33,8 +33,16 @@ import avian.Assembler;
 import avian.ConstantPool.PoolEntry;
 import avian.SystemClassLoader;
 
+// To understand what this is all about, please read:
+//
+//   http://cr.openjdk.java.net/~briangoetz/lambda/lambda-translation.html
+
 public class LambdaMetafactory {
   private static int nextNumber = 0;
+
+  public static final int FLAG_SERIALIZABLE = 1;
+  public static final int FLAG_MARKERS = 2;
+  public static final int FLAG_BRIDGES = 4;
 
   private static Class resolveReturnInterface(MethodType type) {
     int index = 1;
@@ -212,13 +220,15 @@ public class LambdaMetafactory {
                       new MethodHandle(implementationClass,
                                        implementationName,
                                        implementationSpec,
-                                       implementationKind));
+                                       implementationKind),
+                      emptyInterfaceList);
   }
 
   private static byte[] makeLambda(String invokedName,
                                    MethodType invokedType,
                                    MethodType methodType,
-                                   MethodHandle methodImplementation)
+                                   MethodHandle methodImplementation,
+                                   Class[] interfaces)
   {
     String className;
     { int number;
@@ -230,8 +240,12 @@ public class LambdaMetafactory {
 
     List<PoolEntry> pool = new ArrayList();
 
-    int interfaceIndex = ConstantPool.addClass
-      (pool, invokedType.returnType().getName().replace('.', '/'));
+    int[] interfaceIndexes = new int[interfaces.length + 1];
+    interfaceIndexes[0] = ConstantPool.addClass(pool, invokedType.returnType().getName().replace('.', '/'));
+    for (int i = 0; i < interfaces.length; i++) {
+      String name = interfaces[i].getName().replace('.', '/');
+      interfaceIndexes[i + 1] = ConstantPool.addClass(pool, name);
+    }
 
     List<FieldData> fieldTable = new ArrayList();
 
@@ -280,7 +294,7 @@ public class LambdaMetafactory {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     try {
       Assembler.writeClass
-        (out, pool, nameIndex, superIndex, new int[] { interfaceIndex },
+        (out, pool, nameIndex, superIndex, interfaceIndexes,
          fieldTable.toArray(new FieldData[fieldTable.size()]),
          methodTable.toArray(new MethodData[methodTable.size()]));
     } catch (IOException e) {
@@ -292,6 +306,24 @@ public class LambdaMetafactory {
     return out.toByteArray();
   }
 
+  private static CallSite makeCallSite(MethodType invokedType, byte[] classData) throws AssertionError {
+    try {
+      return new CallSite
+              (new MethodHandle
+                      (MethodHandle.REF_invokeStatic, invokedType.loader, Classes.toVMMethod
+                              (avian.SystemClassLoader.getClass
+                                      (avian.Classes.defineVMClass
+                                              (invokedType.loader, classData, 0, classData.length))
+                                      .getMethod("make", invokedType.parameterArray()))));
+    } catch (NoSuchMethodException e) {
+      AssertionError error = new AssertionError();
+      error.initCause(e);
+      throw error;
+    }
+  }
+
+  private static final Class[] emptyInterfaceList = new Class[] {};
+
   public static CallSite metafactory(MethodHandles.Lookup caller,
                                      String invokedName,
                                      MethodType invokedType,
@@ -300,30 +332,79 @@ public class LambdaMetafactory {
                                      MethodType instantiatedMethodType)
     throws LambdaConversionException
   {
-    byte[] classData = makeLambda(invokedName, invokedType, methodType, methodImplementation);
-
-    try {
-      return new CallSite
-        (new MethodHandle
-         (MethodHandle.REF_invokeStatic, invokedType.loader, Classes.toVMMethod
-          (avian.SystemClassLoader.getClass
-           (avian.Classes.defineVMClass
-            (invokedType.loader, classData, 0, classData.length))
-           .getMethod("make", invokedType.parameterArray()))));
-    } catch (NoSuchMethodException e) {
-      AssertionError error = new AssertionError();
-      error.initCause(e);
-      throw error;
-    }
+    byte[] classData = makeLambda(invokedName, invokedType, methodType, methodImplementation, emptyInterfaceList);
+    return makeCallSite(invokedType, classData);
   }
 
   public static CallSite altMetafactory(MethodHandles.Lookup caller,
                                         String invokedName,
                                         MethodType invokedType,
-                                        Object... args)
-    throws LambdaConversionException
-  {
-    // todo: handle flags
-    return metafactory(caller, invokedName, invokedType, (MethodType) args[0], (MethodHandle) args[1], (MethodType) args[2]);
+                                        Object... args) throws LambdaConversionException {
+    // Behaves as if the prototype is like this:
+    //
+    // CallSite altMetafactory(
+    //    MethodHandles.Lookup caller,
+    //    String invokedName,
+    //    MethodType invokedType,
+    //    MethodType methodType,
+    //    MethodHandle methodImplementation,
+    //    MethodType instantiatedMethodType,
+    //    int flags,
+    //    int markerInterfaceCount,  // IF flags has MARKERS set
+    //    Class... markerInterfaces, // IF flags has MARKERS set
+    //    int bridgeCount,           // IF flags has BRIDGES set
+    //    MethodType... bridges      // IF flags has BRIDGES set
+    //  )
+
+    MethodType methodType = (MethodType) args[0];
+    MethodHandle methodImplementation = (MethodHandle) args[1];
+
+    int flags = (Integer) args[3];
+    boolean serializable = (flags & FLAG_SERIALIZABLE) != 0;
+
+    // Marker interfaces are added to a lambda when they're written like this:
+    //
+    //    Runnable r = (Runnable & Serializable) () -> foo()
+    //
+    // The intersection type in the cast here indicates to the compiler what interfaces
+    // the generated lambda class should implement. Because a lambda has (by definition)
+    // one method only, it is meaningless for these interfaces to contain anything, thus
+    // they are only allowed to be empty marker interfaces. In practice the Serializable
+    // interface is handled specially and the use of markers is extremely rare. Adding
+    // support would be easy though.
+    if ((flags & FLAG_MARKERS) != 0)
+      throw new UnsupportedOperationException("Marker interfaces on lambdas are not supported on Avian yet. Sorry.");
+
+    // In some cases there is a mismatch between what the JVM type system supports and
+    // what the Java language supports. In other cases the type of a lambda expression
+    // may not perfectly match the functional interface which represents it. Consider the
+    // following case:
+    //
+    //    interface I { void foo(Integer i, String s1, Strings s2) }
+    //    class Foo { static void m(Number i, Object... rest) {} }
+    //
+    //    I lambda = Foo::m
+    //
+    // This is allowed by the Java language, even though the interface representing the
+    // lambda specifies three specific arguments and the method implementing the lambda
+    // uses varargs and a different type signature. Behind the scenes the compiler generates
+    // a "bridge" method that does the adaptation.
+    //
+    // You can learn more here: http://www.oracle.com/technetwork/java/jvmls2013heid-2013922.pdf
+    // and here: http://cr.openjdk.java.net/~briangoetz/lambda/lambda-translation.html
+    if ((flags & FLAG_BRIDGES) != 0) {
+      int bridgeCount = (Integer) args[4];
+      if (bridgeCount > 0)
+        throw new UnsupportedOperationException("A lambda that requires bridge methods was used, this is not yet supported by Avian. Sorry.");
+    }
+
+    // TODO: This is not necessary if the function type interface is already inheriting
+    // from Serializable.
+    Class[] interfaces = new Class[serializable ? 1 : 0];
+    if (serializable)
+      interfaces[0] = java.io.Serializable.class;
+
+    byte[] classData = makeLambda(invokedName, invokedType, methodType, methodImplementation, interfaces);
+    return makeCallSite(invokedType, classData);
   }
 }
