@@ -41,6 +41,32 @@ public class InvokeDynamic {
     }
   }
 
+  private interface Foo extends java.io.Serializable {
+    void someFunction(Integer a, Integer b, String s);
+  }
+
+  private interface UnboxedSerializable extends java.io.Serializable {
+    int add(int a, int b);
+  }
+
+  private interface Unboxed {
+    int add(int a, int b);
+  }
+
+  private void requiresBridge(Number a, Object... rest) {
+    String s = "" + a;
+    for (Object r : rest) {
+      s += r;
+    }
+  }
+
+  private static Integer addBoxed(Integer a, Integer b) {
+    return a + b;
+  }
+
+  private interface Marker {
+  }
+
   private void test() {
     { int c = 2;
       Operation op = (a, b) -> ((a + b) * c) - foo;
@@ -62,5 +88,24 @@ public class InvokeDynamic {
       expect(s.get().first == 42L);
       expect(s.get().second == 3.14D);
     }
+
+    { Foo s = this::requiresBridge;
+      s.someFunction(1, 2, "");
+    }
+
+    // This abort()s in machine.cpp
+    // { Foo s = (Foo & Marker) this::requiresBridge;
+    //   s.someFunction(1, 2, "");
+    // }
+
+    // NPE
+    // { UnboxedSerializable s = InvokeDynamic::addBoxed;
+    //   expect(s.add(1, 2) == 3);
+    // }
+
+    // NPE
+    // { Unboxed s = InvokeDynamic::addBoxed;
+    //   expect(s.add(1, 2) == 3);
+    // }
   }
 }

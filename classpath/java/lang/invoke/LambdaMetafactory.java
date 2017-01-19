@@ -340,6 +340,7 @@ public class LambdaMetafactory {
                                         String invokedName,
                                         MethodType invokedType,
                                         Object... args) throws LambdaConversionException {
+    // See openjdk8/jdk/src/share/classes/java/lang/invoke/LambdaMetafactory.java
     // Behaves as if the prototype is like this:
     //
     // CallSite altMetafactory(
@@ -355,7 +356,6 @@ public class LambdaMetafactory {
     //    int bridgeCount,           // IF flags has BRIDGES set
     //    MethodType... bridges      // IF flags has BRIDGES set
     //  )
-
     MethodType methodType = (MethodType) args[0];
     MethodHandle methodImplementation = (MethodHandle) args[1];
 
