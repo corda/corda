@@ -7,7 +7,6 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
-import net.corda.core.transactions.FilterFuns
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
@@ -29,7 +28,7 @@ import java.util.*
  */
 open class RatesFixFlow(protected val tx: TransactionBuilder,
                         /** Filtering functions over transaction, used to build partial transaction presented to oracle. */
-                        private val filterFuns: FilterFuns,
+                        private val filtering: (Any) -> Boolean, // Not the best solution, when lambda expression passed (serialization).
                         private val oracle: Party,
                         private val fixOf: FixOf,
                         private val expectedRate: BigDecimal,
@@ -59,7 +58,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         tx.addCommand(fix, oracle.owningKey)
         beforeSigning(fix)
         progressTracker.currentStep = SIGNING
-        val signature = subFlow(FixSignFlow(tx, oracle, filterFuns))
+        val signature = subFlow(FixSignFlow(tx, oracle, filtering))
         tx.addSignatureUnchecked(signature)
     }
     // DOCEND 2
@@ -97,11 +96,11 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         }
     }
 
-    class FixSignFlow(val tx: TransactionBuilder, val oracle: Party, val filterFuns: FilterFuns) : FlowLogic<DigitalSignature.LegallyIdentifiable>() {
+    class FixSignFlow(val tx: TransactionBuilder, val oracle: Party, val filtering: (Any) -> Boolean) : FlowLogic<DigitalSignature.LegallyIdentifiable>() {
         @Suspendable
         override fun call(): DigitalSignature.LegallyIdentifiable {
             val wtx = tx.toWireTransaction()
-            val partialMerkleTx = wtx.buildFilteredTransaction(filterFuns)
+            val partialMerkleTx = wtx.buildFilteredTransaction(filtering)
             val rootHash = wtx.id
 
             val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(oracle, SignRequest(rootHash, partialMerkleTx))

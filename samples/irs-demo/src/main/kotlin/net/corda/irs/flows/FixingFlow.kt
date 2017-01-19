@@ -10,7 +10,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
-import net.corda.core.transactions.FilterFuns
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.trace
@@ -70,12 +69,15 @@ object FixingFlow {
             val oracle = serviceHub.networkMapCache.getNodesWithService(handshake.payload.oracleType).first()
             val oracleParty = oracle.serviceIdentities(handshake.payload.oracleType).first()
 
-            // TODO Could it be solved in better way, move filtering here not in RatesFixFlow?
             // DOCSTART 1
-            fun filterCommands(c: Command) = oracleParty.owningKey in c.signers && c.value is Fix
+            fun filtering(elem: Any): Boolean {
+                return when (elem) {
+                    is Command -> oracleParty.owningKey in elem.signers && elem.value is Fix
+                    else -> false
+                }
+            }
 
-            val filterFuns = FilterFuns(filterCommands = ::filterCommands)
-            val addFixing = object : RatesFixFlow(ptx, filterFuns, oracleParty, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
+            val addFixing = object : RatesFixFlow(ptx, ::filtering, oracleParty, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
                 @Suspendable
                 override fun beforeSigning(fix: Fix) {
                     newDeal.generateFix(ptx, StateAndRef(txState, handshake.payload.ref), fix)
