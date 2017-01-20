@@ -25,7 +25,6 @@ import net.corda.flows.CashFlow
 import net.corda.flows.FinalityFlow
 import net.corda.flows.sendRequest
 import net.corda.node.api.APIServer
-import net.corda.node.printBasicNodeInfo
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -390,7 +389,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             noNetworkMapConfigured()  // TODO This method isn't needed as runWithoutMapService sets the Future in the cache
 
         } else {
-            printBasicNodeInfo("Registering with network map ...")
             registerWithNetworkMap()
         }
     }
