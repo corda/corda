@@ -80,7 +80,7 @@ sealed class MerkleTree(val hash: SecureHash) {
 }
 
 /**
- * It assures that we always calculate hashes in the same order. Plus lets us define which fileds of WireTransaction will be
+ * It assures that we always calculate hashes in the same order. Plus lets us define which fields of WireTransaction will be
  * checked/included in id calculation or partial merkle tree building.
  */
 interface TraversableTx {
@@ -127,7 +127,7 @@ class FilteredLeaves(
         override val type: TransactionType?,
         override val timestamp: Timestamp?
 ) : TraversableTx {
-    // I wanted to force type checking on a structure that we obtained, so we don't sign more than expected.
+    // Force type checking on a structure that we obtained, so we don't sign more than expected.
     // Example: Oracle is implemented to check only for commands, if it gets an attachment and doesn't expect it - it can sign
     // over a tx with the attachment that wasn't verified. Of course it depends how you implement it, but else -> false
     // should solve a problem with possible later extensions to WireTransaction.
