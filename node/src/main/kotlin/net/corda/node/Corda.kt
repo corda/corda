@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Paths
+import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
 private var renderBasicInfoToConsole = true
@@ -84,6 +85,14 @@ fun main(args: Array<String>) {
         val node = conf.createNode()
         node.start()
         printPluginsAndServices(node)
+
+        thread {
+            Thread.sleep(30.seconds.toMillis())
+            while (!node.networkMapRegistrationFuture.isDone) {
+                printBasicNodeInfo("Waiting for response from network map ...")
+                Thread.sleep(30.seconds.toMillis())
+            }
+        }
 
         node.networkMapRegistrationFuture.success {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
