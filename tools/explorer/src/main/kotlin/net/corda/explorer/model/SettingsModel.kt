@@ -9,7 +9,6 @@ import net.corda.core.createDirectories
 import net.corda.core.div
 import net.corda.core.exists
 import tornadofx.Component
-import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -20,10 +19,8 @@ import kotlin.reflect.jvm.javaType
 
 class SettingsModel(path: Path = Paths.get("conf")) : Component(), Observable {
     // Using CordaExplorer as config file name instead of TornadoFX default.
-    private val path = path.let {
-        if (!path.exists()) path.createDirectories()
-        path / "CordaExplorer.properties"
-    }
+    private val path = path.apply { if (!exists()) createDirectories() } / "CordaExplorer.properties"
+
     private val listeners = mutableListOf<InvalidationListener>()
 
     // Delegate to config.
