@@ -109,7 +109,7 @@ class LoginView : View() {
                     row("Certificates Directory :") {
                         textfield {
                             prefWidth = 400.0
-                            textProperty().bind(certificatesDir.map { it.toAbsolutePath().toString() })
+                            textProperty().bind(certificatesDir.map(Path::toString))
                             isEditable = false
                         }
                         button {

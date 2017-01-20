@@ -67,7 +67,7 @@ class SettingsModel(path: Path = Paths.get("conf")) : Component(), Observable {
             Int::class.java -> string(metadata.name, "0").toInt() as T
             Boolean::class.java -> boolean(metadata.name) as T
             Currency::class.java -> currency(string(metadata.name, "USD")) as T
-            Path::class.java -> Paths.get(string(metadata.name, "")) as T
+            Path::class.java -> Paths.get(string(metadata.name, "")).toAbsolutePath() as T
             else -> throw IllegalArgumentException("Unsupported type ${metadata.returnType}")
         }
     }
