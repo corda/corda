@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.Strand.UncaughtExceptionHandler
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.issuedBy
@@ -10,7 +11,9 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.getOrThrow
+import net.corda.core.map
 import net.corda.core.random63BitValue
+import net.corda.core.rootCause
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.flows.CashCommand
@@ -27,7 +30,7 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.sequence
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -85,8 +88,33 @@ class StateMachineManagerTests {
     }
 
     @Test
+    fun `exception while fiber suspended`() {
+        node2.services.registerFlowInitiator(ReceiveFlow::class) { SendFlow(2, it) }
+        val flow = ReceiveFlow(node2.info.legalIdentity)
+        val fiber = node1.services.startFlow(flow) as FlowStateMachineImpl
+        // Before the flow runs change the suspend action to throw an exception
+        val exceptionDuringSuspend = Exception("Thrown during suspend")
+        fiber.actionOnSuspend = {
+            throw exceptionDuringSuspend
+        }
+        var uncaughtException: Throwable? = null
+        fiber.uncaughtExceptionHandler = UncaughtExceptionHandler { f, e ->
+            uncaughtException = e
+        }
+        net.runNetwork()
+        assertThatThrownBy {
+            fiber.resultFuture.getOrThrow()
+        }.isSameAs(exceptionDuringSuspend)
+        assertThat(node1.smm.allStateMachines).isEmpty()
+        // Make sure it doesn't get swallowed up
+        assertThat(uncaughtException?.rootCause).isSameAs(exceptionDuringSuspend)
+        // Make sure the fiber does actually terminate
+        assertThat(fiber.isTerminated).isTrue()
+    }
+
+    @Test
     fun `flow restarted just after receiving payload`() {
-        node2.services.registerFlowInitiator(SendFlow::class) { ReceiveThenSuspendFlow(it) }
+        node2.services.registerFlowInitiator(SendFlow::class) { ReceiveFlow(it).nonTerminating() }
         val payload = random63BitValue()
         node1.services.startFlow(SendFlow(payload, node2.info.legalIdentity))
 
@@ -96,7 +124,7 @@ class StateMachineManagerTests {
         node2.acceptableLiveFiberCountOnStop = 1
         node2.stop()
         net.runNetwork()
-        val restoredFlow = node2.restartAndGetRestoredFlow<ReceiveThenSuspendFlow>(node1)
+        val restoredFlow = node2.restartAndGetRestoredFlow<ReceiveFlow>(node1)
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo(payload)
     }
 
@@ -138,13 +166,13 @@ class StateMachineManagerTests {
     @Test
     fun `flow loaded from checkpoint will respond to messages from before start`() {
         val payload = random63BitValue()
-        node1.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { SendFlow(payload, it) }
-        node2.services.startFlow(ReceiveThenSuspendFlow(node1.info.legalIdentity)) // Prepare checkpointed receive flow
+        node1.services.registerFlowInitiator(ReceiveFlow::class) { SendFlow(payload, it) }
+        node2.services.startFlow(ReceiveFlow(node1.info.legalIdentity).nonTerminating()) // Prepare checkpointed receive flow
         // Make sure the add() has finished initial processing.
         node2.smm.executor.flush()
         node2.disableDBCloseOnStop()
         node2.stop() // kill receiver
-        val restoredFlow = node2.restartAndGetRestoredFlow<ReceiveThenSuspendFlow>(node1)
+        val restoredFlow = node2.restartAndGetRestoredFlow<ReceiveFlow>(node1)
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo(payload)
     }
 
@@ -202,13 +230,13 @@ class StateMachineManagerTests {
     fun `sending to multiple parties`() {
         val node3 = net.createNode(node1.info.address)
         net.runNetwork()
-        node2.services.registerFlowInitiator(SendFlow::class) { ReceiveThenSuspendFlow(it) }
-        node3.services.registerFlowInitiator(SendFlow::class) { ReceiveThenSuspendFlow(it) }
+        node2.services.registerFlowInitiator(SendFlow::class) { ReceiveFlow(it).nonTerminating() }
+        node3.services.registerFlowInitiator(SendFlow::class) { ReceiveFlow(it).nonTerminating() }
         val payload = random63BitValue()
         node1.services.startFlow(SendFlow(payload, node2.info.legalIdentity, node3.info.legalIdentity))
         net.runNetwork()
-        val node2Flow = node2.getSingleFlow<ReceiveThenSuspendFlow>().first
-        val node3Flow = node3.getSingleFlow<ReceiveThenSuspendFlow>().first
+        val node2Flow = node2.getSingleFlow<ReceiveFlow>().first
+        val node3Flow = node3.getSingleFlow<ReceiveFlow>().first
         assertThat(node2Flow.receivedPayloads[0]).isEqualTo(payload)
         assertThat(node3Flow.receivedPayloads[0]).isEqualTo(payload)
 
@@ -236,9 +264,9 @@ class StateMachineManagerTests {
         net.runNetwork()
         val node2Payload = random63BitValue()
         val node3Payload = random63BitValue()
-        node2.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { SendFlow(node2Payload, it) }
-        node3.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { SendFlow(node3Payload, it) }
-        val multiReceiveFlow = ReceiveThenSuspendFlow(node2.info.legalIdentity, node3.info.legalIdentity)
+        node2.services.registerFlowInitiator(ReceiveFlow::class) { SendFlow(node2Payload, it) }
+        node3.services.registerFlowInitiator(ReceiveFlow::class) { SendFlow(node3Payload, it) }
+        val multiReceiveFlow = ReceiveFlow(node2.info.legalIdentity, node3.info.legalIdentity).nonTerminating()
         node1.services.startFlow(multiReceiveFlow)
         node1.acceptableLiveFiberCountOnStop = 1
         net.runNetwork()
@@ -246,14 +274,14 @@ class StateMachineManagerTests {
         assertThat(multiReceiveFlow.receivedPayloads[1]).isEqualTo(node3Payload)
 
         assertSessionTransfers(node2,
-                node1 sent sessionInit(ReceiveThenSuspendFlow::class) to node2,
+                node1 sent sessionInit(ReceiveFlow::class) to node2,
                 node2 sent sessionConfirm to node1,
                 node2 sent sessionData(node2Payload) to node1,
                 node2 sent sessionEnd to node1
         )
 
         assertSessionTransfers(node3,
-                node1 sent sessionInit(ReceiveThenSuspendFlow::class) to node3,
+                node1 sent sessionInit(ReceiveFlow::class) to node3,
                 node3 sent sessionConfirm to node1,
                 node3 sent sessionData(node3Payload) to node1,
                 node3 sent sessionEnd to node1
@@ -329,12 +357,14 @@ class StateMachineManagerTests {
 
     @Test
     fun `exception thrown on other side`() {
-        node2.services.registerFlowInitiator(ReceiveThenSuspendFlow::class) { ExceptionFlow }
-        val future = node1.services.startFlow(ReceiveThenSuspendFlow(node2.info.legalIdentity)).resultFuture
+        val erroringFiber = node2.initiateSingleShotFlow(ReceiveFlow::class) { ExceptionFlow }.map { it.stateMachine as FlowStateMachineImpl }
+        val receivingFiber = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)) as FlowStateMachineImpl
         net.runNetwork()
-        assertThatThrownBy { future.getOrThrow() }.isInstanceOf(FlowException::class.java)
+        assertThatThrownBy { receivingFiber.resultFuture.getOrThrow() }.isInstanceOf(FlowException::class.java)
+        assertThat(receivingFiber.isTerminated).isTrue()
+        assertThat(erroringFiber.getOrThrow().isTerminated).isTrue()
         assertSessionTransfers(
-                node1 sent sessionInit(ReceiveThenSuspendFlow::class) to node2,
+                node1 sent sessionInit(ReceiveFlow::class) to node2,
                 node2 sent sessionConfirm to node1,
                 node2 sent sessionEnd to node1
         )
@@ -433,7 +463,9 @@ class StateMachineManagerTests {
     }
 
 
-    private class ReceiveThenSuspendFlow(vararg val otherParties: Party) : FlowLogic<Unit>() {
+    private class ReceiveFlow(vararg val otherParties: Party) : FlowLogic<Unit>() {
+        private var nonTerminating: Boolean = false
+
         init {
             require(otherParties.isNotEmpty())
         }
@@ -443,7 +475,14 @@ class StateMachineManagerTests {
         @Suspendable
         override fun call() {
             receivedPayloads = otherParties.map { receive<Any>(it).unwrap { it } }
-            Fiber.park()
+            if (nonTerminating) {
+                Fiber.park()
+            }
+        }
+
+        fun nonTerminating(): ReceiveFlow {
+            nonTerminating = true
+            return this
         }
     }
 

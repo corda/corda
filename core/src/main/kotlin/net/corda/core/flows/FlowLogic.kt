@@ -30,7 +30,7 @@ abstract class FlowLogic<out T> {
     val logger: Logger get() = stateMachine.logger
 
     /** Returns a wrapped [UUID] object that identifies this state machine run (i.e. subflows have the same identifier as their parents). */
-    val runId: StateMachineRunId get() = sessionFlow.stateMachine.id
+    val runId: StateMachineRunId get() = stateMachine.id
 
     /**
      * Provides access to big, heavy classes that may be reconstructed from time to time, e.g. across restarts. It is

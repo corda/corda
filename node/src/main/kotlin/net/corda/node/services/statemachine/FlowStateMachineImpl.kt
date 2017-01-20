@@ -6,23 +6,14 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.node.ServiceHub
 import net.corda.core.random63BitValue
-import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.trace
-import net.corda.flows.BroadcastTransactionFlow
-import net.corda.flows.FinalityFlow
-import net.corda.flows.ResolveTransactionsFlow
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.statemachine.StateMachineManager.FlowSession
 import net.corda.node.services.statemachine.StateMachineManager.FlowSessionState
@@ -55,12 +46,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     // These fields shouldn't be serialised, so they are marked @Transient.
-    @Transient lateinit override var serviceHub: ServiceHubInternal
+    @Transient override lateinit var serviceHub: ServiceHubInternal
+    @Transient internal lateinit var database: Database
     @Transient internal lateinit var actionOnSuspend: (FlowIORequest) -> Unit
     @Transient internal lateinit var actionOnEnd: () -> Unit
-    @Transient internal lateinit var database: Database
     @Transient internal var fromCheckpoint: Boolean = false
-    @Transient internal var txTrampoline: Transaction? = null
+    @Transient private var txTrampoline: Transaction? = null
 
     @Transient private var _logger: Logger? = null
     override val logger: Logger get() {
@@ -255,30 +246,28 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         txTrampoline = TransactionManager.currentOrNull()
         StrandLocalTransactionManager.setThreadLocalTx(null)
         ioRequest.session.waitingForResponse = (ioRequest is ReceiveRequest<*>)
+
+        var exceptionDuringSuspend: Throwable? = null
         parkAndSerialize { fiber, serializer ->
             logger.trace { "Suspended on $ioRequest" }
             // restore the Tx onto the ThreadLocal so that we can commit the ensuing checkpoint to the DB
-            StrandLocalTransactionManager.setThreadLocalTx(txTrampoline)
-            txTrampoline = null
             try {
+                StrandLocalTransactionManager.setThreadLocalTx(txTrampoline)
+                txTrampoline = null
                 actionOnSuspend(ioRequest)
             } catch (t: Throwable) {
-                // Do not throw exception again - Quasar completely bins it.
-                logger.warn("Captured exception which was swallowed by Quasar for $logic at ${fiber.stackTrace.toList().joinToString("\n")}", t)
-                // TODO When error handling is introduced, look into whether we should be deleting the checkpoint and
-                // completing the Future
-                processException(t)
+                // Quasar does not terminate the fiber properly if an exception occurs during a suspend. We have to
+                // resume the fiber just so that we can throw it when it's running.
+                exceptionDuringSuspend = t
+                resume(scheduler)
             }
         }
-        logger.trace { "Resumed from $ioRequest" }
-        createTransaction()
-    }
 
-    private fun processException(t: Throwable) {
-        // This can get called in actionOnSuspend *after* we commit the database transaction, so optionally open a new one here.
-        createDatabaseTransaction(database)
-        actionOnEnd()
-        _resultFuture?.setException(t)
+        createTransaction()
+        // TODO Now that we're throwing outside of the suspend the FlowLogic can catch it. We need Quasar to terminate
+        // the fiber when exceptions occur inside a suspend.
+        exceptionDuringSuspend?.let { throw it }
+        logger.trace { "Resumed from $ioRequest" }
     }
 
     internal fun resume(scheduler: FiberScheduler) {
