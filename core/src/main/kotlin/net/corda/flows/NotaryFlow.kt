@@ -1,8 +1,10 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.Party
+import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.signWithECDSA
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessException
@@ -48,7 +50,7 @@ object NotaryFlow {
             try {
                 stx.verifySignatures(notaryParty.owningKey)
             } catch (ex: SignedTransaction.SignaturesMissingException) {
-                throw NotaryException(NotaryError.SignaturesMissing(ex.missing))
+                throw NotaryException(NotaryError.SignaturesMissing(ex))
             }
 
             val response = sendAndReceive<Result>(notaryParty, SignRequest(stx))
@@ -182,9 +184,10 @@ sealed class NotaryError {
     /** Thrown if the time specified in the timestamp command is outside the allowed tolerance */
     class TimestampInvalid : NotaryError()
 
-    class TransactionInvalid : NotaryError()
+    class TransactionInvalid(val msg: String) : NotaryError()
+    class SignaturesInvalid(val msg: String): NotaryError()
 
-    class SignaturesMissing(val missingSigners: Set<CompositeKey>) : NotaryError() {
-        override fun toString() = "Missing signatures from: ${missingSigners.map { it.toBase58String() }}"
+    class SignaturesMissing(val cause: SignedTransaction.SignaturesMissingException) : NotaryError() {
+        override fun toString() = cause.toString()
     }
 }
