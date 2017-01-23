@@ -3,6 +3,7 @@ package net.corda.node.webserver
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.utilities.loggerFor
+import net.corda.node.printBasicNodeInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.messaging.CordaRPCClient
@@ -11,6 +12,7 @@ import net.corda.node.webserver.servlets.ObjectMapperConfig
 import net.corda.node.webserver.servlets.DataUploadServlet
 import net.corda.node.webserver.servlets.ResponseFilter
 import net.corda.node.webserver.internal.APIServerImpl
+import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.servlet.DefaultServlet
@@ -28,12 +30,19 @@ import java.util.*
 class WebServer(val config: FullNodeConfiguration) {
     private companion object {
         val log = loggerFor<WebServer>()
+        val maxRetries = 60 // TODO: Make configurable
+        val retryDelay = 1000L // Milliseconds
     }
 
     val address = config.webAddress
+    private lateinit var server: Server
 
     fun start() {
-        val server = initWebServer(connectLocalRpcAsNodeUser())
+        printBasicNodeInfo("Starting as webserver: ${config.webAddress}")
+        server = initWebServer(connectLocalRpcWithRetries(maxRetries))
+    }
+
+    fun run() {
         while(server.isRunning) {
             Thread.sleep(100) // TODO: Redesign
         }
@@ -85,7 +94,7 @@ class WebServer(val config: FullNodeConfiguration) {
             val httpConfiguration = HttpConfiguration()
             httpConfiguration.outputBufferSize = 32768
             val httpConnector = ServerConnector(server, HttpConnectionFactory(httpConfiguration))
-            println("Starting webserver on address $address")
+            log.info("Starting webserver on address $address")
             httpConnector.port = address.port
             httpConnector
         }
@@ -94,7 +103,7 @@ class WebServer(val config: FullNodeConfiguration) {
         server.handler = handlerCollection
         //runOnStop += Runnable { server.stop() }
         server.start()
-        println("Server started")
+        log.info("Server started")
         log.info("Embedded web server is listening on", "http://${InetAddress.getLocalHost().hostAddress}:${connector.port}/")
         return server
     }
@@ -142,6 +151,22 @@ class WebServer(val config: FullNodeConfiguration) {
             addServlet(jerseyServlet, "/api/*")
             jerseyServlet.initOrder = 0 // Initialise at server start
         }
+    }
+
+    private fun connectLocalRpcWithRetries(retries: Int): CordaRPCOps {
+        for(i in 0..retries - 1) {
+            try {
+                log.info("Connecting to node at ${config.artemisAddress} as node user")
+                val client = CordaRPCClient(config.artemisAddress, config)
+                client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
+                return client.proxy()
+            } catch (e: ActiveMQNotConnectedException) {
+                log.debug("Could not connect to ${config.artemisAddress} due to exception: ", e)
+                Thread.sleep(retryDelay)
+            }
+        }
+
+        return connectLocalRpcAsNodeUser()
     }
 
     private fun connectLocalRpcAsNodeUser(): CordaRPCOps {

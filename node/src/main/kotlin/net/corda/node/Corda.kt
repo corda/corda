@@ -58,7 +58,8 @@ fun main(args: Array<String>) {
 
     drawBanner()
 
-    System.setProperty("log-path", (cmdlineOptions.baseDirectory / "logs").toString())
+    val logDir = if (cmdlineOptions.isWebserver) "logs/web" else "logs"
+    System.setProperty("log-path", (cmdlineOptions.baseDirectory / logDir).toString())
 
     val log = LoggerFactory.getLogger("Main")
     printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
@@ -79,7 +80,7 @@ fun main(args: Array<String>) {
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
-    log.info("Started as webserver: ${cmdlineOptions.isWebserver}")
+    log.info("Starting as webserver: ${cmdlineOptions.isWebserver}")
 
     try {
         cmdlineOptions.baseDirectory.createDirectories()
@@ -101,7 +102,11 @@ fun main(args: Array<String>) {
             }
             node.run()
         } else {
-            WebServer(conf).start()
+            val server = WebServer(conf)
+            server.start()
+            val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
+            printBasicNodeInfo("Webserver started up in $elapsed sec")
+            server.run()
         }
     } catch (e: Exception) {
         log.error("Exception during node startup", e)

@@ -425,7 +425,7 @@ open class DriverDSL(
         }
         val url = URL(protocol + configuration.webAddress.toString() + "/api/status")
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
-        val retries = 5
+        val retries = 50
 
         for (i in 0..retries) {
             try {
@@ -456,7 +456,6 @@ open class DriverDSL(
     }
 
     private fun startNetworkMapService(): ListenableFuture<Process> {
-        val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
         val baseDirectory = driverDirectory / networkMapLegalName
