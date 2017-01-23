@@ -164,7 +164,7 @@ open class TransactionBuilder(
 
     /** A default notary must be specified during builder construction to use this method */
     fun addOutputState(state: ContractState): Int {
-        checkNotNull(notary) { "Need to specify a Notary for the state, or set a default one on TransactionBuilder initialisation" }
+        checkNotNull(notary) { "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation" }
         return addOutputState(state, notary!!)
     }
 
