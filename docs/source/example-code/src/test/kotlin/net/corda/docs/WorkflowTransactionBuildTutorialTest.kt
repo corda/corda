@@ -4,6 +4,7 @@ import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.getOrThrow
+import net.corda.core.node.ServiceEntry
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.linearHeadsOfType
@@ -35,10 +36,11 @@ class WorkflowTransactionBuildTutorialTest {
     @Before
     fun setup() {
         net = MockNetwork(threadPerNode = true)
+        val notaryService = ServiceInfo(ValidatingNotaryService.type)
         notaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
-                keyPair = DUMMY_NOTARY_KEY,
-                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
+                overrideServices = mapOf(Pair(notaryService, DUMMY_NOTARY_KEY)),
+                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
         nodeA = net.createPartyNode(notaryNode.info.address)
         nodeB = net.createPartyNode(notaryNode.info.address)
         FxTransactionDemoTutorial.registerFxProtocols(nodeA.services)

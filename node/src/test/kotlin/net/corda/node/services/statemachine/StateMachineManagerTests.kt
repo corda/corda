@@ -13,6 +13,8 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.getOrThrow
 import net.corda.core.map
 import net.corda.core.messaging.MessageRecipients
+import net.corda.core.node.services.PartyInfo
+import net.corda.core.node.services.ServiceInfo
 import net.corda.core.random63BitValue
 import net.corda.core.rootCause
 import net.corda.core.serialization.OpaqueBytes
@@ -21,6 +23,7 @@ import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.flows.NotaryFlow
 import net.corda.node.services.persistence.checkpoints
+import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
@@ -55,10 +58,12 @@ class StateMachineManagerTests {
         node1 = nodes.first
         node2 = nodes.second
         val notaryKeyPair = generateKeyPair()
+        val notaryService = ServiceInfo(ValidatingNotaryService.type, "notary-service-2000")
+        val overrideServices = mapOf(Pair(notaryService, notaryKeyPair))
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.
-        notary1 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, keyPair = notaryKeyPair, serviceName = "notary-service-2000")
-        notary2 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, keyPair = notaryKeyPair, serviceName = "notary-service-2000")
+        notary1 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, overrideServices = overrideServices, serviceName = "notary-service-2000")
+        notary2 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, overrideServices = overrideServices, serviceName = "notary-service-2000")
 
         net.messagingNetwork.receivedMessages.toSessionTransfers().forEach { sessionTransfers += it }
         net.runNetwork()
@@ -321,6 +326,8 @@ class StateMachineManagerTests {
             net.runNetwork()
         }
         val endpoint = net.messagingNetwork.endpoint(notary1.net.myAddress as InMemoryMessagingNetwork.PeerHandle)!!
+        val party1Info = notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!
+        assert(party1Info is PartyInfo.Service)
         val notary1Address: MessageRecipients = endpoint.getAddressOfParty(notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!)
         assert(notary1Address is InMemoryMessagingNetwork.ServiceHandle)
         assertEquals(notary1Address, endpoint.getAddressOfParty(notary2.services.networkMapCache.getPartyInfo(notary2.info.notaryIdentity)!!))
