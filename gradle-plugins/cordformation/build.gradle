@@ -1,4 +1,18 @@
+buildscript {
+    // TODO: Unify with the one in the main project
+    ext.kotlin_version = '1.0.5-2'
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
 apply plugin: 'groovy'
+apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.publish-utils'
 
 description 'A small gradle plugin for adding some basic Quasar tasks and configurations to reduce build.gradle bloat.'
@@ -7,12 +21,44 @@ repositories {
     mavenCentral()
 }
 
+configurations {
+    noderunner
+    compile.extendsFrom noderunner
+}
+
+sourceSets {
+    runnodes {
+        kotlin {
+            srcDir file('src/noderunner/kotlin')
+            compileClasspath += configurations.noderunner
+        }
+    }
+}
+
 dependencies {
     compile gradleApi()
     compile localGroovy()
+
+    noderunner "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
     // TypeSafe Config: for simple and human friendly config files.
     // TODO: Add a common versions file between Corda and gradle plugins to de-duplicate this version number
     compile "com.typesafe:config:1.3.1"
 }
 
+task createNodeRunner(type: Jar, dependsOn: [classes]) {
+    manifest {
+        attributes 'Implementation-Title': 'Gradle Jar File Example',
+                'Implementation-Version': version,
+                'Main-Class': 'net.corda.plugins.NodeRunnerKt'
+    }
+    baseName = project.name + '-fatjar'
+    from { configurations.noderunner.collect { it.isDirectory() ? it : zipTree(it) } }
+    from sourceSets.runnodes.output
+}
+
+jar {
+    from (createNodeRunner) {
+        rename { 'net/corda/plugins/runnodes.jar' }
+    }
+}
