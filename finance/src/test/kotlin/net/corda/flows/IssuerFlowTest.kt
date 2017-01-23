@@ -29,12 +29,12 @@ class IssuerFlowTest {
     fun `test issuer flow`() {
         net = MockNetwork(false, true)
         ledger {
-            notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-            bankOfCordaNode = net.createPartyNode(notaryNode.info.address, BOC.name, BOC_KEY)
-            bankClientNode = net.createPartyNode(notaryNode.info.address, MEGA_CORP.name, MEGA_CORP_KEY)
+            notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
+            bankOfCordaNode = net.createPartyNode(notaryNode.info.address, BOC.name)
+            bankClientNode = net.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
 
             // using default IssueTo Party Reference
-            val issueToPartyAndRef = MEGA_CORP.ref(OpaqueBytes.Companion.of(123))
+            val issueToPartyAndRef = bankClientNode.info.legalIdentity.ref(OpaqueBytes.Companion.of(123))
             val (issuer, issuerResult) = runIssuerAndIssueRequester(1000000.DOLLARS, issueToPartyAndRef)
             assertEquals(issuerResult.get(), issuer.get().resultFuture.get())
 

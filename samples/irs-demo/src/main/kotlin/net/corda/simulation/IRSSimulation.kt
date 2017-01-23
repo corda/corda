@@ -22,6 +22,8 @@ import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockIdentityService
+import net.i2p.crypto.eddsa.KeyPairGenerator
+import java.security.SecureRandom
 import java.time.LocalDate
 import java.util.*
 
@@ -126,7 +128,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         showProgressFor(listOf(node1, node2))
         showConsensusFor(listOf(node1, node2, regulators[0]))
 
-        val instigator = Instigator(node2.info.legalIdentity, AutoOffer(notary.info.notaryIdentity, irs), node1.keyPair!!)
+        val instigator = Instigator(node2.info.legalIdentity, AutoOffer(notary.info.notaryIdentity, irs), node1.services.legalIdentityKey)
         val instigatorTx: ListenableFuture<SignedTransaction> = node1.services.startFlow(instigator).resultFuture
 
         return Futures.allAsList(instigatorTx, acceptorTx).flatMap { instigatorTx }

@@ -37,7 +37,6 @@ class NotaryChangeTests {
         net = MockNetwork()
         oldNotaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
-                keyPair = DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
         clientNodeA = net.createNode(networkMapAddress = oldNotaryNode.info.address)
         clientNodeB = net.createNode(networkMapAddress = oldNotaryNode.info.address)

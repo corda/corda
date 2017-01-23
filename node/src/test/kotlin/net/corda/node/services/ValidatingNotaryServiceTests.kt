@@ -34,10 +34,9 @@ class ValidatingNotaryServiceTests {
         net = MockNetwork()
         notaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
-                keyPair = DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type))
         )
-        clientNode = net.createNode(networkMapAddress = notaryNode.info.address, keyPair = MINI_CORP_KEY)
+        clientNode = net.createNode(networkMapAddress = notaryNode.info.address)
         net.runNetwork() // Clear network map registration messages
     }
 
@@ -45,7 +44,8 @@ class ValidatingNotaryServiceTests {
         val stx = run {
             val inputState = issueInvalidState(clientNode, notaryNode.info.notaryIdentity)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
-            tx.signWith(clientNode.keyPair!!)
+            val keyPair = clientNode.services.keyManagementService.toKeyPair(clientNode.info.legalIdentity.owningKey.keys.single())
+            tx.signWith(keyPair)
             tx.toSignedTransaction(false)
         }
 
@@ -62,7 +62,8 @@ class ValidatingNotaryServiceTests {
 
             val command = Command(DummyContract.Commands.Move(), expectedMissingKey)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState, command)
-            tx.signWith(clientNode.keyPair!!)
+            val keyPair = clientNode.services.keyManagementService.toKeyPair(clientNode.info.legalIdentity.owningKey.keys.single())
+            tx.signWith(keyPair)
             tx.toSignedTransaction(false)
         }
 
