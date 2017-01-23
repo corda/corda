@@ -188,10 +188,10 @@ class Node(override val configuration: FullNodeConfiguration,
             httpsConfiguration.outputBufferSize = 32768
             httpsConfiguration.addCustomizer(SecureRequestCustomizer())
             val sslContextFactory = SslContextFactory()
-            sslContextFactory.keyStorePath = configuration.keyStorePath.toString()
+            sslContextFactory.keyStorePath = configuration.keyStoreFile.toString()
             sslContextFactory.setKeyStorePassword(configuration.keyStorePassword)
             sslContextFactory.setKeyManagerPassword(configuration.keyStorePassword)
-            sslContextFactory.setTrustStorePath(configuration.trustStorePath.toString())
+            sslContextFactory.setTrustStorePath(configuration.trustStoreFile.toString())
             sslContextFactory.setTrustStorePassword(configuration.trustStorePassword)
             sslContextFactory.setExcludeProtocols("SSL.*", "TLSv1", "TLSv1.1")
             sslContextFactory.setIncludeProtocols("TLSv1.2")

@@ -8,7 +8,7 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.read
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.node.services.config.NodeSSLConfiguration
+import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Inbound
 import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Outbound
 import org.apache.activemq.artemis.api.core.TransportConfiguration
@@ -105,7 +105,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
     }
 
     /** The config object is used to pass in the passwords for the certificate KeyStore and TrustStore */
-    abstract val config: NodeSSLConfiguration?
+    abstract val config: SSLConfiguration?
 
     // Restrict enabled Cipher Suites to AES and GCM as minimum for the bulk cipher.
     // Our self-generated certificates all use ECDSA for handshakes, but we allow classical RSA certificates to work
@@ -126,10 +126,10 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      */
     fun checkStorePasswords() {
         val config = config ?: return
-        config.keyStorePath.read {
+        config.keyStoreFile.read {
             KeyStore.getInstance("JKS").load(it, config.keyStorePassword.toCharArray())
         }
-        config.trustStorePath.read {
+        config.trustStoreFile.read {
             KeyStore.getInstance("JKS").load(it, config.trustStorePassword.toCharArray())
         }
     }
@@ -149,17 +149,17 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
         )
 
         if (config != null) {
-            config.keyStorePath.expectedOnDefaultFileSystem()
-            config.trustStorePath.expectedOnDefaultFileSystem()
+            config.keyStoreFile.expectedOnDefaultFileSystem()
+            config.trustStoreFile.expectedOnDefaultFileSystem()
             val tlsOptions = mapOf<String, Any?>(
                     // Enable TLS transport layer with client certs and restrict to at least SHA256 in handshake
                     // and AES encryption
                     TransportConstants.SSL_ENABLED_PROP_NAME to true,
                     TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
-                    TransportConstants.KEYSTORE_PATH_PROP_NAME to config.keyStorePath,
+                    TransportConstants.KEYSTORE_PATH_PROP_NAME to config.keyStoreFile,
                     TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to config.keyStorePassword, // TODO proper management of keystores and password
                     TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
-                    TransportConstants.TRUSTSTORE_PATH_PROP_NAME to config.trustStorePath,
+                    TransportConstants.TRUSTSTORE_PATH_PROP_NAME to config.trustStoreFile,
                     TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to config.trustStorePassword,
                     TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
                     TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",

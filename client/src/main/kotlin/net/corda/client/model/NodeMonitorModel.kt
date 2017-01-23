@@ -6,14 +6,11 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineInfo
 import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.CashCommand
-import net.corda.flows.CashFlow
-import net.corda.node.services.config.NodeSSLConfiguration
+import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.CordaRPCClient
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -54,7 +51,7 @@ class NodeMonitorModel {
      * Register for updates to/from a given vault.
      * TODO provide an unsubscribe mechanism
      */
-    fun register(nodeHostAndPort: HostAndPort, sslConfig: NodeSSLConfiguration, username: String, password: String) {
+    fun register(nodeHostAndPort: HostAndPort, sslConfig: SSLConfiguration, username: String, password: String) {
         val client = CordaRPCClient(nodeHostAndPort, sslConfig)
         client.start(username, password)
         val proxy = client.proxy()

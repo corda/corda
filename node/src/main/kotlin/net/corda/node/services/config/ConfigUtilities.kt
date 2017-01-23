@@ -103,22 +103,22 @@ inline fun <reified T : Any> Config.getListOrElse(path: String, default: Config.
  */
 fun NodeConfiguration.configureWithDevSSLCertificate() = configureDevKeyAndTrustStores(myLegalName)
 
-private fun NodeSSLConfiguration.configureDevKeyAndTrustStores(myLegalName: String) {
+private fun SSLConfiguration.configureDevKeyAndTrustStores(myLegalName: String) {
     certificatesDirectory.createDirectories()
-    if (!trustStorePath.exists()) {
-        javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordatruststore.jks").copyTo(trustStorePath)
+    if (!trustStoreFile.exists()) {
+        javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordatruststore.jks").copyTo(trustStoreFile)
     }
-    if (!keyStorePath.exists()) {
+    if (!keyStoreFile.exists()) {
         val caKeyStore = X509Utilities.loadKeyStore(
                 javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"),
                 "cordacadevpass")
-        X509Utilities.createKeystoreForSSL(keyStorePath, keyStorePassword, keyStorePassword, caKeyStore, "cordacadevkeypass", myLegalName)
+        X509Utilities.createKeystoreForSSL(keyStoreFile, keyStorePassword, keyStorePassword, caKeyStore, "cordacadevkeypass", myLegalName)
     }
 }
 
 // TODO Move this to CoreTestUtils.kt once we can pry this from the explorer
 @JvmOverloads
-fun configureTestSSL(legalName: String = "Mega Corp."): NodeSSLConfiguration = object : NodeSSLConfiguration {
+fun configureTestSSL(legalName: String = "Mega Corp."): SSLConfiguration = object : SSLConfiguration {
     override val certificatesDirectory = Files.createTempDirectory("certs")
     override val keyStorePassword: String get() = "cordacadevpass"
     override val trustStorePassword: String get() = "trustpass"

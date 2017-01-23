@@ -33,14 +33,14 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
     fun buildKeyStore() {
         config.certificatesDirectory.createDirectories()
 
-        val caKeyStore = X509Utilities.loadOrCreateKeyStore(config.keyStorePath, config.keyStorePassword)
+        val caKeyStore = X509Utilities.loadOrCreateKeyStore(config.keyStoreFile, config.keyStorePassword)
 
         if (!caKeyStore.containsAlias(CORDA_CLIENT_CA)) {
             // No certificate found in key store, create certificate signing request and post request to signing server.
             log.info("No certificate found in key store, creating certificate signing request...")
 
             // Create or load key pair from the key store.
-            val keyPair = X509Utilities.loadOrCreateKeyPairFromKeyStore(config.keyStorePath, config.keyStorePassword,
+            val keyPair = X509Utilities.loadOrCreateKeyPairFromKeyStore(config.keyStoreFile, config.keyStorePassword,
                     config.keyStorePassword, CORDA_CLIENT_CA_PRIVATE_KEY) {
                 X509Utilities.createSelfSignedCACert(config.myLegalName)
             }
@@ -58,15 +58,15 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
             // Assumes certificate chain always starts with client certificate and end with root certificate.
             caKeyStore.addOrReplaceCertificate(CORDA_CLIENT_CA, certificates.first())
 
-            X509Utilities.saveKeyStore(caKeyStore, config.keyStorePath, config.keyStorePassword)
+            X509Utilities.saveKeyStore(caKeyStore, config.keyStoreFile, config.keyStorePassword)
 
             // Save certificates to trust store.
-            val trustStore = X509Utilities.loadOrCreateKeyStore(config.trustStorePath, config.trustStorePassword)
+            val trustStore = X509Utilities.loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword)
 
             // Assumes certificate chain always starts with client certificate and end with root certificate.
             trustStore.addOrReplaceCertificate(CORDA_ROOT_CA, certificates.last())
 
-            X509Utilities.saveKeyStore(trustStore, config.trustStorePath, config.trustStorePassword)
+            X509Utilities.saveKeyStore(trustStore, config.trustStoreFile, config.trustStorePassword)
         } else {
             log.trace("Certificate already exists, exiting certificate signer...")
         }

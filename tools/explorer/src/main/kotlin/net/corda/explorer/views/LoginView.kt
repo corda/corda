@@ -10,7 +10,7 @@ import net.corda.client.model.NodeMonitorModel
 import net.corda.client.model.objectProperty
 import net.corda.core.exists
 import net.corda.explorer.model.SettingsModel
-import net.corda.node.services.config.NodeSSLConfiguration
+import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.config.configureTestSSL
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
@@ -79,14 +79,14 @@ class LoginView : View() {
         if (status != LoginStatus.loggedIn) login()
     }
 
-    private fun configureSSL(): NodeSSLConfiguration {
-        val sslConfig = object : NodeSSLConfiguration {
+    private fun configureSSL(): SSLConfiguration {
+        val sslConfig = object : SSLConfiguration {
             override val certificatesDirectory: Path get() = certificatesDir.get()
             override val keyStorePassword: String get() = keyStorePasswordProperty.get()
             override val trustStorePassword: String get() = trustStorePasswordProperty.get()
         }
         // TODO : Don't use dev certificates.
-        return if (sslConfig.keyStorePath.exists()) sslConfig else configureTestSSL().apply {
+        return if (sslConfig.keyStoreFile.exists()) sslConfig else configureTestSSL().apply {
             alert(Alert.AlertType.WARNING, "", "KeyStore not found in certificates directory.\nDEV certificates will be used by default.")
         }
     }

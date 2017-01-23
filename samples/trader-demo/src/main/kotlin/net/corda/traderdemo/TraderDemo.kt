@@ -5,7 +5,7 @@ import joptsimple.OptionParser
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.div
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.config.NodeSSLConfiguration
+import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.CordaRPCClient
 import org.slf4j.Logger
 import java.nio.file.Path
@@ -68,8 +68,8 @@ private class TraderDemo {
     }
 
     // TODO: Take this out once we have a dedicated RPC port and allow SSL on it to be optional.
-    private fun sslConfigFor(nodename: String, certsPath: String?): NodeSSLConfiguration {
-        return object : NodeSSLConfiguration {
+    private fun sslConfigFor(nodename: String, certsPath: String?): SSLConfiguration {
+        return object : SSLConfiguration {
             override val keyStorePassword: String = "cordacadevpass"
             override val trustStorePassword: String = "trustpass"
             override val certificatesDirectory: Path = if (certsPath != null) Paths.get(certsPath) else Paths.get("build") / "nodes" / nodename / "certificates"

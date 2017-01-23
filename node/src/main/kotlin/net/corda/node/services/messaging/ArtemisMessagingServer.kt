@@ -211,10 +211,10 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
         val rootCAPublicKey = X509Utilities
-                .loadCertificateFromKeyStore(config.trustStorePath, config.trustStorePassword, CORDA_ROOT_CA)
+                .loadCertificateFromKeyStore(config.trustStoreFile, config.trustStorePassword, CORDA_ROOT_CA)
                 .publicKey
         val ourCertificate = X509Utilities
-                .loadCertificateFromKeyStore(config.keyStorePath, config.keyStorePassword, CORDA_CLIENT_CA)
+                .loadCertificateFromKeyStore(config.keyStoreFile, config.keyStorePassword, CORDA_CLIENT_CA)
         val ourSubjectDN = X500Name(ourCertificate.subjectDN.name)
         // This is a sanity check and should not fail unless things have been misconfigured
         require(ourSubjectDN.commonName == config.myLegalName) {

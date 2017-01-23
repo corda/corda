@@ -7,7 +7,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.NotaryFlow
-import net.corda.node.services.config.NodeSSLConfiguration
+import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import java.nio.file.Path
@@ -90,8 +90,8 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
 }
 
 // TODO: Take this out once we have a dedicated RPC port and allow SSL on it to be optional.
-private fun sslConfigFor(nodename: String, certsPath: String?): NodeSSLConfiguration {
-    return object : NodeSSLConfiguration {
+private fun sslConfigFor(nodename: String, certsPath: String?): SSLConfiguration {
+    return object : SSLConfiguration {
         override val keyStorePassword: String = "cordacadevpass"
         override val trustStorePassword: String = "trustpass"
         override val certificatesDirectory: Path = if (certsPath != null) Paths.get(certsPath) else Paths.get("build") / "nodes" / nodename / "certificates"

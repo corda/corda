@@ -12,7 +12,7 @@ import net.corda.core.random63BitValue
 import net.corda.core.seconds
 import net.corda.node.internal.Node
 import net.corda.node.services.User
-import net.corda.node.services.config.NodeSSLConfiguration
+import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
@@ -151,7 +151,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
         assertAllQueueCreationAttacksFail(randomQueue)
     }
 
-    fun clientTo(target: HostAndPort, config: NodeSSLConfiguration = configureTestSSL()): SimpleMQClient {
+    fun clientTo(target: HostAndPort, config: SSLConfiguration = configureTestSSL()): SimpleMQClient {
         val client = SimpleMQClient(target, config)
         clients += client
         return client

@@ -5,7 +5,7 @@ import net.corda.core.ThreadBox
 import net.corda.core.logElapsedTime
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.config.NodeSSLConfiguration
+import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Outbound
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -24,7 +24,7 @@ import javax.annotation.concurrent.ThreadSafe
  * @param config If specified, the SSL configuration to use. If not specified, SSL will be disabled and the node will not be authenticated, nor will RPC traffic be encrypted.
  */
 @ThreadSafe
-class CordaRPCClient(val host: HostAndPort, override val config: NodeSSLConfiguration?) : Closeable, ArtemisMessagingComponent() {
+class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguration?) : Closeable, ArtemisMessagingComponent() {
     private companion object {
         val log = loggerFor<CordaRPCClient>()
     }

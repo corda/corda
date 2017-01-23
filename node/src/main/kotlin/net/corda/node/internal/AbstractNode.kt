@@ -299,7 +299,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun hasSSLCertificates(): Boolean {
         val keyStore = try {
             // This will throw exception if key file not found or keystore password is incorrect.
-            X509Utilities.loadKeyStore(configuration.keyStorePath, configuration.keyStorePassword)
+            X509Utilities.loadKeyStore(configuration.keyStoreFile, configuration.keyStorePassword)
         } catch (e: Exception) {
             null
         }

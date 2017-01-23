@@ -39,15 +39,15 @@ class CertificateSignerTest {
                 myLegalName = "me",
                 networkMapService = null)
 
-        assertFalse(config.keyStorePath.exists())
-        assertFalse(config.trustStorePath.exists())
+        assertFalse(config.keyStoreFile.exists())
+        assertFalse(config.trustStoreFile.exists())
 
         CertificateSigner(config, certService).buildKeyStore()
 
-        assertTrue(config.keyStorePath.exists())
-        assertTrue(config.trustStorePath.exists())
+        assertTrue(config.keyStoreFile.exists())
+        assertTrue(config.trustStoreFile.exists())
 
-        X509Utilities.loadKeyStore(config.keyStorePath, config.keyStorePassword).run {
+        X509Utilities.loadKeyStore(config.keyStoreFile, config.keyStorePassword).run {
             assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY))
             assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_CA))
             assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA))
@@ -56,7 +56,7 @@ class CertificateSignerTest {
             assertFalse(containsAlias(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY))
         }
 
-        X509Utilities.loadKeyStore(config.trustStorePath, config.trustStorePassword).run {
+        X509Utilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword).run {
             assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY))
             assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA))
             assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA))
