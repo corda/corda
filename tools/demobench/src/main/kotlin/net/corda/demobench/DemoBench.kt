@@ -1,6 +1,9 @@
 package net.corda.demobench
 
+import javafx.scene.image.Image
+import net.corda.demobench.views.DemoBenchView
 import tornadofx.App
+import tornadofx.addStageIcon
 
 /**
  * README!
@@ -33,5 +36,6 @@ import tornadofx.App
 
 class DemoBench : App(DemoBenchView::class) {
     init {
+        addStageIcon(Image("r3logo.png"))
     }
 }
