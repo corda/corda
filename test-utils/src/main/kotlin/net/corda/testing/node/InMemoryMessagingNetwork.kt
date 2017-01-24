@@ -85,6 +85,7 @@ class InMemoryMessagingNetwork(
         get() = _receivedMessages
 
     val endpoints: List<InMemoryMessaging> @Synchronized get() = handleEndpointMap.values.toList()
+    fun endpoint(peer: PeerHandle): InMemoryMessaging? = handleEndpointMap.get(peer)
 
     /**
      * Creates a node and returns the new object that identifies its location on the network to senders, and the
