@@ -3,11 +3,12 @@ package net.corda.demobench.views
 import com.jediterm.terminal.TerminalColor
 import com.jediterm.terminal.TextStyle
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
+import java.util.*
 import javafx.application.Platform
-import javafx.collections.FXCollections
 import javafx.embed.swing.SwingNode
 import javafx.scene.Parent
 import javafx.scene.control.Button
+import javafx.scene.control.Tab
 import javafx.scene.control.TabPane
 import javax.swing.SwingUtilities
 import net.corda.demobench.pty.R3Pty
@@ -27,11 +28,9 @@ class DemoBenchView : View("Corda Demo Bench") {
         importStylesheet("/net/corda/demobench/style.css")
 
         primaryStage.setOnCloseRequest {
-            // Close all open tabs
-            FXCollections.observableArrayList(nodeTabPane.tabs).forEach {
-                (it as CloseableTab).requestClose()
-            }
+            log.info("Exiting")
 
+            closeAllTabs()
             Platform.exit()
         }
 
@@ -42,13 +41,19 @@ class DemoBenchView : View("Corda Demo Bench") {
         addNodeButton.fire()
     }
 
+    private fun closeAllTabs() {
+        ArrayList<Tab>(nodeTabPane.tabs).forEach {
+            (it as CloseableTab).requestClose()
+        }
+    }
+
     fun createNode(): CloseableTab {
         val pty = R3Pty("Banksy", settingsProvider, java.awt.Dimension(160, 80))
         val nodeTabView = NodeTabView(pty.name)
         val nodeTab = CloseableTab(pty.name, nodeTabView.root)
 
         // Ensure that we close the terminal along with the tab.
-        nodeTab.setOnClosed {
+        nodeTab.setOnCloseRequest {
             pty.close()
         }
 

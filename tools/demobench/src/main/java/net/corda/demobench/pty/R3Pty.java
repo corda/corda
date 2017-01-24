@@ -1,19 +1,13 @@
 package net.corda.demobench.pty;
 
-import com.jediterm.terminal.TerminalColor;
-import com.jediterm.terminal.TextStyle;
 import com.jediterm.terminal.TtyConnector;
 import com.jediterm.terminal.ui.*;
-import com.jediterm.terminal.ui.settings.DefaultSettingsProvider;
 import com.jediterm.terminal.ui.settings.SettingsProvider;
 import com.pty4j.PtyProcess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.imageio.ImageIO;
-import javax.swing.*;
 import java.awt.*;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -79,40 +73,6 @@ public class R3Pty implements AutoCloseable {
 
     public void run(String... args) {
         run(args, System.getenv());
-    }
-
-    public static void main(final String[] args) throws IOException {
-        JFrame frame = new JFrame("R3 Example");
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        frame.setIconImage(ImageIO.read(R3Pty.class.getResourceAsStream("/r3logo.png")));
-
-        SettingsProvider settings = new DefaultSettingsProvider() {
-            @Override
-            public TextStyle getDefaultStyle() {
-                return new TextStyle(TerminalColor.WHITE, TerminalColor.BLACK);
-            }
-
-            @Override
-            public float getTerminalFontSize() {
-                return 20;
-            }
-
-            @Override
-            public boolean emulateX11CopyPaste() {
-                return true;
-            }
-        };
-
-        R3Pty pty = new R3Pty("Bungo", settings, new Dimension(164, 40));
-
-        frame.getContentPane().add(pty.getTerminal(), BorderLayout.CENTER);
-
-        frame.pack();
-        frame.setLocationByPlatform(true);
-        frame.setResizable(true);
-        frame.setVisible(true);
-
-        pty.run(args);
     }
 
 }
