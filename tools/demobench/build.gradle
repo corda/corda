@@ -3,6 +3,10 @@ version '0.7-SNAPSHOT'
 
 buildscript {
     ext.kotlin_version = '1.0.6'
+    ext.jna_version = '4.1.0'
+    ext.purejavacomm_version = '0.0.17'
+    ext.guava_version = '14.0.1'
+    ext.slf4j_version = '1.7.22'
 
     repositories {
         mavenCentral()
@@ -18,13 +22,32 @@ apply plugin: 'kotlin'
 sourceCompatibility = 1.8
 
 repositories {
+    flatDir {
+        dirs 'libs'
+    }
+
+    mavenLocal()
     mavenCentral()
+    maven {
+        url 'http://www.sparetimelabs.com/maven2'
+    }
 }
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+    compile "net.java.dev.jna:jna:$jna_version"
+    compile "net.java.dev.jna:jna-platform:$jna_version"
+    compile "com.google.guava:guava:$guava_version"
+    compile "com.sparetimelabs:purejavacomm:$purejavacomm_version"
+    compile "org.slf4j:log4j-over-slf4j:$slf4j_version"
+    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
+    compile "ch.qos.logback:logback-classic:1.1.3"
+    compile ":jediterm-terminal-2.5"
+    compile ':pty4j-0.7.2'
+
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
-    compile 'no.tornado:tornadofx:1.5.7'
+    compile 'no.tornado:tornadofx:1.6.0'
 }
