@@ -410,7 +410,6 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
             }
         })
 
-        // Some things where the JRE provides an efficient custom serialisation.
         register(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
         register(EdDSAPrivateKey::class.java, Ed25519PrivateKeySerializer)
         register(Instant::class.java, ReferencesAwareJavaSerializer)
