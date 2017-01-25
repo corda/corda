@@ -94,6 +94,9 @@ CXXFLAGS += -Wnon-virtual-dtor
 # for static_assert()
 CXXFLAGS += -std=c++0x
 
+# Disable cxx11 abi
+CXXFLAGS += -D_GLIBCXX_USE_CXX11_ABI=0
+
 .DEFAULT_GOAL := all
 # this turns off the RCS / SCCS implicit rules of GNU Make
 % : RCS/%,v

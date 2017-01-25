@@ -82,6 +82,9 @@ INCLUDE += -I$(SGX_IPP_INC) \
 
 EDGER8R  := $(LINUX_SDK_DIR)/edger8r/linux/_build/Edger8r.native
 
+# Disable cxx11 abi
+CXXFLAGS += -D_GLIBCXX_USE_CXX11_ABI=0
+
 ifdef PROFILE
         CXXFLAGS += -D_PROFILE_
         CFLAGS += -D_PROFILE_
