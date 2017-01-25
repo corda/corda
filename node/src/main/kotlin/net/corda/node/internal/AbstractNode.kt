@@ -222,7 +222,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             customServices.addAll(buildPluginServices(tokenizableServices))
 
             val uploaders: List<FileUploader> = listOf(storageServices.first.attachments as NodeAttachmentService) +
-                    customServices.filter { it is AcceptsFileUpload }.map { it as AcceptsFileUpload }
+                    customServices.filterIsInstance(AcceptsFileUpload::class.java)
             (storage as StorageServiceImpl).initUploaders(uploaders)
 
             // TODO: uniquenessProvider creation should be inside makeNotaryService(), but notary service initialisation

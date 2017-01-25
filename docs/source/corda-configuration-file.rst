@@ -82,12 +82,15 @@ path to the node's base directory.
 
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
 
-:webAddress: The host and port on which the node is available for web operations.
+:webAddress: The host and port on which the bundled webserver will listen if it is started.
 
     .. note:: If HTTPS is enabled then the browser security checks will require that the accessing url host name is one
         of either the machine name, fully qualified machine name, or server IP address to line up with the Subject Alternative
         Names contained within the development certificates. This is addition to requiring the ``/config/dev/corda_dev_ca.cer``
         root certificate be installed as a Trusted CA.
+
+    .. note:: The driver will not automatically create a webserver instance, but the Cordformation will. If this field
+              is present the web server will start.
 
 :extraAdvertisedServiceIds: A list of ServiceType id strings to be advertised to the NetworkMapService and thus be available
     when other nodes query the NetworkMapCache for supporting nodes. This can also include plugin services loaded from .jar

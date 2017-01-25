@@ -82,11 +82,6 @@ interface CordaRPCOps : RPCOps {
      */
     fun nodeIdentity(): NodeInfo
 
-    /**
-     * Returns true if node is up and ready
-     */
-    fun ready(): Boolean
-
     /*
      * Add note(s) to an existing Vault transaction
      */
@@ -107,9 +102,8 @@ interface CordaRPCOps : RPCOps {
      */
     fun uploadAttachment(jar: InputStream): SecureHash
 
-    /**
-     * Uploads a file by data type to the node and returns a meaningful string to the user
-     */
+    @Suppress("DEPRECATION")
+    @Deprecated("This service will be removed in a future milestone")
     fun uploadFile(dataType: String, name: String?, file: InputStream): String
 
     /**

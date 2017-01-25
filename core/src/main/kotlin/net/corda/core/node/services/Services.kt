@@ -218,14 +218,22 @@ interface KeyManagementService {
     fun freshKey(): KeyPair
 }
 
-// TODO: Move and document
+// TODO: Move to a more appropriate location
+/**
+ * An interface that denotes a service that can accept file uploads.
+ */
 interface FileUploader {
     /**
      * Accepts the data in the given input stream, and returns some sort of useful return message that will be sent
      * back to the user in the response.
      */
     fun upload(file: InputStream): String
-    fun accepts(prefix: String): Boolean
+
+    /**
+     * Check if this service accepts this type of upload. For example if you are uploading interest rates this could
+     * be "my-service-interest-rates". Type here does not refer to file extentions or MIME types.
+     */
+    fun accepts(type: String): Boolean
 }
 
 /**
@@ -244,7 +252,8 @@ interface StorageService {
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage
 
-    /** Provides file uploads of arbitrary files to services **/
+    @Suppress("DEPRECATION")
+    @Deprecated("This service will be removed in a future milestone")
     val uploaders: List<FileUploader>
 
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage

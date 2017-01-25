@@ -80,7 +80,11 @@ fun main(args: Array<String>) {
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
-    log.info("Starting as webserver: ${cmdlineOptions.isWebserver}")
+    if(cmdlineOptions.isWebserver) {
+        log.info("Starting as webserver on ${conf.webAddress}")
+    } else {
+        log.info("Starting as node on ${conf.artemisAddress}")
+    }
 
     try {
         cmdlineOptions.baseDirectory.createDirectories()

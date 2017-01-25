@@ -30,7 +30,6 @@ import java.util.*
 class WebServer(val config: FullNodeConfiguration) {
     private companion object {
         val log = loggerFor<WebServer>()
-        val maxRetries = 60 // TODO: Make configurable
         val retryDelay = 1000L // Milliseconds
     }
 
@@ -39,7 +38,7 @@ class WebServer(val config: FullNodeConfiguration) {
 
     fun start() {
         printBasicNodeInfo("Starting as webserver: ${config.webAddress}")
-        server = initWebServer(connectLocalRpcWithRetries(maxRetries))
+        server = initWebServer(retryConnectLocalRpc())
     }
 
     fun run() {
@@ -78,10 +77,10 @@ class WebServer(val config: FullNodeConfiguration) {
             httpsConfiguration.outputBufferSize = 32768
             httpsConfiguration.addCustomizer(SecureRequestCustomizer())
             val sslContextFactory = SslContextFactory()
-            sslContextFactory.keyStorePath = config.keyStorePath.toString()
+            sslContextFactory.keyStorePath = config.keyStoreFile.toString()
             sslContextFactory.setKeyStorePassword(config.keyStorePassword)
             sslContextFactory.setKeyManagerPassword(config.keyStorePassword)
-            sslContextFactory.setTrustStorePath(config.trustStorePath.toString())
+            sslContextFactory.setTrustStorePath(config.trustStoreFile.toString())
             sslContextFactory.setTrustStorePassword(config.trustStorePassword)
             sslContextFactory.setExcludeProtocols("SSL.*", "TLSv1", "TLSv1.1")
             sslContextFactory.setIncludeProtocols("TLSv1.2")
@@ -153,20 +152,15 @@ class WebServer(val config: FullNodeConfiguration) {
         }
     }
 
-    private fun connectLocalRpcWithRetries(retries: Int): CordaRPCOps {
-        for(i in 0..retries - 1) {
+    private fun retryConnectLocalRpc(): CordaRPCOps {
+        while(true) {
             try {
-                log.info("Connecting to node at ${config.artemisAddress} as node user")
-                val client = CordaRPCClient(config.artemisAddress, config)
-                client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
-                return client.proxy()
+                return connectLocalRpcAsNodeUser()
             } catch (e: ActiveMQNotConnectedException) {
                 log.debug("Could not connect to ${config.artemisAddress} due to exception: ", e)
                 Thread.sleep(retryDelay)
             }
         }
-
-        return connectLocalRpcAsNodeUser()
     }
 
     private fun connectLocalRpcAsNodeUser(): CordaRPCOps {

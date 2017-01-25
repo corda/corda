@@ -12,12 +12,11 @@ class APIServerImpl(val rpcOps: CordaRPCOps) : APIServer {
         return LocalDateTime.ofInstant(rpcOps.currentNodeTime(), ZoneId.of("UTC"))
     }
 
+    /**
+     * This endpoint is for polling if the webserver is serving. It will always return 200.
+     */
     override fun status(): Response {
-        return if (rpcOps.ready()) {
-            Response.ok("started").build()
-        } else {
-            Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("not started").build()
-        }
+        return Response.ok("started").build()
     }
 
     override fun info() = rpcOps.nodeIdentity()

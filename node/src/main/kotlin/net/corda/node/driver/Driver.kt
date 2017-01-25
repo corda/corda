@@ -17,7 +17,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.config.NodeSSLConfiguration
+import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.messaging.NodeMessagingClient
@@ -327,7 +327,7 @@ open class DriverDSL(
         executorService.shutdown()
     }
 
-    private fun queryNodeInfo(nodeAddress: HostAndPort, sslConfig: NodeSSLConfiguration): NodeInfo? {
+    private fun queryNodeInfo(nodeAddress: HostAndPort, sslConfig: SSLConfiguration): NodeInfo? {
         var retries = 0
         while (retries < 5) try {
             val client = CordaRPCClient(nodeAddress, sslConfig)
@@ -335,7 +335,7 @@ open class DriverDSL(
             val rpcOps = client.proxy(timeout = Duration.of(15, ChronoUnit.SECONDS))
             return rpcOps.nodeIdentity()
         } catch(e: Exception) {
-            log.debug("Retrying query node info at $nodeAddress")
+            log.error("Retrying query node info at $nodeAddress")
             retries++
         }
 

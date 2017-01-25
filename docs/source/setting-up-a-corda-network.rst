@@ -45,7 +45,8 @@ The most important fields regarding network configuration are:
 * ``artemisAddress``: This specifies a host and port. Note that the address bound will **NOT** be ``my-corda-node``,
   but rather ``::`` (all addresses on all interfaces). The hostname specified is the hostname *that must be externally
   resolvable by other nodes in the network*. In the above configuration this is the resolvable name of a machine in a vpn.
-* ``webAddress``: The address the webserver should bind. Note that the port should be distinct from that of ``artemisAddress``.
+* ``webAddress``: The address the webserver should bind. Note that the port should be distinct from that of ``artemisAddress``
+                  if they are on the same machine.
 * ``networkMapService``: Details of the node running the network map service. If it's this node that's running the service
   then this field must not be specified.
 
@@ -58,7 +59,9 @@ You should see a banner, some log lines and eventually ``Node started up and reg
 
 .. TODO: Add a better way of polling for startup. A programmatic way of determining whether a node is up is to check whether it's ``webAddress`` is bound.
 
-In terms of process management there is no prescribed method. You may start the jars by hand or perhaps use systemd and friends.
+In terms of process management there is no prescribed method. You may start the jars by hand or perhaps use systemd and friends. If you have
+deployed your nodes via `Cordformation`_ you can run them with the ``runnodes`` scripts in ``build/nodes`` of your project. This is primarily
+for development and testing purposes and will start all of the nodes you have created on the same machine
 
 Logging
 ~~~~~~~
