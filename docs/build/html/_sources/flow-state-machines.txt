@@ -7,9 +7,9 @@
 Writing flows
 =============
 
-This article explains our approach to modelling financial flows in code. It explains how the
-platform's state machine framework is used, and takes you through the code for a simple 2-party asset trading flow
-which is included in the source.
+This article explains our approach to modelling business processes and the lower level network protocols that implement
+them. It explains how the platform's flow framework is used, and takes you through the code for a simple
+2-party asset trading flow which is included in the source.
 
 Introduction
 ------------
@@ -407,10 +407,13 @@ Implementing the buyer
 
 OK, let's do the same for the buyer side:
 
-.. literalinclude:: ../../finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt
-    :language: kotlin
-    :start-after: DOCSTART 1
-    :end-before: DOCEND 1
+.. container:: codeset
+
+    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt
+         :language: kotlin
+         :start-after: DOCSTART 1
+         :end-before: DOCEND 1
+         :dedent: 8
 
 This code is longer but no more complicated. Here are some things to pay attention to:
 
@@ -440,16 +443,59 @@ stage in a piece of work. It is therefore typical to use singletons that subclas
 in one line when using Kotlin. Typical steps might be "Waiting for response from peer", "Waiting for signature to be
 approved", "Downloading and verifying data" etc.
 
+A flow might declare some steps with code inside the flow class like this:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt
+            :language: kotlin
+            :start-after: DOCSTART 2
+            :end-before: DOCSTART 1
+            :dedent: 4
+
+
+    .. sourcecode:: java
+
+       private final ProgressTracker progressTracker = new ProgressTracker(
+               CONSTRUCTING_OFFER,
+               SENDING_OFFER_AND_RECEIVING_PARTIAL_TRANSACTION,
+               VERIFYING
+       );
+
+       private static final ProgressTracker.Step CONSTRUCTING_OFFER = new ProgressTracker.Step(
+               "Constructing proposed purchase order.");
+       private static final ProgressTracker.Step SENDING_OFFER_AND_RECEIVING_PARTIAL_TRANSACTION = new ProgressTracker.Step(
+               "Sending purchase order to seller for review, and receiving partially signed transaction from seller in return.");
+       private static final ProgressTracker.Step VERIFYING = new ProgressTracker.Step(
+               "Verifying signatures and contract constraints.");
+
 Each step exposes a label. By default labels are fixed, but by subclassing ``RelabelableStep``
 you can make a step that can update its label on the fly. That's useful for steps that want to expose non-structured
 progress information like the current file being downloaded. By defining your own step types, you can export progress
 in a way that's both human readable and machine readable.
 
 Progress trackers are hierarchical. Each step can be the parent for another tracker. By altering the
-``ProgressTracker.childrenFor[step] = tracker`` map, a tree of steps can be created. It's allowed to alter the hierarchy
+``ProgressTracker.childrenFor`` map, a tree of steps can be created. It's allowed to alter the hierarchy
 at runtime, on the fly, and the progress renderers will adapt to that properly. This can be helpful when you don't
-fully know ahead of time what steps will be required. If you _do_ know what is required, configuring as much of the
-hierarchy ahead of time is a good idea, as that will help the users see what is coming up.
+fully know ahead of time what steps will be required. If you *do* know what is required, configuring as much of the
+hierarchy ahead of time is a good idea, as that will help the users see what is coming up. You can pre-configure
+steps by overriding the ``Step`` class like this:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt
+            :language: kotlin
+            :start-after: DOCSTART 3
+            :end-before: DOCEND 3
+            :dedent: 4
+
+    .. sourcecode:: java
+
+       private static final ProgressTracker.Step COMMITTING = new ProgressTracker.Step("Committing to the ledger.") {
+           @Nullable @Override public ProgressTracker childProgressTracker() {
+               return FinalityFlow.Companion.tracker();
+           }
+       };
 
 Every tracker has not only the steps given to it at construction time, but also the singleton
 ``ProgressTracker.UNSTARTED`` step and the ``ProgressTracker.DONE`` step. Once a tracker has become ``DONE`` its
@@ -469,7 +515,7 @@ overriding the ``flowTracker`` property (``getFlowTracker`` method in Java). If 
 step in the parent flow automatically, if the parent is using tracking in the first place. The framework will also
 automatically set the current step to ``DONE`` for you, when the flow is finished.
 
-Because a flow may sometimes wish to configure the children in its progress hierarchy _before_ the sub-flow
+Because a flow may sometimes wish to configure the children in its progress hierarchy *before* the sub-flow
 is constructed, for sub-flows that always follow the same outline regardless of their parameters it's conventional
 to define a companion object/static method (for Kotlin/Java respectively) that constructs a tracker, and then allow
 the sub-flow to have the tracker it will use be passed in as a parameter. This allows all trackers to be built

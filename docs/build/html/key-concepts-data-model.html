@@ -1,0 +1,442 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Data model &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
+        <link rel="next" title="Core types" href="key-concepts-core-types.html"/>
+        <link rel="prev" title="Corda ecosystem" href="key-concepts-ecosystem.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="key-concepts.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-ecosystem.html">Corda ecosystem</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Data model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#states">States</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#contracts">Contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#transactions">Transactions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#transaction-validation">Transaction Validation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#transaction-representation">Transaction Representation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-core-types.html">Core types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-financial-model.html">Financial model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-flow-framework.html">Flow framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-consensus-notaries.html">Consensus and notaries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-vault.html">Vault</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-security-model.html">Security model</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Data model</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/key-concepts-data-model.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="data-model">
+<h1>Data model<a class="headerlink" href="#data-model" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p>Corda uses the so-called &#8220;UTXO set&#8221; model (unspent transaction output). In this model, the database
+does not track accounts or balances. An entry is either spent or not spent but it cannot be changed. In this model the
+database is a set of immutable rows keyed by (hash:output index). Transactions define outputs that append new rows and
+inputs which consume existing rows.</p>
+<p>The Corda ledger is defined as a set of immutable <strong>states</strong>, which are created and destroyed by digitally signed <strong>transactions</strong>.
+Each transaction points to a set of states that it will consume/destroy, these are called <strong>inputs</strong>, and contains a set
+of new states that it will create, these are called <strong>outputs</strong>.
+Although the ledger is shared, it is not always the case that transactions and ledger entries are globally visible.
+In cases where a set of transactions stays within a small subgroup of users it is possible to keep the relevant
+data purely within that group. To ensure consistency, we rely heavily on secure hashes like SHA-256 to identify things.</p>
+<p>The Corda model provides the following additional features:</p>
+<ul class="simple">
+<li>There is no global broadcast at any point.</li>
+<li>States can include arbitrary typed data.</li>
+<li>Transactions invoke not only input contracts but also the contracts of the outputs.</li>
+<li>Contracts refer to a bundle of business logic that may handle various different tasks, beyond transaction verification.</li>
+<li>Contracts are Turing-complete and can be written in any ordinary programming language that targets the JVM.</li>
+<li>Arbitrarily-precise time-bounds may be specified in transactions (which must be attested to by a notary)</li>
+<li>Primary consensus implementations use block-free conflict resolution algorithms.</li>
+<li>Transactions are not ordered using a block chain and by implication Corda does not use miners or proof-of-work.
+Instead each state points to a notary, which is a service that guarantees it will sign a transaction only if all the
+input states are un-consumed.</li>
+</ul>
+<p>Corda provides three main tools to achieve global distributed consensus:</p>
+<ul class="simple">
+<li>Smart contract logic to ensure state transitions are valid according to the pre-agreed rules.</li>
+<li>Uniqueness and timestamping services to order transactions temporally and eliminate conflicts.</li>
+<li>An <a class="reference internal" href="key-concepts-flow-framework.html"><span class="doc">orchestration framework</span></a> which simplifies the process of writing complex multi-step protocols between multiple different parties.</li>
+</ul>
+<p>Comparisons of the Corda data model with Bitcoin and Ethereum can be found in the white papers.</p>
+</div>
+<div class="section" id="states">
+<h2>States<a class="headerlink" href="#states" title="Permalink to this headline">¶</a></h2>
+<p>A state object represents an agreement between two or more parties, the evolution of which governed by machine-readable contract code.
+This code references, and is intended to implement, portions of human-readable legal prose.
+It is intended to be shared only with those who have a legitimate reason to see it.</p>
+<p>The following diagram illustrates a state object:</p>
+<img alt="_images/contract.png" src="_images/contract.png" />
+<p>In the diagram above, we see a state object representing a cash claim of £100 against a commercial bank, owned by a fictional shipping company.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Legal prose (depicted above in grey-shade) is currently implemented as an unparsed reference to the natural language
+contract that the code is supposed to express (usually a hash of the contract&#8217;s contents).</p>
+</div>
+<p>States contain arbitrary data, but they always contain at minimum a hash of the bytecode of a
+<strong>contract code</strong> file, which is a program expressed in JVM byte code that runs sandboxed inside a Java virtual machine.
+Contract code (or just &#8220;contracts&#8221; in the rest of this document) are globally shared pieces of business logic.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In the current code dynamic loading of contracts is not implemented. This will change in the near future.</p>
+</div>
+</div>
+<div class="section" id="contracts">
+<h2>Contracts<a class="headerlink" href="#contracts" title="Permalink to this headline">¶</a></h2>
+<p>Contracts define part of the business logic of the ledger.</p>
+<p>Corda enforces business logic through smart contract code, which is constructed as a pure function (called &#8220;verify&#8221;) that either accepts
+or rejects a transaction, and which can be composed from simpler, reusable functions. The functions interpret transactions
+as taking states as inputs and producing output states through the application of (smart contract) commands, and accept
+the transaction if the proposed actions are valid. Given the same transaction, a contract’s “verify” function always yields
+exactly the same result. Contracts do not have storage or the ability to interact with anything.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In the future, contracts will be mobile. Nodes will download and run contracts inside a sandbox without any review in some deployments,
+although we envisage the use of signed code for Corda deployments in the regulated sphere. Corda will use an augmented
+JVM custom sandbox that is radically more restrictive than the ordinary JVM sandbox, and it will enforce not only
+security requirements but also deterministic execution.</p>
+</div>
+<p>To further aid writing contracts we introduce the concept of <a class="reference internal" href="clauses.html"><span class="doc">Clauses</span></a> which provide a means of re-using common
+verification logic.</p>
+</div>
+<div class="section" id="transactions">
+<h2>Transactions<a class="headerlink" href="#transactions" title="Permalink to this headline">¶</a></h2>
+<p>Transaction are used to update the ledger by consuming existing state objects and producing new state objects.</p>
+<p>A transaction update is accepted according to the following two aspects of consensus:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>Transaction validity: parties can ensure that the proposed transaction and all its ancestors are valid
+by checking that the associated contract code runs successfully and has all the required signatures</li>
+<li>Transaction uniqueness: parties can ensure there exists no other transaction, over which we have previously reached
+consensus (validity and uniqueness), that consumes any of the same states. This is the responsibility of a notary service.</li>
+</ol>
+</div></blockquote>
+<p>Beyond inputs and outputs, transactions may also contain <strong>commands</strong>, small data packets that
+the platform does not interpret itself but which parameterise execution of the contracts. They can be thought of as
+arguments to the verify function. Each command has a list of <strong>composite keys</strong> associated with it. The platform ensures
+that the transaction has signatures matching every key listed in the commands before the contracts start to execute. Thus, a verify
+function can trust that all listed keys have signed the transaction, but is responsible for verifying that any keys required
+for the transaction to be valid from the verify function&#8217;s perspective are included in the list. Public keys
+may be random/identityless for privacy, or linked to a well known legal identity, for example via a
+<em>public key infrastructure</em> (PKI).</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Linkage of keys with identities via a PKI is only partially implemented in the current code.</p>
+</div>
+<p>Commands are always embedded inside a transaction. Sometimes, there&#8217;s a larger piece of data that can be reused across
+many different transactions. For this use case, we have <strong>attachments</strong>. Every transaction can refer to zero or more
+attachments by hash. Attachments are always ZIP/JAR files, which may contain arbitrary content. These files are
+then exposed on the classpath and so can be opened by contract code in the same manner as any JAR resources
+would be loaded.</p>
+<p>Note that there is nothing that explicitly binds together specific inputs, outputs, commands or attachments. Instead,
+it&#8217;s up to the contract code to interpret the pieces inside the transaction and ensure they fit together correctly. This
+is done to maximise flexibility for the contract developer.</p>
+<p>Transactions may sometimes need to provide a contract with data from the outside world. Examples may include stock
+prices, facts about events or the statuses of legal entities (e.g. bankruptcy), and so on. The providers of such
+facts are called <strong>oracles</strong> and they provide facts to the ledger by signing transactions that contain commands they
+recognise, or by creating signed attachments. The commands contain the fact and the signature shows agreement to that fact.</p>
+<p>Time is also modelled as a fact and represented as a <strong>timestamping command</strong> placed inside the transaction. This specifies a
+time window in which the transaction is considered valid for notarisation. The time window can be open ended (i.e. with a start but no end or vice versa).
+In this way transactions can be linked to the notary&#8217;s clock.</p>
+<p>It is possible for a single Corda network to have multiple competing notaries. A new (output) state is tied to a specific
+notary when it is created. Transactions can only consume (input) states that are all associated with the same notary.
+A special type of transaction is provided that can move a state (or set of states) from one notary to another.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Currently the platform code will not automatically re-assign states to a single notary. This is a future planned feature.</p>
+</div>
+<div class="section" id="transaction-validation">
+<h3>Transaction Validation<a class="headerlink" href="#transaction-validation" title="Permalink to this headline">¶</a></h3>
+<p>When a transaction is presented to a node as part of a flow it may need to be checked. Checking original transaction validity is
+the responsibility of the <code class="docutils literal"><span class="pre">ResolveTransactions</span></code> flow. This flow performs a breadth-first search over the transaction graph,
+downloading any missing transactions into local storage and validating them. The search bottoms out at transactions without inputs
+(eg. these are mostly created from issuance transactions). A transaction is not considered valid if any of its transitive dependencies are invalid.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Non-validating notaries assume transaction validity and do not request transaction data or their dependencies
+beyond the list of states consumed.</p>
+</div>
+<p>The tutorial &#8221; <a class="reference internal" href="tutorial-contract.html"><span class="doc">Writing a contract</span></a> &#8220;provides a hand-ons walk-through using these concepts.</p>
+</div>
+<div class="section" id="transaction-representation">
+<h3>Transaction Representation<a class="headerlink" href="#transaction-representation" title="Permalink to this headline">¶</a></h3>
+<p>By default, all transaction data (input and output states, commands, attachments) is visible to all participants in
+a multi-party, multi-flow business workflow. <a class="reference internal" href="merkle-trees.html"><span class="doc">Transaction tear-offs</span></a> describes how Corda uses Merkle trees to
+ensure data integrity and hiding of sensitive data within a transaction that shouldn&#8217;t be visible in its entirety to all
+participants (eg. oracles nodes providing facts).</p>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="key-concepts-core-types.html" class="btn btn-neutral float-right" title="Core types" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="key-concepts-ecosystem.html" class="btn btn-neutral" title="Corda ecosystem" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, R3 Limited.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

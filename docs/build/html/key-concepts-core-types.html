@@ -1,0 +1,441 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Core types &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
+        <link rel="next" title="Financial model" href="key-concepts-financial-model.html"/>
+        <link rel="prev" title="Data model" href="key-concepts-data-model.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="key-concepts.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-ecosystem.html">Corda ecosystem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-data-model.html">Data model</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Core types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#state-and-references">State and References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#namedbyhash-and-uniqueidentifier">NamedByHash and UniqueIdentifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#transaction-lifecycle-types">Transaction lifecycle types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#party-and-compositekey">Party and CompositeKey</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#multi-signature-support">Multi-signature support</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#composite-keys">Composite Keys</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#verification">Verification</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#date-support">Date support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cryptography-and-maths-support">Cryptography and maths support</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-financial-model.html">Financial model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-flow-framework.html">Flow framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-consensus-notaries.html">Consensus and notaries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-vault.html">Vault</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-security-model.html">Security model</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Core types</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/key-concepts-core-types.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="core-types">
+<h1>Core types<a class="headerlink" href="#core-types" title="Permalink to this headline">¶</a></h1>
+<p>Corda provides a large standard library of data types used to represent the <a class="reference internal" href="key-concepts-data-model.html"><span class="doc">Data model</span></a> previously described.
+In addition, there are a series of helper libraries which provide date manipulation, maths and cryptography functions.</p>
+<div class="section" id="state-and-references">
+<h2>State and References<a class="headerlink" href="#state-and-references" title="Permalink to this headline">¶</a></h2>
+<p>State objects contain mutable data which we would expect to evolve over the lifetime of a contract.</p>
+<p>A reference to a state in the ledger (whether it has been consumed or not) is represented with a <code class="docutils literal"><span class="pre">StateRef</span></code> object.
+If the state ref has been looked up from storage, you will have a <code class="docutils literal"><span class="pre">StateAndRef</span></code> which is simply a <code class="docutils literal"><span class="pre">StateRef</span></code> plus the data.</p>
+<p>The <code class="docutils literal"><span class="pre">ContractState</span></code> type is an interface that all states must implement. A <code class="docutils literal"><span class="pre">TransactionState</span></code> is a simple
+container for a <code class="docutils literal"><span class="pre">ContractState</span></code> (the custom data used by a contract program) and additional platform-level state
+information, such as the <em>notary</em> pointer (see <a class="reference internal" href="key-concepts-consensus-notaries.html"><span class="doc">Consensus and notaries</span></a>).</p>
+<p>A number of interfaces then extend <code class="docutils literal"><span class="pre">ContractState</span></code>, representing standardised functionality for common kinds
+of state such as:</p>
+<blockquote>
+<div><p><code class="docutils literal"><span class="pre">OwnableState</span></code>
+A state which has an owner (represented as a <code class="docutils literal"><span class="pre">CompositeKey</span></code>, discussed later). Exposes the owner and a function
+for replacing the owner e.g. when an asset is sold.</p>
+<p><code class="docutils literal"><span class="pre">SchedulableState</span></code>
+A state to indicate whether there is some activity to be performed at some future point in time with respect to this
+contract, what that activity is and at what point in time it should be initiated.</p>
+</div></blockquote>
+</div>
+<div class="section" id="namedbyhash-and-uniqueidentifier">
+<h2>NamedByHash and UniqueIdentifier<a class="headerlink" href="#namedbyhash-and-uniqueidentifier" title="Permalink to this headline">¶</a></h2>
+<p>Things which are identified by their hash, like transactions and attachments, should implement the <code class="docutils literal"><span class="pre">NamedByHash</span></code>
+interface which standardises how the ID is extracted. Note that a hash is <em>not</em> a globally unique identifier: it
+is always a derivative summary of the contents of the underlying data. Sometimes this isn&#8217;t what you want:
+two deals that have exactly the same parameters and which are made simultaneously but which are logically different
+can&#8217;t be identified by hash because their contents would be identical. Instead you would use  <code class="docutils literal"><span class="pre">UniqueIdentifier</span></code>.
+This is a combination of a (Java) <code class="docutils literal"><span class="pre">UUID</span></code> representing a globally unique 128 bit random number, and an arbitrary
+string which can be paired with it. For instance the string may represent an existing &#8220;weak&#8221; (not guaranteed unique)
+identifier for convenience purposes.</p>
+</div>
+<div class="section" id="transaction-lifecycle-types">
+<h2>Transaction lifecycle types<a class="headerlink" href="#transaction-lifecycle-types" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">WireTransaction</span></code> class contains the core of a transaction without signatures, and with references to attachments
+in place of the attachments themselves (see also <a class="reference internal" href="key-concepts-data-model.html"><span class="doc">Data model</span></a>). Once signed these are encapsulated in the
+<code class="docutils literal"><span class="pre">SignedTransaction</span></code> class. For processing a transaction (i.e. to verify it) a <code class="docutils literal"><span class="pre">SignedTransaction</span></code> is then converted to a
+<code class="docutils literal"><span class="pre">LedgerTransaction</span></code>, which involves verifying the signatures and associating them to the relevant command(s), and
+resolving the attachment references to the attachments. Commands with valid signatures are encapsulated in the
+<code class="docutils literal"><span class="pre">AuthenticatedObject</span></code> type.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">A <code class="docutils literal"><span class="pre">LedgerTransaction</span></code> has not necessarily had its contract code executed, and thus could be contract-invalid
+(but not signature-invalid). You can use the <code class="docutils literal"><span class="pre">verify</span></code> method as shown below to validate the contracts.</p>
+</div>
+<p>When constructing a new transaction from scratch, you use <code class="docutils literal"><span class="pre">TransactionBuilder</span></code>, which is a mutable transaction that
+can be signed once its construction is complete. This builder class should be used to create the initial transaction representation
+(before signature, before verification). It is intended to be passed around code that may edit it by adding new states/commands.
+Then once the states and commands are right, this class can be used as a holding bucket to gather signatures from multiple parties.
+It is typical for contract classes to expose helper methods that can contribute to a <code class="docutils literal"><span class="pre">TransactionBuilder</span></code>. Once a transaction
+has been constructed using the builders <code class="docutils literal"><span class="pre">toWireTransaction</span></code> or <code class="docutils literal"><span class="pre">toSignedTransaction</span></code> function, it shared with other
+participants using the <a class="reference internal" href="key-concepts-flow-framework.html"><span class="doc">Flow framework</span></a>.</p>
+<p>Here&#8217;s an example of building a transaction that creates an issuance of bananas (note that bananas are not a real
+contract type in the library):</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="py">notaryToUse</span><span class="p">:</span> <span class="n">Party</span> <span class="p">=</span> <span class="p">...</span>
+<span class="k">val</span> <span class="py">txb</span> <span class="p">=</span> <span class="n">TransactionBuilder</span><span class="p">(</span><span class="n">notary</span> <span class="p">=</span> <span class="n">notaryToUse</span><span class="p">).</span><span class="n">withItems</span><span class="p">(</span><span class="n">BananaState</span><span class="p">(</span><span class="n">Amount</span><span class="p">(</span><span class="m">20</span><span class="p">,</span> <span class="n">Bananas</span><span class="p">),</span> <span class="n">fromCountry</span> <span class="p">=</span> <span class="s">&quot;Elbonia&quot;</span><span class="p">))</span>
+<span class="n">txb</span><span class="p">.</span><span class="n">signWith</span><span class="p">(</span><span class="n">myKey</span><span class="p">)</span>
+<span class="n">txb</span><span class="p">.</span><span class="n">setTime</span><span class="p">(</span><span class="n">Instant</span><span class="p">.</span><span class="n">now</span><span class="p">(),</span> <span class="n">notaryToUse</span><span class="p">,</span> <span class="m">30.</span><span class="n">seconds</span><span class="p">)</span>
+<span class="c1">// We must disable the check for sufficient signatures, because this transaction is not yet notarised.</span>
+<span class="k">val</span> <span class="py">stx</span> <span class="p">=</span> <span class="n">txb</span><span class="p">.</span><span class="n">toSignedTransaction</span><span class="p">(</span><span class="n">checkSufficientSignatures</span> <span class="p">=</span> <span class="k">false</span><span class="p">)</span>
+<span class="c1">// Alternatively, let&#39;s just check it verifies pretending it was fully signed. To do this, we get</span>
+<span class="c1">// a WireTransaction, which is what the SignedTransaction wraps. Thus by verifying that directly we</span>
+<span class="c1">// skip signature checking.</span>
+<span class="n">txb</span><span class="p">.</span><span class="n">toWireTransaction</span><span class="p">().</span><span class="n">toLedgerTransaction</span><span class="p">(</span><span class="n">services</span><span class="p">).</span><span class="n">verify</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>In a unit test, you would typically use a freshly created <code class="docutils literal"><span class="pre">MockServices</span></code> object, or more realistically, you would
+write your tests using the <a class="reference internal" href="tutorial-test-dsl.html"><span class="doc">domain specific language for writing tests</span></a>.</p>
+</div>
+<div class="section" id="party-and-compositekey">
+<h2>Party and CompositeKey<a class="headerlink" href="#party-and-compositekey" title="Permalink to this headline">¶</a></h2>
+<p>Entities using the network are called <em>parties</em>. Parties can sign structures using keys, and a party may have many
+keys under their control.</p>
+<p>Parties may sometimes be identified pseudonymously. For example, in a transaction sent to your node as part of a
+chain of custody it is important you can convince yourself of the transaction&#8217;s validity, but equally important that
+you don&#8217;t learn anything about who was involved in that transaction. In these cases a public key may be present
+without any identifying information about who owns it.</p>
+<p>Identities of parties involved in signing a transaction can be represented simply by a <code class="docutils literal"><span class="pre">CompositeKey</span></code>, or by further
+information (such as name) using the <code class="docutils literal"><span class="pre">Party</span></code> class. An <code class="docutils literal"><span class="pre">AuthenticatedObject</span></code> represents an object (like a command)
+that has been signed by a set of parties.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">These types are provisional and will change significantly in future as the identity framework becomes more fleshed out.</p>
+</div>
+</div>
+<div class="section" id="multi-signature-support">
+<h2>Multi-signature support<a class="headerlink" href="#multi-signature-support" title="Permalink to this headline">¶</a></h2>
+<p>Corda supports scenarios where more than one key or party is required to authorise a state object transition, for example:
+&#8220;Either the CEO or 3 out of 5 of his assistants need to provide signatures&#8221;.</p>
+<div class="section" id="composite-keys">
+<span id="id1"></span><h3>Composite Keys<a class="headerlink" href="#composite-keys" title="Permalink to this headline">¶</a></h3>
+<p>This is achieved by public key composition, using a tree data structure <code class="docutils literal"><span class="pre">CompositeKey</span></code>. A <code class="docutils literal"><span class="pre">CompositeKey</span></code> is a tree that
+stores the cryptographic public key primitives in its leaves and the composition logic in the intermediary nodes. Every intermediary
+node specifies a <em>threshold</em> of how many child signatures it requires.</p>
+<p>An illustration of an <em>&#8220;either Alice and Bob, or Charlie&#8221;</em> composite key:</p>
+<a class="reference internal image-reference" href="_images/composite-key.png"><img alt="_images/composite-key.png" class="align-center" src="_images/composite-key.png" style="width: 300px;" /></a>
+<p>To allow further flexibility, each child node can have an associated custom <em>weight</em> (the default is 1). The <em>threshold</em>
+then specifies the minimum total weight of all children required. Our previous example can also be expressed as:</p>
+<a class="reference internal image-reference" href="_images/composite-key-2.png"><img alt="_images/composite-key-2.png" class="align-center" src="_images/composite-key-2.png" style="width: 300px;" /></a>
+</div>
+<div class="section" id="verification">
+<h3>Verification<a class="headerlink" href="#verification" title="Permalink to this headline">¶</a></h3>
+<p>Signature verification is performed in two stages:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>Given a list of signatures, each signature is verified against the expected content.</li>
+<li>The public keys corresponding to the signatures are matched against the leaves of the composite key tree in question,
+and the total combined weight of all children is calculated for every intermediary node. If all thresholds are satisfied,
+the composite key requirement is considered to be met.</li>
+</ol>
+</div></blockquote>
+</div>
+</div>
+<div class="section" id="date-support">
+<h2>Date support<a class="headerlink" href="#date-support" title="Permalink to this headline">¶</a></h2>
+<p>There are a number of supporting interfaces and classes for use by contracts which deal with dates (especially in the
+context of deadlines). As contract negotiation typically deals with deadlines in terms such as &#8220;overnight&#8221;, &#8220;T+3&#8221;,
+etc., it&#8217;s desirable to allow conversion of these terms to their equivalent deadline. <code class="docutils literal"><span class="pre">Tenor</span></code> models the interval
+before a deadline, such as 3 days, etc., while <code class="docutils literal"><span class="pre">DateRollConvention</span></code> describes how deadlines are modified to take
+into account bank holidays or other events that modify normal working days.</p>
+<p>Calculating the rollover of a deadline based on working days requires information on the bank holidays involved
+(and where a contract&#8217;s parties are in different countries, for example, this can involve multiple separate sets of
+bank holidays). The <code class="docutils literal"><span class="pre">BusinessCalendar</span></code> class models these calendars of business holidays; currently it loads these
+from files on disk, but in future this is likely to involve reference data oracles in order to ensure consensus on the
+dates used.</p>
+</div>
+<div class="section" id="cryptography-and-maths-support">
+<h2>Cryptography and maths support<a class="headerlink" href="#cryptography-and-maths-support" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">SecureHash</span></code> class represents a secure hash of unknown algorithm. We currently define only a single subclass,
+<code class="docutils literal"><span class="pre">SecureHash.SHA256</span></code>. There are utility methods to create them, parse them and so on.</p>
+<p>We also provide some mathematical utilities, in particular a set of interpolators and classes for working with
+splines. These can be found in the <a class="reference external" href="api/net.corda.core.math/index.html">maths package</a>.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="key-concepts-financial-model.html" class="btn btn-neutral float-right" title="Financial model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="key-concepts-data-model.html" class="btn btn-neutral" title="Data model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, R3 Limited.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
