@@ -1,5 +1,5 @@
 group 'net.corda'
-version '0.7-SNAPSHOT'
+version '0.8-SNAPSHOT'
 
 buildscript {
     ext.kotlin_version = '1.0.6'
