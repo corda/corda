@@ -410,10 +410,8 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
             }
         })
 
-        // Some things where the JRE provides an efficient custom serialisation.
-        val keyPair = generateKeyPair()
-        register(keyPair.public.javaClass, Ed25519PublicKeySerializer)
-        register(keyPair.private.javaClass, Ed25519PrivateKeySerializer)
+        register(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
+        register(EdDSAPrivateKey::class.java, Ed25519PrivateKeySerializer)
         register(Instant::class.java, ReferencesAwareJavaSerializer)
 
         // Using a custom serializer for compactness

@@ -9,7 +9,7 @@ class ZeroCouponBond {
 
     val contract = arrange {
         actions {
-            (acmeCorp or highStreetBank).may {
+            (acmeCorp or highStreetBank) may {
                 "execute".givenThat(after("2017-09-01")) {
                     highStreetBank.owes(acmeCorp, 100.K, GBP)
                 }
@@ -19,7 +19,7 @@ class ZeroCouponBond {
 
     val contractMove = arrange {
         actions {
-            (momAndPop or highStreetBank).may {
+            (momAndPop or highStreetBank) may {
                 "execute".givenThat(after("2017-09-01")) {
                     highStreetBank.owes(momAndPop, 100.K, GBP)
                 }
@@ -90,7 +90,7 @@ class ZeroCouponBond {
             timestamp(TEST_TX_TIME_1)
 
             command(momAndPop.owningKey) { UniversalContract.Commands.Action("execute") }
-            this `fails with` "action must be authorized"
+            this `fails with` "condition must be met"
         }
     }
 

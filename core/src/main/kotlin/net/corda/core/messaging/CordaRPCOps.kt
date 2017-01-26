@@ -23,8 +23,12 @@ data class StateMachineInfo(
 )
 
 sealed class StateMachineUpdate(val id: StateMachineRunId) {
-    class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate(stateMachineInfo.id)
-    class Removed(id: StateMachineRunId) : StateMachineUpdate(id)
+    class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate(stateMachineInfo.id) {
+        override fun toString() = "Added($id, ${stateMachineInfo.flowLogicClassName})"
+    }
+    class Removed(id: StateMachineRunId) : StateMachineUpdate(id) {
+        override fun toString() = "Removed($id)"
+    }
 }
 
 /**
@@ -172,5 +176,6 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow
 data class FlowHandle<A>(
         val id: StateMachineRunId,
         val progress: Observable<String>,
+        // TODO This should be ListenableFuture<A>
         val returnValue: Observable<A>
 )

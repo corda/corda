@@ -3,7 +3,7 @@ package net.corda.contracts
 import net.corda.contracts.asset.sumCashBy
 import net.corda.contracts.clause.AbstractIssue
 import net.corda.core.contracts.*
-import net.corda.core.contracts.clauses.AnyComposition
+import net.corda.core.contracts.clauses.AnyOf
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.contracts.clauses.GroupClauseVerifier
 import net.corda.core.contracts.clauses.verifyClause
@@ -103,10 +103,10 @@ class CommercialPaper : Contract {
 
     interface Clauses {
         class Group : GroupClauseVerifier<State, Commands, Issued<Terms>>(
-                AnyComposition(
-                        Redeem(),
-                        Move(),
-                        Issue())) {
+                AnyOf(
+                    Redeem(),
+                    Move(),
+                    Issue())) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Terms>>>
                     = tx.groupStates<State, Issued<Terms>> { it.token }
         }

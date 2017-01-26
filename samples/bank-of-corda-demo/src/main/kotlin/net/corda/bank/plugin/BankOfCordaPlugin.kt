@@ -1,7 +1,7 @@
 package net.corda.bank.plugin
 
 import net.corda.bank.api.BankOfCordaWebApi
-import net.corda.bank.flow.IssuerFlow
+import net.corda.flows.IssuerFlow
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.Party
 import net.corda.core.node.CordaPluginRegistry

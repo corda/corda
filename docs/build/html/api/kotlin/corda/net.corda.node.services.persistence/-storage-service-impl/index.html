@@ -1,0 +1,64 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>StorageServiceImpl - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.persistence</a>&nbsp;/&nbsp;<a href=".">StorageServiceImpl</a><br/>
+<br/>
+<h1>StorageServiceImpl</h1>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">StorageServiceImpl</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><a href="../../net.corda.core.node.services/-tx-writable-storage-service/index.html"><span class="identifier">TxWritableStorageService</span></a></code>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">StorageServiceImpl</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.persistence.StorageServiceImpl$<init>(net.corda.core.node.services.AttachmentStorage, net.corda.core.node.services.TransactionStorage, net.corda.core.node.services.StateMachineRecordedTransactionMappingStorage)/attachments">attachments</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.persistence.StorageServiceImpl$<init>(net.corda.core.node.services.AttachmentStorage, net.corda.core.node.services.TransactionStorage, net.corda.core.node.services.StateMachineRecordedTransactionMappingStorage)/validatedTransactions">validatedTransactions</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-transaction-storage/index.html"><span class="identifier">TransactionStorage</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.persistence.StorageServiceImpl$<init>(net.corda.core.node.services.AttachmentStorage, net.corda.core.node.services.TransactionStorage, net.corda.core.node.services.StateMachineRecordedTransactionMappingStorage)/stateMachineRecordedTransactionMapping">stateMachineRecordedTransactionMapping</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-state-machine-recorded-transaction-mapping-storage/index.html"><span class="identifier">StateMachineRecordedTransactionMappingStorage</span></a><span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="attachments.html">attachments</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">attachments</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a></code>
+<p>Provides access to storage of arbitrary JAR files (which may contain only data, no code).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="state-machine-recorded-transaction-mapping.html">stateMachineRecordedTransactionMapping</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">stateMachineRecordedTransactionMapping</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-state-machine-recorded-transaction-mapping-storage/index.html"><span class="identifier">StateMachineRecordedTransactionMappingStorage</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="validated-transactions.html">validatedTransactions</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">validatedTransactions</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-transaction-storage/index.html"><span class="identifier">TransactionStorage</span></a></code>
+<p>A map of hash-&gt;tx where tx has been signature/contract validated and the states are known to be correct.
+The signatures aren't technically needed after that point, but we keep them around so that we can relay
+the transaction data to other nodes that need it.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.serialization/-singleton-serialize-as-token/to-token.html">toToken</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toToken</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.SingletonSerializeAsToken$toToken(net.corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.serialization/-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

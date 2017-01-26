@@ -158,6 +158,18 @@
     -fx-background-color: -color-4;
 }
 
+.certificateButton.button, .certificateButton.button:hover{
+    -fx-background-color: transparent;
+}
+
+.certificateIcon{
+    -fx-fill: -color-2;
+}
+
+.certificateIcon:hover{
+    -fx-fill: -color-3;
+}
+
 .login {
     -fx-background-color: -color-0;
 }

@@ -50,7 +50,7 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
                      deriveState: (TransactionState<S>, Amount<Issued<T>>, CompositeKey) -> TransactionState<S>,
                      generateMoveCommand: () -> CommandData,
                      generateExitCommand: (Amount<Issued<T>>) -> CommandData): CompositeKey {
-        val owner = assetStates.map { it.state.data.owner }.toSet().single()
+        val owner = assetStates.map { it.state.data.owner }.toSet().singleOrNull() ?: throw InsufficientBalanceException(amountIssued)
         val currency = amountIssued.token.product
         val amount = Amount(amountIssued.quantity, currency)
         var acceptableCoins = assetStates.filter { ref -> ref.state.data.amount.token == amountIssued.token }

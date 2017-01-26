@@ -1,0 +1,40 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>AggregatedList.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.client.fxutils</a>&nbsp;/&nbsp;<a href="index.html">AggregatedList</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">AggregatedList</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.AggregatedList$<init>(javafx.collections.ObservableList((net.corda.client.fxutils.AggregatedList.E)), kotlin.Function1((net.corda.client.fxutils.AggregatedList.E, net.corda.client.fxutils.AggregatedList.K)), kotlin.Function2((net.corda.client.fxutils.AggregatedList.K, javafx.collections.ObservableList((net.corda.client.fxutils.AggregatedList.E)), net.corda.client.fxutils.AggregatedList.A)))/list">list</span><span class="symbol">:</span>&nbsp;<span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">E</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils.AggregatedList$<init>(javafx.collections.ObservableList((net.corda.client.fxutils.AggregatedList.E)), kotlin.Function1((net.corda.client.fxutils.AggregatedList.E, net.corda.client.fxutils.AggregatedList.K)), kotlin.Function2((net.corda.client.fxutils.AggregatedList.K, javafx.collections.ObservableList((net.corda.client.fxutils.AggregatedList.E)), net.corda.client.fxutils.AggregatedList.A)))/toKey">toKey</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">E</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">K</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils.AggregatedList$<init>(javafx.collections.ObservableList((net.corda.client.fxutils.AggregatedList.E)), kotlin.Function1((net.corda.client.fxutils.AggregatedList.E, net.corda.client.fxutils.AggregatedList.K)), kotlin.Function2((net.corda.client.fxutils.AggregatedList.K, javafx.collections.ObservableList((net.corda.client.fxutils.AggregatedList.E)), net.corda.client.fxutils.AggregatedList.A)))/assemble">assemble</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="identifier">E</span><span class="symbol">&gt;</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">A</span><span class="symbol">)</span></code>
+<p>Given an <a href="#">ObservableList</a>&lt;<a href="#">E</a>&gt; and a grouping key <a href="#">K</a>, <a href="index.html">AggregatedList</a> groups the elements by the key into a fresh
+<a href="#">ObservableList</a>&lt;<a href="#">E</a>&gt; for each group and exposes the groups as an observable list of <a href="#">A</a>s by calling <a href="-init-.html#net.corda.client.fxutils.AggregatedList$<init>(javafx.collections.ObservableList((net.corda.client.fxutils.AggregatedList.E)), kotlin.Function1((net.corda.client.fxutils.AggregatedList.E, net.corda.client.fxutils.AggregatedList.K)), kotlin.Function2((net.corda.client.fxutils.AggregatedList.K, javafx.collections.ObservableList((net.corda.client.fxutils.AggregatedList.E)), net.corda.client.fxutils.AggregatedList.A)))/assemble">assemble</a> on each.</p>
+<p>Changes done to elements of the input list are reflected in the observable list of the respective group, whereas
+additions/removals of elements in the underlying list are reflected in the exposed <a href="#">ObservableList</a>&lt;<a href="#">A</a>&gt; by
+adding/deleting aggregations as expected.</p>
+<p>The ordering of the exposed list is based on the <a href="#">hashCode</a> of keys.
+The ordering of the groups themselves is based on the <a href="#">hashCode</a> of elements.</p>
+<p>Warning: If there are two elements <a href="#">E</a> in the source list that have the same <a href="#">hashCode</a> then it is not deterministic
+which one will be removed if one is removed from the source list!</p>
+<p>Example:
+val statesGroupedByCurrency = AggregatedList(states, { state -&gt; state.currency }) { currency, group -&gt;
+    object {
+      val currency = currency
+      val states = group
+    }
+}</p>
+<p>The above creates an observable list of (currency, statesOfCurrency) pairs.</p>
+<p>Note that update events to the source list are discarded, assuming the key of elements does not change.
+TODO Should we handle this case? It requires additional bookkeeping of sourceIndex-&gt;(aggregationIndex, groupIndex)</p>
+<h3>Parameters</h3>
+
+<p><a name="list"></a>
+<code>list</code> - The underlying list.
+<p><a name="toKey"></a>
+<code>toKey</code> - Function to extract the key from an element.
+<p><a name="assemble"></a>
+<code>assemble</code> - Function to assemble the aggregation into the exposed <a href="#">A</a>.
+</BODY>
+</HTML>

@@ -45,7 +45,7 @@ configurations {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    testCompile group: 'junit', name: 'junit', version: '4.11'
+    testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
@@ -58,7 +58,7 @@ dependencies {
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
-    compile 'com.squareup.okhttp3:okhttp:3.3.1'
+    compile "com.squareup.okhttp3:okhttp:$okhttp_version"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
@@ -66,7 +66,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     networkMap "Notary"
     node {
         name "Notary"
-        dirName "controller"
         nearestCity "London"
         advertisedServices = ["corda.notary.validating", "corda.interest_rates"]
         artemisPort 10002
@@ -76,7 +75,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     }
     node {
         name "Bank A"
-        dirName "nodea"
         nearestCity "London"
         advertisedServices = []
         artemisPort 10004
@@ -86,7 +84,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     }
     node {
         name "Bank B"
-        dirName "nodeb"
         nearestCity "New York"
         advertisedServices = []
         artemisPort 10006
@@ -99,6 +96,17 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDir = sourceSets.integrationTest.output.classesDir
     classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+// This fixes the "line too long" error when running this demo with windows CLI
+// TODO: Automatically apply to all projects via a plugin
+tasks.withType(CreateStartScripts).each { task ->
+    task.doLast {
+        String text = task.windowsScript.text
+        // Replaces the per file classpath (which are all jars in "lib") with a wildcard on lib
+        text = text.replaceFirst(/(set CLASSPATH=%APP_HOME%\\lib\\).*/, { "${it[1]}*" })
+        task.windowsScript.write text
+    }
 }
 
 idea {

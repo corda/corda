@@ -1,0 +1,64 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>PortAllocation - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.driver</a>&nbsp;/&nbsp;<a href=".">PortAllocation</a><br/>
+<br/>
+<h1>PortAllocation</h1>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">PortAllocation</span></code>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-incremental/index.html">Incremental</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Incremental</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PortAllocation</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-random-free/index.html">RandomFree</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">RandomFree</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PortAllocation</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="next-host-and-port.html">nextHostAndPort</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">nextHostAndPort</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">HostAndPort</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="next-port.html">nextPort</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">nextPort</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-incremental/index.html">Incremental</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Incremental</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PortAllocation</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-random-free/index.html">RandomFree</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">RandomFree</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PortAllocation</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

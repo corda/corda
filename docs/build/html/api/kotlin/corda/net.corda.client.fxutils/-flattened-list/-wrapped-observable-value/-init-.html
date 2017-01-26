@@ -1,0 +1,20 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>FlattenedList.WrappedObservableValue.<init> - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.client.fxutils</a>&nbsp;/&nbsp;<a href="../index.html">FlattenedList</a>&nbsp;/&nbsp;<a href="index.html">WrappedObservableValue</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">WrappedObservableValue</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.FlattenedList.WrappedObservableValue$<init>(javafx.beans.value.ObservableValue((net.corda.client.fxutils.FlattenedList.WrappedObservableValue.A)))/observableValue">observableValue</span><span class="symbol">:</span>&nbsp;<span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>We maintain an ObservableValue-&gt;index map. This is needed because we need the ObservableValue's index in order to
+propagate a change and if the listener closure captures the index at the time of the call to
+<a href="#">ObservableValue.addListener</a> it will become incorrect if the indices shift around later.</p>
+<p>Note that because of the bookkeeping required for this map, any remove operation and any add operation that
+inserts to the middle of the list will be O(N) as we need to scan the map and shift indices accordingly.</p>
+<p>Note also that we're wrapping each ObservableValue, this is required because we want to support reusing of
+ObservableValues and we need each to have a different hash.</p>
+</BODY>
+</HTML>

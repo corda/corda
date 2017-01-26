@@ -1,0 +1,72 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TransactionState - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href=".">TransactionState</a><br/>
+<br/>
+<h1>TransactionState</h1>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TransactionState</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span></code>
+<p>A wrapper for <a href="../-contract-state/index.html">ContractState</a> containing additional platform-level state information.
+This is the definitive state that is stored on the ledger and used in transaction outputs.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">TransactionState</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.TransactionState$<init>(net.corda.core.contracts.TransactionState.T, net.corda.core.crypto.Party, kotlin.Int)/data">data</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.TransactionState$<init>(net.corda.core.contracts.TransactionState.T, net.corda.core.crypto.Party, kotlin.Int)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.TransactionState$<init>(net.corda.core.contracts.TransactionState.T, net.corda.core.crypto.Party, kotlin.Int)/encumbrance">encumbrance</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span></code>
+<p>A wrapper for <a href="../-contract-state/index.html">ContractState</a> containing additional platform-level state information.
+This is the definitive state that is stored on the ledger and used in transaction outputs.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="data.html">data</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">data</span><span class="symbol">: </span><span class="identifier">T</span></code>
+<p>The custom contract state</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="encumbrance.html">encumbrance</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">encumbrance</span><span class="symbol">: </span><span class="identifier">Int</span><span class="symbol">?</span></code>
+<p>All contract states may be <emph>encumbered</emph> by up to one other state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="notary.html">notary</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">notary</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code>
+<p>Identity of the notary that ensures the state is not used as an input to a transaction more than once</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="with-notary.html">withNotary</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">withNotary</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.TransactionState$withNotary(net.corda.core.crypto.Party)/newNotary">newNotary</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">TransactionState</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Copies the underlying state, replacing the notary field with the new value.
+To replace the notary, we need an approval (signature) from <emph>all</emph> participants of the <a href="../-contract-state/index.html">ContractState</a>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

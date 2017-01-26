@@ -26,7 +26,11 @@ abstract class Clause<in S : ContractState, C : CommandData, in K : Any> {
 
     /**
      * Determine the subclauses which will be verified as a result of verifying this clause.
+     *
+     * @throws IllegalStateException if the given commands do not result in a valid execution (for example no match
+     * with [FirstOf]).
      */
+    @Throws(IllegalStateException::class)
     open fun getExecutionPath(commands: List<AuthenticatedObject<C>>): List<Clause<*, *, *>>
             = listOf(this)
 

@@ -5,6 +5,7 @@ import net.corda.core.contracts.Frequency
 import net.corda.core.contracts.Tenor
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.transaction
+import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
@@ -33,15 +34,15 @@ class IRS {
     val contractInitial = arrange {
         rollOut("2016-09-01".ld, "2018-09-01".ld, Frequency.Quarterly) {
             actions {
-                (acmeCorp or highStreetBank).may {
+                (acmeCorp or highStreetBank) may {
                     val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                     val fixed = interest(notional, "act/365", 0.5.bd, start, end)
 
-                    "pay floating".anytime {
+                    "pay floating" anytime {
                         highStreetBank.owes(acmeCorp, floating - fixed, currency)
                         next()
                     }
-                    "pay fixed".anytime {
+                    "pay fixed" anytime {
                         highStreetBank.owes(acmeCorp, fixed - floating, currency)
                         next()
                     }
@@ -51,43 +52,43 @@ class IRS {
     }
     val contractAfterFixingFirst = arrange {
         actions {
-            (acmeCorp or highStreetBank).may {
+            (acmeCorp or highStreetBank) may {
                 val floating = interest(notional, "act/365", 1.0.bd, "2016-09-01", "2016-12-01")
                 val fixed = interest(notional, "act/365", 0.5.bd, "2016-09-01", "2016-12-01")
 
-                "pay floating".anytime {
+                "pay floating" anytime {
                     highStreetBank.owes(acmeCorp, floating - fixed, currency)
                     rollOut("2016-12-01".ld, "2018-09-01".ld, Frequency.Quarterly) {
                         actions {
-                            (acmeCorp or highStreetBank).may {
-                                val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
-                                val fixed = interest(notional, "act/365", 0.5.bd, start, end)
+                            (acmeCorp or highStreetBank) may {
+                                val nextFloating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
+                                val nextFixed = interest(notional, "act/365", 0.5.bd, start, end)
 
-                                "pay floating".anytime {
-                                    highStreetBank.owes(acmeCorp, floating - fixed, currency)
+                                "pay floating" anytime {
+                                    highStreetBank.owes(acmeCorp, nextFloating - nextFixed, currency)
                                     next()
                                 }
-                                "pay fixed".anytime {
-                                    highStreetBank.owes(acmeCorp, fixed - floating, currency)
+                                "pay fixed" anytime {
+                                    highStreetBank.owes(acmeCorp, nextFixed - nextFloating, currency)
                                     next()
                                 }
                             }
                         }
                     }
                 }
-                "pay fixed".anytime {
+                "pay fixed" anytime {
                     highStreetBank.owes(acmeCorp, fixed - floating, currency)
                     rollOut("2016-12-01".ld, "2018-09-01".ld, Frequency.Quarterly) {
                         actions {
-                            (acmeCorp or highStreetBank).may {
+                            (acmeCorp or highStreetBank) may {
                                 val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                                 val fixed = interest(notional, "act/365", 0.5.bd, start, end)
 
-                                "pay floating".anytime {
+                                "pay floating" anytime {
                                     highStreetBank.owes(acmeCorp, floating - fixed, currency)
                                     next()
                                 }
-                                "pay fixed".anytime {
+                                "pay fixed" anytime {
                                     highStreetBank.owes(acmeCorp, fixed - floating, currency)
                                     next()
                                 }
@@ -102,15 +103,15 @@ class IRS {
     val contractAfterExecutionFirst = arrange {
         rollOut("2016-12-01".ld, "2018-09-01".ld, Frequency.Quarterly) {
             actions {
-                (acmeCorp or highStreetBank).may {
+                (acmeCorp or highStreetBank) may {
                     val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                     val fixed = interest(notional, "act/365", 0.5.bd, start, end)
 
-                    "pay floating".anytime {
+                    "pay floating" anytime {
                         highStreetBank.owes(acmeCorp, floating - fixed, currency)
                         next()
                     }
-                    "pay fixed".anytime {
+                    "pay fixed" anytime {
                         highStreetBank.owes(acmeCorp, fixed - floating, currency)
                         next()
                     }
@@ -128,11 +129,6 @@ class IRS {
 
     val statePaymentFirst = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), paymentFirst)
 
-
-    @Test
-    fun ser1() {
-
-    }
 
     @Test
     fun issue() {
@@ -218,5 +214,13 @@ class IRS {
         }
     }
 
+    @Test @Ignore
+    fun `pretty print`() {
+        println ( prettyPrint(contractInitial) )
+
+        println ( prettyPrint(contractAfterFixingFirst) )
+
+        println ( prettyPrint(contractAfterExecutionFirst) )
+    }
 
 }

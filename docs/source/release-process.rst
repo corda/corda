@@ -23,7 +23,7 @@ Our goal is to cut a new milestone roughly once a month. There are no fixed date
 a few days to ensure the code is sufficiently usable. Usually the release will happen around the end of the month.
 
 Steps to cut a release
-======================
+----------------------
 
 1. Pick a commit that is stable and do basic QA: run all the tests, run the demos.
 2. Review the commits between this release and the last looking for new features, API changes, etc. Make sure the

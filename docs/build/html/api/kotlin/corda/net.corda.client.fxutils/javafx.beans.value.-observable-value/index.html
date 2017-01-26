@@ -1,0 +1,50 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.client.fxutils.javafx.beans.value.ObservableValue - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.client.fxutils</a>&nbsp;/&nbsp;<a href=".">javafx.beans.value.ObservableValue</a><br/>
+<br/>
+<h3>Extensions for javafx.beans.value.ObservableValue</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="bind.html">bind</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">&gt;</span> <span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">bind</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$bind(javafx.beans.value.ObservableValue((net.corda.client.fxutils.bind.A)), kotlin.Function1((net.corda.client.fxutils.bind.A, javafx.beans.value.ObservableValue((net.corda.client.fxutils.bind.B)))))/function">function</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">B</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">B</span><span class="symbol">&gt;</span></code>
+<p>data class Person(val height: ObservableValue)
+val person: ObservableValue = (..)
+val personHeight: ObservableValue = person.bind { it.height }</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="bind-out.html">bindOut</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">&gt;</span> <span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">bindOut</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$bindOut(javafx.beans.value.ObservableValue((net.corda.client.fxutils.bindOut.A)), kotlin.Function1((net.corda.client.fxutils.bindOut.A, javafx.beans.value.ObservableValue((net.corda.client.fxutils.bindOut.B)))))/function">function</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">B</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">B</span><span class="symbol">&gt;</span></code>
+<p>A variant of <a href="bind.html">bind</a> that has out variance on the output type. This is sometimes useful when kotlin is too eager to
+propagate variance constraints and type inference fails.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="is-not-null.html">isNotNull</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">isNotNull</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BooleanBinding</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="map.html">map</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">&gt;</span> <span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">map</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$map(javafx.beans.value.ObservableValue((net.corda.client.fxutils.map.A)), kotlin.Function1((net.corda.client.fxutils.map.A, net.corda.client.fxutils.map.B)))/function">function</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">B</span><span class="symbol">&gt;</span></code>
+<p>val person: ObservableValue = (..)
+val personName: ObservableValue = person.map { it.name }</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

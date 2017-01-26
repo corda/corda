@@ -52,7 +52,7 @@ class ValidatingNotaryServiceTests {
         val future = runClient(stx)
 
         val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
-        assertThat(ex.error).isInstanceOf(NotaryError.TransactionInvalid::class.java)
+        assertThat(ex.error).isInstanceOf(NotaryError.SignaturesInvalid::class.java)
     }
 
     @Test fun `should report error for missing signatures`() {
@@ -73,7 +73,7 @@ class ValidatingNotaryServiceTests {
         val notaryError = ex.error
         assertThat(notaryError).isInstanceOf(NotaryError.SignaturesMissing::class.java)
 
-        val missingKeys = (notaryError as NotaryError.SignaturesMissing).missingSigners
+        val missingKeys = (notaryError as NotaryError.SignaturesMissing).cause.missing
         assertEquals(setOf(expectedMissingKey), missingKeys)
     }
 

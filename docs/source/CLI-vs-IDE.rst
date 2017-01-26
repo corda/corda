@@ -1,19 +1,19 @@
 CLI vs IDE
 ==========
 
-We have tried to make every demo, example, tutorial and sample to be both usuable via the command line and also the IntelliJ IDE.
-Most developers will find writing, editing and debugging code more easily done via tools such as an IDE, but when code needs
-to be deployed to run as nodes, control must be done via the command line - no organisations allow their systems to be running via
+We have tried to make every demo, example, tutorial and sample usable via both the command line and the IntelliJ IDE.
+Most developers will find writing, editing and debugging code more easy with tools such as an IDE. But when a production node 
+is deployed, it will be controlled via the command line - no organisation allows their systems to be running via
 a developer environment.
 
 IDE - IntelliJ
 --------------
 
-IntelliJ (the preferred IDE in R3) integrates well with gradle (our chosed build, deploy and CLI tool). IntelliJ understands gradle
-tasks and dependencies, automatically loading them in the background when a project is first loaded or the gradle
+IntelliJ (R3's preferred IDE) integrates well with gradle (our chosen build, deployment and CLI tool). IntelliJ understands gradle
+tasks and dependencies, automatically loading them in the background when a project is first opened or the gradle
 project changes. Occasionally, however, you may need to refresh the gradle project manually - but this is hinted to you
 by the IDE. It's a good idea to do this before carrying on with other work (and in fact you may find it is essential to pick
-up new libraries etc).
+up new libraries, etc.).
 
 There are some great resources about how to get started using IntelliJ. As opposed to trying to repeat them here, we advise
 you to go to the `IntelliJ docs here <https://www.jetbrains.com/idea/documentation/>`_.
@@ -32,22 +32,22 @@ As well as including the most significant run and build configurations in the ID
 and run significant parts of Corda demos and tools. Gradle is highly extensible and we use it for downloading required resources,
 building components, installing those built components into shared areas, configuring the scripts that run nodes, starting
 up demonstration API calls amongst other things. It is exceptionally good at deriving dependency maps and therefore performing
-the preceeding tasks required in order to do the requested task. However, when confusing build errors manifest, then sometimes
+the preceding tasks required in order to do the requested task. However, when confusing build errors manifest, then sometimes
 a ``gradle clean`` may be required in order to clear out any build areas that have an inconsistent state. The total build time
-from downloading / cloaning the repo to a complete build should be only a few minutes, obviously slightly longer if the
+from downloading / cloning the repo to a complete build should be only a few minutes, obviously slightly longer if the
 unit tests are run.
 
 Frequently Used Gradle Tasks
 ****************************
 
-Note that the list of tasks can be ran for any gradle project can be displayed by running the task ``tasks``. Also note that
-gradle is hierachical and therefore tasks in child directories can be run using a colon seperator - ie if you want to run
-the sample attachment-demo ``runSender`` you would use the command ``gradle samples:attachment-demo:runSender``
+Note that the list of tasks can be ran for any gradle project can be displayed by running the task ``tasks``. Also, note that
+gradle is hierarchical and therefore tasks in child directories can be run using a colon separator. For example, if you want to run
+the sample attachment demo run configuration ``runSender``, you would use the command ``gradle samples:attachment-demo:runSender``
 
 The most frequent gradle tasks you will probably be running are ``build`` and ``install``. The ``build`` command also executes the
 unit tests as well. If you want to build without this level of verification, then use the ``assemble`` command - but we do
 not recommend this. After running build, the ``install`` tasks copies over the built jars into the local maven repository
-which will then makes these available for either the sample code or use with the CorDapp template.
+which will then make these available for either the sample code or use with the CorDapp template.
 
 Debugging
 ---------

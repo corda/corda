@@ -1,0 +1,17 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ScheduledStateRef.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href="index.html">ScheduledStateRef</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">ScheduledStateRef</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.ScheduledStateRef$<init>(net.corda.core.contracts.StateRef, java.time.Instant)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.ScheduledStateRef$<init>(net.corda.core.contracts.StateRef, java.time.Instant)/scheduledAt">scheduledAt</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">)</span></code>
+<p>Represents a contract state (unconsumed output) of type <a href="../-linear-state/index.html">LinearState</a> and a point in time that a lifecycle event is expected to take place
+for that contract state.</p>
+<p>This is effectively the input to a scheduler, which wakes up at that point in time and asks the contract state what
+lifecycle processing needs to take place.  e.g. a fixing or a late payment etc.</p>
+</BODY>
+</HTML>

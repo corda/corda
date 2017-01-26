@@ -6,26 +6,33 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
 import javafx.scene.control.*
 import javafx.stage.Window
+import net.corda.client.fxutils.ChosenList
 import net.corda.client.fxutils.isNotNull
 import net.corda.client.fxutils.map
 import net.corda.client.fxutils.unique
 import net.corda.client.model.*
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.Issued
+import net.corda.core.contracts.PartyAndReference
+import net.corda.core.contracts.withoutIssuer
 import net.corda.core.crypto.Party
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.transactions.SignedTransaction
 import net.corda.explorer.model.CashTransaction
+import net.corda.explorer.model.IssuerModel
+import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.views.bigDecimalFormatter
 import net.corda.explorer.views.byteFormatter
 import net.corda.explorer.views.stringConverter
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.flows.CashFlowResult
+import net.corda.flows.IssuerFlow.IssuanceRequester
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.Fragment
 import tornadofx.booleanBinding
-import tornadofx.observable
 import java.math.BigDecimal
 import java.util.*
 
@@ -51,11 +58,24 @@ class NewTransaction : Fragment() {
     private val issueRef = SimpleObjectProperty<Byte>()
     // Inject data
     private val parties by observableList(NetworkIdentityModel::parties)
+    private val issuers by observableList(IssuerModel::issuers)
     private val rpcProxy by observableValue(NodeMonitorModel::proxyObservable)
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
     private val notaries by observableList(NetworkIdentityModel::notaries)
     private val cash by observableList(ContractStateModel::cash)
     private val executeButton = ButtonType("Execute", ButtonBar.ButtonData.APPLY)
+    private val currencyTypes by observableList(IssuerModel::currencyTypes)
+    private val supportedCurrencies by observableList(ReportingCurrencyModel::supportedCurrencies)
+    private val transactionTypes by observableList(IssuerModel::transactionTypes)
+
+    private val currencyItems = ChosenList(transactionTypeCB.valueProperty().map {
+        when(it){
+            CashTransaction.Pay -> supportedCurrencies
+            CashTransaction.Issue,
+            CashTransaction.Exit -> currencyTypes
+            else -> FXCollections.emptyObservableList()
+        }
+    })
 
     fun show(window: Window): Unit {
         dialog(window).showAndWait().ifPresent {
@@ -67,14 +87,29 @@ class NewTransaction : Fragment() {
             }
             dialog.show()
             runAsync {
-                rpcProxy.value!!.startFlow(::CashFlow, it).returnValue.toBlocking().first()
+                if (it is CashCommand.IssueCash) {
+                    myIdentity.value?.let { myIdentity ->
+                        rpcProxy.value!!.startFlow(::IssuanceRequester,
+                                it.amount,
+                                it.recipient,
+                                it.issueRef,
+                                myIdentity.legalIdentity).returnValue.toBlocking().first()
+                    }
+                }
+                else {
+                    rpcProxy.value!!.startFlow(::CashFlow, it).returnValue.toBlocking().first()
+                }
             }.ui {
                 dialog.contentText = when (it) {
+                    is SignedTransaction -> {
+                        dialog.alertType = Alert.AlertType.INFORMATION
+                        "Cash Issued \nTransaction ID : ${it.id} \nMessage"
+                    }
                     is CashFlowResult.Success -> {
                         dialog.alertType = Alert.AlertType.INFORMATION
                         "Transaction Started \nTransaction ID : ${it.transaction?.id} \nMessage : ${it.message}"
                     }
-                    is CashFlowResult.Failed -> {
+                    else -> {
                         dialog.alertType = Alert.AlertType.ERROR
                         it.toString()
                     }
@@ -92,15 +127,15 @@ class NewTransaction : Fragment() {
         dialogPane = root
         initOwner(window)
         setResultConverter {
-            val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
+            val defaultRef = OpaqueBytes.of(1)
+            val issueRef = if (issueRef.value != null) OpaqueBytes.of(issueRef.value) else defaultRef
             when (it) {
                 executeButton -> when (transactionTypeCB.value) {
                     CashTransaction.Issue -> {
-                        val issueRef = if (issueRef.value != null) OpaqueBytes(ByteArray(1, { issueRef.value })) else defaultRef
                         CashCommand.IssueCash(Amount(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.legalIdentity, notaries.first().notaryIdentity)
                     }
-                    CashTransaction.Pay -> CashCommand.PayCash(Amount(amount.value, Issued(PartyAndReference(issuerChoiceBox.value, defaultRef), currencyChoiceBox.value)), partyBChoiceBox.value.legalIdentity)
-                    CashTransaction.Exit -> CashCommand.ExitCash(Amount(amount.value, currencyChoiceBox.value), defaultRef)
+                    CashTransaction.Pay -> CashCommand.PayCash(Amount(amount.value, Issued(PartyAndReference(issuerChoiceBox.value, issueRef), currencyChoiceBox.value)), partyBChoiceBox.value.legalIdentity)
+                    CashTransaction.Exit -> CashCommand.ExitCash(Amount(amount.value, currencyChoiceBox.value), issueRef)
                     else -> null
                 }
                 else -> null
@@ -115,7 +150,7 @@ class NewTransaction : Fragment() {
         root.disableProperty().bind(enableProperty.not())
 
         // Transaction Types Choice Box
-        transactionTypeCB.items = CashTransaction.values().asList().observable()
+        transactionTypeCB.items = transactionTypes
 
         // Party A textfield always display my identity name, not editable.
         partyATextField.isEditable = false
@@ -133,7 +168,7 @@ class NewTransaction : Fragment() {
         // Issuer
         issuerLabel.visibleProperty().bind(transactionTypeCB.valueProperty().isNotNull)
         issuerChoiceBox.apply {
-            items = cash.map { it.token.issuer.party }.unique().sorted()
+            items = issuers.map { it.legalIdentity }.unique().sorted()
             converter = stringConverter { it.name }
             visibleProperty().bind(transactionTypeCB.valueProperty().map { it == CashTransaction.Pay })
         }
@@ -143,16 +178,16 @@ class NewTransaction : Fragment() {
             isEditable = false
         }
         // Issue Reference
-        issueRefLabel.visibleProperty().bind(transactionTypeCB.valueProperty().map { it == CashTransaction.Issue })
+        issueRefLabel.visibleProperty().bind(transactionTypeCB.valueProperty().map { it == CashTransaction.Issue || it == CashTransaction.Exit })
 
         issueRefTextField.apply {
             textFormatter = byteFormatter().apply { issueRef.bind(this.valueProperty()) }
-            visibleProperty().bind(transactionTypeCB.valueProperty().map { it == CashTransaction.Issue })
+            visibleProperty().bind(transactionTypeCB.valueProperty().map { it == CashTransaction.Issue || it == CashTransaction.Exit })
         }
         // Currency
         currencyLabel.visibleProperty().bind(transactionTypeCB.valueProperty().isNotNull)
         // TODO : Create a currency model to store these values
-        currencyChoiceBox.items = FXCollections.observableList(setOf(USD, GBP, CHF).toList())
+        currencyChoiceBox.items = currencyItems
         currencyChoiceBox.visibleProperty().bind(transactionTypeCB.valueProperty().isNotNull)
         val issuer = Bindings.createObjectBinding({ if (issuerChoiceBox.isVisible) issuerChoiceBox.value else myIdentity.value?.legalIdentity }, arrayOf(myIdentity, issuerChoiceBox.visibleProperty(), issuerChoiceBox.valueProperty()))
         availableAmount.visibleProperty().bind(

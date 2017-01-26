@@ -1,0 +1,177 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>VaultService - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.node.services</a>&nbsp;/&nbsp;<a href=".">VaultService</a><br/>
+<br/>
+<h1>VaultService</h1>
+<code><span class="keyword">interface </span><span class="identifier">VaultService</span></code>
+<p>A VaultService is responsible for securely and safely persisting the current state of a vault to storage. The
+vault service vends immutable snapshots of the current vault for working with: if you build a transaction based
+on a vault that isn't current, be aware that it may end up being invalid if the states that were used have been
+consumed by someone else first!</p>
+<p>Note that transactions we've seen are held by the storage service, not the vault.</p>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="cash-balances.html">cashBalances</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+which we have no cash evaluate to null (not present in map), not 0.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="current-vault.html">currentVault</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">currentVault</span><span class="symbol">: </span><a href="../-vault/index.html"><span class="identifier">Vault</span></a></code>
+<p>Returns a read-only snapshot of the vault at the time the call is made. Note that if you consume states or
+keys in this vault, you must inform the vault service so it can update its internal state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="linear-heads.html">linearHeads</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">linearHeads</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-linear-state/index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Returns a snapshot of the heads of LinearStates.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="raw-updates.html">rawUpdates</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">rawUpdates</span><span class="symbol">: </span><span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="../-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code>
+<p>Prefer the use of <a href="updates.html">updates</a> unless you know why you want to use this instead.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="updates.html">updates</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">updates</span><span class="symbol">: </span><span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="../-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code>
+<p>Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Vault will already incorporate
+the update, and the database transaction associated with the update will have been committed and closed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="add-note-to-transaction.html">addNoteToTransaction</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addNoteToTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$addNoteToTransaction(net.corda.core.crypto.SecureHash, kotlin.String)/txnId">txnId</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.services.VaultService$addNoteToTransaction(net.corda.core.crypto.SecureHash, kotlin.String)/noteText">noteText</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Add a note to an existing <a href="#">LedgerTransaction</a> given by its unique <a href="../../net.corda.core.crypto/-secure-hash/index.html">SecureHash</a> id
+Multiple notes may be attached to the same <a href="#">LedgerTransaction</a>.
+These are additively and immutably persisted within the node local vault database in a single textual field
+using a semi-colon separator</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="generate-spend.html">generateSpend</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">generateSpend</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$generateSpend(net.corda.core.transactions.TransactionBuilder, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.CompositeKey, kotlin.collections.Set((net.corda.core.crypto.Party)))/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.services.VaultService$generateSpend(net.corda.core.transactions.TransactionBuilder, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.CompositeKey, kotlin.collections.Set((net.corda.core.crypto.Party)))/amount">amount</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.services.VaultService$generateSpend(net.corda.core.transactions.TransactionBuilder, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.CompositeKey, kotlin.collections.Set((net.corda.core.crypto.Party)))/to">to</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.services.VaultService$generateSpend(net.corda.core.transactions.TransactionBuilder, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.CompositeKey, kotlin.collections.Set((net.corda.core.crypto.Party)))/onlyFromParties">onlyFromParties</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p><a href="../../net.corda.core.contracts/-insufficient-balance-exception/index.html">InsufficientBalanceException</a> is thrown when a Cash Spending transaction fails because
+there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
+Note: an <a href="../../net.corda.core.contracts/-amount/index.html">Amount</a> of <a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html">Currency</a> is only fungible for a given Issuer Party within a <a href="../../net.corda.core.contracts/-fungible-asset/index.html">FungibleAsset</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="get-transaction-notes.html">getTransactionNotes</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getTransactionNotes</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$getTransactionNotes(net.corda.core.crypto.SecureHash)/txnId">txnId</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="linear-heads-of-type_.html">linearHeadsOfType_</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-linear-state/index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span> <span class="identifier">linearHeadsOfType_</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$linearHeadsOfType_(java.lang.Class((net.corda.core.node.services.VaultService.linearHeadsOfType_.T)))/stateType">stateType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Returns the <a href="linear-heads.html">linearHeads</a> only when the type of the state would be considered an 'instanceof' the given type.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="notify.html">notify</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">notify</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$notify(net.corda.core.transactions.WireTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Same as notifyAll but with a single transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="notify-all.html">notifyAll</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">notifyAll</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$notifyAll(kotlin.collections.Iterable((net.corda.core.transactions.WireTransaction)))/txns">txns</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Possibly update the vault by marking as spent states that these transactions consume, and adding any relevant
+new states that they create. You should only insert transactions that have been successfully verified here!</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="states-for-refs.html">statesForRefs</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">statesForRefs</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$statesForRefs(kotlin.collections.List((net.corda.core.contracts.StateRef)))/refs">refs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.contracts/-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">?</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="track.html">track</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">track</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><a href="../-vault/index.html"><span class="identifier">Vault</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="../-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the
+first subscriber is registered so as to avoid racing with early updates.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="when-consumed.html">whenConsumed</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">whenConsumed</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.VaultService$whenConsumed(net.corda.core.contracts.StateRef)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><a href="../-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code>
+<p>Provide a <a href="#">Future</a> for when a <a href="../../net.corda.core.contracts/-state-ref/index.html">StateRef</a> is consumed, which can be very useful in building tests.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../deals-with.html">dealsWith</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-deal-state/index.html"><span class="identifier">DealState</span></a><span class="symbol">&gt;</span> <span class="identifier">VaultService</span><span class="symbol">.</span><span class="identifier">dealsWith</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services$dealsWith(net.corda.core.node.services.VaultService, net.corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../linear-heads-of-type.html">linearHeadsOfType</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-linear-state/index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span> <span class="identifier">VaultService</span><span class="symbol">.</span><span class="identifier">linearHeadsOfType</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.node.services.vault/-node-vault-service/index.html">NodeVaultService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeVaultService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><span class="identifier">VaultService</span></code>
+<p>Currently, the node vault service is a very simple RDBMS backed implementation.  It will change significantly when
+we add further functionality as the design for the vault and vault service matures.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

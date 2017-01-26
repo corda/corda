@@ -77,7 +77,7 @@ When writing code, imagine that you have an intelligent colleague looking over y
 as you go. Think about what they might ask, and then put your answers in the code.
 
 Don’t be afraid of redundancy, many people will start reading your code in the middle with little or no idea of what
-it’s about, eg, due to a bug or a need to introduce a new feature. It’s OK to repeat basic facts or descriptions in
+it’s about (e.g. due to a bug or a need to introduce a new feature). It’s OK to repeat basic facts or descriptions in
 different places if that increases the chance developers will see something important.
 
 API docs: all public methods, constants and classes should have doc comments in either JavaDoc or KDoc. API docs should:
@@ -151,7 +151,7 @@ trivial. If the synchronisation in your code is getting more complex, consider t
 Immutable data structures can be very useful for making it easier to reason about multi-threaded code. Kotlin makes it
 easy to define these via the "data" attribute, which auto-generates a copy() method. That lets you create clones of
 an immutable object with arbitrary fields adjusted in the clone. But if you can't use the data attribute for some
-reason, for instance, you are working in Java or because you need an inheritance heirarchy, then consider that making
+reason, for instance, you are working in Java or because you need an inheritance hierarchy, then consider that making
 a class fully immutable may result in very awkward code if there's ever a need to make complex changes to it. If in
 doubt, ask. Remember, never apply any design pattern religiously.
 

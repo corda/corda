@@ -1,0 +1,28 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>DriverDSL.startNotaryCluster - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.driver</a>&nbsp;/&nbsp;<a href="index.html">DriverDSL</a>&nbsp;/&nbsp;<a href=".">startNotaryCluster</a><br/>
+<br/>
+<h1>startNotaryCluster</h1>
+<a name="net.corda.node.driver.DriverDSL$startNotaryCluster(kotlin.String, kotlin.Int, net.corda.core.node.services.ServiceType, kotlin.collections.List((net.corda.node.services.User)))"></a>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">startNotaryCluster</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.driver.DriverDSL$startNotaryCluster(kotlin.String, kotlin.Int, net.corda.core.node.services.ServiceType, kotlin.collections.List((net.corda.node.services.User)))/notaryName">notaryName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.driver.DriverDSL$startNotaryCluster(kotlin.String, kotlin.Int, net.corda.core.node.services.ServiceType, kotlin.collections.List((net.corda.node.services.User)))/clusterSize">clusterSize</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.driver.DriverDSL$startNotaryCluster(kotlin.String, kotlin.Int, net.corda.core.node.services.ServiceType, kotlin.collections.List((net.corda.node.services.User)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.driver.DriverDSL$startNotaryCluster(kotlin.String, kotlin.Int, net.corda.core.node.services.ServiceType, kotlin.collections.List((net.corda.node.services.User)))/rpcUsers">rpcUsers</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.node.services/-user/index.html"><span class="identifier">User</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">Pair</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-node-handle/index.html"><span class="identifier">NodeHandle</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Overrides <a href="../-driver-d-s-l-exposed-interface/start-notary-cluster.html">DriverDSLExposedInterface.startNotaryCluster</a></p>
+<p>Starts a distributed notary cluster.</p>
+<h3>Parameters</h3>
+
+<p><a name="notaryName"></a>
+<code>notaryName</code> - The legal name of the advertised distributed notary service.
+<p><a name="clusterSize"></a>
+<code>clusterSize</code> - Number of nodes to create for the cluster.
+<p><a name="type"></a>
+<code>type</code> - The advertised notary service type. Currently the only supported type is <a href="../../net.corda.node.services.transactions/-raft-validating-notary-service/type.html">RaftValidatingNotaryService.type</a>.
+<p><a name="rpcUsers"></a>
+<code>rpcUsers</code> - List of users who are authorised to use the RPC system. Defaults to empty list.
+<p><strong>Return</strong><br/>
+The <a href="../../net.corda.core.crypto/-party/index.html">Party</a> identity of the distributed notary service, and the <a href="../../net.corda.core.node/-node-info/index.html">NodeInfo</a>s of the notaries in the cluster.</p>
+</BODY>
+</HTML>

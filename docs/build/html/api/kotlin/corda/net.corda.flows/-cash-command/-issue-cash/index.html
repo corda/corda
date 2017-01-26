@@ -1,0 +1,67 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CashCommand.IssueCash - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href="../index.html">CashCommand</a>&nbsp;/&nbsp;<a href=".">IssueCash</a><br/>
+<br/>
+<h1>IssueCash</h1>
+<code><span class="keyword">class </span><span class="identifier">IssueCash</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../index.html"><span class="identifier">CashCommand</span></a></code>
+<p>Issue cash state objects.</p>
+<h3>Parameters</h3>
+
+<p><a name="amount"></a>
+<code>amount</code> - the amount of currency to issue on to the ledger.
+<p><a name="issueRef"></a>
+<code>issueRef</code> - the reference to specify on the issuance, used to differentiate pools of cash. Convention is
+to use the single byte "0x01" as a default.
+<p><a name="recipient"></a>
+<code>recipient</code> - the party to issue the cash to.
+<p><a name="notary"></a>
+<code>notary</code> - the notary to use for this transaction.
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">IssueCash</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.CashCommand.IssueCash$<init>(net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.serialization.OpaqueBytes, net.corda.core.crypto.Party, net.corda.core.crypto.Party)/amount">amount</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.flows.CashCommand.IssueCash$<init>(net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.serialization.OpaqueBytes, net.corda.core.crypto.Party, net.corda.core.crypto.Party)/issueRef">issueRef</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.flows.CashCommand.IssueCash$<init>(net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.serialization.OpaqueBytes, net.corda.core.crypto.Party, net.corda.core.crypto.Party)/recipient">recipient</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.flows.CashCommand.IssueCash$<init>(net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.serialization.OpaqueBytes, net.corda.core.crypto.Party, net.corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span></code>
+<p>Issue cash state objects.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="amount.html">amount</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">amount</span><span class="symbol">: </span><a href="../../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="issue-ref.html">issueRef</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">issueRef</span><span class="symbol">: </span><a href="../../../net.corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="notary.html">notary</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">notary</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="recipient.html">recipient</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">recipient</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

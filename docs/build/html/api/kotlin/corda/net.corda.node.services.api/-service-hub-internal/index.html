@@ -1,0 +1,123 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ServiceHubInternal - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.api</a>&nbsp;/&nbsp;<a href=".">ServiceHubInternal</a><br/>
+<br/>
+<h1>ServiceHubInternal</h1>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ServiceHubInternal</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node/-plugin-service-hub/index.html"><span class="identifier">PluginServiceHub</span></a></code>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">ServiceHubInternal</span><span class="symbol">(</span><span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="flow-logic-ref-factory.html">flowLogicRefFactory</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">flowLogicRefFactory</span><span class="symbol">: </span><a href="../../net.corda.core.flows/-flow-logic-ref-factory/index.html"><span class="identifier">FlowLogicRefFactory</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="monitoring-service.html">monitoringService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">monitoringService</span><span class="symbol">: </span><a href="../-monitoring-service/index.html"><span class="identifier">MonitoringService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="network-service.html">networkService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkService</span><span class="symbol">: </span><a href="../-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="schema-service.html">schemaService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">schemaService</span><span class="symbol">: </span><a href="../-schema-service/index.html"><span class="identifier">SchemaService</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="invoke-flow-async.html">invokeFlowAsync</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">invokeFlowAsync</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.api.ServiceHubInternal$invokeFlowAsync(java.lang.Class((net.corda.core.flows.FlowLogic((net.corda.node.services.api.ServiceHubInternal.invokeFlowAsync.T)))), kotlin.Array((kotlin.Any)))/logicType">logicType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="keyword">vararg</span> <span class="identifier" id="net.corda.node.services.api.ServiceHubInternal$invokeFlowAsync(java.lang.Class((net.corda.core.flows.FlowLogic((net.corda.node.services.api.ServiceHubInternal.invokeFlowAsync.T)))), kotlin.Array((kotlin.Any)))/args">args</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.flows/-flow-state-machine/index.html"><span class="identifier">FlowStateMachine</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Will check <a href="invoke-flow-async.html#net.corda.node.services.api.ServiceHubInternal$invokeFlowAsync(java.lang.Class((net.corda.core.flows.FlowLogic((net.corda.node.services.api.ServiceHubInternal.invokeFlowAsync.T)))), kotlin.Array((kotlin.Any)))/logicType">logicType</a> and <a href="invoke-flow-async.html#net.corda.node.services.api.ServiceHubInternal$invokeFlowAsync(java.lang.Class((net.corda.core.flows.FlowLogic((net.corda.node.services.api.ServiceHubInternal.invokeFlowAsync.T)))), kotlin.Array((kotlin.Any)))/args">args</a> against a whitelist and if acceptable then construct and initiate the flow.
+Note that you must be on the server thread to call this method.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="start-flow.html">startFlow</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">startFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.api.ServiceHubInternal$startFlow(net.corda.core.flows.FlowLogic((net.corda.node.services.api.ServiceHubInternal.startFlow.T)))/logic">logic</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.flows/-flow-state-machine/index.html"><span class="identifier">FlowStateMachine</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Starts an already constructed flow. Note that you must be on the server thread to call this method.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.node/-plugin-service-hub/get-flow-factory.html">getFlowFactory</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getFlowFactory</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.PluginServiceHub$getFlowFactory(java.lang.Class((kotlin.Any)))/markerClass">markerClass</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="symbol">(</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span></code>
+<p>Return the flow factory that has been registered with <a href="../../net.corda.core.node/-plugin-service-hub/get-flow-factory.html#net.corda.core.node.PluginServiceHub$getFlowFactory(java.lang.Class((kotlin.Any)))/markerClass">markerClass</a>, or null if no factory is found.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.node/-plugin-service-hub/register-flow-initiator.html">registerFlowInitiator</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">registerFlowInitiator</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.PluginServiceHub$registerFlowInitiator(kotlin.reflect.KClass((kotlin.Any)), kotlin.Function1((net.corda.core.crypto.Party, net.corda.core.flows.FlowLogic((kotlin.Any)))))/markerClass">markerClass</span><span class="symbol">:</span>&nbsp;<span class="identifier">KClass</span><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.PluginServiceHub$registerFlowInitiator(kotlin.reflect.KClass((kotlin.Any)), kotlin.Function1((net.corda.core.crypto.Party, net.corda.core.flows.FlowLogic((kotlin.Any)))))/flowFactory">flowFactory</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Register the flow factory we wish to use when a initiating party attempts to communicate with us. The
+registration is done against a marker <a href="#">KClass</a> which is sent in the session handshake by the other party. If this
+marker class has been registered then the corresponding factory will be used to create the flow which will
+communicate with the other side. If there is no mapping then the session attempt is rejected.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.contracts.testing/fill-with-some-test-cash.html">fillWithSomeTestCash</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../../net.corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">.</span><span class="identifier">fillWithSomeTestCash</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.testing$fillWithSomeTestCash(net.corda.core.node.ServiceHub, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, net.corda.core.serialization.OpaqueBytes, net.corda.core.crypto.CompositeKey, net.corda.core.contracts.PartyAndReference, java.security.KeyPair)/howMuch">howMuch</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.testing$fillWithSomeTestCash(net.corda.core.node.ServiceHub, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, net.corda.core.serialization.OpaqueBytes, net.corda.core.crypto.CompositeKey, net.corda.core.contracts.PartyAndReference, java.security.KeyPair)/outputNotary">outputNotary</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a>&nbsp;<span class="symbol">=</span>&nbsp;DUMMY_NOTARY<span class="symbol">, </span><span class="identifier" id="net.corda.contracts.testing$fillWithSomeTestCash(net.corda.core.node.ServiceHub, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, net.corda.core.serialization.OpaqueBytes, net.corda.core.crypto.CompositeKey, net.corda.core.contracts.PartyAndReference, java.security.KeyPair)/atLeastThisManyStates">atLeastThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;3<span class="symbol">, </span><span class="identifier" id="net.corda.contracts.testing$fillWithSomeTestCash(net.corda.core.node.ServiceHub, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, net.corda.core.serialization.OpaqueBytes, net.corda.core.crypto.CompositeKey, net.corda.core.contracts.PartyAndReference, java.security.KeyPair)/atMostThisManyStates">atMostThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;10<span class="symbol">, </span><span class="identifier" id="net.corda.contracts.testing$fillWithSomeTestCash(net.corda.core.node.ServiceHub, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, net.corda.core.serialization.OpaqueBytes, net.corda.core.crypto.CompositeKey, net.corda.core.contracts.PartyAndReference, java.security.KeyPair)/rng">rng</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Random.html"><span class="identifier">Random</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Random()<span class="symbol">, </span><span class="identifier" id="net.corda.contracts.testing$fillWithSomeTestCash(net.corda.core.node.ServiceHub, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, net.corda.core.serialization.OpaqueBytes, net.corda.core.crypto.CompositeKey, net.corda.core.contracts.PartyAndReference, java.security.KeyPair)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a>&nbsp;<span class="symbol">=</span>&nbsp;OpaqueBytes(ByteArray(1, { 1 }))<span class="symbol">, </span><span class="identifier" id="net.corda.contracts.testing$fillWithSomeTestCash(net.corda.core.node.ServiceHub, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, net.corda.core.serialization.OpaqueBytes, net.corda.core.crypto.CompositeKey, net.corda.core.contracts.PartyAndReference, java.security.KeyPair)/ownedBy">ownedBy</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="net.corda.contracts.testing$fillWithSomeTestCash(net.corda.core.node.ServiceHub, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, net.corda.core.serialization.OpaqueBytes, net.corda.core.crypto.CompositeKey, net.corda.core.contracts.PartyAndReference, java.security.KeyPair)/issuedBy">issuedBy</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a>&nbsp;<span class="symbol">=</span>&nbsp;DUMMY_CASH_ISSUER<span class="symbol">, </span><span class="identifier" id="net.corda.contracts.testing$fillWithSomeTestCash(net.corda.core.node.ServiceHub, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, net.corda.core.serialization.OpaqueBytes, net.corda.core.crypto.CompositeKey, net.corda.core.contracts.PartyAndReference, java.security.KeyPair)/issuerKey">issuerKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a>&nbsp;<span class="symbol">=</span>&nbsp;DUMMY_CASH_ISSUER_KEY<span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-vault/index.html"><span class="identifier">Vault</span></a></code>
+<p>Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
+to the vault. This is intended for unit tests. The cash is issued by <a href="../../net.corda.contracts.asset/-d-u-m-m-y_-c-a-s-h_-i-s-s-u-e-r.html">DUMMY_CASH_ISSUER</a> and owned by the legal
+identity key from the storage service.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.node/record-transactions.html">recordTransactions</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../../net.corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">.</span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="net.corda.core.node$recordTransactions(net.corda.core.node.ServiceHub, kotlin.Array((net.corda.core.transactions.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Given some <a href="../../net.corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>s, writes them to the local storage for validated transactions and then
+sends them to the vault for further processing.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

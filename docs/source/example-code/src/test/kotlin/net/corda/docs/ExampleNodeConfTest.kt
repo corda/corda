@@ -17,9 +17,11 @@ class ExampleNodeConfTest {
         exampleNodeConfFilenames.forEach {
             println("Checking $it")
             val configResource = ExampleNodeConfTest::class.java.classLoader.getResource(it)
+            val baseDirectory = Paths.get("some-example-base-dir")
             val nodeConfig = FullNodeConfiguration(
+                    baseDirectory,
                     ConfigHelper.loadConfig(
-                            baseDirectoryPath = Paths.get("some-example-base-dir"),
+                            baseDirectory = baseDirectory,
                             configFileOverride = Paths.get(configResource.toURI())
                     )
             )

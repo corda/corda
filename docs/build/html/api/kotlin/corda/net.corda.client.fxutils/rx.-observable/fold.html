@@ -1,0 +1,22 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>fold - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.client.fxutils</a>&nbsp;/&nbsp;<a href="index.html">rx.Observable</a>&nbsp;/&nbsp;<a href=".">fold</a><br/>
+<br/>
+<h1>fold</h1>
+<a name="net.corda.client.fxutils$fold(rx.Observable((net.corda.client.fxutils.fold.T)), net.corda.client.fxutils.fold.R, kotlin.Function2((net.corda.client.fxutils.fold.R, net.corda.client.fxutils.fold.T, kotlin.Unit)))"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">, </span><span class="identifier">R</span><span class="symbol">&gt;</span> <span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">fold</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$fold(rx.Observable((net.corda.client.fxutils.fold.T)), net.corda.client.fxutils.fold.R, kotlin.Function2((net.corda.client.fxutils.fold.R, net.corda.client.fxutils.fold.T, kotlin.Unit)))/accumulator">accumulator</span><span class="symbol">:</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils$fold(rx.Observable((net.corda.client.fxutils.fold.T)), net.corda.client.fxutils.fold.R, kotlin.Function2((net.corda.client.fxutils.fold.R, net.corda.client.fxutils.fold.T, kotlin.Unit)))/folderFun">folderFun</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">R</span><span class="symbol">,</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">R</span></code>
+<p>fold takes an <a href="#">rx.Observable</a> stream and applies fold function on it, and collects all elements using the accumulator.</p>
+<h3>Parameters</h3>
+
+<p><a name="accumulator"></a>
+<code>accumulator</code> - The accumulator for accumulating elements.
+<p><a name="folderFun"></a>
+<code>folderFun</code> - The transformation function to be called on the observable list when a new element is emitted on
+    the stream, which should modify the list as needed.
+</BODY>
+</HTML>

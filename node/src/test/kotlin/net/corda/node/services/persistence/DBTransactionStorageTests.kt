@@ -1,11 +1,11 @@
 package net.corda.node.services.persistence
 
-import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.NullPublicKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -109,8 +109,7 @@ class DBTransactionStorageTests {
 
     @Test
     fun `updates are fired`() {
-        val future = SettableFuture.create<SignedTransaction>()
-        transactionStorage.updates.subscribe { tx -> future.set(tx) }
+        val future = transactionStorage.updates.toFuture()
         val expected = newTransaction()
         databaseTransaction(database) {
             transactionStorage.addTransaction(expected)

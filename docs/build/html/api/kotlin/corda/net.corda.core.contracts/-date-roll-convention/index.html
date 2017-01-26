@@ -1,0 +1,80 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>DateRollConvention - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href=".">DateRollConvention</a><br/>
+<br/>
+<h1>DateRollConvention</h1>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">DateRollConvention</span></code>
+<p>This reflects what happens if a date on which a business event is supposed to happen actually falls upon a non-working day.
+Depending on the accounting requirement, we can move forward until we get to a business day, or backwards.
+There are some additional rules which are explained in the individual cases below.</p>
+<h3>Enum Values</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-actual/index.html">Actual</a></td>
+<td>
+<p>Don't roll the date, use the one supplied.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-following/index.html">Following</a></td>
+<td>
+<p>Following is the next business date from this one.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-modified-following/index.html">ModifiedFollowing</a></td>
+<td>
+<p>"Modified following" is the next business date, unless it's in the next month, in which case use the preceeding
+business date.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-previous/index.html">Previous</a></td>
+<td>
+<p>Previous is the previous business date from this one.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-modified-previous/index.html">ModifiedPrevious</a></td>
+<td>
+<p>Modified previous is the previous business date, unless it's in the previous month, in which case use the next
+business date.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="is-modified.html">isModified</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">isModified</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="direction.html">direction</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">direction</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-date-roll-direction/index.html"><span class="identifier">DateRollDirection</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

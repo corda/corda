@@ -1,0 +1,19 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>MultilateralNetState.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.contracts.clause</a>&nbsp;/&nbsp;<a href="index.html">MultilateralNetState</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">MultilateralNetState</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.clause.MultilateralNetState$<init>(net.corda.contracts.asset.Obligation.Terms((net.corda.contracts.clause.MultilateralNetState.P)))/template">template</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.contracts.asset/-obligation/-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>Subset of state, containing the elements which must match for two or more obligation transactions to be candidates
+for netting (this does not include the checks to enforce that everyone's amounts received are the same at the end,
+which is handled under the verify() function).
+In comparison to <a href="../-bilateral-net-state/index.html">BilateralNetState</a>, this doesn't include the parties' keys, as ensuring balances match on
+input and output is handled elsewhere.
+Used in cases where all parties (or their proxies) are signing, such as central clearing.</p>
+</BODY>
+</HTML>

@@ -1,4 +1,4 @@
-Building Transactions
+Building transactions
 =====================
 
 Introduction
@@ -75,7 +75,7 @@ have to separately check that this is still the same
 The final stage of committing the transaction to the ledger is to 
 notarise the ``SignedTransaction``, distribute this to all appropriate 
 parties and record the data into the ledger. These actions are best 
-delegated to the ``FinalityFlow``, rather than calling the inidividual 
+delegated to the ``FinalityFlow``, rather than calling the individual 
 steps manually. However, do note that the final broadcast to the other 
 nodes is asynchronous, so care must be used in unit testing to 
 correctly await the Vault updates. 
@@ -292,7 +292,7 @@ final step is notarisation. This involves calling ``NotaryFlow.Client``
 to confirm the transaction, consume the inputs and return its confirming 
 signature. Then the flow should ensure that all nodes end with all 
 signatures and that they call ``ServiceHub.recordTransactions``. The 
-code for this is standardised in the ``FinalityFlow``, or more explictly 
+code for this is standardised in the ``FinalityFlow``, or more explicitly 
 an example is: 
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/WorkflowTransactionBuildTutorial.kt

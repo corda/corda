@@ -1,0 +1,41 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>driver - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href="index.html">net.corda.node.driver</a>&nbsp;/&nbsp;<a href=".">driver</a><br/>
+<br/>
+<h1>driver</h1>
+<a name="net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))"></a>
+<code><span class="identifier">@JvmOverloads</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span> <span class="identifier">driver</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))/isDebug">isDebug</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))/driverDirectory">driverDirectory</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Paths.get("build", getTimestampAsDirectoryName())<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))/portAllocation">portAllocation</span><span class="symbol">:</span>&nbsp;<a href="-port-allocation/index.html"><span class="identifier">PortAllocation</span></a>&nbsp;<span class="symbol">=</span>&nbsp;PortAllocation.Incremental(10000)<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))/debugPortAllocation">debugPortAllocation</span><span class="symbol">:</span>&nbsp;<a href="-port-allocation/index.html"><span class="identifier">PortAllocation</span></a>&nbsp;<span class="symbol">=</span>&nbsp;PortAllocation.Incremental(5005)<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))/useTestClock">useTestClock</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))/dsl">dsl</span><span class="symbol">:</span>&nbsp;<a href="-driver-d-s-l-exposed-interface/index.html"><span class="identifier">DriverDSLExposedInterface</span></a><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">A</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">A</span></code>
+<p>driver allows one to start up nodes like this:
+driver {
+    val noService = startNode("NoService")
+    val notary = startNode("Notary")</p>
+<pre><code><pre><code>    (...)</code></pre></code></pre>
+<p>}</p>
+<p>Note that <a href="-driver-d-s-l/start-node.html">DriverDSL.startNode</a> does not wait for the node to start up synchronously, but rather returns a <a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html">Future</a>
+of the <a href="../net.corda.core.node/-node-info/index.html">NodeInfo</a> that may be waited on, which completes when the new node registered with the network map service.</p>
+<p>The driver implicitly bootstraps a <a href="../net.corda.node.services.network/-network-map-service/index.html">NetworkMapService</a>.</p>
+<h3>Parameters</h3>
+
+<p><a name="driverDirectory"></a>
+<code>driverDirectory</code> - The base directory node directories go into, defaults to "build//". The node
+directories themselves are "//", where legalName defaults to "-"
+and may be specified in <a href="-driver-d-s-l/start-node.html">DriverDSL.startNode</a>.
+<p><a name="portAllocation"></a>
+<code>portAllocation</code> - The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
+<p><a name="debugPortAllocation"></a>
+<code>debugPortAllocation</code> - The port allocation strategy to use for jvm debugging. Defaults to incremental.
+<p><a name="useTestClock"></a>
+<code>useTestClock</code> - If true the test clock will be used in Node.
+<p><a name="isDebug"></a>
+<code>isDebug</code> - Indicates whether the spawned nodes should start in jdwt debug mode.
+<p><a name="dsl"></a>
+<code>dsl</code> - The dsl itself.
+<p><strong>Return</strong><br/>
+The value returned in the <a href="driver.html#net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))/dsl">dsl</a> closure.</p>
+</BODY>
+</HTML>

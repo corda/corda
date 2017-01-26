@@ -28,6 +28,6 @@ dependencies {
     compile project(':core')
     compile project(':finance')
 
-    testCompile 'junit:junit:4.12'
+    testCompile "junit:junit:$junit_version"
     testCompile project(':test-utils')
 }

@@ -1,0 +1,39 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>MultilateralNettableState - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href=".">MultilateralNettableState</a><br/>
+<br/>
+<h1>MultilateralNettableState</h1>
+<code><span class="keyword">interface </span><span class="identifier">MultilateralNettableState</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span></code>
+<p>Interface for state objects that support being netted with other state objects.</p>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="multilateral-net-state.html">multilateralNetState</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">multilateralNetState</span><span class="symbol">: </span><span class="identifier">T</span></code>
+<p>Returns an object used to determine if two states can be subject to close-out netting. If two states return
+equal objects, they can be close out netted together.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-nettable-state.html">NettableState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">NettableState</span><span class="symbol">&lt;</span><span class="identifier">N</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-bilateral-nettable-state/index.html"><span class="identifier">BilateralNettableState</span></a><span class="symbol">&lt;</span><span class="identifier">N</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-bilateral-nettable-state/index.html"><span class="identifier">BilateralNettableState</span></a><span class="symbol">&lt;</span><span class="identifier">N</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier">MultilateralNettableState</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

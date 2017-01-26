@@ -14,6 +14,7 @@ import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.NetworkCacheError
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -25,6 +26,7 @@ import net.corda.node.services.network.NetworkMapService.FetchMapResponse
 import net.corda.node.services.network.NetworkMapService.SubscribeResponse
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.bufferUntilDatabaseCommit
+import net.corda.node.utilities.wrapWithDatabaseTransaction
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.SignatureException
@@ -43,7 +45,8 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override val partyNodes: List<NodeInfo> get() = registeredNodes.map { it.value }
     override val networkMapNodes: List<NodeInfo> get() = getNodesWithService(NetworkMapService.type)
     private val _changed = PublishSubject.create<MapChange>()
-    override val changed: Observable<MapChange> get() = _changed
+    // We use assignment here so that multiple subscribers share the same wrapped Observable.
+    override val changed: Observable<MapChange> = _changed.wrapWithDatabaseTransaction()
     private val changePublisher: rx.Observer<MapChange> get() = _changed.bufferUntilDatabaseCommit()
 
     private val _registrationFuture = SettableFuture.create<Unit>()
@@ -52,9 +55,24 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     private var registeredForPush = false
     protected var registeredNodes: MutableMap<Party, NodeInfo> = Collections.synchronizedMap(HashMap<Party, NodeInfo>())
 
+    override fun getPartyInfo(party: Party): PartyInfo? {
+        val node = registeredNodes[party]
+        if (node != null) {
+            return PartyInfo.Node(node)
+        }
+        for (entry in registeredNodes) {
+            for (service in entry.value.advertisedServices) {
+                if (service.identity == party) {
+                    return PartyInfo.Service(service)
+                }
+            }
+        }
+        return null
+    }
+
     override fun track(): Pair<List<NodeInfo>, Observable<MapChange>> {
         synchronized(_changed) {
-            return Pair(partyNodes, _changed.bufferUntilSubscribed())
+            return Pair(partyNodes, _changed.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 

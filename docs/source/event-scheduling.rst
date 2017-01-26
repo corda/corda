@@ -52,7 +52,7 @@ There are two main steps to implementing scheduled events:
    performed by the contract, using ``ZonedDateTime``.
 
 In the short term, until we have automatic flow session set up, you will also likely need to install a network
-handler to help with obtaining a unqiue and secure random session.  An example is described below.
+handler to help with obtaining a unique and secure random session.  An example is described below.
 
 The production and consumption of ``ContractStates`` is observed by the scheduler and the activities associated with
 any consumed states are unscheduled.  Any newly produced states are then queried via the ``nextScheduledActivity``

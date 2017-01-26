@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -77,7 +81,12 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -89,7 +98,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
-<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
@@ -114,16 +123,12 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -142,23 +147,20 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
@@ -168,14 +170,14 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
-<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -230,7 +232,7 @@
 These provide a common language for states and contracts.</p>
 <div class="section" id="amount">
 <h2>Amount<a class="headerlink" href="#amount" title="Permalink to this headline">¶</a></h2>
-<p>The <a class="reference external" href="api/net.corda.core.contracts/-amount/index.html">Amount</a> class is used to represent an amount of some
+<p>The <a class="reference external" href="api/kotlin/corda/net.corda.core.contracts/-amount/index.html">Amount</a> class is used to represent an amount of some
 fungible asset. It is a generic class which wraps around a type used to define the underlying product, called
 the <em>token</em>. For instance it can be the standard JDK type <code class="docutils literal"><span class="pre">Currency</span></code>, or an <code class="docutils literal"><span class="pre">Issued</span></code> instance, or this can be
 a more complex type such as an obligation contract issuance definition (which in turn contains a token definition
@@ -345,7 +347,7 @@ write your tests using the <a class="reference internal" href="tutorial-test-dsl
 <h2>Party and PublicKey<a class="headerlink" href="#party-and-publickey" title="Permalink to this headline">¶</a></h2>
 <p>Entities using the network are called <em>parties</em>. Parties can sign structures using keys, and a party may have many
 keys under their control.</p>
-<p>Parties may sometimes be identified pseudonomously, for example, in a transaction sent to your node as part of a
+<p>Parties may sometimes be identified pseudonymously, for example, in a transaction sent to your node as part of a
 chain of custody it is important you can convince yourself of the transaction&#8217;s validity, but equally important that
 you don&#8217;t learn anything about who was involved in that transaction. In these cases a public key may be present
 without any identifying information about who owns it.</p>
@@ -404,7 +406,7 @@ dates used.</p>
 <p>The <code class="docutils literal"><span class="pre">SecureHash</span></code> class represents a secure hash of unknown algorithm. We currently define only a single subclass,
 <code class="docutils literal"><span class="pre">SecureHash.SHA256</span></code>. There are utility methods to create them, parse them and so on.</p>
 <p>We also provide some mathematical utilities, in particular a set of interpolators and classes for working with
-splines. These can be found in the <a class="reference external" href="api/net.corda.core.math/index.html">maths package</a>.</p>
+splines. These can be found in the <a class="reference external" href="api/kotlin/corda/net.corda.core.math/index.html">maths package</a>.</p>
 </div>
 </div>
 

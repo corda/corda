@@ -1,0 +1,80 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TwoPartyDealFlow.Acceptor - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href="../index.html">TwoPartyDealFlow</a>&nbsp;/&nbsp;<a href=".">Acceptor</a><br/>
+<br/>
+<h1>Acceptor</h1>
+<code><span class="keyword">class </span><span class="identifier">Acceptor</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-secondary/index.html"><span class="identifier">Secondary</span></a><span class="symbol">&lt;</span><a href="../-auto-offer/index.html"><span class="identifier">AutoOffer</span></a><span class="symbol">&gt;</span></code>
+<p>One side of the flow for inserting a pre-agreed deal.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">Acceptor</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.TwoPartyDealFlow.Acceptor$<init>(net.corda.core.crypto.Party, net.corda.core.utilities.ProgressTracker)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.flows.TwoPartyDealFlow.Acceptor$<init>(net.corda.core.crypto.Party, net.corda.core.utilities.ProgressTracker)/progressTracker">progressTracker</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Secondary.tracker()<span class="symbol">)</span></code>
+<p>One side of the flow for inserting a pre-agreed deal.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="other-party.html">otherParty</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">otherParty</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="progress-tracker.html">progressTracker</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">progressTracker</span><span class="symbol">: </span><a href="../../../net.corda.core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a></code>
+<p>Override this to provide a <a href="../../../net.corda.core.utilities/-progress-tracker/index.html">ProgressTracker</a>. If one is provided and stepped, the framework will do something
+helpful with the progress reports. If this flow is invoked as a subflow of another, then the
+tracker will be made a child of the current step in the parent. If it's null, this flow doesn't track
+progress.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="assemble-shared-t-x.html">assembleSharedTX</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">assembleSharedTX</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.TwoPartyDealFlow.Acceptor$assembleSharedTX(net.corda.flows.TwoPartyDealFlow.Handshake((net.corda.flows.TwoPartyDealFlow.AutoOffer)))/handshake">handshake</span><span class="symbol">:</span>&nbsp;<a href="../-handshake/index.html"><span class="identifier">Handshake</span></a><span class="symbol">&lt;</span><a href="../-auto-offer/index.html"><span class="identifier">AutoOffer</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="validate-handshake.html">validateHandshake</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">validateHandshake</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.TwoPartyDealFlow.Acceptor$validateHandshake(net.corda.flows.TwoPartyDealFlow.Handshake((net.corda.flows.TwoPartyDealFlow.AutoOffer)))/handshake">handshake</span><span class="symbol">:</span>&nbsp;<a href="../-handshake/index.html"><span class="identifier">Handshake</span></a><span class="symbol">&lt;</span><a href="../-auto-offer/index.html"><span class="identifier">AutoOffer</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-handshake/index.html"><span class="identifier">Handshake</span></a><span class="symbol">&lt;</span><a href="../-auto-offer/index.html"><span class="identifier">AutoOffer</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-secondary/call.html">call</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a></code>
+<p>This is where you fill out your business logic. The returned object will usually be ignored, but can be
+helpful if this flow is meant to be used as a subflow.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

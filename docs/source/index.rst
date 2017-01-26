@@ -2,26 +2,39 @@ Welcome to the Corda documentation!
 ===================================
 
 .. warning:: This build of the docs is from the "|version|" branch, not a milestone release. It may not reflect the
-   current state of the code. `Read the docs for M6 <https://docs.corda.net/releases/release-M6.0/>`_.
+   current state of the code. `Read the docs for milestone release M7 <https://docs.corda.net/releases/release-M7.0/>`_.
 
-This is the developer guide for Corda, a proposed architecture for distributed ledgers. Here are the sources
-of documentation you may find useful, from highest level to lowest:
+`Corda <https://www.corda.net/>`_ is an open-source distributed ledger platform. The latest *milestone* (i.e. stable) 
+release is M7. The codebase is on `GitHub <https://github.com/corda>`_, and our community can be found on 
+`Slack <https://slack.corda.net/>`_ and in our `forum <https://discourse.corda.net/>`_.
 
-1. The `Introductory white paper`_ describes the motivating vision and background of the project. It is the kind
-   of document your boss should read. It describes why the project exists and briefly compares it to alternative
-   systems on the market.
-2. The `Technical white paper`_ describes the entire intended design from beginning to end. It is the kind of
-   document that you should read, or at least, read parts of. Note that because the technical white paper
-   describes the intended end state, it does not always align with the implementation.
-3. This user guide. It describes *how* to use the system to write apps, as currently implemented. It assumes
-   you already have read the relevant sections of the technology white paper and now wish to learn how to use it.
-4. The `API docs`_.
+If you're new to Corda, you should start by learning about its motivating vision and architecture. A good introduction 
+is the `Introduction to Corda webinar <https://vimeo.com/192757743/c2ec39c1e1>`_ and the `Introductory white paper`_. As 
+they become more familiar with Corda, readers with a technical background will also want to dive into the `Technical white paper`_, 
+which describes the platform's envisioned end-state.
+
+Corda is designed so that developers can easily extend its functionality by writing CorDapps 
+(**Cor**\ da **D**\ istributed **App**\ lication\ **s**\ ). An example CorDapp is available on 
+`Github <https://github.com/corda/cordapp-template>`_. To get it running, follow the instructions in the 
+`readme <https://github.com/corda/cordapp-template/blob/master/README.md>`_, or watch the 
+`Corda Developers Tutorial <https://vimeo.com/192797322/aab499b152>`_.
+
+Additional CorDapp samples are available in the Corda repo's `samples <https://github.com/corda/corda/tree/master/samples>`_ 
+directory. These are sophisticated CorDapps that implement more complex functionality. You can find directions for 
+running these samples `here <https://docs.corda.net/running-the-demos.html>`_. 
+
+From there, you'll be in a position to start extending the example CorDapp yourself (e.g. by writing new states, contracts, 
+and/or flows). For this, you'll want to refer to this docsite, and to the `tutorials <https://docs.corda.net/#tutorials>`_ 
+in particular. If you get stuck, get in touch on `Slack <https://slack.corda.net/>`_ or the `forum <https://discourse.corda.net/>`_.
+
+Once you're familiar with Corda and CorDapp development, we'd encourage you to get involved in the development of the 
+platform itself. Find out more about `contributing to Corda <https://github.com/corda/corda/wiki/Corda's-Open-Source-Approach>`_.
 
 .. _`Introductory white paper`: _static/corda-introductory-whitepaper.pdf
 .. _`Technical white paper`: _static/corda-technical-whitepaper.pdf
-.. _`API docs`: api/index.html
 
-Read on to learn:
+Documentation Contents:
+=======================
 
 .. toctree::
    :maxdepth: 2
@@ -87,7 +100,6 @@ Read on to learn:
    :caption: Other
 
    network-simulator
-   initial-margin-agreement
 
 .. toctree::
    :maxdepth: 2
@@ -108,6 +120,7 @@ Read on to learn:
    codestyle
    building-the-docs
    publishing-corda
+   azure-vm
 
 .. toctree::
    :maxdepth: 2

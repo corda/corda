@@ -1,8 +1,10 @@
 package net.corda.docs
 
+import com.google.common.util.concurrent.Futures
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.issuedBy
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
@@ -12,9 +14,6 @@ import net.corda.flows.CashFlow
 import net.corda.flows.CashFlowResult
 import net.corda.node.driver.driver
 import net.corda.node.services.User
-import net.corda.node.services.config.configureTestSSL
-import net.corda.node.services.messaging.ArtemisMessagingComponent
-import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.expect
@@ -26,31 +25,25 @@ import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
 class IntegrationTestingTutorial {
-
     @Test
-    fun aliceBobCashExchangeExample() {
+    fun `alice bob cash exchange example`() {
         // START 1
         driver {
             val testUser = User("testUser", "testPassword", permissions = setOf(startFlowPermission<CashFlow>()))
-            val aliceFuture = startNode("Alice", rpcUsers = listOf(testUser))
-            val bobFuture = startNode("Bob", rpcUsers = listOf(testUser))
-            val notaryFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
-            val alice = aliceFuture.get()
-            val bob = bobFuture.get()
-            val notary = notaryFuture.get()
+            val (alice, bob, notary) = Futures.allAsList(
+                    startNode("Alice", rpcUsers = listOf(testUser)),
+                    startNode("Bob", rpcUsers = listOf(testUser)),
+                    startNode("Notary", advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
+            ).getOrThrow()
             // END 1
 
             // START 2
-            val aliceClient = CordaRPCClient(
-                    host = ArtemisMessagingComponent.toHostAndPort(alice.nodeInfo.address),
-                    config = configureTestSSL()
-            )
+            val aliceClient = alice.rpcClientToNode()
+
             aliceClient.start("testUser", "testPassword")
             val aliceProxy = aliceClient.proxy()
-            val bobClient = CordaRPCClient(
-                    host = ArtemisMessagingComponent.toHostAndPort(bob.nodeInfo.address),
-                    config = configureTestSSL()
-            )
+            val bobClient = bob.rpcClientToNode()
+
             bobClient.start("testUser", "testPassword")
             val bobProxy = bobClient.proxy()
             // END 2

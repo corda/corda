@@ -1,0 +1,16 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>onNext - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href="index.html">net.corda.core.messaging</a>&nbsp;/&nbsp;<a href=".">onNext</a><br/>
+<br/>
+<h1>onNext</h1>
+<a name="net.corda.core.messaging$onNext(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long)"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">M</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">onNext</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$onNext(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$onNext(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long)/sessionId">sessionId</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">M</span><span class="symbol">&gt;</span></code>
+<p>Returns a <a href="#">ListenableFuture</a> of the next message payload (<a href="-message/data.html">Message.data</a>) which is received on the given topic and sessionId.
+The payload is deserialized to an object of type <a href="#">M</a>. Any exceptions thrown will be captured by the future.</p>
+</BODY>
+</HTML>

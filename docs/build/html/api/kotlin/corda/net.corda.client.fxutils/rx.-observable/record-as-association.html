@@ -1,0 +1,21 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>recordAsAssociation - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.client.fxutils</a>&nbsp;/&nbsp;<a href="index.html">rx.Observable</a>&nbsp;/&nbsp;<a href=".">recordAsAssociation</a><br/>
+<br/>
+<h1>recordAsAssociation</h1>
+<a name="net.corda.client.fxutils$recordAsAssociation(rx.Observable((net.corda.client.fxutils.recordAsAssociation.A)), kotlin.Function1((net.corda.client.fxutils.recordAsAssociation.A, net.corda.client.fxutils.recordAsAssociation.K)), kotlin.Function3((net.corda.client.fxutils.recordAsAssociation.K, net.corda.client.fxutils.recordAsAssociation.A, , )))"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">K</span><span class="symbol">&gt;</span> <span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">recordAsAssociation</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$recordAsAssociation(rx.Observable((net.corda.client.fxutils.recordAsAssociation.A)), kotlin.Function1((net.corda.client.fxutils.recordAsAssociation.A, net.corda.client.fxutils.recordAsAssociation.K)), kotlin.Function3((net.corda.client.fxutils.recordAsAssociation.K, net.corda.client.fxutils.recordAsAssociation.A, , )))/toKey">toKey</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">K</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils$recordAsAssociation(rx.Observable((net.corda.client.fxutils.recordAsAssociation.A)), kotlin.Function1((net.corda.client.fxutils.recordAsAssociation.A, net.corda.client.fxutils.recordAsAssociation.K)), kotlin.Function3((net.corda.client.fxutils.recordAsAssociation.K, net.corda.client.fxutils.recordAsAssociation.A, , )))/merge">merge</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">oldValue</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">newValue</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">A</span>&nbsp;<span class="symbol">=</span>&nbsp;{ _key, _oldValue, newValue -&gt; newValue }<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span></code>
+<p>This variant simply associates each event with its key.</p>
+<h3>Parameters</h3>
+
+<p><a name="toKey"></a>
+<code>toKey</code> - Function retrieving the key to associate with.
+<p><a name="merge"></a>
+<code>merge</code> - The function to be called if there is an existing element at the key.
+</BODY>
+</HTML>

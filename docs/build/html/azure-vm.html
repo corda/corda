@@ -1,0 +1,410 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Working with the Corda Demo on Azure Marketplace &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
+        <link rel="next" title="Glossary" href="glossary.html"/>
+        <link rel="prev" title="Publishing Corda" href="publishing-corda.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Working with the Corda Demo on Azure Marketplace</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#pre-requisites">Pre-requisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#deploying-the-vm">Deploying the VM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#viewing-the-simm-valuation-demo">Viewing the SIMM Valuation demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#viewing-the-irs-demo">Viewing the IRS demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#viewing-logs-advanced-users">Viewing logs (advanced users)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next Steps</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Working with the Corda Demo on Azure Marketplace</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/azure-vm.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="working-with-the-corda-demo-on-azure-marketplace">
+<h1>Working with the Corda Demo on Azure Marketplace<a class="headerlink" href="#working-with-the-corda-demo-on-azure-marketplace" title="Permalink to this headline">¶</a></h1>
+<p>Corda ships with a VM image which can be used to deploy a pre-configured virtual machine on the <a class="reference external" href="https://azure.microsoft.com/en-gb/overview/what-is-azure">Microsoft Azure Marketplace</a></p>
+<p>This Corda Demo VM is an easy option for running the demos; it is <em>NOT</em> a development environment. When you are ready to get developing on Corda and start making contributions to the project please clone the <a class="reference external" href="https://github.com/corda/">GitHub Repos</a> instead.</p>
+<div class="section" id="pre-requisites">
+<h2>Pre-requisites<a class="headerlink" href="#pre-requisites" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Ensure you have a registered Microsoft Azure account and are logged on to the Azure portal.</li>
+<li>It is recommended you generate a private-public SSH key pair (see <a class="reference external" href="https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2/">here</a>)</li>
+</ul>
+</div>
+<div class="section" id="deploying-the-vm">
+<h2>Deploying the VM<a class="headerlink" href="#deploying-the-vm" title="Permalink to this headline">¶</a></h2>
+<p>Search the Azure Marketplace for Corda.
+Click the &#8216;Create&#8217; button.</p>
+<p>STEP 1: Basics</p>
+<ul class="simple">
+<li><strong>Name</strong>: Choose an appropriate descriptive name for the VM</li>
+<li><strong>VM Disk Type</strong>: Select &#8216;SSD&#8217;</li>
+<li><strong>Username</strong>: Your preferred user name for the administrator account when accessing via SSH</li>
+<li><strong>Authentication type</strong>: Select &#8216;SSH public key&#8217;, then paste the contents of your SSH public key file (see pre-requisites, above) into the box below. Alternatively select &#8216;Password&#8217; to use a password of your choice to administer the VM</li>
+<li><strong>Subscription</strong>: Select your subscription name</li>
+<li><strong>Resource group</strong>: Select &#8216;Use existing&#8217;. From the drop-down menu, select your account group</li>
+<li><strong>Location</strong>: Select the geographical location physically closest to you</li>
+</ul>
+<a class="reference internal image-reference" href="_images/azure_vm_10_00_1.png"><img alt="_images/azure_vm_10_00_1.png" src="_images/azure_vm_10_00_1.png" style="width: 300px;" /></a>
+<p>Click &#8216;OK&#8217;</p>
+<p>STEP 2: Size</p>
+<p>A range of available hardware configurations will be presented, along with estimated costs. For the purposes of running the demos, a configuration of 2 cores and at least 14GB is recommended</p>
+<a class="reference internal image-reference" href="_images/azure_vm_10_05_1.png"><img alt="_images/azure_vm_10_05_1.png" src="_images/azure_vm_10_05_1.png" style="width: 300px;" /></a>
+<p>Choose the required configuration and click &#8216;Select&#8217;.</p>
+<p>STEP 3: Settings</p>
+<p>Adjust any configuration settings required. For the purposes of running the Corda demos, all settings may be left as default.</p>
+<a class="reference internal image-reference" href="_images/azure_vm_10_16_1.png"><img alt="_images/azure_vm_10_16_1.png" src="_images/azure_vm_10_16_1.png" style="width: 300px;" /></a>
+<p>STEP 4: Summary</p>
+<p>The banner at the top of the dialog should read &#8216;Validation passed&#8217; otherwise go back and adjust settings where needed.</p>
+<a class="reference internal image-reference" href="_images/azure_vm_10_19.png"><img alt="_images/azure_vm_10_19.png" src="_images/azure_vm_10_19.png" style="width: 300px;" /></a>
+<p>Click &#8216;OK&#8217; to proceed.</p>
+<p>STEP 5: Buy</p>
+<p>Click &#8216;Purchase&#8217; to complete the configuration and start the VM deployment.</p>
+<p>The VM will begin the deployment process, which typically takes 4-5 minutes to complete. To see progress, click on the &#8220;Deploying&#8221; icon displayed.</p>
+<a class="reference internal image-reference" href="_images/azure_vm_10_20.png"><img alt="_images/azure_vm_10_20.png" src="_images/azure_vm_10_20.png" style="width: 300px;" /></a>
+<p>Once deployed, click &#8216;Overview&#8217; to see the virtual machine details. Note down the <strong>Public IP address</strong>. You will need this to connect to the demo screens via your web browser:</p>
+<a class="reference internal image-reference" href="_images/azure_vm_10_26.png"><img alt="_images/azure_vm_10_26.png" src="_images/azure_vm_10_26.png" style="width: 300px;" /></a>
+</div>
+<div class="section" id="viewing-the-simm-valuation-demo">
+<h2>Viewing the SIMM Valuation demo<a class="headerlink" href="#viewing-the-simm-valuation-demo" title="Permalink to this headline">¶</a></h2>
+<p>The SIMM Valuation demo creates three nodes, representing three parties in the example workflow (Bank A, Bank B, Bank C). Each node listens on a different port - those used by the demo are:</p>
+<p><strong>SIMM Valuation Demo ports:</strong> <strong>12005 (node A for Bank A)</strong>, <strong>12007 (node B for Bank B)</strong>, <strong>12009 (node C for Bank C)</strong></p>
+<p>Open three browser tabs and direct each one to</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>http://<span class="o">(</span>public IP address<span class="o">)</span>:<span class="o">(</span>port<span class="o">)</span>/web/simmvaluationdemo
+</pre></div>
+</div>
+<p>specifying each of the three ports above in different windows, e.g.</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>http://51.140.41.48/12005/web/simmvaluationdemo
+</pre></div>
+</div>
+<p>You will be able to view the basic web interface identifying the different banks.</p>
+<p>Now let&#8217;s take a look at a transaction between Bank A and B which is not visible to Bank C. This illustrates the restricted data sharing feature of Corda, i.e. data is shared on a need-to-know basis. Nodes provide the dependency graph of a transaction they are sending to another node on demand, but there is no global broadcast of all transactions.</p>
+<ol class="arabic simple">
+<li>In the browser tab for Bank A (the top right hand corner shows which bank you are administering) click &#8216;Create New Trade&#8217; from the top navigation bar</li>
+<li>Select to trade with Bank B</li>
+<li>Select &#8216;EUR Fixed 1y EURIBOR 3m&#8217; from the drop down</li>
+<li>Click &#8216;Submit&#8217; to create the trade</li>
+<li>In the browser tab for Bank B click &#8216;View Portfolio&#8217; from the top navigation bar to see this new trade</li>
+<li>In the browser tab for Bank C click &#8216;View Portfolio&#8217; from the top navigation bar and you will not be able to see the trade, as expected</li>
+</ol>
+<a class="reference internal image-reference" href="_images/azure_vm_10_51.png"><img alt="_images/azure_vm_10_51.png" src="_images/azure_vm_10_51.png" style="width: 300px;" /></a>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">There is a known issue whereby some users may see a 400 error when navigating the SIMM Valuation demo. If you encounter this error, simply navigate back to the root page (<a class="reference external" href="http://">http://</a><em>(public IP address)</em>:<em>(port)</em>/<em>web</em>/<em>simmvaluationdemo</em>) in the browser before continuing.</p>
+</div>
+</div>
+<div class="section" id="viewing-the-irs-demo">
+<h2>Viewing the IRS demo<a class="headerlink" href="#viewing-the-irs-demo" title="Permalink to this headline">¶</a></h2>
+<p>The IRS demo creates three nodes: Bank A, Bank B and a node that runs a notary, a network map and an interest rates oracle together. The two banks agree on an interest rate swap, and then do regular fixings of the deal as the time on a simulated clock passes. Each bank node listens on a different port - those used by the demo are:</p>
+<p><strong>IRS demo ports:</strong> <strong>11005 (node A for Bank A)</strong>, <strong>11007 (node B for Bank B)</strong></p>
+<p>Open two browser tabs and direct one to each of the following:</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>http://localhost:11005/web/irsdemo
+http://localhost:11007/web/irsdemo
+</pre></div>
+</div>
+<p>You will be able to see the nodes&#8217; view of the ledger.</p>
+<a class="reference internal image-reference" href="_images/azure_vm_10_52.png"><img alt="_images/azure_vm_10_52.png" src="_images/azure_vm_10_52.png" style="width: 300px;" /></a>
+<p>Now let&#8217;s take a look at how the interest rates oracle provides interest rates for a deal with a semi-annual payment frequency, and how the two counterparties to the trade see the same deal information on their own nodes, i.e. you see what I see.</p>
+<ol class="arabic simple">
+<li>In the browser tab for Bank A click &#8216;Create Deal&#8217; from the top navigation bar</li>
+<li>Modify the terms of the IRS deal, or leave as default</li>
+<li>Click &#8216;Submit&#8217; to create the deal</li>
+<li>In the browser tab for Bank A click &#8216;Recent Deals&#8217; from the top navigation bar to view the deal</li>
+<li>In the browser tab for Bank B click &#8216;Recent Deals&#8217; from the top navigation bar to view the deal. Compare the economic details to those shown in the Bank A tab</li>
+</ol>
+<a class="reference internal image-reference" href="_images/azure_vm_10_54.png"><img alt="_images/azure_vm_10_54.png" src="_images/azure_vm_10_54.png" style="width: 300px;" /></a>
+</div>
+<div class="section" id="viewing-logs-advanced-users">
+<h2>Viewing logs (advanced users)<a class="headerlink" href="#viewing-logs-advanced-users" title="Permalink to this headline">¶</a></h2>
+<p>Users may wish to view the raw logs generated by each node, which contain more information about the operations performed by each node.</p>
+<p>You can access these using an SSH client of your choice (e.g. Putty) and logging into the virtual machine using the public IP address.
+Once logged in, navigate to</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>/opt/simm-nodes/
+</pre></div>
+</div>
+<p>for the SIMM Valuation demo logs and</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>/opt/irs-nodes/
+</pre></div>
+</div>
+<p>for the IRS demo logs.
+There are separate sub-directories for each of the three nodes (<em>nodea</em>, <em>nodeb</em>, <em>nodec</em>), each containing a <em>/logs</em> sub-directory.</p>
+<p>The name of the log file will follow the name given to the service it reflects, e.g. <em>node-clint-vm-test.log</em>.</p>
+<a class="reference internal image-reference" href="_images/azure_vm_10_47.png"><img alt="_images/azure_vm_10_47.png" src="_images/azure_vm_10_47.png" style="width: 300px;" /></a>
+<p>You can open log files with any text editor.</p>
+<a class="reference internal image-reference" href="_images/azure_vm_10_49.png"><img alt="_images/azure_vm_10_49.png" src="_images/azure_vm_10_49.png" style="width: 300px;" /></a>
+</div>
+<div class="section" id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
+<p>Now you have taken a look at two Corda demos do go and visit the <a class="reference external" href="https://www.corda.net">dedicated Corda website</a></p>
+<p>Or to get straight into the Corda open source codebase, head over to the <a class="reference external" href="https://www.github.com/corda">Github Corda repo</a></p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="glossary.html" class="btn btn-neutral float-right" title="Glossary" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="publishing-corda.html" class="btn btn-neutral" title="Publishing Corda" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, R3 Limited.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

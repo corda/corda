@@ -9,7 +9,7 @@ import java.math.BigDecimal
  * Specifies the contract between two parties that trade an OpenGamma IRS. Currently can only agree to trade.
  */
 data class OGTrade(override val legalContractReference: SecureHash = SecureHash.sha256("OGTRADE.KT")) : Contract {
-    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllComposition(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
+    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllOf(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
 
     interface Commands : CommandData {
         class Agree : TypeOnlyCommandData(), Commands  // Both sides agree to trade
@@ -28,7 +28,7 @@ data class OGTrade(override val legalContractReference: SecureHash = SecureHash.
             }
         }
 
-        class Group : GroupClauseVerifier<IRSState, Commands, UniqueIdentifier>(AnyComposition(Agree())) {
+        class Group : GroupClauseVerifier<IRSState, Commands, UniqueIdentifier>(AnyOf(Agree())) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<IRSState, UniqueIdentifier>>
                     // Group by Trade ID for in / out states
                     = tx.groupStates() { state -> state.linearId }

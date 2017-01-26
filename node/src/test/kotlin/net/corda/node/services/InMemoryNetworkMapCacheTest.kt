@@ -29,14 +29,14 @@ class InMemoryNetworkMapCacheTest {
         val nodeB = network.createNode(null, -1, MockNetwork.DefaultFactory, true, "Node B", keyPair, ServiceInfo(NetworkMapService.type))
 
         // Node A currently knows only about itself, so this returns node A
-        assertEquals(nodeA.netMapCache.getNodeByCompositeKey(keyPair.public.composite), nodeA.info)
+        assertEquals(nodeA.netMapCache.getNodeByLegalIdentityKey(keyPair.public.composite), nodeA.info)
 
         databaseTransaction(nodeA.database) {
             nodeA.netMapCache.addNode(nodeB.info)
         }
         // Now both nodes match, so it throws an error
         expect<IllegalStateException> {
-            nodeA.netMapCache.getNodeByCompositeKey(keyPair.public.composite)
+            nodeA.netMapCache.getNodeByLegalIdentityKey(keyPair.public.composite)
         }
     }
 }

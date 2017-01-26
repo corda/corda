@@ -1,5 +1,5 @@
-Getting set up: troubleshooting
-===============================
+Troubleshooting
+===============
 
 IntelliJ issues
 ---------------
@@ -22,7 +22,7 @@ If on attempting to open the project (including importing Gradle project), Intel
 you may need to fix the project structure. Do this by following  `these instructions <https://www.jetbrains.com/help/idea/2016.2/configuring-global-project-and-module-sdks.html>`_. The correct JDK is often found at a path such as ``jdk1.8.0_xx…/Contents/Home``
 
 Ensure that you have the Project language level set at as 8. If you are having trouble selecting the correct JDK, the
-Jetbrains website offers the `following guidelines <https://intellij-support.jetbrains.com/hc/en-us/articles/206544879-Selecting-the-JDK-version-the-IDE-will-run-under>`_.
+JetBrains website offers the `following guidelines <https://intellij-support.jetbrains.com/hc/en-us/articles/206544879-Selecting-the-JDK-version-the-IDE-will-run-under>`_.
 
 Kotlin issues
 -------------
@@ -62,14 +62,12 @@ Wait for it to think and download the dependencies. After that you might have an
 
 The code should build, the unit tests should show as all green.
 
-If still have problems, the Jetbrains website has more information on `gradle here <https://www.jetbrains.com/help/idea/2016.2/working-with-gradle-projects.html>`_.
+If still have problems, the JetBrains website has more information on `gradle here <https://www.jetbrains.com/help/idea/2016.2/working-with-gradle-projects.html>`_.
 
 Gradle via the CLI
 ******************
 
-Gradle commands can also be run in the command line - further details of command line gradle can be found in
-
-.. TODO: add gradle cmd line doc link here
+Gradle commands can also be run from the command line - further details of command line gradle can be found `here <https://docs.gradle.org/current/userguide/gradle_command_line.html>`_.
 
 Doing it without IntelliJ
 -------------------------

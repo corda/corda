@@ -50,9 +50,11 @@ class CordaRPCOpsImplTest {
         rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
         CURRENT_RPC_USER.set(User("user", "pwd", permissions = setOf(startFlowPermission<CashFlow>())))
 
-        stateMachineUpdates = rpc.stateMachinesAndUpdates().second
-        transactions = rpc.verifiedTransactions().second
-        vaultUpdates = rpc.vaultAndUpdates().second
+        databaseTransaction(aliceNode.database) {
+            stateMachineUpdates = rpc.stateMachinesAndUpdates().second
+            transactions = rpc.verifiedTransactions().second
+            vaultUpdates = rpc.vaultAndUpdates().second
+        }
     }
 
     @Test

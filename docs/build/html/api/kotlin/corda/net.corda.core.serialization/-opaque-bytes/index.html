@@ -1,0 +1,140 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>OpaqueBytes - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.serialization</a>&nbsp;/&nbsp;<a href=".">OpaqueBytes</a><br/>
+<br/>
+<h1>OpaqueBytes</h1>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">OpaqueBytes</span></code>
+<p>A simple class that wraps a byte array and makes the equals/hashCode/toString methods work as you actually expect.
+In an ideal JVM this would be a value type and be completely overhead free. Project Valhalla is adding such
+functionality to Java, but it won't arrive for a few years yet!</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">OpaqueBytes</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.OpaqueBytes$<init>(kotlin.ByteArray)/bytes">bytes</span><span class="symbol">:</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">)</span></code>
+<p>A simple class that wraps a byte array and makes the equals/hashCode/toString methods work as you actually expect.
+In an ideal JVM this would be a value type and be completely overhead free. Project Valhalla is adding such
+functionality to Java, but it won't arrive for a few years yet!</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="bytes.html">bytes</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">bytes</span><span class="symbol">: </span><span class="identifier">ByteArray</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="size.html">size</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">size</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="equals.html">equals</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">equals</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.OpaqueBytes$equals(kotlin.Any)/other">other</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="hash-code.html">hashCode</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">hashCode</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="open.html">open</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">open</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/io/ByteArrayInputStream.html"><span class="identifier">ByteArrayInputStream</span></a></code>
+<p>Returns a <a href="http://docs.oracle.com/javase/6/docs/api/java/io/ByteArrayInputStream.html">ByteArrayInputStream</a> of the bytes</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="to-string.html">toString</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="of.html">of</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">of</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="net.corda.core.serialization.OpaqueBytes.Companion$of(kotlin.ByteArray)/b">b</span><span class="symbol">:</span>&nbsp;<span class="identifier">Byte</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">OpaqueBytes</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../deserialize.html">deserialize</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">OpaqueBytes</span><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.OpaqueBytes, com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.crypto/sha256.html">sha256</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">OpaqueBytes</span><span class="symbol">.</span><span class="identifier">sha256</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-secure-hash/-s-h-a256/index.html"><span class="identifier">SHA256</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.crypto/-digital-signature/index.html">DigitalSignature</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">DigitalSignature</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">OpaqueBytes</span></code>
+<p>A wrapper around a digital signature. The covering field is a generic tag usable by whatever is interpreting the
+signature. It isn't used currently, but experience from Bitcoin suggests such a feature is useful, especially when
+building partially signed transactions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.crypto/-secure-hash/index.html">SecureHash</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">SecureHash</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">OpaqueBytes</span></code>
+<p>Container for a cryptographically secure hash value.
+Provides utilities for generating a cryptographic hash using different algorithms (currently only SHA-256 supported).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-serialized-bytes/index.html">SerializedBytes</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">SerializedBytes</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">OpaqueBytes</span></code>
+<p>A type safe wrapper around a byte array that contains a serialised object. You can call <a href="../kotlin.-byte-array/deserialize.html">SerializedBytes.deserialize</a>
+to get the original object back.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

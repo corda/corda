@@ -29,8 +29,8 @@ class ValidatingNotaryFlow(otherSide: Party,
             wtx.toLedgerTransaction(serviceHub).verify()
         } catch (e: Exception) {
             when (e) {
-                is TransactionVerificationException,
-                is SignatureException -> throw NotaryException(NotaryError.TransactionInvalid())
+                is TransactionVerificationException -> NotaryException(NotaryError.TransactionInvalid(e.toString()))
+                is SignatureException -> throw NotaryException(NotaryError.SignaturesInvalid(e.toString()))
                 else -> throw e
             }
         }
@@ -40,7 +40,7 @@ class ValidatingNotaryFlow(otherSide: Party,
         try {
             stx.verifySignatures(serviceHub.myInfo.notaryIdentity.owningKey)
         } catch(e: SignedTransaction.SignaturesMissingException) {
-            throw NotaryException(NotaryError.SignaturesMissing(e.missing))
+            throw NotaryException(NotaryError.SignaturesMissing(e))
         }
     }
 

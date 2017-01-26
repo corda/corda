@@ -1,0 +1,49 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.client.fxutils.javafx.collections.ObservableMap - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.client.fxutils</a>&nbsp;/&nbsp;<a href=".">javafx.collections.ObservableMap</a><br/>
+<br/>
+<h3>Extensions for javafx.collections.ObservableMap</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="create-map-change.html">createMapChange</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">K</span><span class="symbol">&gt;</span> <span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">createMapChange</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$createMapChange(javafx.collections.ObservableMap((net.corda.client.fxutils.createMapChange.K, net.corda.client.fxutils.createMapChange.A)), net.corda.client.fxutils.createMapChange.K, net.corda.client.fxutils.createMapChange.A, net.corda.client.fxutils.createMapChange.A)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils$createMapChange(javafx.collections.ObservableMap((net.corda.client.fxutils.createMapChange.K, net.corda.client.fxutils.createMapChange.A)), net.corda.client.fxutils.createMapChange.K, net.corda.client.fxutils.createMapChange.A, net.corda.client.fxutils.createMapChange.A)/removedValue">removedValue</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils$createMapChange(javafx.collections.ObservableMap((net.corda.client.fxutils.createMapChange.K, net.corda.client.fxutils.createMapChange.A)), net.corda.client.fxutils.createMapChange.K, net.corda.client.fxutils.createMapChange.A, net.corda.client.fxutils.createMapChange.A)/addedValue">addedValue</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Change</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="get-observable-entries.html">getObservableEntries</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="identifier">V</span><span class="symbol">&gt;</span> <span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">getObservableEntries</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="identifier">Entry</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>val nameToPerson: ObservableMap&lt;String, Person&gt; = (..)
+val people: ObservableList = nameToPerson.getObservableValues()</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="get-observable-value.html">getObservableValue</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="identifier">V</span><span class="symbol">&gt;</span> <span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">getObservableValue</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$getObservableValue(javafx.collections.ObservableMap((net.corda.client.fxutils.getObservableValue.K, net.corda.client.fxutils.getObservableValue.V)), net.corda.client.fxutils.getObservableValue.K)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">V</span><span class="symbol">?</span><span class="symbol">&gt;</span></code>
+<p>val nameToPerson: ObservableMap&lt;String, Person&gt; = (..)
+val john: ObservableValue&lt;Person?&gt; = nameToPerson.getObservableValue("John")</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="get-observable-values.html">getObservableValues</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="identifier">V</span><span class="symbol">&gt;</span> <span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">getObservableValues</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="identifier">V</span><span class="symbol">&gt;</span></code>
+<p>val nameToPerson: ObservableMap&lt;String, Person&gt; = (..)
+val people: ObservableList = nameToPerson.getObservableValues()</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,0 +1,21 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TwoPartyDealFlow.Primary.progressTracker - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href="../index.html">TwoPartyDealFlow</a>&nbsp;/&nbsp;<a href="index.html">Primary</a>&nbsp;/&nbsp;<a href=".">progressTracker</a><br/>
+<br/>
+<h1>progressTracker</h1>
+<a name="net.corda.flows.TwoPartyDealFlow.Primary$progressTracker"></a>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">progressTracker</span><span class="symbol">: </span><a href="../../../net.corda.core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a></code>
+<p>Overrides <a href="../../../net.corda.core.flows/-flow-logic/progress-tracker.html">FlowLogic.progressTracker</a></p>
+<p>Override this to provide a <a href="../../../net.corda.core.utilities/-progress-tracker/index.html">ProgressTracker</a>. If one is provided and stepped, the framework will do something
+helpful with the progress reports. If this flow is invoked as a subflow of another, then the
+tracker will be made a child of the current step in the parent. If it's null, this flow doesn't track
+progress.</p>
+<p>Note that this has to return a tracker before the flow is invoked. You can't change your mind half way
+through.</p>
+</BODY>
+</HTML>

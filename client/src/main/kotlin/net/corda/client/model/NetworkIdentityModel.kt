@@ -1,11 +1,12 @@
 package net.corda.client.model
 
 import javafx.beans.value.ObservableValue
+import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import kotlinx.support.jdk8.collections.removeIf
 import net.corda.client.fxutils.firstOrDefault
 import net.corda.client.fxutils.firstOrNullObservable
-import net.corda.client.fxutils.foldToObservableList
+import net.corda.client.fxutils.fold
 import net.corda.client.fxutils.map
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.node.NodeInfo
@@ -17,15 +18,15 @@ class NetworkIdentityModel {
     private val networkIdentityObservable by observable(NodeMonitorModel::networkMap)
 
     val networkIdentities: ObservableList<NodeInfo> =
-            networkIdentityObservable.foldToObservableList(Unit) { update, _accumulator, observableList ->
-                observableList.removeIf {
+            networkIdentityObservable.fold(FXCollections.observableArrayList()) { list, update ->
+                list.removeIf {
                     when (update) {
                         is MapChange.Removed -> it == update.node
                         is MapChange.Modified -> it == update.previousNode
                         else -> false
                     }
                 }
-                observableList.addAll(update.node)
+                list.addAll(update.node)
             }
 
     private val rpcProxy by observableValue(NodeMonitorModel::proxyObservable)

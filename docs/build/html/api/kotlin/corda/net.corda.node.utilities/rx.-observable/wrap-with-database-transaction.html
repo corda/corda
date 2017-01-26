@@ -1,0 +1,17 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>wrapWithDatabaseTransaction - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.utilities</a>&nbsp;/&nbsp;<a href="index.html">rx.Observable</a>&nbsp;/&nbsp;<a href=".">wrapWithDatabaseTransaction</a><br/>
+<br/>
+<h1>wrapWithDatabaseTransaction</h1>
+<a name="net.corda.node.utilities$wrapWithDatabaseTransaction(rx.Observable((net.corda.node.utilities.wrapWithDatabaseTransaction.T)), org.jetbrains.exposed.sql.Database)"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">wrapWithDatabaseTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$wrapWithDatabaseTransaction(rx.Observable((net.corda.node.utilities.wrapWithDatabaseTransaction.T)), org.jetbrains.exposed.sql.Database)/db">db</span><span class="symbol">:</span>&nbsp;<span class="identifier">Database</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Wrap delivery of observations in a database transaction.  Multiple subscribers will receive the observations inside
+the same database transaction.  This also lazily subscribes to the source <a href="#">rx.Observable</a> to preserve any buffering
+that might be in place.</p>
+</BODY>
+</HTML>

@@ -45,10 +45,10 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    testCompile group: 'junit', name: 'junit', version: '4.11'
+    testCompile "junit:junit:$junit_version"
 
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
-    compile 'no.tornado:tornadofx:1.5.7'
+    compile 'no.tornado:tornadofx:1.5.9'
 
     // Corda Core: Data structures and basic types needed to work with Corda.
     compile project(':core')
@@ -57,7 +57,7 @@ dependencies {
     compile project(':finance')
 
     // FontAwesomeFX: The "FontAwesome" icon library.
-    compile 'de.jensd:fontawesomefx-fontawesome:4.6.1-2'
+    compile 'de.jensd:fontawesomefx-fontawesome:4.7.0'
 
     // ReactFX: Functional reactive UI programming.
     compile 'org.reactfx:reactfx:2.0-M5'
@@ -80,4 +80,10 @@ dependencies {
 task(runDemoNodes, dependsOn: 'classes', type: JavaExec) {
     main = 'net.corda.explorer.MainKt'
     classpath = sourceSets.main.runtimeClasspath
+}
+
+task(runSimulationNodes, dependsOn: 'classes', type: JavaExec) {
+    main = 'net.corda.explorer.MainKt'
+    classpath = sourceSets.main.runtimeClasspath
+    args '-S'
 }

@@ -22,7 +22,7 @@ class Cordform extends DefaultTask {
      * @param directory The directory the nodes will be installed into.
      * @return
      */
-    public void directory(String directory) {
+    void directory(String directory) {
         this.directory = Paths.get(directory)
     }
 
@@ -32,7 +32,7 @@ class Cordform extends DefaultTask {
      * @warning Ensure the node name is one of the configured nodes.
      * @param nodeName The name of the node that will host the network map.
      */
-    public void networkMap(String nodeName) {
+    void networkMap(String nodeName) {
         networkMapNodeName = nodeName
     }
 
@@ -41,7 +41,7 @@ class Cordform extends DefaultTask {
      *
      * @param configureClosure A node configuration that will be deployed.
      */
-    public void node(Closure configureClosure) {
+    void node(Closure configureClosure) {
         nodes << project.configure(new Node(project), configureClosure)
     }
 
@@ -85,7 +85,7 @@ class Cordform extends DefaultTask {
         Node networkMapNode = getNodeByName(networkMapNodeName)
         nodes.each {
             if(it != networkMapNode) {
-                it.networkMapAddress(networkMapNode.getArtemisAddress())
+                it.networkMapAddress(networkMapNode.getArtemisAddress(), networkMapNodeName)
             }
             it.build(directory.toFile())
         }

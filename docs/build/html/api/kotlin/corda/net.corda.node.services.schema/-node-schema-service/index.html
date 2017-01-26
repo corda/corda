@@ -1,0 +1,77 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NodeSchemaService - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.schema</a>&nbsp;/&nbsp;<a href=".">NodeSchemaService</a><br/>
+<br/>
+<h1>NodeSchemaService</h1>
+<code><span class="keyword">class </span><span class="identifier">NodeSchemaService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.api/-schema-service/index.html"><span class="identifier">SchemaService</span></a><span class="symbol">, </span><a href="../../net.corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code>
+<p>Most basic implementation of <a href="../../net.corda.node.services.api/-schema-service/index.html">SchemaService</a>.</p>
+<p>TODO: support loading schema options from node configuration.
+TODO: support configuring what schemas are to be selected for persistence.
+TODO: support plugins for schema version upgrading or custom mapping not supported by original <a href="../../net.corda.core.schemas/-queryable-state/index.html">QueryableState</a>.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">NodeSchemaService</span><span class="symbol">(</span><span class="symbol">)</span></code>
+<p>Most basic implementation of <a href="../../net.corda.node.services.api/-schema-service/index.html">SchemaService</a>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="schema-options.html">schemaOptions</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">schemaOptions</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../net.corda.core.schemas/-mapped-schema/index.html"><span class="identifier">MappedSchema</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.node.services.api/-schema-service/-schema-options/index.html"><span class="identifier">SchemaOptions</span></a><span class="symbol">&gt;</span></code>
+<p>Options configured for this node's schemas.  A missing entry for a schema implies all properties are null.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="generate-mapped-object.html">generateMappedObject</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">generateMappedObject</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.schema.NodeSchemaService$generateMappedObject(net.corda.core.schemas.QueryableState, net.corda.core.schemas.MappedSchema)/state">state</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.schemas/-queryable-state/index.html"><span class="identifier">QueryableState</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.schema.NodeSchemaService$generateMappedObject(net.corda.core.schemas.QueryableState, net.corda.core.schemas.MappedSchema)/schema">schema</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.schemas/-mapped-schema/index.html"><span class="identifier">MappedSchema</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.schemas/-persistent-state/index.html"><span class="identifier">PersistentState</span></a></code>
+<p>Map a state to a <a href="../../net.corda.core.schemas/-persistent-state/index.html">PersistentState</a> for the given schema, either via direct support from the state
+or via custom logic in this service.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="select-schemas.html">selectSchemas</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">selectSchemas</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.schema.NodeSchemaService$selectSchemas(net.corda.core.schemas.QueryableState)/state">state</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.schemas/-queryable-state/index.html"><span class="identifier">QueryableState</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.schemas/-mapped-schema/index.html"><span class="identifier">MappedSchema</span></a><span class="symbol">&gt;</span></code>
+<p>Given a state, select schemas to map it to that are supported by <a href="generate-mapped-object.html">generateMappedObject</a> and that are configured
+for this node.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.serialization/-singleton-serialize-as-token/to-token.html">toToken</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toToken</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.SingletonSerializeAsToken$toToken(net.corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.serialization/-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,0 +1,22 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>FlowLogicRefFactory.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.flows</a>&nbsp;/&nbsp;<a href="index.html">FlowLogicRefFactory</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+
+<p><code><span class="identifier">FlowLogicRefFactory</span><span class="symbol">(</span><span class="symbol">)</span></code>
+<p><code><span class="identifier">FlowLogicRefFactory</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogicRefFactory$<init>(kotlin.collections.Map((kotlin.String, kotlin.collections.Set(()))))/flowWhitelist">flowWhitelist</span><span class="symbol">:</span>&nbsp;<span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>A class for conversion to and from <a href="../-flow-logic/index.html">FlowLogic</a> and <a href="../-flow-logic-ref/index.html">FlowLogicRef</a> instances.</p>
+<p>Validation of types is performed on the way in and way out in case this object is passed between JVMs which might have differing
+whitelists.</p>
+<p>TODO: Ways to populate whitelist of "blessed" flows per node/party
+TODO: Ways to populate argument types whitelist. Per node/party or global?
+TODO: Align with API related logic for passing in FlowLogic references (FlowRef)
+TODO: Actual support for AppContext / AttachmentsClassLoader</p>
+</BODY>
+</HTML>

@@ -1,0 +1,55 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ReceivedMessage - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.messaging</a>&nbsp;/&nbsp;<a href=".">ReceivedMessage</a><br/>
+<br/>
+<h1>ReceivedMessage</h1>
+<code><span class="keyword">interface </span><span class="identifier">ReceivedMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-message/index.html"><span class="identifier">Message</span></a></code>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="peer.html">peer</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">peer</span><span class="symbol">: </span><span class="identifier">X500Name</span></code>
+<p>The authenticated sender.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-message/data.html">data</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">data</span><span class="symbol">: </span><span class="identifier">ByteArray</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-message/debug-timestamp.html">debugTimestamp</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">debugTimestamp</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-message/topic-session.html">topicSession</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">topicSession</span><span class="symbol">: </span><a href="../-topic-session/index.html"><span class="identifier">TopicSession</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-message/unique-message-id.html">uniqueMessageId</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">uniqueMessageId</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/UUID.html"><span class="identifier">UUID</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>
