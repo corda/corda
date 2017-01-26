@@ -28,9 +28,7 @@ public class R3Pty implements AutoCloseable {
     @Override
     public void close() {
         LOG.info("Closing terminal '{}'", name);
-        if (terminal.getTerminalStarter() != null) {
-            terminal.close();
-        }
+        terminal.close();
     }
 
     public String getName() {
@@ -63,7 +61,9 @@ public class R3Pty implements AutoCloseable {
         }
 
         Map<String, String> environment = new HashMap<>(envs);
-        environment.put("TERM", "xterm");
+        if (!UIUtil.isWindows) {
+            environment.put("TERM", "xterm");
+        }
 
         TerminalSession session = terminal.createTerminalSession(createTtyConnector(args, environment, workingDir));
         session.start();

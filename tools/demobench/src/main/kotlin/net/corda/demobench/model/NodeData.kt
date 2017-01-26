@@ -5,9 +5,10 @@ import javafx.beans.property.SimpleStringProperty
 
 class NodeData {
 
-    var legalName : SimpleStringProperty = SimpleStringProperty("")
-    var p2pPort: SimpleIntegerProperty = SimpleIntegerProperty(0)
-    val artemisPort: SimpleIntegerProperty = SimpleIntegerProperty(0)
-    val webPort: SimpleIntegerProperty = SimpleIntegerProperty(0)
+    var legalName = SimpleStringProperty("")
+    val nearestCity = SimpleStringProperty("London")
+    var p2pPort = SimpleIntegerProperty(0)
+    val artemisPort = SimpleIntegerProperty(0)
+    val webPort = SimpleIntegerProperty(0)
 
 }
