@@ -1,0 +1,337 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Vault &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
+        <link rel="next" title="Security model" href="key-concepts-security-model.html"/>
+        <link rel="prev" title="Consensus and notaries" href="key-concepts-consensus-notaries.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="key-concepts.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-ecosystem.html">Corda ecosystem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-core-types.html">Core types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-financial-model.html">Financial model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-flow-framework.html">Flow framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-consensus-notaries.html">Consensus and notaries</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Vault</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-security-model.html">Security model</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Vault</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/key-concepts-vault.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="vault">
+<h1>Vault<a class="headerlink" href="#vault" title="Permalink to this headline">¶</a></h1>
+<p>The vault contains data extracted from the ledger that is considered relevant to the node’s owner, stored in a relational model
+that can be easily queried and worked with.</p>
+<p>The vault keeps track of both unconsumed and consumed states:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Unconsumed (or unspent) states represent fungible states available for spending (including spend-to-self transactions)
+and linear states available for evolution (eg. in response to a lifecycle event on a deal) or transfer to another party.</li>
+<li>Consumed (or spent) states represent ledger immutable state for the purpose of transaction reporting, audit and archival, including the ability to perform joins with app-private data (like customer notes)</li>
+</ul>
+</div></blockquote>
+<p>By fungible we refer to assets of measurable quantity (eg. a cash currency, units of stock) which can be combined
+together to represent a single ledger state.</p>
+<p>Like with a cryptocurrency wallet, the Corda vault can create transactions that send value (eg. transfer of state) to someone else
+by combining fungible states and possibly adding a change output that makes the values balance (this process is usually referred to as ‘coin selection’).
+Vault spending ensures that transactions respect the fungibility rules in order to ensure that the issuer and reference data is preserved as the assets pass from hand to hand.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Basic &#8216;coin selection&#8217; is currently implemented. Future work includes fungible state optimisation (splitting and
+merging of states in the background), &#8216;soft locking&#8217; (ability to automatically or explicitly reserve states to prevent
+multiple transactions trying to use the same output simultaneously), &#8216;state re-issuance&#8217; (sending of states back to the
+issuer for re-issuance, thus pruning long transaction chains and improving privacy).</p>
+</div>
+<p>There is also a facility for attaching descriptive textual notes against any transaction stored in the vault.</p>
+<p>The vault supports the management of data in both authoritative (&#8220;on-ledger&#8221;) form and, where appropriate, shadow (&#8220;off-ledger&#8221;) form:</p>
+<ul class="simple">
+<li>&#8220;On-ledger&#8221; data refers to distributed ledger state (cash, deals, trades) to which a firm is participant.</li>
+<li>&#8220;Off-ledger&#8221; data refers to a firm&#8217;s internal reference, static and systems data.</li>
+</ul>
+<p>The following diagram illustrates the breakdown of the vault into sub-system components:</p>
+<img alt="_images/vault.png" src="_images/vault.png" />
+<p>Note the following:</p>
+<ul class="simple">
+<li>the vault &#8220;On Ledger&#8221; store tracks unconsumed state and is updated internally by the node upon recording of a transaction on the ledger
+(following successful smart contract verification and signature by all participants)</li>
+<li>the vault &#8220;Off Ledger&#8221; store refers to additional data added by the node owner subsequent to transaction recording</li>
+<li>the vault performs fungible state spending (and in future, fungible state optimisation management including merging, splitting and re-issuance)</li>
+<li>vault extensions represent additional custom plugin code a developer may write to query specific custom contract state attributes.</li>
+<li>customer &#8220;Off Ledger&#8221; (private store) represents internal organisational data that may be joined with the vault data to perform additional reporting or processing</li>
+<li>a vault query API is exposed to developers using standard Corda RPC and CorDapp plugin mechanisms</li>
+<li>a vault update API is internally used by transaction recording flows.</li>
+<li>the vault database schemas are directly accessible via JDBC for customer joins and queries</li>
+</ul>
+<p>Section 8 of the <a class="reference external" href="_static/corda-technical-whitepaper.pdf">Technical white paper</a> describes features of the vault yet to be implemented including private key managament,
+soft state locking, state splitting and merging, asset re-issuance and node event scheduling.</p>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="key-concepts-security-model.html" class="btn btn-neutral float-right" title="Security model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="key-concepts-consensus-notaries.html" class="btn btn-neutral" title="Consensus and notaries" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, R3 Limited.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

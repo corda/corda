@@ -21,6 +21,8 @@ extend the demos. For more details about running via the command line or from wi
 
 .. note:: If any of the demos don't work, please raise an issue on GitHub.
 
+.. _trader-demo:
+
 Trader demo
 -----------
 
@@ -54,6 +56,8 @@ To run from IntelliJ:
 4. Run ``Trader Demo: Run Seller`` to trigger the transaction
 5. In the "Trader Demo: Run Nodes" run configuration window, you should see some log lines scroll past. Within a few seconds, the message
    "Purchase complete - we are a happy customer!" should be printed.
+
+.. _irs-demo:
 
 IRS demo
 --------
@@ -259,6 +263,8 @@ Using the following login details:
 - For the Big Corporation node: localhost / port 10006 / username user1 / password test
 
 See https://docs.corda.net/node-explorer.html for further details on usage.
+
+.. _simm-demo:
 
 SIMM and Portfolio Demo - aka the Initial Margin Agreement Demo
 ---------------------------------------------------------------
