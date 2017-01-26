@@ -5,6 +5,7 @@ import tornadofx.ItemViewModel
 class NodeDataModel : ItemViewModel<NodeData>(NodeData()) {
 
     val legalName = bind { item?.legalName }
+    val nearestCity = bind { item?.nearestCity }
     val p2pPort = bind { item?.p2pPort }
     val artemisPort = bind { item?.artemisPort }
     val webPort = bind { item?.webPort }

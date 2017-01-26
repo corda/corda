@@ -11,6 +11,7 @@ import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
 import javax.swing.SwingUtilities
 import net.corda.demobench.model.NodeConfig
+import net.corda.demobench.model.NodeController
 import net.corda.demobench.pty.R3Pty
 import net.corda.demobench.ui.PropertyLabel
 import tornadofx.Fragment
@@ -18,6 +19,8 @@ import tornadofx.vgrow
 
 class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
+
+    private val controller by inject<NodeController>()
 
     private val nodeName by fxid<Label>()
     private val p2pPort by fxid<PropertyLabel>()
@@ -31,7 +34,7 @@ class NodeTerminalView : Fragment() {
     var pty : R3Pty? = null
 
     fun open(config: NodeConfig) {
-        nodeName.text = config.name
+        nodeName.text = config.legalName
         p2pPort.value = config.p2pPort.toString()
 
         val swingTerminal = SwingNode()
@@ -43,16 +46,22 @@ class NodeTerminalView : Fragment() {
         root.isVisible = true
 
         SwingUtilities.invokeLater({
-            val r3pty = R3Pty(config.name, TerminalSettingsProvider(), Dimension(160, 80))
+            val r3pty = R3Pty(config.legalName, TerminalSettingsProvider(), Dimension(160, 80))
             pty = r3pty
 
             swingTerminal.content = r3pty.terminal
-            r3pty.run("/bin/bash", "--login")
+            controller.runCorda(r3pty, config)
         })
     }
 
     fun close() {
         pty?.close()
+    }
+
+    fun refreshTerminal() {
+        SwingUtilities.invokeLater {
+            // TODO
+        }
     }
 
     init {

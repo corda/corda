@@ -33,6 +33,19 @@ class NodeTabView : Fragment() {
                         }
                     }
                 }
+                field("Nearest City") {
+                    textfield(model.nearestCity) {
+                        minWidth = 200.0
+                        maxWidth = 200.0
+                        validator {
+                            if (it.isNullOrBlank()) {
+                                error("Nearest city is required")
+                            } else {
+                                null
+                            }
+                        }
+                    }
+                }
                 field("P2P Port") {
                     textfield(model.p2pPort, NumberStringConverter(INTEGER_FORMAT)) {
                         minWidth = 100.0
@@ -99,8 +112,15 @@ class NodeTabView : Fragment() {
         val config = controller.validate(model.item)
         if (config != null) {
             nodeConfigView.isVisible = false
-            nodeTab.text = config.name
+            nodeTab.text = config.legalName
             nodeTerminalView.open(config)
+
+            nodeTab.setOnSelectionChanged {
+                if (nodeTab.isSelected) {
+                    // Doesn't work yet
+                    nodeTerminalView.refreshTerminal()
+                }
+            }
         }
     }
 
