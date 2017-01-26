@@ -1,10 +1,7 @@
 package net.corda.flows
 
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.messaging.MessagingService
-import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.messaging.onNext
-import net.corda.core.messaging.send
+import net.corda.core.messaging.*
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 
 /**
@@ -21,7 +18,7 @@ interface ServiceRequestMessage {
  */
 fun <R : Any> MessagingService.sendRequest(topic: String,
                                            request: ServiceRequestMessage,
-                                           target: SingleMessageRecipient): ListenableFuture<R> {
+                                           target: MessageRecipients): ListenableFuture<R> {
     val responseFuture = onNext<R>(topic, request.sessionID)
     send(topic, DEFAULT_SESSION_ID, request, target)
     return responseFuture

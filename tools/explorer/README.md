@@ -1,6 +1,6 @@
 # Node Explorer
 
-The node explorer provide views of the node's vault and transaction data using Corda's RPC framework.
+The node explorer provides views of the node's vault and transaction data using Corda's RPC framework.
 The user can execute cash transaction commands to issue and move cash to other parties on the network or exit cash using the user interface.
 
 ## Running the UI
@@ -16,6 +16,14 @@ The user can execute cash transaction commands to issue and move cash to other p
 
 ## Running Demo Nodes
 
+A demonstration Corda network topology is configured with 5 nodes playing the following roles:
+1. Notary
+2. Issuer nodes (representing two fictional central banks - UK Bank Plc issuer of GBP and USA Bank Corp issuer of USD)
+3. Participant nodes (representing two users - Alice and Bob)
+
+The Issuer nodes have the ability to issue, move and exit cash amounts.
+The Participant nodes are only able to spend cash (eg. move cash).
+
 **Windows:**
 
     gradlew.bat tools:explorer:runDemoNodes
@@ -29,8 +37,11 @@ The user can execute cash transaction commands to issue and move cash to other p
     Notary -> 20002
     Alice -> 20004
     Bob -> 20006
-    Bank of Corda -> 20008
-  
+    UK Bank Plc -> 20008
+    USA Bank Corp -> 20010
+
+Explorer login credentials to the Issuer nodes are 'manager'/'test'.
+Explorer login credentials to the Participants nodes are 'user1'/'test'.
 
 ## TODOs:
 - Shows more useful information in the dashboard.

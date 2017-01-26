@@ -79,7 +79,9 @@ open class MockServiceHubInternal(
 
     override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(txStorageService, txs)
 
-    override fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = smm.add(logic)
+    override fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> {
+        return smm.executor.fetchFrom { smm.add(logic) }
+    }
 
     override fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party) -> FlowLogic<*>) {
         flowFactories[markerClass.java] = flowFactory

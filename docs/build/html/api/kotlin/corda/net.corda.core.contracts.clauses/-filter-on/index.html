@@ -1,0 +1,88 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>FilterOn - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts.clauses</a>&nbsp;/&nbsp;<a href=".">FilterOn</a><br/>
+<br/>
+<h1>FilterOn</h1>
+<code><span class="keyword">class </span><span class="identifier">FilterOn</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">K</span><span class="symbol">&gt;</span></code>
+<p>Filter the states that are passed through to the wrapped clause, to restrict them to a specific type.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">FilterOn</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.clauses.FilterOn$<init>(net.corda.core.contracts.clauses.Clause((net.corda.core.contracts.clauses.FilterOn.S, net.corda.core.contracts.clauses.FilterOn.C, net.corda.core.contracts.clauses.FilterOn.K)), kotlin.Function1((kotlin.collections.List((net.corda.core.contracts.ContractState)), kotlin.collections.List((net.corda.core.contracts.clauses.FilterOn.S)))))/clause">clause</span><span class="symbol">:</span>&nbsp;<a href="../-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">K</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.clauses.FilterOn$<init>(net.corda.core.contracts.clauses.Clause((net.corda.core.contracts.clauses.FilterOn.S, net.corda.core.contracts.clauses.FilterOn.C, net.corda.core.contracts.clauses.FilterOn.K)), kotlin.Function1((kotlin.collections.List((net.corda.core.contracts.ContractState)), kotlin.collections.List((net.corda.core.contracts.clauses.FilterOn.S)))))/filterStates">filterStates</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>Filter the states that are passed through to the wrapped clause, to restrict them to a specific type.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="clause.html">clause</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">clause</span><span class="symbol">: </span><a href="../-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">K</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="filter-states.html">filterStates</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">filterStates</span><span class="symbol">: </span><span class="symbol">(</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="required-commands.html">requiredCommands</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">requiredCommands</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../../net.corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Determine whether this clause runs or not</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="get-execution-path.html">getExecutionPath</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getExecutionPath</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.clauses.FilterOn$getExecutionPath(kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.core.contracts.clauses.FilterOn.C)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">,</span>&nbsp;<span class="identifier">*</span><span class="symbol">,</span>&nbsp;<span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Determine the subclauses which will be verified as a result of verifying this clause.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="verify.html">verify</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.clauses.FilterOn$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.core.contracts.ContractState)), kotlin.collections.List((net.corda.core.contracts.ContractState)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.core.contracts.clauses.FilterOn.C)))), net.corda.core.contracts.clauses.FilterOn.K)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.clauses.FilterOn$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.core.contracts.ContractState)), kotlin.collections.List((net.corda.core.contracts.ContractState)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.core.contracts.clauses.FilterOn.C)))), net.corda.core.contracts.clauses.FilterOn.K)/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.clauses.FilterOn$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.core.contracts.ContractState)), kotlin.collections.List((net.corda.core.contracts.ContractState)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.core.contracts.clauses.FilterOn.C)))), net.corda.core.contracts.clauses.FilterOn.K)/outputs">outputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.clauses.FilterOn$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.core.contracts.ContractState)), kotlin.collections.List((net.corda.core.contracts.ContractState)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.core.contracts.clauses.FilterOn.C)))), net.corda.core.contracts.clauses.FilterOn.K)/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.clauses.FilterOn$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.core.contracts.ContractState)), kotlin.collections.List((net.corda.core.contracts.ContractState)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.core.contracts.clauses.FilterOn.C)))), net.corda.core.contracts.clauses.FilterOn.K)/groupingKey">groupingKey</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span></code>
+<p>Verify the transaction matches the conditions from this clause. For example, a "no zero amount output" clause
+would check each of the output states that it applies to, looking for a zero amount, and throw IllegalStateException
+if any matched.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../matches.html">matches</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span> <a href="../-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">matches</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.clauses$matches(net.corda.core.contracts.clauses.Clause((net.corda.core.contracts.ContractState, net.corda.core.contracts.clauses.matches.C, kotlin.Any)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.core.contracts.clauses.matches.C)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Determine if the given list of commands matches the required commands for a clause to trigger.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

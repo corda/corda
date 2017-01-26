@@ -1,0 +1,106 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.node.driver - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.node.driver</a><br/>
+<br/>
+<h2>Package net.corda.node.driver</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-driver-based-test/index.html">DriverBasedTest</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">DriverBasedTest</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-driver-d-s-l/index.html">DriverDSL</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">DriverDSL</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-driver-d-s-l-internal-interface/index.html"><span class="identifier">DriverDSLInternalInterface</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-driver-d-s-l-exposed-interface/index.html">DriverDSLExposedInterface</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">DriverDSLExposedInterface</span></code>
+<p>This is the interface that's exposed to DSL users.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-driver-d-s-l-internal-interface/index.html">DriverDSLInternalInterface</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">DriverDSLInternalInterface</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-driver-d-s-l-exposed-interface/index.html"><span class="identifier">DriverDSLExposedInterface</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-node-handle/index.html">NodeHandle</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">NodeHandle</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-port-allocation/index.html">PortAllocation</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">PortAllocation</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="address-must-be-bound.html">addressMustBeBound</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">addressMustBeBound</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.driver$addressMustBeBound(java.util.concurrent.ScheduledExecutorService, com.google.common.net.HostAndPort)/executorService">executorService</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/ScheduledExecutorService.html"><span class="identifier">ScheduledExecutorService</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$addressMustBeBound(java.util.concurrent.ScheduledExecutorService, com.google.common.net.HostAndPort)/hostAndPort">hostAndPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">HostAndPort</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="address-must-not-be-bound.html">addressMustNotBeBound</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">addressMustNotBeBound</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.driver$addressMustNotBeBound(java.util.concurrent.ScheduledExecutorService, com.google.common.net.HostAndPort)/executorService">executorService</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/ScheduledExecutorService.html"><span class="identifier">ScheduledExecutorService</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$addressMustNotBeBound(java.util.concurrent.ScheduledExecutorService, com.google.common.net.HostAndPort)/hostAndPort">hostAndPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">HostAndPort</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="driver.html">driver</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span> <span class="identifier">driver</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))/isDebug">isDebug</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))/driverDirectory">driverDirectory</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Paths.get("build", getTimestampAsDirectoryName())<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))/portAllocation">portAllocation</span><span class="symbol">:</span>&nbsp;<a href="-port-allocation/index.html"><span class="identifier">PortAllocation</span></a>&nbsp;<span class="symbol">=</span>&nbsp;PortAllocation.Incremental(10000)<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))/debugPortAllocation">debugPortAllocation</span><span class="symbol">:</span>&nbsp;<a href="-port-allocation/index.html"><span class="identifier">PortAllocation</span></a>&nbsp;<span class="symbol">=</span>&nbsp;PortAllocation.Incremental(5005)<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))/useTestClock">useTestClock</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$driver(kotlin.Boolean, java.nio.file.Path, net.corda.node.driver.PortAllocation, net.corda.node.driver.PortAllocation, kotlin.Boolean, kotlin.Function1((net.corda.node.driver.DriverDSLExposedInterface, net.corda.node.driver.driver.A)))/dsl">dsl</span><span class="symbol">:</span>&nbsp;<a href="-driver-d-s-l-exposed-interface/index.html"><span class="identifier">DriverDSLExposedInterface</span></a><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">A</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">A</span></code>
+<p><a href="driver.html">driver</a> allows one to start up nodes like this:
+driver {
+    val noService = startNode("NoService")
+    val notary = startNode("Notary")</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="generic-driver.html">genericDriver</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">DI</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-driver-d-s-l-exposed-interface/index.html"><span class="identifier">DriverDSLExposedInterface</span></a><span class="symbol">, </span><span class="identifier">D</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-driver-d-s-l-internal-interface/index.html"><span class="identifier">DriverDSLInternalInterface</span></a><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">&gt;</span> <span class="identifier">genericDriver</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.driver$genericDriver(net.corda.node.driver.genericDriver.D, kotlin.Function1((net.corda.node.driver.genericDriver.D, net.corda.node.driver.genericDriver.DI)), kotlin.Function1((net.corda.node.driver.genericDriver.DI, net.corda.node.driver.genericDriver.A)))/driverDsl">driverDsl</span><span class="symbol">:</span>&nbsp;<span class="identifier">D</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$genericDriver(net.corda.node.driver.genericDriver.D, kotlin.Function1((net.corda.node.driver.genericDriver.D, net.corda.node.driver.genericDriver.DI)), kotlin.Function1((net.corda.node.driver.genericDriver.DI, net.corda.node.driver.genericDriver.A)))/coerce">coerce</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">D</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">DI</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$genericDriver(net.corda.node.driver.genericDriver.D, kotlin.Function1((net.corda.node.driver.genericDriver.D, net.corda.node.driver.genericDriver.DI)), kotlin.Function1((net.corda.node.driver.genericDriver.DI, net.corda.node.driver.genericDriver.A)))/dsl">dsl</span><span class="symbol">:</span>&nbsp;<span class="identifier">DI</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">A</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">A</span></code>
+<p>This is a helper method to allow extending of the DSL, along the lines of
+interface SomeOtherExposedDSLInterface : DriverDSLExposedInterface
+interface SomeOtherInternalDSLInterface : DriverDSLInternalInterface, SomeOtherExposedDSLInterface
+class SomeOtherDSL(val driverDSL : DriverDSL) : DriverDSLInternalInterface by driverDSL, SomeOtherInternalDSLInterface</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="get-timestamp-as-directory-name.html">getTimestampAsDirectoryName</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getTimestampAsDirectoryName</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="write-config.html">writeConfig</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">writeConfig</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.driver$writeConfig(java.nio.file.Path, kotlin.String, com.typesafe.config.Config)/path">path</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$writeConfig(java.nio.file.Path, kotlin.String, com.typesafe.config.Config)/filename">filename</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.driver$writeConfig(java.nio.file.Path, kotlin.String, com.typesafe.config.Config)/config">config</span><span class="symbol">:</span>&nbsp;<span class="identifier">Config</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

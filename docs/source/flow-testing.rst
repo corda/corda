@@ -80,4 +80,4 @@ valid) inside a ``databaseTransaction``.  All node flows run within a database t
 but any time we need to use the database directly from a unit test, you need to provide a database transaction as shown
 here.
 
-And that's it: you can explore the documentation for the `MockNetwork API <api/net.corda.testing.node/-mock-network/index.html>`_ here.
+And that's it: you can explore the documentation for the `MockNetwork API <api/kotlin/corda/net.corda.testing.node/-mock-network/index.html>`_ here.

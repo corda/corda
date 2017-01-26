@@ -1,0 +1,33 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>Generator.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.client.mock</a>&nbsp;/&nbsp;<a href="index.html">Generator</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">Generator</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.mock.Generator$<init>(kotlin.Function1((java.util.SplittableRandom, net.corda.core.ErrorOr((net.corda.client.mock.Generator.A)))))/generate">generate</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/SplittableRandom.html"><span class="identifier">SplittableRandom</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../net.corda.core/-error-or/index.html"><span class="identifier">ErrorOr</span></a><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>This file defines a basic <a href="index.html">Generator</a> library for composing random generators of objects.</p>
+<p>An object of type <a href="index.html">Generator</a>&lt;<a href="#">A</a>&gt; captures a generator of <a href="#">A</a>s. Generators may be composed in several ways.</p>
+<p><a href="choice.html">Generator.choice</a> picks a generator from the specified list and runs that.
+<a href="frequency.html">Generator.frequency</a> is similar to <a href="choice.html">choice</a> but the probability may be specified for each generator (it is normalised before picking).
+<a href="combine.html">Generator.combine</a> combines two generators of A and B with a function (A, B) -&gt; C. Variants exist for other arities.
+<a href="bind.html">Generator.bind</a> sequences two generators using an arbitrary A-&gt;Generator function. Keep the usage of this
+function minimal as it may explode the stack, especially when using recursion.</p>
+<p>There are other utilities as well, the type of which are usually descriptive.</p>
+<p>Example:
+val birdNameGenerator = Generator.pickOne(listOf("raven", "pigeon"))
+val birdHeightGenerator = Generator.doubleRange(from = 10.0, to = 30.0)
+val birdGenerator = birdNameGenerator.combine(birdHeightGenerator) { name, height -&gt; Bird(name, height) }
+val birdsGenerator = Generator.replicate(2, birdGenerator)
+val mammalsGenerator = Generator.sampleBernoulli(listOf(Mammal("fox"), Mammal("elephant")))
+val animalsGenerator = Generator.frequency(
+    0.2 to birdsGenerator,
+    0.8 to mammalsGenerator
+)
+val animals = animalsGenerator.generate(SplittableRandom()).getOrThrow()</p>
+<p>The above will generate a random list of animals.</p>
+</BODY>
+</HTML>

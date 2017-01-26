@@ -1,0 +1,190 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.client.fxutils - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.client.fxutils</a><br/>
+<br/>
+<h2>Package net.corda.client.fxutils</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-aggregated-list/index.html">AggregatedList</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">AggregatedList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">E</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">TransformationList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">E</span><span class="symbol">&gt;</span></code>
+<p>Given an <a href="#">ObservableList</a>&lt;<a href="#">E</a>&gt; and a grouping key <a href="#">K</a>, <a href="-aggregated-list/index.html">AggregatedList</a> groups the elements by the key into a fresh
+<a href="#">ObservableList</a>&lt;<a href="#">E</a>&gt; for each group and exposes the groups as an observable list of <a href="#">A</a>s by calling <a href="-aggregated-list/assemble.html">assemble</a> on each.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-amount-bindings/index.html">AmountBindings</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">AmountBindings</span></code>
+<p>Utility bindings for the <a href="../net.corda.core.contracts/-amount/index.html">Amount</a> type, similar in spirit to <a href="#">Bindings</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-associated-list/index.html">AssociatedList</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">AssociatedList</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="keyword">out</span>&nbsp;<span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-read-only-backed-observable-map-base/index.html"><span class="identifier">ReadOnlyBackedObservableMapBase</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">B</span><span class="symbol">,</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span></code>
+<p><a href="-associated-list/index.html">AssociatedList</a> creates an <a href="#">ObservableMap</a> from an <a href="#">ObservableList</a> by associating each list element with a unique key.
+It is <emph>not</emph> allowed to have several elements map to the same value!</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-chosen-list/index.html">ChosenList</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ChosenList</span><span class="symbol">&lt;</span><span class="identifier">E</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ObservableListBase</span><span class="symbol">&lt;</span><span class="identifier">E</span><span class="symbol">&gt;</span></code>
+<p><a href="-chosen-list/index.html">ChosenList</a> manages an <a href="#">ObservableList</a> that may be changed by the wrapping <a href="#">ObservableValue</a>. Whenever the underlying
+<a href="#">ObservableValue</a> changes the exposed list changes to the new value. Changes to the list are simply propagated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-concatenated-list/index.html">ConcatenatedList</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ConcatenatedList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">TransformationList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p><a href="-concatenated-list/index.html">ConcatenatedList</a> takes a list of lists and concatenates them. Any change to the underlying lists or the outer list
+is propagated as expected.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-flattened-list/index.html">FlattenedList</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FlattenedList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">TransformationList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p><a href="-flattened-list/index.html">FlattenedList</a> flattens the passed in list of <a href="#">ObservableValue</a>s so that changes in individual updates to the values
+are reflected in the exposed list as expected.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-left-outer-joined-map/index.html">LeftOuterJoinedMap</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">LeftOuterJoinedMap</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">, </span><span class="identifier">C</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-read-only-backed-observable-map-base/index.html"><span class="identifier">ReadOnlyBackedObservableMapBase</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">SimpleObjectProperty</span><span class="symbol">&lt;</span><span class="identifier">B</span><span class="symbol">?</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p><a href="-left-outer-joined-map/index.html">LeftOuterJoinedMap</a> implements a special case of a left outer join where we're matching on primary keys of both
+tables.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-map-values-list/index.html">MapValuesList</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">MapValuesList</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">C</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span></code>
+<p><a href="-map-values-list/index.html">MapValuesList</a> takes an <a href="#">ObservableMap</a> and returns its values as an <a href="#">ObservableList</a>.
+The order of returned elements is deterministic but unspecified.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-mapped-list/index.html">MappedList</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">MappedList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">TransformationList</span><span class="symbol">&lt;</span><span class="identifier">B</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span></code>
+<p>This is a variant of <a href="#">EasyBind.map</a> where the mapped list is backed, therefore the mapping function will only be run
+when an element is inserted or updated.
+Use this instead of <a href="#">EasyBind.map</a> to trade off memory vs CPU, or if (god forbid) the mapped function is side-effecting.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-read-only-backed-observable-map-base/index.html">ReadOnlyBackedObservableMapBase</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">ReadOnlyBackedObservableMapBase</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span></code>
+<p><a href="-read-only-backed-observable-map-base/index.html">ReadOnlyBackedObservableMapBase</a> is a base class implementing all abstract functions required for an <a href="#">ObservableMap</a>
+using a backing HashMap that subclasses should modify.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-replayed-list/index.html">ReplayedList</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ReplayedList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">TransformationList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span></code>
+<p>This list type just replays changes propagated from the underlying source list. Used for testing changes and backing a
+non-backed observable</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extensions for External Classes</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="javafx.beans.value.-observable-value/index.html">javafx.beans.value.ObservableValue</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="javafx.collections.-observable-list/index.html">javafx.collections.ObservableList</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="javafx.collections.-observable-map/index.html">javafx.collections.ObservableMap</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.-function1/index.html">kotlin.Function1</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.-function2/index.html">kotlin.Function2</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.-function3/index.html">kotlin.Function3</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.-function4/index.html">kotlin.Function4</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.collections.-collection/index.html">kotlin.collections.Collection</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="rx.-observable/index.html">rx.Observable</a></td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="lift.html">lift</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span> <span class="identifier">A</span><span class="symbol">.</span><span class="identifier">lift</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span></code>
+<p>val aliceHeight: ObservableValue = (..)
+val bobHeight: ObservableValue = (..)
+fun sumHeight(a: Long, b: Long): Long { .. }</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

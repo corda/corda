@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -31,7 +35,7 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Clauses key concepts" href="clauses.html"/>
+        <link rel="next" title="Clauses" href="clauses.html"/>
         <link rel="prev" title="Transaction tear-offs" href="merkle-trees.html"/> 
 
   
@@ -77,7 +81,12 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -89,7 +98,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
-<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
@@ -108,16 +117,12 @@
 <li class="toctree-l2"><a class="reference internal" href="#timestamping">Timestamping</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -136,23 +141,20 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
@@ -162,14 +164,14 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
-<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -261,8 +263,8 @@ Hence it is the point at which we can say finality has occurred.</p>
 <h3>Multiple notaries<a class="headerlink" href="#multiple-notaries" title="Permalink to this headline">¶</a></h3>
 <p>More than one notary can exist in the network. This gives the following benefits:</p>
 <ul class="simple">
-<li><strong>Custom behaviour</strong>. We can have both validating and privacy preserving Notaries &#8211; parties can make a choice based on their specific requirements</li>
-<li><strong>Load balancing</strong>. Spreading the transaction load over multiple Notaries will allow higher transaction throughput in the platform overall</li>
+<li><strong>Custom behaviour</strong>. We can have both validating and privacy preserving notaries &#8211; parties can make a choice based on their specific requirements</li>
+<li><strong>Load balancing</strong>. Spreading the transaction load over multiple notaries will allow higher transaction throughput in the platform overall</li>
 <li><strong>Low latency</strong>. Latency could be minimised by choosing a notary physically closer the transacting parties</li>
 </ul>
 <p>A transaction should only be signed by a notary if all of its input states point to it.
@@ -327,7 +329,7 @@ However, if the party is not also compelled to commit to the associated transact
 As a result, we need to ensure that the notary either has to also sign the transaction within some time tolerance,
 or perform timestamping <em>and</em> notarisation at the same time, which is the chosen behaviour for this model.</p>
 <p>There will never be exact clock synchronisation between the party creating the transaction and the notary.
-This is not only due to physics, network latencies etc but because between inserting the command and getting the
+This is not only due to physics, network latencies, etc., but because between inserting the command and getting the
 notary to sign there may be many other steps, like sending the transaction to other parties involved in the trade
 as well, or even requesting human signoff. Thus the time observed by the notary may be quite different to the
 time observed in step 1.</p>
@@ -360,7 +362,7 @@ clocks at the US Naval Observatory. This time feed is extremely accurate and ava
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="clauses.html" class="btn btn-neutral float-right" title="Clauses key concepts" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="clauses.html" class="btn btn-neutral float-right" title="Clauses" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="merkle-trees.html" class="btn btn-neutral" title="Transaction tear-offs" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

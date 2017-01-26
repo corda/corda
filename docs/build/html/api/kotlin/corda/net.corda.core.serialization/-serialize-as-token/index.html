@@ -1,0 +1,57 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>SerializeAsToken - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.serialization</a>&nbsp;/&nbsp;<a href=".">SerializeAsToken</a><br/>
+<br/>
+<h1>SerializeAsToken</h1>
+<code><span class="keyword">interface </span><span class="identifier">SerializeAsToken</span></code>
+<p>This interface should be implemented by classes that want to substitute a token representation of themselves if
+they are serialized because they have a lot of internal state that does not serialize (well).</p>
+<p>This models a similar pattern to the readReplace/writeReplace methods in Java serialization.</p>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="to-token.html">toToken</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">toToken</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.SerializeAsToken$toToken(net.corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.node.serialization/-node-clock/index.html">NodeClock</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a><span class="symbol">, </span><span class="identifier">SerializeAsToken</span></code>
+<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that tokenizes itself when serialized, and delegates to an underlying <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> implementation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-singleton-serialize-as-token/index.html">SingletonSerializeAsToken</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">SingletonSerializeAsToken</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SerializeAsToken</span></code>
+<p>A base class for implementing large objects / components / services that need to serialize themselves to a string token
+to indicate which instance the token is a serialized form of.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.node.utilities/-test-clock/index.html">TestClock</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TestClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.utilities/-mutable-clock/index.html"><span class="identifier">MutableClock</span></a><span class="symbol">, </span><span class="identifier">SerializeAsToken</span></code>
+<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the date advanced for use in demos.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

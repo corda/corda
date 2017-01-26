@@ -1,6 +1,5 @@
 package net.corda.contracts.universal
 
-import net.corda.core.contracts.BusinessCalendar
 import net.corda.core.contracts.Frequency
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.transaction
@@ -9,13 +8,12 @@ import java.time.Instant
 import kotlin.test.assertEquals
 
 class RollOutTests {
-
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
 
     val contract = arrange {
         rollOut("2016-09-01".ld, "2017-09-01".ld, Frequency.Monthly) {
             actions {
-                (acmeCorp or highStreetBank).may {
+                (acmeCorp or highStreetBank) may {
                     "transfer".givenThat(after(end)) {
                         highStreetBank.owes(acmeCorp, 10.K, USD)
                         next()
@@ -29,7 +27,7 @@ class RollOutTests {
     val contract2 = arrange {
         rollOut("2016-09-01".ld, "2017-09-01".ld, Frequency.Monthly) {
             actions {
-                (acmeCorp or highStreetBank).may {
+                (acmeCorp or highStreetBank) may {
                     "transfer".givenThat(after(end)) {
                         highStreetBank.owes(acmeCorp, 10.K, USD)
                         next()
@@ -43,7 +41,7 @@ class RollOutTests {
     val contractStep1a = arrange {
         rollOut("2016-10-03".ld, "2017-09-01".ld, Frequency.Monthly) {
             actions {
-                (acmeCorp or highStreetBank).may {
+                (acmeCorp or highStreetBank) may {
                     "transfer".givenThat(after(end)) {
                         highStreetBank.owes(acmeCorp, 10.K, USD)
                         next()
@@ -68,8 +66,8 @@ class RollOutTests {
     }
     val contract_action1 = arrange {
         actions {
-            highStreetBank.may {
-                "do it".anytime {
+            highStreetBank may {
+                "do it" anytime {
                     highStreetBank.owes(acmeCorp, 10.K, USD)
                 }
             }
@@ -77,8 +75,8 @@ class RollOutTests {
     }
     val contract_action2 = arrange {
         actions {
-            highStreetBank.may {
-                "do it".anytime {
+            highStreetBank may {
+                "do it" anytime {
                     highStreetBank.owes(acmeCorp, 10.K, USD)
                 }
             }
@@ -86,15 +84,15 @@ class RollOutTests {
     }
     val contract_and1 = arrange {
         actions {
-            highStreetBank.may {
-                "do it".anytime {
+            highStreetBank may {
+                "do it" anytime {
                     highStreetBank.owes(acmeCorp, 10.K, USD)
                 }
             }
         }
         actions {
-            acmeCorp.may {
-                "do it".anytime {
+            acmeCorp may {
+                "do it" anytime {
                     acmeCorp.owes(momAndPop, 10.K, USD)
                 }
             }
@@ -104,15 +102,15 @@ class RollOutTests {
     }
     val contract_and2 = arrange {
         actions {
-            highStreetBank.may {
-                "do it".anytime {
+            highStreetBank may {
+                "do it" anytime {
                     highStreetBank.owes(acmeCorp, 10.K, USD)
                 }
             }
         }
         actions {
-            acmeCorp.may {
-                "do it".anytime {
+            acmeCorp may {
+                "do it" anytime {
                     acmeCorp.owes(momAndPop, 10.K, USD)
                 }
             }
@@ -139,11 +137,6 @@ class RollOutTests {
     @Test
     fun `arrangement equality complex`() {
         assertEquals(contract, contract2)
-    }
-
-    @Test
-    fun dateTests() {
-        val d1 = BusinessCalendar.parseDateFromString("2016-09-10")
     }
 
     @Test

@@ -1,0 +1,82 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NodeMapError - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.network</a>&nbsp;/&nbsp;<a href=".">NodeMapError</a><br/>
+<br/>
+<h1>NodeMapError</h1>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">NodeMapError</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-invalid-signature/index.html">InvalidSignature</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InvalidSignature</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NodeMapError</span></code>
+<p>Thrown if the signature on the node info does not match the public key for the identity</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-invalid-subscriber/index.html">InvalidSubscriber</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InvalidSubscriber</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NodeMapError</span></code>
+<p>Thrown if the replyTo of a subscription change message is not a single message recipient</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-unknown-change-type/index.html">UnknownChangeType</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">UnknownChangeType</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NodeMapError</span></code>
+<p>Thrown if a change arrives which is of an unknown type</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core/kotlin.-throwable/root-cause.html">rootCause</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">Throwable</span><span class="symbol">.</span><span class="identifier">rootCause</span><span class="symbol">: </span><span class="identifier">Throwable</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-invalid-signature/index.html">InvalidSignature</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InvalidSignature</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NodeMapError</span></code>
+<p>Thrown if the signature on the node info does not match the public key for the identity</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-invalid-subscriber/index.html">InvalidSubscriber</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InvalidSubscriber</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NodeMapError</span></code>
+<p>Thrown if the replyTo of a subscription change message is not a single message recipient</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-unknown-change-type/index.html">UnknownChangeType</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">UnknownChangeType</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NodeMapError</span></code>
+<p>Thrown if a change arrives which is of an unknown type</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

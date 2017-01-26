@@ -1,6 +1,6 @@
 package net.corda.bank.api
 
-import net.corda.bank.flow.IssuerFlow.IssuanceRequester
+import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.currency
 import net.corda.core.messaging.CordaRPCOps

@@ -1,3 +1,4 @@
+// TODO Move out the Kotlin specific stuff into a separate file
 @file:JvmName("Utils")
 
 package net.corda.core
@@ -26,10 +27,7 @@ import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
 import java.time.Duration
 import java.time.temporal.Temporal
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.Executor
-import java.util.concurrent.Future
+import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.BiConsumer
 import java.util.stream.Stream
@@ -67,9 +65,9 @@ infix fun Long.checkedAdd(b: Long) = Math.addExact(this, b)
 fun random63BitValue(): Long = Math.abs(newSecureRandom().nextLong())
 
 /** Same as [Future.get] but with a more descriptive name, and doesn't throw [ExecutionException], instead throwing its cause */
-fun <T> Future<T>.getOrThrow(): T {
-    try {
-        return get()
+fun <T> Future<T>.getOrThrow(timeout: Duration? = null): T {
+    return try {
+        if (timeout == null) get() else get(timeout.toNanos(), TimeUnit.NANOSECONDS)
     } catch (e: ExecutionException) {
         throw e.cause!!
     }
@@ -204,18 +202,30 @@ fun <T> List<T>.randomOrNull(predicate: (T) -> Boolean) = filter(predicate).rand
 // An alias that can sometimes make code clearer to read.
 val RunOnCallerThread: Executor = MoreExecutors.directExecutor()
 
+inline fun elapsedTime(block: () -> Unit): Duration {
+    val start = System.nanoTime()
+    block()
+    val end = System.nanoTime()
+    return Duration.ofNanos(end-start)
+}
+
 // TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
 // returns in the IRSSimulationTest. If not, commit the inline back.
 fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
-    val now = System.currentTimeMillis()
-    val r = body()
-    val elapsed = System.currentTimeMillis() - now
-    if (logger != null)
-        logger.info("$label took $elapsed msec")
-    else
-        println("$label took $elapsed msec")
-    return r
+    // Use nanoTime as it's monotonic.
+    val now = System.nanoTime()
+    try {
+        return body()
+    } finally {
+        val elapsed = Duration.ofNanos(System.nanoTime() - now).toMillis()
+        if (logger != null)
+            logger.info("$label took $elapsed msec")
+        else
+            println("$label took $elapsed msec")
+    }
 }
+
+fun <T> Logger.logElapsedTime(label: String, body: () -> T): T = logElapsedTime(label, this, body)
 
 /**
  * A threadbox is a simple utility that makes it harder to forget to take a lock before accessing some shared state.
@@ -271,19 +281,17 @@ class TransientProperty<out T>(private val initializer: () -> T) {
 /**
  * Given a path to a zip file, extracts it to the given directory.
  */
-fun extractZipFile(zipPath: Path, toPath: Path) {
-    val normalisedToPath = toPath.normalize()
-    normalisedToPath.createDirectories()
+fun extractZipFile(zipFile: Path, toDirectory: Path) {
+    val normalisedDirectory = toDirectory.normalize().createDirectories()
 
-    zipPath.read {
+    zipFile.read {
         val zip = ZipInputStream(BufferedInputStream(it))
         while (true) {
             val e = zip.nextEntry ?: break
-            val outPath = normalisedToPath / e.name
+            val outPath = (normalisedDirectory / e.name).normalize()
 
-            // Security checks: we should reject a zip that contains tricksy paths that try to escape toPath.
-            if (!outPath.normalize().startsWith(normalisedToPath))
-                throw IllegalStateException("ZIP contained a path that resolved incorrectly: ${e.name}")
+            // Security checks: we should reject a zip that contains tricksy paths that try to escape toDirectory.
+            check(outPath.startsWith(normalisedDirectory)) { "ZIP contained a path that resolved incorrectly: ${e.name}" }
 
             if (e.isDirectory) {
                 outPath.createDirectories()
@@ -355,8 +363,7 @@ data class ErrorOr<out A> private constructor(val value: A?, val error: Throwabl
 }
 
 /**
- * Returns an observable that buffers events until subscribed.
- *
+ * Returns an Observable that buffers events until subscribed.
  * @see UnicastSubject
  */
 fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
@@ -375,5 +382,18 @@ fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
     return subject
 }
 
-/** Allows summing big decimals that are in iterable collections */
+/**
+ * Returns a [ListenableFuture] bound to the *first* item emitted by this Observable. The future will complete with a
+ * NoSuchElementException if no items are emitted or any other error thrown by the Observable.
+ */
+fun <T> Observable<T>.toFuture(): ListenableFuture<T> {
+    val future = SettableFuture.create<T>()
+    first().subscribe(
+            { future.set(it) },
+            { future.setException(it) }
+    )
+    return future
+}
+
+/** Return the sum of an Iterable of [BigDecimal]s. */
 fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a + b }

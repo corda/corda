@@ -1,0 +1,73 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.contracts - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.contracts</a><br/>
+<br/>
+<h2>Package net.corda.contracts</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-commercial-paper/index.html">CommercialPaper</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">CommercialPaper</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-commercial-paper-legacy/index.html">CommercialPaperLegacy</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">CommercialPaperLegacy</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-c-p_-l-e-g-a-c-y_-p-r-o-g-r-a-m_-i-d.html">CP_LEGACY_PROGRAM_ID</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">CP_LEGACY_PROGRAM_ID</span><span class="symbol">: </span><a href="-commercial-paper-legacy/index.html"><span class="identifier">CommercialPaperLegacy</span></a></code>
+<p>Legacy version of <a href="-commercial-paper/index.html">CommercialPaper</a> that includes the full verification logic itself, rather than breaking it
+into clauses. This is here just as an example for the contract tutorial.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-c-p_-p-r-o-g-r-a-m_-i-d.html">CP_PROGRAM_ID</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">CP_PROGRAM_ID</span><span class="symbol">: </span><a href="-commercial-paper/index.html"><span class="identifier">CommercialPaper</span></a></code>
+<p>This is an ultra-trivial implementation of commercial paper, which is essentially a simpler version of a corporate
+bond. It can be seen as a company-specific currency. A company issues CP with a particular face value, say $100,
+but sells it for less, say $90. The paper can be redeemed for cash at a given date in the future. Thus this example
+would have a 10% interest rate with a single repayment. Commercial paper is often rolled over (the maturity date
+is adjusted as if the paper was redeemed and immediately repurchased, but without having to front the cash).</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="owned by.html">owned by</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-commercial-paper/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts$owned by(net.corda.contracts.CommercialPaper.State, net.corda.core.crypto.CompositeKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-commercial-paper/-state/index.html"><span class="identifier">State</span></a></code><br/>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">ICommercialPaperState</span><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts$owned by(net.corda.contracts.ICommercialPaperState, net.corda.core.crypto.CompositeKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ICommercialPaperState</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="with notary.html">with notary</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-commercial-paper/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">with notary</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts$with notary(net.corda.contracts.CommercialPaper.State, net.corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../net.corda.core.contracts/-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><a href="-commercial-paper/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -14,7 +14,7 @@ import net.corda.node.services.api.ServiceHubInternal
 class ScheduledActivityObserver(val services: ServiceHubInternal) {
     init {
         services.vaultService.rawUpdates.subscribe { update ->
-            update.consumed.forEach { services.schedulerService.unscheduleStateActivity(it) }
+            update.consumed.forEach { services.schedulerService.unscheduleStateActivity(it.ref) }
             update.produced.forEach { scheduleStateActivity(it, services.flowLogicRefFactory) }
         }
     }

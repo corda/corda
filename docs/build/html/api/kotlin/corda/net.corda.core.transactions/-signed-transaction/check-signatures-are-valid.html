@@ -1,0 +1,22 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>SignedTransaction.checkSignaturesAreValid - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.transactions</a>&nbsp;/&nbsp;<a href="index.html">SignedTransaction</a>&nbsp;/&nbsp;<a href=".">checkSignaturesAreValid</a><br/>
+<br/>
+<h1>checkSignaturesAreValid</h1>
+<a name="net.corda.core.transactions.SignedTransaction$checkSignaturesAreValid()"></a>
+<code><span class="keyword">fun </span><span class="identifier">checkSignaturesAreValid</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Mathematically validates the signatures that are present on this transaction. This does not imply that
+the signatures are by the right keys, or that there are sufficient signatures, just that they aren't
+corrupt. If you use this function directly you'll need to do the other checks yourself. Probably you
+want <a href="verify-signatures.html">verifySignatures</a> instead.</p>
+<h3>Exceptions</h3>
+
+<p><a name="SignatureException"></a>
+<code>SignatureException</code> - if a signature fails to verify.
+</BODY>
+</HTML>

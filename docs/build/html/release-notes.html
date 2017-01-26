@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -77,7 +81,12 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -89,7 +98,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
-<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
@@ -99,16 +108,12 @@
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -127,23 +132,20 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
@@ -153,12 +155,11 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
-<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Release notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-7">Milestone 7</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-6">Milestone 6</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-5">Milestone 5</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-4">Milestone 4</a></li>
@@ -170,6 +171,8 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -221,6 +224,59 @@
   <div class="section" id="release-notes">
 <h1>Release notes<a class="headerlink" href="#release-notes" title="Permalink to this headline">¶</a></h1>
 <p>Here are brief summaries of what&#8217;s changed between each snapshot release.</p>
+<div class="section" id="milestone-7">
+<h2>Milestone 7<a class="headerlink" href="#milestone-7" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">With thanks to <a class="reference external" href="https://github.com/thschroeter">Thomas Schroeter</a> <code class="docutils literal"><span class="pre">NotaryFlow</span></code> is now idempotent.</p>
+</li>
+<li><p class="first">Explorer:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The GUI for the explorer now shows other nodes on the network map and the transactions between them.</li>
+<li>Map resolution increased and allows zooming and panning.</li>
+<li><a class="reference external" href="https://www.corda.net/2017/01/03/the-node-explorer/">Video demonstration</a> of the Node Explorer.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">The CorDapp template now has a Java example that parallels the Kotlin one for developers more comfortable with Java.
+ORM support added to the Kotlin example.</p>
+</li>
+<li><p class="first">Demos:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Added the Bank of Corda demo - a demo showing a node (Bank of Corda) acting as an issuer of Cash, and a client
+driver providing both Web and RPC access to request issuance of cash.</li>
+<li>Demos now use RPC to communicate with the node from the webserver. This brings the demos more in line with how
+interaction with nodes is expected to be. The demos now treat their webservers like clients. This will also allow
+for the splitting of the webserver from the node for milestone 8.</li>
+<li>Added a SIMM valuation demo integration test to catch regressions.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Security:</p>
+<blockquote>
+<div><ul class="simple">
+<li>MQ broker of the node now requires authentication which means that third parties cannot connect to and
+listen to queues on the Node. RPC and P2P between nodes is now authenticated as a result of this change.
+This also means that nodes or RPC users cannot pretend to be other nodes or RPC users.</li>
+<li>The node now does host verification of any node that connects to it and prevents man in the middle attacks.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Improvements:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Vault updates now contain full <code class="docutils literal"><span class="pre">StateAndRef</span></code> which allows subscribers to check whether the update contains
+relevant states.</li>
+<li>Cash balances are calculated using aggregate values to prevent iterating through all states in the vault, which
+improves performance.</li>
+<li>Multi-party services, such as notaries, are now load balanced and represented as a single <code class="docutils literal"><span class="pre">Party</span></code> object.</li>
+<li>The Notary Change flow now supports encumbrances.</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div>
 <div class="section" id="milestone-6">
 <h2>Milestone 6<a class="headerlink" href="#milestone-6" title="Permalink to this headline">¶</a></h2>
 <ul>
@@ -250,7 +306,7 @@ approach rather than something usable for production.</p>
 <li>Added a Client RPC python example.</li>
 <li>Node console output now displays concise startup information, such as startup time or web address. All logging to
 the console is suppressed apart from errors and flow progress tracker steps. It can be re-enabled by passing
-<code class="docutils literal"><span class="pre">--log-to-console</span></code> command line parameter. Note that the log file remains unchanged an will still contain all
+<code class="docutils literal"><span class="pre">--log-to-console</span></code> command line parameter. Note that the log file remains unchanged and will still contain all
 log entries.</li>
 <li>The <code class="docutils literal"><span class="pre">runnodes</span></code> scripts generated by the Gradle plugins now open each node in separate terminal windows or (on macOS) tabs.</li>
 <li>A much more complete template app.</li>
@@ -264,7 +320,7 @@ In the future this will also allow parties to use multiple signing keys for thei
 </li>
 <li><p class="first">Decentralised consensus: A prototype RAFT based notary composed of multiple nodes has been added. This implementation
 is optimised for high performance over robustness against malicious cluster members, which may be appropriate for
-some financial situations. See <a class="reference internal" href="running-the-demos.html#notary-demo"><span class="std std-ref">Distributed Notary demo</span></a> to try it out. A BFT notary will be added later.</p>
+some financial situations. See <span class="xref std std-ref">notary-demo</span> to try it out. A BFT notary will be added later.</p>
 </li>
 <li><p class="first">Node explorer app:</p>
 <blockquote>
@@ -424,7 +480,7 @@ not currently running a permissioning service.</li>
 <blockquote>
 <div><ul class="simple">
 <li>The Corda libraries that app developers need to link against can now be installed into your local Maven
-repository, where they can then be used like any other JAR. See <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">CorDapps Background</span></a>.</li>
+repository, where they can then be used like any other JAR. See <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">CorDapp basics</span></a>.</li>
 </ul>
 </div></blockquote>
 </li>
@@ -543,7 +599,7 @@ through code review and which may, in general, not even function correctly):</p>
 <div><ul>
 <li><p class="first">Thanks to the prolific Sofus Mortensen &#64; Nordea Bank, an experimental generic contract DSL that is based on the famous
 2001 &#8220;Composing contracts&#8221; paper has been added. We thank Sofus for this great and promising research, which is so
-relevant in the wake of TheDAO hack.</p>
+relevant in the wake of the DAO hack.</p>
 </li>
 <li><p class="first">The contract code from the recent trade finance demos is now in experimental. This code comes thanks to a
 collaboration of the members; all credit to:</p>

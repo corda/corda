@@ -1,0 +1,51 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ScheduledActivity - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href=".">ScheduledActivity</a><br/>
+<br/>
+<h1>ScheduledActivity</h1>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ScheduledActivity</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-scheduled/index.html"><span class="identifier">Scheduled</span></a></code>
+<p>This class represents the lifecycle activity that a contract state of type <a href="../-linear-state/index.html">LinearState</a> would like to perform at a given point in time.
+e.g. run a fixing flow.</p>
+<p>Note the use of <a href="../../net.corda.core.flows/-flow-logic-ref/index.html">FlowLogicRef</a> to represent a safe way to transport a <a href="#">FlowLogic</a> out of the contract sandbox.</p>
+<p>Currently we support only flow based activities as we expect there to be a transaction generated off the back of
+the activity, otherwise we have to start tracking secondary state on the platform of which scheduled activities
+for a particular <a href="../-contract-state/index.html">ContractState</a> have been processed/fired etc.  If the activity is not "on ledger" then the
+scheduled activity shouldn't be either.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">ScheduledActivity</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.ScheduledActivity$<init>(net.corda.core.flows.FlowLogicRef, java.time.Instant)/logicRef">logicRef</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic-ref/index.html"><span class="identifier">FlowLogicRef</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.ScheduledActivity$<init>(net.corda.core.flows.FlowLogicRef, java.time.Instant)/scheduledAt">scheduledAt</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">)</span></code>
+<p>This class represents the lifecycle activity that a contract state of type <a href="../-linear-state/index.html">LinearState</a> would like to perform at a given point in time.
+e.g. run a fixing flow.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="logic-ref.html">logicRef</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">logicRef</span><span class="symbol">: </span><a href="../../net.corda.core.flows/-flow-logic-ref/index.html"><span class="identifier">FlowLogicRef</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="scheduled-at.html">scheduledAt</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">scheduledAt</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

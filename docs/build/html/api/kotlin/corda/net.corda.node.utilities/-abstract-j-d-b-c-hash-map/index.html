@@ -1,0 +1,205 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>AbstractJDBCHashMap - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.utilities</a>&nbsp;/&nbsp;<a href=".">AbstractJDBCHashMap</a><br/>
+<br/>
+<h1>AbstractJDBCHashMap</h1>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractJDBCHashMap</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">V</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-j-d-b-c-hashed-table/index.html"><span class="identifier">JDBCHashedTable</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">, </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/AbstractMap.html"><span class="identifier">AbstractMap</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span></code>
+<p>A base class for a JDBC table backed hash map that iterates in insertion order by using
+an ever increasing sequence number on entries.  Iterators supports remove() but entries are not really mutable and
+do not support setValue() method from <a href="#">MutableMap.MutableEntry</a>.</p>
+<p>You should only use keys that have overridden <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Object.html#hashCode()">Object.hashCode</a> and that have a good hash code distribution.  Beware
+changing the hashCode() implementation once objects have been persisted.  A process to re-hash the entries persisted
+would be necessary if you do this.</p>
+<p>Subclasses must provide their own mapping to and from keys/values and the database table columns, but there are
+inherited columns that all tables must provide to support iteration order and hashing.</p>
+<p>The map operates in one of two modes.</p>
+<ol><li>loadOnInit=true where the entire table is loaded into memory in the constructor and all entries remain in memory,
+with only writes needing to perform database access.</li>
+<li>loadOnInit=false where all entries with the same key hash code are loaded from the database on demand when accessed
+via any method other than via keys/values/entries properties, and thus the whole map is not loaded into memory.  The number
+of entries retained in memory is controlled indirectly by an LRU algorithm (courtesy of <a href="http://docs.oracle.com/javase/6/docs/api/java/util/LinkedHashMap.html">LinkedHashMap</a>) and a maximum
+number of hash "buckets", where one bucket represents all entries with the same hash code.  There is a default value
+for maximum buckets.</li>
+</ol>
+<p>All operations require a <a href="../database-transaction.html">databaseTransaction</a> to be started.</p>
+<p>The keys/values/entries collections are really designed just for iterating and other uses might turn out to be
+costly in terms of performance.  Beware when loadOnInit=true, the iterator first sorts the entries which could be
+costly too.</p>
+<p>This class is <emph>not</emph> thread safe.</p>
+<p>TODO: consider caching size once calculated for the first time.
+TODO: buckets just use a list and so are vulnerable to poor hash code implementations with collisions.
+TODO: if iterators are used extensively when loadOnInit=true, consider maintaining a collection of keys in iteration order to avoid sorting each time.
+TODO: revisit whether we need the loadOnInit==true functionality and remove if not.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">AbstractJDBCHashMap</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean, kotlin.Int)/table">table</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean, kotlin.Int)/loadOnInit">loadOnInit</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$<init>(net.corda.node.utilities.AbstractJDBCHashMap.T, kotlin.Boolean, kotlin.Int)/maxBuckets">maxBuckets</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;DEFAULT_MAX_BUCKETS<span class="symbol">)</span></code>
+<p>A base class for a JDBC table backed hash map that iterates in insertion order by using
+an ever increasing sequence number on entries.  Iterators supports remove() but entries are not really mutable and
+do not support setValue() method from <a href="#">MutableMap.MutableEntry</a>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="entries.html">entries</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">entries</span><span class="symbol">: </span><span class="identifier">MutableSet</span><span class="symbol">&lt;</span><span class="identifier">MutableEntry</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="keys.html">keys</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">keys</span><span class="symbol">: </span><span class="identifier">MutableSet</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="load-on-init.html">loadOnInit</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">loadOnInit</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="max-buckets.html">maxBuckets</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">maxBuckets</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="size.html">size</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">size</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="table.html">table</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">table</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="values.html">values</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">values</span><span class="symbol">: </span><span class="identifier">MutableCollection</span><span class="symbol">&lt;</span><span class="identifier">V</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="add-key-to-insert.html">addKeyToInsert</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addKeyToInsert</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$addKeyToInsert(org.jetbrains.exposed.sql.statements.InsertStatement, kotlin.collections.Map.Entry((net.corda.node.utilities.AbstractJDBCHashMap.K, net.corda.node.utilities.AbstractJDBCHashMap.V)), kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/insert">insert</span><span class="symbol">:</span>&nbsp;<span class="identifier">InsertStatement</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$addKeyToInsert(org.jetbrains.exposed.sql.statements.InsertStatement, kotlin.collections.Map.Entry((net.corda.node.utilities.AbstractJDBCHashMap.K, net.corda.node.utilities.AbstractJDBCHashMap.V)), kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/entry">entry</span><span class="symbol">:</span>&nbsp;<span class="identifier">Entry</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$addKeyToInsert(org.jetbrains.exposed.sql.statements.InsertStatement, kotlin.collections.Map.Entry((net.corda.node.utilities.AbstractJDBCHashMap.K, net.corda.node.utilities.AbstractJDBCHashMap.V)), kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/finalizables">finalizables</span><span class="symbol">:</span>&nbsp;<span class="identifier">MutableList</span><span class="symbol">&lt;</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Implementation should marshall the key to the insert statement.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="add-value-to-insert.html">addValueToInsert</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addValueToInsert</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$addValueToInsert(org.jetbrains.exposed.sql.statements.InsertStatement, kotlin.collections.Map.Entry((net.corda.node.utilities.AbstractJDBCHashMap.K, net.corda.node.utilities.AbstractJDBCHashMap.V)), kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/insert">insert</span><span class="symbol">:</span>&nbsp;<span class="identifier">InsertStatement</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$addValueToInsert(org.jetbrains.exposed.sql.statements.InsertStatement, kotlin.collections.Map.Entry((net.corda.node.utilities.AbstractJDBCHashMap.K, net.corda.node.utilities.AbstractJDBCHashMap.V)), kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/entry">entry</span><span class="symbol">:</span>&nbsp;<span class="identifier">Entry</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$addValueToInsert(org.jetbrains.exposed.sql.statements.InsertStatement, kotlin.collections.Map.Entry((net.corda.node.utilities.AbstractJDBCHashMap.K, net.corda.node.utilities.AbstractJDBCHashMap.V)), kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/finalizables">finalizables</span><span class="symbol">:</span>&nbsp;<span class="identifier">MutableList</span><span class="symbol">&lt;</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Implementation should marshall the value to the insert statement.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="clear.html">clear</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">clear</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="contains-key.html">containsKey</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">containsKey</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$containsKey(net.corda.node.utilities.AbstractJDBCHashMap.K)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="contains-value.html">containsValue</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">containsValue</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$containsValue(net.corda.node.utilities.AbstractJDBCHashMap.V)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">V</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="get.html">get</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">get</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$get(net.corda.node.utilities.AbstractJDBCHashMap.K)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">V</span><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="is-empty.html">isEmpty</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">isEmpty</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="key-from-row.html">keyFromRow</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">keyFromRow</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$keyFromRow(org.jetbrains.exposed.sql.ResultRow)/row">row</span><span class="symbol">:</span>&nbsp;<span class="identifier">ResultRow</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">K</span></code>
+<p>Implementation should return the key object marshalled from the database table row.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="put.html">put</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">put</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$put(net.corda.node.utilities.AbstractJDBCHashMap.K, net.corda.node.utilities.AbstractJDBCHashMap.V)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$put(net.corda.node.utilities.AbstractJDBCHashMap.K, net.corda.node.utilities.AbstractJDBCHashMap.V)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">V</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">V</span><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="remove.html">remove</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">remove</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$remove(net.corda.node.utilities.AbstractJDBCHashMap.K)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">V</span><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="value-from-row.html">valueFromRow</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">valueFromRow</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AbstractJDBCHashMap$valueFromRow(org.jetbrains.exposed.sql.ResultRow)/row">row</span><span class="symbol">:</span>&nbsp;<span class="identifier">ResultRow</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">V</span></code>
+<p>Implementation should return the value object marshalled from the database table row.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="log.html">log</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">log</span><span class="symbol">: </span><span class="identifier">Logger</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-j-d-b-c-hash-map/index.html">JDBCHashMap</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">JDBCHashMap</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">V</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractJDBCHashMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">,</span>&nbsp;<a href="../-j-d-b-c-hash-map/-blob-map-table/index.html"><span class="identifier">BlobMapTable</span></a><span class="symbol">&gt;</span></code>
+<p>A convenient JDBC table backed hash map with iteration order based on insertion order.
+See AbstractJDBCHashMap for further implementation details.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

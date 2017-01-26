@@ -2,7 +2,7 @@ package net.corda.bank.api
 
 import com.google.common.net.HostAndPort
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
-import net.corda.bank.flow.IssuerFlow.IssuanceRequester
+import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.currency

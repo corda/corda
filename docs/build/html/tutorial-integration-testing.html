@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -8,7 +12,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Integration Test Tutorial &mdash; R3 Corda latest documentation</title>
+  <title>Integration testing &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -77,7 +81,12 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -89,7 +98,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
-<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
@@ -99,16 +108,12 @@
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -127,23 +132,20 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Integration Test Tutorial</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
@@ -153,14 +155,14 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
-<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -195,7 +197,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>Integration Test Tutorial</li>
+    <li>Integration testing</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -209,8 +211,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="integration-test-tutorial">
-<h1>Integration Test Tutorial<a class="headerlink" href="#integration-test-tutorial" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="integration-testing">
+<h1>Integration testing<a class="headerlink" href="#integration-testing" title="Permalink to this headline">¶</a></h1>
 <p>Integration testing involves bringing up nodes locally and testing
 invariants about them by starting flows and inspecting their state.</p>
 <p>In this tutorial we will bring up three nodes Alice, Bob and a
@@ -223,14 +225,13 @@ subsequently passed around.)</p>
 <p>In order to spawn nodes we will use the Driver DSL. This DSL allows
 one to start up node processes from code. It manages a network map
 service and safe shutting down of nodes in the background.</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        <span class="n">driver</span> <span class="p">{</span>
-            <span class="k">val</span> <span class="py">testUser</span> <span class="p">=</span> <span class="n">User</span><span class="p">(</span><span class="s">&quot;testUser&quot;</span><span class="p">,</span> <span class="s">&quot;testPassword&quot;</span><span class="p">,</span> <span class="n">permissions</span> <span class="p">=</span> <span class="n">setOf</span><span class="p">(</span><span class="n">startFlowPermission</span><span class="p">&lt;</span><span class="n">CashFlow</span><span class="p">&gt;()))</span>
-            <span class="k">val</span> <span class="py">aliceFuture</span> <span class="p">=</span> <span class="n">startNode</span><span class="p">(</span><span class="s">&quot;Alice&quot;</span><span class="p">,</span> <span class="n">rpcUsers</span> <span class="p">=</span> <span class="n">listOf</span><span class="p">(</span><span class="n">testUser</span><span class="p">))</span>
-            <span class="k">val</span> <span class="py">bobFuture</span> <span class="p">=</span> <span class="n">startNode</span><span class="p">(</span><span class="s">&quot;Bob&quot;</span><span class="p">,</span> <span class="n">rpcUsers</span> <span class="p">=</span> <span class="n">listOf</span><span class="p">(</span><span class="n">testUser</span><span class="p">))</span>
-            <span class="k">val</span> <span class="py">notaryFuture</span> <span class="p">=</span> <span class="n">startNode</span><span class="p">(</span><span class="s">&quot;Notary&quot;</span><span class="p">,</span> <span class="n">advertisedServices</span> <span class="p">=</span> <span class="n">setOf</span><span class="p">(</span><span class="n">ServiceInfo</span><span class="p">(</span><span class="n">ValidatingNotaryService</span><span class="p">.</span><span class="n">type</span><span class="p">)))</span>
-            <span class="k">val</span> <span class="py">alice</span> <span class="p">=</span> <span class="n">aliceFuture</span><span class="p">.</span><span class="k">get</span><span class="p">()</span>
-            <span class="k">val</span> <span class="py">bob</span> <span class="p">=</span> <span class="n">bobFuture</span><span class="p">.</span><span class="k">get</span><span class="p">()</span>
-            <span class="k">val</span> <span class="py">notary</span> <span class="p">=</span> <span class="n">notaryFuture</span><span class="p">.</span><span class="k">get</span><span class="p">()</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        driver {
+            val testUser = User(&quot;testUser&quot;, &quot;testPassword&quot;, permissions = setOf(startFlowPermission&lt;CashFlow&gt;()))
+            val (alice, bob, notary) = Futures.allAsList(
+                    startNode(&quot;Alice&quot;, rpcUsers = listOf(testUser)),
+                    startNode(&quot;Bob&quot;, rpcUsers = listOf(testUser)),
+                    startNode(&quot;Notary&quot;, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
+            ).getOrThrow()
 </pre></div>
 </div>
 <p>The above code creates a <code class="docutils literal"><span class="pre">User</span></code> permissioned to start the
@@ -244,17 +245,13 @@ notary directly, so there&#8217;s no need to pass in the test <code class="docut
 <p>The <code class="docutils literal"><span class="pre">startNode</span></code> function returns a future that completes once the
 node is fully started. This allows starting of the nodes to be
 parallel. We wait on these futures as we need the information
-returned; their respective <code class="docutils literal"><span class="pre">NodeInfo</span></code> s.</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>            <span class="k">val</span> <span class="py">aliceClient</span> <span class="p">=</span> <span class="n">CordaRPCClient</span><span class="p">(</span>
-                    <span class="n">host</span> <span class="p">=</span> <span class="n">ArtemisMessagingComponent</span><span class="p">.</span><span class="n">toHostAndPort</span><span class="p">(</span><span class="n">alice</span><span class="p">.</span><span class="n">nodeInfo</span><span class="p">.</span><span class="n">address</span><span class="p">),</span>
-                    <span class="n">config</span> <span class="p">=</span> <span class="n">configureTestSSL</span><span class="p">()</span>
-            <span class="p">)</span>
+returned; their respective <code class="docutils literal"><span class="pre">NodeHandles</span></code> s.</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>            <span class="k">val</span> <span class="py">aliceClient</span> <span class="p">=</span> <span class="n">alice</span><span class="p">.</span><span class="n">rpcClientToNode</span><span class="p">()</span>
+
             <span class="n">aliceClient</span><span class="p">.</span><span class="n">start</span><span class="p">(</span><span class="s">&quot;testUser&quot;</span><span class="p">,</span> <span class="s">&quot;testPassword&quot;</span><span class="p">)</span>
             <span class="k">val</span> <span class="py">aliceProxy</span> <span class="p">=</span> <span class="n">aliceClient</span><span class="p">.</span><span class="n">proxy</span><span class="p">()</span>
-            <span class="k">val</span> <span class="py">bobClient</span> <span class="p">=</span> <span class="n">CordaRPCClient</span><span class="p">(</span>
-                    <span class="n">host</span> <span class="p">=</span> <span class="n">ArtemisMessagingComponent</span><span class="p">.</span><span class="n">toHostAndPort</span><span class="p">(</span><span class="n">bob</span><span class="p">.</span><span class="n">nodeInfo</span><span class="p">.</span><span class="n">address</span><span class="p">),</span>
-                    <span class="n">config</span> <span class="p">=</span> <span class="n">configureTestSSL</span><span class="p">()</span>
-            <span class="p">)</span>
+            <span class="k">val</span> <span class="py">bobClient</span> <span class="p">=</span> <span class="n">bob</span><span class="p">.</span><span class="n">rpcClientToNode</span><span class="p">()</span>
+
             <span class="n">bobClient</span><span class="p">.</span><span class="n">start</span><span class="p">(</span><span class="s">&quot;testUser&quot;</span><span class="p">,</span> <span class="s">&quot;testPassword&quot;</span><span class="p">)</span>
             <span class="k">val</span> <span class="py">bobProxy</span> <span class="p">=</span> <span class="n">bobClient</span><span class="p">.</span><span class="n">proxy</span><span class="p">()</span>
 </pre></div>
@@ -262,8 +259,6 @@ returned; their respective <code class="docutils literal"><span class="pre">Node
 <p>Next we connect to Alice and Bob respectively from the test process
 using the test user we created. Then we establish RPC links that allow
 us to start flows and query state.</p>
-<p>Note that Driver nodes start up with test server certificiates, so
-it&#8217;s enough to pass in <code class="docutils literal"><span class="pre">configureTestSSL()</span></code> for the clients.</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span>            <span class="k">val</span> <span class="py">bobVaultUpdates</span> <span class="p">=</span> <span class="n">bobProxy</span><span class="p">.</span><span class="n">vaultAndUpdates</span><span class="p">().</span><span class="n">second</span>
             <span class="k">val</span> <span class="py">aliceVaultUpdates</span> <span class="p">=</span> <span class="n">aliceProxy</span><span class="p">.</span><span class="n">vaultAndUpdates</span><span class="p">().</span><span class="n">second</span>
 </pre></div>

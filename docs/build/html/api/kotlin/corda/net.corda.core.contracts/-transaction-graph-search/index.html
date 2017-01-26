@@ -1,0 +1,82 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TransactionGraphSearch - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href=".">TransactionGraphSearch</a><br/>
+<br/>
+<h1>TransactionGraphSearch</h1>
+<code><span class="keyword">class </span><span class="identifier">TransactionGraphSearch</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Callable.html"><span class="identifier">Callable</span></a><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Given a map of transaction id to <a href="../../net.corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>, performs a breadth first search of the dependency graph from
+the starting point down in order to find transactions that match the given query criteria.</p>
+<p>Currently, only one kind of query is supported: find any transaction that contains a command of the given type.</p>
+<p>In future, this should support restricting the search by time, and other types of useful query.</p>
+<h3>Parameters</h3>
+
+<p><a name="transactions"></a>
+<code>transactions</code> - map of transaction id to <a href="../../net.corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>.
+<p><a name="startPoints"></a>
+<code>startPoints</code> - transactions to use as starting points for the search.
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-query/index.html">Query</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Query</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">TransactionGraphSearch</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.TransactionGraphSearch$<init>(net.corda.core.node.services.ReadOnlyTransactionStorage, kotlin.collections.List((net.corda.core.transactions.WireTransaction)))/transactions">transactions</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-read-only-transaction-storage/index.html"><span class="identifier">ReadOnlyTransactionStorage</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.TransactionGraphSearch$<init>(net.corda.core.node.services.ReadOnlyTransactionStorage, kotlin.collections.List((net.corda.core.transactions.WireTransaction)))/startPoints">startPoints</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>Given a map of transaction id to <a href="../../net.corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>, performs a breadth first search of the dependency graph from
+the starting point down in order to find transactions that match the given query criteria.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="query.html">query</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">query</span><span class="symbol">: </span><a href="-query/index.html"><span class="identifier">Query</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="start-points.html">startPoints</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">startPoints</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="transactions.html">transactions</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">transactions</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-read-only-transaction-storage/index.html"><span class="identifier">ReadOnlyTransactionStorage</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="call.html">call</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

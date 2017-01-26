@@ -1,0 +1,153 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CommercialPaper.State - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.contracts</a>&nbsp;/&nbsp;<a href="../index.html">CommercialPaper</a>&nbsp;/&nbsp;<a href=".">State</a><br/>
+<br/>
+<h1>State</h1>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">, </span><a href="../../../net.corda.core.schemas/-queryable-state/index.html"><span class="identifier">QueryableState</span></a><span class="symbol">, </span><span class="identifier">ICommercialPaperState</span></code>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">State</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaper.State$<init>(net.corda.core.contracts.PartyAndReference, net.corda.core.crypto.CompositeKey, net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((java.util.Currency)))), java.time.Instant)/issuance">issuance</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.CommercialPaper.State$<init>(net.corda.core.contracts.PartyAndReference, net.corda.core.crypto.CompositeKey, net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((java.util.Currency)))), java.time.Instant)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.CommercialPaper.State$<init>(net.corda.core.contracts.PartyAndReference, net.corda.core.crypto.CompositeKey, net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((java.util.Currency)))), java.time.Instant)/faceValue">faceValue</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.CommercialPaper.State$<init>(net.corda.core.contracts.PartyAndReference, net.corda.core.crypto.CompositeKey, net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((java.util.Currency)))), java.time.Instant)/maturityDate">maturityDate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="contract.html">contract</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">contract</span><span class="symbol">: </span><a href="../index.html"><span class="identifier">CommercialPaper</span></a></code>
+<p>An instance of the contract class that will verify this state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="face-value.html">faceValue</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">faceValue</span><span class="symbol">: </span><a href="../../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="issuance.html">issuance</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">issuance</span><span class="symbol">: </span><a href="../../../net.corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="maturity-date.html">maturityDate</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">maturityDate</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="owner.html">owner</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">owner</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a></code>
+<p>There must be a MoveCommand signed by this key to claim the amount</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="participants.html">participants</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">participants</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span></code>
+<p>A <emph>participant</emph> is any party that is able to consume this state in a valid transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="token.html">token</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">token</span><span class="symbol">: </span><a href="../../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="generate-mapped-object.html">generateMappedObject</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">generateMappedObject</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaper.State$generateMappedObject(net.corda.core.schemas.MappedSchema)/schema">schema</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.schemas/-mapped-schema/index.html"><span class="identifier">MappedSchema</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../net.corda.core.schemas/-persistent-state/index.html"><span class="identifier">PersistentState</span></a></code>
+<p>Object Relational Mapping support.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="supported-schemas.html">supportedSchemas</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">supportedSchemas</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.schemas/-mapped-schema/index.html"><span class="identifier">MappedSchema</span></a><span class="symbol">&gt;</span></code>
+<p>Object Relational Mapping support.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="to-string.html">toString</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="with-face-value.html">withFaceValue</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">withFaceValue</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaper.State$withFaceValue(net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((java.util.Currency)))))/newFaceValue">newFaceValue</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ICommercialPaperState</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="with-issuance.html">withIssuance</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">withIssuance</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaper.State$withIssuance(net.corda.core.contracts.PartyAndReference)/newIssuance">newIssuance</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ICommercialPaperState</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="with-maturity-date.html">withMaturityDate</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">withMaturityDate</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaper.State$withMaturityDate(java.time.Instant)/newMaturityDate">newMaturityDate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ICommercialPaperState</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="with-new-owner.html">withNewOwner</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">withNewOwner</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaper.State$withNewOwner(net.corda.core.crypto.CompositeKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><a href="../-commands/-move/index.html"><span class="identifier">Move</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">State</span><span class="symbol">&gt;</span></code>
+<p>Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="with-owner.html">withOwner</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">withOwner</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaper.State$withOwner(net.corda.core.crypto.CompositeKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ICommercialPaperState</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../owned by.html">owned by</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts$owned by(net.corda.contracts.CommercialPaper.State, net.corda.core.crypto.CompositeKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../with notary.html">with notary</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">with notary</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts$with notary(net.corda.contracts.CommercialPaper.State, net.corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../net.corda.core.contracts/-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">State</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

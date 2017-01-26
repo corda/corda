@@ -1,0 +1,23 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>StrandLocalTransactionManager.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.utilities</a>&nbsp;/&nbsp;<a href="index.html">StrandLocalTransactionManager</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">StrandLocalTransactionManager</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.StrandLocalTransactionManager$<init>(org.jetbrains.exposed.sql.Database)/initWithDatabase">initWithDatabase</span><span class="symbol">:</span>&nbsp;<span class="identifier">Database</span><span class="symbol">)</span></code>
+<p>A relatively close copy of the <a href="#">ThreadLocalTransactionManager</a> in Exposed but with the following adjustments to suit
+our environment:</p>
+<p>Because the construction of a <a href="#">Database</a> instance results in replacing the singleton <a href="#">TransactionManager</a> instance,
+our tests involving two <a href="#">MockNode</a>s effectively replace the database instances of each other and continue to trample
+over each other.  So here we use a companion object to hold them as <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/ThreadLocal.html">ThreadLocal</a> and <a href="index.html">StrandLocalTransactionManager</a>
+is otherwise effectively stateless so it's replacement does not matter.  The <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/ThreadLocal.html">ThreadLocal</a> is then set correctly and
+explicitly just prior to initiating a transaction in <a href="../database-transaction.html">databaseTransaction</a> and <a href="../create-database-transaction.html">createDatabaseTransaction</a> above.</p>
+<p>The <a href="index.html">StrandLocalTransactionManager</a> instances have an <a href="#">Observable</a> of the transaction close <a href="-boundary/index.html">Boundary</a>s which
+facilitates the use of <a href="#">Observable.afterDatabaseCommit</a> to create event streams that only emit once the database
+transaction is closed and the data has been persisted and becomes visible to other observers.</p>
+</BODY>
+</HTML>

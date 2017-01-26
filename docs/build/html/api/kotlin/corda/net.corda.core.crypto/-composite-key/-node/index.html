@@ -1,0 +1,134 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CompositeKey.Node - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.core.crypto</a>&nbsp;/&nbsp;<a href="../index.html">CompositeKey</a>&nbsp;/&nbsp;<a href=".">Node</a><br/>
+<br/>
+<h1>Node</h1>
+<code><span class="keyword">class </span><span class="identifier">Node</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../index.html"><span class="identifier">CompositeKey</span></a></code>
+<p>Represents a node in the key tree. It maintains a list of child nodes – sub-trees, and associated
+<a href="weights.html">weights</a> carried by child node signatures.</p>
+<p>The <a href="threshold.html">threshold</a> specifies the minimum total weight required (in the simple case – the minimum number of child
+signatures required) to satisfy the sub-tree rooted at this node.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">Node</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.CompositeKey.Node$<init>(kotlin.Int, kotlin.collections.List((net.corda.core.crypto.CompositeKey)), kotlin.collections.List((kotlin.Int)))/threshold">threshold</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.crypto.CompositeKey.Node$<init>(kotlin.Int, kotlin.collections.List((net.corda.core.crypto.CompositeKey)), kotlin.collections.List((kotlin.Int)))/children">children</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.crypto.CompositeKey.Node$<init>(kotlin.Int, kotlin.collections.List((net.corda.core.crypto.CompositeKey)), kotlin.collections.List((kotlin.Int)))/weights">weights</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">Int</span><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>Represents a node in the key tree. It maintains a list of child nodes – sub-trees, and associated
+<a href="-init-.html#net.corda.core.crypto.CompositeKey.Node$<init>(kotlin.Int, kotlin.collections.List((net.corda.core.crypto.CompositeKey)), kotlin.collections.List((kotlin.Int)))/weights">weights</a> carried by child node signatures.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="children.html">children</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">children</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="keys.html">keys</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">keys</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code>
+<p>Returns all <a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html">PublicKey</a>s contained within the tree leaves</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="threshold.html">threshold</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">threshold</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="weights.html">weights</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">weights</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">Int</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../single-key.html">singleKey</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">singleKey</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code>
+<p>Returns the enclosed <a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html">PublicKey</a> for a <a href="../index.html">CompositeKey</a> with a single leaf node</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="equals.html">equals</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">equals</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.CompositeKey.Node$equals(kotlin.Any)/other">other</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="hash-code.html">hashCode</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">hashCode</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="is-fulfilled-by.html">isFulfilledBy</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">isFulfilledBy</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.CompositeKey.Node$isFulfilledBy(kotlin.collections.Iterable((java.security.PublicKey)))/keys">keys</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Checks whether <a href="is-fulfilled-by.html#net.corda.core.crypto.CompositeKey.Node$isFulfilledBy(kotlin.collections.Iterable((java.security.PublicKey)))/keys">keys</a> match a sufficient amount of leaf nodes</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="to-string.html">toString</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../contains-any.html">containsAny</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">containsAny</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.CompositeKey$containsAny(kotlin.collections.Iterable((java.security.PublicKey)))/otherKeys">otherKeys</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Checks whether any of the given <a href="../keys.html">keys</a> matches a leaf on the tree</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../is-fulfilled-by.html">isFulfilledBy</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">isFulfilledBy</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.CompositeKey$isFulfilledBy(java.security.PublicKey)/key">key</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../to-base58-string.html">toBase58String</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toBase58String</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code>
+<p>This is generated by serializing the composite key with Kryo, and encoding the resulting bytes in base58.
+A custom serialization format is being used.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

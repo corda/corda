@@ -111,4 +111,4 @@ The ``gatherRemoteState`` function should check the actual remote nodes' states 
 
 The reason it gets the previous state boils down to allowing non-deterministic predictions about the nodes' remote states. Say some piece of work triggers an asynchronous notification of a node. We need to account both for the case when the node hasn't received the notification and for the case when it has. In these cases ``S`` should somehow represent a collection of possible states, and ``gatherRemoteState`` should "collapse" the collection based on the observations it makes. Of course we don't need this for the simple case of the Self Issue test.
 
-The last parameter ``isConsistent`` is used to poll for eventual consistency at the end of a load test. This is not needed for Self Issue.
+The last parameter ``isConsistent`` is used to poll for eventual consistency at the end of a load test. This is not needed for self-issuance.

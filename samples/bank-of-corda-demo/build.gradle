@@ -42,7 +42,7 @@ configurations {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    testCompile group: 'junit', name: 'junit', version: '4.11'
+    testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
@@ -56,14 +56,13 @@ dependencies {
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install', 'build']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     directory "./build/nodes"
     // This name "Notary" is hard-coded into BankOfCordaClientApi so if you change it here, change it there too.
     // In this demo the node that runs a standalone notary also acts as the network map server.
     networkMap "Notary"
     node {
         name "Notary"
-        dirName "notary"
         nearestCity "London"
         advertisedServices = ["corda.notary.validating"]
         artemisPort 10002
@@ -72,25 +71,30 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [':install', 'buil
     }
     node {
         name "BankOfCorda"
-        dirName "node-bank-of-corda"
         nearestCity "London"
-        advertisedServices = []
+        advertisedServices = ["corda.issuer.USD"]
         artemisPort 10004
         webPort 10005
         cordapps = []
-// TODO: task needs to parse this item when generating node.conf
-//        rpcUsers : [
-//                { user=user1, password=test, permissions=[ StartFlow.net.corda.bank.flow.IssuerFlow$IssuanceRequester ] }
-//        ]
+        rpcUsers = [
+                ['user' : "user1",
+                 'password' : "test",
+                 'permissions' : ["StartFlow.net.corda.flows.CashFlow",
+                                  "StartFlow.net.corda.flows.IssuerFlow\$IssuanceRequester"]]
+        ]
     }
     node {
         name "BigCorporation"
-        dirName "node-big-corp"
         nearestCity "New York"
         advertisedServices = []
         artemisPort 10006
         webPort 10007
         cordapps = []
+        rpcUsers = [
+                ['user' : "user1",
+                 'password' : "test",
+                 'permissions' : ["StartFlow.net.corda.flows.CashFlow"]]
+        ]
     }
 }
 

@@ -1,0 +1,23 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NodeMessagingClient.removeMessageHandler - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href="index.html">NodeMessagingClient</a>&nbsp;/&nbsp;<a href=".">removeMessageHandler</a><br/>
+<br/>
+<h1>removeMessageHandler</h1>
+<a name="net.corda.node.services.messaging.NodeMessagingClient$removeMessageHandler(net.corda.core.messaging.MessageHandlerRegistration)"></a>
+<code><span class="keyword">fun </span><span class="identifier">removeMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$removeMessageHandler(net.corda.core.messaging.MessageHandlerRegistration)/registration">registration</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Overrides <a href="../../net.corda.core.messaging/-messaging-service/remove-message-handler.html">MessagingService.removeMessageHandler</a></p>
+<p>Removes a handler given the object returned from <a href="add-message-handler.html">addMessageHandler</a>. The callback will no longer be invoked once
+this method has returned, although executions that are currently in flight will not be interrupted.</p>
+<h3>Exceptions</h3>
+
+<p><a name="IllegalArgumentException"></a>
+<code>IllegalArgumentException</code> - if the given registration isn't valid for this messaging service.
+<p><a name="IllegalStateException"></a>
+<code>IllegalStateException</code> - if the given registration was already de-registered.
+</BODY>
+</HTML>

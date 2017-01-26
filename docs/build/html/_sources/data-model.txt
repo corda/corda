@@ -2,8 +2,7 @@ Data model
 ==========
 
 This article covers the data model: how *states*, *transactions* and *code contracts* interact with each other and
-how they are represented in software. It doesn't attempt to give detailed design rationales or information on future
-design elements: please refer to the R3 wiki for background information.
+how they are represented in software.
 
 Overview
 --------
@@ -72,9 +71,7 @@ a special type of transaction is provided that moves a state (or set of states) 
    a mismatch. This is a future planned feature.
 
 As the same terminology often crops up in different distributed ledger designs, let's compare this to other
-systems you may be familiar with. You can find more detailed design rationales for why the platform
-differs from existing systems in `the R3 wiki <https://r3-cev.atlassian.net/wiki/display/AWG/Platform+Stream%3A+Corda>`_,
-but to summarise, the driving factors are:
+systems you may be familiar with. The key differences are:
 
 * Improved contract flexibility vs Bitcoin
 * Improved scalability vs Ethereum, as well as ability to keep parts of the transaction graph private (yet still uniquely addressable)

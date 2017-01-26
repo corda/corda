@@ -99,7 +99,7 @@ class CashTests {
             tweak {
                 output { outState }
                 command(DUMMY_PUBKEY_2) { Cash.Commands.Move() }
-                this `fails with` "the owning keys are the same as the signing keys"
+                this `fails with` "the owning keys are a subset of the signing keys"
             }
             tweak {
                 output { outState }
@@ -537,6 +537,25 @@ class CashTests {
     @Test
     fun generateInsufficientExit() {
         assertFailsWith<InsufficientBalanceException> { makeExit(1000.DOLLARS, MEGA_CORP, 1) }
+    }
+
+    /**
+     * Try exiting for an owner with no states
+     */
+    @Test
+    fun generateOwnerWithNoStatesExit() {
+        assertFailsWith<InsufficientBalanceException> { makeExit(100.POUNDS, CHARLIE, 1) }
+    }
+
+    /**
+     * Try exiting when vault is empty
+     */
+    @Test
+    fun generateExitWithEmptyVault() {
+        assertFailsWith<InsufficientBalanceException> {
+            val tx = TransactionType.General.Builder(DUMMY_NOTARY)
+            Cash().generateExit(tx, Amount(100, Issued(CHARLIE.ref(1), GBP)), emptyList())
+        }
     }
 
     @Test

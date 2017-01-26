@@ -1,0 +1,163 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.core.utilities - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.core.utilities</a><br/>
+<br/>
+<h2>Package net.corda.core.utilities</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-api-utils/index.html">ApiUtils</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ApiUtils</span></code>
+<p>Utility functions to reduce boilerplate when developing HTTP APIs</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-emoji/index.html">Emoji</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">Emoji</span></code>
+<p>A simple wrapper class that contains icons and support for printing them only when we're connected to a terminal.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-log-helper/index.html">LogHelper</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">LogHelper</span></code>
+<p>A configuration helper that allows modifying the log level for specific loggers</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-non-empty-set/index.html">NonEmptySet</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NonEmptySet</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableSet</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>A set which is constrained to ensure it can never be empty. An initial value must be provided at
+construction, and attempting to remove the last element will cause an IllegalStateException.
+The underlying set is exposed for Kryo to access, but should not be accessed directly.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-non-empty-set-serializer/index.html">NonEmptySetSerializer</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">NonEmptySetSerializer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Serializer</span><span class="symbol">&lt;</span><a href="-non-empty-set/index.html"><span class="identifier">NonEmptySet</span></a><span class="symbol">&lt;</span><span class="identifier">Any</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Custom serializer which understands it has to read in an item before
+trying to construct the set.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-progress-tracker/index.html">ProgressTracker</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ProgressTracker</span></code>
+<p>A progress tracker helps surface information about the progress of an operation to a user interface or API of some
+kind. It lets you define a set of <emph>steps</emph> that represent an operation. A step is represented by an object (typically
+a singleton).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-time-window/index.html">TimeWindow</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TimeWindow</span></code>
+<p>A class representing a window in time from a particular instant, lasting a specified duration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-untrustworthy-data/index.html">UntrustworthyData</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">UntrustworthyData</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>A small utility to approximate taint tracking: if a method gives you back one of these, it means the data came from
+a remote source that may be incentivised to pass us junk that violates basic assumptions and thus must be checked
+first. The wrapper helps you to avoid forgetting this vital step. Things you might want to check are:</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extensions for External Classes</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="org.slf4j.-logger/index.html">org.slf4j.Logger</a></td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-k-e-y_1.html">DUMMY_KEY_1</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_KEY_1</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-k-e-y_2.html">DUMMY_KEY_2</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_KEY_2</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-n-o-t-a-r-y.html">DUMMY_NOTARY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_NOTARY</span><span class="symbol">: </span><a href="../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-n-o-t-a-r-y_-k-e-y.html">DUMMY_NOTARY_KEY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_NOTARY_KEY</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-p-u-b-k-e-y_1.html">DUMMY_PUBKEY_1</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_PUBKEY_1</span><span class="symbol">: </span><a href="../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-p-u-b-k-e-y_2.html">DUMMY_PUBKEY_2</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_PUBKEY_2</span><span class="symbol">: </span><a href="../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-t-e-s-t_-t-x_-t-i-m-e.html">TEST_TX_TIME</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">TEST_TX_TIME</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="logger-for.html">loggerFor</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">loggerFor</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Logger</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="non-empty-set-of.html">nonEmptySetOf</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">nonEmptySetOf</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.utilities$nonEmptySetOf(net.corda.core.utilities.nonEmptySetOf.T, kotlin.Array((net.corda.core.utilities.nonEmptySetOf.T)))/initial">initial</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="keyword">vararg</span> <span class="identifier" id="net.corda.core.utilities$nonEmptySetOf(net.corda.core.utilities.nonEmptySetOf.T, kotlin.Array((net.corda.core.utilities.nonEmptySetOf.T)))/elements">elements</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><a href="-non-empty-set/index.html"><span class="identifier">NonEmptySet</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

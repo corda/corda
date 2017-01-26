@@ -123,12 +123,6 @@ public class JavaCommercialPaper implements Contract {
         public List<CompositeKey> getParticipants() {
             return ImmutableList.of(this.owner);
         }
-
-        @Nullable
-        @Override
-        public Integer getEncumbrance() {
-            return null;
-        }
     }
 
     public interface Clauses {
@@ -137,10 +131,10 @@ public class JavaCommercialPaper implements Contract {
             // warning.
             @SuppressWarnings("unchecked")
             Group() {
-                super(new AnyComposition<>(
-                        new Clauses.Redeem(),
-                        new Clauses.Move(),
-                        new Clauses.Issue()
+                super(new AnyOf<>(
+                    new Clauses.Redeem(),
+                    new Clauses.Move(),
+                    new Clauses.Issue()
                 ));
             }
 
@@ -303,10 +297,14 @@ public class JavaCommercialPaper implements Contract {
         return SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
     }
 
-    public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {
+    public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary, Integer encumbrance) {
         State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate);
-        TransactionState output = new TransactionState<>(state, notary);
+        TransactionState output = new TransactionState<>(state, notary, encumbrance);
         return new TransactionType.General.Builder(notary).withItems(output, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
+    }
+
+    public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {
+        return generateIssue(issuance, faceValue, maturityDate, notary, null);
     }
 
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, VaultService vault) throws InsufficientBalanceException {
@@ -317,7 +315,7 @@ public class JavaCommercialPaper implements Contract {
 
     public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, CompositeKey newOwner) {
         tx.addInputState(paper);
-        tx.addOutputState(new TransactionState<>(new State(paper.getState().getData().getIssuance(), newOwner, paper.getState().getData().getFaceValue(), paper.getState().getData().getMaturityDate()), paper.getState().getNotary()));
+        tx.addOutputState(new TransactionState<>(new State(paper.getState().getData().getIssuance(), newOwner, paper.getState().getData().getFaceValue(), paper.getState().getData().getMaturityDate()), paper.getState().getNotary(), paper.getState().getEncumbrance()));
         tx.addCommand(new Command(new Commands.Move(), paper.getState().getData().getOwner()));
     }
 }

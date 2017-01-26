@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.catch
 import net.corda.core.node.services.DEFAULT_SESSION_ID
+import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.DeserializeAsKotlinObjectDef
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -79,6 +80,9 @@ interface MessagingService {
      */
     fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID = UUID.randomUUID()): Message
 
+    /** Given information about either a specific node or a service returns its corresponding address */
+    fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients
+
     /** Returns an address that refers to this node. */
     val myAddress: SingleMessageRecipient
 }
@@ -127,7 +131,7 @@ inline fun MessagingService.runOnNextMessage(topicSession: TopicSession, crossin
 
 /**
  * Returns a [ListenableFuture] of the next message payload ([Message.data]) which is received on the given topic and sessionId.
- * The payload is deserilaized to an object of type [M]. Any exceptions thrown will be captured by the future.
+ * The payload is deserialized to an object of type [M]. Any exceptions thrown will be captured by the future.
  */
 fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long): ListenableFuture<M> {
     val messageFuture = SettableFuture.create<M>()

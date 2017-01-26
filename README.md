@@ -19,7 +19,13 @@ Read our full and planned feature list [here](https://docs.corda.net/inthebox.ht
 
 Firstly, read the [Getting started](https://docs.corda.net/getting-set-up.html) documentation. 
 
-Watching the following webinars will give you a great introduction to Corda:
+Next, use the following guides to set up your dev environment:
+
+* If you are on **Windows** [use this getting started guide](https://www.corda.net/wp-content/uploads/2017/01/Corda-Windows-Quick-start-guide-1.pdf) which also explains through how to run the sample apps.
+
+* Alternatively if you are on **Mac/Linux**, [watch this brief Webinar](https://vimeo.com/200167665) which walks through getting Corda, installing it, building it, running nodes and opening projects in IntelliJ.
+
+After the above, watching the following webinars will give you a great introduction to Corda:
 
 ### Webinar 1 – [Introduction to Corda](https://vimeo.com/192757743/c2ec39c1e1)
  
@@ -72,3 +78,11 @@ Please read [here](./CONTRIBUTING.md).
 ## License
 
 [Apache 2.0](./LICENCE)
+
+## Acknowledgements
+
+![YourKit](https://www.yourkit.com/images/yklogo.png)
+
+YourKit supports open source projects with its full-featured Java Profiler.
+
+YourKit, LLC is the creator of [YourKit Java Profiler](https://www.yourkit.com/java/profiler/) and [YourKit .NET Profiler](https://www.yourkit.com/.net/profiler/), innovative and intelligent tools for profiling Java and .NET applications.

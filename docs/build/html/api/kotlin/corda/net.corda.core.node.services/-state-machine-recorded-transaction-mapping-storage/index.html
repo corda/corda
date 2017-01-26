@@ -1,0 +1,53 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>StateMachineRecordedTransactionMappingStorage - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.node.services</a>&nbsp;/&nbsp;<a href=".">StateMachineRecordedTransactionMappingStorage</a><br/>
+<br/>
+<h1>StateMachineRecordedTransactionMappingStorage</h1>
+<code><span class="keyword">interface </span><span class="identifier">StateMachineRecordedTransactionMappingStorage</span></code>
+<p>This is the interface to storage storing state machine -&gt; recorded tx mappings. Any time a transaction is recorded
+during a flow run <a href="add-mapping.html">addMapping</a> should be called.</p>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="add-mapping.html">addMapping</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addMapping</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.StateMachineRecordedTransactionMappingStorage$addMapping(net.corda.core.flows.StateMachineRunId, net.corda.core.crypto.SecureHash)/stateMachineRunId">stateMachineRunId</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-state-machine-run-id/index.html"><span class="identifier">StateMachineRunId</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.services.StateMachineRecordedTransactionMappingStorage$addMapping(net.corda.core.flows.StateMachineRunId, net.corda.core.crypto.SecureHash)/transactionId">transactionId</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="track.html">track</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">track</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-state-machine-transaction-mapping/index.html"><span class="identifier">StateMachineTransactionMapping</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="../-state-machine-transaction-mapping/index.html"><span class="identifier">StateMachineTransactionMapping</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.node.services.persistence/-d-b-transaction-mapping-storage/index.html">DBTransactionMappingStorage</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DBTransactionMappingStorage</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">StateMachineRecordedTransactionMappingStorage</span></code>
+<p>Database storage of a txhash -&gt; state machine id mapping.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.node.services.persistence/-in-memory-state-machine-recorded-transaction-mapping-storage/index.html">InMemoryStateMachineRecordedTransactionMappingStorage</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InMemoryStateMachineRecordedTransactionMappingStorage</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">StateMachineRecordedTransactionMappingStorage</span></code>
+<p>This is a temporary in-memory storage of a state machine id -&gt; txhash mapping</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

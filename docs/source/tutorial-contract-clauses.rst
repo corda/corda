@@ -7,50 +7,59 @@
 Writing a contract using clauses
 ================================
 
-This tutorial will take you through restructuring the commercial paper contract to use clauses. You should have
+In this tutorial, we will restructure the commercial paper contract to use clauses. You should have
 already completed ":doc:`tutorial-contract`".
-As before, the example is focused on basic implementation of commercial paper, which is essentially a simpler version of a corporate
-bond. A company issues CP with a particular face value, say $100, but sells it for less, say $90. The paper can be redeemed
-for cash at a given date in the future. Thus this example would have a 10% interest rate with a single repayment.
-Whole Kotlin code can be found in ``CommercialPaper.kt``.
 
-What are clauses and why to use them?
--------------------------------------
+As before, this example is focused on a basic implementation of commercial paper (CP), which is essentially a simpler version of a corporate
+bond. A company issues commercial paper with a particular face value, say $100, but sells it for less, say $90. The paper can be redeemed
+for cash at a given future date. In our example, the commercial paper has a 10% interest rate, with a single repayment.
+The full Kotlin code can be found in ``CommercialPaper.kt``.
+
+What are clauses and why use them?
+----------------------------------
 
 Clauses are essentially micro-contracts which contain independent verification logic, and can be logically composed
-together to form a contract. Clauses are designed to enable re-use of common verification parts, for example issuing state objects
-is generally the same for all fungible contracts, so a common issuance clause can be inherited for each contract's
+to form a complete contract. Clauses are designed to enable re-use of common verification parts. For example, issuing state objects
+is generally the same for all fungible contracts, so a common issuance clause can be used for each contract's
 issue clause. This cuts down on scope for error, and improves consistency of behaviour. By splitting verification logic
-into smaller chunks, they can also be readily tested in isolation.
+into smaller chunks, these can also be readily tested in isolation.
 
-How clauses work?
------------------
+How do clauses work?
+--------------------
 
-We have different types of clauses, the most basic are the ones that define verification logic for particular command set.
-We will see them later as elementary building blocks that commercial paper consist of - ``Move``, ``Issue`` and ``Redeem``.
-As a developer you need to identify reusable parts of your contract and decide how they should be combined. It is where
-composite clauses become useful. They gather many clause subcomponents and resolve how and which of them should be checked.
+There are different types of clauses. The most basic are those that define the verification logic for a single command 
+(e.g. ``Move``, ``Issue`` and ``Redeem``, in the case of commercial paper), or even run without any commands at all (e.g. ``Timestamp``). 
 
-For example, assume that we want to verify a transaction using all constraints defined in separate clauses. We need to
-wrap classes that define them into ``AllComposition`` composite clause. It assures that all clauses from that combination
-match with commands in a transaction - only then verification logic can be executed.
-It may be a little confusing, but composite clause is also a clause and you can even wrap it in the special grouping clause.
-In ``CommercialPaper`` it looks like that:
+These basic clauses can then be combined using a ``CompositeClause``. The goal of composite clauses is to determine 
+which individual clauses need to be matched and verified for a given transaction 
+to be considered valid. We refer to a clause as being "matched" when the transaction has the required commands present for the clause 
+in question to trigger. Meanwhile, we talk about a clause "verifying" when its ``verify()`` function returns ``True``.
+
+As an example, let's say we want a transaction to be valid only when every single one of its clauses matches and verifies. We implement this 
+by wrapping the individual clauses into an ``AllOf`` composite clause, which ensures that a transaction is 
+only considered valid if all of its clauses are both matched and verify.
+
+There are two other basic composite clauses that you should be aware of:
+
+   * ``AnyOf``, whereby 1 or more clauses may match, and every matched clause must verify
+   * ``FirstOf``, whereby at least one clause must match, and the first such clause must verify
+
+In turn, composite clauses are themselves ``Clause`` s, and can, for example, be wrapped in the special ``GroupClauseVerifier`` grouping clause. 
+For ``CommercialPaper``, this would look as follows:
 
 .. image:: resources/commPaperClauses.png
 
-The most basic types of composite clauses are ``AllComposition``, ``AnyComposition`` and ``FirstComposition``.
-In this tutorial we will use ``GroupClauseVerifier`` and ``AnyComposition``. It's important to understand how they work.
-Charts showing execution and more detailed information can be found in :doc:`clauses`.
+For this tutorial, we will be using ``GroupClauseVerifier`` and ``AnyOf``. Since it's important to understand how these work,
+charts showing their execution and other details can be found in :doc:`clauses`.
 
 .. _verify_ref:
 
 Commercial paper class
 ----------------------
 
-We start from defining ``CommercialPaper`` class. As in previous tutorial we need some elementary parts: ``Commands`` interface,
-``generateMove``, ``generateIssue``, ``generateRedeem`` - so far so good that stays the same. The new part is verification and
-``Clauses`` interface (you will see them later in code). Let's start from the basic structure:
+We start by defining the ``CommercialPaper`` class. As in the previous tutorial, we need some elementary parts: a ``Commands`` interface,
+``generateMove``, ``generateIssue``, ``generateRedeem``. So far, so good - these stay the same. The new part is verification and the
+``Clauses`` interface (which we will see later in code). Let's start from the basic structure:
 
 .. container:: codeset
 
@@ -97,18 +106,18 @@ We start from defining ``CommercialPaper`` class. As in previous tutorial we nee
             }
         }
 
-As you can see we used ``verifyClause`` function with ``Clauses.Group()`` in place of previous verification.
+As you can see, we used ``verifyClause`` function with ``Clauses.Group()`` in place of our previous verification logic.
 It's an entry point to running clause logic. ``verifyClause`` takes the transaction, a clause (usually a composite one)
-to verify, and a collection of commands the clause is expected to handle all of. This list of commands is important because
-``verifyClause`` checks that none of the commands are left unprocessed at the end, and raises an error if they are.
+to verify, and all of the commands the clause is expected to handle. This list of commands is important because
+``verifyClause`` checks that none of the commands are left unprocessed at the end, raising an error if they are.
 
 Simple Clauses
 --------------
 
-Let's move to constructing contract logic in terms of clauses language. Commercial paper contract has three commands and
+Let's move to constructing contract logic in terms of clauses. The commercial paper contract has three commands and
 three corresponding behaviours: ``Issue``, ``Move`` and ``Redeem``. Each of them has a specific set of requirements that must be satisfied -
-perfect material for defining clauses. For brevity we will show only ``Move`` clause, rest is constructed in similar manner
-and included in the ``CommercialPaper.kt`` code.
+perfect material for defining clauses. For brevity, we will only show the ``Move`` clause. The rest is constructed in similar manner,
+and is included in the ``CommercialPaper.kt`` code.
 
 .. container:: codeset
 
@@ -172,50 +181,51 @@ and included in the ``CommercialPaper.kt`` code.
             }
             ...
 
-We took part of code for ``Command.Move`` verification from previous tutorial and put it into the verify function
+We took part of the code for ``Command.Move`` verification from the previous tutorial and put it into the verify function
 of ``Move`` class. Notice that this class must extend the ``Clause`` abstract class, which defines
-the ``verify`` function, and the ``requiredCommands`` property used to determine the conditions under which a clause
-is triggered. In the above example it means that the clause will run verification when the ``Commands.Move`` is present in a transaction.
+the ``verify`` function and the ``requiredCommands`` property used to determine the conditions under which a clause
+is triggered. In the above example, this means that the clause will run its verification logic when ``Commands.Move`` is present in a transaction.
 
-.. note:: Notice that commands refer to all input and output states in a transaction. For clause to be executed, transaction has
-    to include all commands from ``requiredCommands`` set.
+.. note:: Notice that commands refer to all input and output states in a transaction. For a clause to be executed, the transaction has
+    to include all commands from the ``requiredCommands`` set.
 
-Few important changes:
+A few important changes:
 
--   ``verify`` function returns the set of commands which it has processed. Normally this returned set is identical to the
-    ``requiredCommands`` used to trigger the clause, however in some cases the clause may process further optional commands
+-   The ``verify`` function returns the set of commands which it has processed. Normally this set is identical to the
+    ``requiredCommands`` used to trigger the clause. However, in some cases, the clause may process further optional commands
     which it needs to report that it has handled.
 
 -   Verification takes new parameters. Usually inputs and outputs are some subset of the original transaction entries
     passed to the clause by outer composite or grouping clause. ``groupingKey`` is a key used to group original states.
 
-As a simple example imagine input states:
+As a simple example, imagine the following input states:
 
 1. 1000 GBP issued by Bank of England
 2. 500 GBP issued by Bank of England
 3. 1000 GBP issued by Bank of Scotland
 
-We will group states by Issuer so in the first group we have inputs 1 and 2, in second group input number 3. Grouping keys are:
+We will group states by Issuer, meaning that we have inputs 1 and 2 in one group, and input 3 in another group. The grouping keys are
 'GBP issued by Bank of England' and 'GBP issued by Bank of Scotland'.
 
-How the states can be grouped and passed in that form to the ``Move`` clause? That leads us to the concept of ``GroupClauseVerifier``.
+How are the states grouped and passed in this form to the ``Move`` clause? Answering that question leads us to the concept of 
+``GroupClauseVerifier``.
 
 Group clause
 ------------
 
 We may have a transaction with similar but unrelated state evolutions which need to be validated independently. It
-makes sense to check ``Move`` command on groups of related inputs and outputs (see example above). Thus, we need to collect
+makes sense to check the ``Move`` command on groups of related inputs and outputs (see example above). Thus, we need to collect
 relevant states together.
-For this we extend the standard ``GroupClauseVerifier`` and specify how to group input/output states, as well as the top-level
-clause to run on each group. In our example a top-level is a composite clause - ``AnyCompostion`` that delegates verification to
-it's subclasses (wrapped move, issue, redeem). Any in this case means that it will take 0 or more clauses that match transaction commands.
+For this, we extend the standard ``GroupClauseVerifier`` and specify how to group input/output states, as well as the top-level
+clause to run on each group. In our example, the top level is a composite clause - ``AnyCompostion`` - that delegates verification to
+its subclauses (wrapped move, issue, redeem). "Any" in this case means that it will take 0 or more clauses that match the transaction commands.
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
         class Group : GroupClauseVerifier<State, Commands, Issued<Terms>>(
-            AnyComposition(
+            AnyOf(
                 Redeem(),
                 Move(),
                 Issue())) {
@@ -227,7 +237,7 @@ it's subclasses (wrapped move, issue, redeem). Any in this case means that it wi
 
         class Group extends GroupClauseVerifier<State, Commands, State> {
             public Group() {
-                super(new AnyComposition<>(
+                super(new AnyOf<>(
                     new Clauses.Redeem(),
                     new Clauses.Move(),
                     new Clauses.Issue()
@@ -242,16 +252,16 @@ it's subclasses (wrapped move, issue, redeem). Any in this case means that it wi
         }
 
 For the ``CommercialPaper`` contract, ``Group`` is the main clause for the contract, and is passed directly into
-``verifyClause`` (see the example code at the top of this tutorial). We used ``groupStates`` function here, it's worth reminding
-how it works: :ref:`state_ref`.
+``verifyClause`` (see the example code at the top of this tutorial). We also used ``groupStates`` function here - it 
+may be worth reminding yourself how it works here: :ref:`state_ref`.
 
 Summary
 -------
 
-In summary the top level contract ``CommercialPaper`` specifies a single grouping clause of type
-``CommercialPaper.Clauses.Group`` which in turn specifies ``GroupClause`` implementations for each type of command
-(``Redeem``, ``Move`` and ``Issue``). This reflects the flow of verification: in order to verify a ``CommercialPaper``
-we first group states, check which commands are specified, and run command-specific verification logic accordingly.
+In summary, the top-level contract ``CommercialPaper`` specifies a single grouping clause of type
+``CommercialPaper.Clauses.Group``, which in turn specifies ``GroupClause`` implementations for each type of command
+(``Redeem``, ``Move`` and ``Issue``). This reflects the verification flow: in order to verify ``CommercialPaper``, 
+we first group states, then we check which commands are specified, and finally we run command-specific verification logic accordingly.
 
 .. image:: resources/commPaperExecution.png
 

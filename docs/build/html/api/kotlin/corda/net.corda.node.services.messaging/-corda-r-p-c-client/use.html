@@ -1,0 +1,19 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CordaRPCClient.use - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href="index.html">CordaRPCClient</a>&nbsp;/&nbsp;<a href=".">use</a><br/>
+<br/>
+<h1>use</h1>
+<a name="net.corda.node.services.messaging.CordaRPCClient$use(kotlin.String, kotlin.String, kotlin.Function1((net.corda.core.messaging.CordaRPCOps, net.corda.node.services.messaging.CordaRPCClient.use.T)))"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">use</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$use(kotlin.String, kotlin.String, kotlin.Function1((net.corda.core.messaging.CordaRPCOps, net.corda.node.services.messaging.CordaRPCClient.use.T)))/username">username</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$use(kotlin.String, kotlin.String, kotlin.Function1((net.corda.core.messaging.CordaRPCOps, net.corda.node.services.messaging.CordaRPCClient.use.T)))/password">password</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$use(kotlin.String, kotlin.String, kotlin.Function1((net.corda.core.messaging.CordaRPCOps, net.corda.node.services.messaging.CordaRPCClient.use.T)))/block">block</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code>
+<p>A convenience function that opens a connection with the given credentials, executes the given code block with all
+available RPCs in scope and shuts down the RPC connection again. It's meant for quick prototyping and demos. For
+more control you probably want to control the lifecycle of the client and proxies independently, as well as
+configuring a timeout and other such features via the <a href="proxy.html">proxy</a> method.</p>
+<p>After this method returns the client is closed and can't be restarted.</p>
+</BODY>
+</HTML>

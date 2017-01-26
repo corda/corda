@@ -20,7 +20,7 @@ whatever the current Corda version is.
 What it is and is not
 ---------------------
 
-The simulator currenty exists as an illustrative tool to help with explaining how Corda works in an example scenario.
+The simulator currently exists as an illustrative tool to help with explaining how Corda works in an example scenario.
 It utilises the ``Simulator`` tools that support creating a simulated Corda network and the nodes running in it within
 a single JVM, as an extension of the ``MockNetwork`` testing framework.  See more about the ``MockNetwork`` and
 testing flows here: :doc:`flow-testing`.

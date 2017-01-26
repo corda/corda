@@ -1,0 +1,23 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>associateBy - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.client.fxutils</a>&nbsp;/&nbsp;<a href="index.html">javafx.collections.ObservableList</a>&nbsp;/&nbsp;<a href=".">associateBy</a><br/>
+<br/>
+<h1>associateBy</h1>
+
+<p><a name="net.corda.client.fxutils$associateBy(javafx.collections.ObservableList((net.corda.client.fxutils.associateBy.A)), kotlin.Function1((net.corda.client.fxutils.associateBy.A, net.corda.client.fxutils.associateBy.K)), kotlin.Function2((net.corda.client.fxutils.associateBy.K, net.corda.client.fxutils.associateBy.A, net.corda.client.fxutils.associateBy.B)))"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">&gt;</span> <span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">associateBy</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$associateBy(javafx.collections.ObservableList((net.corda.client.fxutils.associateBy.A)), kotlin.Function1((net.corda.client.fxutils.associateBy.A, net.corda.client.fxutils.associateBy.K)), kotlin.Function2((net.corda.client.fxutils.associateBy.K, net.corda.client.fxutils.associateBy.A, net.corda.client.fxutils.associateBy.B)))/toKey">toKey</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">K</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils$associateBy(javafx.collections.ObservableList((net.corda.client.fxutils.associateBy.A)), kotlin.Function1((net.corda.client.fxutils.associateBy.A, net.corda.client.fxutils.associateBy.K)), kotlin.Function2((net.corda.client.fxutils.associateBy.K, net.corda.client.fxutils.associateBy.A, net.corda.client.fxutils.associateBy.B)))/assemble">assemble</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">B</span><span class="symbol">&gt;</span></code>
+<p>data class Person(val height: Long)
+val people: ObservableList = (..)
+val nameToHeight: ObservableMap&lt;String, Long&gt; = people.associateBy(Person::name) { name, person -&gt; person.height }</p>
+
+<p><a name="net.corda.client.fxutils$associateBy(javafx.collections.ObservableList((net.corda.client.fxutils.associateBy.A)), kotlin.Function1((net.corda.client.fxutils.associateBy.A, net.corda.client.fxutils.associateBy.K)))"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">&gt;</span> <span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">associateBy</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$associateBy(javafx.collections.ObservableList((net.corda.client.fxutils.associateBy.A)), kotlin.Function1((net.corda.client.fxutils.associateBy.A, net.corda.client.fxutils.associateBy.K)))/toKey">toKey</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">K</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span></code>
+<p>val people: ObservableList = (..)
+val nameToPerson: ObservableMap&lt;String, Person&gt; = people.associateBy(Person::name)</p>
+</BODY>
+</HTML>

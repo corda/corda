@@ -8,48 +8,26 @@ import net.corda.core.random63BitValue
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
-import net.corda.node.driver.NodeInfoAndConfig
+import net.corda.node.driver.DriverBasedTest
+import net.corda.node.driver.NodeHandle
 import net.corda.node.driver.driver
 import net.corda.node.services.User
-import net.corda.node.services.config.configureTestSSL
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.toHostAndPort
 import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
-import java.util.concurrent.CountDownLatch
-import kotlin.concurrent.thread
 
-class CordaRPCClientTest {
-
+class CordaRPCClientTest : DriverBasedTest() {
     private val rpcUser = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>()))
-    private val stopDriver = CountDownLatch(1)
-    private var driverThread: Thread? = null
+    private lateinit var node: NodeHandle
     private lateinit var client: CordaRPCClient
-    private lateinit var driverInfo: NodeInfoAndConfig
 
-    @Before
-    fun start() {
-        val driverStarted = CountDownLatch(1)
-        driverThread = thread {
-            driver(isDebug = true) {
-                driverInfo = startNode(rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
-                client = CordaRPCClient(toHostAndPort(driverInfo.nodeInfo.address), configureTestSSL())
-                driverStarted.countDown()
-                stopDriver.await()
-            }
-        }
-        driverStarted.await()
-    }
-
-    @After
-    fun stop() {
-        stopDriver.countDown()
-        driverThread?.join()
+    override fun setup() = driver(isDebug = true) {
+        node = startNode(rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
+        client = node.rpcClientToNode()
+        runTest()
     }
 
     @Test
@@ -78,7 +56,9 @@ class CordaRPCClientTest {
         println("Creating proxy")
         val proxy = client.proxy()
         println("Starting flow")
-        val flowHandle = proxy.startFlow(::CashFlow, CashCommand.IssueCash(20.DOLLARS, OpaqueBytes.of(0), driverInfo.nodeInfo.legalIdentity, driverInfo.nodeInfo.legalIdentity))
+        val flowHandle = proxy.startFlow(
+                ::CashFlow,
+                CashCommand.IssueCash(20.DOLLARS, OpaqueBytes.of(0), node.nodeInfo.legalIdentity, node.nodeInfo.legalIdentity))
         println("Started flow, waiting on result")
         flowHandle.progress.subscribe {
             println("PROGRESS $it")

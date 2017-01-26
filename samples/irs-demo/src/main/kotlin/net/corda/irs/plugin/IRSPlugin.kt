@@ -58,6 +58,8 @@ class IRSPlugin : CordaPluginRegistry() {
             register(DateRollConvention::class.java)
             register(LocalDate::class.java)
             register(FixingFlow.FixingSession::class.java)
+            register(FixedRatePaymentEvent::class.java)
+            register(FloatingRatePaymentEvent::class.java)
         }
         return true
     }

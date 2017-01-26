@@ -1,0 +1,25 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.node.utilities.java.time.Clock - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.utilities</a>&nbsp;/&nbsp;<a href=".">java.time.Clock</a><br/>
+<br/>
+<h3>Extensions for java.time.Clock</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="await-with-deadline.html">awaitWithDeadline</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a><span class="symbol">.</span><span class="identifier">awaitWithDeadline</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities$awaitWithDeadline(java.time.Clock, java.time.Instant, java.util.concurrent.Future((kotlin.Any)))/deadline">deadline</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.utilities$awaitWithDeadline(java.time.Clock, java.time.Instant, java.util.concurrent.Future((kotlin.Any)))/future">future</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;GuavaSettableFuture.create&lt;Any&gt;()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Wait until the given <a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html">Future</a> is complete or the deadline is reached, with support for <a href="../-mutable-clock/index.html">MutableClock</a> implementations
+used in demos or testing.  This will substitute a Fiber compatible Future so the current <a href="#">Strand</a> is not blocked.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

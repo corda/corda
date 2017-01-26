@@ -1,0 +1,165 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NetworkMapService - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.network</a>&nbsp;/&nbsp;<a href=".">NetworkMapService</a><br/>
+<br/>
+<h1>NetworkMapService</h1>
+<code><span class="keyword">interface </span><span class="identifier">NetworkMapService</span></code>
+<p>A network map contains lists of nodes on the network along with information about their identity keys, services
+they provide and host names or IP addresses where they can be connected to. This information is cached locally within
+nodes, by the <a href="../../net.corda.core.node.services/-network-map-cache/index.html">NetworkMapCache</a>. Currently very basic consensus controls are applied, using signed changes which
+replace each other based on a serial number present in the change.</p>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-fetch-map-request/index.html">FetchMapRequest</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FetchMapRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.flows/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-fetch-map-response/index.html">FetchMapResponse</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">FetchMapResponse</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-query-identity-request/index.html">QueryIdentityRequest</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">QueryIdentityRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.flows/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-query-identity-response/index.html">QueryIdentityResponse</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">QueryIdentityResponse</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-registration-request/index.html">RegistrationRequest</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">RegistrationRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.flows/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-registration-response/index.html">RegistrationResponse</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">RegistrationResponse</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-subscribe-request/index.html">SubscribeRequest</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">SubscribeRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.flows/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-subscribe-response/index.html">SubscribeResponse</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">SubscribeResponse</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-update/index.html">Update</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Update</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-update-acknowledge/index.html">UpdateAcknowledge</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">UpdateAcknowledge</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="nodes.html">nodes</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">nodes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-d-e-f-a-u-l-t_-e-x-p-i-r-a-t-i-o-n_-p-e-r-i-o-d.html">DEFAULT_EXPIRATION_PERIOD</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DEFAULT_EXPIRATION_PERIOD</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Period.html"><span class="identifier">Period</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-f-e-t-c-h_-f-l-o-w_-t-o-p-i-c.html">FETCH_FLOW_TOPIC</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">FETCH_FLOW_TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-p-u-s-h_-a-c-k_-f-l-o-w_-t-o-p-i-c.html">PUSH_ACK_FLOW_TOPIC</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">PUSH_ACK_FLOW_TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-p-u-s-h_-f-l-o-w_-t-o-p-i-c.html">PUSH_FLOW_TOPIC</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">PUSH_FLOW_TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-q-u-e-r-y_-f-l-o-w_-t-o-p-i-c.html">QUERY_FLOW_TOPIC</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">QUERY_FLOW_TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-r-e-g-i-s-t-e-r_-f-l-o-w_-t-o-p-i-c.html">REGISTER_FLOW_TOPIC</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">REGISTER_FLOW_TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-s-u-b-s-c-r-i-p-t-i-o-n_-f-l-o-w_-t-o-p-i-c.html">SUBSCRIPTION_FLOW_TOPIC</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">SUBSCRIPTION_FLOW_TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="logger.html">logger</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">logger</span><span class="symbol">: </span><span class="identifier">Logger</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="type.html">type</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">type</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-abstract-network-map-service/index.html">AbstractNetworkMapService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NetworkMapService</span><span class="symbol">, </span><a href="../../net.corda.node.services.api/-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code>
+<p>Abstracted out core functionality as the basis for a persistent implementation, as well as existing in-memory implementation.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

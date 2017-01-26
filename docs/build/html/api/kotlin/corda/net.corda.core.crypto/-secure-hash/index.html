@@ -1,0 +1,153 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>SecureHash - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.crypto</a>&nbsp;/&nbsp;<a href=".">SecureHash</a><br/>
+<br/>
+<h1>SecureHash</h1>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">SecureHash</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a></code>
+<p>Container for a cryptographically secure hash value.
+Provides utilities for generating a cryptographic hash using different algorithms (currently only SHA-256 supported).</p>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-s-h-a256/index.html">SHA256</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">SHA256</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SecureHash</span></code>
+<p>SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.serialization/-opaque-bytes/bytes.html">bytes</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">bytes</span><span class="symbol">: </span><span class="identifier">ByteArray</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.serialization/-opaque-bytes/size.html">size</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">size</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="prefix-chars.html">prefixChars</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">prefixChars</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.SecureHash$prefixChars(kotlin.Int)/prefixLen">prefixLen</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;6<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="to-string.html">toString</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.serialization/-opaque-bytes/equals.html">equals</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">equals</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.OpaqueBytes$equals(kotlin.Any)/other">other</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.serialization/-opaque-bytes/hash-code.html">hashCode</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">hashCode</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.serialization/-opaque-bytes/open.html">open</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">open</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/io/ByteArrayInputStream.html"><span class="identifier">ByteArrayInputStream</span></a></code>
+<p>Returns a <a href="http://docs.oracle.com/javase/6/docs/api/java/io/ByteArrayInputStream.html">ByteArrayInputStream</a> of the bytes</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="parse.html">parse</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">parse</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.SecureHash.Companion$parse(kotlin.String)/str">str</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="-s-h-a256/index.html"><span class="identifier">SHA256</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="random-s-h-a256.html">randomSHA256</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">randomSHA256</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="-s-h-a256/index.html"><span class="identifier">SHA256</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="sha256.html">sha256</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">sha256</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.SecureHash.Companion$sha256(kotlin.ByteArray)/bytes">bytes</span><span class="symbol">:</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">)</span><span class="symbol">: </span><a href="-s-h-a256/index.html"><span class="identifier">SHA256</span></a></code><br/>
+<code><span class="keyword">fun </span><span class="identifier">sha256</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.SecureHash.Companion$sha256(kotlin.String)/str">str</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="-s-h-a256/index.html"><span class="identifier">SHA256</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="sha256-twice.html">sha256Twice</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">sha256Twice</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.SecureHash.Companion$sha256Twice(kotlin.ByteArray)/bytes">bytes</span><span class="symbol">:</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">)</span><span class="symbol">: </span><a href="-s-h-a256/index.html"><span class="identifier">SHA256</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.serialization/deserialize.html">deserialize</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="../../net.corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.OpaqueBytes, com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.transactions/hash-concat.html">hashConcat</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">SecureHash</span><span class="symbol">.</span><span class="identifier">hashConcat</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions$hashConcat(net.corda.core.crypto.SecureHash, net.corda.core.crypto.SecureHash)/other">other</span><span class="symbol">:</span>&nbsp;<span class="identifier">SecureHash</span><span class="symbol">)</span><span class="symbol">: </span><a href="-s-h-a256/index.html"><span class="identifier">SHA256</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../sha256.html">sha256</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../../net.corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a><span class="symbol">.</span><span class="identifier">sha256</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="-s-h-a256/index.html"><span class="identifier">SHA256</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-s-h-a256/index.html">SHA256</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">SHA256</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SecureHash</span></code>
+<p>SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,0 +1,17 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>RPCDispatcher.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href="index.html">RPCDispatcher</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">RPCDispatcher</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.RPCDispatcher$<init>(net.corda.core.messaging.RPCOps, net.corda.node.services.RPCUserService, kotlin.String)/ops">ops</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-r-p-c-ops/index.html"><span class="identifier">RPCOps</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.RPCDispatcher$<init>(net.corda.core.messaging.RPCOps, net.corda.node.services.RPCUserService, kotlin.String)/userService">userService</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services/-r-p-c-user-service/index.html"><span class="identifier">RPCUserService</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.RPCDispatcher$<init>(net.corda.core.messaging.RPCOps, net.corda.node.services.RPCUserService, kotlin.String)/nodeLegalName">nodeLegalName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span></code>
+<p>Intended to service transient clients only (not p2p nodes) for short-lived, transient request/response pairs.
+If you need robustness, this is the wrong system. If you don't want a response, this is probably the
+wrong system (you could just send a message). If you want complex customisation of how requests/responses
+are handled, this is probably the wrong system.</p>
+</BODY>
+</HTML>

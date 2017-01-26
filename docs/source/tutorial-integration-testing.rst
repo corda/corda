@@ -1,5 +1,5 @@
-Integration Test Tutorial
-=========================
+Integration testing
+===================
 
 Integration testing involves bringing up nodes locally and testing
 invariants about them by starting flows and inspecting their state.
@@ -35,7 +35,7 @@ notary directly, so there's no need to pass in the test ``User``.
 The ``startNode`` function returns a future that completes once the
 node is fully started. This allows starting of the nodes to be
 parallel. We wait on these futures as we need the information
-returned; their respective ``NodeInfo`` s.
+returned; their respective ``NodeHandles`` s.
 
 .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/IntegrationTestingTutorial.kt
     :language: kotlin
@@ -45,9 +45,6 @@ returned; their respective ``NodeInfo`` s.
 Next we connect to Alice and Bob respectively from the test process
 using the test user we created. Then we establish RPC links that allow
 us to start flows and query state.
-
-Note that Driver nodes start up with test server certificiates, so
-it's enough to pass in ``configureTestSSL()`` for the clients.
 
 .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/IntegrationTestingTutorial.kt
     :language: kotlin

@@ -1,0 +1,134 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NodeConfiguration - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.config</a>&nbsp;/&nbsp;<a href=".">NodeConfiguration</a><br/>
+<br/>
+<h1>NodeConfiguration</h1>
+<code><span class="keyword">interface </span><span class="identifier">NodeConfiguration</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-node-s-s-l-configuration/index.html"><span class="identifier">NodeSSLConfiguration</span></a></code>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="base-directory.html">baseDirectory</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">baseDirectory</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="certificates-directory.html">certificatesDirectory</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">certificatesDirectory</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="data-source-properties.html">dataSourceProperties</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">dataSourceProperties</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Properties.html"><span class="identifier">Properties</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="dev-mode.html">devMode</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">devMode</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="email-address.html">emailAddress</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">emailAddress</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="export-j-m-xto.html">exportJMXto</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">exportJMXto</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="my-legal-name.html">myLegalName</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">myLegalName</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="nearest-city.html">nearestCity</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">nearestCity</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="network-map-service.html">networkMapService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkMapService</span><span class="symbol">: </span><a href="../../net.corda.node.internal/-network-map-info/index.html"><span class="identifier">NetworkMapInfo</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="rpc-users.html">rpcUsers</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">rpcUsers</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.node.services/-user/index.html"><span class="identifier">User</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-node-s-s-l-configuration/key-store-password.html">keyStorePassword</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">keyStorePassword</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-node-s-s-l-configuration/key-store-path.html">keyStorePath</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">keyStorePath</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-node-s-s-l-configuration/trust-store-password.html">trustStorePassword</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">trustStorePassword</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-node-s-s-l-configuration/trust-store-path.html">trustStorePath</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">trustStorePath</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../configure-with-dev-s-s-l-certificate.html">configureWithDevSSLCertificate</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">NodeConfiguration</span><span class="symbol">.</span><span class="identifier">configureWithDevSSLCertificate</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Strictly for dev only automatically construct a server certificate/private key signed from
+the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-full-node-configuration/index.html">FullNodeConfiguration</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FullNodeConfiguration</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NodeConfiguration</span></code>
+<p><a href="../-full-node-configuration/base-directory.html">baseDirectory</a> is not retrieved from the config file but rather from a command line argument.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

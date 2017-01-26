@@ -1,0 +1,99 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>DistributedImmutableMap - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.transactions</a>&nbsp;/&nbsp;<a href=".">DistributedImmutableMap</a><br/>
+<br/>
+<h1>DistributedImmutableMap</h1>
+<code><span class="keyword">class </span><span class="identifier">DistributedImmutableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">V</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">StateMachine</span><span class="symbol">, </span><span class="identifier">Snapshottable</span></code>
+<p>A distributed map state machine that doesn't allow overriding values. The state machine is replicated
+across a Copycat Raft cluster.</p>
+<p>The map contents are backed by a JDBC table. State re-synchronisation is achieved by periodically persisting snapshots
+to disk, and sharing them across the cluster. A new node joining the cluster will have to obtain and install a snapshot
+containing the entire JDBC table contents.</p>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-commands/index.html">Commands</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">Commands</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">DistributedImmutableMap</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.transactions.DistributedImmutableMap$<init>(org.jetbrains.exposed.sql.Database, kotlin.String)/db">db</span><span class="symbol">:</span>&nbsp;<span class="identifier">Database</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.transactions.DistributedImmutableMap$<init>(org.jetbrains.exposed.sql.Database, kotlin.String)/tableName">tableName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span></code>
+<p>A distributed map state machine that doesn't allow overriding values. The state machine is replicated
+across a Copycat Raft cluster.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="db.html">db</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">db</span><span class="symbol">: </span><span class="identifier">Database</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="get.html">get</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">get</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.transactions.DistributedImmutableMap$get(io.atomix.copycat.server.Commit((net.corda.node.services.transactions.DistributedImmutableMap.Commands.Get((net.corda.node.services.transactions.DistributedImmutableMap.K, net.corda.node.services.transactions.DistributedImmutableMap.V)))))/commit">commit</span><span class="symbol">:</span>&nbsp;<span class="identifier">Commit</span><span class="symbol">&lt;</span><a href="-commands/-get/index.html"><span class="identifier">Get</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">V</span><span class="symbol">?</span></code>
+<p>Gets a value for the given <a href="-commands/-get/key.html">Commands.Get.key</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="install.html">install</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">install</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.transactions.DistributedImmutableMap$install(io.atomix.copycat.server.storage.snapshot.SnapshotReader)/reader">reader</span><span class="symbol">:</span>&nbsp;<span class="identifier">SnapshotReader</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Reads entries from disk and adds them to <a href="#">map</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="put.html">put</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">put</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.transactions.DistributedImmutableMap$put(io.atomix.copycat.server.Commit((net.corda.node.services.transactions.DistributedImmutableMap.Commands.PutAll((net.corda.node.services.transactions.DistributedImmutableMap.K, net.corda.node.services.transactions.DistributedImmutableMap.V)))))/commit">commit</span><span class="symbol">:</span>&nbsp;<span class="identifier">Commit</span><span class="symbol">&lt;</span><a href="-commands/-put-all/index.html"><span class="identifier">PutAll</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span></code>
+<p>Stores the given <a href="-commands/-put-all/entries.html">Commands.PutAll.entries</a> if no entry key already exists.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="size.html">size</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">size</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.transactions.DistributedImmutableMap$size(io.atomix.copycat.server.Commit((net.corda.node.services.transactions.DistributedImmutableMap.Commands.Size)))/commit">commit</span><span class="symbol">:</span>&nbsp;<span class="identifier">Commit</span><span class="symbol">&lt;</span><a href="-commands/-size/index.html"><span class="identifier">Size</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="snapshot.html">snapshot</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">snapshot</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.transactions.DistributedImmutableMap$snapshot(io.atomix.copycat.server.storage.snapshot.SnapshotWriter)/writer">writer</span><span class="symbol">:</span>&nbsp;<span class="identifier">SnapshotWriter</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Writes out all <a href="#">map</a> entries to disk. Note that this operation does not load all entries into memory, as the
+<a href="#">SnapshotWriter</a> is using a disk-backed buffer internally, and iterating map entries results in only a
+fixed number of recently accessed entries to ever be kept in memory.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

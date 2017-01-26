@@ -27,5 +27,5 @@ fun fx_swap(expiry: String, notional: BigDecimal, strike: BigDecimal,
 fun fx_swap2(expiry: String, notional: Long, strike: Double,
              foreignCurrency: Currency, domesticCurrency: Currency,
              partyA: Party, partyB: Party) =
-        Action("execute", after(expiry), setOf(partyA, partyB),
+        Action("execute", after(expiry) and (signedBy(partyA) or signedBy(partyB)),
                 swap(partyA, BigDecimal(notional * strike), domesticCurrency, partyB, BigDecimal(notional), foreignCurrency))

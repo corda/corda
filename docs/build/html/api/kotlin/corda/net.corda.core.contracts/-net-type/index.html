@@ -1,0 +1,40 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NetType - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href=".">NetType</a><br/>
+<br/>
+<h1>NetType</h1>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">NetType</span></code>
+<p>Enum for the types of netting that can be applied to state objects. Exact behaviour
+for each type of netting is left to the contract to determine.</p>
+<h3>Enum Values</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-c-l-o-s-e_-o-u-t.html">CLOSE_OUT</a></td>
+<td>
+<p>Close-out netting applies where one party is bankrupt or otherwise defaults (exact terms are contract specific),
+and allows their counterparty to net obligations without requiring approval from all parties. For example, if
+Bank A owes Bank B £1m, and Bank B owes Bank A £1m, in the case of Bank B defaulting this would enable Bank A
+to net out the two obligations to zero, rather than being legally obliged to pay £1m without any realistic
+expectation of the debt to them being paid. Realistically this is limited to bilateral netting, to simplify
+determining which party must sign the netting transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-p-a-y-m-e-n-t.html">PAYMENT</a></td>
+<td>
+<p>"Payment" is used to refer to conventional netting, where all parties must confirm the netting transaction. This
+can be a multilateral netting transaction, and may be created by a central clearing service.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

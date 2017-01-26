@@ -1,0 +1,18 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>MessagingServiceInternal.stop - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.api</a>&nbsp;/&nbsp;<a href="index.html">MessagingServiceInternal</a>&nbsp;/&nbsp;<a href=".">stop</a><br/>
+<br/>
+<h1>stop</h1>
+<a name="net.corda.node.services.api.MessagingServiceInternal$stop()"></a>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Initiates shutdown: if called from a thread that isn't controlled by the executor passed to the constructor
+then this will block until all in-flight messages have finished being handled and acknowledged. If called
+from a thread that's a part of the <a href="#">AffinityExecutor</a> given to the constructor, it returns immediately and
+shutdown is asynchronous.</p>
+</BODY>
+</HTML>

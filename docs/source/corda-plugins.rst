@@ -36,12 +36,12 @@ extensions to be created, or registered at startup. In particular:
     a. The ``webApis`` property is a list of JAX-RS annotated REST access 
     classes. These classes will be constructed by the embedded web server 
     and must have a single argument constructor taking a ``ServiceHub`` 
-    reference. This reference provides acccess to functions such as querying 
+    reference. This reference provides access to functions such as querying 
     for states through the ``VaultService`` interface, or access to the 
     ``NetworkMapCache`` to identify services on remote nodes. The framework will 
     provide a database transaction in scope during the lifetime of the web 
     call, so full access to database data is valid. Unlike 
-    ``servicePlugins`` the ``webApis`` cannnot register new protocols, or 
+    ``servicePlugins`` the ``webApis`` cannot register new protocols, or 
     initiate threads. (N.B. The intent is to move the Web support into a 
     separate helper process using the RPC mechanism to control access.) 
 

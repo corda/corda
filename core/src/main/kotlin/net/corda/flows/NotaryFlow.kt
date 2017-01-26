@@ -1,7 +1,10 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.Party
+import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.signWithECDSA
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessException
@@ -47,7 +50,7 @@ object NotaryFlow {
             try {
                 stx.verifySignatures(notaryParty.owningKey)
             } catch (ex: SignedTransaction.SignaturesMissingException) {
-                throw NotaryException(NotaryError.SignaturesMissing(ex.missing))
+                throw NotaryException(NotaryError.SignaturesMissing(ex))
             }
 
             val response = sendAndReceive<Result>(notaryParty, SignRequest(stx))
@@ -129,19 +132,34 @@ object NotaryFlow {
         open fun beforeCommit(stx: SignedTransaction) {
         }
 
+        /**
+         * A NotaryException is thrown if any of the states have been consumed by a different transaction. Note that
+         * this method does not throw an exception when input states are present multiple times within the transaction.
+         */
         private fun commitInputStates(tx: WireTransaction) {
             try {
                 uniquenessProvider.commit(tx.inputs, tx.id, otherSide)
             } catch (e: UniquenessException) {
-                val conflictData = e.error.serialize()
-                val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
-                throw NotaryException(NotaryError.Conflict(tx, signedConflict))
+                val conflicts = tx.inputs.filterIndexed { i, stateRef ->
+                    val consumingTx = e.error.stateHistory[stateRef]
+                    consumingTx != null && consumingTx != UniquenessProvider.ConsumingTx(tx.id, i, otherSide)
+                }
+                if (conflicts.isNotEmpty()) {
+                    // TODO: Create a new UniquenessException that only contains the conflicts filtered above.
+                    throw notaryException(tx, e)
+                }
             }
         }
 
         private fun sign(bits: ByteArray): DigitalSignature.WithKey {
             val mySigningKey = serviceHub.notaryIdentityKey
             return mySigningKey.signWithECDSA(bits)
+        }
+
+        private fun notaryException(tx: WireTransaction, e: UniquenessException): NotaryException {
+            val conflictData = e.error.serialize()
+            val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
+            return NotaryException(NotaryError.Conflict(tx, signedConflict))
         }
     }
 
@@ -166,9 +184,10 @@ sealed class NotaryError {
     /** Thrown if the time specified in the timestamp command is outside the allowed tolerance */
     class TimestampInvalid : NotaryError()
 
-    class TransactionInvalid : NotaryError()
+    class TransactionInvalid(val msg: String) : NotaryError()
+    class SignaturesInvalid(val msg: String): NotaryError()
 
-    class SignaturesMissing(val missingSigners: Set<CompositeKey>) : NotaryError() {
-        override fun toString() = "Missing signatures from: ${missingSigners.map { it.toBase58String() }}"
+    class SignaturesMissing(val cause: SignedTransaction.SignaturesMissingException) : NotaryError() {
+        override fun toString() = cause.toString()
     }
 }

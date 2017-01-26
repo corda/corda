@@ -1,0 +1,20 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>VaultService.rawUpdates - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.node.services</a>&nbsp;/&nbsp;<a href="index.html">VaultService</a>&nbsp;/&nbsp;<a href=".">rawUpdates</a><br/>
+<br/>
+<h1>rawUpdates</h1>
+<a name="net.corda.core.node.services.VaultService$rawUpdates"></a>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">rawUpdates</span><span class="symbol">: </span><span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="../-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code>
+<p>Prefer the use of <a href="updates.html">updates</a> unless you know why you want to use this instead.</p>
+<p>Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Vault will already incorporate
+the update, and the database transaction associated with the update will still be open and current.  If for some
+reason the processing crosses outside of the database transaction (for example, the update is pushed outside the current
+JVM or across to another <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Thread.html">Thread</a> which is executing in a different database transaction) then the Vault may
+not incorporate the update due to racing with committing the current database transaction.</p>
+</BODY>
+</HTML>

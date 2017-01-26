@@ -1,0 +1,21 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>DataVending.Service.<init> - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.node.services.persistence</a>&nbsp;/&nbsp;<a href="../index.html">DataVending</a>&nbsp;/&nbsp;<a href="index.html">Service</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">Service</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.persistence.DataVending.Service$<init>(net.corda.core.node.PluginServiceHub)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.node/-plugin-service-hub/index.html"><span class="identifier">PluginServiceHub</span></a><span class="symbol">)</span></code>
+<p>This class sets up network message handlers for requests from peers for data keyed by hash. It is a piece of simple
+glue that sits between the network layer and the database layer.</p>
+<p>Note that in our data model, to be able to name a thing by hash automatically gives the power to request it. There
+are no access control lists. If you want to keep some data private, then you must be careful who you give its name
+to, and trust that they will not pass the name onwards. If someone suspects some data might exist but does not have
+its name, then the 256-bit search space they'd have to cover makes it physically impossible to enumerate, and as
+such the hash of a piece of data can be seen as a type of password allowing access to it.</p>
+<p>Additionally, because nodes do not store invalid transactions, requesting such a transaction will always yield null.</p>
+</BODY>
+</HTML>
