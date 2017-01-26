@@ -69,6 +69,8 @@ ifeq ($(ARCH), x86)
 else
 	PROTPBUF_CXXFLAGS += -m64
 endif
+PROTPBUF_CXXFLAGS += -D_GLIBCXX_USE_CXX11_ABI=0
+
 
 EXTERNAL_LIB += -lprotobuf 
  
