@@ -28,7 +28,9 @@ public class R3Pty implements AutoCloseable {
     @Override
     public void close() {
         LOG.info("Closing terminal '{}'", name);
-        terminal.close();
+        if (terminal.getTerminalStarter() != null) {
+            terminal.close();
+        }
     }
 
     public String getName() {
