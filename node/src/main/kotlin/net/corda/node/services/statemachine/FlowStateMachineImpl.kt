@@ -123,6 +123,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                                           sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
         val (session, new) = getSession(otherParty, sessionFlow, payload)
         val receivedSessionData = if (new) {
+            // Ensure Init response is consumed before receive.
+            session.maybeReceiveInitResponse()
             // Only do a receive here as the session init has carried the payload
             receiveInternal<SessionData>(session)
         } else {
@@ -137,6 +139,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                                    otherParty: Party,
                                    sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
         val session = getSession(otherParty, sessionFlow, null).first
+        // Ensure Init response is consumed before receive.
+        session.maybeReceiveInitResponse()
         return receiveInternal<SessionData>(session).checkPayloadIs(receiveType)
     }
 
@@ -146,6 +150,19 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         if (!new) {
             // Don't send the payload again if it was already piggy-backed on a session init
             sendInternal(session, createSessionData(session, payload))
+        }
+    }
+
+    @Suspendable
+    private fun FlowSession.maybeReceiveInitResponse() {
+        if (state is FlowSessionState.Initiating) {
+            val (peerParty, sessionInitResponse) = receiveInternal<SessionInitResponse>(this)
+            if (sessionInitResponse is SessionConfirm) {
+                state = FlowSessionState.Initiated(peerParty, sessionInitResponse.initiatedSessionId)
+            } else {
+                sessionInitResponse as SessionReject
+                throw FlowException("Party ${state.sendToParty} rejected session request: ${sessionInitResponse.errorMessage}")
+            }
         }
     }
 
@@ -177,6 +194,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     private fun getSession(otherParty: Party, sessionFlow: FlowLogic<*>, firstPayload: Any?): Pair<FlowSession, Boolean> {
         val session = openSessions[Pair(sessionFlow, otherParty)]
         return if (session != null) {
+            // Its not a new session, try to retrieve the init response.
+            session.maybeReceiveInitResponse()
             Pair(session, false)
         } else {
             Pair(startNewSession(otherParty, sessionFlow, firstPayload), true)
@@ -196,15 +215,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         openSessions[Pair(sessionFlow, otherParty)] = session
         val counterpartyFlow = sessionFlow.getCounterpartyMarker(otherParty).name
         val sessionInit = SessionInit(session.ourSessionId, counterpartyFlow, firstPayload)
-        val (peerParty, sessionInitResponse) = sendAndReceiveInternal<SessionInitResponse>(session, sessionInit)
-        if (sessionInitResponse is SessionConfirm) {
-            require(session.state is FlowSessionState.Initiating)
-            session.state = FlowSessionState.Initiated(peerParty, sessionInitResponse.initiatedSessionId)
-            return session
-        } else {
-            sessionInitResponse as SessionReject
-            throw FlowException("Party $otherParty rejected session request: ${sessionInitResponse.errorMessage}")
-        }
+        sendInternal(session, sessionInit)
+        return session
     }
 
     @Suspendable
