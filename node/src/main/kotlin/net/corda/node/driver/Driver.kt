@@ -468,18 +468,30 @@ open class DriverDSL(
             else
                 ""
 
-            val javaArgs = listOf(
-                    path,
-                    "-Dname=${nodeConf.myLegalName}",
-                    "-javaagent:$quasarJarPath",
-                    debugPortArg,
-                    "-Dvisualvm.display.name=Corda",
-                    "-Xmx200m",
-                    "-XX:+UseG1GC",
-                    "-cp", classpath,
-                    className,
-                    "--base-directory=${nodeConf.baseDirectory}"
-            ).filter(String::isNotEmpty)
+            val additionalKeys = listOf("amq.delivery.delay.ms")
+
+            val systemArgs = mutableMapOf(
+                    "name" to nodeConf.myLegalName,
+                    "visualvm.display.name" to "Corda"
+            )
+
+            for (key in additionalKeys) {
+                if (System.getProperty(key) != null) {
+                    systemArgs.set(key, System.getProperty(key))
+                }
+            }
+
+            val javaArgs = listOf(path) +
+                    systemArgs.map { "-D${it.key}=${it.value}" } +
+                    listOf(
+                            "-javaagent:$quasarJarPath",
+                            debugPortArg,
+                            "-Xmx200m",
+                            "-XX:+UseG1GC",
+                            "-cp", classpath,
+                            className,
+                            "--base-directory=${nodeConf.baseDirectory}"
+                    ).filter(String::isNotEmpty)
             val builder = ProcessBuilder(javaArgs)
             builder.redirectError(Paths.get("error.$className.log").toFile())
             builder.inheritIO()
