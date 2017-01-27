@@ -4,8 +4,15 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
+import java.lang.String.join
 
-class NodeConfig(legalName: String, artemisPort: Int, nearestCity: String, webPort: Int) : NetworkMapConfig(legalName, artemisPort){
+class NodeConfig(
+        legalName: String,
+        artemisPort: Int,
+        nearestCity: String,
+        webPort: Int,
+        extraServices: List<String>
+) : NetworkMapConfig(legalName, artemisPort) {
 
     private var nearestCityName: String = nearestCity
     val nearestCity : String
@@ -14,6 +21,10 @@ class NodeConfig(legalName: String, artemisPort: Int, nearestCity: String, webPo
     private var webPortValue: Int = webPort
     val webPort : Int
         get() { return webPortValue }
+
+    private var extraServicesValue: List<String> = extraServices
+    val extraServices : List<String>
+        get() { return extraServicesValue }
 
     private var networkMapValue: NetworkMapConfig? = null
     var networkMap : NetworkMapConfig?
@@ -25,7 +36,7 @@ class NodeConfig(legalName: String, artemisPort: Int, nearestCity: String, webPo
                     .withValue("myLegalName", valueFor(legalName))
                     .withValue("artemisAddress", addressValueFor(artemisPort))
                     .withValue("nearestCity", valueFor(nearestCity))
-                    .withValue("extraAdvertisedServiceIds", valueFor(""))
+                    .withValue("extraAdvertisedServiceIds", valueFor(join(",", extraServices)))
                     .withFallback(optional("networkMapService", networkMap, {
                         c, n -> c.withValue("address", addressValueFor(n.artemisPort))
                             .withValue("legalName", valueFor(n.legalName))
