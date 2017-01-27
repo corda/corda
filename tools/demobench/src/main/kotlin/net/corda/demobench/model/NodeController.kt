@@ -30,13 +30,11 @@ class NodeController : Controller() {
 
     fun validate(nodeData: NodeData): NodeConfig? {
         val config = NodeConfig(
-            nodeData.legalName.value,
+            nodeData.legalName.value.trim(),
             nodeData.artemisPort.value,
-            nodeData.nearestCity.value,
+            nodeData.nearestCity.value.trim(),
             nodeData.webPort.value
         )
-
-        log.info("Node key: " + config.key)
 
         if (nodes.putIfAbsent(config.key, config) != null) {
             return null
@@ -51,8 +49,12 @@ class NodeController : Controller() {
     val nextPort: Int
         get() { return port.andIncrement }
 
-    fun exists(name: String): Boolean {
-        return nodes.keys.contains(toKey(name))
+    fun keyExists(key: String): Boolean {
+        return nodes.keys.contains(key)
+    }
+
+    fun nameExists(name: String): Boolean {
+        return keyExists(toKey(name))
     }
 
     fun chooseNetworkMap(config: NodeConfig) {

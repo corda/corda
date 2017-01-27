@@ -4,6 +4,7 @@ import java.text.DecimalFormat
 import javafx.util.converter.NumberStringConverter
 import net.corda.demobench.model.NodeController
 import net.corda.demobench.model.NodeDataModel
+import net.corda.demobench.model.toKey
 import net.corda.demobench.ui.CloseableTab
 import tornadofx.*
 
@@ -13,7 +14,7 @@ class NodeTabView : Fragment() {
     private val main by inject<DemoBenchView>()
 
     private val INTEGER_FORMAT = DecimalFormat()
-    private val NOT_NUMBER = Regex("[^\\d]")
+    private val NOT_NUMBER = "[^\\d]".toRegex()
 
     private val model = NodeDataModel()
     private val controller by inject<NodeController>()
@@ -27,12 +28,19 @@ class NodeTabView : Fragment() {
                         minWidth = 200.0
                         maxWidth = 200.0
                         validator {
-                            if ((it == null) || it.isBlank()) {
+                            if (it == null) {
                                 error("Node name is required")
-                            } else if (controller.exists(it)) {
-                                error("Node with this name already exists")
                             } else {
-                                null
+                                val name = it.trim()
+                                if (name.isEmpty()) {
+                                    error("Node name is required")
+                                } else if (controller.nameExists(name)) {
+                                    error("Node with this name already exists")
+                                } else if (name.length > 10) {
+                                    error("Name is too long")
+                                } else {
+                                    null
+                                }
                             }
                         }
                     }
@@ -42,7 +50,9 @@ class NodeTabView : Fragment() {
                         minWidth = 200.0
                         maxWidth = 200.0
                         validator {
-                            if (it.isNullOrBlank()) {
+                            if (it == null) {
+                                error("Nearest city is required")
+                            } else if (it.trim().isEmpty()) {
                                 error("Nearest city is required")
                             } else {
                                 null
