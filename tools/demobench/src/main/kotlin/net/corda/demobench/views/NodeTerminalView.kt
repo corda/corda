@@ -60,7 +60,7 @@ class NodeTerminalView : Fragment() {
 
     fun refreshTerminal() {
         SwingUtilities.invokeLater {
-            // TODO
+            // TODO - Force a repaint somehow? My naive attempts have not worked.
         }
     }
 

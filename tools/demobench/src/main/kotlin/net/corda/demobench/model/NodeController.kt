@@ -33,7 +33,8 @@ class NodeController : Controller() {
             nodeData.legalName.value.trim(),
             nodeData.artemisPort.value,
             nodeData.nearestCity.value.trim(),
-            nodeData.webPort.value
+            nodeData.webPort.value,
+            nodeData.extraServices.value
         )
 
         if (nodes.putIfAbsent(config.key, config) != null) {
@@ -77,6 +78,7 @@ class NodeController : Controller() {
                 confFile.writeText(fileData.root().render(renderOptions))
 
                 pty.run(command, System.getenv(), nodeDir.toString())
+                log.info("Launched node: " + config.legalName)
                 return true
             } catch (e: Exception) {
                 log.severe("Failed to launch Corda:" + e)

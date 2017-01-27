@@ -1,10 +1,11 @@
 package net.corda.demobench.views
 
 import java.text.DecimalFormat
+import javafx.scene.control.SelectionMode.MULTIPLE
 import javafx.util.converter.NumberStringConverter
 import net.corda.demobench.model.NodeController
 import net.corda.demobench.model.NodeDataModel
-import net.corda.demobench.model.toKey
+import net.corda.demobench.model.ServiceController
 import net.corda.demobench.ui.CloseableTab
 import tornadofx.*
 
@@ -17,10 +18,11 @@ class NodeTabView : Fragment() {
     private val NOT_NUMBER = "[^\\d]".toRegex()
 
     private val model = NodeDataModel()
-    private val controller by inject<NodeController>()
+    private val nodeController by inject<NodeController>()
+    private val serviceController by inject<ServiceController>()
 
     private val nodeTerminalView = find<NodeTerminalView>()
-    private val nodeConfigView = pane {
+    private val nodeConfigView = stackpane {
         form {
             fieldset("Configuration") {
                 field("Node Name") {
@@ -34,7 +36,7 @@ class NodeTabView : Fragment() {
                                 val name = it.trim()
                                 if (name.isEmpty()) {
                                     error("Node name is required")
-                                } else if (controller.nameExists(name)) {
+                                } else if (nodeController.nameExists(name)) {
                                     error("Node with this name already exists")
                                 } else if (name.length > 10) {
                                     error("Name is too long")
@@ -92,13 +94,19 @@ class NodeTabView : Fragment() {
                 }
             }
 
-            fieldset("Plugins") {
+            fieldset("Services") {
+                listview(serviceController.services.observable()) {
+                    selectionModel.selectionMode = MULTIPLE
+                    model.item.extraServices.set(selectionModel.selectedItems)
+                }
             }
 
             button("Create Node") {
                 setOnAction() {
-                    launch()
-                    main.enableAddNodes()
+                    if (model.validate()) {
+                        launch()
+                        main.enableAddNodes()
+                    }
                 }
             }
         }
@@ -108,7 +116,7 @@ class NodeTabView : Fragment() {
 
     fun launch() {
         model.commit()
-        val config = controller.validate(model.item)
+        val config = nodeController.validate(model.item)
         if (config != null) {
             nodeConfigView.isVisible = false
             nodeTab.text = config.legalName
@@ -134,7 +142,7 @@ class NodeTabView : Fragment() {
         root.add(nodeConfigView)
         root.add(nodeTerminalView)
 
-        model.artemisPort.value = controller.nextPort
-        model.webPort.value = controller.nextPort
+        model.artemisPort.value = nodeController.nextPort
+        model.webPort.value = nodeController.nextPort
     }
 }
