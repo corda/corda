@@ -29,6 +29,9 @@ class DemoBenchView : View("Corda Demo Bench") {
         addNodeButton.setOnAction {
             val nodeTab = createNodeTab()
             nodeTabPane.selectionModel.select(nodeTab)
+
+            // Prevent us from creating new nodes until we have created the Network Map
+            addNodeButton.isDisable = true
         }
         addNodeButton.fire()
     }
@@ -47,4 +50,7 @@ class DemoBenchView : View("Corda Demo Bench") {
         return nodeTab
     }
 
+    fun enableAddNodes() {
+        addNodeButton.isDisable = false
+    }
 }

@@ -10,6 +10,8 @@ import tornadofx.*
 class NodeTabView : Fragment() {
     override val root = stackpane {}
 
+    private val main by inject<DemoBenchView>()
+
     private val INTEGER_FORMAT = DecimalFormat()
     private val NOT_NUMBER = Regex("[^\\d]")
 
@@ -25,8 +27,10 @@ class NodeTabView : Fragment() {
                         minWidth = 200.0
                         maxWidth = 200.0
                         validator {
-                            if (it.isNullOrBlank()) {
+                            if ((it == null) || it.isBlank()) {
                                 error("Node name is required")
+                            } else if (controller.exists(it)) {
+                                error("Node with this name already exists")
                             } else {
                                 null
                             }
@@ -47,21 +51,6 @@ class NodeTabView : Fragment() {
                     }
                 }
                 field("P2P Port") {
-                    textfield(model.p2pPort, NumberStringConverter(INTEGER_FORMAT)) {
-                        minWidth = 100.0
-                        maxWidth = 100.0
-                        validator {
-                            if ((it == null) || it.isEmpty()) {
-                                error("Port number required")
-                            } else if (it.contains(NOT_NUMBER)) {
-                                error("Invalid port number")
-                            } else {
-                                null
-                            }
-                        }
-                    }
-                }
-                field("Artemis Port") {
                     textfield(model.artemisPort, NumberStringConverter(INTEGER_FORMAT)) {
                         minWidth = 100.0
                         maxWidth = 100.0
@@ -94,12 +83,12 @@ class NodeTabView : Fragment() {
             }
 
             fieldset("Plugins") {
-
             }
 
             button("Create Node") {
                 setOnAction() {
                     launch()
+                    main.enableAddNodes()
                 }
             }
         }
@@ -135,7 +124,6 @@ class NodeTabView : Fragment() {
         root.add(nodeConfigView)
         root.add(nodeTerminalView)
 
-        model.p2pPort.value = controller.nextPort
         model.artemisPort.value = controller.nextPort
         model.webPort.value = controller.nextPort
     }
