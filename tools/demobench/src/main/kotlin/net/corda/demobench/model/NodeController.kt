@@ -94,6 +94,6 @@ class NodeController : Controller() {
     init {
         log.info("Working directory: " + workDir)
         log.info("Java executable: " + javaPath)
-        log.info("Corda JAR: " + command[0])
+        log.info("Corda JAR: " + cordaPath)
     }
 }
