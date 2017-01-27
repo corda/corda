@@ -35,7 +35,7 @@ class NodeTerminalView : Fragment() {
 
     fun open(config: NodeConfig) {
         nodeName.text = config.legalName
-        p2pPort.value = config.p2pPort.toString()
+        p2pPort.value = config.artemisPort.toString()
 
         val swingTerminal = SwingNode()
         swingTerminal.setOnMouseClicked {

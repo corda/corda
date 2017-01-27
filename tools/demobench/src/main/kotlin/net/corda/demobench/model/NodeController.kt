@@ -26,24 +26,43 @@ class NodeController : Controller() {
     private val nodes = ConcurrentHashMap<String, NodeConfig>()
     private val port = AtomicInteger(FIRST_PORT)
 
+    private var networkMapConfig: NetworkMapConfig? = null
+
     fun validate(nodeData: NodeData): NodeConfig? {
         val config = NodeConfig(
             nodeData.legalName.value,
-            nodeData.nearestCity.value,
-            nodeData.p2pPort.value,
             nodeData.artemisPort.value,
+            nodeData.nearestCity.value,
             nodeData.webPort.value
         )
+
+        log.info("Node key: " + config.key)
 
         if (nodes.putIfAbsent(config.key, config) != null) {
             return null
         }
+
+        // The first node becomes our network map
+        chooseNetworkMap(config)
 
         return config
     }
 
     val nextPort: Int
         get() { return port.andIncrement }
+
+    fun exists(name: String): Boolean {
+        return nodes.keys.contains(toKey(name))
+    }
+
+    fun chooseNetworkMap(config: NodeConfig) {
+        if (networkMapConfig != null) {
+            config.networkMap = networkMapConfig
+        } else {
+            networkMapConfig = config
+            log.info("Network map provided by: " + config.legalName)
+        }
+    }
 
     fun runCorda(pty: R3Pty, config: NodeConfig): Boolean {
         val nodeDir = workDir.resolve(config.key).toFile()
@@ -73,5 +92,6 @@ class NodeController : Controller() {
     init {
         log.info("Working directory: " + workDir)
         log.info("Java executable: " + javaPath)
+        log.info("Corda JAR: " + command[0])
     }
 }
