@@ -16,7 +16,7 @@ open class NetworkMapConfig(legalName: String, artemisPort: Int) {
 
 }
 
-private val WHITESPACE = Regex("\\s++")
+private val WHITESPACE = "\\s++".toRegex()
 
 fun toKey(value: String): String {
     return value.replace(WHITESPACE, "").toLowerCase()
