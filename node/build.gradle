@@ -157,6 +157,10 @@ dependencies {
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
 
+    // BFT-SMaRt
+    compile 'commons-codec:commons-codec:1.10'
+    compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
+
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
 }
