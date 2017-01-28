@@ -25,6 +25,8 @@ import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.node.services.transactions.BFTSmartUniquenessProvider
+import net.corda.node.services.transactions.BFTValidatingNotaryService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.databaseTransaction
 import org.jetbrains.exposed.sql.Database
@@ -162,6 +164,9 @@ class Node(override val configuration: FullNodeConfiguration,
         return when (type) {
             RaftValidatingNotaryService.type -> with(configuration) {
                 RaftUniquenessProvider(baseDirectory, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
+            }
+            BFTValidatingNotaryService.type -> with(configuration) {
+                BFTSmartUniquenessProvider(notaryNodeAddress!!, notaryClusterAddresses, database)
             }
             else -> PersistentUniquenessProvider()
         }
