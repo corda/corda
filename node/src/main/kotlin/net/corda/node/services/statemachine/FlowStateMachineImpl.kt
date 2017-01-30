@@ -85,23 +85,18 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val result = try {
             logic.call()
         } catch (t: Throwable) {
-            waitForAllSessionConfirmations()
             actionOnEnd()
             _resultFuture?.setException(t)
             throw ExecutionException(t)
         }
-        waitForAllSessionConfirmations()
+        // Wait for sessions with unconfirmed session state.
+        openSessions.values.filter { it.state is FlowSessionState.Initiating }.forEach {
+            it.waitForConfirmation()
+        }
         // This is to prevent actionOnEnd being called twice if it throws an exception
         actionOnEnd()
         _resultFuture?.set(result)
         return result
-    }
-
-    @Suspendable
-    private fun waitForAllSessionConfirmations(){
-        openSessions.values.filter { it.state is FlowSessionState.Initiating }.forEach {
-            it.waitForConfirmation()
-        }
     }
 
     private fun createTransaction() {
