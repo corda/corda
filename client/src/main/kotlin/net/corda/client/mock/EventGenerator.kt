@@ -5,7 +5,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.flows.CashCommand
+import net.corda.flows.CashFlow
 import java.util.*
 
 /**
@@ -64,7 +64,7 @@ class EventGenerator(
 
     val issueCashGenerator =
             amountGenerator.combine(partyGenerator, issueRefGenerator) { amount, to, issueRef ->
-                CashCommand.IssueCash(
+                CashFlow.Command.IssueCash(
                         amount,
                         issueRef,
                         to,
@@ -76,7 +76,7 @@ class EventGenerator(
             amountIssuedGenerator.combine(
                     partyGenerator
             ) { amountIssued, recipient ->
-                CashCommand.PayCash(
+                CashFlow.Command.PayCash(
                         amount = amountIssued,
                         recipient = recipient
                 )
@@ -84,7 +84,7 @@ class EventGenerator(
 
     val exitCashGenerator =
             amountIssuedGenerator.map {
-                CashCommand.ExitCash(
+                CashFlow.Command.ExitCash(
                         it.withoutIssuer(),
                         it.token.issuer.reference
                 )
