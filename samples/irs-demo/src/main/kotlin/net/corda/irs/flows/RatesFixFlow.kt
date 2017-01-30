@@ -97,7 +97,6 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     }
 
     class FixSignFlow(val tx: TransactionBuilder, val oracle: Party,
-//                      @Transient val filtering: (Any) -> Boolean) : FlowLogic<DigitalSignature.LegallyIdentifiable>() { //todo
                       val filtering: (Any) -> Boolean) : FlowLogic<DigitalSignature.LegallyIdentifiable>() {
         @Suspendable
         override fun call(): DigitalSignature.LegallyIdentifiable {
