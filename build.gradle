@@ -35,10 +35,6 @@ buildscript {
         mavenLocal()
         mavenCentral()
         jcenter()
-        // TODO: Remove this once all packages are published to jcenter or maven central. (M6 or 7).
-        maven {
-            url  "http://r3.bintray.com/corda"
-        }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
