@@ -19,7 +19,6 @@ import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.node.driver.DriverBasedTest
 import net.corda.node.driver.driver
@@ -94,7 +93,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     @Test
     fun `cash issue works end to end`() {
-        rpc.startFlow(::CashFlow, CashCommand.IssueCash(
+        rpc.startFlow(::CashFlow, CashFlow.Command.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                 recipient = aliceNode.legalIdentity,
@@ -119,14 +118,14 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     @Test
     fun `cash issue and move`() {
-        rpc.startFlow(::CashFlow, CashCommand.IssueCash(
+        rpc.startFlow(::CashFlow, CashFlow.Command.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                 recipient = aliceNode.legalIdentity,
                 notary = notaryNode.notaryIdentity
         )).returnValue.getOrThrow()
 
-        rpc.startFlow(::CashFlow, CashCommand.PayCash(
+        rpc.startFlow(::CashFlow, CashFlow.Command.PayCash(
                 amount = Amount(100, Issued(PartyAndReference(aliceNode.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
                 recipient = aliceNode.legalIdentity
         ))

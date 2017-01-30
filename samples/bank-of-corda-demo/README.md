@@ -41,9 +41,9 @@ Testing of the Bank of Corda application is demonstrated at two levels:
 
 Security
 The RPC API requires a client to pass in user credentials:
-    client.start("user1","test")
+    client.start("bankUser","test")
 which are validated on the Bank of Corda node against those configured at node startup:
-    User("user1", "test", permissions = setOf(startFlowPermission<IssuerFlow.IssuanceRequester>()))
+    User("bankUser", "test", permissions = setOf(startFlowPermission<IssuerFlow.IssuanceRequester>()))
     startNode("BankOfCorda", rpcUsers = listOf(user))
 
 Notary
