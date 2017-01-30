@@ -192,7 +192,7 @@ object NodeInterestRates {
             if (!ftx.verify(merkleRoot)) {
                 throw MerkleTreeException("Rate Fix Oracle: Couldn't verify partial Merkle tree.")
             }
-
+            // Performing validation of obtained FilteredLeaves.
             fun commandValidator(elem: Command): Boolean {
                 if (!(identity.owningKey in elem.signers && elem.value is Fix))
                     throw IllegalArgumentException("Oracle received unknown command (not in signers or not Fix).")

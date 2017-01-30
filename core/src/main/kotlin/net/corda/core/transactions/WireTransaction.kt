@@ -33,7 +33,7 @@ class WireTransaction(
         signers: List<CompositeKey>,
         type: TransactionType,
         timestamp: Timestamp?
-) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp), TraversableTx {
+) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp), TraversableTransaction {
     init {
         checkInvariants()
     }
@@ -111,7 +111,7 @@ class WireTransaction(
                 outputs.filter { filtering(it) },
                 commands.filter { filtering(it) },
                 notNullFalse(notary) as Party?,
-                mustSign.filter { filtering(it) }, // TODO Do we want to keep it as one or also filter over it?
+                mustSign.filter { filtering(it) },
                 notNullFalse(type) as TransactionType?,
                 notNullFalse(timestamp) as Timestamp?
         )

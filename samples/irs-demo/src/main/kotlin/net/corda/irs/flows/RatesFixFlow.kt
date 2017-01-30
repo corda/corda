@@ -28,7 +28,7 @@ import java.util.*
  */
 open class RatesFixFlow(protected val tx: TransactionBuilder,
                         /** Filtering functions over transaction, used to build partial transaction presented to oracle. */
-                        private val filtering: (Any) -> Boolean, // Not the best solution, when lambda expression passed (serialization).
+                        private val filtering: (Any) -> Boolean,
                         private val oracle: Party,
                         private val fixOf: FixOf,
                         private val expectedRate: BigDecimal,
@@ -96,7 +96,9 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         }
     }
 
-    class FixSignFlow(val tx: TransactionBuilder, val oracle: Party, val filtering: (Any) -> Boolean) : FlowLogic<DigitalSignature.LegallyIdentifiable>() {
+    class FixSignFlow(val tx: TransactionBuilder, val oracle: Party,
+//                      @Transient val filtering: (Any) -> Boolean) : FlowLogic<DigitalSignature.LegallyIdentifiable>() { //todo
+                      val filtering: (Any) -> Boolean) : FlowLogic<DigitalSignature.LegallyIdentifiable>() {
         @Suspendable
         override fun call(): DigitalSignature.LegallyIdentifiable {
             val wtx = tx.toWireTransaction()

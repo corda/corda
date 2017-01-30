@@ -5,7 +5,7 @@ One of the basic data structures in our platform is a transaction. It can be pas
 also by third parties. The construction of transactions assumes that they form a whole entity with input and output states,
 commands and attachments inside. However all sensitive data shouldn’t be revealed to other nodes that take part in
 the creation of transaction on validation level (a good example of this situation is the Oracle which validates only
-embedded commands). How to achive it in a way that convinces the other party the data they got for signing really did form
+embedded commands). How to achieve it in a way that convinces the other party the data they got for signing really did form
 a part of the transaction?
 
 We decided to use well known and described cryptographic scheme to provide proofs of inclusion and data integrity.
@@ -98,26 +98,11 @@ In the Oracle example this step takes place in ``RatesFixFlow``:
         val ins: List<StateRef> = ftx.filteredLeaves.inputs
         val timestamp: Timestamp? = ftx.filteredLeaves.timestamp
         ...
-        // Performing validation of obtained FilteredLeaves.
-        fun commandValidator(elem: Command): Boolean {
-                if (!(identity.owningKey in elem.signers && elem.value is Fix))
-                    throw IllegalArgumentException("Oracle received unknown command (not in signers or not Fix).")
-                val fix = elem.value as Fix
-                val known = knownFixes[fix.of]
-                if (known == null || known != fix)
-                    throw UnknownFix(fix.of)
-                return true
-            }
 
-            fun check(elem: Any): Boolean {
-                return when (elem) {
-                    is Command -> commandValidator(elem)
-                    else -> throw IllegalArgumentException("Oracle received data of different type than expected.")
-                }
-            }
-            val leaves = ftx.filteredLeaves
-            if (!leaves.checkWithFun(::check))
-                throw IllegalArgumentException()
+.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
+    :language: kotlin
+    :start-after: DOCSTART 1
+    :end-before: DOCEND 1
 
 Above code snippet is taken from ``NodeInterestRates.kt`` file and implements a signing part of an Oracle.
 You can check only leaves using ``leaves.checkWithFun { check(it) }`` and then verify obtained ``FilteredTransaction``

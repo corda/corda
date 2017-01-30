@@ -58,12 +58,7 @@ class NodeInterestRatesTest {
         }
     }
 
-    fun filterAllCmds(elem: Any): Boolean {
-        return when (elem) {
-            is Command -> true
-            else -> false
-        }
-    }
+    fun filterCmds(elem: Any): Boolean = elem is Command
 
     @Before
     fun setUp() {
@@ -142,7 +137,7 @@ class NodeInterestRatesTest {
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx1, wtx1.id) }
             tx.addCommand(Cash.Commands.Move(), ALICE_PUBKEY)
             val wtx2 = tx.toWireTransaction()
-            val ftx2 = wtx2.buildFilteredTransaction { x -> filterAllCmds(x) }
+            val ftx2 = wtx2.buildFilteredTransaction { x -> filterCmds(x) }
             assertFalse(wtx1.id == wtx2.id)
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx2, wtx2.id) }
         }
@@ -210,7 +205,7 @@ class NodeInterestRatesTest {
             val wtx1 = tx.toWireTransaction()
             tx.addCommand(Cash.Commands.Move(), ALICE_PUBKEY)
             val wtx2 = tx.toWireTransaction()
-            val ftx2 = wtx2.buildFilteredTransaction { x -> filterAllCmds(x) }
+            val ftx2 = wtx2.buildFilteredTransaction { x -> filterCmds(x) }
             assertFalse(wtx1.id == wtx2.id)
             assertFailsWith<MerkleTreeException> { oracle.sign(ftx2, wtx1.id) }
         }
@@ -233,7 +228,7 @@ class NodeInterestRatesTest {
                 else -> false
             }
         }
-        val flow = RatesFixFlow(tx, ::fixCmdFilter , oracle, fixOf, "0.675".bd, "0.1".bd)
+        val flow = RatesFixFlow(tx, ::fixCmdFilter, oracle, fixOf, "0.675".bd, "0.1".bd)
         LogHelper.setLevel("rates")
         net.runNetwork()
         val future = n1.services.startFlow(flow).resultFuture

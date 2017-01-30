@@ -70,7 +70,7 @@ class PartialMerkleTree(val root: PartialTree) {
             require(zeroHash !in includeHashes) { "Zero hashes shouldn't be included in partial tree." }
             checkFull(merkleRoot) // Throws MerkleTreeException if it is not a full binary tree.
             val tree = buildPartialTree(merkleRoot, includeHashes, usedHashes)
-            // Too much included hashes or different ones.
+            // Too many included hashes or different ones.
             if (includeHashes.size != usedHashes.size)
                 throw MerkleTreeException("Some of the provided hashes are not in the tree.")
             return PartialMerkleTree(tree.second)
@@ -131,7 +131,7 @@ class PartialMerkleTree(val root: PartialTree) {
     fun verify(merkleRootHash: SecureHash, hashesToCheck: List<SecureHash>): Boolean {
         val usedHashes = ArrayList<SecureHash>()
         val verifyRoot = verify(root, usedHashes)
-        // It means that we obtained more/less hashes than needed or different sets of hashes.
+        // It means that we obtained more/fewer hashes than needed or different sets of hashes.
         if (hashesToCheck.groupBy { it } != usedHashes.groupBy { it })
             return false
         return (verifyRoot == merkleRootHash)

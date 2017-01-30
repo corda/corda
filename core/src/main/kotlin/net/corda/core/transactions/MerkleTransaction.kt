@@ -80,10 +80,11 @@ sealed class MerkleTree(val hash: SecureHash) {
 }
 
 /**
- * It assures that we always calculate hashes in the same order. Plus lets us define which fields of WireTransaction will be
- * checked/included in id calculation or partial merkle tree building.
+ * Interface implemented by WireTransaction and FilteredLeaves.
+ * Property traversableList assures that we always calculate hashes in the same order, lets us define which
+ * fields of WireTransaction will be included in id calculation or partial merkle tree building.
  */
-interface TraversableTx {
+interface TraversableTransaction {
     val inputs: List<StateRef>
     val attachments: List<SecureHash>
     val outputs: List<TransactionState<ContractState>>
@@ -100,21 +101,22 @@ interface TraversableTx {
     // We may want to specify our own behaviour on certain tx fields.
     // Like if we include them at all, what to do with null values, if we treat list as one or not etc. for building
     // torn-off transaction and id calculation.
-    fun <T>traverseWithListFun(traverseFun: (List<Any>) -> T): T {
-        val traverseList = mutableListOf(inputs, attachments, outputs, commands).flatten().toMutableList()
-        if (notary != null) traverseList.add(notary!!)
-        traverseList.addAll(mustSign)
-        if (type != null) traverseList.add(type!!)
-        if (timestamp != null) traverseList.add(timestamp!!)
-        return traverseFun(traverseList)
-    }
+    val traversableList: List<Any>
+        get() {
+            val traverseList = mutableListOf(inputs, attachments, outputs, commands).flatten().toMutableList()
+            if (notary != null) traverseList.add(notary!!)
+            traverseList.addAll(mustSign)
+            if (type != null) traverseList.add(type!!)
+            if (timestamp != null) traverseList.add(timestamp!!)
+            return traverseList
+        }
 
     // Calculation of all leaves hashes that are needed for calculation of transaction id and partial Merkle branches.
-    fun calculateLeavesHashes(): List<SecureHash> = traverseWithListFun { x -> x.map { serializedHash(it) } }
+    fun calculateLeavesHashes(): List<SecureHash> = traversableList.map { serializedHash(it) }
 }
 
 /**
- * Class that holds filtered leaves for a partial Merkle transaction. We assume mixed leaves types, notice that every
+ * Class that holds filtered leaves for a partial Merkle transaction. We assume mixed leaf types, notice that every
  * field from WireTransaction can be used in PartialMerkleTree calculation.
  */
 class FilteredLeaves(
@@ -126,18 +128,18 @@ class FilteredLeaves(
         override val mustSign: List<CompositeKey>,
         override val type: TransactionType?,
         override val timestamp: Timestamp?
-) : TraversableTx {
-    // Force type checking on a structure that we obtained, so we don't sign more than expected.
-    // Example: Oracle is implemented to check only for commands, if it gets an attachment and doesn't expect it - it can sign
-    // over a tx with the attachment that wasn't verified. Of course it depends how you implement it, but else -> false
-    // should solve a problem with possible later extensions to WireTransaction.
+) : TraversableTransaction {
     /**
      * Function that checks the whole filtered structure.
+     * Force type checking on a structure that we obtained, so we don't sign more than expected.
+     * Example: Oracle is implemented to check only for commands, if it gets an attachment and doesn't expect it - it can sign
+     * over a transaction with the attachment that wasn't verified. Of course it depends on how you implement it, but else -> false
+     * should solve a problem with possible later extensions to WireTransaction.
      * @param checkingFun function that performs type checking on the structure fields and provides verification logic accordingly.
      * @returns false if no elements were matched on a structure or checkingFun returned false.
      */
     fun checkWithFun(checkingFun: (Any) -> Boolean): Boolean {
-        val checkList = traverseWithListFun { x -> x.map { checkingFun(it) } }
+        val checkList = traversableList.map { checkingFun(it) }
         return (!checkList.isEmpty()) && checkList.all { true }
     }
 }
