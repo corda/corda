@@ -10,6 +10,7 @@ import java.nio.file.Files
  */
 class Node {
     static final String JAR_NAME = 'corda.jar'
+    static final String WAR_NAME = 'corda-webserver.war'
     static final String DEFAULT_HOST = 'localhost'
 
     /**
@@ -128,7 +129,8 @@ class Node {
     void build(File rootDir) {
         nodeDir = new File(rootDir, name.replaceAll("\\s",""))
         configureRpcUsers()
-        installCordaJAR()
+        installCordaJar()
+        installWebserverWar()
         installBuiltPlugin()
         installCordapps()
         installDependencies()
@@ -154,12 +156,24 @@ class Node {
     /**
      * Installs the corda fat JAR to the node directory.
      */
-    private void installCordaJAR() {
+    private void installCordaJar() {
         def cordaJar = verifyAndGetCordaJar()
         project.copy {
             from cordaJar
             into nodeDir
             rename cordaJar.name, JAR_NAME
+        }
+    }
+
+    /**
+     * Installs the corda webserver WAR to the node directory
+     */
+    private void installWebserverWar() {
+        def webWar = verifyAndGetWebserverWar()
+        project.copy {
+            from webWar
+            into nodeDir
+            rename webWar.name, WAR_NAME
         }
     }
 
@@ -239,6 +253,24 @@ class Node {
             def cordaJar = maybeCordaJAR.getSingleFile()
             assert(cordaJar.isFile())
             return cordaJar
+        }
+    }
+
+    /**
+     * Find the corda WAR amongst the dependencies
+     *
+     * @return A file representing the Corda webserver WAR
+     */
+    private File verifyAndGetWebserverWar() {
+        def maybeWar = project.configurations.runtime.filter {
+            it.toString().contains("corda-webserver-${project.corda_version}.war")
+        }
+        if (maybeWar.size() == 0) {
+            throw new RuntimeException("No Corda Webserver WAR found. Have you deployed the Corda project to Maven? Looked for \"corda-webserver-${project.corda_version}.war\"")
+        } else {
+            def war = maybeWar.getSingleFile()
+            assert(war.isFile())
+            return war
         }
     }
 

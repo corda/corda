@@ -1,9 +1,7 @@
-package net.corda.node.webserver.servlets
+package net.corda.webserver.servlets
 
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
-import net.corda.node.internal.Node
-import net.corda.node.services.api.AcceptsFileUpload
 import org.apache.commons.fileupload.servlet.ServletFileUpload
 import java.util.*
 import javax.servlet.http.HttpServlet
@@ -11,7 +9,7 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 /**
- * Accepts binary streams, finds the right [AcceptsFileUpload] implementor and hands the stream off to it.
+ * Uploads to the node via the [CordaRPCOps] uploadFile interface.
  */
 class DataUploadServlet: HttpServlet() {
     private val log = loggerFor<DataUploadServlet>()
@@ -41,6 +39,7 @@ class DataUploadServlet: HttpServlet() {
 
             try {
                 val dataType = req.pathInfo.substring(1).substringBefore('/')
+                @Suppress("DEPRECATION") // TODO: Replace the use of uploadFile
                 messages += rpc.uploadFile(dataType, item.name, item.openStream())
                 log.info("${item.name} successfully accepted: ${messages.last()}")
             } catch(e: RuntimeException) {

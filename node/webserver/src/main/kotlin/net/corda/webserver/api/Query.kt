@@ -1,4 +1,4 @@
-package net.corda.node.webserver.api
+package net.corda.webserver.api
 
 /**
  * Extremely rudimentary query language which should most likely be replaced with a product.

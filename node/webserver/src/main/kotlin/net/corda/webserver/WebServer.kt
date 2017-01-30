@@ -1,181 +1,71 @@
-package net.corda.node.webserver
+@file:JvmName("WebServer")
 
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.node.CordaPluginRegistry
-import net.corda.core.utilities.loggerFor
-import net.corda.node.printBasicNodeInfo
+package net.corda.webserver
+
+import com.typesafe.config.ConfigException
+import net.corda.core.div
+import net.corda.core.rootCause
+import net.corda.node.ArgsParser
 import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.messaging.ArtemisMessagingComponent
-import net.corda.node.services.messaging.CordaRPCClient
-import net.corda.node.webserver.internal.APIServerImpl
-import net.corda.node.webserver.servlets.AttachmentDownloadServlet
-import net.corda.node.webserver.servlets.DataUploadServlet
-import net.corda.node.webserver.servlets.ObjectMapperConfig
-import net.corda.node.webserver.servlets.ResponseFilter
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
-import org.eclipse.jetty.server.*
-import org.eclipse.jetty.server.handler.HandlerCollection
-import org.eclipse.jetty.servlet.DefaultServlet
-import org.eclipse.jetty.servlet.ServletContextHandler
-import org.eclipse.jetty.servlet.ServletHolder
-import org.eclipse.jetty.util.ssl.SslContextFactory
-import org.eclipse.jetty.webapp.WebAppContext
-import org.glassfish.jersey.server.ResourceConfig
-import org.glassfish.jersey.server.ServerProperties
-import org.glassfish.jersey.servlet.ServletContainer
-import java.lang.reflect.InvocationTargetException
-import java.util.*
+import net.corda.webserver.internal.NodeWebServer
+import org.slf4j.LoggerFactory
+import java.lang.management.ManagementFactory
+import java.net.InetAddress
+import kotlin.system.exitProcess
 
-// TODO: Split into a separate module under client that packages into WAR formats.
-class WebServer(val config: FullNodeConfiguration) {
-    private companion object {
-        val log = loggerFor<WebServer>()
-        val retryDelay = 1000L // Milliseconds
+fun main(args: Array<String>) {
+    val startTime = System.currentTimeMillis()
+    val argsParser = ArgsParser()
+
+    val cmdlineOptions = try {
+        argsParser.parse(*args)
+    } catch (ex: Exception) {
+        println("Unknown command line arguments: ${ex.message}")
+        exitProcess(1)
     }
 
-    val address = config.webAddress
-    private lateinit var server: Server
-
-    fun start() {
-        printBasicNodeInfo("Starting as webserver: ${config.webAddress}")
-        server = initWebServer(retryConnectLocalRpc())
+    // Maybe render command line help.
+    if (cmdlineOptions.help) {
+        argsParser.printHelp(System.out)
+        exitProcess(0)
     }
 
-    fun run() {
-        while (server.isRunning) {
-            Thread.sleep(100) // TODO: Redesign
-        }
+    // Set up logging.
+    if (cmdlineOptions.logToConsole) {
+        // This property is referenced from the XML config file.
+        System.setProperty("consoleLogLevel", "info")
     }
 
-    private fun initWebServer(localRpc: CordaRPCOps): Server {
-        // Note that the web server handlers will all run concurrently, and not on the node thread.
-        val handlerCollection = HandlerCollection()
+    System.setProperty("log-path", (cmdlineOptions.baseDirectory / "web/logs").toString())
+    val log = LoggerFactory.getLogger("Main")
+    println("Logs can be found in ${System.getProperty("log-path")}")
 
-        // TODO: Move back into the node itself.
-        // Export JMX monitoring statistics and data over REST/JSON.
-        if (config.exportJMXto.split(',').contains("http")) {
-            val classpath = System.getProperty("java.class.path").split(System.getProperty("path.separator"))
-            val warpath = classpath.firstOrNull { it.contains("jolokia-agent-war-2") && it.endsWith(".war") }
-            if (warpath != null) {
-                handlerCollection.addHandler(WebAppContext().apply {
-                    // Find the jolokia WAR file on the classpath.
-                    contextPath = "/monitoring/json"
-                    setInitParameter("mimeType", "application/json")
-                    war = warpath
-                })
-            } else {
-                log.warn("Unable to locate Jolokia WAR on classpath")
-            }
-        }
+    val conf = try {
+        FullNodeConfiguration(cmdlineOptions.baseDirectory, cmdlineOptions.loadConfig())
+    } catch (e: ConfigException) {
+        println("Unable to load the configuration file: ${e.rootCause.message}")
+        exitProcess(2)
+    }
 
-        // API, data upload and download to services (attachments, rates oracles etc)
-        handlerCollection.addHandler(buildServletContextHandler(localRpc))
+    log.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
+    val info = ManagementFactory.getRuntimeMXBean()
+    log.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
+    log.info("Application Args: ${args.joinToString(" ")}")
+    log.info("bootclasspath: ${info.bootClassPath}")
+    log.info("classpath: ${info.classPath}")
+    log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
+    log.info("Machine: ${InetAddress.getLocalHost().hostName}")
+    log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
+    log.info("Starting as webserver on ${conf.webAddress}")
 
-        val server = Server()
-
-        val connector = if (config.useHTTPS) {
-            val httpsConfiguration = HttpConfiguration()
-            httpsConfiguration.outputBufferSize = 32768
-            httpsConfiguration.addCustomizer(SecureRequestCustomizer())
-            val sslContextFactory = SslContextFactory()
-            sslContextFactory.keyStorePath = config.keyStoreFile.toString()
-            sslContextFactory.setKeyStorePassword(config.keyStorePassword)
-            sslContextFactory.setKeyManagerPassword(config.keyStorePassword)
-            sslContextFactory.setTrustStorePath(config.trustStoreFile.toString())
-            sslContextFactory.setTrustStorePassword(config.trustStorePassword)
-            sslContextFactory.setExcludeProtocols("SSL.*", "TLSv1", "TLSv1.1")
-            sslContextFactory.setIncludeProtocols("TLSv1.2")
-            sslContextFactory.setExcludeCipherSuites(".*NULL.*", ".*RC4.*", ".*MD5.*", ".*DES.*", ".*DSS.*")
-            sslContextFactory.setIncludeCipherSuites(".*AES.*GCM.*")
-            val sslConnector = ServerConnector(server, SslConnectionFactory(sslContextFactory, "http/1.1"), HttpConnectionFactory(httpsConfiguration))
-            sslConnector.port = address.port
-            sslConnector
-        } else {
-            val httpConfiguration = HttpConfiguration()
-            httpConfiguration.outputBufferSize = 32768
-            val httpConnector = ServerConnector(server, HttpConnectionFactory(httpConfiguration))
-            httpConnector.port = address.port
-            httpConnector
-        }
-        server.connectors = arrayOf<Connector>(connector)
-
-        server.handler = handlerCollection
+    try {
+        val server = NodeWebServer(conf)
         server.start()
-        log.info("Started webserver on address $address")
-        return server
-    }
-
-    private fun buildServletContextHandler(localRpc: CordaRPCOps): ServletContextHandler {
-        return ServletContextHandler().apply {
-            contextPath = "/"
-            setAttribute("rpc", localRpc)
-            addServlet(DataUploadServlet::class.java, "/upload/*")
-            addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
-
-            val resourceConfig = ResourceConfig()
-            resourceConfig.register(ObjectMapperConfig(localRpc))
-            resourceConfig.register(ResponseFilter())
-            resourceConfig.register(APIServerImpl(localRpc))
-
-            val webAPIsOnClasspath = pluginRegistries.flatMap { x -> x.webApis }
-            for (webapi in webAPIsOnClasspath) {
-                log.info("Add plugin web API from attachment $webapi")
-                val customAPI = try {
-                    webapi.apply(localRpc)
-                } catch (ex: InvocationTargetException) {
-                    log.error("Constructor $webapi threw an error: ", ex.targetException)
-                    continue
-                }
-                resourceConfig.register(customAPI)
-            }
-
-            val staticDirMaps = pluginRegistries.map { x -> x.staticServeDirs }
-            val staticDirs = staticDirMaps.flatMap { it.keys }.zip(staticDirMaps.flatMap { it.values })
-            staticDirs.forEach {
-                val staticDir = ServletHolder(DefaultServlet::class.java)
-                staticDir.setInitParameter("resourceBase", it.second)
-                staticDir.setInitParameter("dirAllowed", "true")
-                staticDir.setInitParameter("pathInfoOnly", "true")
-                addServlet(staticDir, "/web/${it.first}/*")
-            }
-
-            // Give the app a slightly better name in JMX rather than a randomly generated one and enable JMX
-            resourceConfig.addProperties(mapOf(ServerProperties.APPLICATION_NAME to "node.api",
-                    ServerProperties.MONITORING_STATISTICS_MBEANS_ENABLED to "true"))
-
-            val container = ServletContainer(resourceConfig)
-            val jerseyServlet = ServletHolder(container)
-            addServlet(jerseyServlet, "/api/*")
-            jerseyServlet.initOrder = 0 // Initialise at server start
-        }
-    }
-
-    private fun retryConnectLocalRpc(): CordaRPCOps {
-        while (true) {
-            try {
-                return connectLocalRpcAsNodeUser()
-            } catch (e: ActiveMQNotConnectedException) {
-                log.debug("Could not connect to ${config.artemisAddress} due to exception: ", e)
-                Thread.sleep(retryDelay)
-            // This error will happen if the server has yet to create the keystore
-            // Keep the fully qualified package name due to collisions with the Kotlin stdlib
-            // exception of the same name
-            } catch (e: java.nio.file.NoSuchFileException) {
-                log.debug("Tried to open a file that doesn't yet exist, retrying", e)
-                Thread.sleep(retryDelay)
-            }
-        }
-    }
-
-    private fun connectLocalRpcAsNodeUser(): CordaRPCOps {
-        log.info("Connecting to node at ${config.artemisAddress} as node user")
-        val client = CordaRPCClient(config.artemisAddress, config)
-        client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
-        return client.proxy()
-    }
-
-    /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
-    val pluginRegistries: List<CordaPluginRegistry> by lazy {
-        ServiceLoader.load(CordaPluginRegistry::class.java).toList()
+        val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
+        println("Webserver started up in $elapsed sec")
+        server.run()
+    } catch (e: Exception) {
+        log.error("Exception during node startup", e)
+        exitProcess(1)
     }
 }

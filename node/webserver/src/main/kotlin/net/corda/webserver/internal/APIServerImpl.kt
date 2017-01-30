@@ -1,7 +1,7 @@
-package net.corda.node.webserver.internal
+package net.corda.webserver.internal
 
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.node.webserver.api.*
+import net.corda.webserver.api.*
 import java.time.LocalDateTime
 import java.time.ZoneId
 import javax.ws.rs.core.Response

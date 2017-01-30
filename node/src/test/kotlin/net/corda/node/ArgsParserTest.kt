@@ -5,7 +5,6 @@ import net.corda.core.div
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
-import org.slf4j.event.Level
 import java.nio.file.Paths
 
 class ArgsParserTest {
@@ -20,7 +19,6 @@ class ArgsParserTest {
                 help = false,
                 logToConsole = false,
                 loggingLevel = Level.INFO,
-                isWebserver = false,
                 isRegistration = false))
     }
 
@@ -67,12 +65,6 @@ class ArgsParserTest {
             val cmdLineOptions = parser.parse("--logging-level", level.name)
             assertThat(cmdLineOptions.loggingLevel).isEqualTo(level)
         }
-    }
-
-    @Test
-    fun `webserver`() {
-        val cmdLineOptions = parser.parse("--webserver")
-        assertThat(cmdLineOptions.isWebserver).isTrue()
     }
 
     @Test

@@ -1,4 +1,4 @@
-package net.corda.node.webserver.api
+package net.corda.webserver.api
 
 import net.corda.core.node.NodeInfo
 import java.time.LocalDateTime

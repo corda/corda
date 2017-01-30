@@ -1,9 +1,8 @@
-package net.corda.node.webserver.servlets
+package net.corda.webserver.servlets
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.node.ServiceHub
-import net.corda.node.utilities.JsonSupport
+import net.corda.webserver.utilities.JsonSupport
 import javax.ws.rs.ext.ContextResolver
 import javax.ws.rs.ext.Provider
 

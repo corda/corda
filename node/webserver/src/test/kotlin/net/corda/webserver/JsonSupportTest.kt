@@ -1,11 +1,10 @@
-package net.corda.node
+package net.corda.webserver
 
 import com.pholser.junit.quickcheck.From
 import com.pholser.junit.quickcheck.Property
 import com.pholser.junit.quickcheck.runner.JUnitQuickcheck
 import net.corda.core.testing.PublicKeyGenerator
-import net.corda.node.utilities.JsonSupport
-import net.corda.testing.node.MockIdentityService
+import net.corda.webserver.utilities.JsonSupport
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.junit.runner.RunWith
 import java.security.PublicKey

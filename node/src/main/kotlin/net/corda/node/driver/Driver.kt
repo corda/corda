@@ -420,7 +420,7 @@ open class DriverDSL(
         }
     }
 
-    private fun queryWebserver(configuration: FullNodeConfiguration): HostAndPort? {
+    private fun queryWebserver(configuration: FullNodeConfiguration, process: Process): HostAndPort? {
         val protocol = if (configuration.useHTTPS) {
             "https://"
         } else {
@@ -429,7 +429,7 @@ open class DriverDSL(
         val url = URL(protocol + configuration.webAddress.toString() + "/api/status")
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
 
-        while (true) try {
+        while (process.isAlive) try {
             val response = client.newCall(Request.Builder().url(url).build()).execute()
             if (response.isSuccessful && (response.body().string() == "started")) {
                 return configuration.webAddress
@@ -437,14 +437,17 @@ open class DriverDSL(
         } catch(e: ConnectException) {
             log.debug("Retrying webserver info at ${configuration.webAddress}")
         }
+
+        log.error("Webserver at ${configuration.webAddress} has died")
+        return null
     }
 
     override fun startWebserver(handle: NodeHandle): ListenableFuture<HostAndPort> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-
-        return future {
-            registerProcess(DriverDSL.startWebserver(executorService, handle.configuration, debugPort))
-            queryWebserver(handle.configuration)!!
+        val process = DriverDSL.startWebserver(executorService, handle.configuration, debugPort)
+        registerProcess(process)
+        return process.map {
+            queryWebserver(handle.configuration, it)!!
         }
     }
 
@@ -542,7 +545,7 @@ open class DriverDSL(
                 executorService: ScheduledExecutorService,
                 nodeConf: FullNodeConfiguration,
                 debugPort: Int?): ListenableFuture<Process> {
-            val className = "net.corda.node.Corda" // cannot directly get class for this, so just use string
+            val className = "net.corda.webserver.WebServer" // cannot directly get class for this, so just use string
             val separator = System.getProperty("file.separator")
             val classpath = System.getProperty("java.class.path")
             val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
@@ -556,8 +559,7 @@ open class DriverDSL(
                     listOf("-Dname=node-${nodeConf.artemisAddress}-webserver") + debugPortArg +
                     listOf(
                             "-cp", classpath, className,
-                            "--base-directory", nodeConf.baseDirectory.toString(),
-                            "--webserver")
+                            "--base-directory", nodeConf.baseDirectory.toString())
             val builder = ProcessBuilder(javaArgs)
             builder.redirectError(Paths.get("error.$className.log").toFile())
             builder.inheritIO()
