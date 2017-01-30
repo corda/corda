@@ -121,32 +121,39 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                                           otherParty: Party,
                                           payload: Any,
                                           sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
-        val receivedSessionData = getSession(otherParty, sessionFlow)?.let {
-            sendAndReceiveInternal<SessionData>(it, createSessionData(it, payload))
-        } ?: receiveInternal<SessionData>(startNewSession(otherParty, sessionFlow, payload, true))
-        return receivedSessionData.checkPayloadIs(receiveType)
+        val session = getConfirmedSession(otherParty, sessionFlow)
+        return if (session == null) {
+            // Only do a receive here as the session init has carried the payload
+            receiveInternal<SessionData>(startNewSession(otherParty, sessionFlow, payload, waitForConfirmation = true))
+        } else {
+            sendAndReceiveInternal<SessionData>(session, createSessionData(session, payload))
+        }.checkPayloadIs(receiveType)
     }
 
     @Suspendable
     override fun <T : Any> receive(receiveType: Class<T>,
                                    otherParty: Party,
                                    sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
-        val session = getSession(otherParty, sessionFlow) ?: startNewSession(otherParty, sessionFlow, null, true)
+        val session = getConfirmedSession(otherParty, sessionFlow) ?: startNewSession(otherParty, sessionFlow, null, waitForConfirmation = true)
         return receiveInternal<SessionData>(session).checkPayloadIs(receiveType)
     }
 
     @Suspendable
     override fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>) {
-        getSession(otherParty, sessionFlow)?.let {
-            sendInternal(it, createSessionData(it, payload))
-        } ?: startNewSession(otherParty, sessionFlow, payload)
+        val session = getConfirmedSession(otherParty, sessionFlow)
+        if (session == null) {
+            // Don't send the payload again if it was already piggy-backed on a session init
+            startNewSession(otherParty, sessionFlow, payload, waitForConfirmation = false)
+        } else {
+            sendInternal(session, createSessionData(session, payload))
+        }
     }
 
     /**
      * This method will suspend the state machine and wait for incoming session init response from other party.
      */
     @Suspendable
-    private fun FlowSession.receiveSessionResponse() {
+    private fun FlowSession.waitForConfirmation() {
         val (peerParty, sessionInitResponse) = receiveInternal<SessionInitResponse>(this)
         if (sessionInitResponse is SessionConfirm) {
             state = FlowSessionState.Initiated(peerParty, sessionInitResponse.initiatedSessionId)
@@ -181,11 +188,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    private fun getSession(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession? {
+    private fun getConfirmedSession(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession? {
         return openSessions[Pair(sessionFlow, otherParty)]?.apply {
             if (state is FlowSessionState.Initiating) {
                 // Session still initiating, try to retrieve the init response.
-                receiveSessionResponse()
+                waitForConfirmation()
             }
         }
     }
@@ -197,15 +204,15 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      * multiple public keys, but we **don't support multiple nodes advertising the same legal identity**.
      */
     @Suspendable
-    private fun startNewSession(otherParty: Party, sessionFlow: FlowLogic<*>, firstPayload: Any?, waitForResponse: Boolean = false): FlowSession {
+    private fun startNewSession(otherParty: Party, sessionFlow: FlowLogic<*>, firstPayload: Any?, waitForConfirmation: Boolean): FlowSession {
         logger.trace { "Initiating a new session with $otherParty" }
         val session = FlowSession(sessionFlow, random63BitValue(), FlowSessionState.Initiating(otherParty))
         openSessions[Pair(sessionFlow, otherParty)] = session
         val counterpartyFlow = sessionFlow.getCounterpartyMarker(otherParty).name
         val sessionInit = SessionInit(session.ourSessionId, counterpartyFlow, firstPayload)
         sendInternal(session, sessionInit)
-        if (waitForResponse) {
-            session.receiveSessionResponse()
+        if (waitForConfirmation) {
+            session.waitForConfirmation()
         }
         return session
     }
