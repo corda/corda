@@ -32,7 +32,7 @@ class NodeTerminalView : Fragment() {
     private val viewDatabaseButton by fxid<Button>()
     private val launchExplorerButton by fxid<Button>()
 
-    var viewer : DBViewer = DBViewer()
+    var viewer = DBViewer()
     var pty : R3Pty? = null
 
     fun open(config: NodeConfig) {

@@ -5,6 +5,7 @@ import org.h2.tools.Server
 import org.h2.util.JdbcUtils
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
+import kotlin.reflect.jvm.jvmName
 
 
 class DBViewer : AutoCloseable {
@@ -22,14 +23,14 @@ class DBViewer : AutoCloseable {
 
     fun openBrowser(h2Port: Int) {
         val conn = JdbcUtils.getConnection(
-            "org.h2.Driver",
+            org.h2.Driver::class.jvmName,
             "jdbc:h2:tcp://localhost:%d/node".format(h2Port),
             "sa",
             ""
         )
 
         val url = (webServer.service as LocalWebServer).addSession(conn)
-        log.info("URL: {}", url)
+        log.info("Session: {}", url)
 
         pool.execute {
             Server.openBrowser(url)
