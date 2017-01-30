@@ -11,6 +11,7 @@ class NodeConfig(
         artemisPort: Int,
         nearestCity: String,
         webPort: Int,
+        h2Port: Int,
         extraServices: List<String>
 ) : NetworkMapConfig(legalName, artemisPort) {
 
@@ -21,6 +22,10 @@ class NodeConfig(
     private var webPortValue: Int = webPort
     val webPort : Int
         get() { return webPortValue }
+
+    private var h2PortValue: Int = h2Port
+    val h2Port : Int
+       get() { return h2PortValue }
 
     private var extraServicesValue: List<String> = extraServices
     val extraServices : List<String>
@@ -43,6 +48,7 @@ class NodeConfig(
                     } ))
                     .withValue("webAddress", addressValueFor(webPort))
                     .withValue("rpcUsers", valueFor(listOf<String>()))
+                    .withValue("h2port", valueFor(h2Port))
                     .withValue("useTestClock", valueFor(true))
 
 }

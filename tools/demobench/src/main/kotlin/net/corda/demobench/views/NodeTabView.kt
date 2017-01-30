@@ -92,6 +92,21 @@ class NodeTabView : Fragment() {
                         }
                     }
                 }
+                field("Database Port") {
+                    textfield(model.h2Port, NumberStringConverter(INTEGER_FORMAT)) {
+                        minWidth = 100.0
+                        maxWidth = 100.0
+                        validator {
+                            if ((it == null) || it.isEmpty()) {
+                                error("Port number required")
+                            } else if (it.contains(NOT_NUMBER)) {
+                                error("Invalid port number")
+                            } else {
+                                null
+                            }
+                        }
+                    }
+                }
             }
 
             fieldset("Services") {
@@ -144,5 +159,6 @@ class NodeTabView : Fragment() {
 
         model.artemisPort.value = nodeController.nextPort
         model.webPort.value = nodeController.nextPort
+        model.h2Port.value = nodeController.nextPort
     }
 }

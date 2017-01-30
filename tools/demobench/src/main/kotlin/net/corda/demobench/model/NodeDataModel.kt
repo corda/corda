@@ -8,5 +8,6 @@ class NodeDataModel : ItemViewModel<NodeData>(NodeData()) {
     val nearestCity = bind { item?.nearestCity }
     val artemisPort = bind { item?.artemisPort }
     val webPort = bind { item?.webPort }
+    val h2Port = bind { item?.h2Port }
 
 }
