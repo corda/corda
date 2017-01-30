@@ -59,9 +59,7 @@ You should see a banner, some log lines and eventually ``Node started up and reg
 
 .. TODO: Add a better way of polling for startup. A programmatic way of determining whether a node is up is to check whether it's ``webAddress`` is bound.
 
-In terms of process management there is no prescribed method. You may start the jars by hand or perhaps use systemd and friends. If you have
-deployed your nodes via `Cordformation`_ you can run them with the ``runnodes`` scripts in ``build/nodes`` of your project. This is primarily
-for development and testing purposes and will start all of the nodes you have created on the same machine
+In terms of process management there is no prescribed method. You may start the jars by hand or perhaps use systemd and friends.
 
 Logging
 ~~~~~~~
