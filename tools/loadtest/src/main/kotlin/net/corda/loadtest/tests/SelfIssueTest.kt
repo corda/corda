@@ -11,7 +11,8 @@ import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
-import net.corda.flows.CashCommand
+import net.corda.core.toFuture
+import net.corda.flows.CashException
 import net.corda.flows.CashFlow
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeHandle
@@ -22,7 +23,7 @@ private val log = LoggerFactory.getLogger("SelfIssue")
 
 // DOCS START 1
 data class SelfIssueCommand(
-        val command: CashCommand.IssueCash,
+        val command: CashFlow.Command.IssueCash,
         val node: NodeHandle
 )
 

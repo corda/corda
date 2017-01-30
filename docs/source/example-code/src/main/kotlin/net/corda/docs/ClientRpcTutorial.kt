@@ -12,8 +12,9 @@ import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.CashCommand
-import net.corda.flows.CashFlow
+import net.corda.flows.CashExitFlow
+import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
 import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.startFlowPermission
@@ -41,7 +42,9 @@ fun main(args: Array<String>) {
     val printOrVisualise = PrintOrVisualise.valueOf(args[0])
 
     val baseDirectory = Paths.get("build/rpc-api-tutorial")
-    val user = User("user", "password", permissions = setOf(startFlowPermission<CashFlow>()))
+    val user = User("user", "password", permissions = setOf(startFlowPermission<CashIssueFlow>(),
+            startFlowPermission<CashPaymentFlow>(),
+            startFlowPermission<CashExitFlow>()))
 
     driver(driverDirectory = baseDirectory) {
         startNode("Notary", advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
@@ -114,14 +117,14 @@ fun generateTransactions(proxy: CordaRPCOps) {
         val n = random.nextDouble()
         if (ownedQuantity > 10000 && n > 0.8) {
             val quantity = Math.abs(random.nextLong()) % 2000
-            proxy.startFlow(::CashFlow, CashCommand.ExitCash(Amount(quantity, USD), issueRef))
+            proxy.startFlow(::CashExitFlow, Amount(quantity, USD), issueRef)
             ownedQuantity -= quantity
         } else if (ownedQuantity > 1000 && n < 0.7) {
             val quantity = Math.abs(random.nextLong() % Math.min(ownedQuantity, 2000))
-            proxy.startFlow(::CashFlow, CashCommand.PayCash(Amount(quantity, Issued(meAndRef, USD)), me))
+            proxy.startFlow(::CashPaymentFlow, Amount(quantity, Issued(meAndRef, USD)), me)
         } else {
             val quantity = Math.abs(random.nextLong() % 1000)
-            proxy.startFlow(::CashFlow, CashCommand.IssueCash(Amount(quantity, USD), issueRef, me, notary))
+            proxy.startFlow(::CashIssueFlow, Amount(quantity, USD), issueRef, me, notary)
             ownedQuantity += quantity
         }
     }

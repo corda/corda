@@ -9,7 +9,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.flows.CashCommand
+import net.corda.core.toFuture
 import net.corda.flows.CashFlow
 import net.corda.node.driver.driver
 import net.corda.node.services.User
@@ -56,7 +56,7 @@ class IntegrationTestingTutorial {
             val issueRef = OpaqueBytes.of(0)
             for (i in 1 .. 10) {
                 thread {
-                    aliceProxy.startFlow(::CashFlow, CashCommand.IssueCash(
+                    aliceProxy.startFlow(::CashFlow, CashFlow.Command.IssueCash(
                             amount = i.DOLLARS,
                             issueRef = issueRef,
                             recipient = bob.nodeInfo.legalIdentity,
@@ -82,7 +82,7 @@ class IntegrationTestingTutorial {
 
             // START 5
             for (i in 1 .. 10) {
-                val flowHandle = bobProxy.startFlow(::CashFlow, CashCommand.PayCash(
+                val flowHandle = bobProxy.startFlow(::CashFlow, CashFlow.Command.PayCash(
                         amount = i.DOLLARS.issuedBy(alice.nodeInfo.legalIdentity.ref(issueRef)),
                         recipient = alice.nodeInfo.legalIdentity
                 ))
