@@ -243,21 +243,20 @@ class StateMachineManagerTests {
 
         assertSessionTransfers(node2,
                 node1 sent sessionInit(SendFlow::class, payload) to node2,
-                node2 sent sessionConfirm to node1
-                //TODO: Node1 not sending back session end now because it didn't wait and receive the init response
-                //node1 sent sessionEnd to node2
+                node2 sent sessionConfirm to node1,
+                node1 sent sessionEnd to node2
                 //There's no session end from the other flows as they're manually suspended
         )
 
         assertSessionTransfers(node3,
                 node1 sent sessionInit(SendFlow::class, payload) to node3,
-                node3 sent sessionConfirm to node1
-                //node1 sent sessionEnd to node3
+                node3 sent sessionConfirm to node1,
+                node1 sent sessionEnd to node3
                 //There's no session end from the other flows as they're manually suspended
         )
 
-        node2.acceptableLiveFiberCountOnStop = 2
-        node3.acceptableLiveFiberCountOnStop = 2
+        node2.acceptableLiveFiberCountOnStop = 1
+        node3.acceptableLiveFiberCountOnStop = 1
     }
 
     @Test
