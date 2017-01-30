@@ -135,6 +135,6 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     @Throws(FileNotFoundException::class, TransactionResolutionException::class, SignaturesMissingException::class)
     fun toLedgerTransaction(services: ServiceHub) = verifySignatures().toLedgerTransaction(services)
 
-    /** Alternative to CryptoUtilities' KeyPair.signWithECDSA for better Java interop. */
+    /** Utility to simplify the act of signing the transaction. */
     fun signWithECDSA(keyPair: KeyPair) = keyPair.signWithECDSA(this.id.bytes)
 }
