@@ -7,11 +7,11 @@ import net.corda.node.printBasicNodeInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.messaging.CordaRPCClient
-import net.corda.node.webserver.servlets.AttachmentDownloadServlet
-import net.corda.node.webserver.servlets.ObjectMapperConfig
-import net.corda.node.webserver.servlets.DataUploadServlet
-import net.corda.node.webserver.servlets.ResponseFilter
 import net.corda.node.webserver.internal.APIServerImpl
+import net.corda.node.webserver.servlets.AttachmentDownloadServlet
+import net.corda.node.webserver.servlets.DataUploadServlet
+import net.corda.node.webserver.servlets.ObjectMapperConfig
+import net.corda.node.webserver.servlets.ResponseFilter
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -42,7 +42,7 @@ class WebServer(val config: FullNodeConfiguration) {
     }
 
     fun run() {
-        while(server.isRunning) {
+        while (server.isRunning) {
             Thread.sleep(100) // TODO: Redesign
         }
     }
@@ -153,7 +153,7 @@ class WebServer(val config: FullNodeConfiguration) {
     }
 
     private fun retryConnectLocalRpc(): CordaRPCOps {
-        while(true) {
+        while (true) {
             try {
                 return connectLocalRpcAsNodeUser()
             } catch (e: ActiveMQNotConnectedException) {

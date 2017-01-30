@@ -14,7 +14,6 @@ import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.BOC_PARTY_REF
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
-import net.corda.node.utilities.getHostAndPort
 import net.corda.testing.sequence
 import org.junit.Test
 import kotlin.test.assertTrue
@@ -25,8 +24,8 @@ class BankOfCordaRPCClientTest {
         driver(dsl = {
             val user = User("user1", "test", permissions = setOf(startFlowPermission<IssuanceRequester>()))
             val (nodeBankOfCorda, nodeBigCorporation) = Futures.allAsList(
-                startNode("BankOfCorda", setOf(ServiceInfo(SimpleNotaryService.type)), listOf(user)),
-                startNode("BigCorporation", rpcUsers = listOf(user))
+                    startNode("BankOfCorda", setOf(ServiceInfo(SimpleNotaryService.type)), listOf(user)),
+                    startNode("BigCorporation", rpcUsers = listOf(user))
             ).getOrThrow()
 
             // Bank of Corda RPC Client

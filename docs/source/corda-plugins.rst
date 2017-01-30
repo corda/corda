@@ -35,7 +35,7 @@ extensions to be created, or registered at startup. In particular:
 
     a. The ``webApis`` property is a list of JAX-RS annotated REST access 
     classes. These classes will be constructed by the bundled web server
-    and must have a single argument constructor taking a ``CordaRpcOps``
+    and must have a single argument constructor taking a ``CordaRPCOps``
     reference. This will allow it to communicate with the node process
     via the RPC interface. These web APIs will not be available if the
     bundled web server is not started.

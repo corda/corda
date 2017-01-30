@@ -89,7 +89,7 @@ fun main(args: Array<String>) {
     try {
         cmdlineOptions.baseDirectory.createDirectories()
 
-        if(!cmdlineOptions.isWebserver) {
+        if  (!cmdlineOptions.isWebserver) {
             val node = conf.createNode()
             node.start()
             printPluginsAndServices(node)
