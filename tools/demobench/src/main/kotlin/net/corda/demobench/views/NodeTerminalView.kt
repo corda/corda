@@ -10,6 +10,7 @@ import javafx.scene.control.Label
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
 import javax.swing.SwingUtilities
+import net.corda.demobench.model.DBViewer
 import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.NodeController
 import net.corda.demobench.pty.R3Pty
@@ -20,7 +21,7 @@ import tornadofx.vgrow
 class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
 
-    private val controller by inject<NodeController>()
+    private val nodeController by inject<NodeController>()
 
     private val nodeName by fxid<Label>()
     private val p2pPort by fxid<PropertyLabel>()
@@ -31,6 +32,7 @@ class NodeTerminalView : Fragment() {
     private val viewDatabaseButton by fxid<Button>()
     private val launchExplorerButton by fxid<Button>()
 
+    var viewer : DBViewer = DBViewer()
     var pty : R3Pty? = null
 
     fun open(config: NodeConfig) {
@@ -50,11 +52,16 @@ class NodeTerminalView : Fragment() {
             pty = r3pty
 
             swingTerminal.content = r3pty.terminal
-            controller.runCorda(r3pty, config)
+            nodeController.runCorda(r3pty, config)
+
+            viewDatabaseButton.setOnAction {
+                viewer.openBrowser(config.h2Port)
+            }
         })
     }
 
     fun close() {
+        viewer.close()
         pty?.close()
     }
 

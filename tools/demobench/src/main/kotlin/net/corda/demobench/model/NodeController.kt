@@ -34,6 +34,7 @@ class NodeController : Controller() {
             nodeData.artemisPort.value,
             nodeData.nearestCity.value.trim(),
             nodeData.webPort.value,
+            nodeData.h2Port.value,
             nodeData.extraServices.value
         )
 
