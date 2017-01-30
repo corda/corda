@@ -106,7 +106,9 @@ class CordaRPCOpsImpl(
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
     override fun uploadFile(dataType: String, name: String?, file: InputStream): String {
         val acceptor = services.storageService.uploaders.firstOrNull { it.accepts(dataType) }
-        return acceptor?.upload(file) ?: throw RuntimeException("Cannot find file upload acceptor for $dataType")
+        return databaseTransaction(database) {
+            acceptor?.upload(file) ?: throw RuntimeException("Cannot find file upload acceptor for $dataType")
+        }
     }
 
     override fun partyFromKey(key: CompositeKey) = services.identityService.partyFromKey(key)
