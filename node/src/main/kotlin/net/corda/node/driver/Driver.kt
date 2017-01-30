@@ -328,19 +328,14 @@ open class DriverDSL(
     }
 
     private fun queryNodeInfo(nodeAddress: HostAndPort, sslConfig: SSLConfiguration): NodeInfo? {
-        var retries = 0
-        while (retries < 5) try {
+        while (true) try {
             val client = CordaRPCClient(nodeAddress, sslConfig)
             client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
             val rpcOps = client.proxy(timeout = Duration.of(15, ChronoUnit.SECONDS))
             return rpcOps.nodeIdentity()
         } catch(e: Exception) {
             log.error("Retrying query node info at $nodeAddress")
-            retries++
         }
-
-        log.error("Could not query node info after $retries retries")
-        return null
     }
 
     override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>,
@@ -425,21 +420,15 @@ open class DriverDSL(
         }
         val url = URL(protocol + configuration.webAddress.toString() + "/api/status")
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
-        val retries = 50
 
-        for (i in 0..retries) {
-            try {
-                val response = client.newCall(Request.Builder().url(url).build()).execute()
-                if (response.isSuccessful && (response.body().string() == "started")) {
-                    return configuration.webAddress
-                }
-            } catch(e: ConnectException) {
-                log.debug("Retrying webserver info at ${configuration.webAddress}")
+        while (true) try {
+            val response = client.newCall(Request.Builder().url(url).build()).execute()
+            if (response.isSuccessful && (response.body().string() == "started")) {
+                return configuration.webAddress
             }
+        } catch(e: ConnectException) {
+            log.debug("Retrying webserver info at ${configuration.webAddress}")
         }
-
-        log.error("Could not query node info after $retries retries")
-        return null
     }
 
     override fun startWebserver(handle: NodeHandle): ListenableFuture<HostAndPort> {
