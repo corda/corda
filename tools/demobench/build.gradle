@@ -4,7 +4,6 @@ version "$corda_version"
 buildscript {
     ext.kotlin_version = '1.0.6'
     ext.tornadofx_version = '1.6.0'
-    ext.h2_version = '1.4.193'
     ext.jna_version = '4.1.0'
     ext.purejavacomm_version = '0.0.17'
     ext.guava_version = '14.0.1'
