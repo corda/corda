@@ -13,7 +13,7 @@ class ServiceController : Controller() {
        get() = serviceSet
 
     private fun loadConf(url: URL): List<String> {
-        val set = HashSet<String>()
+        val set = TreeSet<String>()
         InputStreamReader(url.openStream()).readLines().forEach {
             val service = it.trim()
             set.add(service)
