@@ -27,6 +27,7 @@ import java.lang.reflect.InvocationTargetException
 import java.net.InetAddress
 import java.util.*
 
+// TODO: Split into a separate module under client that packages into WAR formats.
 class WebServer(val config: FullNodeConfiguration) {
     private companion object {
         val log = loggerFor<WebServer>()
@@ -51,6 +52,7 @@ class WebServer(val config: FullNodeConfiguration) {
         // Note that the web server handlers will all run concurrently, and not on the node thread.
         val handlerCollection = HandlerCollection()
 
+        // TODO: Move back into the node itself.
         // Export JMX monitoring statistics and data over REST/JSON.
         if (config.exportJMXto.split(',').contains("http")) {
             val classpath = System.getProperty("java.class.path").split(System.getProperty("path.separator"))

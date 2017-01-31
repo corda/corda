@@ -89,6 +89,7 @@ fun main(args: Array<String>) {
     try {
         cmdlineOptions.baseDirectory.createDirectories()
 
+        // TODO: Webserver should be split and start from inside a WAR container
         if  (!cmdlineOptions.isWebserver) {
             val node = conf.createNode()
             node.start()

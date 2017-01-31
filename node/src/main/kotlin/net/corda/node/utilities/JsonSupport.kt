@@ -24,6 +24,8 @@ import java.time.LocalDateTime
 /**
  * Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
  * the java.time API, some core types, and Kotlin data classes.
+ *
+ * TODO: This does not belong in node. It should be moved to the client module or a dedicated webserver module.
  */
 object JsonSupport {
     interface PartyObjectMapper {
