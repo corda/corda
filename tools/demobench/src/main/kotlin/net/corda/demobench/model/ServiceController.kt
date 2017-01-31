@@ -1,7 +1,8 @@
 package net.corda.demobench.model
 
 import tornadofx.Controller
-import java.io.File
+import java.io.InputStreamReader
+import java.net.URL
 import java.util.*
 
 class ServiceController : Controller() {
@@ -11,9 +12,9 @@ class ServiceController : Controller() {
     val services : List<String>
        get() = serviceSet
 
-    private fun loadConf(name: String): List<String> {
+    private fun loadConf(url: URL): List<String> {
         val set = HashSet<String>()
-        File(name).readLines().forEach {
+        InputStreamReader(url.openStream()).readLines().forEach {
             val service = it.trim()
             set.add(service)
 
@@ -30,7 +31,7 @@ class ServiceController : Controller() {
         serviceSet = if (serviceConf == null) {
             emptyList<String>()
         } else {
-            loadConf(serviceConf.file)
+            loadConf(serviceConf)
         }
     }
 }
