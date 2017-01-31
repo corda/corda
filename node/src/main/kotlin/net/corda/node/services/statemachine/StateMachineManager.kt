@@ -291,7 +291,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val session = try {
             val flow = flowFactory(sender)
             val fiber = createFiber(flow)
-            val session = FlowSession(flow, random63BitValue(), FlowSessionState.Initiated(sender, otherPartySessionId))
+            val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId))
             if (sessionInit.firstPayload != null) {
                 session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))
             }
@@ -345,7 +345,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             processIORequest(ioRequest)
             decrementLiveFibers()
         }
-        fiber.actionOnEnd = { errorResponse: FlowException? ->
+        fiber.actionOnEnd = { errorResponse: Pair<FlowException, Boolean>? ->
             try {
                 fiber.logic.progressTracker?.currentStep = ProgressTracker.DONE
                 mutex.locked {
@@ -367,9 +367,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun endAllFiberSessions(fiber: FlowStateMachineImpl<*>, errorResponse: FlowException?) {
-        @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-        (errorResponse as java.lang.Throwable?)?.stackTrace = emptyArray()
+    private fun endAllFiberSessions(fiber: FlowStateMachineImpl<*>, errorResponse: Pair<FlowException, Boolean>?) {
+        // TODO Blanking the stack trace prevents the receiving flow from filling in its own stack trace
+//        @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+//        (errorResponse?.first as java.lang.Throwable?)?.stackTrace = emptyArray()
         openSessions.values.removeIf { session ->
             if (session.fiber == fiber) {
                 session.endSession(errorResponse)
@@ -380,15 +381,23 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun FlowSession.endSession(errorResponse: FlowException?) {
-        val initiatedState = state as? Initiated
-        if (initiatedState != null) {
-            sendSessionMessage(
-                    initiatedState.peerParty,
-                    SessionEnd(initiatedState.peerSessionId, errorResponse),
-                    fiber)
-            recentlyClosedSessions[ourSessionId] = initiatedState.peerParty
+    private fun FlowSession.endSession(errorResponse: Pair<FlowException, Boolean>?) {
+        val initiatedState = state as? Initiated ?: return
+        val propagatedException = errorResponse?.let {
+            val (exception, propagated) = it
+            if (propagated) {
+                // This exception was propagated to us. We only propagate it down the invocation chain to the flow that
+                // initiated us, not to flows we've started sessions with.
+                if (initiatingParty != null) exception else null
+            } else {
+                exception // Our local flow threw the exception so propagate it
+            }
         }
+        sendSessionMessage(
+                initiatedState.peerParty,
+                SessionEnd(initiatedState.peerSessionId, propagatedException),
+                fiber)
+        recentlyClosedSessions[ourSessionId] = initiatedState.peerParty
     }
 
     private fun startFiber(fiber: FlowStateMachineImpl<*>) {
@@ -508,6 +517,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     data class FlowSession(
             val flow: FlowLogic<*>,
             val ourSessionId: Long,
+            val initiatingParty: Party?,
             var state: FlowSessionState,
             @Volatile var waitingForResponse: Boolean = false
     ) {

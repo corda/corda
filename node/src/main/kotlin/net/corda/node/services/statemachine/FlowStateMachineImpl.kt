@@ -49,7 +49,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient override lateinit var serviceHub: ServiceHubInternal
     @Transient internal lateinit var database: Database
     @Transient internal lateinit var actionOnSuspend: (FlowIORequest) -> Unit
-    @Transient internal lateinit var actionOnEnd: (FlowException?) -> Unit
+    @Transient internal lateinit var actionOnEnd: (Pair<FlowException, Boolean>?) -> Unit
     @Transient internal var fromCheckpoint: Boolean = false
     @Transient private var txTrampoline: Transaction? = null
 
@@ -85,15 +85,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val result = try {
             logic.call()
         } catch (e: FlowException) {
-            if (e.stackTrace[0].className == javaClass.name) {
-                // FlowException was propagated to us as it's stack trace points to this internal class (see suspendAndExpectReceive).
-                // If we've got to here then the flow doesn't want to handle it and so we end, but we don't propagate
-                // the exception further as it's not relevant to anyone else.
-                actionOnEnd(null)
-            } else {
-                // FLowException came from this flow
-                actionOnEnd(e)
-            }
+            // Check if the FlowException was propagated by looking at where the stack trace originates (see suspendAndExpectReceive).
+            val propagated = e.stackTrace[0].className == javaClass.name
+            actionOnEnd(Pair(e, propagated))
             _resultFuture?.setException(e)
             return
         } catch (t: Throwable) {
@@ -221,7 +215,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     private fun startNewSession(otherParty: Party.Full, sessionFlow: FlowLogic<*>, firstPayload: Any?, waitForConfirmation: Boolean): FlowSession {
         logger.trace { "Initiating a new session with $otherParty" }
-        val session = FlowSession(sessionFlow, random63BitValue(), FlowSessionState.Initiating(otherParty))
+        val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty))
         openSessions[Pair(sessionFlow, otherParty)] = session
         val counterpartyFlow = sessionFlow.getCounterpartyMarker(otherParty).name
         val sessionInit = SessionInit(session.ourSessionId, counterpartyFlow, firstPayload)
