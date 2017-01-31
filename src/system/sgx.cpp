@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <map>
+#include <dlfcn.h>
 #include <sys/time.h>
 #include <avian/arch.h>
 #include <avian/append.h>
@@ -15,9 +16,6 @@
 
 #define PATH_MAX 256
 
-extern std::map<std::string, void*> dispatch_table;
-extern void init_sgx_dispatch_table();
-
 using namespace vm;
 using namespace avian::util;
 
@@ -27,8 +25,6 @@ extern "C" __attribute__((weak)) const uint8_t* embedded_file_boot_jar(size_t* s
 extern "C" __attribute__((weak)) const uint8_t* embedded_file_app_jar(size_t* size);
 
 extern "C" const uint8_t* javahomeJar(size_t* size);
-
-extern "C" const void *find_in_dispatch_table(const char *name);
 
 namespace {
     void abort_with(const char *msg) {
@@ -297,7 +293,7 @@ namespace {
                     return (void *) &embedded_file_app_jar;
                 } if (!strcmp(function, "javahomeJar")) {
                     return (void *) &javahomeJar;
-                } else if ((ptr = find_in_dispatch_table(function))) {
+                } else if ((ptr = dlsym(NULL, function))) {
                     return (void *) ptr;
                 } else {
                     // If you seem to be hitting a JNI call you're sure should exist, try uncommenting this.
