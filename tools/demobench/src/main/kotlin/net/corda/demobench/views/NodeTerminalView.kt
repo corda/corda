@@ -10,9 +10,7 @@ import javafx.scene.control.Label
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
 import javax.swing.SwingUtilities
-import net.corda.demobench.model.DBViewer
-import net.corda.demobench.model.NodeConfig
-import net.corda.demobench.model.NodeController
+import net.corda.demobench.model.*
 import net.corda.demobench.pty.R3Pty
 import net.corda.demobench.ui.PropertyLabel
 import tornadofx.Fragment
@@ -22,6 +20,7 @@ class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
 
     private val nodeController by inject<NodeController>()
+    private val explorerController by inject<ExplorerController>()
 
     private val nodeName by fxid<Label>()
     private val p2pPort by fxid<PropertyLabel>()
@@ -32,7 +31,8 @@ class NodeTerminalView : Fragment() {
     private val viewDatabaseButton by fxid<Button>()
     private val launchExplorerButton by fxid<Button>()
 
-    var viewer = DBViewer()
+    val explorer = explorerController.explorer()
+    val viewer = DBViewer()
     var pty : R3Pty? = null
 
     fun open(config: NodeConfig) {
@@ -57,18 +57,31 @@ class NodeTerminalView : Fragment() {
             viewDatabaseButton.setOnAction {
                 viewer.openBrowser(config.h2Port)
             }
+
+            /*
+             * We only want to run one explorer for each node.
+             * So disable the "launch" button when we have
+             * launched the explorer and only reenable it when
+             * the explorer has exited.
+             */
+            launchExplorerButton.setOnAction {
+                launchExplorerButton.isDisable= true
+
+                explorer.open(config, onExit = {
+                    launchExplorerButton.isDisable = false
+                })
+            }
         })
     }
 
     fun close() {
+        explorer.close()
         viewer.close()
         pty?.close()
     }
 
     fun refreshTerminal() {
-        SwingUtilities.invokeLater {
-            // TODO - Force a repaint somehow? My naive attempts have not worked.
-        }
+        // TODO - Force a repaint somehow? My naive attempts have not worked.
     }
 
     init {

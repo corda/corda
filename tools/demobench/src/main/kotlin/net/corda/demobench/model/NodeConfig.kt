@@ -36,6 +36,10 @@ class NodeConfig(
         get() { return networkMapValue }
         set(value) { networkMapValue = value }
 
+    private val userMap: Map<String, String>
+    val user: Map<String, String>
+        get() = userMap
+
     val toFileConfig : Config
         get() = ConfigFactory.empty()
                     .withValue("myLegalName", valueFor(legalName))
@@ -47,9 +51,16 @@ class NodeConfig(
                             .withValue("legalName", valueFor(n.legalName))
                     } ))
                     .withValue("webAddress", addressValueFor(webPort))
-                    .withValue("rpcUsers", valueFor(listOf<String>()))
+                    .withValue("rpcUsers", valueFor(listOf<Any>(user)))
                     .withValue("h2port", valueFor(h2Port))
                     .withValue("useTestClock", valueFor(true))
+
+    init {
+        userMap = mapOf(
+            Pair("password", "letmein"),
+            Pair("user", "guest")
+        )
+    }
 
 }
 

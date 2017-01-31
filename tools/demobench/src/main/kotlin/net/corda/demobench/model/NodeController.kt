@@ -1,6 +1,5 @@
 package net.corda.demobench.model
 
-import com.jediterm.terminal.ui.UIUtil
 import com.typesafe.config.ConfigRenderOptions
 import java.lang.management.ManagementFactory
 import java.nio.file.Paths
@@ -15,11 +14,10 @@ class NodeController : Controller() {
     private val FIRST_PORT = 10000
 
     private val workDir = Paths.get("work", localDir).toAbsolutePath()
+    private val jvm by inject<JVMConfig>()
 
-    private val javaExe = if (UIUtil.isWindows) "java.exe" else "java"
-    private val javaPath = Paths.get(System.getProperty("java.home"), "bin", javaExe)
     private val cordaPath = Paths.get("corda", "corda.jar").toAbsolutePath()
-    private val command = arrayOf(javaPath.toString(), "-jar", cordaPath.toString())
+    private val command = jvm.commandFor(cordaPath)
 
     private val renderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
 
@@ -96,7 +94,6 @@ class NodeController : Controller() {
 
     init {
         log.info("Working directory: " + workDir)
-        log.info("Java executable: " + javaPath)
         log.info("Corda JAR: " + cordaPath)
     }
 }
