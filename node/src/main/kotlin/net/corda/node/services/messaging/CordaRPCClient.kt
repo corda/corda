@@ -13,6 +13,7 @@ import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.apache.activemq.artemis.api.core.client.ClientSessionFactory
+import org.apache.activemq.artemis.api.core.client.ServerLocator
 import rx.Observable
 import java.io.Closeable
 import java.time.Duration
@@ -26,7 +27,7 @@ import javax.annotation.concurrent.ThreadSafe
  * @param config If specified, the SSL configuration to use. If not specified, SSL will be disabled and the node will not be authenticated, nor will RPC traffic be encrypted.
  */
 @ThreadSafe
-class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguration?) : Closeable, ArtemisMessagingComponent() {
+class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguration?, val serviceConfigurationOverride: (ServerLocator.() -> Unit)? = null) : Closeable, ArtemisMessagingComponent() {
     private companion object {
         val log = loggerFor<CordaRPCClient>()
     }
@@ -58,6 +59,7 @@ class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguratio
                     retryInterval = 5.seconds.toMillis()
                     retryIntervalMultiplier = 1.5  // Exponential backoff
                     maxRetryInterval = 3.minutes.toMillis()
+                    serviceConfigurationOverride?.invoke(this)
                 }
                 sessionFactory = serverLocator.createSessionFactory()
                 session = sessionFactory.createSession(username, password, false, true, true, serverLocator.isPreAcknowledge, serverLocator.ackBatchSize)
