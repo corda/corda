@@ -5,7 +5,9 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.messaging.*
+import net.corda.core.minutes
 import net.corda.core.node.services.PartyInfo
+import net.corda.core.seconds
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.opaque
 import net.corda.core.success
@@ -117,7 +119,14 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             log.info("Connecting to server: $serverHostPort")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
             val tcpTransport = tcpTransport(Outbound(), serverHostPort.hostText, serverHostPort.port)
-            val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
+            val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
+                // TODO: Put these in config file?
+                confirmationWindowSize = 100000 // a guess
+                retryInterval = 5.seconds.toMillis()
+                retryIntervalMultiplier = 1.5  // Exponential backoff
+                maxRetryInterval = 3.minutes.toMillis()
+            }
+
             clientFactory = locator.createSessionFactory()
 
             // Login using the node username. The broker will authentiate us as its node (as opposed to another peer)

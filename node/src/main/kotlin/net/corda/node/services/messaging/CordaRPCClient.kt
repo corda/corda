@@ -4,6 +4,8 @@ import com.google.common.net.HostAndPort
 import net.corda.core.ThreadBox
 import net.corda.core.logElapsedTime
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.minutes
+import net.corda.core.seconds
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Outbound
@@ -49,11 +51,14 @@ class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguratio
             check(!running)
             log.logElapsedTime("Startup") {
                 checkStorePasswords()
-                val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport(Outbound(), host.hostText, host.port))
-                serverLocator.threadPoolMaxSize = 1
-                // TODO: Configure session reconnection, confirmation window sizes and other Artemis features.
-                // This will allow reconnection in case of server restart/network outages/IP address changes, etc.
-                // See http://activemq.apache.org/artemis/docs/1.5.0/client-reconnection.html
+                val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport(Outbound(), host.hostText, host.port)).apply {
+                    // TODO: Put these in config file or make it user configurable?
+                    threadPoolMaxSize = 1
+                    confirmationWindowSize = 100000 // a guess
+                    retryInterval = 5.seconds.toMillis()
+                    retryIntervalMultiplier = 1.5  // Exponential backoff
+                    maxRetryInterval = 3.minutes.toMillis()
+                }
                 sessionFactory = serverLocator.createSessionFactory()
                 session = sessionFactory.createSession(username, password, false, true, true, serverLocator.isPreAcknowledge, serverLocator.ackBatchSize)
                 session.start()
