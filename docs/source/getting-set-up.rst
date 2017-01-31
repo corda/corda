@@ -11,7 +11,8 @@ we're interested to hear about any issues that arise.
 JVM
 ~~~
 
-Corda is written in Kotlin and runs in a JVM. We recommend Oracle JDK 8, which can be obtained directly from 
+Corda is written in Kotlin and runs in a JVM. We develop against Oracle JDK 8, and other JVM implementations are not actively 
+supported. Oracle JDK 8 can be obtained directly from 
 `Oracle <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_. Installation instructions are 
 available for `Windows <http://docs.oracle.com/javase/8/docs/technotes/guides/install/windows_jdk_install.html#CHDEBCCJ>`_, 
 `Linux <http://docs.oracle.com/javase/8/docs/technotes/guides/install/linux_jdk.html#BJFGGEFG>`_ and 
@@ -20,8 +21,9 @@ available for `Windows <http://docs.oracle.com/javase/8/docs/technotes/guides/in
 Please ensure that you keep your Oracle JDK installation updated to the latest version while working with Corda. 
 Even earlier versions of JDK 8 versions can cause cryptic errors.
 
-Other implementations of the JVM are not actively supported. However, if you do choose to use OpenJDK instead of Oracle's 
-JDK, you will also need to install OpenJFX.
+If you do choose to use OpenJDK instead of Oracle's JDK, you will also need to install OpenJFX.
+
+Additional troubleshooting information can be found `here <https://docs.corda.net/getting-set-up-fault-finding.html#java-issues>`_.
 
 Kotlin
 ~~~~~~
@@ -29,8 +31,6 @@ Kotlin
 Applications on Corda (CorDapps) can be written in any JVM-targeting language. However, Corda itself and most of the samples 
 are written in Kotlin. If you're unfamiliar with Kotlin, there is an official `getting started guide <https://kotlinlang.org/docs/tutorials/>`_. 
 See also our :doc:`further-notes-on-kotlin`.
-
-Additional troubleshooting information can be found `here <https://docs.corda.net/getting-set-up-fault-finding.html#kotlin-issues>`_.
 
 IDE
 ~~~
@@ -44,7 +44,7 @@ the build tool used by Corda.
 You'll also want to install the Kotlin IDEA plugin by following the instructions 
 `here <https://kotlinlang.org/docs/tutorials/getting-started.html>`_.
 
-Additional troubleshooting information can be found `here <https://docs.corda.net/getting-set-up-fault-finding.html#intellij-issues>`_.
+Additional troubleshooting information can be found `here <https://docs.corda.net/getting-set-up-fault-finding.html#idea-issues>`_.
 
 Git
 ~~~
@@ -60,7 +60,7 @@ Gradle
 
 We use Gradle as the build tool for Corda. However, you do not need to install Gradle itself, as a wrapper is provided.
 
-Additional troubleshooting information can be found `here <https://docs.corda.net/getting-set-up-fault-finding.html#gradle-issues>`_.
+The wrapper can be run from the command line by using ``./gradlew [taskName]`` on OS X/Linux, or ``gradlew.bat [taskName]`` on Windows.
 
 Corda source code
 -----------------
