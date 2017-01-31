@@ -16,8 +16,8 @@ which describes the platform's envisioned end-state.
 Corda is designed so that developers can easily extend its functionality by writing CorDapps 
 (**Cor**\ da **D**\ istributed **App**\ lication\ **s**\ ). Some example CorDapps are available in the Corda repo's 
 `samples <https://github.com/corda/corda/tree/master/samples>`_ directory. To run these yourself, make 
-sure you follow the instructions in `Getting set up <https://docs.corda.net/getting-set-up.html>`_, then go to 
-`Running the demos <https://docs.corda.net/running-the-demos.html>`_.
+sure you follow the instructions in :doc:`getting-set-up`, then go to 
+:doc:`running-the-demos`.
 
 If, after running the demos, you're interested in writing your own CorDapps, a template CorDapp is available on 
 `Github <https://github.com/corda/cordapp-template>`_. To get it running, follow the instructions in the 
@@ -25,7 +25,7 @@ If, after running the demos, you're interested in writing your own CorDapps, a t
 `Corda Developers Tutorial <https://vimeo.com/192797322/aab499b152>`_.
 
 From there, you'll be in a position to start extending the example CorDapp yourself (e.g. by writing new states, contracts, 
-and/or flows). For this, you'll want to refer to this docsite, and to the `tutorials <https://docs.corda.net/#tutorials>`_ 
+and/or flows). For this, you'll want to refer to this docsite, and to the `tutorials <https://docs.corda.net/tutorial-contract.html>`_ 
 in particular. If you get stuck, get in touch on `Slack <https://slack.corda.net/>`_ or the `forum <https://discourse.corda.net/>`_.
 
 Once you're familiar with Corda and CorDapp development, we'd encourage you to get involved in the development of the 

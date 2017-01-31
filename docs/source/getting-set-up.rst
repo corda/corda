@@ -30,7 +30,7 @@ Applications on Corda (CorDapps) can be written in any JVM-targeting language. H
 are written in Kotlin. If you're unfamiliar with Kotlin, there is an official `getting started guide <https://kotlinlang.org/docs/tutorials/>`_. 
 See also our :doc:`further-notes-on-kotlin`.
 
-Additional troubleshooting information can be found `here <https://docs.corda.net/html/getting-set-up-fault-finding.html#kotlin-issues>`_.
+Additional troubleshooting information can be found `here <https://docs.corda.net/getting-set-up-fault-finding.html#kotlin-issues>`_.
 
 IDE
 ~~~
@@ -44,7 +44,7 @@ the build tool used by Corda.
 You'll also want to install the Kotlin IDEA plugin by following the instructions 
 `here <https://kotlinlang.org/docs/tutorials/getting-started.html>`_.
 
-Additional troubleshooting information can be found `here <https://docs.corda.net/html/getting-set-up-fault-finding.html#intellij-issues>`_.
+Additional troubleshooting information can be found `here <https://docs.corda.net/getting-set-up-fault-finding.html#intellij-issues>`_.
 
 Git
 ~~~
@@ -60,7 +60,7 @@ Gradle
 
 We use Gradle as the build tool for Corda. However, you do not need to install Gradle itself, as a wrapper is provided.
 
-Additional troubleshooting information can be found `here <https://docs.corda.net/html/getting-set-up-fault-finding.html#gradle-issues>`_.
+Additional troubleshooting information can be found `here <https://docs.corda.net/getting-set-up-fault-finding.html#gradle-issues>`_.
 
 Corda source code
 -----------------
@@ -94,10 +94,10 @@ and clicking "Refresh all Gradle projects". Whenever prompted about Gradle, acce
 Next steps
 ----------
 
-The best way to check that everything is working fine is by `running the demos <https://docs.corda.net/running-the-demos.html>`_.
+The best way to check that everything is working fine is by :doc:`running-the-demos`.
 
-Once you have these demos running, you may be interested in writing your own CorDapps, in which case you should refer to the 
-`CorDapp template <https://docs.corda.net/tutorial-cordapp.html>`_.
+Once you have these demos running, you may be interested in writing your own CorDapps, in which case you should refer to 
+:doc:`tutorial-cordapp`.
 
 If you encounter any issues, please see the :doc:`getting-set-up-fault-finding` page, or get in touch with us on the 
 `forums <https://discourse.corda.net/>`_ or via `slack <http://slack.corda.net/>`_.
