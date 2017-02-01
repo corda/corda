@@ -8,7 +8,7 @@ import net.corda.core.node.recordTransactions
 import net.corda.core.transactions.SignedTransaction
 import java.util.*
 
-class DummyIssueAndMove(private val notary: Party, private val counterpartyNode: Party) : FlowLogic<SignedTransaction>() {
+class DummyIssueAndMove(private val notary: Party.Full, private val counterpartyNode: Party.Full) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
         val random = Random()

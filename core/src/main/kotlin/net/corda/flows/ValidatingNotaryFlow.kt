@@ -15,7 +15,7 @@ import java.security.SignatureException
  * has its input states "blocked" by a transaction from another party, and needs to establish whether that transaction was
  * indeed valid.
  */
-class ValidatingNotaryFlow(otherSide: Party,
+class ValidatingNotaryFlow(otherSide: Party.Full,
                            timestampChecker: TimestampChecker,
                            uniquenessProvider: UniquenessProvider) :
         NotaryFlow.Service(otherSide, timestampChecker, uniquenessProvider) {

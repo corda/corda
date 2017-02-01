@@ -15,7 +15,7 @@ class SimpleNotaryService(services: ServiceHubInternal,
         val type = ServiceType.notary.getSubType("simple")
     }
 
-    override fun createFlow(otherParty: Party): NotaryFlow.Service {
+    override fun createFlow(otherParty: Party.Full): NotaryFlow.Service {
         return NotaryFlow.Service(otherParty, timestampChecker, uniquenessProvider)
     }
 }

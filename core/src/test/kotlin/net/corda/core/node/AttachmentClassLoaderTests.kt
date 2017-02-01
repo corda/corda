@@ -23,7 +23,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
 interface DummyContractBackdoor {
-    fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder
+    fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party.Full): TransactionBuilder
     fun inspectState(state: ContractState): Int
 }
 
@@ -52,7 +52,7 @@ class AttachmentClassLoaderTests {
         // The "empty contract"
         override val legalContractReference: SecureHash = SecureHash.sha256("")
 
-        fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
+        fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party.Full): TransactionBuilder {
             val state = State(magicNumber)
             return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Create(), owner.party.owningKey))
         }

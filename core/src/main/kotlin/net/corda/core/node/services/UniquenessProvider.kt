@@ -12,7 +12,7 @@ import net.corda.core.crypto.SecureHash
  */
 interface UniquenessProvider {
     /** Commits all input states of the given transaction */
-    fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party)
+    fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party.Full)
 
     /** Specifies the consuming transaction for every conflicting state */
     data class Conflict(val stateHistory: Map<StateRef, ConsumingTx>)
@@ -26,7 +26,7 @@ interface UniquenessProvider {
      *       This allows a party to just submit invalid transactions with outputs it was aware of and
      *       find out where exactly they were spent.
      */
-    data class ConsumingTx(val id: SecureHash, val inputIndex: Int, val requestingParty: Party)
+    data class ConsumingTx(val id: SecureHash, val inputIndex: Int, val requestingParty: Party.Full)
 }
 
 class UniquenessException(val error: UniquenessProvider.Conflict) : Exception()

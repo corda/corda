@@ -111,7 +111,7 @@ class TransactionTests {
 
     @Test
     fun `general transactions cannot change notary`() {
-        val notary: Party = DUMMY_NOTARY
+        val notary: Party.Full = DUMMY_NOTARY
         val inState = TransactionState(DummyContract.SingleOwnerState(0, ALICE_PUBKEY), notary)
         val outState = inState.copy(notary = ALICE)
         val inputs = listOf(StateAndRef(inState, StateRef(SecureHash.randomSHA256(), 0)))

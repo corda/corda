@@ -45,9 +45,9 @@ class CompositeKeyGenerator : Generator<CompositeKey>(CompositeKey::class.java) 
     }
 }
 
-class PartyGenerator : Generator<Party>(Party::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Party {
-        return Party(StringGenerator().generate(random, status), CompositeKeyGenerator().generate(random, status))
+class PartyGenerator : Generator<Party.Full>(Party.Full::class.java) {
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Party.Full {
+        return Party.Full(StringGenerator().generate(random, status), CompositeKeyGenerator().generate(random, status))
     }
 }
 

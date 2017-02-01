@@ -7,9 +7,9 @@ import org.junit.Test
 import java.util.*
 
 // Test parties
-val acmeCorp = Party("ACME Corporation", generateKeyPair().public)
-val highStreetBank = Party("High Street Bank", generateKeyPair().public)
-val momAndPop = Party("Mom and Pop", generateKeyPair().public)
+val acmeCorp = Party.Full("ACME Corporation", generateKeyPair().public)
+val highStreetBank = Party.Full("High Street Bank", generateKeyPair().public)
+val momAndPop = Party.Full("Mom and Pop", generateKeyPair().public)
 
 val acmeCorporationHasDefaulted = TerminalEvent(acmeCorp, generateKeyPair().public.composite)
 

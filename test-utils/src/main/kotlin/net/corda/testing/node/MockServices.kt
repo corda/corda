@@ -61,20 +61,20 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = throw UnsupportedOperationException()
     override val schedulerService: SchedulerService get() = throw UnsupportedOperationException()
-    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party("MegaCorp", key.public.composite))
+    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party.Full("MegaCorp", key.public.composite))
 }
 
 @ThreadSafe
-class MockIdentityService(val identities: List<Party>) : IdentityService, SingletonSerializeAsToken() {
-    private val keyToParties: Map<CompositeKey, Party>
+class MockIdentityService(val identities: List<Party.Full>) : IdentityService, SingletonSerializeAsToken() {
+    private val keyToParties: Map<CompositeKey, Party.Full>
         get() = synchronized(identities) { identities.associateBy { it.owningKey } }
-    private val nameToParties: Map<String, Party>
+    private val nameToParties: Map<String, Party.Full>
         get() = synchronized(identities) { identities.associateBy { it.name } }
 
-    override fun registerIdentity(party: Party) { throw UnsupportedOperationException() }
-    override fun getAllIdentities(): Iterable<Party> = ArrayList(keyToParties.values)
-    override fun partyFromKey(key: CompositeKey): Party? = keyToParties[key]
-    override fun partyFromName(name: String): Party? = nameToParties[name]
+    override fun registerIdentity(party: Party.Full) { throw UnsupportedOperationException() }
+    override fun getAllIdentities(): Iterable<Party.Full> = ArrayList(keyToParties.values)
+    override fun partyFromKey(key: CompositeKey): Party.Full? = keyToParties[key]
+    override fun partyFromName(name: String): Party.Full? = nameToParties[name]
 }
 
 

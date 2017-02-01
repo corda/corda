@@ -15,7 +15,7 @@ class InMemoryUniquenessProvider() : UniquenessProvider {
     /** For each input state store the consuming transaction information */
     private val committedStates = ThreadBox(HashMap<StateRef, UniquenessProvider.ConsumingTx>())
 
-    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
+    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party.Full) {
         committedStates.locked {
             val conflictingStates = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
             for (inputState in states) {

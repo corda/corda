@@ -29,7 +29,7 @@ class WireTransaction(
         outputs: List<TransactionState<ContractState>>,
         /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
         val commands: List<Command>,
-        notary: Party?,
+        notary: Party.Full?,
         signers: List<CompositeKey>,
         type: TransactionType,
         timestamp: Timestamp?

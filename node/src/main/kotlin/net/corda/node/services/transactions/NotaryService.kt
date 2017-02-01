@@ -21,6 +21,6 @@ abstract class NotaryService(services: ServiceHubInternal) : SingletonSerializeA
     }
 
     /** Implement a factory that specifies the transaction commit flow for the notary service to use */
-    abstract fun createFlow(otherParty: Party): NotaryFlow.Service
+    abstract fun createFlow(otherParty: Party.Full): NotaryFlow.Service
 
 }

@@ -65,7 +65,7 @@ open class MockServiceHubInternal(
     private val txStorageService: TxWritableStorageService
         get() = storage ?: throw UnsupportedOperationException()
 
-    private val flowFactories = ConcurrentHashMap<Class<*>, (Party) -> FlowLogic<*>>()
+    private val flowFactories = ConcurrentHashMap<Class<*>, (Party.Full) -> FlowLogic<*>>()
 
     lateinit var smm: StateMachineManager
 
@@ -83,11 +83,11 @@ open class MockServiceHubInternal(
         return smm.executor.fetchFrom { smm.add(logic) }
     }
 
-    override fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party) -> FlowLogic<*>) {
+    override fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party.Full) -> FlowLogic<*>) {
         flowFactories[markerClass.java] = flowFactory
     }
 
-    override fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)? {
+    override fun getFlowFactory(markerClass: Class<*>): ((Party.Full) -> FlowLogic<*>)? {
         return flowFactories[markerClass]
     }
 }

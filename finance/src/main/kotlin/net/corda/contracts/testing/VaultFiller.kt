@@ -31,7 +31,7 @@ import java.util.*
  * @return a vault object that represents the generated states (it will NOT be the full vault from the service hub!).
  */
 fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
-                                    outputNotary: Party = DUMMY_NOTARY,
+                                    outputNotary: Party.Full = DUMMY_NOTARY,
                                     atLeastThisManyStates: Int = 3,
                                     atMostThisManyStates: Int = 10,
                                     rng: Random = Random(),

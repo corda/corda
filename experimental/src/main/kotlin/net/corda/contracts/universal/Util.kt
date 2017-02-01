@@ -12,14 +12,14 @@ fun Instant.toLocalDate(): LocalDate = LocalDate.ofEpochDay(this.epochSecond / 6
 
 fun LocalDate.toInstant(): Instant = Instant.ofEpochSecond(this.toEpochDay() * 60 * 60 * 24)
 
-private fun signingParties(perceivable: Perceivable<Boolean>) : ImmutableSet<Party> =
+private fun signingParties(perceivable: Perceivable<Boolean>) : ImmutableSet<Party.Full> =
     when (perceivable) {
         is ActorPerceivable -> ImmutableSet.of( perceivable.actor )
         is PerceivableAnd -> Sets.union( signingParties( perceivable.left ), signingParties(perceivable.right) ).immutableCopy()
         is PerceivableOr -> Sets.union( signingParties( perceivable.left ), signingParties(perceivable.right) ).immutableCopy()
-        is TimePerceivable -> ImmutableSet.of<Party>()
+        is TimePerceivable -> ImmutableSet.of<Party.Full>()
         is TerminalEvent -> ImmutableSet.of( perceivable.reference )
-        is PerceivableComparison<*> -> ImmutableSet.of<Party>() // todo
+        is PerceivableComparison<*> -> ImmutableSet.of<Party.Full>() // todo
         else -> throw IllegalArgumentException("signingParties " + perceivable)
     }
 
@@ -47,26 +47,26 @@ private fun liablePartiesVisitor(action: Action): ImmutableSet<CompositeKey> {
 /** Returns list of potentially liable parties for a given contract */
 fun liableParties(contract: Arrangement): Set<CompositeKey> = liablePartiesVisitor(contract)
 
-private fun involvedPartiesVisitor(action: Action): Set<Party> =
+private fun involvedPartiesVisitor(action: Action): Set<Party.Full> =
     Sets.union(involvedPartiesVisitor(action.arrangement), signingParties(action.condition)).immutableCopy()
 
-private fun involvedPartiesVisitor(arrangement: Arrangement): ImmutableSet<Party> =
+private fun involvedPartiesVisitor(arrangement: Arrangement): ImmutableSet<Party.Full> =
         when (arrangement) {
-            is Zero -> ImmutableSet.of<Party>()
+            is Zero -> ImmutableSet.of<Party.Full>()
             is Obligation -> ImmutableSet.of(arrangement.from, arrangement.to)
             is RollOut -> involvedPartiesVisitor(arrangement.template)
-            is Continuation -> ImmutableSet.of<Party>()
+            is Continuation -> ImmutableSet.of<Party.Full>()
             is And ->
-                arrangement.arrangements.fold(ImmutableSet.builder<Party>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
+                arrangement.arrangements.fold(ImmutableSet.builder<Party.Full>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
             is Actions ->
-                arrangement.actions.fold(ImmutableSet.builder<Party>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
+                arrangement.actions.fold(ImmutableSet.builder<Party.Full>(), { builder, k -> builder.addAll(involvedPartiesVisitor(k)) }).build()
             else -> throw IllegalArgumentException(arrangement.toString())
         }
 
 /** returns list of involved parties for a given contract */
-fun involvedParties(arrangement: Arrangement): Set<Party> = involvedPartiesVisitor(arrangement)
+fun involvedParties(arrangement: Arrangement): Set<Party.Full> = involvedPartiesVisitor(arrangement)
 
-fun replaceParty(perceivable: Perceivable<Boolean>, from: Party, to: Party): Perceivable<Boolean> =
+fun replaceParty(perceivable: Perceivable<Boolean>, from: Party.Full, to: Party.Full): Perceivable<Boolean> =
         when (perceivable) {
             is ActorPerceivable ->
                 if (perceivable.actor == from)
@@ -79,14 +79,14 @@ fun replaceParty(perceivable: Perceivable<Boolean>, from: Party, to: Party): Per
             else -> throw IllegalArgumentException("replaceParty " + perceivable)
         }
 
-fun replaceParty(action: Action, from: Party, to: Party): Action =
+fun replaceParty(action: Action, from: Party.Full, to: Party.Full): Action =
         Action(action.name, replaceParty(action.condition, from, to), replaceParty(action.arrangement, from, to))
         //if (action.actors.contains(from)) {
         //    Action(action.name, action.condition, action.actors - from + to, replaceParty(action.arrangement, from, to))
         //} else
         //    Action(action.name, action.condition, replaceParty(action.arrangement, from, to))
 
-fun replaceParty(arrangement: Arrangement, from: Party, to: Party): Arrangement = when (arrangement) {
+fun replaceParty(arrangement: Arrangement, from: Party.Full, to: Party.Full): Arrangement = when (arrangement) {
     is Zero -> arrangement
     is Obligation -> Obligation(arrangement.amount, arrangement.currency,
             if (arrangement.from == from) to else arrangement.from,
@@ -169,7 +169,7 @@ fun <T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
     assert(false)
 }
 
-fun debugCompare(parLeft: Party, parRight: Party) {
+fun debugCompare(parLeft: Party.Full, parRight: Party.Full) {
     assert(parLeft == parRight)
 }
 
@@ -181,7 +181,7 @@ fun debugCompare(left: LocalDate, right: LocalDate) {
     assert(left == right)
 }
 
-fun debugCompare(parLeft: Set<Party>, parRight: Set<Party>) {
+fun debugCompare(parLeft: Set<Party.Full>, parRight: Set<Party.Full>) {
     if (parLeft == parRight) return
 
     assert(parLeft == parRight)

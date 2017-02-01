@@ -25,7 +25,7 @@ class UniversalContract : Contract {
 
         // replace parties
         // must be signed by all parties present in contract before and after command
-        class Move(val from: Party, val to: Party) : TypeOnlyCommandData(), Commands
+        class Move(val from: Party.Full, val to: Party.Full) : TypeOnlyCommandData(), Commands
 
         // must be signed by all liable parties present in contract
         class Issue : TypeOnlyCommandData(), Commands

@@ -22,15 +22,18 @@ import java.security.PublicKey
  *
  * @see CompositeKey
  */
-class Party(val name: String, val owningKey: CompositeKey) {
-    /** A helper constructor that converts the given [PublicKey] in to a [CompositeKey] with a single node */
-    constructor(name: String, owningKey: PublicKey) : this(name, owningKey.composite)
-
+sealed class Party(val owningKey: CompositeKey) {
     /** Anonymised parties do not include any detail apart from owning key, so equality is dependent solely on the key */
     override fun equals(other: Any?): Boolean = other is Party && this.owningKey == other.owningKey
-    override fun hashCode(): Int = owningKey.hashCode()
-    override fun toString() = name
 
-    fun ref(bytes: OpaqueBytes) = PartyAndReference(this, bytes)
-    fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
+    override fun hashCode(): Int = owningKey.hashCode()
+
+    class Full(val name: String, owningKey: CompositeKey) : Party(owningKey) {
+        /** A helper constructor that converts the given [PublicKey] in to a [CompositeKey] with a single node */
+        constructor(name: String, owningKey: PublicKey) : this(name, owningKey.composite)
+        override fun toString() = name
+
+        fun ref(bytes: OpaqueBytes) = PartyAndReference(this, bytes)
+        fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
+    }
 }

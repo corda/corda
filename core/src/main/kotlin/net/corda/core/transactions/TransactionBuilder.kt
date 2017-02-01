@@ -26,7 +26,7 @@ import java.util.*
  */
 open class TransactionBuilder(
         protected val type: TransactionType = TransactionType.General(),
-        var notary: Party? = null,
+        var notary: Party.Full? = null,
         protected val inputs: MutableList<StateRef> = arrayListOf(),
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
@@ -160,7 +160,7 @@ open class TransactionBuilder(
     }
 
     @JvmOverloads
-    fun addOutputState(state: ContractState, notary: Party, encumbrance: Int? = null) = addOutputState(TransactionState(state, notary, encumbrance))
+    fun addOutputState(state: ContractState, notary: Party.Full, encumbrance: Int? = null) = addOutputState(TransactionState(state, notary, encumbrance))
 
     /** A default notary must be specified during builder construction to use this method */
     fun addOutputState(state: ContractState): Int {

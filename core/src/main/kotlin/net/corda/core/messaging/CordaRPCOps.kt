@@ -114,14 +114,14 @@ interface CordaRPCOps : RPCOps {
     // TODO These need rethinking. Instead of these direct calls we should have a way of replicating a subset of
     // the node's state locally and query that directly.
     /**
-     * Returns the [Party] corresponding to the given key, if found.
+     * Returns the [Party.Full] corresponding to the given key, if found.
      */
-    fun partyFromKey(key: CompositeKey): Party?
+    fun partyFromKey(key: CompositeKey): Party.Full?
 
     /**
-     * Returns the [Party] with the given name as it's [Party.name]
+     * Returns the [Party.Full] with the given name as it's [Party.name]
      */
-    fun partyFromName(name: String): Party?
+    fun partyFromName(name: String): Party.Full?
 }
 
 /**

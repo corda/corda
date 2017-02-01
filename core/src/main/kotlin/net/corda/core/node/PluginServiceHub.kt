@@ -21,10 +21,10 @@ interface PluginServiceHub : ServiceHub {
      */
 
     // TODO: remove dependency on Kotlin relfection (Kotlin KClass -> Java Class).
-    fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party) -> FlowLogic<*>)
+    fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party.Full) -> FlowLogic<*>)
 
     /**
      * Return the flow factory that has been registered with [markerClass], or null if no factory is found.
      */
-    fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)?
+    fun getFlowFactory(markerClass: Class<*>): ((Party.Full) -> FlowLogic<*>)?
 }

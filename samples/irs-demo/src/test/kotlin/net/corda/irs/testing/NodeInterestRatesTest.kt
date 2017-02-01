@@ -46,7 +46,7 @@ class NodeInterestRatesTest {
         """.trimIndent())
 
     val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
-    val DUMMY_CASH_ISSUER = Party("Cash issuer", DUMMY_CASH_ISSUER_KEY.public)
+    val DUMMY_CASH_ISSUER = Party.Full("Cash issuer", DUMMY_CASH_ISSUER_KEY.public)
 
     val clock = Clock.systemUTC()
     lateinit var oracle: NodeInterestRates.Oracle

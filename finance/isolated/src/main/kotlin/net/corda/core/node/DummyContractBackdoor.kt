@@ -6,7 +6,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.crypto.Party
 
 interface DummyContractBackdoor {
-    fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder
+    fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party.Full): TransactionBuilder
 
     fun inspectState(state: ContractState): Int
 }

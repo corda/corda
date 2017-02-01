@@ -62,7 +62,7 @@ sealed class TransactionType {
     /** A general transaction type where transaction validity is determined by custom contract code */
     class General : TransactionType() {
         /** Just uses the default [TransactionBuilder] with no special logic */
-        class Builder(notary: Party?) : TransactionBuilder(General(), notary) {}
+        class Builder(notary: Party.Full?) : TransactionBuilder(General(), notary) {}
 
         override fun verifyTransaction(tx: LedgerTransaction) {
             verifyNoNotaryChange(tx)
@@ -143,7 +143,7 @@ sealed class TransactionType {
          * A transaction builder that automatically sets the transaction type to [NotaryChange]
          * and adds the list of participants to the signers set for every input state.
          */
-        class Builder(notary: Party) : TransactionBuilder(NotaryChange(), notary) {
+        class Builder(notary: Party.Full) : TransactionBuilder(NotaryChange(), notary) {
             override fun addInputState(stateAndRef: StateAndRef<*>) {
                 signers.addAll(stateAndRef.state.data.participants)
                 super.addInputState(stateAndRef)

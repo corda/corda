@@ -72,7 +72,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
     }
 
-    internal val openSessions = HashMap<Pair<FlowLogic<*>, Party>, FlowSession>()
+    internal val openSessions = HashMap<Pair<FlowLogic<*>, Party.Full>, FlowSession>()
 
     init {
         logic.stateMachine = this
@@ -133,7 +133,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun <T : Any> sendAndReceive(receiveType: Class<T>,
-                                          otherParty: Party,
+                                          otherParty: Party.Full,
                                           payload: Any,
                                           sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
         val session = getConfirmedSession(otherParty, sessionFlow)
@@ -147,14 +147,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun <T : Any> receive(receiveType: Class<T>,
-                                   otherParty: Party,
+                                   otherParty: Party.Full,
                                    sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
         val session = getConfirmedSession(otherParty, sessionFlow) ?: startNewSession(otherParty, sessionFlow, null, waitForConfirmation = true)
         return receiveInternal<SessionData>(session).checkPayloadIs(receiveType)
     }
 
     @Suspendable
-    override fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>) {
+    override fun send(otherParty: Party.Full, payload: Any, sessionFlow: FlowLogic<*>) {
         val session = getConfirmedSession(otherParty, sessionFlow)
         if (session == null) {
             // Don't send the payload again if it was already piggy-backed on a session init
@@ -203,7 +203,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    private fun getConfirmedSession(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession? {
+    private fun getConfirmedSession(otherParty: Party.Full, sessionFlow: FlowLogic<*>): FlowSession? {
         return openSessions[Pair(sessionFlow, otherParty)]?.apply {
             if (state is FlowSessionState.Initiating) {
                 // Session still initiating, try to retrieve the init response.
@@ -219,7 +219,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      * multiple public keys, but we **don't support multiple nodes advertising the same legal identity**.
      */
     @Suspendable
-    private fun startNewSession(otherParty: Party, sessionFlow: FlowLogic<*>, firstPayload: Any?, waitForConfirmation: Boolean): FlowSession {
+    private fun startNewSession(otherParty: Party.Full, sessionFlow: FlowLogic<*>, firstPayload: Any?, waitForConfirmation: Boolean): FlowSession {
         logger.trace { "Initiating a new session with $otherParty" }
         val session = FlowSession(sessionFlow, random63BitValue(), FlowSessionState.Initiating(otherParty))
         openSessions[Pair(sessionFlow, otherParty)] = session
