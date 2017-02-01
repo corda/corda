@@ -75,6 +75,13 @@ class Node {
         config = config.withValue("useHTTPS", ConfigValueFactory.fromAnyRef(isHttps))
     }
 
+    /**
+     * Sets the H2 port for this node
+     */
+    void h2port(Integer h2port) {
+        config = config.withValue("h2port", ConfigValueFactory.fromAnyRef(h2port))
+    }
+
     void useTestClock(Boolean useTestClock) {
         config = config.withValue("useTestClock", ConfigValueFactory.fromAnyRef(useTestClock))
     }
