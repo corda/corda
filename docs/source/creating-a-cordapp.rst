@@ -12,10 +12,10 @@ App plugins
 To create an app plugin you must you must extend from `CordaPluginRegistry`_. The JavaDoc contains
 specific details of the implementation, but you can extend the server in the following ways:
 
-1. Required flows: Specify which flows will be whitelisted for use in your web APIs.
+1. Required flows: Specify which flows will be whitelisted for use in your RPC calls.
 2. Service plugins: Register your services (see below).
-3. Web APIs: You may register your own endpoints under /api/ of the built-in web server.
-4. Static web endpoints: You may register your own static serving directories for serving web content.
+3. Web APIs: You may register your own endpoints under /api/ of the bundled web server.
+4. Static web endpoints: You may register your own static serving directories for serving web content from the web server.
 5. Registering your additional classes used in RPC.
 
 Services

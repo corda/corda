@@ -34,21 +34,16 @@ of the node internal subsystems.
 extensions to be created, or registered at startup. In particular: 
 
     a. The ``webApis`` property is a list of JAX-RS annotated REST access 
-    classes. These classes will be constructed by the embedded web server 
-    and must have a single argument constructor taking a ``ServiceHub`` 
-    reference. This reference provides access to functions such as querying 
-    for states through the ``VaultService`` interface, or access to the 
-    ``NetworkMapCache`` to identify services on remote nodes. The framework will 
-    provide a database transaction in scope during the lifetime of the web 
-    call, so full access to database data is valid. Unlike 
-    ``servicePlugins`` the ``webApis`` cannot register new protocols, or 
-    initiate threads. (N.B. The intent is to move the Web support into a 
-    separate helper process using the RPC mechanism to control access.) 
+    classes. These classes will be constructed by the bundled web server
+    and must have a single argument constructor taking a ``CordaRPCOps``
+    reference. This will allow it to communicate with the node process
+    via the RPC interface. These web APIs will not be available if the
+    bundled web server is not started.
 
     b. The ``staticServeDirs`` property maps static web content to virtual 
     paths and allows simple web demos to be distributed within the CorDapp 
-    jars. (N.B. The intent is to move the Web support into a separate helper 
-    process using the RPC mechanism to control access.) 
+    jars. These static serving directories will not be available if the
+    bundled web server is not started.
 
     c. The ``requiredFlows`` property is used to declare new protocols in 
     the plugin jar. Specifically the property must return a map with a key 

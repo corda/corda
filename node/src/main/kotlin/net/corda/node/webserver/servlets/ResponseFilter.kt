@@ -1,4 +1,4 @@
-package net.corda.node.servlets
+package net.corda.node.webserver.servlets
 
 import javax.ws.rs.container.ContainerRequestContext
 import javax.ws.rs.container.ContainerResponseContext

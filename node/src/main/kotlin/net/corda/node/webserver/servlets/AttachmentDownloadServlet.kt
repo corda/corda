@@ -1,4 +1,4 @@
-package net.corda.node.servlets
+package net.corda.node.webserver.servlets
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.StorageService

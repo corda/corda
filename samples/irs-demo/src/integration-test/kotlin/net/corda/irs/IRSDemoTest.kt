@@ -35,14 +35,20 @@ class IRSDemoTest : IntegrationTestCategory {
                     startNode("Bank B")
             ).getOrThrow()
 
+            val (controllerAddr, nodeAAddr, nodeBAddr) = Futures.allAsList(
+                    startWebserver(controller),
+                    startWebserver(nodeA),
+                    startWebserver(nodeB)
+            ).getOrThrow()
+
             val nextFixingDates = getFixingDateObservable(nodeA.configuration)
 
-            runUploadRates(controller.configuration.webAddress)
-            runTrade(nodeA.configuration.webAddress)
+            runUploadRates(controllerAddr)
+            runTrade(nodeAAddr)
             // Wait until the initial trade and all scheduled fixings up to the current date have finished
             nextFixingDates.first { it == null || it > currentDate }
 
-            runDateChange(nodeB.configuration.webAddress)
+            runDateChange(nodeBAddr)
             nextFixingDates.first { it == null || it > futureDate }
         }
     }
