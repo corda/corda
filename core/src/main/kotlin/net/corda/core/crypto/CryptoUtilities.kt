@@ -34,7 +34,7 @@ open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
     }
 
     // TODO: consider removing this as whoever needs to identify the signer should be able to derive it from the public key
-    class LegallyIdentifiable(val signer: Party.Full, bits: ByteArray) : WithKey(signer.owningKey.singleKey, bits)
+    class LegallyIdentifiable(val signer: Party, bits: ByteArray) : WithKey(signer.owningKey.singleKey, bits)
 }
 
 object NullPublicKey : PublicKey, Comparable<PublicKey> {
@@ -81,8 +81,8 @@ fun PublicKey.toBase58String() = Base58.encode((this as EdDSAPublicKey).abyte)
 
 fun KeyPair.signWithECDSA(bytesToSign: ByteArray) = private.signWithECDSA(bytesToSign, public)
 fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes) = private.signWithECDSA(bytesToSign.bytes, public)
-fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes, party: Party.Full) = signWithECDSA(bytesToSign.bytes, party)
-fun KeyPair.signWithECDSA(bytesToSign: ByteArray, party: Party.Full): DigitalSignature.LegallyIdentifiable {
+fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes, party: Party) = signWithECDSA(bytesToSign.bytes, party)
+fun KeyPair.signWithECDSA(bytesToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
     check(public in party.owningKey.keys)
     val sig = signWithECDSA(bytesToSign)
     return DigitalSignature.LegallyIdentifiable(party, sig.bytes)

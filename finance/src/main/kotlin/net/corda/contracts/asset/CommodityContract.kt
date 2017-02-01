@@ -144,13 +144,13 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
     /**
      * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, tokenDef: Issued<Commodity>, pennies: Long, owner: CompositeKey, notary: Party.Full)
+    fun generateIssue(tx: TransactionBuilder, tokenDef: Issued<Commodity>, pennies: Long, owner: CompositeKey, notary: Party)
             = generateIssue(tx, Amount(pennies, tokenDef), owner, notary)
 
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Commodity>>, owner: CompositeKey, notary: Party.Full) {
+    fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Commodity>>, owner: CompositeKey, notary: Party) {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().map { it.data }.sumCashOrNull() == null)
         val at = amount.token.issuer

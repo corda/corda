@@ -32,7 +32,7 @@ object ExitServerFlow {
     }
 
 
-    private class ExitServerHandler(val otherParty: Party.Full) : FlowLogic<Unit>() {
+    private class ExitServerHandler(val otherParty: Party) : FlowLogic<Unit>() {
         override fun call() {
             // Just to validate we got the message
             if (enabled) {

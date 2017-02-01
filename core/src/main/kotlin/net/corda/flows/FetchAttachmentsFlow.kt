@@ -12,7 +12,7 @@ import java.io.InputStream
  * attachments are saved to local storage automatically.
  */
 class FetchAttachmentsFlow(requests: Set<SecureHash>,
-                           otherSide: Party.Full) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide) {
+                           otherSide: Party) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide) {
 
     override fun load(txid: SecureHash): Attachment? = serviceHub.storageService.attachments.openAttachment(txid)
 

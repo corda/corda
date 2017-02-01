@@ -74,7 +74,7 @@ object NodeInterestRates {
             services.registerFlowInitiator(RatesFixFlow.FixQueryFlow::class) { FixQueryHandler(it, this) }
         }
 
-        private class FixSignHandler(val otherParty: Party.Full, val service: Service) : FlowLogic<Unit>() {
+        private class FixSignHandler(val otherParty: Party, val service: Service) : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
                 val request = receive<RatesFixFlow.SignRequest>(otherParty).unwrap { it }
@@ -82,7 +82,7 @@ object NodeInterestRates {
             }
         }
 
-        private class FixQueryHandler(val otherParty: Party.Full, val service: Service) : FlowLogic<Unit>() {
+        private class FixQueryHandler(val otherParty: Party, val service: Service) : FlowLogic<Unit>() {
             companion object {
                 object RECEIVED : ProgressTracker.Step("Received fix request")
                 object SENDING : ProgressTracker.Step("Sending fix response")
@@ -123,7 +123,7 @@ object NodeInterestRates {
      * The oracle will try to interpolate the missing value of a tenor for the given fix name and date.
      */
     @ThreadSafe
-    class Oracle(val identity: Party.Full, private val signingKey: KeyPair, val clock: Clock) {
+    class Oracle(val identity: Party, private val signingKey: KeyPair, val clock: Clock) {
         private object Table : JDBCHashedTable("demo_interest_rate_fixes") {
             val name = varchar("index_name", length = 255)
             val forDay = localDate("for_day")

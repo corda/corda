@@ -5,10 +5,10 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceEntry
 
 /**
- * Holds information about a [Party.Full], which may refer to either a specific node or a service.
+ * Holds information about a [Party], which may refer to either a specific node or a service.
  */
 sealed class PartyInfo() {
-    abstract val party: Party.Full
+    abstract val party: Party
     class Node(val node: NodeInfo) : PartyInfo() {
         override val party = node.legalIdentity
     }

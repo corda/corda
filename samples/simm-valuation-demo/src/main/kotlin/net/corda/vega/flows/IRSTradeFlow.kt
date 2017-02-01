@@ -11,9 +11,9 @@ import net.corda.vega.contracts.OGTrade
 import net.corda.vega.contracts.SwapData
 
 object IRSTradeFlow {
-    data class OfferMessage(val notary: Party.Full, val dealBeingOffered: IRSState)
+    data class OfferMessage(val notary: Party, val dealBeingOffered: IRSState)
 
-    class Requester(val swap: SwapData, val otherParty: Party.Full) : FlowLogic<SignedTransaction>() {
+    class Requester(val swap: SwapData, val otherParty: Party) : FlowLogic<SignedTransaction>() {
 
         @Suspendable
         override fun call(): SignedTransaction {
@@ -45,7 +45,7 @@ object IRSTradeFlow {
         }
     }
 
-    class Receiver(private val replyToParty: Party.Full) : FlowLogic<Unit>() {
+    class Receiver(private val replyToParty: Party) : FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {

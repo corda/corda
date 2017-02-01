@@ -226,7 +226,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
                 .withMessageContaining(permission)
     }
 
-    private fun startBobAndCommunicateWithAlice(): Party.Full {
+    private fun startBobAndCommunicateWithAlice(): Party {
         val bob = startNode("Bob").getOrThrow()
         bob.services.registerFlowInitiator(SendFlow::class, ::ReceiveFlow)
         val bobParty = bob.info.legalIdentity
@@ -235,12 +235,12 @@ abstract class MQSecurityTest : NodeBasedTest() {
         return bobParty
     }
 
-    private class SendFlow(val otherParty: Party.Full, val payload: Any) : FlowLogic<Unit>() {
+    private class SendFlow(val otherParty: Party, val payload: Any) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() = send(otherParty, payload)
     }
 
-    private class ReceiveFlow(val otherParty: Party.Full) : FlowLogic<Any>() {
+    private class ReceiveFlow(val otherParty: Party) : FlowLogic<Any>() {
         @Suspendable
         override fun call() = receive<Any>(otherParty).unwrap { it }
     }

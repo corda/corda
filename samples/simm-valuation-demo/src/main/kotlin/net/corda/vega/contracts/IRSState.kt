@@ -15,18 +15,18 @@ import java.security.PublicKey
  * TODO: Merge with the existing demo IRS code.
  */
 data class IRSState(val swap: SwapData,
-                    val buyer: Party.Full,
-                    val seller: Party.Full,
+                    val buyer: Party,
+                    val seller: Party,
                     override val contract: OGTrade,
                     override val linearId: UniqueIdentifier = UniqueIdentifier(swap.id.first + swap.id.second)) : DealState {
     override val ref: String = linearId.externalId!! // Same as the constructor for UniqueIdentified
-    override val parties: List<Party.Full> get() = listOf(buyer, seller)
+    override val parties: List<Party> get() = listOf(buyer, seller)
 
     override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
         return parties.flatMap { it.owningKey.keys }.intersect(ourKeys).isNotEmpty()
     }
 
-    override fun generateAgreement(notary: Party.Full): TransactionBuilder {
+    override fun generateAgreement(notary: Party): TransactionBuilder {
         val state = IRSState(swap, buyer, seller, OGTrade())
         return TransactionType.General.Builder(notary).withItems(state, Command(OGTrade.Commands.Agree(), parties.map { it.owningKey }))
     }

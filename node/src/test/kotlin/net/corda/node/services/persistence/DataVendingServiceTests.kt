@@ -94,7 +94,7 @@ class DataVendingServiceTests {
     }
 
 
-    private class NotifyTxFlow(val otherParty: Party.Full, val stx: SignedTransaction) : FlowLogic<Unit>() {
+    private class NotifyTxFlow(val otherParty: Party, val stx: SignedTransaction) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() = send(otherParty, NotifyTxRequest(stx))
     }

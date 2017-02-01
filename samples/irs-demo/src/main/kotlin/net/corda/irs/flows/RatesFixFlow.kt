@@ -30,7 +30,7 @@ import java.util.*
 open class RatesFixFlow(protected val tx: TransactionBuilder,
                         /** Filtering functions over transaction, used to build partial transaction presented to oracle. */
                         private val filterFuns: FilterFuns,
-                        private val oracle: Party.Full,
+                        private val oracle: Party,
                         private val fixOf: FixOf,
                         private val expectedRate: BigDecimal,
                         private val rateTolerance: BigDecimal,
@@ -81,7 +81,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     }
 
     // DOCSTART 1
-    class FixQueryFlow(val fixOf: FixOf, val oracle: Party.Full) : FlowLogic<Fix>() {
+    class FixQueryFlow(val fixOf: FixOf, val oracle: Party) : FlowLogic<Fix>() {
         @Suspendable
         override fun call(): Fix {
             val deadline = suggestInterestRateAnnouncementTimeWindow(fixOf.name, oracle.name, fixOf.forDay).end
@@ -97,7 +97,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         }
     }
 
-    class FixSignFlow(val tx: TransactionBuilder, val oracle: Party.Full, val filterFuns: FilterFuns) : FlowLogic<DigitalSignature.LegallyIdentifiable>() {
+    class FixSignFlow(val tx: TransactionBuilder, val oracle: Party, val filterFuns: FilterFuns) : FlowLogic<DigitalSignature.LegallyIdentifiable>() {
         @Suspendable
         override fun call(): DigitalSignature.LegallyIdentifiable {
             val wtx = tx.toWireTransaction()

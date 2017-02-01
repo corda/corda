@@ -38,7 +38,7 @@ object SimmFlow {
      * Represents a new portfolio offer unless the stateRef field is non-null, at which point it represents a
      * portfolio update offer.
      */
-    data class OfferMessage(val notary: Party.Full,
+    data class OfferMessage(val notary: Party,
                             val dealBeingOffered: PortfolioState,
                             val stateRef: StateRef?,
                             val valuationDate: LocalDate)
@@ -47,14 +47,14 @@ object SimmFlow {
      * Initiates with the other party by sending a portfolio to agree on and then comes to consensus over initial
      * margin using SIMM. If there is an existing state it will update and revalue the portfolio agreement.
      */
-    class Requester(val otherParty: Party.Full,
+    class Requester(val otherParty: Party,
                     val valuationDate: LocalDate,
                     val existing: StateAndRef<PortfolioState>?)
     : FlowLogic<RevisionedState<PortfolioState.Update>>() {
-        constructor(otherParty: Party.Full, valuationDate: LocalDate) : this(otherParty, valuationDate, null)
+        constructor(otherParty: Party, valuationDate: LocalDate) : this(otherParty, valuationDate, null)
 
-        lateinit var myIdentity: Party.Full
-        lateinit var notary: Party.Full
+        lateinit var myIdentity: Party
+        lateinit var notary: Party
 
         @Suspendable
         override fun call(): RevisionedState<PortfolioState.Update> {
@@ -108,7 +108,7 @@ object SimmFlow {
         }
 
         @Suspendable
-        private fun agreeValuation(portfolio: Portfolio, asOf: LocalDate, valuer: Party.Full): PortfolioValuation {
+        private fun agreeValuation(portfolio: Portfolio, asOf: LocalDate, valuer: Party): PortfolioValuation {
             // TODO: The attachments need to be added somewhere
             // TODO: handle failures
             val analyticsEngine = OGSIMMAnalyticsEngine()
@@ -186,8 +186,8 @@ object SimmFlow {
     /**
      * Receives and validates a portfolio and comes to consensus over the portfolio initial margin using SIMM.
      */
-    class Receiver(val replyToParty: Party.Full) : FlowLogic<Unit>() {
-        lateinit var ownParty: Party.Full
+    class Receiver(val replyToParty: Party) : FlowLogic<Unit>() {
+        lateinit var ownParty: Party
         lateinit var offer: OfferMessage
 
         @Suspendable
@@ -235,7 +235,7 @@ object SimmFlow {
          * [ reference data is data such as calendars etc, market data is data such as current market price of ]
          */
         @Suspendable
-        private fun agreeValuation(portfolio: Portfolio, asOf: LocalDate, valuer: Party.Full): PortfolioValuation {
+        private fun agreeValuation(portfolio: Portfolio, asOf: LocalDate, valuer: Party): PortfolioValuation {
             // TODO: The attachments need to be added somewhere
             // TODO: handle failures
             val analyticsEngine = OGSIMMAnalyticsEngine()

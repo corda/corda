@@ -27,7 +27,7 @@ class IRSPlugin : CordaPluginRegistry() {
             UpdateBusinessDayFlow.Broadcast::class.java.name to setOf(LocalDate::class.java.name),
             ExitServerFlow.Broadcast::class.java.name to setOf(kotlin.Int::class.java.name),
             FixingFlow.FixingRoleDecider::class.java.name to setOf(StateRef::class.java.name, Duration::class.java.name),
-            FixingFlow.Floater::class.java.name to setOf(Party.Full::class.java.name, FixingFlow.FixingSession::class.java.name))
+            FixingFlow.Floater::class.java.name to setOf(Party::class.java.name, FixingFlow.FixingSession::class.java.name))
 
     override fun registerRPCKryoTypes(kryo: Kryo): Boolean {
         kryo.apply {

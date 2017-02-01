@@ -17,7 +17,7 @@ data class TransactionForContract(val inputs: List<ContractState>,
                                   val attachments: List<Attachment>,
                                   val commands: List<AuthenticatedObject<CommandData>>,
                                   val origHash: SecureHash,
-                                  val inputNotary: Party.Full? = null,
+                                  val inputNotary: Party? = null,
                                   val timestamp: Timestamp? = null) {
     override fun hashCode() = origHash.hashCode()
     override fun equals(other: Any?) = other is TransactionForContract && other.origHash == origHash
@@ -102,7 +102,7 @@ sealed class TransactionVerificationException(val tx: LedgerTransaction, cause: 
     }
 
     class InvalidNotaryChange(tx: LedgerTransaction) : TransactionVerificationException(tx, null)
-    class NotaryChangeInWrongTransactionType(tx: LedgerTransaction, val outputNotary: Party.Full) : TransactionVerificationException(tx, null) {
+    class NotaryChangeInWrongTransactionType(tx: LedgerTransaction, val outputNotary: Party) : TransactionVerificationException(tx, null) {
         override fun toString(): String = "Found unexpected notary change in transaction. Tx notary: ${tx.notary}, found: ${outputNotary}"
     }
 

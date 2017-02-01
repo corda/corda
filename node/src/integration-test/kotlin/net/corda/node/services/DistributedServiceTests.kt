@@ -30,7 +30,7 @@ class DistributedServiceTests : DriverBasedTest() {
     lateinit var alice: NodeHandle
     lateinit var notaries: List<NodeHandle>
     lateinit var aliceProxy: CordaRPCOps
-    lateinit var raftNotaryIdentity: Party.Full
+    lateinit var raftNotaryIdentity: Party
     lateinit var notaryStateMachines: Observable<Pair<NodeInfo, StateMachineUpdate>>
 
     override fun setup() = driver {
@@ -80,7 +80,7 @@ class DistributedServiceTests : DriverBasedTest() {
         }
 
         // The state machines added in the notaries should map one-to-one to notarisation requests
-        val notarisationsPerNotary = HashMap<Party.Full, Int>()
+        val notarisationsPerNotary = HashMap<Party, Int>()
         notaryStateMachines.expectEvents(isStrict = false) {
             replicate<Pair<NodeInfo, StateMachineUpdate>>(50) {
                 expect(match = { it.second is StateMachineUpdate.Added }) {
@@ -119,7 +119,7 @@ class DistributedServiceTests : DriverBasedTest() {
             paySelf(5.POUNDS)
         }
 
-        val notarisationsPerNotary = HashMap<Party.Full, Int>()
+        val notarisationsPerNotary = HashMap<Party, Int>()
         notaryStateMachines.expectEvents(isStrict = false) {
             replicate<Pair<NodeInfo, StateMachineUpdate>>(30) {
                 expect(match = { it.second is StateMachineUpdate.Added }) {

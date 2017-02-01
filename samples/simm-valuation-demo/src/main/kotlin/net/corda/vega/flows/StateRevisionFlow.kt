@@ -27,7 +27,7 @@ object StateRevisionFlow {
         }
     }
 
-    open class Receiver<in T>(otherParty: Party.Full) : AbstractStateReplacementFlow.Acceptor<T>(otherParty) {
+    open class Receiver<in T>(otherParty: Party) : AbstractStateReplacementFlow.Acceptor<T>(otherParty) {
         override fun verifyProposal(proposal: AbstractStateReplacementFlow.Proposal<T>) {
             val proposedTx = proposal.stx.tx
             val state = proposal.stateRef

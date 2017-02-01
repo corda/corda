@@ -490,8 +490,8 @@ class TwoPartyTradeFlowTests {
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
             withError: Boolean,
             owner: CompositeKey,
-            issuer: Party.Full,
-            notary: Party.Full): Pair<Vault, List<WireTransaction>> {
+            issuer: Party,
+            notary: Party): Pair<Vault, List<WireTransaction>> {
         val interimOwnerKey = MEGA_CORP_PUBKEY
         // Bob (Buyer) has some cash he got from the Bank of Elbonia, Alice (Seller) has some commercial paper she
         // wants to sell to Bob.
@@ -538,7 +538,7 @@ class TwoPartyTradeFlowTests {
             owner: CompositeKey,
             amount: Amount<Issued<Currency>>,
             attachmentID: SecureHash?,
-            notary: Party.Full): Pair<Vault, List<WireTransaction>> {
+            notary: Party): Pair<Vault, List<WireTransaction>> {
         val ap = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             output("alice's paper", notary = notary) {
                 CommercialPaper.State(MEGA_CORP.ref(1, 2, 3), owner, amount, TEST_TX_TIME + 7.days)

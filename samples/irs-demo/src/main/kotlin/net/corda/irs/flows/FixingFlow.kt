@@ -33,7 +33,7 @@ object FixingFlow {
      * of the flow that is run by the party with the fixed leg of swap deal, which is the basis for deciding
      * who does what in the flow.
      */
-    class Fixer(override val otherParty: Party.Full,
+    class Fixer(override val otherParty: Party,
                 override val progressTracker: ProgressTracker = TwoPartyDealFlow.Secondary.tracker()) : TwoPartyDealFlow.Secondary<FixingSession>() {
 
         private lateinit var txState: TransactionState<*>
@@ -96,7 +96,7 @@ object FixingFlow {
      * is just the "side" of the flow run by the party with the floating leg as a way of deciding who
      * does what in the flow.
      */
-    class Floater(override val otherParty: Party.Full,
+    class Floater(override val otherParty: Party,
                   override val payload: FixingSession,
                   override val progressTracker: ProgressTracker = TwoPartyDealFlow.Primary.tracker()) : TwoPartyDealFlow.Primary() {
 

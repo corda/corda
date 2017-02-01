@@ -31,7 +31,7 @@ data class SessionData(override val recipientSessionId: Long, val payload: Any) 
 
 data class SessionEnd(override val recipientSessionId: Long, val errorResponse: FlowException?) : ExistingSessionMessage
 
-data class ReceivedSessionMessage<out M : ExistingSessionMessage>(val sender: Party.Full, val message: M)
+data class ReceivedSessionMessage<out M : ExistingSessionMessage>(val sender: Party, val message: M)
 
 fun <T> ReceivedSessionMessage<SessionData>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
     if (type.isInstance(message.payload)) {

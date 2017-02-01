@@ -29,11 +29,11 @@ import java.time.LocalDateTime
  */
 object JsonSupport {
     interface PartyObjectMapper {
-        fun partyFromName(partyName: String): Party.Full?
+        fun partyFromName(partyName: String): Party?
     }
 
     class RpcObjectMapper(val rpc: CordaRPCOps) : PartyObjectMapper, ObjectMapper() {
-        override fun partyFromName(partyName: String): Party.Full? = rpc.partyFromName(partyName)
+        override fun partyFromName(partyName: String): Party? = rpc.partyFromName(partyName)
     }
     class IdentityObjectMapper(val identityService: IdentityService) : PartyObjectMapper, ObjectMapper(){
         override fun partyFromName(partyName: String) = identityService.partyFromName(partyName)
@@ -53,8 +53,8 @@ object JsonSupport {
 
     val cordaModule: Module by lazy {
         SimpleModule("core").apply {
-            addSerializer(Party.Full::class.java, PartySerializer)
-            addDeserializer(Party.Full::class.java, PartyDeserializer)
+            addSerializer(Party::class.java, PartySerializer)
+            addDeserializer(Party::class.java, PartyDeserializer)
             addSerializer(BigDecimal::class.java, ToStringSerializer)
             addDeserializer(BigDecimal::class.java, NumberDeserializers.BigDecimalDeserializer())
             addSerializer(SecureHash::class.java, SecureHashSerializer)
@@ -120,14 +120,14 @@ object JsonSupport {
 
     }
 
-    object PartySerializer : JsonSerializer<Party.Full>() {
-        override fun serialize(obj: Party.Full, generator: JsonGenerator, provider: SerializerProvider) {
+    object PartySerializer : JsonSerializer<Party>() {
+        override fun serialize(obj: Party, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeString(obj.name)
         }
     }
 
-    object PartyDeserializer : JsonDeserializer<Party.Full>() {
-        override fun deserialize(parser: JsonParser, context: DeserializationContext): Party.Full {
+    object PartyDeserializer : JsonDeserializer<Party>() {
+        override fun deserialize(parser: JsonParser, context: DeserializationContext): Party {
             if (parser.currentToken == JsonToken.FIELD_NAME) {
                 parser.nextToken()
             }

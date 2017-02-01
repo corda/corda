@@ -29,7 +29,7 @@ import java.util.*
  * The flow returns a list of verified [LedgerTransaction] objects, in a depth-first order.
  */
 class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
-                              private val otherSide: Party.Full) : FlowLogic<List<LedgerTransaction>>() {
+                              private val otherSide: Party) : FlowLogic<List<LedgerTransaction>>() {
 
     companion object {
         private fun dependencyIDs(wtx: WireTransaction) = wtx.inputs.map { it.txhash }.toSet()
@@ -77,14 +77,14 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
     /**
      * Resolve the full history of a transaction and verify it with its dependencies.
      */
-    constructor(stx: SignedTransaction, otherSide: Party.Full) : this(stx.tx, otherSide) {
+    constructor(stx: SignedTransaction, otherSide: Party) : this(stx.tx, otherSide) {
         this.stx = stx
     }
 
     /**
      * Resolve the full history of a transaction and verify it with its dependencies.
      */
-    constructor(wtx: WireTransaction, otherSide: Party.Full) : this(dependencyIDs(wtx), otherSide) {
+    constructor(wtx: WireTransaction, otherSide: Party) : this(dependencyIDs(wtx), otherSide) {
         this.wtx = wtx
     }
 

@@ -22,8 +22,8 @@ object NotaryChangeFlow : AbstractStateReplacementFlow() {
 
     class Instigator<out T : ContractState>(
             originalState: StateAndRef<T>,
-            newNotary: Party.Full,
-            progressTracker: ProgressTracker = tracker()) : AbstractStateReplacementFlow.Instigator<T, Party.Full>(originalState, newNotary, progressTracker) {
+            newNotary: Party,
+            progressTracker: ProgressTracker = tracker()) : AbstractStateReplacementFlow.Instigator<T, Party>(originalState, newNotary, progressTracker) {
 
         override fun assembleTx(): Pair<SignedTransaction, Iterable<CompositeKey>> {
             val state = originalState.state
@@ -88,8 +88,8 @@ object NotaryChangeFlow : AbstractStateReplacementFlow() {
 
     }
 
-    class Acceptor(otherSide: Party.Full,
-                   override val progressTracker: ProgressTracker = tracker()) : AbstractStateReplacementFlow.Acceptor<Party.Full>(otherSide) {
+    class Acceptor(otherSide: Party,
+                   override val progressTracker: ProgressTracker = tracker()) : AbstractStateReplacementFlow.Acceptor<Party>(otherSide) {
 
         /**
          * Check the notary change proposal.
@@ -98,7 +98,7 @@ object NotaryChangeFlow : AbstractStateReplacementFlow() {
          * and is also in a geographically convenient location we can just automatically approve the change.
          * TODO: In more difficult cases this should call for human attention to manually verify and approve the proposal
          */
-        override fun verifyProposal(proposal: AbstractStateReplacementFlow.Proposal<Party.Full>): Unit {
+        override fun verifyProposal(proposal: AbstractStateReplacementFlow.Proposal<Party>): Unit {
             val state = proposal.stateRef
             val proposedTx = proposal.stx.tx
 

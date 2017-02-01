@@ -65,7 +65,7 @@ inline fun <R> requireThat(body: Requirements.() -> R) = Requirements.body()
 
 /** Filters the command list by type, party and public key all at once. */
 inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signer: CompositeKey? = null,
-                                                                                         party: Party.Full? = null) =
+                                                                                         party: Party? = null) =
         filter { it.value is T }.
                 filter { if (signer == null) true else signer in it.signers }.
                 filter { if (party == null) true else party in it.signingParties }.
@@ -75,7 +75,7 @@ inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>
 
 /** Filters the command list by type, parties and public keys all at once. */
 inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signers: Collection<CompositeKey>?,
-                                                                                         parties: Collection<Party.Full>?) =
+                                                                                         parties: Collection<Party>?) =
         filter { it.value is T }.
                 filter { if (signers == null) true else it.signers.containsAll(signers) }.
                 filter { if (parties == null) true else it.signingParties.containsAll(parties) }.

@@ -143,13 +143,13 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     /**
      * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, tokenDef: Issued<Currency>, pennies: Long, owner: CompositeKey, notary: Party.Full)
+    fun generateIssue(tx: TransactionBuilder, tokenDef: Issued<Currency>, pennies: Long, owner: CompositeKey, notary: Party)
             = generateIssue(tx, Amount(pennies, tokenDef), owner, notary)
 
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, owner: CompositeKey, notary: Party.Full) {
+    fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, owner: CompositeKey, notary: Party) {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().map { it.data }.sumCashOrNull() == null)
         val at = amount.token.issuer
@@ -192,12 +192,12 @@ fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>): Amount<Is
 }
 
 fun Cash.State.ownedBy(owner: CompositeKey) = copy(owner = owner)
-fun Cash.State.issuedBy(party: Party.Full) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party))))
+fun Cash.State.issuedBy(party: Party) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party))))
 fun Cash.State.issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = deposit)))
 fun Cash.State.withDeposit(deposit: PartyAndReference): Cash.State = copy(amount = amount.copy(token = amount.token.copy(issuer = deposit)))
 
 infix fun Cash.State.`owned by`(owner: CompositeKey) = ownedBy(owner)
-infix fun Cash.State.`issued by`(party: Party.Full) = issuedBy(party)
+infix fun Cash.State.`issued by`(party: Party) = issuedBy(party)
 infix fun Cash.State.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
 infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = withDeposit(deposit)
 
@@ -206,7 +206,7 @@ infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = wi
 /** A randomly generated key. */
 val DUMMY_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
-val DUMMY_CASH_ISSUER by lazy { Party.Full("Snake Oil Issuer", DUMMY_CASH_ISSUER_KEY.public.composite).ref(1) }
+val DUMMY_CASH_ISSUER by lazy { Party("Snake Oil Issuer", DUMMY_CASH_ISSUER_KEY.public.composite).ref(1) }
 /** An extension property that lets you write 100.DOLLARS.CASH */
 val Amount<Currency>.CASH: Cash.State get() = Cash.State(Amount(quantity, Issued(DUMMY_CASH_ISSUER, token)), NullCompositeKey)
 /** An extension property that lets you get a cash state from an issued token, under the [NullPublicKey] */

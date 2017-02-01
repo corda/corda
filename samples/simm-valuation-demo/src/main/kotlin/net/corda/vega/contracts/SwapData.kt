@@ -46,7 +46,7 @@ data class SwapData(
         val notional: BigDecimal,
         val fixedRate: BigDecimal) {
 
-    fun getLegForParty(party: Party.Full): Leg {
+    fun getLegForParty(party: Party): Leg {
         return if (party.name == buyer.second) FixedLeg(notional) else FloatingLeg(notional)
     }
 

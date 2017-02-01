@@ -25,15 +25,15 @@ data class StateMachineRunId private constructor(val uuid: UUID) {
 interface FlowStateMachine<R> {
     @Suspendable
     fun <T : Any> sendAndReceive(receiveType: Class<T>,
-                                 otherParty: Party.Full,
+                                 otherParty: Party,
                                  payload: Any,
                                  sessionFlow: FlowLogic<*>): UntrustworthyData<T>
 
     @Suspendable
-    fun <T : Any> receive(receiveType: Class<T>, otherParty: Party.Full, sessionFlow: FlowLogic<*>): UntrustworthyData<T>
+    fun <T : Any> receive(receiveType: Class<T>, otherParty: Party, sessionFlow: FlowLogic<*>): UntrustworthyData<T>
 
     @Suspendable
-    fun send(otherParty: Party.Full, payload: Any, sessionFlow: FlowLogic<*>)
+    fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>)
 
     val serviceHub: ServiceHub
     val logger: Logger

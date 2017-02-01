@@ -11,6 +11,6 @@ class NotaryDemoPlugin : CordaPluginRegistry() {
     // A list of protocols that are required for this cordapp
     override val requiredFlows = mapOf(
             NotaryFlow.Client::class.java.name to setOf(SignedTransaction::class.java.name, setOf(Unit).javaClass.name),
-            DummyIssueAndMove::class.java.name to setOf(Party.Full::class.java.name)
+            DummyIssueAndMove::class.java.name to setOf(Party::class.java.name)
     )
 }

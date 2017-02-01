@@ -29,10 +29,10 @@ import javax.ws.rs.core.Response
 
 @Path("simmvaluationdemo")
 class PortfolioApi(val rpc: CordaRPCOps) {
-    private val ownParty: Party.Full get() = rpc.nodeIdentity().legalIdentity
+    private val ownParty: Party get() = rpc.nodeIdentity().legalIdentity
     private val portfolioUtils = PortfolioApiUtils(ownParty)
 
-    private inline fun <reified T : DealState> dealsWith(party: Party.Full): List<StateAndRef<T>> {
+    private inline fun <reified T : DealState> dealsWith(party: Party): List<StateAndRef<T>> {
         return rpc.vaultAndUpdates().first.filterStatesOfType<T>().filter { it.state.data.parties.any { it == party } }
     }
 
@@ -40,7 +40,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
      * DSL to get a party and then executing the passed function with the party as a parameter.
      * Used as such: withParty(name) { doSomethingWith(it) }
      */
-    private fun withParty(partyName: String, func: (Party.Full) -> Response): Response {
+    private fun withParty(partyName: String, func: (Party) -> Response): Response {
         val otherParty = rpc.partyFromKey(CompositeKey.parseFromBase58(partyName))
         return if (otherParty != null) {
             func(otherParty)
@@ -53,7 +53,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
      * DSL to get a portfolio and then executing the passed function with the portfolio as a parameter.
      * Used as such: withPortfolio(party) { doSomethingWith(it) }
      */
-    private fun withPortfolio(party: Party.Full, func: (PortfolioState) -> Response): Response {
+    private fun withPortfolio(party: Party, func: (PortfolioState) -> Response): Response {
         val portfolio = getPortfolioWith(party)
         return if (portfolio != null) {
             func(portfolio)
@@ -65,12 +65,12 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     /**
      * Gets all existing IRSStates with the party provided.
      */
-    private fun getTradesWith(party: Party.Full) = dealsWith<IRSState>(party)
+    private fun getTradesWith(party: Party) = dealsWith<IRSState>(party)
 
     /**
      * Gets the most recent portfolio state, or null if not extant, with the party provided.
      */
-    private fun getPortfolioWith(party: Party.Full): PortfolioState? {
+    private fun getPortfolioWith(party: Party): PortfolioState? {
         val portfolios = dealsWith<PortfolioState>(party)
         // Can have at most one between any two parties with the current no split portfolio model
         require(portfolios.size < 2) { "This API currently only supports one portfolio with a counterparty" }
@@ -82,7 +82,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
      *
      * @warning Do not call if you have not agreed a portfolio with the other party.
      */
-    private fun getPortfolioStateAndRefWith(party: Party.Full): StateAndRef<PortfolioState> {
+    private fun getPortfolioStateAndRefWith(party: Party): StateAndRef<PortfolioState> {
         val portfolios = dealsWith<PortfolioState>(party)
         // Can have at most one between any two parties with the current no split portfolio model
         require(portfolios.size < 2) { "This API currently only supports one portfolio with a counterparty" }

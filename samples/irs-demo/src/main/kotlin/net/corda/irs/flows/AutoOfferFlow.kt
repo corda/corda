@@ -78,8 +78,8 @@ object AutoOfferFlow {
             return stx
         }
 
-        private fun notUs(parties: List<Party.Full>): List<Party.Full> {
-            val notUsParties: MutableList<Party.Full> = arrayListOf()
+        private fun notUs(parties: List<Party>): List<Party> {
+            val notUsParties: MutableList<Party> = arrayListOf()
             for (party in parties) {
                 if (serviceHub.myInfo.legalIdentity != party) {
                     notUsParties.add(party)

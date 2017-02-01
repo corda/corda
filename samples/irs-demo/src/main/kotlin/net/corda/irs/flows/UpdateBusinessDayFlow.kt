@@ -31,7 +31,7 @@ object UpdateBusinessDayFlow {
         }
     }
 
-    private class UpdateBusinessDayHandler(val otherParty: Party.Full) : FlowLogic<Unit>() {
+    private class UpdateBusinessDayHandler(val otherParty: Party) : FlowLogic<Unit>() {
         override fun call() {
             val message = receive<UpdateBusinessDayMessage>(otherParty).unwrap { it }
             (serviceHub.clock as TestClock).updateDate(message.date)

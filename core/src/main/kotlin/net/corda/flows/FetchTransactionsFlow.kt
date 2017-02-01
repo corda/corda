@@ -12,7 +12,7 @@ import net.corda.core.transactions.SignedTransaction
  * results in a [FetchDataFlow.HashNotFound] exception. Note that returned transactions are not inserted into
  * the database, because it's up to the caller to actually verify the transactions are valid.
  */
-class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: Party.Full) :
+class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: Party) :
         FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide) {
 
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.storageService.validatedTransactions.getTransaction(txid)

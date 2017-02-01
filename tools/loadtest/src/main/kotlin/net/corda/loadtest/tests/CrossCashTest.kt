@@ -50,7 +50,7 @@ data class CrossCashCommand(
  * Map from node to (map from issuer to USD quantity)
  */
 data class CrossCashState(
-        val nodeVaults: Map<Party.Full, Map<Party.Full, Long>>,
+        val nodeVaults: Map<Party, Map<Party, Long>>,
 
         // node -> (notifying node -> [(issuer, amount)])
         // This map holds the queues that encode the non-determinism of how tx notifications arrive in the background.
@@ -68,20 +68,20 @@ data class CrossCashState(
         // requires more concurrent code which is conceptually also more complex than the current design.
         // TODO: Alternative: We may possibly reduce the complexity of the search even further using some form of
         //     knapsack instead of the naive search
-        val diffQueues: Map<Party.Full, Map<Party.Full, List<Pair<Party.Full, Long>>>>
+        val diffQueues: Map<Party, Map<Party, List<Pair<Party, Long>>>>
 ) {
-    fun copyVaults(): HashMap<Party.Full, HashMap<Party.Full, Long>> {
-        val newNodeVaults = HashMap<Party.Full, HashMap<Party.Full, Long>>()
+    fun copyVaults(): HashMap<Party, HashMap<Party, Long>> {
+        val newNodeVaults = HashMap<Party, HashMap<Party, Long>>()
         for ((key, value) in nodeVaults) {
             newNodeVaults[key] = HashMap(value)
         }
         return newNodeVaults
     }
 
-    fun copyQueues(): HashMap<Party.Full, HashMap<Party.Full, ArrayList<Pair<Party.Full, Long>>>> {
-        val newDiffQueues = HashMap<Party.Full, HashMap<Party.Full, ArrayList<Pair<Party.Full, Long>>>>()
+    fun copyQueues(): HashMap<Party, HashMap<Party, ArrayList<Pair<Party, Long>>>> {
+        val newDiffQueues = HashMap<Party, HashMap<Party, ArrayList<Pair<Party, Long>>>>()
         for ((node, queues) in diffQueues) {
-            val newQueues = HashMap<Party.Full, ArrayList<Pair<Party.Full, Long>>>()
+            val newQueues = HashMap<Party, ArrayList<Pair<Party, Long>>>()
             for ((sender, value) in queues) {
                 newQueues[sender] = ArrayList(value)
             }
@@ -217,9 +217,9 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
 
         gatherRemoteState = { previousState ->
             log.info("Reifying state...")
-            val currentNodeVaults = HashMap<Party.Full, HashMap<Party.Full, Long>>()
+            val currentNodeVaults = HashMap<Party, HashMap<Party, Long>>()
             simpleNodes.forEach {
-                val quantities = HashMap<Party.Full, Long>()
+                val quantities = HashMap<Party, Long>()
                 val vault = it.connection.proxy.vaultAndUpdates().first
                 vault.forEach {
                     val state = it.state.data
@@ -231,7 +231,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                 currentNodeVaults.put(it.info.legalIdentity, quantities)
             }
             val (consistentVaults, diffQueues) = if (previousState == null) {
-                Pair(currentNodeVaults, mapOf<Party.Full, Map<Party.Full, List<Pair<Party.Full, Long>>>>())
+                Pair(currentNodeVaults, mapOf<Party, Map<Party, List<Pair<Party, Long>>>>())
             } else {
                 log.info("${previousState.diffQueues.values.sumBy { it.values.sumBy { it.size } }} txs in limbo")
                 val newDiffQueues = previousState.copyQueues()
@@ -249,12 +249,12 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                                             "\nActual gathered state:\n${CrossCashState(currentNodeVaults, mapOf())}"
                             )
                             // TODO We should terminate here with an exception, we cannot carry on as we have an inconsistent model. We carry on currently because we always diverge due to notarisation failures
-                            return@LoadTest CrossCashState(currentNodeVaults, mapOf<Party.Full, Map<Party.Full, List<Pair<Party.Full, Long>>>>())
+                            return@LoadTest CrossCashState(currentNodeVaults, mapOf<Party, Map<Party, List<Pair<Party, Long>>>>())
                         }
                         if (matches.size > 1) {
                             log.warn("Multiple predicted states match the remote state")
                         }
-                        val minimumMatches = matches.fold<Map<Party.Full, Int>, HashMap<Party.Full, Int>?>(null) { minimum, next ->
+                        val minimumMatches = matches.fold<Map<Party, Int>, HashMap<Party, Int>?>(null) { minimum, next ->
                             if (minimum == null) {
                                 HashMap(next)
                             } else {
