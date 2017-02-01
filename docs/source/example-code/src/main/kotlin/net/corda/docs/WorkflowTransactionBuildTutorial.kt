@@ -8,6 +8,7 @@ import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.unwrap
 import net.corda.flows.FinalityFlow
 import java.security.PublicKey
 import java.time.Duration

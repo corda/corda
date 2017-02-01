@@ -5,8 +5,8 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.signWithECDSA
-import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
@@ -14,6 +14,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 
 object NotaryFlow {
     /**

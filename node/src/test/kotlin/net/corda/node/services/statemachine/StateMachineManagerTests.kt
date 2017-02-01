@@ -21,6 +21,7 @@ import net.corda.core.random63BitValue
 import net.corda.core.rootCause
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.deserialize
+import net.corda.core.utilities.unwrap
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.flows.CashCommand
