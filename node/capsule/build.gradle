@@ -54,6 +54,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: ['buildCertSigningRequestUtility
     applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
 
     capsuleManifest {
+        applicationVersion = corda_version
         appClassPath = ["jolokia-agent-war-${project.rootProject.ext.jolokia_version}.war"]
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
         systemProperties['visualvm.display.name'] = 'Corda'
