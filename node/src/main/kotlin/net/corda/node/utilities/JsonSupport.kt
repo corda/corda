@@ -30,16 +30,20 @@ import java.time.LocalDateTime
 object JsonSupport {
     interface PartyObjectMapper {
         fun partyFromName(partyName: String): Party.Full?
+        fun partyFromKey(owningKey: CompositeKey): Party.Full?
     }
 
     class RpcObjectMapper(val rpc: CordaRPCOps) : PartyObjectMapper, ObjectMapper() {
         override fun partyFromName(partyName: String): Party.Full? = rpc.partyFromName(partyName)
+        override fun partyFromKey(owningKey: CompositeKey): Party.Full? = rpc.partyFromKey(owningKey)
     }
     class IdentityObjectMapper(val identityService: IdentityService) : PartyObjectMapper, ObjectMapper(){
         override fun partyFromName(partyName: String) = identityService.partyFromName(partyName)
+        override fun partyFromKey(owningKey: CompositeKey) = identityService.partyFromKey(owningKey)
     }
     class NoPartyObjectMapper: PartyObjectMapper, ObjectMapper() {
         override fun partyFromName(partyName: String) = throw UnsupportedOperationException()
+        override fun partyFromKey(owningKey: CompositeKey) = throw UnsupportedOperationException()
     }
 
     val javaTimeModule: Module by lazy {
@@ -53,8 +57,10 @@ object JsonSupport {
 
     val cordaModule: Module by lazy {
         SimpleModule("core").apply {
-            addSerializer(Party.Full::class.java, PartySerializer)
-            addDeserializer(Party.Full::class.java, PartyDeserializer)
+            addSerializer(Party.Full::class.java, PartyFullSerializer)
+            addDeserializer(Party.Full::class.java, PartyFullDeserializer)
+            addSerializer(Party.Anonymised::class.java, PartyAnonymisedSerializer)
+            addDeserializer(Party.Anonymised::class.java, PartyAnonymisedDeserializer)
             addSerializer(BigDecimal::class.java, ToStringSerializer)
             addDeserializer(BigDecimal::class.java, NumberDeserializers.BigDecimalDeserializer())
             addSerializer(SecureHash::class.java, SecureHashSerializer)
@@ -120,13 +126,13 @@ object JsonSupport {
 
     }
 
-    object PartySerializer : JsonSerializer<Party.Full>() {
+    object PartyFullSerializer : JsonSerializer<Party.Full>() {
         override fun serialize(obj: Party.Full, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeString(obj.name)
         }
     }
 
-    object PartyDeserializer : JsonDeserializer<Party.Full>() {
+    object PartyFullDeserializer : JsonDeserializer<Party.Full>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): Party.Full {
             if (parser.currentToken == JsonToken.FIELD_NAME) {
                 parser.nextToken()
@@ -135,6 +141,23 @@ object JsonSupport {
             val mapper = parser.codec as PartyObjectMapper
             // TODO this needs to use some industry identifier(s) not just these human readable names
             return mapper.partyFromName(parser.text) ?: throw JsonParseException(parser, "Could not find a Party with name ${parser.text}")
+        }
+    }
+
+    object PartyAnonymisedSerializer : JsonSerializer<Party.Anonymised>() {
+        override fun serialize(obj: Party.Anonymised, generator: JsonGenerator, provider: SerializerProvider) {
+            generator.writeString(obj.owningKey.toBase58String())
+        }
+    }
+
+    object PartyAnonymisedDeserializer : JsonDeserializer<Party.Anonymised>() {
+        override fun deserialize(parser: JsonParser, context: DeserializationContext): Party.Anonymised {
+            if (parser.currentToken == JsonToken.FIELD_NAME) {
+                parser.nextToken()
+            }
+            val key = CompositeKey.parseFromBase58(parser.text)
+            val mapper = parser.codec as PartyObjectMapper
+            return mapper.partyFromKey(key)?.toAnonymised() ?: throw JsonParseException(parser, "Could not find a Party with key: ${parser.text}")
         }
     }
 

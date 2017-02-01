@@ -430,6 +430,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
 
         // This is required to make all the unit tests pass
+        register(Party.Anonymised::class.java)
         register(Party.Full::class.java)
 
         // This ensures a NonEmptySetSerializer is constructed with an initial value.

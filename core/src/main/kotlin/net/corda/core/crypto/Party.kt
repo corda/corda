@@ -27,6 +27,12 @@ sealed class Party(val owningKey: CompositeKey) {
     override fun equals(other: Any?): Boolean = other is Party && this.owningKey == other.owningKey
 
     override fun hashCode(): Int = owningKey.hashCode()
+    override fun toString(): String = owningKey.toBase58String()
+    abstract fun toAnonymised(): Party.Anonymised
+
+    class Anonymised(owningKey: CompositeKey) : Party(owningKey) {
+        override fun toAnonymised(): Anonymised = this
+    }
 
     class Full(val name: String, owningKey: CompositeKey) : Party(owningKey) {
         /** A helper constructor that converts the given [PublicKey] in to a [CompositeKey] with a single node */
@@ -35,5 +41,6 @@ sealed class Party(val owningKey: CompositeKey) {
 
         fun ref(bytes: OpaqueBytes) = PartyAndReference(this, bytes)
         fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
+        override fun toAnonymised() = Party.Anonymised(owningKey)
     }
 }
