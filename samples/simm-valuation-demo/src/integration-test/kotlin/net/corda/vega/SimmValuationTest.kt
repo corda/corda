@@ -42,8 +42,8 @@ class SimmValuationTest : IntegrationTestCategory {
         }
     }
 
-    private fun getPartyWithName(partyApi: HttpApi, countryparty: String): PortfolioApi.ApiParty =
-            getAvailablePartiesFor(partyApi).counterparties.single { it.text == countryparty }
+    private fun getPartyWithName(partyApi: HttpApi, counterparty: String): PortfolioApi.ApiParty =
+            getAvailablePartiesFor(partyApi).counterparties.single { it.text == counterparty }
 
     private fun getAvailablePartiesFor(partyApi: HttpApi): PortfolioApi.AvailableParties {
         return partyApi.getJson<PortfolioApi.AvailableParties>("whoami")
