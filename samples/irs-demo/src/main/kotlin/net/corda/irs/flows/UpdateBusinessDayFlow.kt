@@ -7,6 +7,7 @@ import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 import net.corda.node.utilities.TestClock
 import net.corda.testing.node.MockNetworkMapCache
 import java.time.LocalDate

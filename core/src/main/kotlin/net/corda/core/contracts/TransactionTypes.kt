@@ -17,6 +17,7 @@ sealed class TransactionType {
      *
      * Note: Presence of _signatures_ is not checked, only the public keys to be signed for.
      */
+    @Throws(TransactionVerificationException::class)
     fun verify(tx: LedgerTransaction) {
         require(tx.notary != null || tx.timestamp == null) { "Transactions with timestamps must be notarised." }
         val duplicates = detectDuplicateInputs(tx)

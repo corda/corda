@@ -5,6 +5,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.unwrap
 import net.corda.flows.TwoPartyDealFlow
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.OGTrade

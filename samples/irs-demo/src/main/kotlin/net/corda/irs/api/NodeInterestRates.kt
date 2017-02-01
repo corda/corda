@@ -14,6 +14,7 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 import net.corda.irs.flows.FixingFlow
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.services.api.AcceptsFileUpload

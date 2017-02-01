@@ -9,5 +9,8 @@ package net.corda.core.flows
  * [FlowException] (or a subclass) can be a valid expected response from a flow, particularly ones which act as a service.
  * It is recommended a [FlowLogic] document the [FlowException] types it can throw.
  */
-open class FlowException @JvmOverloads constructor(message: String? = null, cause: Throwable? = null)
-    : Exception(message, cause)
+open class FlowException(override val message: String?, override val cause: Throwable?) : Exception() {
+    constructor(message: String?) : this(message, null)
+    constructor(cause: Throwable?) : this(cause?.toString(), cause)
+    constructor() : this(null, null)
+}

@@ -54,6 +54,7 @@ class LedgerTransaction(
      *
      * @throws TransactionVerificationException if anything goes wrong.
      */
+    @Throws(TransactionVerificationException::class)
     fun verify() = type.verify(this)
 
     // TODO: When we upgrade to Kotlin 1.1 we can make this a data class again and have the compiler generate these.
