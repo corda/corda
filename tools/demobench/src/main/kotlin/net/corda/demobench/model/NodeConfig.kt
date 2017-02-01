@@ -9,27 +9,11 @@ import java.lang.String.join
 class NodeConfig(
         legalName: String,
         artemisPort: Int,
-        nearestCity: String,
-        webPort: Int,
-        h2Port: Int,
-        extraServices: List<String>
+        val nearestCity: String,
+        val webPort: Int,
+        val h2Port: Int,
+        val extraServices: List<String>
 ) : NetworkMapConfig(legalName, artemisPort) {
-
-    private var nearestCityName: String = nearestCity
-    val nearestCity : String
-        get() { return nearestCityName }
-
-    private var webPortValue: Int = webPort
-    val webPort : Int
-        get() { return webPortValue }
-
-    private var h2PortValue: Int = h2Port
-    val h2Port : Int
-       get() { return h2PortValue }
-
-    private var extraServicesValue: List<String> = extraServices
-    val extraServices : List<String>
-        get() { return extraServicesValue }
 
     private var networkMapValue: NetworkMapConfig? = null
     var networkMap : NetworkMapConfig?

@@ -5,10 +5,9 @@ import java.util.concurrent.Executors
 import kotlin.reflect.jvm.jvmName
 
 
-class Explorer(explorerController: ExplorerController) : AutoCloseable {
+class Explorer(val explorerController: ExplorerController) : AutoCloseable {
     private val log = LoggerFactory.getLogger(Explorer::class.jvmName)
 
-    private val explorerController: ExplorerController = explorerController
     private val executor = Executors.newSingleThreadExecutor()
     private var process: Process? = null
 
