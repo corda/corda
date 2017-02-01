@@ -10,29 +10,6 @@ public class CordaCaplet extends Capsule {
 
     protected CordaCaplet(Capsule pred) {
         super(pred);
-        checkExistingVersion();
-    }
-
-    /**
-     * Aborts starting the node if an existing deployment with a different version is detected in the current directory
-     */
-    private void checkExistingVersion() {
-        String currentVersion = super.attribute(ATTR_APP_VERSION);
-        Path versionFile = Paths.get("version");
-        try {
-            if (Files.exists(versionFile)) {
-                String existingVersion = Files.readAllLines(versionFile).get(0);
-                if (!existingVersion.equals(currentVersion)) {
-                    System.err.println("ERROR: Unable to start the node, version change detected - current: " +
-                            currentVersion + ", existing: " + existingVersion + ". Node upgrades are not yet supported.");
-                    System.exit(1);
-                }
-            } else {
-                Files.write(versionFile, currentVersion.getBytes());
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     /**

@@ -58,6 +58,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: ['buildCertSigningRequestUtility
         appClassPath = ["jolokia-agent-war-${project.rootProject.ext.jolokia_version}.war"]
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
         systemProperties['visualvm.display.name'] = 'Corda'
+        systemProperties['corda.version'] = corda_version
         minJavaVersion = '1.8.0'
         // This version is known to work and avoids earlier 8u versions that have bugs.
         minUpdateVersion['1.8'] = '102'
