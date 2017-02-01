@@ -72,12 +72,7 @@ interface NetworkMapCache {
      */
 
     /** Look up the node info for a specific peer key. */
-    fun getNodeByLegalIdentityKey(compositeKey: CompositeKey): NodeInfo? {
-        // Although we should never have more than one match, it is theoretically possible. Report an error if it happens.
-        val candidates = partyNodes.filter { it.legalIdentity.owningKey == compositeKey }
-        check(candidates.size <= 1) { "Found more than one match for key $compositeKey" }
-        return candidates.singleOrNull()
-    }
+    fun getNodeByLegalIdentityKey(compositeKey: CompositeKey): NodeInfo?
     /** Look up all nodes advertising the service owned by [compositeKey] */
     fun getNodesByAdvertisedServiceIdentityKey(compositeKey: CompositeKey): List<NodeInfo> {
         return partyNodes.filter { it.advertisedServices.any { it.identity.owningKey == compositeKey } }
