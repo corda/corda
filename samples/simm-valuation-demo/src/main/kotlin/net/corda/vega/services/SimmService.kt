@@ -36,9 +36,9 @@ object SimmService {
     class Plugin : CordaPluginRegistry() {
         override val webApis = listOf(Function(::PortfolioApi))
         override val requiredFlows: Map<String, Set<String>> = mapOf(
-                SimmFlow.Requester::class.java.name to setOf(Party.Full::class.java.name, LocalDate::class.java.name),
+                SimmFlow.Requester::class.java.name to setOf(Party::class.java.name, LocalDate::class.java.name),
                 SimmRevaluation.Initiator::class.java.name to setOf(StateRef::class.java.name, LocalDate::class.java.name),
-                IRSTradeFlow.Requester::class.java.name to setOf(SwapData::class.java.name, Party.Full::class.java.name))
+                IRSTradeFlow.Requester::class.java.name to setOf(SwapData::class.java.name, Party::class.java.name))
         override val staticServeDirs: Map<String, String> = mapOf("simmvaluationdemo" to javaClass.classLoader.getResource("simmvaluationweb").toExternalForm())
         override val servicePlugins = listOf(Function(SimmFlow::Service), Function(IRSTradeFlow::Service))
         override fun registerRPCKryoTypes(kryo: Kryo): Boolean {

@@ -25,7 +25,7 @@ data class SwapDataModel(
     /**
      * Turn this model into the internal representation of SwapData.
      */
-    fun toData(buyer: Party.Full, seller: Party.Full): SwapData {
+    fun toData(buyer: Party, seller: Party): SwapData {
         return SwapData(
                 Pair("swap", id), Pair("party", buyer.name), Pair("party", seller.name), description, tradeDate, convention, startDate, endDate, notional, fixedRate
         )

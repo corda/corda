@@ -304,7 +304,7 @@ class InterestRateSwap() : Contract {
     }
 
     open class FixedLeg(
-            var fixedRatePayer: Party.Full,
+            var fixedRatePayer: Party,
             notional: Amount<Currency>,
             paymentFrequency: Frequency,
             effectiveDate: LocalDate,
@@ -343,7 +343,7 @@ class InterestRateSwap() : Contract {
         override fun hashCode() = super.hashCode() + 31 * Objects.hash(fixedRatePayer, fixedRate, rollConvention)
 
         // Can't autogenerate as not a data class :-(
-        fun copy(fixedRatePayer: Party.Full = this.fixedRatePayer,
+        fun copy(fixedRatePayer: Party = this.fixedRatePayer,
                  notional: Amount<Currency> = this.notional,
                  paymentFrequency: Frequency = this.paymentFrequency,
                  effectiveDate: LocalDate = this.effectiveDate,
@@ -365,7 +365,7 @@ class InterestRateSwap() : Contract {
     }
 
     open class FloatingLeg(
-            var floatingRatePayer: Party.Full,
+            var floatingRatePayer: Party,
             notional: Amount<Currency>,
             paymentFrequency: Frequency,
             effectiveDate: LocalDate,
@@ -423,7 +423,7 @@ class InterestRateSwap() : Contract {
                 index, indexSource, indexTenor)
 
 
-        fun copy(floatingRatePayer: Party.Full = this.floatingRatePayer,
+        fun copy(floatingRatePayer: Party = this.floatingRatePayer,
                  notional: Amount<Currency> = this.notional,
                  paymentFrequency: Frequency = this.paymentFrequency,
                  effectiveDate: LocalDate = this.effectiveDate,
@@ -672,7 +672,7 @@ class InterestRateSwap() : Contract {
             return fixedLeg.fixedRatePayer.owningKey.containsAny(ourKeys) || floatingLeg.floatingRatePayer.owningKey.containsAny(ourKeys)
         }
 
-        override val parties: List<Party.Full>
+        override val parties: List<Party>
             get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
 
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
@@ -683,7 +683,7 @@ class InterestRateSwap() : Contract {
             return ScheduledActivity(flowLogicRefFactory.create(FixingFlow.FixingRoleDecider::class.java, thisStateRef), instant)
         }
 
-        override fun generateAgreement(notary: Party.Full): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
+        override fun generateAgreement(notary: Party): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
 
         override fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix) {
             InterestRateSwap().generateFix(ptx, StateAndRef(TransactionState(this, oldState.state.notary), oldState.ref), fix)
@@ -728,7 +728,7 @@ class InterestRateSwap() : Contract {
      *  Note: The day count, interest rate calculation etc are not finished yet, but they are demonstrable.
      */
     fun generateAgreement(floatingLeg: FloatingLeg, fixedLeg: FixedLeg, calculation: Calculation,
-                          common: Common, notary: Party.Full): TransactionBuilder {
+                          common: Common, notary: Party): TransactionBuilder {
 
         val fixedLegPaymentSchedule = LinkedHashMap<LocalDate, FixedRatePaymentEvent>()
         var dates = BusinessCalendar.createGenericSchedule(fixedLeg.effectiveDate, fixedLeg.paymentFrequency, fixedLeg.paymentCalendar, fixedLeg.rollConvention, endDate = fixedLeg.terminationDate)

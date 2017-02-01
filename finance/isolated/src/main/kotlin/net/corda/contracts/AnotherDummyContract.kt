@@ -28,7 +28,7 @@ class AnotherDummyContract : Contract, net.corda.core.node.DummyContractBackdoor
     // The "empty contract"
     override val legalContractReference: SecureHash = SecureHash.sha256("https://anotherdummy.org")
 
-    override fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party.Full): TransactionBuilder {
+    override fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
         val state = State(magicNumber)
         return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Create(), owner.party.owningKey))
     }

@@ -23,14 +23,14 @@ class ActionsBuilder {
             else
                 Actions(actions.toSet())
 
-    infix fun Party.Full.may(init: ActionBuilder.() -> Action): Action {
+    infix fun Party.may(init: ActionBuilder.() -> Action): Action {
         val builder = ActionBuilder(setOf(this))
         builder.init()
         actions.addAll(builder.actions)
         return builder.actions.first()
     }
 
-    infix fun Set<Party.Full>.may(init: ActionBuilder.() -> Action): Action {
+    infix fun Set<Party>.may(init: ActionBuilder.() -> Action): Action {
         val builder = ActionBuilder(this)
         builder.init()
         actions.addAll(builder.actions)
@@ -38,8 +38,8 @@ class ActionsBuilder {
         return builder.actions.first()
     }
 
-    infix fun Party.Full.or(party: Party.Full) = setOf(this, party)
-    infix fun Set<Party.Full>.or(party: Party.Full) = this.plus(party)
+    infix fun Party.or(party: Party) = setOf(this, party)
+    infix fun Set<Party>.or(party: Party) = this.plus(party)
 
     fun String.givenThat(condition: Perceivable<Boolean>, init: ContractBuilder.() -> Arrangement): Action {
         val b = ContractBuilder()
@@ -67,13 +67,13 @@ open class ContractBuilder {
         return c
     }
 
-    fun Party.Full.owes(beneficiary: Party.Full, amount: BigDecimal, currency: Currency): Obligation {
+    fun Party.owes(beneficiary: Party, amount: BigDecimal, currency: Currency): Obligation {
         val c = Obligation(const(amount), currency, this, beneficiary)
         contracts.add(c)
         return c
     }
 
-    fun Party.Full.owes(beneficiary: Party.Full, amount: Perceivable<BigDecimal>, currency: Currency): Obligation {
+    fun Party.owes(beneficiary: Party, amount: Perceivable<BigDecimal>, currency: Currency): Obligation {
         val c = Obligation(amount, currency, this, beneficiary)
         contracts.add(c)
         return c
@@ -81,7 +81,7 @@ open class ContractBuilder {
 
     @Deprecated(level = DeprecationLevel.ERROR, message = "Not allowed")
     fun Action(@Suppress("UNUSED_PARAMETER") name: String, @Suppress("UNUSED_PARAMETER") condition: Perceivable<Boolean>,
-               @Suppress("UNUSED_PARAMETER") actors: Set<Party.Full>, @Suppress("UNUSED_PARAMETER") arrangement: Arrangement) {
+               @Suppress("UNUSED_PARAMETER") actors: Set<Party>, @Suppress("UNUSED_PARAMETER") arrangement: Arrangement) {
     }
 
     @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
@@ -97,11 +97,11 @@ open class ContractBuilder {
     }
 
     @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
-    fun Party.Full.may(init: ActionBuilder.() -> Action) {
+    fun Party.may(init: ActionBuilder.() -> Action) {
     }
 
     @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
-    fun Set<Party.Full>.may(init: ActionBuilder.() -> Action) {
+    fun Set<Party>.may(init: ActionBuilder.() -> Action) {
     }
 
     val start = StartDate()
@@ -152,7 +152,7 @@ interface GivenThatResolve {
     fun resolve(contract: Arrangement)
 }
 
-class ActionBuilder(val actors: Set<Party.Full>) {
+class ActionBuilder(val actors: Set<Party>) {
     internal val actions = mutableListOf<Action>()
 
     fun String.givenThat(condition: Perceivable<Boolean>, init: ContractBuilder.() -> Arrangement): Action {

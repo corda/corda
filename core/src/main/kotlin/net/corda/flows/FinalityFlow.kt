@@ -15,9 +15,9 @@ import net.corda.core.utilities.ProgressTracker
  * @return a list of participants who were successfully notified of the transaction.
  */
 class FinalityFlow(val transaction: SignedTransaction,
-                   val participants: Set<Party.Full>,
+                   val participants: Set<Party>,
                    override val progressTracker: ProgressTracker) : FlowLogic<Unit>() {
-    constructor(transaction: SignedTransaction, participants: Set<Party.Full>) : this(transaction, participants, tracker())
+    constructor(transaction: SignedTransaction, participants: Set<Party>) : this(transaction, participants, tracker())
 
     companion object {
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service")

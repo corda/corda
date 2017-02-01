@@ -13,8 +13,8 @@ import java.util.*
 fun generateIssue(
         max: Long,
         currency: Currency,
-        notary: Party.Full,
-        possibleRecipients: List<Party.Full>
+        notary: Party,
+        possibleRecipients: List<Party>
 ): Generator<CashCommand.IssueCash> {
     return generateAmount(0, max, Generator.pure(currency)).combine(
             Generator.pure(OpaqueBytes.of(0)),
@@ -27,8 +27,8 @@ fun generateIssue(
 fun generateMove(
         max: Long,
         currency: Currency,
-        issuer: Party.Full,
-        possibleRecipients: List<Party.Full>
+        issuer: Party,
+        possibleRecipients: List<Party>
 ): Generator<CashCommand.PayCash> {
     return generateAmount(1, max, Generator.pure(Issued(PartyAndReference(issuer, OpaqueBytes.of(0)), currency))).combine(
             Generator.pickOne(possibleRecipients)

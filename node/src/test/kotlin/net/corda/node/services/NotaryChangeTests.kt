@@ -75,7 +75,7 @@ class NotaryChangeTests {
     @Test
     fun `should throw when a participant refuses to change Notary`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
-        val newEvilNotary = Party.Full("Evil Notary", generateKeyPair().public)
+        val newEvilNotary = Party("Evil Notary", generateKeyPair().public)
         val flow = Instigator(state, newEvilNotary)
         val future = clientNodeA.services.startFlow(flow)
 
@@ -177,7 +177,7 @@ fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode, notaryNode: A
     return stateAndRef
 }
 
-fun issueInvalidState(node: AbstractNode, notary: Party.Full): StateAndRef<*> {
+fun issueInvalidState(node: AbstractNode, notary: Party): StateAndRef<*> {
     val tx = DummyContract.generateInitial(node.info.legalIdentity.ref(0), Random().nextInt(), notary)
     tx.setTime(Instant.now(), 30.seconds)
     val nodeKey = node.services.legalIdentityKey

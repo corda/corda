@@ -27,7 +27,7 @@ data class SwapDataView(
         var marginedText: String = "❌️") {
 }
 
-fun SwapData.toView(viewingParty: Party.Full, portfolio: Portfolio? = null,
+fun SwapData.toView(viewingParty: Party, portfolio: Portfolio? = null,
                     presentValue: MultiCurrencyAmount? = null,
                     IM: InitialMarginTriple? = null): SwapDataView {
     val isBuyer = viewingParty.name == buyer.second

@@ -84,7 +84,7 @@ class CashViewer : CordaView("Cash") {
      */
     sealed class ViewerNode(val equivAmount: ObservableValue<out Amount<Currency>>,
                             val states: ObservableList<StateAndRef<Cash.State>>) {
-        class IssuerNode(val issuer: Party.Full,
+        class IssuerNode(val issuer: Party,
                          sumEquivAmount: ObservableValue<out Amount<Currency>>,
                          states: ObservableList<StateAndRef<Cash.State>>) : ViewerNode(sumEquivAmount, states)
 

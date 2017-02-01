@@ -35,7 +35,7 @@ object NotaryFlow {
             fun tracker() = ProgressTracker(REQUESTING, VALIDATING)
         }
 
-        lateinit var notaryParty: Party.Full
+        lateinit var notaryParty: Party
 
         @Suspendable
         @Throws(NotaryException::class)
@@ -82,7 +82,7 @@ object NotaryFlow {
      *
      * TODO: the notary service should only be able to see timestamp commands and inputs
      */
-    open class Service(val otherSide: Party.Full,
+    open class Service(val otherSide: Party,
                        val timestampChecker: TimestampChecker,
                        val uniquenessProvider: UniquenessProvider) : FlowLogic<Unit>() {
 

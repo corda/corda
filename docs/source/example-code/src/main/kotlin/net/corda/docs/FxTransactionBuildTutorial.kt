@@ -27,9 +27,9 @@ object FxTransactionDemoTutorial {
 
 private data class FxRequest(val tradeId: String,
                              val amount: Amount<Issued<Currency>>,
-                             val owner: Party.Full,
-                             val counterparty: Party.Full,
-                             val notary: Party.Full? = null)
+                             val owner: Party,
+                             val counterparty: Party,
+                             val notary: Party? = null)
 
 private data class FxResponse(val inputs: List<StateAndRef<Cash.State>>,
                               val outputs: List<Cash.State>)
@@ -39,7 +39,7 @@ private data class FxResponse(val inputs: List<StateAndRef<Cash.State>>,
 // Which is brought here to make the filtering logic more visible in the example
 private fun gatherOurInputs(serviceHub: ServiceHub,
                             amountRequired: Amount<Issued<Currency>>,
-                            notary: Party.Full?): Pair<List<StateAndRef<Cash.State>>, Long> {
+                            notary: Party?): Pair<List<StateAndRef<Cash.State>>, Long> {
     // Collect cash type inputs
     val cashStates = serviceHub.vaultService.currentVault.statesOfType<Cash.State>()
     // extract our key identity for convenience
@@ -56,7 +56,7 @@ private fun gatherOurInputs(serviceHub: ServiceHub,
     // For simplicity we just filter on the first notary encountered
     // A production quality flow would need to migrate notary if the
     // the amounts were not sufficient in any one notary
-    val sourceNotary: Party.Full = notary ?: suitableCashStates.first().state.notary
+    val sourceNotary: Party = notary ?: suitableCashStates.first().state.notary
 
     val inputsList = mutableListOf<StateAndRef<Cash.State>>()
     // Iterate over filtered cash states to gather enough to pay
@@ -102,8 +102,8 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, request: FxReques
 class ForeignExchangeFlow(val tradeId: String,
                           val baseCurrencyAmount: Amount<Issued<Currency>>,
                           val quoteCurrencyAmount: Amount<Issued<Currency>>,
-                          val baseCurrencyBuyer: Party.Full,
-                          val baseCurrencySeller: Party.Full) : FlowLogic<SecureHash>() {
+                          val baseCurrencyBuyer: Party,
+                          val baseCurrencySeller: Party) : FlowLogic<SecureHash>() {
     @Suspendable
     override fun call(): SecureHash {
         // Select correct sides of the Fx exchange to query for.
@@ -208,7 +208,7 @@ class ForeignExchangeFlow(val tradeId: String,
     // DOCEND 3
 }
 
-class ForeignExchangeRemoteFlow(val source: Party.Full) : FlowLogic<Unit>() {
+class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         // Initial receive from remote party

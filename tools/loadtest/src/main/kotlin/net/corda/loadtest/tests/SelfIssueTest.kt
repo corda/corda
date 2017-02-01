@@ -27,9 +27,9 @@ data class SelfIssueCommand(
 )
 
 data class SelfIssueState(
-        val vaultsSelfIssued: Map<Party.Full, Long>
+        val vaultsSelfIssued: Map<Party, Long>
 ) {
-    fun copyVaults(): HashMap<Party.Full, Long> {
+    fun copyVaults(): HashMap<Party, Long> {
         return HashMap(vaultsSelfIssued)
     }
 }
@@ -71,7 +71,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
         },
 
         gatherRemoteState = { previousState ->
-            val selfIssueVaults = HashMap<Party.Full, Long>()
+            val selfIssueVaults = HashMap<Party, Long>()
             simpleNodes.forEach { node ->
                 val vault = node.connection.proxy.vaultAndUpdates().first
                 vault.forEach {

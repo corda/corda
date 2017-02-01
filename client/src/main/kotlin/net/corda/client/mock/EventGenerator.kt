@@ -13,10 +13,10 @@ import java.util.*
  * state/ref pairs, but it doesn't necessarily generate "correct" events!
  */
 class EventGenerator(
-        val parties: List<Party.Full>,
-        val notary: Party.Full,
+        val parties: List<Party>,
+        val notary: Party,
         val currencies: List<Currency> = listOf(USD, GBP, CHF),
-        val issuers: List<Party.Full> = parties
+        val issuers: List<Party> = parties
 ) {
     private var vault = listOf<StateAndRef<Cash.State>>()
 

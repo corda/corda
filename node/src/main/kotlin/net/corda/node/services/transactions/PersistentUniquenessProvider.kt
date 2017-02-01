@@ -38,7 +38,7 @@ class PersistentUniquenessProvider() : UniquenessProvider, SingletonSerializeAsT
         override fun valueFromRow(row: ResultRow): UniquenessProvider.ConsumingTx = UniquenessProvider.ConsumingTx(
                 row[table.consumingTxHash],
                 row[table.consumingIndex],
-                Party.Full(row[table.requestingParty.name], row[table.requestingParty.owningKey])
+                Party(row[table.requestingParty.name], row[table.requestingParty.owningKey])
         )
 
         override fun addKeyToInsert(insert: InsertStatement,
@@ -58,7 +58,7 @@ class PersistentUniquenessProvider() : UniquenessProvider, SingletonSerializeAsT
         }
     })
 
-    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party.Full) {
+    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
         val conflict = committedStates.locked {
             val conflictingStates = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
             for (inputState in states) {

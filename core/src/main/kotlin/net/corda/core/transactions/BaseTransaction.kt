@@ -18,7 +18,7 @@ abstract class BaseTransaction(
          * This is intended for issuance/genesis transactions that don't consume any other states and thus can't
          * double spend anything.
          */
-        val notary: Party.Full?,
+        val notary: Party?,
         /**
          * Composite keys that need to be fulfilled by signatures in order for the transaction to be valid.
          * In a [SignedTransaction] this list is used to check whether there are any missing signatures. Note that

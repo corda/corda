@@ -40,20 +40,20 @@ object DataVending {
             services.registerFlowInitiator(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
         }
 
-        private class FetchTransactionsHandler(otherParty: Party.Full) : FetchDataHandler<SignedTransaction>(otherParty) {
+        private class FetchTransactionsHandler(otherParty: Party) : FetchDataHandler<SignedTransaction>(otherParty) {
             override fun getData(id: SecureHash): SignedTransaction? {
                 return serviceHub.storageService.validatedTransactions.getTransaction(id)
             }
         }
 
         // TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
-        private class FetchAttachmentsHandler(otherParty: Party.Full) : FetchDataHandler<ByteArray>(otherParty) {
+        private class FetchAttachmentsHandler(otherParty: Party) : FetchDataHandler<ByteArray>(otherParty) {
             override fun getData(id: SecureHash): ByteArray? {
                 return serviceHub.storageService.attachments.openAttachment(id)?.open()?.readBytes()
             }
         }
 
-        private abstract class FetchDataHandler<out T>(val otherParty: Party.Full) : FlowLogic<Unit>() {
+        private abstract class FetchDataHandler<out T>(val otherParty: Party) : FlowLogic<Unit>() {
             @Suspendable
             @Throws(FetchDataFlow.HashNotFound::class)
             override fun call() {
@@ -75,7 +75,7 @@ object DataVending {
         //       includes us in any outside that list. Potentially just if it includes any outside that list at all.
         // TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
         //       cash without from unknown parties?
-        class NotifyTransactionHandler(val otherParty: Party.Full) : FlowLogic<Unit>() {
+        class NotifyTransactionHandler(val otherParty: Party) : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
                 val request = receive<BroadcastTransactionFlow.NotifyTxRequest>(otherParty).unwrap { it }

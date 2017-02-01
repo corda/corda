@@ -59,7 +59,7 @@ val PROSPECTUS_HASH = SecureHash.parse("decd098666b9657314870e192ced0c3519c2c9d3
 
 fun sender(rpc: CordaRPCOps) {
     // Get the identity key of the other side (the recipient).
-    val otherSide: Party.Full = rpc.partyFromName("Bank B")!!
+    val otherSide: Party = rpc.partyFromName("Bank B")!!
 
     // Make sure we have the file in storage
     // TODO: We should have our own demo file, not share the trader demo file

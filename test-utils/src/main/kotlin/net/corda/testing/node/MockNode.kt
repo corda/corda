@@ -63,7 +63,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
 
-    val identities = ArrayList<Party.Full>()
+    val identities = ArrayList<Party>()
 
     private val _nodes = ArrayList<MockNode>()
     /** A read only view of the current set of executing nodes. */
@@ -174,7 +174,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     val override = overrideServices[it.info]
                     if (override != null) {
                         // TODO: Store the key
-                        ServiceEntry(it.info, Party.Full(it.identity.name, override.public))
+                        ServiceEntry(it.info, Party(it.identity.name, override.public))
                     } else {
                         it
                     }

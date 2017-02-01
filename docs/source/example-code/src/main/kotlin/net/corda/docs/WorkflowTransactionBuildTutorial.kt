@@ -51,13 +51,13 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
      * Truly minimal state that just records a tradeId string and the parties involved.
      */
     data class State(val tradeId: String,
-                     val source: Party.Full,
-                     val counterparty: Party.Full,
+                     val source: Party,
+                     val counterparty: Party,
                      val state: WorkflowState = WorkflowState.NEW,
                      override val linearId: UniqueIdentifier = UniqueIdentifier(tradeId),
                      override val contract: TradeApprovalContract = TradeApprovalContract()) : LinearState {
 
-        val parties: List<Party.Full> get() = listOf(source, counterparty)
+        val parties: List<Party> get() = listOf(source, counterparty)
         override val participants: List<CompositeKey> get() = parties.map { it.owningKey }
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
@@ -110,7 +110,7 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
  * as their approval/rejection is to follow.
  */
 class SubmitTradeApprovalFlow(val tradeId: String,
-                              val counterparty: Party.Full) : FlowLogic<StateAndRef<TradeApprovalContract.State>>() {
+                              val counterparty: Party) : FlowLogic<StateAndRef<TradeApprovalContract.State>>() {
     @Suspendable
     override fun call(): StateAndRef<TradeApprovalContract.State> {
         // Manufacture an initial state
@@ -225,7 +225,7 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
  * Then after checking to sign it and eventually store the fully notarised
  * transaction to the ledger.
  */
-class RecordCompletionFlow(val source: Party.Full) : FlowLogic<Unit>() {
+class RecordCompletionFlow(val source: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call(): Unit {
         // DOCSTART 3

@@ -134,7 +134,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(SignedTransaction::class.java, ImmutableClassSerializer(SignedTransaction::class))
         register(WireTransaction::class.java, WireTransactionSerializer)
         register(SerializedBytes::class.java, SerializedBytesSerializer)
-        register(Party.Full::class.java)
+        register(Party::class.java)
         register(Array<Any>(0,{}).javaClass)
         register(Class::class.java, ClassSerializer)
 

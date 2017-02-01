@@ -48,7 +48,7 @@ class NewTransaction : Fragment() {
     private val partyBLabel by fxid<Label>()
     private val issuerLabel by fxid<Label>()
     private val issuerTextField by fxid<TextField>()
-    private val issuerChoiceBox by fxid<ChoiceBox<Party.Full>>()
+    private val issuerChoiceBox by fxid<ChoiceBox<Party>>()
     private val issueRefLabel by fxid<Label>()
     private val issueRefTextField by fxid<TextField>()
     private val currencyLabel by fxid<Label>()

@@ -17,16 +17,16 @@ import java.time.temporal.ChronoUnit
  */
 data class PortfolioState(val portfolio: List<StateRef>,
                           override val contract: PortfolioSwap,
-                          private val _parties: Pair<Party.Full, Party.Full>,
+                          private val _parties: Pair<Party, Party>,
                           val valuationDate: LocalDate,
                           val valuation: PortfolioValuation? = null,
                           override val linearId: UniqueIdentifier = UniqueIdentifier())
     : RevisionedState<PortfolioState.Update>, SchedulableState, DealState {
     data class Update(val portfolio: List<StateRef>? = null, val valuation: PortfolioValuation? = null)
 
-    override val parties: List<Party.Full> get() = _parties.toList()
+    override val parties: List<Party> get() = _parties.toList()
     override val ref: String = linearId.toString()
-    val valuer: Party.Full get() = parties[0]
+    val valuer: Party get() = parties[0]
 
     override val participants: List<CompositeKey>
         get() = parties.map { it.owningKey }
@@ -40,11 +40,11 @@ data class PortfolioState(val portfolio: List<StateRef>,
         return parties.flatMap { it.owningKey.keys }.intersect(ourKeys).isNotEmpty()
     }
 
-    override fun generateAgreement(notary: Party.Full): TransactionBuilder {
+    override fun generateAgreement(notary: Party): TransactionBuilder {
         return TransactionType.General.Builder(notary).withItems(copy(), Command(PortfolioSwap.Commands.Agree(), parties.map { it.owningKey }))
     }
 
-    override fun generateRevision(notary: Party.Full, oldState: StateAndRef<*>, updatedValue: Update): TransactionBuilder {
+    override fun generateRevision(notary: Party, oldState: StateAndRef<*>, updatedValue: Update): TransactionBuilder {
         require(oldState.state.data == this)
         val portfolio = updatedValue.portfolio ?: portfolio
         val valuation = updatedValue.valuation ?: valuation

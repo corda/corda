@@ -21,7 +21,7 @@ data class Portfolio(private val tradeStateAndRefs: List<StateAndRef<IRSState>>,
     val swaps: List<SwapData> by lazy { trades.map { it.swap } }
     val refs: List<StateRef> by lazy { tradeStateAndRefs.map { it.ref } }
 
-    fun getNotionalForParty(party: Party.Full) = trades.map { it.swap.getLegForParty(party).notional }.sum()
+    fun getNotionalForParty(party: Party) = trades.map { it.swap.getLegForParty(party).notional }.sum()
 
     fun update(curTrades: List<StateAndRef<IRSState>>): Portfolio {
         return copy(tradeStateAndRefs = curTrades)

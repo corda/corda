@@ -31,8 +31,8 @@ class ScheduledFlowTests {
     lateinit var nodeB: MockNetwork.MockNode
 
     data class ScheduledState(val creationTime: Instant,
-                              val source: Party.Full,
-                              val destination: Party.Full,
+                              val source: Party,
+                              val destination: Party,
                               val processed: Boolean = false,
                               override val linearId: UniqueIdentifier = UniqueIdentifier(),
                               override val contract: Contract = DummyContract()) : SchedulableState, LinearState {
@@ -52,7 +52,7 @@ class ScheduledFlowTests {
         }
     }
 
-    class InsertInitialStateFlow(val destination: Party.Full) : FlowLogic<Unit>() {
+    class InsertInitialStateFlow(val destination: Party) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val scheduledState = ScheduledState(serviceHub.clock.instant(),
@@ -87,7 +87,7 @@ class ScheduledFlowTests {
 
     class ScheduledFlowTestPlugin : CordaPluginRegistry() {
         override val requiredFlows: Map<String, Set<String>> = mapOf(
-                InsertInitialStateFlow::class.java.name to setOf(Party.Full::class.java.name),
+                InsertInitialStateFlow::class.java.name to setOf(Party::class.java.name),
                 ScheduledFlow::class.java.name to setOf(StateRef::class.java.name)
         )
     }

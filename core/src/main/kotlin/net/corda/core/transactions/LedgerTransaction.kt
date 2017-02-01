@@ -26,7 +26,7 @@ class LedgerTransaction(
         val attachments: List<Attachment>,
         /** The hash of the original serialised WireTransaction. */
         override val id: SecureHash,
-        notary: Party.Full?,
+        notary: Party?,
         signers: List<CompositeKey>,
         timestamp: Timestamp?,
         type: TransactionType

@@ -266,7 +266,7 @@ class Obligation<P> : Contract {
     data class State<P>(
             var lifecycle: Lifecycle = Lifecycle.NORMAL,
             /** Where the debt originates from (obligor) */
-            val obligor: Party.Full,
+            val obligor: Party,
             val template: Terms<P>,
             val quantity: Long,
             /** The public key of the entity the contract pays to */
@@ -456,11 +456,11 @@ class Obligation<P> : Contract {
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
     fun generateIssue(tx: TransactionBuilder,
-                      obligor: Party.Full,
+                      obligor: Party,
                       issuanceDef: Terms<P>,
                       pennies: Long,
                       beneficiary: CompositeKey,
-                      notary: Party.Full) {
+                      notary: Party) {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().map { it.data }.sumObligationsOrNull<P>() == null)
         tx.addOutputState(State(Lifecycle.NORMAL, obligor, issuanceDef, pennies, beneficiary), notary)
@@ -469,13 +469,13 @@ class Obligation<P> : Contract {
 
     fun generatePaymentNetting(tx: TransactionBuilder,
                                issued: Issued<Obligation.Terms<P>>,
-                               notary: Party.Full,
+                               notary: Party,
                                vararg states: State<P>) {
         requireThat {
             "all states are in the normal lifecycle state " by (states.all { it.lifecycle == Lifecycle.NORMAL })
         }
         val groups = states.groupBy { it.multilateralNetState }
-        val partyLookup = HashMap<CompositeKey, Party.Full>()
+        val partyLookup = HashMap<CompositeKey, Party>()
         val signers = states.map { it.beneficiary }.union(states.map { it.obligor.owningKey }).toSet()
 
         // Create a lookup table of the party that each public key represents.
@@ -509,7 +509,7 @@ class Obligation<P> : Contract {
     fun generateSetLifecycle(tx: TransactionBuilder,
                              statesAndRefs: List<StateAndRef<State<P>>>,
                              lifecycle: Lifecycle,
-                             notary: Party.Full) {
+                             notary: Party) {
         val states = statesAndRefs.map { it.state.data }
         val issuanceDef = getTermsOrThrow(states)
         val existingLifecycle = when (lifecycle) {
@@ -545,7 +545,7 @@ class Obligation<P> : Contract {
                        statesAndRefs: Iterable<StateAndRef<State<P>>>,
                        assetStatesAndRefs: Iterable<StateAndRef<FungibleAsset<P>>>,
                        moveCommand: MoveCommand,
-                       notary: Party.Full) {
+                       notary: Party) {
         val states = statesAndRefs.map { it.state }
         val obligationIssuer = states.first().data.obligor
         val obligationOwner = states.first().data.beneficiary
@@ -700,18 +700,18 @@ fun <P> Iterable<ContractState>.sumObligationsOrZero(issuanceDef: Issued<Obligat
         = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrZero(issuanceDef)
 
 infix fun <T> Obligation.State<T>.at(dueBefore: Instant) = copy(template = template.copy(dueBefore = dueBefore))
-infix fun <T> Obligation.State<T>.between(parties: Pair<Party.Full, CompositeKey>) = copy(obligor = parties.first, beneficiary = parties.second)
+infix fun <T> Obligation.State<T>.between(parties: Pair<Party, CompositeKey>) = copy(obligor = parties.first, beneficiary = parties.second)
 infix fun <T> Obligation.State<T>.`owned by`(owner: CompositeKey) = copy(beneficiary = owner)
-infix fun <T> Obligation.State<T>.`issued by`(party: Party.Full) = copy(obligor = party)
+infix fun <T> Obligation.State<T>.`issued by`(party: Party) = copy(obligor = party)
 // For Java users:
 @Suppress("unused") fun <T> Obligation.State<T>.ownedBy(owner: CompositeKey) = copy(beneficiary = owner)
 
-@Suppress("unused") fun <T> Obligation.State<T>.issuedBy(party: Party.Full) = copy(obligor = party)
+@Suppress("unused") fun <T> Obligation.State<T>.issuedBy(party: Party) = copy(obligor = party)
 
 /** A randomly generated key. */
 val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
-val DUMMY_OBLIGATION_ISSUER by lazy { Party.Full("Snake Oil Issuer", DUMMY_OBLIGATION_ISSUER_KEY.public.composite) }
+val DUMMY_OBLIGATION_ISSUER by lazy { Party("Snake Oil Issuer", DUMMY_OBLIGATION_ISSUER_KEY.public.composite) }
 
 val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
     get() = Obligation.Terms(nonEmptySetOf(Cash().legalContractReference), nonEmptySetOf(this), TEST_TX_TIME)

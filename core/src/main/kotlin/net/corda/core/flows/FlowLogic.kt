@@ -44,7 +44,7 @@ abstract class FlowLogic<out T> {
      * other side. The default implementation returns the class object of this FlowLogic, but any [Class] instance
      * will do as long as the other side registers with it.
      */
-    open fun getCounterpartyMarker(party: Party.Full): Class<*> = javaClass
+    open fun getCounterpartyMarker(party: Party): Class<*> = javaClass
 
     /**
      * Serializes and queues the given [payload] object for sending to the [otherParty]. Suspends until a response
@@ -59,7 +59,7 @@ abstract class FlowLogic<out T> {
      *
      * @returns an [UntrustworthyData] wrapper around the received object.
      */
-    inline fun <reified R : Any> sendAndReceive(otherParty: Party.Full, payload: Any) = sendAndReceive(R::class.java, otherParty, payload)
+    inline fun <reified R : Any> sendAndReceive(otherParty: Party, payload: Any) = sendAndReceive(R::class.java, otherParty, payload)
 
     /**
      * Serializes and queues the given [payload] object for sending to the [otherParty]. Suspends until a response
@@ -73,7 +73,7 @@ abstract class FlowLogic<out T> {
      * @returns an [UntrustworthyData] wrapper around the received object.
      */
     @Suspendable
-    open fun <R : Any> sendAndReceive(receiveType: Class<R>, otherParty: Party.Full, payload: Any): UntrustworthyData<R> {
+    open fun <R : Any> sendAndReceive(receiveType: Class<R>, otherParty: Party, payload: Any): UntrustworthyData<R> {
         return stateMachine.sendAndReceive(receiveType, otherParty, payload, sessionFlow)
     }
 
@@ -84,7 +84,7 @@ abstract class FlowLogic<out T> {
      * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
      * corrupted data in order to exploit your code.
      */
-    inline fun <reified R : Any> receive(otherParty: Party.Full): UntrustworthyData<R> = receive(R::class.java, otherParty)
+    inline fun <reified R : Any> receive(otherParty: Party): UntrustworthyData<R> = receive(R::class.java, otherParty)
 
     /**
      * Suspends until the specified [otherParty] sends us a message of type [receiveType].
@@ -96,7 +96,7 @@ abstract class FlowLogic<out T> {
      * @returns an [UntrustworthyData] wrapper around the received object.
      */
     @Suspendable
-    open fun <R : Any> receive(receiveType: Class<R>, otherParty: Party.Full): UntrustworthyData<R> {
+    open fun <R : Any> receive(receiveType: Class<R>, otherParty: Party): UntrustworthyData<R> {
         return stateMachine.receive(receiveType, otherParty, sessionFlow)
     }
 
@@ -108,7 +108,7 @@ abstract class FlowLogic<out T> {
      * network's event horizon time.
      */
     @Suspendable
-    open fun send(otherParty: Party.Full, payload: Any) = stateMachine.send(otherParty, payload, sessionFlow)
+    open fun send(otherParty: Party, payload: Any) = stateMachine.send(otherParty, payload, sessionFlow)
 
     /**
      * Invokes the given subflow. This function returns once the subflow completes successfully with the result

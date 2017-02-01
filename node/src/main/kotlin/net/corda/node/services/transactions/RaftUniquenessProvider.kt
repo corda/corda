@@ -107,7 +107,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
                 .build()
     }
 
-    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party.Full) {
+    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
         val entries = states.mapIndexed { i, stateRef -> stateRef to UniquenessProvider.ConsumingTx(txId, i, callerIdentity) }
 
         log.debug("Attempting to commit input states: ${states.joinToString()}")

@@ -17,7 +17,7 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import java.nio.file.Path
 import java.util.*
 
-class BuyerFlow(val otherParty: Party.Full,
+class BuyerFlow(val otherParty: Party,
                 private val attachmentsPath: Path,
                 override val progressTracker: ProgressTracker = ProgressTracker(STARTING_BUY)) : FlowLogic<Unit>() {
 

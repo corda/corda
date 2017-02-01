@@ -104,7 +104,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     // low-performance prototyping period.
     protected abstract val serverThread: AffinityExecutor
 
-    private val flowFactories = ConcurrentHashMap<Class<*>, (Party.Full) -> FlowLogic<*>>()
+    private val flowFactories = ConcurrentHashMap<Class<*>, (Party) -> FlowLogic<*>>()
     protected val partyKeys = mutableSetOf<KeyPair>()
 
     val services = object : ServiceHubInternal() {
@@ -127,13 +127,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             return serverThread.fetchFrom { smm.add(logic) }
         }
 
-        override fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party.Full) -> FlowLogic<*>) {
+        override fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party) -> FlowLogic<*>) {
             require(markerClass !in flowFactories) { "${markerClass.java.name} has already been used to register a flow" }
             log.info("Registering flow ${markerClass.java.name}")
             flowFactories[markerClass.java] = flowFactory
         }
 
-        override fun getFlowFactory(markerClass: Class<*>): ((Party.Full) -> FlowLogic<*>)? {
+        override fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)? {
             return flowFactories[markerClass]
         }
 
@@ -491,10 +491,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                                                stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage) =
             StorageServiceImpl(attachments, transactionStorage, stateMachineRecordedTransactionMappingStorage)
 
-    protected fun obtainLegalIdentity(): Party.Full = obtainKeyPair(configuration.baseDirectory, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).first
+    protected fun obtainLegalIdentity(): Party = obtainKeyPair(configuration.baseDirectory, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).first
     protected fun obtainLegalIdentityKey(): KeyPair = obtainKeyPair(configuration.baseDirectory, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).second
 
-    private fun obtainKeyPair(dir: Path, privateKeyFileName: String, publicKeyFileName: String, serviceName: String? = null): Pair<Party.Full, KeyPair> {
+    private fun obtainKeyPair(dir: Path, privateKeyFileName: String, publicKeyFileName: String, serviceName: String? = null): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
         // is distributed to other peers and we use it (or a key signed by it) when we need to do something
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
@@ -508,7 +508,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             log.info("Identity key not found, generating fresh key!")
             val keyPair: KeyPair = generateKeyPair()
             keyPair.serialize().writeToFile(privKeyFile)
-            val myIdentity = Party.Full(identityName, keyPair.public)
+            val myIdentity = Party(identityName, keyPair.public)
             // We include the Party class with the file here to help catch mixups when admins provide files of the
             // wrong type by mistake.
             myIdentity.serialize().writeToFile(pubIdentityFile)
@@ -517,7 +517,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // Check that the identity in the config file matches the identity file we have stored to disk.
             // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
             // things up for us.
-            val myIdentity = pubIdentityFile.readAll().deserialize<Party.Full>()
+            val myIdentity = pubIdentityFile.readAll().deserialize<Party>()
             if (myIdentity.name != identityName)
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:" +
                         "$identityName vs ${myIdentity.name}")

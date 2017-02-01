@@ -16,7 +16,7 @@ import net.corda.core.transactions.SignedTransaction
  * @return a list of participants who were successfully notified of the transaction.
  */
 class BroadcastTransactionFlow(val notarisedTransaction: SignedTransaction,
-                               val participants: Set<Party.Full>) : FlowLogic<Unit>() {
+                               val participants: Set<Party>) : FlowLogic<Unit>() {
 
     data class NotifyTxRequest(val tx: SignedTransaction)
 

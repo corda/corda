@@ -302,7 +302,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.useClassLoader(classLoader) {
             val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
             val commands = kryo.readClassAndObject(input) as List<Command>
-            val notary = kryo.readClassAndObject(input) as Party.Full?
+            val notary = kryo.readClassAndObject(input) as Party?
             val signers = kryo.readClassAndObject(input) as List<CompositeKey>
             val transactionType = kryo.readClassAndObject(input) as TransactionType
             val timestamp = kryo.readClassAndObject(input) as Timestamp?
@@ -430,7 +430,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
 
         // This is required to make all the unit tests pass
-        register(Party.Full::class.java)
+        register(Party::class.java)
 
         // This ensures a NonEmptySetSerializer is constructed with an initial value.
         register(NonEmptySet::class.java, NonEmptySetSerializer)

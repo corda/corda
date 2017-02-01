@@ -58,22 +58,22 @@ val ORACLE_PUBKEY: CompositeKey get() = ORACLE_KEY.public.composite
 
 val ALICE_KEY: KeyPair by lazy { generateKeyPair() }
 val ALICE_PUBKEY: CompositeKey get() = ALICE_KEY.public.composite
-val ALICE: Party.Full get() = Party.Full("Alice", ALICE_PUBKEY)
+val ALICE: Party get() = Party("Alice", ALICE_PUBKEY)
 
 val BOB_KEY: KeyPair by lazy { generateKeyPair() }
 val BOB_PUBKEY: CompositeKey get() = BOB_KEY.public.composite
-val BOB: Party.Full get() = Party.Full("Bob", BOB_PUBKEY)
+val BOB: Party get() = Party("Bob", BOB_PUBKEY)
 
 val CHARLIE_KEY: KeyPair by lazy { generateKeyPair() }
 val CHARLIE_PUBKEY: CompositeKey get() = CHARLIE_KEY.public.composite
-val CHARLIE: Party.Full get() = Party.Full("Charlie", CHARLIE_PUBKEY)
+val CHARLIE: Party get() = Party("Charlie", CHARLIE_PUBKEY)
 
-val MEGA_CORP: Party.Full get() = Party.Full("MegaCorp", MEGA_CORP_PUBKEY)
-val MINI_CORP: Party.Full get() = Party.Full("MiniCorp", MINI_CORP_PUBKEY)
+val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)
+val MINI_CORP: Party get() = Party("MiniCorp", MINI_CORP_PUBKEY)
 
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
 val BOC_PUBKEY: CompositeKey get() = BOC_KEY.public.composite
-val BOC: Party.Full get() = Party.Full("BankOfCorda", BOC_PUBKEY)
+val BOC: Party get() = Party("BankOfCorda", BOC_PUBKEY)
 val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
@@ -139,7 +139,7 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
  */
 inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
         markerClass: KClass<out FlowLogic<*>>,
-        noinline flowFactory: (Party.Full) -> P): ListenableFuture<P> {
+        noinline flowFactory: (Party) -> P): ListenableFuture<P> {
     val future = smm.changes.filter { it.addOrRemove == ADD && it.logic is P }.map { it.logic as P }.toFuture()
     services.registerFlowInitiator(markerClass, flowFactory)
     return future
