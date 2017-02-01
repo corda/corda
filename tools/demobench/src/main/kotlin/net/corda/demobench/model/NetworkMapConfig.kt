@@ -1,18 +1,10 @@
 package net.corda.demobench.model
 
-open class NetworkMapConfig(legalName: String, artemisPort: Int) {
+open class NetworkMapConfig(val legalName: String, val artemisPort: Int) {
 
-    private var keyValue: String = toKey(legalName)
+    private var keyValue = toKey(legalName)
     val key : String
         get() { return keyValue }
-
-    private var legalNameValue: String = legalName
-    val legalName : String
-        get() { return legalNameValue }
-
-    private var artemisPortValue: Int = artemisPort
-    val artemisPort : Int
-        get() { return artemisPortValue }
 
 }
 
