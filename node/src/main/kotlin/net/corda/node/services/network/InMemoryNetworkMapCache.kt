@@ -4,6 +4,7 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.bufferUntilSubscribed
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.map
 import net.corda.core.messaging.MessagingService
@@ -69,6 +70,8 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         }
         return null
     }
+
+    override fun getNodeByLegalIdentityKey(compositeKey: CompositeKey): NodeInfo? = registeredNodes[Party("", compositeKey)]
 
     override fun track(): Pair<List<NodeInfo>, Observable<MapChange>> {
         synchronized(_changed) {
