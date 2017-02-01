@@ -53,7 +53,7 @@ class PartyGenerator : Generator<Party.Full>(Party.Full::class.java) {
 
 class PartyAndReferenceGenerator : Generator<PartyAndReference>(PartyAndReference::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): PartyAndReference {
-        return PartyAndReference(PartyGenerator().generate(random, status), OpaqueBytes(random.nextBytes(16)))
+        return PartyAndReference(PartyGenerator().generate(random, status).toAnonymised(), OpaqueBytes(random.nextBytes(16)))
     }
 }
 

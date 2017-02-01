@@ -17,16 +17,20 @@ import java.time.temporal.ChronoUnit
  */
 data class PortfolioState(val portfolio: List<StateRef>,
                           override val contract: PortfolioSwap,
-                          private val _parties: Pair<Party.Full, Party.Full>,
+                          private val _parties: Pair<Party.Anonymised, Party.Anonymised>,
                           val valuationDate: LocalDate,
                           val valuation: PortfolioValuation? = null,
                           override val linearId: UniqueIdentifier = UniqueIdentifier())
     : RevisionedState<PortfolioState.Update>, SchedulableState, DealState {
+    constructor(portfolio: List<StateRef>, contract: PortfolioSwap,
+                parties: Pair<Party, Party>, valuationDate: LocalDate, valuation: PortfolioValuation? = null)
+        : this(portfolio, contract, Pair(parties.first.toAnonymised(), parties.second.toAnonymised()),
+            valuationDate, valuation)
     data class Update(val portfolio: List<StateRef>? = null, val valuation: PortfolioValuation? = null)
 
-    override val parties: List<Party.Full> get() = _parties.toList()
+    override val parties: List<Party.Anonymised> get() = _parties.toList()
     override val ref: String = linearId.toString()
-    val valuer: Party.Full get() = parties[0]
+    val valuer: Party.Anonymised get() = parties[0]
 
     override val participants: List<CompositeKey>
         get() = parties.map { it.owningKey }

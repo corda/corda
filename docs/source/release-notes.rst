@@ -10,6 +10,8 @@ Milestone 8
 
     * ``Party`` equality is now based on the owning key, rather than the owning key and name. This is important for
       party anonymisation to work, as each key must identify exactly one party.
+    * ``Party`` split into ``Party.Full`` and pseudonymous ``Party.Anonymised``, with ``Party.Anonymised`` used in
+      contract states to avoid leaking identifying information.
 
 Milestone 7
 -----------

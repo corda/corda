@@ -139,7 +139,7 @@ each side.
           }
 
           open class Buyer(val otherParty: Party,
-                           val notary: Party,
+                           val notary: Party.Full,
                            val acceptablePrice: Amount<Currency>,
                            val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
               @Suspendable

@@ -49,9 +49,9 @@ InMemoryIdentityService
 
 The ``InMemoryIdentityService`` implements the ``IdentityService`` 
 interface and provides a store of remote mappings between ``CompositeKey`` 
-and remote ``Parties``. It is automatically populated from the 
+and remote ``Party.Full`` instances. It is automatically populated from the
 ``NetworkMapCache`` updates and is used when translating ``CompositeKey`` 
-exposed in transactions into fully populated ``Party`` identities. This 
+exposed in transactions into fully populated ``Party.Full`` identities. This
 service is also used in the default JSON mapping of parties in the web 
 server, thus allowing the party names to be used to refer to other nodes' 
 legal identities. In the future the Identity service will be made 
@@ -137,9 +137,9 @@ services of authorised nodes provided by the remote
 ``NetworkMapService``. Typical use is to search for nodes hosting 
 specific advertised services e.g. a Notary service, or an Oracle 
 service. Also, this service allows mapping of friendly names, or 
-``Party`` identities to the full ``NodeInfo`` which is used in the 
+``Party.Full`` identities to the full ``NodeInfo`` which is used in the
 ``StateMachineManager`` to convert between the ``CompositeKey``, or 
-``Party`` based addressing used in the flows/contracts and the 
+``Party.Full`` based addressing used in the flows/contracts and the
 physical host and port information required for the physical 
 ``ArtemisMQ`` messaging layer. 
 

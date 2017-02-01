@@ -1,6 +1,7 @@
 package net.corda.core.crypto
 
 import net.corda.core.contracts.PartyAndReference
+import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.OpaqueBytes
 import java.security.PublicKey
 
@@ -30,6 +31,9 @@ sealed class Party(val owningKey: CompositeKey) {
     override fun toString(): String = owningKey.toBase58String()
     abstract fun toAnonymised(): Party.Anonymised
 
+    fun ref(bytes: OpaqueBytes) = PartyAndReference(this.toAnonymised(), bytes)
+    fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
+
     class Anonymised(owningKey: CompositeKey) : Party(owningKey) {
         override fun toAnonymised(): Anonymised = this
     }
@@ -37,10 +41,8 @@ sealed class Party(val owningKey: CompositeKey) {
     class Full(val name: String, owningKey: CompositeKey) : Party(owningKey) {
         /** A helper constructor that converts the given [PublicKey] in to a [CompositeKey] with a single node */
         constructor(name: String, owningKey: PublicKey) : this(name, owningKey.composite)
-        override fun toString() = name
 
-        fun ref(bytes: OpaqueBytes) = PartyAndReference(this, bytes)
-        fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
         override fun toAnonymised() = Party.Anonymised(owningKey)
+        override fun toString() = name
     }
 }

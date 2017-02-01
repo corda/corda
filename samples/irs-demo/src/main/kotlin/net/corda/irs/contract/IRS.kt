@@ -304,7 +304,7 @@ class InterestRateSwap() : Contract {
     }
 
     open class FixedLeg(
-            var fixedRatePayer: Party.Full,
+            var fixedRatePayer: Party.Anonymised,
             notional: Amount<Currency>,
             paymentFrequency: Frequency,
             effectiveDate: LocalDate,
@@ -343,7 +343,7 @@ class InterestRateSwap() : Contract {
         override fun hashCode() = super.hashCode() + 31 * Objects.hash(fixedRatePayer, fixedRate, rollConvention)
 
         // Can't autogenerate as not a data class :-(
-        fun copy(fixedRatePayer: Party.Full = this.fixedRatePayer,
+        fun copy(fixedRatePayer: Party.Anonymised = this.fixedRatePayer,
                  notional: Amount<Currency> = this.notional,
                  paymentFrequency: Frequency = this.paymentFrequency,
                  effectiveDate: LocalDate = this.effectiveDate,
@@ -365,7 +365,7 @@ class InterestRateSwap() : Contract {
     }
 
     open class FloatingLeg(
-            var floatingRatePayer: Party.Full,
+            var floatingRatePayer: Party.Anonymised,
             notional: Amount<Currency>,
             paymentFrequency: Frequency,
             effectiveDate: LocalDate,
@@ -423,7 +423,7 @@ class InterestRateSwap() : Contract {
                 index, indexSource, indexTenor)
 
 
-        fun copy(floatingRatePayer: Party.Full = this.floatingRatePayer,
+        fun copy(floatingRatePayer: Party.Anonymised = this.floatingRatePayer,
                  notional: Amount<Currency> = this.notional,
                  paymentFrequency: Frequency = this.paymentFrequency,
                  effectiveDate: LocalDate = this.effectiveDate,
@@ -672,7 +672,7 @@ class InterestRateSwap() : Contract {
             return fixedLeg.fixedRatePayer.owningKey.containsAny(ourKeys) || floatingLeg.floatingRatePayer.owningKey.containsAny(ourKeys)
         }
 
-        override val parties: List<Party.Full>
+        override val parties: List<Party.Anonymised>
             get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
 
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {

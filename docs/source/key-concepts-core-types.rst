@@ -67,7 +67,7 @@ contract type in the library):
 
    .. sourcecode:: kotlin
 
-      val notaryToUse: Party = ...
+      val notaryToUse: Party.Full = ...
       val txb = TransactionBuilder(notary = notaryToUse).withItems(BananaState(Amount(20, Bananas), fromCountry = "Elbonia"))
       txb.signWith(myKey)
       txb.setTime(Instant.now(), notaryToUse, 30.seconds)
@@ -87,13 +87,13 @@ Party and CompositeKey
 Entities using the network are called *parties*. Parties can sign structures using keys, and a party may have many
 keys under their control.
 
-Parties may sometimes be identified pseudonymously. For example, in a transaction sent to your node as part of a
-chain of custody it is important you can convince yourself of the transaction's validity, but equally important that
-you don't learn anything about who was involved in that transaction. In these cases a public key may be present
-without any identifying information about who owns it.
+Parties can be represented either in full (including name) or pseudonymously. For example, in a transaction sent to your
+node as part of a chain of custody it is important you can convince yourself of the transaction's validity, but equally
+important that you don't learn anything about who was involved in that transaction. In these cases ``Party.Anonymised``
+should be used, which contains a composite public key without any identifying information about who owns it.
 
-Identities of parties involved in signing a transaction can be represented simply by a ``CompositeKey``, or by further
-information (such as name) using the ``Party`` class. An ``AuthenticatedObject`` represents an object (like a command)
+Identities of parties involved in signing a transaction can be represented simply by a ``Party.Anonymised``, or by further
+information (such as name) using the ``Party.Full`` class. An ``AuthenticatedObject`` represents an object (like a command)
 that has been signed by a set of parties.
 
 .. note:: These types are provisional and will change significantly in future as the identity framework becomes more fleshed out.

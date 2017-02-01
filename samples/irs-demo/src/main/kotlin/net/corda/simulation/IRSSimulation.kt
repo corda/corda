@@ -8,6 +8,7 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.RunOnCallerThread
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.toBase58String
 import net.corda.core.flatMap
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.map
@@ -117,8 +118,8 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         // have the convenient copy() method that'd let us make small adjustments. Instead they're partly mutable.
         // TODO: We should revisit this in post-Excalibur cleanup and fix, e.g. by introducing an interface.
         val irs = om.readValue<InterestRateSwap.State>(javaClass.classLoader.getResource("simulation/trade.json"))
-        irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity
-        irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity
+        irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity.toAnonymised()
+        irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity.toAnonymised()
 
         @Suppress("UNCHECKED_CAST")
         val acceptorTx = node2.initiateSingleShotFlow(Instigator::class) { Acceptor(it) }.flatMap {

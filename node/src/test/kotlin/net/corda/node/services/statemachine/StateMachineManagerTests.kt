@@ -362,7 +362,7 @@ class StateMachineManagerTests {
                     },
                     expect(match = { it.message is SessionConfirm }) {
                         it.message as SessionConfirm
-                        require(it.from == notary1.id)
+                        assertEquals(notary1.id, it.from)
                     }
             )
         }

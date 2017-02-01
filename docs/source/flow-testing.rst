@@ -23,7 +23,7 @@ with this basic skeleton:
           lateinit var net: MockNetwork
           lateinit var a: MockNetwork.MockNode
           lateinit var b: MockNetwork.MockNode
-          lateinit var notary: Party
+          lateinit var notary: Party.Full
 
           @Before
           fun setup() {

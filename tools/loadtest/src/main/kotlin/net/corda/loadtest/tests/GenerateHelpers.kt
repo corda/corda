@@ -27,7 +27,7 @@ fun generateIssue(
 fun generateMove(
         max: Long,
         currency: Currency,
-        issuer: Party.Full,
+        issuer: Party.Anonymised,
         possibleRecipients: List<Party.Full>
 ): Generator<CashCommand.PayCash> {
     return generateAmount(1, max, Generator.pure(Issued(PartyAndReference(issuer, OpaqueBytes.of(0)), currency))).combine(

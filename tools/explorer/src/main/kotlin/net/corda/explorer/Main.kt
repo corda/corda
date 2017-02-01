@@ -160,7 +160,7 @@ fun main(args: Array<String>) {
             val eventGenerator = EventGenerator(
                     parties = listOf(aliceNode.nodeInfo.legalIdentity, bobNode.nodeInfo.legalIdentity),
                     notary = notaryNode.nodeInfo.notaryIdentity,
-                    issuers = listOf(issuerNodeGBP.nodeInfo.legalIdentity,issuerNodeUSD.nodeInfo.legalIdentity)
+                    issuers = listOf(issuerNodeGBP.nodeInfo.legalIdentity, issuerNodeUSD.nodeInfo.legalIdentity)
             )
             val issuerGBPEventGenerator = EventGenerator(
                     parties = listOf(issuerNodeGBP.nodeInfo.legalIdentity, aliceNode.nodeInfo.legalIdentity, bobNode.nodeInfo.legalIdentity),
