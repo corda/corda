@@ -1,83 +1,103 @@
 Getting set up
 ==============
 
-We have tried to make access to Corda as relatively simple as possible, using industry standard established tools.
-Although it is possible to replace any of the recommendations below, we will find it a lot easier to support your efforts
-if you follow our guidelines. Saying that, we are also interested in problems that arise due to different configurations.
+Software requirements
+---------------------
 
-A JVM
------
+Corda uses industry-standard tools to make set-up as simple as possible. Following the software recommendations below will 
+minimize the number of errors you encounter, and make it easier for others to provide support. However, if you do use other tools, 
+we're interested to hear about any issues that arise.
 
-Corda runs in a JVM and is written predominantly in Kotlin with some example use cases demonstrated in Java that we have
-incorporated to demonstrate that Kotlin and Java can work seamlessly together. We recommend the most recent production
-version of Java 8. The JDK can be obtained `from Oracle <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_.
-Other implementations of the JVM are not actively supported, but as mentioned, we are interested in finding out any issues you
-do have with them.
+JVM
+~~~
 
-.. note:: If you are using a JVM implementation other than Oracle's you may get errors similar to ``Unresolved reference: javafx``.
-   This means JavaFX is not bundled with the JVM and you will need to install it separately (e.g. OpenJFX is needed
-   with OpenJDK).
+Corda is written in Kotlin and runs in a JVM. We develop against Oracle JDK 8, and other JVM implementations are not actively 
+supported. Oracle JDK 8 can be obtained directly from 
+`Oracle <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_. Installation instructions are 
+available for `Windows <http://docs.oracle.com/javase/8/docs/technotes/guides/install/windows_jdk_install.html#CHDEBCCJ>`_, 
+`Linux <http://docs.oracle.com/javase/8/docs/technotes/guides/install/linux_jdk.html#BJFGGEFG>`_ and 
+`OS X <http://docs.oracle.com/javase/8/docs/technotes/guides/install/mac_jdk.html#CHDBADCG>`_.
 
-IntelliJ
---------
-We strongly recommend the use of IntelliJ's Development Environment known as IDEA. Download it for free from
-`JetBrains <https://www.jetbrains.com/idea/download/>`_. The primary reason we recommend this particular IDE is that it integrates
-very well with our choice of language for Corda, "Kotlin", as JetBrains also support the development of Kotlin.
+Please ensure that you keep your Oracle JDK installation updated to the latest version while working with Corda. 
+Even earlier versions of JDK 8 versions can cause cryptic errors.
 
-.. warning:: When opening the Corda project for the first time from the IntelliJ splash screen, please use "Open"
-   and then agree to import the Gradle project from the popup bubble. Don't pick "Import" on the splash screen,
-   because a bug in IntelliJ will cause the pre-packaged run configurations to be erased. If you see this warning
-   too late, it's no problem, just use ``git checkout .idea/runConfiguration`` or the version control tab in IntelliJ
-   to undelete the files.
+If you do choose to use OpenJDK instead of Oracle's JDK, you will also need to install OpenJFX.
 
+Additional troubleshooting information can be found `here <https://docs.corda.net/getting-set-up-fault-finding.html#java-issues>`_.
 
 Kotlin
-------
-Kotlin is available as a downloadable plugin to IntelliJ. Refer to IntelliJ's instructions on
-`getting Started with Kotlin and IntelliJ <https://kotlinlang.org/docs/tutorials/getting-started.html>`_. Additionally,
-if you would like to start getting to grips with the Kotlin language, then we strongly recommend you work through some
-of the tutorials (known as "koans") as well. Also see our :doc:`further-notes-on-kotlin`.
+~~~~~~
 
+Applications on Corda (CorDapps) can be written in any JVM-targeting language. However, Corda itself and most of the samples 
+are written in Kotlin. If you're unfamiliar with Kotlin, there is an official `getting started guide <https://kotlinlang.org/docs/tutorials/>`_. 
+See also our :doc:`further-notes-on-kotlin`.
 
-Version control via Git
------------------------
+IDE
+~~~
 
-We use git to version control Corda. The authoritative place to obtain git is from the main `git website <https://git-scm.com/downloads>`_
-but it may be the case that your operating system provides git with a supported utility (e.g. for Apple, git is provided along
-with XCode - their free development environment). If this is the case, we would recommend you obtain git via that
-supported route.
+We strongly recommend the use of IntelliJ IDEA as an IDE, primarily due to the strength of its Kotlin integration. The free Community 
+Edition can be downloaded from `JetBrains <https://www.jetbrains.com/idea/download/>`_.
 
-You will need the command line package installed which you can then use natively (via the command line) or via IntelliJ
-(in which case you may need to configure IntelliJ to recognise where git has been installed on your system). IntelliJ and
-git configuration are quite seamless although the first time you use it, you will have to configure IntelliJ the location
-of your git command installation. More details regarding this can be found
-on the `JetBrains website <https://www.jetbrains.com/help/idea/2016.2/using-git-integration.html>`_
+Please make sure that you're running the latest version of IDEA, as older versions have been known to have problems integrating with Gradle, 
+the build tool used by Corda.
+
+You'll also want to install the Kotlin IDEA plugin by following the instructions 
+`here <https://kotlinlang.org/docs/tutorials/getting-started.html>`_.
+
+Additional troubleshooting information can be found `here <https://docs.corda.net/getting-set-up-fault-finding.html#idea-issues>`_.
+
+Git
+~~~
+
+We use git to version-control Corda. Instructions on installing git can be found 
+`here <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`_.
+
+Following these instructions will give you access to git via the command line. It can also be useful to control git via IDEA. Instructions 
+for doing so can be found on the `JetBrains website <https://www.jetbrains.com/help/idea/2016.2/using-git-integration.html>`_.
 
 Gradle
-------
+~~~~~~
 
-Gradle is our primary means of building Corda and managing dependencies. IntelliJ has its own view of this and occasionally
-may need to be resynced from time to time. This can be done within IntelliJ by pressing the "gradle refresh" icon located
-on the gradle tab (generally found on the right hand side), or by following the gradle commands specific for the task you
-are performing (details expounded later). Whenever prompted about gradle, accept the defaults suggested by IntelliJ.
+We use Gradle as the build tool for Corda. However, you do not need to install Gradle itself, as a wrapper is provided.
 
+The wrapper can be run from the command line by using ``./gradlew [taskName]`` on OS X/Linux, or ``gradlew.bat [taskName]`` on Windows.
 
 Corda source code
 -----------------
 
-You can check out the Corda platform source code from this repository:
+The Corda platform source code is available here:
 
     https://github.com/corda/corda.git
 
-and a template app that you can use as a basis for experimenting with app development from:
+and a basic CorDapp that you can use as the basis for your own CorDapps is available here:
 
     https://github.com/corda/cordapp-template.git
 
-You can catch up with the latest code by selecting "VCS -> Update Project" in the IntelliJ menu.
+You can clone both of these repos to your local machine by running the command ``git clone [repo URL]``.
 
+By default, both repos will be on the ``master`` branch. However, this is an unstable development branch. You should check 
+out the latest milestone release (currently Milestone 7) instead by running ``git checkout release-M7``.
 
-Troubleshooting
----------------
+Opening Corda/CorDapps in IDEA
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-See :doc:`getting-set-up-fault-finding`, or get in touch with us either on the `forums <https://discourse.corda.net/>`_ or via `slack <http://slack.corda.net/>`_.
+When opening a Corda project for the first time from the IDEA splash screen, please click "Open" rather than "Import Project", 
+and then import the Gradle project by clicking "Import Gradle project" in the popup bubble on the lower right-hand side of the screen. 
+If you instead pick "Import Project" on the splash screen, a bug in IDEA will cause Corda's pre-packaged run configurations to be erased. 
 
+If you see this warning too late, that's not a problem - just use ``git checkout .idea/runConfiguration`` or the version control tab in 
+IDEA to undelete the files.
+
+IDEA's build of the project may need to be resynced from time to time. This can be done from within IDEA by going to "View" -> "Tool Windows" -> "Gradle" 
+and clicking "Refresh all Gradle projects". Whenever prompted about Gradle, accept the defaults suggested by IDEA.
+
+Next steps
+----------
+
+The best way to check that everything is working fine is by :doc:`running-the-demos`.
+
+Once you have these demos running, you may be interested in writing your own CorDapps, in which case you should refer to 
+:doc:`tutorial-cordapp`.
+
+If you encounter any issues, please see the :doc:`getting-set-up-fault-finding` page, or get in touch with us on the 
+`forums <https://discourse.corda.net/>`_ or via `slack <http://slack.corda.net/>`_.
