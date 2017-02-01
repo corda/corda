@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.core.contracts.AttachmentResolutionException
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.crypto.CompositeKey
@@ -8,7 +9,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.signWithECDSA
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializedBytes
-import java.io.FileNotFoundException
 import java.security.KeyPair
 import java.security.SignatureException
 import java.util.*
@@ -127,12 +127,12 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * [WireTransaction.toLedgerTransaction] with the passed in [ServiceHub] to resolve the dependencies,
      * returning an unverified LedgerTransaction.
      *
-     * @throws FileNotFoundException if a required attachment was not found in storage.
+     * @throws AttachmentResolutionException if a required attachment was not found in storage.
      * @throws TransactionResolutionException if an input points to a transaction not found in storage.
      * @throws SignatureException if any signatures were invalid or unrecognised
      * @throws SignaturesMissingException if any signatures that should have been present are missing.
      */
-    @Throws(FileNotFoundException::class, TransactionResolutionException::class, SignaturesMissingException::class)
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, SignatureException::class)
     fun toLedgerTransaction(services: ServiceHub) = verifySignatures().toLedgerTransaction(services)
 
     /**

@@ -12,6 +12,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 import net.corda.flows.TwoPartyTradeFlow
 import net.corda.node.services.persistence.NodeAttachmentService
 import java.nio.file.Path

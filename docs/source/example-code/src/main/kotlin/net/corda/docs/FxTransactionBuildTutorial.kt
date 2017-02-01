@@ -14,6 +14,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.unwrap
 import net.corda.flows.FinalityFlow
 import net.corda.flows.ResolveTransactionsFlow
 import java.util.*

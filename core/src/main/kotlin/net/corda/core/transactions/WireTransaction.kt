@@ -12,7 +12,6 @@ import net.corda.core.serialization.THREAD_LOCAL_KRYO
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Emoji
-import java.io.FileNotFoundException
 import java.security.PublicKey
 
 /**
@@ -66,10 +65,10 @@ class WireTransaction(
      * Looks up identities and attachments from storage to generate a [LedgerTransaction]. A transaction is expected to
      * have been fully resolved using the resolution flow by this point.
      *
-     * @throws FileNotFoundException if a required attachment was not found in storage.
+     * @throws AttachmentResolutionException if a required attachment was not found in storage.
      * @throws TransactionResolutionException if an input points to a transaction not found in storage.
      */
-    @Throws(FileNotFoundException::class, TransactionResolutionException::class)
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub): LedgerTransaction {
         // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
         val authenticatedArgs = commands.map {
@@ -78,7 +77,7 @@ class WireTransaction(
         }
         // Open attachments specified in this transaction. If we haven't downloaded them, we fail.
         val attachments = attachments.map {
-            services.storageService.attachments.openAttachment(it) ?: throw FileNotFoundException(it.toString())
+            services.storageService.attachments.openAttachment(it) ?: throw AttachmentResolutionException(it)
         }
         val resolvedInputs = inputs.map { StateAndRef(services.loadState(it), it) }
         return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, mustSign, timestamp, type)

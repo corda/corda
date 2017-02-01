@@ -10,6 +10,7 @@ import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.recordTransactions
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.unwrap
 import net.corda.flows.*
 import java.util.function.Function
 import javax.annotation.concurrent.ThreadSafe

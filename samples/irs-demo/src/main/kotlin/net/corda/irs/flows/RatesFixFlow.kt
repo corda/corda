@@ -10,6 +10,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 import net.corda.irs.flows.RatesFixFlow.FixOutOfRange
 import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
 import java.math.BigDecimal
