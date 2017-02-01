@@ -312,3 +312,23 @@
 	*** match;
 	*** next;
 }
+
+# These classes are accessed via bytecode generated on the fly.
+-keepclassmembers class java.lang.reflect.Proxy {
+  <methods>;
+}
+
+-keepclassmembers class java.lang.reflect.InvocationHandler {
+  <methods>;
+}
+
+# Don't strip special enum members.
+-keepclassmembers,allowoptimization enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+-keepclassmembers class java.lang.reflect.Executable {
+  <methods>;
+}
+
