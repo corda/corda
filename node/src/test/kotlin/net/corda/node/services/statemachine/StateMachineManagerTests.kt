@@ -390,9 +390,8 @@ class StateMachineManagerTests {
                 node2 sent sessionConfirm to node1,
                 node2 sent sessionEnd(errorFlow.exceptionThrown) to node1
         )
-        // TODO see StateMachineManager.endAllFiberSessions
-//        // Make sure the original stack trace isn't sent down the wire
-//        assertThat((sessionTransfers.last().message as SessionEnd).errorResponse!!.stackTrace).isEmpty()
+        // Make sure the original stack trace isn't sent down the wire
+        assertThat((sessionTransfers.last().message as SessionEnd).errorResponse!!.stackTrace).isEmpty()
     }
 
     @Test

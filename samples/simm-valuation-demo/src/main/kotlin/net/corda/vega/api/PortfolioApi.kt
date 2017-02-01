@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.filterStatesOfType
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.vega.analytics.InitialMarginTriple
@@ -159,7 +160,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         return withParty(partyName) {
             val buyer = if (swap.buySell.isBuy) ownParty else it
             val seller = if (swap.buySell.isSell) ownParty else it
-            rpc.startFlow(IRSTradeFlow::Requester, swap.toData(buyer, seller), it).returnValue.toBlocking().first()
+            rpc.startFlow(IRSTradeFlow::Requester, swap.toData(buyer, seller), it).returnValue.getOrThrow()
             Response.accepted().entity("{}").build()
         }
     }
@@ -266,12 +267,12 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     fun startPortfolioCalculations(params: ValuationCreationParams = ValuationCreationParams(LocalDate.of(2016, 6, 6)), @PathParam("party") partyName: String): Response {
         return withParty(partyName) { otherParty ->
             val existingSwap = getPortfolioWith(otherParty)
-            if (existingSwap == null) {
-                rpc.startFlow(SimmFlow::Requester, otherParty, params.valuationDate).returnValue.toBlocking().first()
+            val flowHandle = if (existingSwap == null) {
+                rpc.startFlow(SimmFlow::Requester, otherParty, params.valuationDate)
             } else {
-                val handle = rpc.startFlow(SimmRevaluation::Initiator, getPortfolioStateAndRefWith(otherParty).ref, params.valuationDate)
-                handle.returnValue.toBlocking().first()
+                rpc.startFlow(SimmRevaluation::Initiator, getPortfolioStateAndRefWith(otherParty).ref, params.valuationDate)
             }
+            flowHandle.returnValue.getOrThrow()
 
             withPortfolio(otherParty) { portfolioState ->
                 val portfolio = portfolioState.portfolio.toStateAndRef<IRSState>(rpc).toPortfolio()

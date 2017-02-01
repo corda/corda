@@ -11,7 +11,6 @@ import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.toFuture
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.node.driver.DriverBasedTest
@@ -138,13 +137,13 @@ class DistributedServiceTests : DriverBasedTest() {
         val issueHandle = aliceProxy.startFlow(
                 ::CashFlow,
                 CashCommand.IssueCash(amount, OpaqueBytes.of(0), alice.nodeInfo.legalIdentity, raftNotaryIdentity))
-        issueHandle.returnValue.toFuture().getOrThrow()
+        issueHandle.returnValue.getOrThrow()
     }
 
     private fun paySelf(amount: Amount<Currency>) {
         val payHandle = aliceProxy.startFlow(
                 ::CashFlow,
                 CashCommand.PayCash(amount.issuedBy(alice.nodeInfo.legalIdentity.ref(0)), alice.nodeInfo.legalIdentity))
-        payHandle.returnValue.toFuture().getOrThrow()
+        payHandle.returnValue.getOrThrow()
     }
 }

@@ -1,8 +1,10 @@
 package net.corda.notarydemo
 
 import com.google.common.net.HostAndPort
+import com.google.common.util.concurrent.Futures
 import net.corda.core.crypto.toStringShort
 import net.corda.core.div
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
@@ -60,9 +62,9 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      */
     private fun buildTransactions(count: Int): List<SignedTransaction> {
         val moveTransactions = (1..count).map {
-            rpc.startFlow(::DummyIssueAndMove, notary, counterpartyNode.legalIdentity).returnValue.toBlocking().toFuture()
+            rpc.startFlow(::DummyIssueAndMove, notary, counterpartyNode.legalIdentity).returnValue
         }
-        return moveTransactions.map { it.get() }
+        return Futures.allAsList(moveTransactions).getOrThrow()
     }
 
     /**
@@ -72,10 +74,8 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      * @return a list of encoded signer public keys - one for every transaction
      */
     private fun notariseTransactions(transactions: List<SignedTransaction>): List<String> {
-        val signatureFutures = transactions.map {
-            rpc.startFlow(NotaryFlow::Client, it).returnValue.toBlocking().toFuture()
-        }
-        return signatureFutures.map { it.get().by.toStringShort() }
+        val signatureFutures = transactions.map { rpc.startFlow(NotaryFlow::Client, it).returnValue }
+        return Futures.allAsList(signatureFutures).getOrThrow().map { it.by.toStringShort() }
     }
 }
 
