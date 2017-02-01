@@ -2,11 +2,10 @@ package net.corda.demobench.model
 
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
-import kotlin.reflect.jvm.jvmName
 
 
 class Explorer(val explorerController: ExplorerController) : AutoCloseable {
-    private val log = LoggerFactory.getLogger(Explorer::class.jvmName)
+    private val log = LoggerFactory.getLogger(Explorer::class.java)
 
     private val executor = Executors.newSingleThreadExecutor()
     private var process: Process? = null
