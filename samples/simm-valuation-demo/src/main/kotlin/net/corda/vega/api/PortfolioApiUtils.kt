@@ -14,7 +14,7 @@ import java.time.LocalDate
 /**
  * API JSON generation functions for larger JSON outputs.
  */
-class PortfolioApiUtils(private val ownParty: Party) {
+class PortfolioApiUtils(private val ownParty: Party.Full) {
     data class InitialMarginView(val baseCurrency: String, val post: Map<String, Double>, val call: Map<String, Double>, val agreed: Boolean)
     data class ValuationsView(
             val businessDate: LocalDate,

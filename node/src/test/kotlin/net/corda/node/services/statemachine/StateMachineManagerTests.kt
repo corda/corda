@@ -394,7 +394,7 @@ class StateMachineManagerTests {
         assertThat((sessionTransfers.last().message as SessionEnd).errorResponse!!.stackTrace).isEmpty()
     }
 
-    private class SendAndReceiveFlow(val otherParty: Party, val payload: Any) : FlowLogic<Unit>() {
+    private class SendAndReceiveFlow(val otherParty: Party.Full, val payload: Any) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             sendAndReceive<Any>(otherParty, payload)
@@ -434,7 +434,7 @@ class StateMachineManagerTests {
         )
     }
 
-    private class ConditionalExceptionFlow(val otherParty: Party, val sendPayload: Any) : FlowLogic<Unit>() {
+    private class ConditionalExceptionFlow(val otherParty: Party.Full, val sendPayload: Any) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val throwException = receive<Boolean>(otherParty).unwrap { it }
@@ -447,12 +447,12 @@ class StateMachineManagerTests {
 
     @Test
     fun `retry subFlow due to receiving FlowException`() {
-        class AskForExceptionFlow(val otherParty: Party, val throwException: Boolean) : FlowLogic<String>() {
+        class AskForExceptionFlow(val otherParty: Party.Full, val throwException: Boolean) : FlowLogic<String>() {
             @Suspendable
             override fun call(): String = sendAndReceive<String>(otherParty, throwException).unwrap { it }
         }
 
-        class RetryOnExceptionFlow(val otherParty: Party) : FlowLogic<String>() {
+        class RetryOnExceptionFlow(val otherParty: Party.Full) : FlowLogic<String>() {
             @Suspendable
             override fun call(): String {
                 return try {
@@ -541,7 +541,7 @@ class StateMachineManagerTests {
     }
 
 
-    private class SendFlow(val payload: Any, vararg val otherParties: Party) : FlowLogic<Unit>() {
+    private class SendFlow(val payload: Any, vararg val otherParties: Party.Full) : FlowLogic<Unit>() {
         init {
             require(otherParties.isNotEmpty())
         }
@@ -551,7 +551,7 @@ class StateMachineManagerTests {
     }
 
 
-    private class ReceiveFlow(vararg val otherParties: Party) : FlowLogic<Unit>() {
+    private class ReceiveFlow(vararg val otherParties: Party.Full) : FlowLogic<Unit>() {
         private var nonTerminating: Boolean = false
 
         init {
@@ -574,7 +574,7 @@ class StateMachineManagerTests {
         }
     }
 
-    private class PingPongFlow(val otherParty: Party, val payload: Long) : FlowLogic<Unit>() {
+    private class PingPongFlow(val otherParty: Party.Full, val payload: Long) : FlowLogic<Unit>() {
         @Transient var receivedPayload: Long? = null
         @Transient var receivedPayload2: Long? = null
 

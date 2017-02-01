@@ -11,5 +11,5 @@ import net.corda.core.transactions.TransactionBuilder
  * functional sense) however it can be amended and then re-written as another state into the ledger.
  */
 interface RevisionedState<in T> : ContractState {
-    fun generateRevision(notary: Party, oldState: StateAndRef<*>, updatedValue: T): TransactionBuilder
+    fun generateRevision(notary: Party.Full, oldState: StateAndRef<*>, updatedValue: T): TransactionBuilder
 }

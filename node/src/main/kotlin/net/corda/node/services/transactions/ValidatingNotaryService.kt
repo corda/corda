@@ -15,7 +15,7 @@ class ValidatingNotaryService(services: ServiceHubInternal,
         val type = ServiceType.notary.getSubType("validating")
     }
 
-    override fun createFlow(otherParty: Party): ValidatingNotaryFlow {
+    override fun createFlow(otherParty: Party.Full): ValidatingNotaryFlow {
         return ValidatingNotaryFlow(otherParty, timestampChecker, uniquenessProvider)
     }
 }

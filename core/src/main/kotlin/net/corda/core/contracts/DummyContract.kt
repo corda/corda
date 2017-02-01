@@ -46,7 +46,7 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
 
     companion object {
         @JvmStatic
-        fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
+        fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party.Full): TransactionBuilder {
             val state = SingleOwnerState(magicNumber, owner.party.owningKey)
             return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Create(), owner.party.owningKey))
         }

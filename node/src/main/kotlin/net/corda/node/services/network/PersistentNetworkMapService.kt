@@ -23,17 +23,17 @@ class PersistentNetworkMapService(services: ServiceHubInternal) : AbstractNetwor
         val registrationInfo = blob("node_registration_info")
     }
 
-    override val registeredNodes: MutableMap<Party, NodeRegistrationInfo> = synchronizedMap(object : AbstractJDBCHashMap<Party, NodeRegistrationInfo, Table>(Table, loadOnInit = true) {
-        override fun keyFromRow(row: ResultRow): Party = Party(row[table.nodeParty.name], row[table.nodeParty.owningKey])
+    override val registeredNodes: MutableMap<Party.Full, NodeRegistrationInfo> = synchronizedMap(object : AbstractJDBCHashMap<Party.Full, NodeRegistrationInfo, Table>(Table, loadOnInit = true) {
+        override fun keyFromRow(row: ResultRow): Party.Full = Party.Full(row[table.nodeParty.name], row[table.nodeParty.owningKey])
 
         override fun valueFromRow(row: ResultRow): NodeRegistrationInfo = deserializeFromBlob(row[table.registrationInfo])
 
-        override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<Party, NodeRegistrationInfo>, finalizables: MutableList<() -> Unit>) {
+        override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<Party.Full, NodeRegistrationInfo>, finalizables: MutableList<() -> Unit>) {
             insert[table.nodeParty.name] = entry.key.name
             insert[table.nodeParty.owningKey] = entry.key.owningKey
         }
 
-        override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<Party, NodeRegistrationInfo>, finalizables: MutableList<() -> Unit>) {
+        override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<Party.Full, NodeRegistrationInfo>, finalizables: MutableList<() -> Unit>) {
             insert[table.registrationInfo] = serializeToBlob(entry.value, finalizables)
         }
     })

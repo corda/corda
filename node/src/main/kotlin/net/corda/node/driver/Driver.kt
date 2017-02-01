@@ -59,7 +59,7 @@ interface DriverDSLExposedInterface {
     /**
      * Starts a [Node] in a separate process.
      *
-     * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
+     * @param providedName Optional name of the node, which will be its legal name in [Party.Full]. Defaults to something
      *   random. Note that this must be unique as the driver uses it as a primary key!
      * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
@@ -77,13 +77,13 @@ interface DriverDSLExposedInterface {
      * @param clusterSize Number of nodes to create for the cluster.
      * @param type The advertised notary service type. Currently the only supported type is [RaftValidatingNotaryService.type].
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
-     * @return The [Party] identity of the distributed notary service, and the [NodeInfo]s of the notaries in the cluster.
+     * @return The [Party.Full] identity of the distributed notary service, and the [NodeInfo]s of the notaries in the cluster.
      */
     fun startNotaryCluster(
             notaryName: String,
             clusterSize: Int = 3,
             type: ServiceType = RaftValidatingNotaryService.type,
-            rpcUsers: List<User> = emptyList()): Future<Pair<Party, List<NodeHandle>>>
+            rpcUsers: List<User> = emptyList()): Future<Pair<Party.Full, List<NodeHandle>>>
 
     /**
      * Starts a web server for a node
@@ -386,7 +386,7 @@ open class DriverDSL(
             clusterSize: Int,
             type: ServiceType,
             rpcUsers: List<User>
-    ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
+    ): ListenableFuture<Pair<Party.Full, List<NodeHandle>>> {
         val nodeNames = (1..clusterSize).map { "Notary Node $it" }
         val paths = nodeNames.map { driverDirectory / it }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)

@@ -13,7 +13,7 @@ class RaftValidatingNotaryService(services: ServiceHubInternal,
         val type = ValidatingNotaryService.type.getSubType("raft")
     }
 
-    override fun createFlow(otherParty: Party): ValidatingNotaryFlow {
+    override fun createFlow(otherParty: Party.Full): ValidatingNotaryFlow {
         return ValidatingNotaryFlow(otherParty, timestampChecker, uniquenessProvider)
     }
 }

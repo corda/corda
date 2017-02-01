@@ -56,7 +56,7 @@ class RaftNotaryServiceTests : NodeBasedTest() {
         assertEquals(error.tx, secondSpendTx.tx)
     }
 
-    private fun issueState(node: AbstractNode, notary: Party, notaryKey: KeyPair): StateAndRef<*> {
+    private fun issueState(node: AbstractNode, notary: Party.Full, notaryKey: KeyPair): StateAndRef<*> {
         return databaseTransaction(node.database) {
             val tx = DummyContract.generateInitial(node.info.legalIdentity.ref(0), Random().nextInt(), notary)
             tx.signWith(node.services.legalIdentityKey)

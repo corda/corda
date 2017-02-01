@@ -117,7 +117,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private val totalFinishedFlows = metrics.counter("Flows.Finished")
 
     private val openSessions = ConcurrentHashMap<Long, FlowSession>()
-    private val recentlyClosedSessions = ConcurrentHashMap<Long, Party>()
+    private val recentlyClosedSessions = ConcurrentHashMap<Long, Party.Full>()
 
     // Context for tokenized services in checkpoints
     private val serializationContext = SerializeAsTokenContext(tokenizableServices, quasarKryo())
@@ -238,7 +238,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun onExistingSessionMessage(message: ExistingSessionMessage, sender: Party) {
+    private fun onExistingSessionMessage(message: ExistingSessionMessage, sender: Party.Full) {
         val session = openSessions[message.recipientSessionId]
         if (session != null) {
             session.fiber.logger.trace { "Received $message on $session" }
@@ -267,7 +267,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun onSessionInit(sessionInit: SessionInit, sender: Party) {
+    private fun onSessionInit(sessionInit: SessionInit, sender: Party.Full) {
         logger.trace { "Received $sessionInit $sender" }
         val otherPartySessionId = sessionInit.initiatorSessionId
 
@@ -472,7 +472,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun sendSessionMessage(party: Party, message: SessionMessage, fiber: FlowStateMachineImpl<*>? = null) {
+    private fun sendSessionMessage(party: Party.Full, message: SessionMessage, fiber: FlowStateMachineImpl<*>? = null) {
         val partyInfo = serviceHub.networkMapCache.getPartyInfo(party)
                 ?: throw IllegalArgumentException("Don't know about party $party")
         val address = serviceHub.networkService.getAddressOfParty(partyInfo)
@@ -484,23 +484,24 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     /**
      * [FlowSessionState] describes the session's state.
      *
-     * [Initiating] is pre-handshake. [Initiating.otherParty] at this point holds a [Party] corresponding to either a
+     * [Initiating] is pre-handshake. [Initiating.otherParty] at this point holds a [Party.Full] corresponding to either a
      *     specific peer or a service.
      * [Initiated] is post-handshake. At this point [Initiating.otherParty] will have been resolved to a specific peer
      *     [Initiated.peerParty], and the peer's sessionId has been initialised.
      */
     sealed class FlowSessionState {
-        abstract val sendToParty: Party
+        abstract val sendToParty: Party.Full
         class Initiating(
-                val otherParty: Party /** This may be a specific peer or a service party */
+                val otherParty: Party.Full
+                /** This may be a specific peer or a service party */
         ) : FlowSessionState() {
-            override val sendToParty: Party get() = otherParty
+            override val sendToParty: Party.Full get() = otherParty
         }
         class Initiated(
-                val peerParty: Party, /** This must be a peer party */
+                val peerParty: Party.Full,/** This must be a peer party */
                 val peerSessionId: Long
         ) : FlowSessionState() {
-            override val sendToParty: Party get() = peerParty
+            override val sendToParty: Party.Full get() = peerParty
         }
     }
 

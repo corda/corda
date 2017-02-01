@@ -29,7 +29,7 @@ object ServiceIdentityGenerator {
 
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
         val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public.composite }).build(threshold)
-        val notaryParty = Party(serviceName, notaryKey).serialize()
+        val notaryParty = Party.Full(serviceName, notaryKey).serialize()
 
         keyPairs.zip(dirs) { keyPair, dir ->
             Files.createDirectories(dir)
