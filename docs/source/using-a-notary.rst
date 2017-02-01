@@ -16,24 +16,24 @@ the :ref:`network-map-service`. The network map cache exposes two methods for ob
     /**
      * Gets a notary identity by the given name.
      */
-    fun getNotary(name: String): Party?
+    fun getNotary(name: String): Party.Full?
 
     /**
      * Returns a notary identity advertised by any of the nodes on the network (chosen at random)
      *
      * @param type Limits the result to notaries of the specified type (optional)
      */
-    fun getAnyNotary(type: ServiceType? = null): Party?
+    fun getAnyNotary(type: ServiceType? = null): Party.Full?
 
 Currently notaries can only be differentiated by name and type, but in the future the network map service will be
 able to provide more metadata, such as location or legal identities of the nodes operating it.
 
 Now, let's say we want to issue an asset and assign it to a notary named "Notary A".
-The first step is to obtain the notary identity -- ``Party``:
+The first step is to obtain the notary identity -- ``Party.Full``:
 
 .. sourcecode:: kotlin
 
-    val ourNotary: Party = serviceHub.networkMapCache.getNotary("Central Bank Notary")
+    val ourNotary: Party.Full = serviceHub.networkMapCache.getNotary("Central Bank Notary")
 
 Then we initialise the transaction builder:
 
@@ -83,7 +83,7 @@ First we obtain a reference to the state, which will be the input to our "move" 
     val stateRef = StateRef(txhash = issueTransaction.id, index = 0)
 
 Then we create a new state -- a copy of our state but with the owner set to Alice. This is a bit more involved so
-we just use a helper that handles it for us. We also assume that we already have the ``Party`` for Alice, ``aliceParty``.
+we just use a helper that handles it for us. We also assume that we already have the ``Party.Anonymised`` for Alice, ``aliceParty``.
 
 .. sourcecode:: kotlin
 
@@ -124,7 +124,7 @@ which notary needs to be called based on the input states (and the timestamp com
         * Specifies the transaction id, the position of the consumed state in the inputs, and
         * the caller identity requesting the commit
         */
-        data class ConsumingTx(val id: SecureHash, val inputIndex: Int, val requestingParty: Party)
+        data class ConsumingTx(val id: SecureHash, val inputIndex: Int, val requestingParty: Party.Full)
 
    Conflict handling and resolution is currently the responsibility of the flow author.
 

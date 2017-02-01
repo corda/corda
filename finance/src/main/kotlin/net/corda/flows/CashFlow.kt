@@ -46,13 +46,14 @@ class CashFlow(val command: CashCommand, override val progressTracker: ProgressT
     private fun initiatePayment(req: CashCommand.PayCash): SignedTransaction {
         progressTracker.currentStep = PAYING
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
+        val issuer = serviceHub.identityService.deanonymiseParty(req.amount.token.issuer) ?: throw IllegalStateException("Unknown issuing party")
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
             serviceHub.vaultService.generateSpend(
                     builder,
                     req.amount.withoutIssuer(),
                     req.recipient.owningKey,
-                    setOf(req.amount.token.issuer.party))
+                    setOf(issuer))
         } catch (e: InsufficientBalanceException) {
             throw CashException("Insufficent cash for spend", e)
         }

@@ -21,7 +21,7 @@ object IRSTradeFlow {
             val notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
             val myIdentity = serviceHub.myInfo.legalIdentity
             val (buyer, seller) =
-                    if (swap.buyer.second == myIdentity.name) {
+                    if (swap.buyer.second == myIdentity.owningKey) {
                         Pair(myIdentity, otherParty)
                     } else {
                         Pair(otherParty, myIdentity)

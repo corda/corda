@@ -15,12 +15,14 @@ import java.security.PublicKey
  * TODO: Merge with the existing demo IRS code.
  */
 data class IRSState(val swap: SwapData,
-                    val buyer: Party.Full,
-                    val seller: Party.Full,
+                    val buyer: Party.Anonymised,
+                    val seller: Party.Anonymised,
                     override val contract: OGTrade,
                     override val linearId: UniqueIdentifier = UniqueIdentifier(swap.id.first + swap.id.second)) : DealState {
+    constructor(swap: SwapData, buyer: Party.Full, seller: Party.Full, contract: OGTrade)
+        : this(swap, buyer.toAnonymised(), seller.toAnonymised(), contract)
     override val ref: String = linearId.externalId!! // Same as the constructor for UniqueIdentified
-    override val parties: List<Party.Full> get() = listOf(buyer, seller)
+    override val parties: List<Party.Anonymised> get() = listOf(buyer, seller)
 
     override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
         return parties.flatMap { it.owningKey.keys }.intersect(ourKeys).isNotEmpty()

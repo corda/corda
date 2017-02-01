@@ -122,6 +122,8 @@ interface CordaRPCOps : RPCOps {
      * Returns the [Party.Full] with the given name as it's [Party.name]
      */
     fun partyFromName(name: String): Party.Full?
+
+    fun deanonymiseParty(party: Party.Anonymised): Party.Full? = partyFromKey(party.owningKey)
 }
 
 /**

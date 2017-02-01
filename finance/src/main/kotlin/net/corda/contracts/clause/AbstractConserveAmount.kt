@@ -99,7 +99,7 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
 
         requireThat {
             "there are no zero sized inputs" by inputs.none { it.amount.quantity == 0L }
-            "for reference ${deposit.reference} at issuer ${deposit.party.name} the amounts balance: ${inputAmount.quantity} - ${amountExitingLedger.quantity} != ${outputAmount.quantity}" by
+            "for reference ${deposit.reference} at issuer ${deposit.party} the amounts balance: ${inputAmount.quantity} - ${amountExitingLedger.quantity} != ${outputAmount.quantity}" by
                     (inputAmount == outputAmount + amountExitingLedger)
         }
 

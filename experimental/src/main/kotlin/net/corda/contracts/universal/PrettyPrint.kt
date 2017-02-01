@@ -64,7 +64,7 @@ private class PrettyPrint(arr : Arrangement) {
 
     init {
         parties.forEach {
-            println( "val ${createPartyName(it)} = Party(\"${it.name}\", \"${it.owningKey}\")" )
+            println( "val ${createPartyName(it)} = Party.Full(\"${it.name}\", \"${it.owningKey}\")" )
         }
     }
 

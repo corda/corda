@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 
@@ -22,4 +23,7 @@ interface IdentityService {
 
     fun partyFromKey(key: CompositeKey): Party.Full?
     fun partyFromName(name: String): Party.Full?
+
+    fun deanonymiseParty(party: Party.Anonymised) = partyFromKey(party.owningKey)
+    fun deanonymiseParty(partyAndRef: PartyAndReference) = partyFromKey(partyAndRef.party.owningKey)
 }

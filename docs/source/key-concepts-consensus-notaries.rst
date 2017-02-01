@@ -41,7 +41,7 @@ consuming any of the same input states. Every **state** has an appointed notary:
             /** The custom contract state */
             val data: T,
             /** Identity of the notary that ensures the state is not used as an input to a transaction more than once */
-            val notary: Party) {
+            val notary: Party.Full) {
         ...
     }
 
@@ -83,7 +83,7 @@ To change the notary for an input state, use the ``NotaryChangeFlow``. For examp
 
     @Suspendable
     fun changeNotary(originalState: StateAndRef<ContractState>,
-                     newNotary: Party): StateAndRef<ContractState> {
+                     newNotary: Party.Full): StateAndRef<ContractState> {
         val flow = NotaryChangeFlow.Instigator(originalState, newNotary)
         return subFlow(flow)
     }

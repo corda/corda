@@ -27,9 +27,9 @@ data class SelfIssueCommand(
 )
 
 data class SelfIssueState(
-        val vaultsSelfIssued: Map<Party.Full, Long>
+        val vaultsSelfIssued: Map<Party.Anonymised, Long>
 ) {
-    fun copyVaults(): HashMap<Party.Full, Long> {
+    fun copyVaults(): HashMap<Party.Anonymised, Long> {
         return HashMap(vaultsSelfIssued)
     }
 }
@@ -56,7 +56,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
 
         interpret = { state, command ->
             val vaults = state.copyVaults()
-            val issuer = command.node.info.legalIdentity
+            val issuer = command.node.info.legalIdentity.toAnonymised()
             vaults.put(issuer, (vaults[issuer] ?: 0L) + command.command.amount.quantity)
             SelfIssueState(vaults)
         },
@@ -71,14 +71,14 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
         },
 
         gatherRemoteState = { previousState ->
-            val selfIssueVaults = HashMap<Party.Full, Long>()
+            val selfIssueVaults = HashMap<Party.Anonymised, Long>()
             simpleNodes.forEach { node ->
                 val vault = node.connection.proxy.vaultAndUpdates().first
                 vault.forEach {
                     val state = it.state.data
                     if (state is Cash.State) {
                         val issuer = state.amount.token.issuer.party
-                        if (issuer == node.info.legalIdentity) {
+                        if (issuer.owningKey == node.info.legalIdentity.owningKey) {
                             selfIssueVaults.put(issuer, (selfIssueVaults[issuer] ?: 0L) + state.amount.quantity)
                         }
                     }

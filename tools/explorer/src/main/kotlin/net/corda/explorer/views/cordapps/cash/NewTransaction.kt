@@ -201,7 +201,7 @@ class NewTransaction : Fragment() {
         )
         availableAmount.textProperty()
                 .bind(Bindings.createStringBinding({
-                    val filteredCash = cash.filtered { it.token.issuer.party == issuer.value && it.token.product == currencyChoiceBox.value }
+                    val filteredCash = cash.filtered { it.token.issuer.party.owningKey == issuer.value?.owningKey && it.token.product == currencyChoiceBox.value }
                             .map { it.withoutIssuer().quantity }
                     "${filteredCash.sum()} ${currencyChoiceBox.value?.currencyCode} Available"
                 }, arrayOf(currencyChoiceBox.valueProperty(), issuerChoiceBox.valueProperty())))

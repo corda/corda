@@ -4,11 +4,11 @@ import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.databaseTransaction
-import net.corda.testing.expect
 import net.corda.testing.node.MockNetwork
 import org.junit.Test
 import java.math.BigInteger
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class InMemoryNetworkMapCacheTest {
     private val network = MockNetwork()
@@ -34,12 +34,8 @@ class InMemoryNetworkMapCacheTest {
         databaseTransaction(nodeA.database) {
             nodeA.netMapCache.addNode(nodeB.info)
         }
-        // Now both nodes match, so it throws an error
-        expect<IllegalStateException> {
-            nodeA.netMapCache.getNodeByLegalIdentityKey(nodeA.info.legalIdentity.owningKey)
-        }
-        expect<IllegalStateException> {
-            nodeA.netMapCache.getNodeByLegalIdentityKey(nodeB.info.legalIdentity.owningKey)
-        }
+
+        // The details of node B write over those for node A
+        assertEquals(nodeA.netMapCache.getNodeByLegalIdentityKey(nodeA.info.legalIdentity.owningKey), nodeB.info)
     }
 }

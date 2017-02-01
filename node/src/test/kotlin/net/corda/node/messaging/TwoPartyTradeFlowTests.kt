@@ -255,7 +255,7 @@ class TwoPartyTradeFlowTests {
 
             val extraKey = bobNode.keyManagement.freshKey()
             val bobsFakeCash = fillUpForBuyer(false, extraKey.public.composite,
-                    DUMMY_CASH_ISSUER.party,
+                    DUMMY_CASH_ISSUER,
                     notaryNode.info.notaryIdentity).second
             val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode, notaryNode, bobNode.services.legalIdentityKey, extraKey)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
@@ -349,7 +349,7 @@ class TwoPartyTradeFlowTests {
             val attachmentID = attachment(ByteArrayInputStream(stream.toByteArray()))
 
             val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public.composite,
-                    DUMMY_CASH_ISSUER.party,
+                    DUMMY_CASH_ISSUER,
                     notaryNode.info.notaryIdentity).second
             insertFakeTransactions(bobsFakeCash, bobNode, notaryNode)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
@@ -445,7 +445,7 @@ class TwoPartyTradeFlowTests {
         val bobKey = bobNode.services.legalIdentityKey
         val issuer = MEGA_CORP.ref(1, 2, 3)
 
-        val bobsBadCash = fillUpForBuyer(bobError, bobKey.public.composite, DUMMY_CASH_ISSUER.party,
+        val bobsBadCash = fillUpForBuyer(bobError, bobKey.public.composite, DUMMY_CASH_ISSUER,
                 notaryNode.info.notaryIdentity).second
         val alicesFakePaper = fillUpForSeller(aliceError, aliceNode.info.legalIdentity.owningKey,
                 1200.DOLLARS `issued by` issuer, null, notaryNode.info.notaryIdentity).second
@@ -490,7 +490,7 @@ class TwoPartyTradeFlowTests {
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
             withError: Boolean,
             owner: CompositeKey,
-            issuer: Party.Full,
+            issuer: PartyAndReference,
             notary: Party.Full): Pair<Vault, List<WireTransaction>> {
         val interimOwnerKey = MEGA_CORP_PUBKEY
         // Bob (Buyer) has some cash he got from the Bank of Elbonia, Alice (Seller) has some commercial paper she
@@ -500,10 +500,10 @@ class TwoPartyTradeFlowTests {
             output("elbonian money 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` interimOwnerKey }
             output("elbonian money 2", notary = notary) { 1000.DOLLARS.CASH `issued by` issuer `owned by` interimOwnerKey }
             if (!withError) {
-                command(issuer.owningKey) { Cash.Commands.Issue() }
+                command(issuer.party.owningKey) { Cash.Commands.Issue() }
             } else {
                 // Put a broken command on so at least a signature is created
-                command(issuer.owningKey) { Cash.Commands.Move() }
+                command(issuer.party.owningKey) { Cash.Commands.Move() }
             }
             timestamp(TEST_TX_TIME)
             if (withError) {

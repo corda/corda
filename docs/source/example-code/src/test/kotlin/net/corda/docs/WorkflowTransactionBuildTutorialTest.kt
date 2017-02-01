@@ -75,8 +75,8 @@ class WorkflowTransactionBuildTutorialTest {
         // Confirm the state as as expected
         assertEquals(WorkflowState.NEW, proposalRef.state.data.state)
         assertEquals("1234", proposalRef.state.data.tradeId)
-        assertEquals(nodeA.info.legalIdentity, proposalRef.state.data.source)
-        assertEquals(nodeB.info.legalIdentity, proposalRef.state.data.counterparty)
+        assertEquals(nodeA.info.legalIdentity.owningKey, proposalRef.state.data.source.owningKey)
+        assertEquals(nodeB.info.legalIdentity.owningKey, proposalRef.state.data.counterparty.owningKey)
         assertEquals(proposalRef, latestFromA)
         assertEquals(proposalRef, latestFromB)
         // Setup a vault subscriber to pause until the final update is in NodeA and NodeB
@@ -99,8 +99,8 @@ class WorkflowTransactionBuildTutorialTest {
         // Confirm the state is as expected
         assertEquals(WorkflowState.APPROVED, completedRef.state.data.state)
         assertEquals("1234", completedRef.state.data.tradeId)
-        assertEquals(nodeA.info.legalIdentity, completedRef.state.data.source)
-        assertEquals(nodeB.info.legalIdentity, completedRef.state.data.counterparty)
+        assertEquals(nodeA.info.legalIdentity.toAnonymised(), completedRef.state.data.source)
+        assertEquals(nodeB.info.legalIdentity.toAnonymised(), completedRef.state.data.counterparty)
         assertEquals(completedRef, finalFromA)
         assertEquals(completedRef, finalFromB)
     }
