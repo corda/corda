@@ -15,7 +15,10 @@ class Explorer(val explorerController: ExplorerController) : AutoCloseable {
               "--host=localhost",
               "--port=%d".format(config.artemisPort),
               "--username=%s".format(config.user["user"]),
-              "--password=%s".format(config.user["password"])
+              "--password=%s".format(config.user["password"]),
+              "--certificatesDir=%s".format(config.ssl.certificatesDirectory),
+              "--keyStorePassword=%s".format(config.ssl.keyStorePassword),
+              "--trustStorePassword=%s".format(config.ssl.trustStorePassword)
         )
         process = p
 

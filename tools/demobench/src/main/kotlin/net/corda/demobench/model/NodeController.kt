@@ -13,7 +13,7 @@ import tornadofx.Controller
 class NodeController : Controller() {
     private val FIRST_PORT = 10000
 
-    private val workDir = Paths.get("work", localDir).toAbsolutePath()
+    private val baseDir = Paths.get("work", localDir).toAbsolutePath()
     private val jvm by inject<JVMConfig>()
 
     private val cordaPath = Paths.get("corda", "corda.jar").toAbsolutePath()
@@ -28,6 +28,7 @@ class NodeController : Controller() {
 
     fun validate(nodeData: NodeData): NodeConfig? {
         val config = NodeConfig(
+            baseDir,
             nodeData.legalName.value.trim(),
             nodeData.artemisPort.value,
             nodeData.nearestCity.value.trim(),
@@ -37,6 +38,7 @@ class NodeController : Controller() {
         )
 
         if (nodes.putIfAbsent(config.key, config) != null) {
+            log.warning("Node with key '" + config.key + "' already exists.")
             return null
         }
 
@@ -67,7 +69,7 @@ class NodeController : Controller() {
     }
 
     fun runCorda(pty: R3Pty, config: NodeConfig): Boolean {
-        val nodeDir = workDir.resolve(config.key).toFile()
+        val nodeDir = config.nodeDir.toFile()
 
         if (nodeDir.mkdirs()) {
             try {
@@ -93,7 +95,7 @@ class NodeController : Controller() {
                     .format(Date(ManagementFactory.getRuntimeMXBean().startTime))
 
     init {
-        log.info("Working directory: " + workDir)
+        log.info("Base directory: " + baseDir)
         log.info("Corda JAR: " + cordaPath)
     }
 }

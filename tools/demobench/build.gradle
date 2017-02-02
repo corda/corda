@@ -33,8 +33,12 @@ repositories {
 
     mavenLocal()
     mavenCentral()
+    jcenter()
     maven {
         url 'http://www.sparetimelabs.com/maven2'
+    }
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
     }
 }
 
@@ -43,12 +47,16 @@ dependencies {
     compile "no.tornado:tornadofx:$tornadofx_version"
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
+    // ONLY USING THE RPC CLIENT!?
+    compile project(':node')
+
     compile "com.h2database:h2:$h2_version"
     compile "net.java.dev.jna:jna:$jna_version"
     compile "net.java.dev.jna:jna-platform:$jna_version"
     compile "com.google.guava:guava:$guava_version"
     compile "com.sparetimelabs:purejavacomm:$purejavacomm_version"
     compile "org.slf4j:log4j-over-slf4j:$slf4j_version"
+    compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
     compile "ch.qos.logback:logback-classic:$logback_version"
     compile "com.typesafe:config:$typesafe_config_version"
@@ -57,6 +65,11 @@ dependencies {
 
     testCompile group: 'junit', name: 'junit', version: "$junit_version"
 }
+
+// We don't want the Node to drag these transitive dependencies in either!
+configurations.compile.exclude module: 'commons-logging'
+configurations.compile.exclude module: 'log4j-slf4j-impl'
+configurations.compile.exclude module: 'log4j-core'
 
 jar {
     manifest {
