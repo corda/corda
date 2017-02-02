@@ -4,6 +4,7 @@ import com.jediterm.terminal.TerminalColor
 import com.jediterm.terminal.TextStyle
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
 import java.awt.Dimension
+import javafx.application.Platform
 import javafx.embed.swing.SwingNode
 import javafx.scene.control.Button
 import javafx.scene.control.Label
@@ -12,9 +13,11 @@ import javafx.scene.layout.VBox
 import javax.swing.SwingUtilities
 import net.corda.demobench.model.*
 import net.corda.demobench.pty.R3Pty
+import net.corda.demobench.rpc.NodeRPC
 import net.corda.demobench.ui.PropertyLabel
 import tornadofx.Fragment
 import tornadofx.vgrow
+import java.util.*
 
 class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
@@ -31,9 +34,10 @@ class NodeTerminalView : Fragment() {
     private val viewDatabaseButton by fxid<Button>()
     private val launchExplorerButton by fxid<Button>()
 
-    val explorer = explorerController.explorer()
-    val viewer = DBViewer()
-    var pty : R3Pty? = null
+    private val explorer = explorerController.explorer()
+    private val viewer = DBViewer()
+    private var rpc: NodeRPC? = null
+    private var pty: R3Pty? = null
 
     fun open(config: NodeConfig) {
         nodeName.text = config.legalName
@@ -65,18 +69,38 @@ class NodeTerminalView : Fragment() {
              * the explorer has exited.
              */
             launchExplorerButton.setOnAction {
-                launchExplorerButton.isDisable= true
+                launchExplorerButton.isDisable = true
 
                 explorer.open(config, onExit = {
                     launchExplorerButton.isDisable = false
                 })
             }
+
+            rpc = NodeRPC(config, { ops ->
+                try {
+                    val verifiedTx = ops.verifiedTransactions()
+                    val statesInVault = ops.vaultAndUpdates()
+                    val cashBalances = ops.getCashBalances().entries.joinToString(
+                        separator = ", ",
+                        transform = { e -> "%s %s".format(e.value, e.key.currencyCode) }
+                    )
+
+                    Platform.runLater {
+                        states.value = statesInVault.first.size.toString()
+                        transactions.value = verifiedTx.first.size.toString()
+                        balance.value = cashBalances
+                    }
+                } catch (e: Exception) {
+                    log.warning("RPC failed: " + e)
+                }
+            })
         })
     }
 
     fun close() {
         explorer.close()
         viewer.close()
+        rpc?.close()
         pty?.close()
     }
 

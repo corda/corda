@@ -4,9 +4,12 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
+import net.corda.node.services.config.SSLConfiguration
 import java.lang.String.join
+import java.nio.file.Path
 
 class NodeConfig(
+        baseDir: Path,
         legalName: String,
         artemisPort: Int,
         val nearestCity: String,
@@ -15,14 +18,22 @@ class NodeConfig(
         val extraServices: List<String>
 ) : NetworkMapConfig(legalName, artemisPort) {
 
+    val nodeDir: Path = baseDir.resolve(key)
+
     private var networkMapValue: NetworkMapConfig? = null
     var networkMap : NetworkMapConfig?
-        get() { return networkMapValue }
+        get() = networkMapValue
         set(value) { networkMapValue = value }
 
     private val userMap: Map<String, String>
     val user: Map<String, String>
         get() = userMap
+
+    val ssl: SSLConfiguration = object : SSLConfiguration {
+        override val certificatesDirectory: Path = nodeDir.resolve("certificates")
+        override val trustStorePassword: String = "trustpass"
+        override val keyStorePassword: String = "cordacadevpass"
+    }
 
     val toFileConfig : Config
         get() = ConfigFactory.empty()
