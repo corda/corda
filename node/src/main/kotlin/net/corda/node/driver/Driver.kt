@@ -334,7 +334,7 @@ open class DriverDSL(
                 client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
                 return@poll client.proxy()
             } catch(e: Exception) {
-                log.error("Retrying query node info at $nodeAddress")
+                log.error("Exception $e, Retrying RPC connection at $nodeAddress")
                 null
             }
         }
@@ -380,12 +380,8 @@ open class DriverDSL(
         registerProcess(processFuture)
         return processFuture.flatMap { process ->
             establishRpc(messagingAddress, configuration).flatMap { rpc ->
-                poll(executorService, "$name to register with the network map") {
-                    if (rpc.isRegisteredWithNetworkMap()) {
-                        NodeHandle(rpc.nodeIdentity(), rpc, configuration, process)
-                    } else {
-                        null
-                    }
+                rpc.waitUntilRegisteredWithNetworkMap().toFuture().map {
+                    NodeHandle(rpc.nodeIdentity(), rpc, configuration, process)
                 }
             }
         }
