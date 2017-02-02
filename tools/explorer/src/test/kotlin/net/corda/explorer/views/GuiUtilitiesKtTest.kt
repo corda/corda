@@ -13,6 +13,7 @@ class GuiUtilitiesKtTest {
         val ds = DecimalFormatSymbols(Locale.getDefault()).decimalSeparator
 
         assertEquals("10${ds}5k", 10500.toStringWithSuffix())
+        assertEquals("100", 100.toStringWithSuffix())
         assertEquals("5${ds}0M", 5000000.toStringWithSuffix())
         assertEquals("1${ds}0B", 1000000000.toStringWithSuffix())
         assertEquals("1${ds}5T", 1500000000000.toStringWithSuffix())
