@@ -111,6 +111,7 @@ class CordaRPCOpsImpl(
         }
     }
 
+    override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered.toObservable()
     override fun partyFromKey(key: CompositeKey) = services.identityService.partyFromKey(key)
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)
 
