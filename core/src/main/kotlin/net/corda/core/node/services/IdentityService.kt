@@ -1,5 +1,7 @@
 package net.corda.core.node.services
 
+import net.corda.core.contracts.PartyAndReference
+import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 
@@ -10,6 +12,7 @@ import net.corda.core.crypto.Party
  */
 interface IdentityService {
     fun registerIdentity(party: Party)
+
     /**
      * Get all identities known to the service. This is expensive, and [partyFromKey] or [partyFromName] should be
      * used in preference where possible.
@@ -22,4 +25,7 @@ interface IdentityService {
 
     fun partyFromKey(key: CompositeKey): Party?
     fun partyFromName(name: String): Party?
+
+    fun partyFromAnonymous(party: AnonymousParty): Party?
+    fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
 }

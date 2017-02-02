@@ -1,6 +1,7 @@
 package net.corda.core.contracts
 
 import net.corda.core.contracts.clauses.Clause
+import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
@@ -349,8 +350,8 @@ inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filt
  * Reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
  * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the party.
  */
-data class PartyAndReference(val party: Party, val reference: OpaqueBytes) {
-    override fun toString() = "${party.name}$reference"
+data class PartyAndReference(val party: AnonymousParty, val reference: OpaqueBytes) {
+    override fun toString() = "${party}$reference"
 }
 
 /** Marker interface for classes that represent commands */
