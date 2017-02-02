@@ -3,6 +3,13 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
+Milestone 9
+-----------
+
+* API:
+
+    * Pseudonymous ``AnonymousParty`` class added as a superclass of ``Party``.
+
 Milestone 8
 -----------
 

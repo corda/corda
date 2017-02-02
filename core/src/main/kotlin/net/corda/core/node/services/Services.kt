@@ -2,10 +2,7 @@ package net.corda.core.node.services
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.toStringShort
+import net.corda.core.crypto.*
 import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -198,7 +195,7 @@ interface VaultService {
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,
                       to: CompositeKey,
-                      onlyFromParties: Set<Party>? = null): Pair<TransactionBuilder, List<CompositeKey>>
+                      onlyFromParties: Set<AnonymousParty>? = null): Pair<TransactionBuilder, List<CompositeKey>>
 }
 
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)
