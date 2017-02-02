@@ -65,4 +65,14 @@ class CordaRPCClientTest : DriverBasedTest() {
         }
         println("Result: ${flowHandle.returnValue.toBlocking().first()}")
     }
+
+    @Test
+    fun `get cash balances`() {
+        println("Starting client")
+        client.start(rpcUser.username, rpcUser.password)
+        println("Creating proxy")
+        val proxy = client.proxy()
+        val cash = proxy.getCashBalances()
+        println("Cash Balances: $cash")
+    }
 }
