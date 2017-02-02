@@ -1,7 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.contracts.PartyAndReference
-import net.corda.core.serialization.OpaqueBytes
 import java.security.PublicKey
 
 /**
@@ -22,15 +20,8 @@ import java.security.PublicKey
  *
  * @see CompositeKey
  */
-class Party(val name: String, val owningKey: CompositeKey) {
+class Party(val name: String, owningKey: CompositeKey) : AnonymousParty(owningKey) {
     /** A helper constructor that converts the given [PublicKey] in to a [CompositeKey] with a single node */
     constructor(name: String, owningKey: PublicKey) : this(name, owningKey.composite)
-
-    /** Anonymised parties do not include any detail apart from owning key, so equality is dependent solely on the key */
-    override fun equals(other: Any?): Boolean = other is Party && this.owningKey == other.owningKey
-    override fun hashCode(): Int = owningKey.hashCode()
-    override fun toString() = name
-
-    fun ref(bytes: OpaqueBytes) = PartyAndReference(this, bytes)
-    fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
+    override fun toString() = "${owningKey.toBase58String()} (name)"
 }

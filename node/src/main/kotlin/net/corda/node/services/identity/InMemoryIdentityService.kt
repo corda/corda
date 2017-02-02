@@ -1,5 +1,7 @@
 package net.corda.node.services.identity
 
+import net.corda.core.contracts.PartyAndReference
+import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.node.services.IdentityService
@@ -26,4 +28,11 @@ class InMemoryIdentityService() : SingletonSerializeAsToken(), IdentityService {
 
     override fun partyFromKey(key: CompositeKey): Party? = keyToParties[key]
     override fun partyFromName(name: String): Party? = nameToParties[name]
+    override fun partyFromAnonymous(party: AnonymousParty): Party? {
+        return if (party is Party)
+            party
+        else
+            partyFromKey(party.owningKey)
+    }
+    override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
 }
