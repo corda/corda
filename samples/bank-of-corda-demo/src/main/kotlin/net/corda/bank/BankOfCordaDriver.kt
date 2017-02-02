@@ -50,8 +50,9 @@ private class BankOfCordaDriver {
             driver(dsl = {
                 val user = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>(), startFlowPermission<IssuerFlow.IssuanceRequester>()))
                 startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.type)))
-                startNode("BankOfCorda", rpcUsers = listOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
+                val bankOfCorda = startNode("BankOfCorda", rpcUsers = listOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
                 startNode("BigCorporation", rpcUsers = listOf(user))
+                startWebserver(bankOfCorda.get())
                 waitForAllNodesToFinish()
             }, isDebug = true)
         }
@@ -75,7 +76,8 @@ private class BankOfCordaDriver {
                 }
             }
             catch (e: Exception) {
-                printHelp(parser)
+                println("Exception occurred: $e \n ${e.printStackTrace()}")
+                exitProcess(1)
             }
         }
     }

@@ -16,9 +16,12 @@ import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.crypto.Party
+import net.corda.core.flows.FlowException
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.explorer.model.CashTransaction
 import net.corda.explorer.model.IssuerModel
@@ -28,7 +31,6 @@ import net.corda.explorer.views.byteFormatter
 import net.corda.explorer.views.stringConverter
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
-import net.corda.flows.CashFlowResult
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.Fragment
@@ -87,33 +89,37 @@ class NewTransaction : Fragment() {
             }
             dialog.show()
             runAsync {
-                if (it is CashCommand.IssueCash) {
+                val handle = if (it is CashCommand.IssueCash) {
                     myIdentity.value?.let { myIdentity ->
                         rpcProxy.value!!.startFlow(::IssuanceRequester,
                                 it.amount,
                                 it.recipient,
                                 it.issueRef,
-                                myIdentity.legalIdentity).returnValue.toBlocking().first()
+                                myIdentity.legalIdentity)
                     }
+                } else {
+                    rpcProxy.value!!.startFlow(::CashFlow, it)
                 }
-                else {
-                    rpcProxy.value!!.startFlow(::CashFlow, it).returnValue.toBlocking().first()
+                val response = try {
+                    handle?.returnValue?.toFuture()?.getOrThrow()
+                } catch (e: FlowException) {
+                    e
                 }
+                it to response
             }.ui {
-                dialog.contentText = when (it) {
-                    is SignedTransaction -> {
-                        dialog.alertType = Alert.AlertType.INFORMATION
-                        "Cash Issued \nTransaction ID : ${it.id} \nMessage"
+                val (command, response) = it
+                val (alertType, contentText) = if (response is FlowException) {
+                    Alert.AlertType.ERROR to response.message
+                } else {
+                    val type = when (command) {
+                        is CashCommand.IssueCash -> "Cash Issued"
+                        is CashCommand.ExitCash -> "Cash Exited"
+                        is CashCommand.PayCash -> "Cash Paid"
                     }
-                    is CashFlowResult.Success -> {
-                        dialog.alertType = Alert.AlertType.INFORMATION
-                        "Transaction Started \nTransaction ID : ${it.transaction?.id} \nMessage : ${it.message}"
-                    }
-                    else -> {
-                        dialog.alertType = Alert.AlertType.ERROR
-                        it.toString()
-                    }
+                    Alert.AlertType.INFORMATION to "$type \nTransaction ID : ${(response as SignedTransaction).id}"
                 }
+                dialog.alertType = alertType
+                dialog.contentText = contentText
                 dialog.dialogPane.isDisable = false
                 dialog.dialogPane.scene.window.sizeToScene()
             }.setOnFailed {

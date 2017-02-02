@@ -98,7 +98,6 @@ class ScheduledFlowTests {
         net = MockNetwork(threadPerNode = true)
         notaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
-                keyPair = DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
         nodeA = net.createNode(notaryNode.info.address, start = false)
         nodeB = net.createNode(notaryNode.info.address, start = false)

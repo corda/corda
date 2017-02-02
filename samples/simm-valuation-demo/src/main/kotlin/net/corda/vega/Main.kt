@@ -1,5 +1,7 @@
 package net.corda.vega
 
+import com.google.common.util.concurrent.Futures
+import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.driver.driver
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -12,9 +14,16 @@ import net.corda.node.services.transactions.SimpleNotaryService
 fun main(args: Array<String>) {
     driver(dsl = {
         startNode("Controller", setOf(ServiceInfo(SimpleNotaryService.type)))
-        startNode("Bank A")
-        startNode("Bank B")
-        startNode("Bank C")
+        val (nodeA, nodeB, nodeC) = Futures.allAsList(
+                startNode("Bank A"),
+                startNode("Bank B"),
+                startNode("Bank C")
+        ).getOrThrow()
+
+        startWebserver(nodeA)
+        startWebserver(nodeB)
+        startWebserver(nodeC)
+
         waitForAllNodesToFinish()
     }, isDebug = true)
 }

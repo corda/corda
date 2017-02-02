@@ -50,16 +50,12 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             fun visit(transaction: SignedTransaction) {
                 if (transaction.id !in visited) {
                     visited.add(transaction.id)
-                    forwardGraph[transaction.id]?.forEach {
-                        visit(it)
-                    }
+                    forwardGraph[transaction.id]?.forEach(::visit)
                     result.add(transaction)
                 }
             }
 
-            transactions.forEach {
-                visit(it)
-            }
+            transactions.forEach(::visit)
 
             result.reverse()
             require(result.size == transactions.size)
@@ -93,6 +89,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
     }
 
     @Suspendable
+    @Throws(FetchDataFlow.HashNotFound::class)
     override fun call(): List<LedgerTransaction> {
         val newTxns: Iterable<SignedTransaction> = topologicalSort(downloadDependencies(txHashes))
 

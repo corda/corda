@@ -1,5 +1,6 @@
 package net.corda.node.driver
 
+import com.google.common.net.HostAndPort
 import net.corda.core.getOrThrow
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
@@ -24,6 +25,14 @@ class DriverTests {
             val hostAndPort = ArtemisMessagingComponent.toHostAndPort(nodeInfo.address)
             // Check that the port is bound
             addressMustNotBeBound(executorService, hostAndPort)
+        }
+
+        fun webserverMustBeUp(webserverAddr: HostAndPort) {
+            addressMustBeBound(executorService, webserverAddr)
+        }
+
+        fun webserverMustBeDown(webserverAddr: HostAndPort) {
+            addressMustNotBeBound(executorService, webserverAddr)
         }
     }
 
@@ -59,5 +68,16 @@ class DriverTests {
             nodeInfo.getOrThrow()
         }
         nodeMustBeDown(nodeInfo.nodeInfo)
+    }
+
+    @Test
+    fun `starting a node and independent web server works`() {
+        val addr = driver {
+            val node = startNode("test").getOrThrow()
+            val webserverAddr = startWebserver(node).getOrThrow()
+            webserverMustBeUp(webserverAddr)
+            webserverAddr
+        }
+        webserverMustBeDown(addr)
     }
 }

@@ -23,6 +23,7 @@ import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
+import java.security.KeyPair
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
@@ -32,14 +33,15 @@ class NotaryServiceTests {
     lateinit var net: MockNetwork
     lateinit var notaryNode: MockNetwork.MockNode
     lateinit var clientNode: MockNetwork.MockNode
+    lateinit var clientKeyPair: KeyPair
 
     @Before fun setup() {
         net = MockNetwork()
         notaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
-                keyPair = DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
-        clientNode = net.createNode(networkMapAddress = notaryNode.info.address, keyPair = MINI_CORP_KEY)
+        clientNode = net.createNode(networkMapAddress = notaryNode.info.address)
+        clientKeyPair = clientNode.keyManagement.toKeyPair(clientNode.info.legalIdentity.owningKey.keys.single())
         net.runNetwork() // Clear network map registration messages
     }
 
@@ -48,7 +50,7 @@ class NotaryServiceTests {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
             tx.setTime(Instant.now(), 30.seconds)
-            tx.signWith(clientNode.keyPair!!)
+            tx.signWith(clientKeyPair)
             tx.toSignedTransaction(false)
         }
 
@@ -61,7 +63,7 @@ class NotaryServiceTests {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
-            tx.signWith(clientNode.keyPair!!)
+            tx.signWith(clientKeyPair)
             tx.toSignedTransaction(false)
         }
 
@@ -75,7 +77,7 @@ class NotaryServiceTests {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
             tx.setTime(Instant.now().plusSeconds(3600), 30.seconds)
-            tx.signWith(clientNode.keyPair!!)
+            tx.signWith(clientKeyPair)
             tx.toSignedTransaction(false)
         }
 
@@ -89,7 +91,7 @@ class NotaryServiceTests {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
-            tx.signWith(clientNode.keyPair!!)
+            tx.signWith(clientKeyPair)
             tx.toSignedTransaction(false)
         }
 
@@ -107,13 +109,13 @@ class NotaryServiceTests {
         val inputState = issueState(clientNode)
         val stx = run {
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
-            tx.signWith(clientNode.keyPair!!)
+            tx.signWith(clientKeyPair)
             tx.toSignedTransaction(false)
         }
         val stx2 = run {
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
             tx.addInputState(issueState(clientNode))
-            tx.signWith(clientNode.keyPair!!)
+            tx.signWith(clientKeyPair)
             tx.toSignedTransaction(false)
         }
 

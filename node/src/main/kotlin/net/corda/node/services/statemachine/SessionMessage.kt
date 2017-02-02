@@ -29,7 +29,7 @@ data class SessionData(override val recipientSessionId: Long, val payload: Any) 
     }
 }
 
-data class SessionEnd(override val recipientSessionId: Long) : ExistingSessionMessage
+data class SessionEnd(override val recipientSessionId: Long, val errorResponse: FlowException?) : ExistingSessionMessage
 
 data class ReceivedSessionMessage<out M : ExistingSessionMessage>(val sender: Party, val message: M)
 
@@ -37,7 +37,9 @@ fun <T> ReceivedSessionMessage<SessionData>.checkPayloadIs(type: Class<T>): Untr
     if (type.isInstance(message.payload)) {
         return UntrustworthyData(type.cast(message.payload))
     } else {
-        throw FlowException("We were expecting a ${type.name} from $sender but we instead got a " +
+        throw FlowSessionException("We were expecting a ${type.name} from $sender but we instead got a " +
                 "${message.payload.javaClass.name} (${message.payload})")
     }
 }
+
+class FlowSessionException(message: String) : RuntimeException(message)

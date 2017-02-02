@@ -5,9 +5,11 @@ import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.signWithECDSA
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializedBytes
 import java.io.FileNotFoundException
+import java.security.KeyPair
 import java.security.SignatureException
 import java.util.*
 
@@ -132,4 +134,13 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      */
     @Throws(FileNotFoundException::class, TransactionResolutionException::class, SignaturesMissingException::class)
     fun toLedgerTransaction(services: ServiceHub) = verifySignatures().toLedgerTransaction(services)
+
+    /**
+     * Utility to simplify the act of signing the transaction.
+     *
+     * @param keyPair the signer's public/private key pair.
+     *
+     * @return a digital signature of the transaction.
+     */
+    fun signWithECDSA(keyPair: KeyPair) = keyPair.signWithECDSA(this.id.bytes)
 }

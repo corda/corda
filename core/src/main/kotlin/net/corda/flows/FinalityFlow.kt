@@ -27,6 +27,7 @@ class FinalityFlow(val transaction: SignedTransaction,
     }
 
     @Suspendable
+    @Throws(NotaryException::class)
     override fun call() {
         // TODO: Resolve the tx here: it's probably already been done, but re-resolution is a no-op and it'll make the API more forgiving.
 

@@ -11,11 +11,12 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.core.contracts.BusinessCalendar
 import net.corda.core.crypto.*
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAPublicKey
+import net.corda.core.node.services.IdentityService
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -23,9 +24,25 @@ import java.time.LocalDateTime
 /**
  * Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
  * the java.time API, some core types, and Kotlin data classes.
+ *
+ * TODO: This does not belong in node. It should be moved to the client module or a dedicated webserver module.
  */
 object JsonSupport {
-    val javaTimeModule : Module by lazy {
+    interface PartyObjectMapper {
+        fun partyFromName(partyName: String): Party?
+    }
+
+    class RpcObjectMapper(val rpc: CordaRPCOps) : PartyObjectMapper, ObjectMapper() {
+        override fun partyFromName(partyName: String): Party? = rpc.partyFromName(partyName)
+    }
+    class IdentityObjectMapper(val identityService: IdentityService) : PartyObjectMapper, ObjectMapper(){
+        override fun partyFromName(partyName: String) = identityService.partyFromName(partyName)
+    }
+    class NoPartyObjectMapper: PartyObjectMapper, ObjectMapper() {
+        override fun partyFromName(partyName: String) = throw UnsupportedOperationException()
+    }
+
+    val javaTimeModule: Module by lazy {
         SimpleModule("java.time").apply {
             addSerializer(LocalDate::class.java, ToStringSerializer)
             addDeserializer(LocalDate::class.java, LocalDateDeserializer)
@@ -34,7 +51,7 @@ object JsonSupport {
         }
     }
 
-    val cordaModule : Module by lazy {
+    val cordaModule: Module by lazy {
         SimpleModule("core").apply {
             addSerializer(Party::class.java, PartySerializer)
             addDeserializer(Party::class.java, PartyDeserializer)
@@ -61,18 +78,24 @@ object JsonSupport {
         }
     }
 
-    fun createDefaultMapper(identities: IdentityService): ObjectMapper =
-            ServiceHubObjectMapper(identities).apply {
-                enable(SerializationFeature.INDENT_OUTPUT)
-                enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
-                enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+    /* Mapper requiring RPC support to deserialise parties from names */
+    fun createDefaultMapper(rpc: CordaRPCOps): ObjectMapper = configureMapper(RpcObjectMapper(rpc))
 
-                registerModule(javaTimeModule)
-                registerModule(cordaModule)
-                registerModule(KotlinModule())
-            }
+    /* For testing or situations where deserialising parties is not required */
+    fun createNonRpcMapper(): ObjectMapper = configureMapper(NoPartyObjectMapper())
 
-    class ServiceHubObjectMapper(val identities: IdentityService) : ObjectMapper()
+    /* For testing with an in memory identity service */
+    fun createInMemoryMapper(identityService: IdentityService) = configureMapper(IdentityObjectMapper(identityService))
+
+    private fun configureMapper(mapper: ObjectMapper): ObjectMapper = mapper.apply {
+        enable(SerializationFeature.INDENT_OUTPUT)
+        enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+        enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+
+        registerModule(javaTimeModule)
+        registerModule(cordaModule)
+        registerModule(KotlinModule())
+    }
 
     object ToStringSerializer : JsonSerializer<Any>() {
         override fun serialize(obj: Any, generator: JsonGenerator, provider: SerializerProvider) {
@@ -108,9 +131,10 @@ object JsonSupport {
             if (parser.currentToken == JsonToken.FIELD_NAME) {
                 parser.nextToken()
             }
-            val mapper = parser.codec as ServiceHubObjectMapper
+
+            val mapper = parser.codec as PartyObjectMapper
             // TODO this needs to use some industry identifier(s) not just these human readable names
-            return mapper.identities.partyFromName(parser.text) ?: throw JsonParseException(parser, "Could not find a Party with name: ${parser.text}")
+            return mapper.partyFromName(parser.text) ?: throw JsonParseException(parser, "Could not find a Party with name ${parser.text}")
         }
     }
 

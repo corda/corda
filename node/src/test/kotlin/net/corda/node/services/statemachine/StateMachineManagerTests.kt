@@ -13,6 +13,8 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.getOrThrow
 import net.corda.core.map
 import net.corda.core.messaging.MessageRecipients
+import net.corda.core.node.services.PartyInfo
+import net.corda.core.node.services.ServiceInfo
 import net.corda.core.random63BitValue
 import net.corda.core.rootCause
 import net.corda.core.serialization.OpaqueBytes
@@ -21,6 +23,7 @@ import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.flows.NotaryFlow
 import net.corda.node.services.persistence.checkpoints
+import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
@@ -31,7 +34,8 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.sequence
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -55,10 +59,12 @@ class StateMachineManagerTests {
         node1 = nodes.first
         node2 = nodes.second
         val notaryKeyPair = generateKeyPair()
+        val notaryService = ServiceInfo(ValidatingNotaryService.type, "notary-service-2000")
+        val overrideServices = mapOf(Pair(notaryService, notaryKeyPair))
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.
-        notary1 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, keyPair = notaryKeyPair, serviceName = "notary-service-2000")
-        notary2 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, keyPair = notaryKeyPair, serviceName = "notary-service-2000")
+        notary1 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, overrideServices = overrideServices, serviceName = "notary-service-2000")
+        notary2 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, overrideServices = overrideServices, serviceName = "notary-service-2000")
 
         net.messagingNetwork.receivedMessages.toSessionTransfers().forEach { sessionTransfers += it }
         net.runNetwork()
@@ -244,14 +250,14 @@ class StateMachineManagerTests {
         assertSessionTransfers(node2,
                 node1 sent sessionInit(SendFlow::class, payload) to node2,
                 node2 sent sessionConfirm to node1,
-                node1 sent sessionEnd to node2
+                node1 sent sessionEnd() to node2
                 //There's no session end from the other flows as they're manually suspended
         )
 
         assertSessionTransfers(node3,
                 node1 sent sessionInit(SendFlow::class, payload) to node3,
                 node3 sent sessionConfirm to node1,
-                node1 sent sessionEnd to node3
+                node1 sent sessionEnd() to node3
                 //There's no session end from the other flows as they're manually suspended
         )
 
@@ -278,14 +284,14 @@ class StateMachineManagerTests {
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
                 node2 sent sessionConfirm to node1,
                 node2 sent sessionData(node2Payload) to node1,
-                node2 sent sessionEnd to node1
+                node2 sent sessionEnd() to node1
         )
 
         assertSessionTransfers(node3,
                 node1 sent sessionInit(ReceiveFlow::class) to node3,
                 node3 sent sessionConfirm to node1,
                 node3 sent sessionData(node3Payload) to node1,
-                node3 sent sessionEnd to node1
+                node3 sent sessionEnd() to node1
         )
     }
 
@@ -301,7 +307,7 @@ class StateMachineManagerTests {
                 node2 sent sessionData(20L) to node1,
                 node1 sent sessionData(11L) to node2,
                 node2 sent sessionData(21L) to node1,
-                node1 sent sessionEnd to node2
+                node1 sent sessionEnd() to node2
         )
     }
 
@@ -321,6 +327,8 @@ class StateMachineManagerTests {
             net.runNetwork()
         }
         val endpoint = net.messagingNetwork.endpoint(notary1.net.myAddress as InMemoryMessagingNetwork.PeerHandle)!!
+        val party1Info = notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!
+        assert(party1Info is PartyInfo.Service)
         val notary1Address: MessageRecipients = endpoint.getAddressOfParty(notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!)
         assert(notary1Address is InMemoryMessagingNetwork.ServiceHandle)
         assertEquals(notary1Address, endpoint.getAddressOfParty(notary2.services.networkMapCache.getPartyInfo(notary2.info.notaryIdentity)!!))
@@ -361,18 +369,119 @@ class StateMachineManagerTests {
     }
 
     @Test
-    fun `exception thrown on other side`() {
-        val erroringFiber = node2.initiateSingleShotFlow(ReceiveFlow::class) { ExceptionFlow }.map { it.stateMachine as FlowStateMachineImpl }
+    fun `FlowException thrown on other side`() {
+        val erroringFlowFuture = node2.initiateSingleShotFlow(ReceiveFlow::class) {
+            ExceptionFlow { MyFlowException("Nothing useful") }
+        }
         val receivingFiber = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)) as FlowStateMachineImpl
         net.runNetwork()
-        assertThatThrownBy { receivingFiber.resultFuture.getOrThrow() }.isInstanceOf(FlowException::class.java)
+        assertThatExceptionOfType(MyFlowException::class.java)
+                .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
+                .withMessage("Nothing useful")
+                .withStackTraceContaining("ReceiveFlow")  // Make sure the stack trace is that of the receiving flow
+        databaseTransaction(node2.database) {
+            assertThat(node2.checkpointStorage.checkpoints()).isEmpty()
+        }
+        val errorFlow = erroringFlowFuture.getOrThrow()
         assertThat(receivingFiber.isTerminated).isTrue()
-        assertThat(erroringFiber.getOrThrow().isTerminated).isTrue()
+        assertThat((errorFlow.stateMachine as FlowStateMachineImpl).isTerminated).isTrue()
         assertSessionTransfers(
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
                 node2 sent sessionConfirm to node1,
-                node2 sent sessionEnd to node1
+                node2 sent sessionEnd(errorFlow.exceptionThrown) to node1
         )
+        // TODO see StateMachineManager.endAllFiberSessions
+//        // Make sure the original stack trace isn't sent down the wire
+//        assertThat((sessionTransfers.last().message as SessionEnd).errorResponse!!.stackTrace).isEmpty()
+    }
+
+    @Test
+    fun `FlowException propagated in invocation chain`() {
+        val node3 = net.createNode(node1.info.address)
+        net.runNetwork()
+
+        node3.initiateSingleShotFlow(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
+        node2.initiateSingleShotFlow(ReceiveFlow::class) { ReceiveFlow(node3.info.legalIdentity) }
+        val receivingFiber = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity))
+        net.runNetwork()
+        assertThatExceptionOfType(MyFlowException::class.java)
+                .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
+                .withMessage("Chain")
+    }
+
+    private class SendAndReceiveFlow(val otherParty: Party, val payload: Any) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            sendAndReceive<Any>(otherParty, payload)
+        }
+    }
+
+    @Test
+    fun `FlowException thrown and there is a 3rd unrelated party flow`() {
+        val node3 = net.createNode(node1.info.address)
+        net.runNetwork()
+
+        // Node 2 will send its payload and then block waiting for the receive from node 1. Meanwhile node 1 will move
+        // onto node 3 which will throw the exception
+        val node2Fiber = node2
+                .initiateSingleShotFlow(ReceiveFlow::class) { SendAndReceiveFlow(it, "Hello") }
+                .map { it.stateMachine }
+        node3.initiateSingleShotFlow(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Nothing useful") } }
+
+        val node1Fiber = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity, node3.info.legalIdentity)) as FlowStateMachineImpl
+        net.runNetwork()
+
+        // Node 1 will terminate with the error it received from node 3 but it won't propagate that to node 2 (as it's
+        // not relevant to it) but it will end its session with it
+        assertThatExceptionOfType(MyFlowException::class.java).isThrownBy {
+            node1Fiber.resultFuture.getOrThrow()
+        }
+        val node2ResultFuture = node2Fiber.getOrThrow().resultFuture
+        assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
+            node2ResultFuture.getOrThrow()
+        }
+
+        assertSessionTransfers(node2,
+                node1 sent sessionInit(ReceiveFlow::class) to node2,
+                node2 sent sessionConfirm to node1,
+                node2 sent sessionData("Hello") to node1,
+                node1 sent sessionEnd() to node2  // Unexpected session-end
+        )
+    }
+
+    private class ConditionalExceptionFlow(val otherParty: Party, val sendPayload: Any) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val throwException = receive<Boolean>(otherParty).unwrap { it }
+            if (throwException) {
+                throw MyFlowException("Throwing exception as requested")
+            }
+            send(otherParty, sendPayload)
+        }
+    }
+
+    @Test
+    fun `retry subFlow due to receiving FlowException`() {
+        class AskForExceptionFlow(val otherParty: Party, val throwException: Boolean) : FlowLogic<String>() {
+            @Suspendable
+            override fun call(): String = sendAndReceive<String>(otherParty, throwException).unwrap { it }
+        }
+
+        class RetryOnExceptionFlow(val otherParty: Party) : FlowLogic<String>() {
+            @Suspendable
+            override fun call(): String {
+                return try {
+                    subFlow(AskForExceptionFlow(otherParty, throwException = true))
+                } catch (e: MyFlowException) {
+                    subFlow(AskForExceptionFlow(otherParty, throwException = false))
+                }
+            }
+        }
+
+        node2.services.registerFlowInitiator(AskForExceptionFlow::class) { ConditionalExceptionFlow(it, "Hello") }
+        val resultFuture = node1.services.startFlow(RetryOnExceptionFlow(node2.info.legalIdentity)).resultFuture
+        net.runNetwork()
+        assertThat(resultFuture.getOrThrow()).isEqualTo("Hello")
     }
 
     private inline fun <reified P : FlowLogic<*>> MockNode.restartAndGetRestoredFlow(
@@ -396,15 +505,16 @@ class StateMachineManagerTests {
 
     private fun sessionData(payload: Any) = SessionData(0, payload)
 
-    private val sessionEnd = SessionEnd(0)
+    private fun sessionEnd(error: FlowException? = null) = SessionEnd(0, error)
 
     private fun assertSessionTransfers(vararg expected: SessionTransfer) {
         assertThat(sessionTransfers).containsExactly(*expected)
     }
 
-    private fun assertSessionTransfers(node: MockNode, vararg expected: SessionTransfer) {
+    private fun assertSessionTransfers(node: MockNode, vararg expected: SessionTransfer): List<SessionTransfer> {
         val actualForNode = sessionTransfers.filter { it.from == node.id || it.to == node.net.myAddress }
         assertThat(actualForNode).containsExactly(*expected)
+        return actualForNode
     }
 
     private data class SessionTransfer(val from: Int, val message: SessionMessage, val to: MessageRecipients) {
@@ -432,7 +542,6 @@ class StateMachineManagerTests {
 
     private infix fun MockNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(id, message)
     private infix fun Pair<Int, SessionMessage>.to(node: MockNode): SessionTransfer = SessionTransfer(first, second, node.net.myAddress)
-
 
     private class NoOpFlow(val nonTerminating: Boolean = false) : FlowLogic<Unit>() {
         @Transient var flowStarted = false
@@ -491,7 +600,16 @@ class StateMachineManagerTests {
         }
     }
 
-    private object ExceptionFlow : FlowLogic<Nothing>() {
-        override fun call(): Nothing = throw Exception()
+    private class ExceptionFlow<E : Exception>(val exception: () -> E) : FlowLogic<Nothing>() {
+        lateinit var exceptionThrown: E
+        override fun call(): Nothing {
+            exceptionThrown = exception()
+            throw exceptionThrown
+        }
+    }
+
+    private class MyFlowException(message: String) : FlowException(message) {
+        override fun equals(other: Any?): Boolean = other is MyFlowException && other.message == this.message
+        override fun hashCode(): Int = message?.hashCode() ?: 31
     }
 }

@@ -5,14 +5,15 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.POUNDS
 import net.corda.core.contracts.issuedBy
 import net.corda.core.crypto.Party
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.toFuture
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
-import net.corda.flows.CashFlowResult
 import net.corda.node.driver.DriverBasedTest
 import net.corda.node.driver.NodeHandle
 import net.corda.node.driver.driver
@@ -137,13 +138,13 @@ class DistributedServiceTests : DriverBasedTest() {
         val issueHandle = aliceProxy.startFlow(
                 ::CashFlow,
                 CashCommand.IssueCash(amount, OpaqueBytes.of(0), alice.nodeInfo.legalIdentity, raftNotaryIdentity))
-        require(issueHandle.returnValue.toBlocking().first() is CashFlowResult.Success)
+        issueHandle.returnValue.toFuture().getOrThrow()
     }
 
     private fun paySelf(amount: Amount<Currency>) {
         val payHandle = aliceProxy.startFlow(
                 ::CashFlow,
                 CashCommand.PayCash(amount.issuedBy(alice.nodeInfo.legalIdentity.ref(0)), alice.nodeInfo.legalIdentity))
-        require(payHandle.returnValue.toBlocking().first() is CashFlowResult.Success)
+        payHandle.returnValue.toFuture().getOrThrow()
     }
 }

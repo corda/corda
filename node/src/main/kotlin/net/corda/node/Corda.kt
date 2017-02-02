@@ -7,6 +7,7 @@ import net.corda.core.utilities.Emoji
 import net.corda.node.internal.Node
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.utilities.ANSIProgressObserver
+import net.corda.node.webserver.WebServer
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.LoggerFactory
@@ -57,7 +58,8 @@ fun main(args: Array<String>) {
 
     drawBanner()
 
-    System.setProperty("log-path", (cmdlineOptions.baseDirectory / "logs").toString())
+    val logDir = if (cmdlineOptions.isWebserver) "logs/web" else "logs"
+    System.setProperty("log-path", (cmdlineOptions.baseDirectory / logDir).toString())
 
     val log = LoggerFactory.getLogger("Main")
     printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
@@ -78,33 +80,39 @@ fun main(args: Array<String>) {
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
+    if(cmdlineOptions.isWebserver) {
+        log.info("Starting as webserver on ${conf.webAddress}")
+    } else {
+        log.info("Starting as node on ${conf.artemisAddress}")
+    }
 
     try {
         cmdlineOptions.baseDirectory.createDirectories()
 
-        val node = conf.createNode()
-        node.start()
-        printPluginsAndServices(node)
+        // TODO: Webserver should be split and start from inside a WAR container
+        if  (!cmdlineOptions.isWebserver) {
+            val node = conf.createNode()
+            node.start()
+            printPluginsAndServices(node)
 
-        thread {
-            Thread.sleep(30.seconds.toMillis())
-            while (!node.networkMapRegistrationFuture.isDone) {
-                printBasicNodeInfo("Waiting for response from network map ...")
-                Thread.sleep(30.seconds.toMillis())
+            node.networkMapRegistrationFuture.success {
+                val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
+                printBasicNodeInfo("Node started up and registered in $elapsed sec")
+
+                if (renderBasicInfoToConsole)
+                    ANSIProgressObserver(node.smm)
+            } failure {
+                log.error("Error during network map registration", it)
+                exitProcess(1)
             }
-        }
-
-        node.networkMapRegistrationFuture.success {
+            node.run()
+        } else {
+            val server = WebServer(conf)
+            server.start()
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            printBasicNodeInfo("Node started up and registered in $elapsed sec")
-
-            if (renderBasicInfoToConsole)
-                ANSIProgressObserver(node.smm)
-        } failure {
-            log.error("Error during network map registration", it)
-            exitProcess(1)
+            printBasicNodeInfo("Webserver started up in $elapsed sec")
+            server.run()
         }
-        node.run()
     } catch (e: Exception) {
         log.error("Exception during node startup", e)
         exitProcess(1)

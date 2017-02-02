@@ -1,5 +1,6 @@
 package net.corda.docs
 
+import net.corda.core.crypto.Party
 import net.corda.core.contracts.*
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
@@ -9,6 +10,7 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
+import net.corda.core.node.ServiceEntry
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.databaseTransaction
@@ -27,10 +29,11 @@ class FxTransactionBuildTutorialTest {
     @Before
     fun setup() {
         net = MockNetwork(threadPerNode = true)
+        val notaryService = ServiceInfo(ValidatingNotaryService.type)
         notaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
-                keyPair = DUMMY_NOTARY_KEY,
-                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
+                overrideServices = mapOf(Pair(notaryService, DUMMY_NOTARY_KEY)),
+                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
         nodeA = net.createPartyNode(notaryNode.info.address)
         nodeB = net.createPartyNode(notaryNode.info.address)
         FxTransactionDemoTutorial.registerFxProtocols(nodeA.services)

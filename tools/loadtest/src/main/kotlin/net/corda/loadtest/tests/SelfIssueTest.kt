@@ -7,10 +7,12 @@ import net.corda.client.mock.replicatePoisson
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.Party
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
+import net.corda.core.toFuture
 import net.corda.flows.CashCommand
+import net.corda.flows.CashException
 import net.corda.flows.CashFlow
-import net.corda.flows.CashFlowResult
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeHandle
 import org.slf4j.LoggerFactory
@@ -60,14 +62,11 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
         },
 
         execute = { command ->
-            val result = command.node.connection.proxy.startFlow(::CashFlow, command.command).returnValue.toBlocking().first()
-            when (result) {
-                is CashFlowResult.Success -> {
-                    log.info(result.message)
-                }
-                is CashFlowResult.Failed -> {
-                    log.error(result.message)
-                }
+            try {
+                val result = command.node.connection.proxy.startFlow(::CashFlow, command.command).returnValue.toFuture().getOrThrow()
+                log.info("Success: $result")
+            } catch (e: CashException) {
+                log.error("Failure", e)
             }
         },
 

@@ -28,7 +28,6 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.flows.CashFlowResult
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.User
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
@@ -36,6 +35,7 @@ import net.corda.node.services.messaging.ArtemisMessagingComponent.NetworkMapAdd
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.apache.activemq.artemis.api.core.SimpleString
+import org.apache.commons.fileupload.MultipartStream
 import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -146,6 +146,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
 
         register(BufferedInputStream::class.java, InputStreamSerializer)
         register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
+        register(MultipartStream.ItemInputStream::class.java, InputStreamSerializer)
 
         noReferencesWithin<WireTransaction>()
 
@@ -190,8 +191,6 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(Cash.Clauses.ConserveAmount::class.java)
         register(listOf(Unit).javaClass) // SingletonList
         register(setOf(Unit).javaClass) // SingletonSet
-        register(CashFlowResult.Success::class.java)
-        register(CashFlowResult.Failed::class.java)
         register(ServiceEntry::class.java)
         register(NodeInfo::class.java)
         register(PhysicalLocation::class.java)
@@ -208,6 +207,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(SimpleString::class.java)
         register(ServiceEntry::class.java)
         // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
+        register(RuntimeException::class.java)
         register(IllegalArgumentException::class.java)
         register(ArrayIndexOutOfBoundsException::class.java)
         register(IndexOutOfBoundsException::class.java)
