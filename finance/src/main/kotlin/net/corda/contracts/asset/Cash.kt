@@ -192,12 +192,12 @@ fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>): Amount<Is
 }
 
 fun Cash.State.ownedBy(owner: CompositeKey) = copy(owner = owner)
-fun Cash.State.issuedBy(party: Party) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party))))
+fun Cash.State.issuedBy(party: AnonymousParty) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party))))
 fun Cash.State.issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = deposit)))
 fun Cash.State.withDeposit(deposit: PartyAndReference): Cash.State = copy(amount = amount.copy(token = amount.token.copy(issuer = deposit)))
 
 infix fun Cash.State.`owned by`(owner: CompositeKey) = ownedBy(owner)
-infix fun Cash.State.`issued by`(party: Party) = issuedBy(party)
+infix fun Cash.State.`issued by`(party: AnonymousParty) = issuedBy(party)
 infix fun Cash.State.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
 infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = withDeposit(deposit)
 

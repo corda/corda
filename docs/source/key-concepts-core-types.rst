@@ -87,14 +87,15 @@ Party and CompositeKey
 Entities using the network are called *parties*. Parties can sign structures using keys, and a party may have many
 keys under their control.
 
-Parties may sometimes be identified pseudonymously. For example, in a transaction sent to your node as part of a
-chain of custody it is important you can convince yourself of the transaction's validity, but equally important that
-you don't learn anything about who was involved in that transaction. In these cases a public key may be present
-without any identifying information about who owns it.
+Parties can be represented either in full (including name) or pseudonymously, using the ``Party`` or ``AnonymousParty``
+classes respectively. For example, in a transaction sent to your node as part of a chain of custody it is important you
+can convince yourself of the transaction's validity, but equally important that you don't learn anything about who was
+involved in that transaction. In these cases ``AnonymousParty`` should be used, which contains a composite public key
+without any identifying information about who owns it. In contrast, for internal processing where extended details of
+a party are required, the ``Party`` class should be used. The identity service provides functionality for resolving
+anonymous parties to full parties.
 
-Identities of parties involved in signing a transaction can be represented simply by a ``CompositeKey``, or by further
-information (such as name) using the ``Party`` class. An ``AuthenticatedObject`` represents an object (like a command)
-that has been signed by a set of parties.
+An ``AuthenticatedObject`` represents an object (like a command) that has been signed by a set of parties.
 
 .. note:: These types are provisional and will change significantly in future as the identity framework becomes more fleshed out.
 
