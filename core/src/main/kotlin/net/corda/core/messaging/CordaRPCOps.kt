@@ -111,6 +111,11 @@ interface CordaRPCOps : RPCOps {
      */
     fun currentNodeTime(): Instant
 
+    /**
+     * Returns whether the node has registered with the network map.
+     */
+    fun isRegisteredWithNetworkMap(): Boolean
+
     // TODO These need rethinking. Instead of these direct calls we should have a way of replicating a subset of
     // the node's state locally and query that directly.
     /**

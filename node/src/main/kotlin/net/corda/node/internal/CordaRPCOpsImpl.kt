@@ -111,6 +111,8 @@ class CordaRPCOpsImpl(
         }
     }
 
+    override fun isRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered.isDone
+
     override fun partyFromKey(key: CompositeKey) = services.identityService.partyFromKey(key)
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)
 
