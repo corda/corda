@@ -29,6 +29,8 @@ Milestone 8
 
 * Flow framework: improved exception handling and other tweaks.
 
+* Notary flow: Provide complete details of underlying error when contract validation fails.
+
 Milestone 7
 -----------
 
