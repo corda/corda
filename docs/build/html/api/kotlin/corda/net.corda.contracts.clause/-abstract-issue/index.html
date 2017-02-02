@@ -1,0 +1,130 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>AbstractIssue - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.contracts.clause</a>&nbsp;/&nbsp;<a href=".">AbstractIssue</a><br/>
+<br/>
+<h1>AbstractIssue</h1>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractIssue</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts.clauses/-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Standard issue clause for contracts that issue fungible assets.</p>
+<h3>Parameters</h3>
+
+<p><a name="S"></a>
+<code>S</code> - the type of contract state which is being issued.
+<p><a name="T"></a>
+<code>T</code> - the token underlying the issued state.
+<p><a name="sum"></a>
+<code>sum</code> - function to convert a list of states into an amount of the token. Must error if there are no states in
+the list.
+<p><a name="sumOrZero"></a>
+<code>sumOrZero</code> - function to convert a list of states into an amount of the token, and returns zero if there are
+no states in the list. Takes in an instance of the token definition for constructing the zero amount if needed.
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">AbstractIssue</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.clause.AbstractIssue$<init>(kotlin.Function1((kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((net.corda.contracts.clause.AbstractIssue.T)))))), kotlin.Function2((kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), net.corda.core.contracts.Issued((net.corda.contracts.clause.AbstractIssue.T)), net.corda.core.contracts.Amount(()))))/sum">sum</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.clause.AbstractIssue$<init>(kotlin.Function1((kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((net.corda.contracts.clause.AbstractIssue.T)))))), kotlin.Function2((kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), net.corda.core.contracts.Issued((net.corda.contracts.clause.AbstractIssue.T)), net.corda.core.contracts.Amount(()))))/sumOrZero">sumOrZero</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="symbol">(</span><span class="identifier">token</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>Standard issue clause for contracts that issue fungible assets.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="sum.html">sum</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">sum</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="sum-or-zero.html">sumOrZero</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">sumOrZero</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="symbol">(</span><span class="identifier">token</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.contracts.clauses/-clause/required-commands.html">requiredCommands</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">requiredCommands</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../../net.corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Determine whether this clause runs or not</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="verify.html">verify</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.clause.AbstractIssue$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.contracts.clause.AbstractIssue.C)))), net.corda.core.contracts.Issued((net.corda.contracts.clause.AbstractIssue.T)))/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.clause.AbstractIssue$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.contracts.clause.AbstractIssue.C)))), net.corda.core.contracts.Issued((net.corda.contracts.clause.AbstractIssue.T)))/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.clause.AbstractIssue$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.contracts.clause.AbstractIssue.C)))), net.corda.core.contracts.Issued((net.corda.contracts.clause.AbstractIssue.T)))/outputs">outputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.clause.AbstractIssue$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.contracts.clause.AbstractIssue.C)))), net.corda.core.contracts.Issued((net.corda.contracts.clause.AbstractIssue.T)))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.clause.AbstractIssue$verify(net.corda.core.contracts.TransactionForContract, kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), kotlin.collections.List((net.corda.contracts.clause.AbstractIssue.S)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.contracts.clause.AbstractIssue.C)))), net.corda.core.contracts.Issued((net.corda.contracts.clause.AbstractIssue.T)))/groupingKey">groupingKey</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span></code>
+<p>Verify the transaction matches the conditions from this clause. For example, a "no zero amount output" clause
+would check each of the output states that it applies to, looking for a zero amount, and throw IllegalStateException
+if any matched.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.contracts.clauses/matches.html">matches</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span> <a href="../../net.corda.core.contracts.clauses/-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">matches</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.clauses$matches(net.corda.core.contracts.clauses.Clause((net.corda.core.contracts.ContractState, net.corda.core.contracts.clauses.matches.C, kotlin.Any)), kotlin.collections.List((net.corda.core.contracts.AuthenticatedObject((net.corda.core.contracts.clauses.matches.C)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Determine if the given list of commands matches the required commands for a clause to trigger.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.contracts.asset/-cash/-clauses/-issue/index.html">Issue</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Issue</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractIssue</span><span class="symbol">&lt;</span><a href="../../net.corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.contracts.asset/-cash/-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.contracts.asset/-commodity-contract/-clauses/-issue/index.html">Issue</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Issue</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractIssue</span><span class="symbol">&lt;</span><a href="../../net.corda.contracts.asset/-commodity-contract/-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.contracts.asset/-commodity-contract/-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.contracts/-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code>
+<p>Standard issue clause, specialised to match the commodity issue command.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.contracts.asset/-obligation/-clauses/-issue/index.html">Issue</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Issue</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractIssue</span><span class="symbol">&lt;</span><a href="../../net.corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../../net.corda.contracts.asset/-obligation/-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.contracts.asset/-obligation/-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Generic issuance clause</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.contracts/-commercial-paper/-clauses/-issue/index.html">Issue</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Issue</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractIssue</span><span class="symbol">&lt;</span><a href="../../net.corda.contracts/-commercial-paper/-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.contracts/-commercial-paper/-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.contracts/-commercial-paper/-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

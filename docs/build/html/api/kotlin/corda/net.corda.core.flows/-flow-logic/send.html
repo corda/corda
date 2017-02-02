@@ -1,0 +1,18 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>FlowLogic.send - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.flows</a>&nbsp;/&nbsp;<a href="index.html">FlowLogic</a>&nbsp;/&nbsp;<a href=".">send</a><br/>
+<br/>
+<h1>send</h1>
+<a name="net.corda.core.flows.FlowLogic$send(net.corda.core.crypto.Party, kotlin.Any)"></a>
+<code><span class="identifier">@Suspendable</span> <span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$send(net.corda.core.crypto.Party, kotlin.Any)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$send(net.corda.core.crypto.Party, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Queues the given <a href="send.html#net.corda.core.flows.FlowLogic$send(net.corda.core.crypto.Party, kotlin.Any)/payload">payload</a> for sending to the <a href="send.html#net.corda.core.flows.FlowLogic$send(net.corda.core.crypto.Party, kotlin.Any)/otherParty">otherParty</a> and continues without suspending.</p>
+<p>Note that the other party may receive the message at some arbitrary later point or not at all: if <a href="send.html#net.corda.core.flows.FlowLogic$send(net.corda.core.crypto.Party, kotlin.Any)/otherParty">otherParty</a>
+is offline then message delivery will be retried until it comes back or until the message is older than the
+network's event horizon time.</p>
+</BODY>
+</HTML>

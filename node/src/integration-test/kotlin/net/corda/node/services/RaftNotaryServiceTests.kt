@@ -1,22 +1,18 @@
 package net.corda.node.services
 
+import com.google.common.util.concurrent.Futures
 import net.corda.core.contracts.DummyContract
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
-import net.corda.core.div
 import net.corda.core.getOrThrow
-import net.corda.core.node.services.ServiceInfo
+import net.corda.core.map
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
 import net.corda.flows.NotaryFlow
 import net.corda.node.internal.AbstractNode
-import net.corda.node.internal.Node
-import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.node.utilities.databaseTransaction
-import net.corda.testing.getFreeLocalPorts
 import net.corda.testing.node.NodeBasedTest
 import org.junit.Test
 import java.security.KeyPair
@@ -26,63 +22,38 @@ import kotlin.test.assertFailsWith
 
 class RaftNotaryServiceTests : NodeBasedTest() {
     private val notaryName = "RAFT Notary Service"
-    private val clusterSize = 3
 
     @Test
     fun `detect double spend`() {
-        val masterNode = createNotaryCluster()
-        val alice = startNode("Alice")
+        val (masterNode, alice) = Futures.allAsList(
+                startNotaryCluster(notaryName, 3).map { it.first() },
+                startNode("Alice")
+        ).getOrThrow()
 
         val notaryParty = alice.netMapCache.getNotary(notaryName)!!
+        val notaryNodeKeyPair = databaseTransaction(masterNode.database) { masterNode.services.notaryIdentityKey }
+        val aliceKey = databaseTransaction(alice.database) { alice.services.legalIdentityKey }
 
-        val stx = run {
-            val notaryNodeKeyPair = databaseTransaction(masterNode.database) {
-                masterNode.services.notaryIdentityKey
-            }
-            val inputState = issueState(alice, notaryParty, notaryNodeKeyPair)
-            val tx = TransactionType.General.Builder(notaryParty).withItems(inputState)
-            val aliceKey = databaseTransaction(alice.database) {
-                alice.services.legalIdentityKey
-            }
-            tx.signWith(aliceKey)
-            tx.toSignedTransaction(false)
+        val inputState = issueState(alice, notaryParty, notaryNodeKeyPair)
+
+        val firstSpendTx = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
+            signWith(aliceKey)
+            toSignedTransaction(false)
         }
-
-        val buildFlow = { NotaryFlow.Client(stx) }
-
-        val firstSpend = alice.services.startFlow(buildFlow())
+        val firstSpend = alice.services.startFlow(NotaryFlow.Client(firstSpendTx))
         firstSpend.resultFuture.getOrThrow()
 
-        val secondSpend = alice.services.startFlow(buildFlow())
+        val secondSpendTx = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
+            val dummyState = DummyContract.SingleOwnerState(0, alice.info.legalIdentity.owningKey)
+            addOutputState(dummyState)
+            signWith(aliceKey)
+            toSignedTransaction(false)
+        }
+        val secondSpend = alice.services.startFlow(NotaryFlow.Client(secondSpendTx))
 
         val ex = assertFailsWith(NotaryException::class) { secondSpend.resultFuture.getOrThrow() }
         val error = ex.error as NotaryError.Conflict
-        assertEquals(error.tx, stx.tx)
-    }
-
-    private fun createNotaryCluster(): Node {
-        val notaryService = ServiceInfo(RaftValidatingNotaryService.type, notaryName)
-        val notaryAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
-        ServiceIdentityGenerator.generateToDisk(
-            (0 until clusterSize).map { tempFolder.root.toPath() / "Notary$it" },
-            notaryService.type.id,
-            notaryName)
-
-        val masterNode = startNode(
-            "Notary0",
-            advertisedServices = setOf(notaryService),
-            configOverrides = mapOf("notaryNodeAddress" to notaryAddresses[0]))
-
-        for (i in 1 until clusterSize) {
-            startNode(
-                "Notary$i",
-                advertisedServices = setOf(notaryService),
-                configOverrides = mapOf(
-                    "notaryNodeAddress" to notaryAddresses[i],
-                    "notaryClusterAddresses" to listOf(notaryAddresses[0])))
-        }
-
-        return masterNode
+        assertEquals(error.tx, secondSpendTx.tx)
     }
 
     private fun issueState(node: AbstractNode, notary: Party, notaryKey: KeyPair): StateAndRef<*> {

@@ -9,6 +9,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.DUMMY_NOTARY
 import java.time.Duration
 import java.time.Instant
+import java.util.*
 
 /**
  * This interface defines the bare bone functionality that a Transaction DSL interpreter should implement.
@@ -31,9 +32,10 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * Adds an output to the transaction.
      * @param label An optional label that may be later used to retrieve the output probably in other transactions.
      * @param notary The associated notary.
+     * @param encumbrance The position of the encumbrance state.
      * @param contractState The state itself.
      */
-    fun _output(label: String?, notary: Party, contractState: ContractState)
+    fun _output(label: String?, notary: Party, encumbrance: Int?, contractState: ContractState)
 
     /**
      * Adds an [Attachment] reference to the transaction.
@@ -76,6 +78,9 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
     fun input(state: ContractState) {
         val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder(notary = DUMMY_NOTARY)) {
             output { state }
+            // Add a dummy randomised output so that the transaction id differs when issuing the same state multiple times
+            val nonceState = DummyContract.SingleOwnerState(Random().nextInt(), DUMMY_NOTARY.owningKey)
+            output { nonceState }
         }
         input(transaction.outRef<ContractState>(0).ref)
     }
@@ -85,16 +90,16 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
      * @see TransactionDSLInterpreter._output
      */
     @JvmOverloads
-    fun output(label: String? = null, notary: Party = DUMMY_NOTARY, contractStateClosure: () -> ContractState) =
-            _output(label, notary,  contractStateClosure())
+    fun output(label: String? = null, notary: Party = DUMMY_NOTARY, encumbrance: Int? = null, contractStateClosure: () -> ContractState) =
+            _output(label, notary, encumbrance, contractStateClosure())
     /**
      * @see TransactionDSLInterpreter._output
      */
     fun output(label: String, contractState: ContractState) =
-            _output(label, DUMMY_NOTARY, contractState)
+            _output(label, DUMMY_NOTARY, null, contractState)
 
     fun output(contractState: ContractState) =
-            _output(null, DUMMY_NOTARY, contractState)
+            _output(null, DUMMY_NOTARY, null, contractState)
 
     /**
      * @see TransactionDSLInterpreter._command

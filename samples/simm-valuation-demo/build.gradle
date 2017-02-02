@@ -81,7 +81,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     networkMap "Controller"
     node {
         name "Controller"
-        dirName "controller"
         nearestCity "London"
         advertisedServices = ["corda.notary.validating"]
         artemisPort 10002
@@ -90,7 +89,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     }
     node {
         name "Bank A"
-        dirName "nodea"
         nearestCity "London"
         advertisedServices = []
         artemisPort 10004
@@ -99,7 +97,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     }
     node {
         name "Bank B"
-        dirName "nodeb"
         nearestCity "New York"
         advertisedServices = []
         artemisPort 10006
@@ -108,7 +105,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     }
     node {
         name "Bank C"
-        dirName "nodec"
         nearestCity "tokyo"
         advertisedServices = []
         artemisPort 10008

@@ -1,0 +1,207 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ReadOnlyBackedObservableMapBase - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.client.fxutils</a>&nbsp;/&nbsp;<a href=".">ReadOnlyBackedObservableMapBase</a><br/>
+<br/>
+<h1>ReadOnlyBackedObservableMapBase</h1>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">ReadOnlyBackedObservableMapBase</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span></code>
+<p>ReadOnlyBackedObservableMapBase is a base class implementing all abstract functions required for an <a href="#">ObservableMap</a>
+using a backing HashMap that subclasses should modify.</p>
+<p>Non-read-only API calls throw.</p>
+<h3>Parameters</h3>
+
+<p><a name="K"></a>
+<code>K</code> - The key type.
+<p><a name="A"></a>
+<code>A</code> - The exposed map element type.
+<p><a name="B"></a>
+<code>B</code> - Auxiliary data subclasses may wish to store in the backing map.
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">ReadOnlyBackedObservableMapBase</span><span class="symbol">(</span><span class="symbol">)</span></code>
+<p>ReadOnlyBackedObservableMapBase is a base class implementing all abstract functions required for an <a href="#">ObservableMap</a>
+using a backing HashMap that subclasses should modify.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="backing-map.html">backingMap</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">backingMap</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/HashMap.html"><span class="identifier">HashMap</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">Pair</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">B</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="entries.html">entries</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">entries</span><span class="symbol">: </span><span class="identifier">MutableSet</span><span class="symbol">&lt;</span><span class="identifier">MutableEntry</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="keys.html">keys</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">keys</span><span class="symbol">: </span><span class="identifier">MutableSet</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="size.html">size</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">size</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="values.html">values</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">values</span><span class="symbol">: </span><span class="identifier">MutableCollection</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="add-listener.html">addListener</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">addListener</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.ReadOnlyBackedObservableMapBase$addListener(javafx.beans.InvalidationListener)/listener">listener</span><span class="symbol">:</span>&nbsp;<span class="identifier">InvalidationListener</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">addListener</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.ReadOnlyBackedObservableMapBase$addListener(javafx.collections.MapChangeListener((net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.K, net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.A)))/listener">listener</span><span class="symbol">:</span>&nbsp;<span class="identifier">MapChangeListener</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="keyword">in</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="clear.html">clear</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">clear</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="contains-key.html">containsKey</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">containsKey</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.ReadOnlyBackedObservableMapBase$containsKey(net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.K)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="contains-value.html">containsValue</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">containsValue</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.ReadOnlyBackedObservableMapBase$containsValue(net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.A)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="fire-change.html">fireChange</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">fireChange</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.ReadOnlyBackedObservableMapBase$fireChange(javafx.collections.MapChangeListener.Change((net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.K, net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.A)))/change">change</span><span class="symbol">:</span>&nbsp;<span class="identifier">Change</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="keyword">out</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="get.html">get</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">get</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.ReadOnlyBackedObservableMapBase$get(net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.K)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">A</span><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="is-empty.html">isEmpty</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">isEmpty</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="put.html">put</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">put</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.ReadOnlyBackedObservableMapBase$put(net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.K, net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.A)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils.ReadOnlyBackedObservableMapBase$put(net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.K, net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.A)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">A</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="put-all.html">putAll</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">putAll</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.ReadOnlyBackedObservableMapBase$putAll(kotlin.collections.Map((net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.K, net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.A)))/from">from</span><span class="symbol">:</span>&nbsp;<span class="identifier">Map</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="remove.html">remove</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">remove</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.ReadOnlyBackedObservableMapBase$remove(net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.K)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">A</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="remove-listener.html">removeListener</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">removeListener</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.ReadOnlyBackedObservableMapBase$removeListener(javafx.beans.InvalidationListener)/listener">listener</span><span class="symbol">:</span>&nbsp;<span class="identifier">InvalidationListener</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">removeListener</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.ReadOnlyBackedObservableMapBase$removeListener(javafx.collections.MapChangeListener((net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.K, net.corda.client.fxutils.ReadOnlyBackedObservableMapBase.A)))/listener">listener</span><span class="symbol">:</span>&nbsp;<span class="identifier">MapChangeListener</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="keyword">in</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../javafx.collections.-observable-map/create-map-change.html">createMapChange</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">K</span><span class="symbol">&gt;</span> <span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">createMapChange</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$createMapChange(javafx.collections.ObservableMap((net.corda.client.fxutils.createMapChange.K, net.corda.client.fxutils.createMapChange.A)), net.corda.client.fxutils.createMapChange.K, net.corda.client.fxutils.createMapChange.A, net.corda.client.fxutils.createMapChange.A)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils$createMapChange(javafx.collections.ObservableMap((net.corda.client.fxutils.createMapChange.K, net.corda.client.fxutils.createMapChange.A)), net.corda.client.fxutils.createMapChange.K, net.corda.client.fxutils.createMapChange.A, net.corda.client.fxutils.createMapChange.A)/removedValue">removedValue</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils$createMapChange(javafx.collections.ObservableMap((net.corda.client.fxutils.createMapChange.K, net.corda.client.fxutils.createMapChange.A)), net.corda.client.fxutils.createMapChange.K, net.corda.client.fxutils.createMapChange.A, net.corda.client.fxutils.createMapChange.A)/addedValue">addedValue</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Change</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../javafx.collections.-observable-map/get-observable-entries.html">getObservableEntries</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="identifier">V</span><span class="symbol">&gt;</span> <span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">getObservableEntries</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="identifier">Entry</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>val nameToPerson: ObservableMap&lt;String, Person&gt; = (..)
+val people: ObservableList = nameToPerson.getObservableValues()</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../javafx.collections.-observable-map/get-observable-value.html">getObservableValue</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="identifier">V</span><span class="symbol">&gt;</span> <span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">getObservableValue</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$getObservableValue(javafx.collections.ObservableMap((net.corda.client.fxutils.getObservableValue.K, net.corda.client.fxutils.getObservableValue.V)), net.corda.client.fxutils.getObservableValue.K)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">K</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">V</span><span class="symbol">?</span><span class="symbol">&gt;</span></code>
+<p>val nameToPerson: ObservableMap&lt;String, Person&gt; = (..)
+val john: ObservableValue&lt;Person?&gt; = nameToPerson.getObservableValue("John")</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../javafx.collections.-observable-map/get-observable-values.html">getObservableValues</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="identifier">V</span><span class="symbol">&gt;</span> <span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">getObservableValues</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="identifier">V</span><span class="symbol">&gt;</span></code>
+<p>val nameToPerson: ObservableMap&lt;String, Person&gt; = (..)
+val people: ObservableList = nameToPerson.getObservableValues()</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-associated-list/index.html">AssociatedList</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">AssociatedList</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="keyword">out</span>&nbsp;<span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ReadOnlyBackedObservableMapBase</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">B</span><span class="symbol">,</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span></code>
+<p><a href="../-associated-list/index.html">AssociatedList</a> creates an <a href="#">ObservableMap</a> from an <a href="#">ObservableList</a> by associating each list element with a unique key.
+It is <emph>not</emph> allowed to have several elements map to the same value!</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-left-outer-joined-map/index.html">LeftOuterJoinedMap</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">LeftOuterJoinedMap</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">, </span><span class="identifier">C</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ReadOnlyBackedObservableMapBase</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">SimpleObjectProperty</span><span class="symbol">&lt;</span><span class="identifier">B</span><span class="symbol">?</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p><a href="../-left-outer-joined-map/index.html">LeftOuterJoinedMap</a> implements a special case of a left outer join where we're matching on primary keys of both
+tables.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

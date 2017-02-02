@@ -1,0 +1,98 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TwoPartyDealFlow - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href=".">TwoPartyDealFlow</a><br/>
+<br/>
+<h1>TwoPartyDealFlow</h1>
+<code><span class="keyword">object </span><span class="identifier">TwoPartyDealFlow</span></code>
+<p>Classes for manipulating a two party deal or agreement.</p>
+<p>TODO: The subclasses should probably be broken out into individual flows rather than making this an ever expanding collection of subclasses.</p>
+<p>TODO: Also, the term Deal is used here where we might prefer Agreement.</p>
+<p>TODO: Consider whether we can merge this with <a href="../-two-party-trade-flow/index.html">TwoPartyTradeFlow</a></p>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-acceptor/index.html">Acceptor</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Acceptor</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-secondary/index.html"><span class="identifier">Secondary</span></a><span class="symbol">&lt;</span><a href="-auto-offer/index.html"><span class="identifier">AutoOffer</span></a><span class="symbol">&gt;</span></code>
+<p>One side of the flow for inserting a pre-agreed deal.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-auto-offer/index.html">AutoOffer</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">AutoOffer</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-handshake/index.html">Handshake</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Handshake</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-instigator/index.html">Instigator</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Instigator</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-primary/index.html"><span class="identifier">Primary</span></a></code>
+<p>One side of the flow for inserting a pre-agreed deal.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-marker-for-bogus-regulator-flow.html">MarkerForBogusRegulatorFlow</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MarkerForBogusRegulatorFlow</span></code>
+<p><a href="-primary/index.html">Primary</a> at the end sends the signed tx to all the regulator parties. This a seperate workflow which needs a
+sepearate session with the regulator. This interface is used to do that in <a href="-primary/get-counterparty-marker.html">Primary.getCounterpartyMarker</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-primary/index.html">Primary</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Primary</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code>
+<p>Abstracted bilateral deal flow participant that initiates communication/handshake.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-secondary/index.html">Secondary</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Secondary</span><span class="symbol">&lt;</span><span class="identifier">U</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code>
+<p>Abstracted bilateral deal flow participant that is recipient of initial communication.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-signatures-from-primary/index.html">SignaturesFromPrimary</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">SignaturesFromPrimary</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-deal-mismatch-exception/index.html">DealMismatchException</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DealMismatchException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-deal-ref-mismatch-exception/index.html">DealRefMismatchException</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DealRefMismatchException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

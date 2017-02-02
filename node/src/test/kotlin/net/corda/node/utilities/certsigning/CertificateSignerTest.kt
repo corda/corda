@@ -8,11 +8,10 @@ import net.corda.core.crypto.X509Utilities
 import net.corda.core.div
 import net.corda.core.exists
 import net.corda.core.readLines
-import net.corda.node.services.config.NodeConfiguration
+import net.corda.testing.TestNodeConfiguration
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -20,11 +19,10 @@ import kotlin.test.assertTrue
 class CertificateSignerTest {
     @Rule
     @JvmField
-    val tempFolder: TemporaryFolder = TemporaryFolder()
+    val tempFolder = TemporaryFolder()
 
     @Test
     fun buildKeyStore() {
-
         val id = SecureHash.randomSHA256().toString()
 
         val certs = arrayOf(X509Utilities.createSelfSignedCACert("CORDA_CLIENT_CA").certificate,
@@ -36,27 +34,20 @@ class CertificateSignerTest {
             on { retrieveCertificates(eq(id)) }.then { certs }
         }
 
+        val config = TestNodeConfiguration(
+                baseDirectory = tempFolder.root.toPath(),
+                myLegalName = "me",
+                networkMapService = null)
 
-        val config = object : NodeConfiguration {
-            override val basedir: Path = tempFolder.root.toPath()
-            override val myLegalName: String = "me"
-            override val nearestCity: String = "London"
-            override val emailAddress: String = ""
-            override val devMode: Boolean = true
-            override val exportJMXto: String = ""
-            override val keyStorePassword: String = "testpass"
-            override val trustStorePassword: String = "trustpass"
-        }
-
-        assertFalse(config.keyStorePath.exists())
-        assertFalse(config.trustStorePath.exists())
+        assertFalse(config.keyStoreFile.exists())
+        assertFalse(config.trustStoreFile.exists())
 
         CertificateSigner(config, certService).buildKeyStore()
 
-        assertTrue(config.keyStorePath.exists())
-        assertTrue(config.trustStorePath.exists())
+        assertTrue(config.keyStoreFile.exists())
+        assertTrue(config.trustStoreFile.exists())
 
-        X509Utilities.loadKeyStore(config.keyStorePath, config.keyStorePassword).run {
+        X509Utilities.loadKeyStore(config.keyStoreFile, config.keyStorePassword).run {
             assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY))
             assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_CA))
             assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA))
@@ -65,7 +56,7 @@ class CertificateSignerTest {
             assertFalse(containsAlias(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY))
         }
 
-        X509Utilities.loadKeyStore(config.trustStorePath, config.trustStorePassword).run {
+        X509Utilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword).run {
             assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY))
             assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA))
             assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA))
@@ -74,7 +65,6 @@ class CertificateSignerTest {
             assertFalse(containsAlias(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY))
         }
 
-        assertEquals(id, (config.certificatesPath / "certificate-request-id.txt").readLines { it.findFirst().get() })
+        assertEquals(id, (config.certificatesDirectory / "certificate-request-id.txt").readLines { it.findFirst().get() })
     }
-
 }

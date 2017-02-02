@@ -28,13 +28,14 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.flows.CashFlowResult
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.User
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.node.services.messaging.ArtemisMessagingComponent.NetworkMapAddress
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.apache.activemq.artemis.api.core.SimpleString
+import org.apache.commons.fileupload.MultipartStream
 import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -145,6 +146,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
 
         register(BufferedInputStream::class.java, InputStreamSerializer)
         register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
+        register(MultipartStream.ItemInputStream::class.java, InputStreamSerializer)
 
         noReferencesWithin<WireTransaction>()
 
@@ -189,26 +191,14 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(Cash.Clauses.ConserveAmount::class.java)
         register(listOf(Unit).javaClass) // SingletonList
         register(setOf(Unit).javaClass) // SingletonSet
-        register(CashFlowResult.Success::class.java)
-        register(CashFlowResult.Failed::class.java)
         register(ServiceEntry::class.java)
         register(NodeInfo::class.java)
         register(PhysicalLocation::class.java)
         register(NetworkMapCache.MapChange.Added::class.java)
         register(NetworkMapCache.MapChange.Removed::class.java)
         register(NetworkMapCache.MapChange.Modified::class.java)
-        register(ArtemisMessagingComponent.NodeAddress::class.java,
-                read = { kryo, input ->
-                    ArtemisMessagingComponent.NodeAddress(
-                            kryo.readObject(input, SimpleString::class.java),
-                            kryo.readObject(input, HostAndPort::class.java))
-                },
-                write = { kryo, output, nodeAddress ->
-                    kryo.writeObject(output, nodeAddress.queueName)
-                    kryo.writeObject(output, nodeAddress.hostAndPort)
-                }
-        )
-        register(NodeMessagingClient.makeNetworkMapAddress(HostAndPort.fromString("localhost:0")).javaClass)
+        register(ArtemisMessagingComponent.NodeAddress::class.java)
+        register(NetworkMapAddress::class.java)
         register(ServiceInfo::class.java)
         register(ServiceType.getServiceType("ab", "ab").javaClass)
         register(ServiceType.parse("ab").javaClass)
@@ -217,6 +207,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(SimpleString::class.java)
         register(ServiceEntry::class.java)
         // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
+        register(RuntimeException::class.java)
         register(IllegalArgumentException::class.java)
         register(ArrayIndexOutOfBoundsException::class.java)
         register(IndexOutOfBoundsException::class.java)

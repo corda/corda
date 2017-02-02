@@ -1,0 +1,35 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>Amount.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href="index.html">Amount</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+
+<p><code><span class="identifier">Amount</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.Amount$<init>(java.math.BigDecimal, net.corda.core.contracts.Amount.T)/quantity">quantity</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.Amount$<init>(java.math.BigDecimal, net.corda.core.contracts.Amount.T)/token">token</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span></code>
+<p>Construct the amount using the given decimal value as quantity. Any fractional part
+is discarded. To convert and use the fractional part, see <a href="from-decimal.html">fromDecimal</a>.</p>
+
+<p><code><span class="identifier">Amount</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.Amount$<init>(java.math.BigInteger, net.corda.core.contracts.Amount.T)/quantity">quantity</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigInteger.html"><span class="identifier">BigInteger</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.Amount$<init>(java.math.BigInteger, net.corda.core.contracts.Amount.T)/token">token</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span></code>
+<p><code><span class="identifier">Amount</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.Amount$<init>(kotlin.Long, net.corda.core.contracts.Amount.T)/quantity">quantity</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.Amount$<init>(kotlin.Long, net.corda.core.contracts.Amount.T)/token">token</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span></code>
+<p>Amount represents a positive quantity of some token (currency, asset, etc.), measured in quantity of the smallest
+representable units. Note that quantity is not necessarily 1/100ths of a currency unit, but are the actual smallest
+amount used in whatever underlying thing the amount represents.</p>
+<p>Amounts of different tokens <emph>do not mix</emph> and attempting to add or subtract two amounts of different currencies
+will throw <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/IllegalArgumentException.html">IllegalArgumentException</a>. Amounts may not be negative. Amounts are represented internally using a signed
+64 bit value, therefore, the maximum expressable amount is 2^63 - 1 == Long.MAX_VALUE. Addition, subtraction and
+multiplication are overflow checked and will throw <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/ArithmeticException.html">ArithmeticException</a> if the operation would have caused integer
+overflow.</p>
+<p>TODO: It may make sense to replace this with convenience extensions over the JSR 354 MonetaryAmount interface,
+    in particular for use during calculations. This may also resolve...
+TODO: Think about how positive-only vs positive-or-negative amounts can be represented in the type system.
+TODO: Add either a scaling factor, or a variant for use in calculations.</p>
+<h3>Parameters</h3>
+
+<p><a name="T"></a>
+<code>T</code> - the type of the token, for example <a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html">Currency</a>.
+</BODY>
+</HTML>

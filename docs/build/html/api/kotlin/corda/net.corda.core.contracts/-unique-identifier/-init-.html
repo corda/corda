@@ -1,0 +1,26 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>UniqueIdentifier.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href="index.html">UniqueIdentifier</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">UniqueIdentifier</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.UniqueIdentifier$<init>(kotlin.String, java.util.UUID)/externalId">externalId</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.UniqueIdentifier$<init>(kotlin.String, java.util.UUID)/id">id</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/UUID.html"><span class="identifier">UUID</span></a>&nbsp;<span class="symbol">=</span>&nbsp;UUID.randomUUID()<span class="symbol">)</span></code>
+<p>This class provides a truly unique identifier of a trade, state, or other business object, bound to any existing
+external ID. Equality and comparison are based on the unique ID only; if two states somehow have the same UUID but
+different external IDs, it would indicate a problem with handling of IDs.</p>
+<h3>Parameters</h3>
+
+<p><a name="externalId"></a>
+<code>externalId</code> - Any existing weak identifier such as trade reference ID.
+This should be set here the first time a <a href="index.html">UniqueIdentifier</a> is created as part of state issuance,
+or ledger on-boarding activity. This ensure that the human readable identity is paired with the strong ID.
+<p><a name="id"></a>
+<code>id</code> - Should never be set by user code and left as default initialised.
+So that the first time a state is issued this should be given a new UUID.
+Subsequent copies and evolutions of a state should just copy the <a href="-init-.html#net.corda.core.contracts.UniqueIdentifier$<init>(kotlin.String, java.util.UUID)/externalId">externalId</a> and <a href="-init-.html#net.corda.core.contracts.UniqueIdentifier$<init>(kotlin.String, java.util.UUID)/id">id</a> fields unmodified.
+</BODY>
+</HTML>

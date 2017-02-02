@@ -1,23 +1,22 @@
 package net.corda.node.services
 
 import net.corda.core.bufferUntilSubscribed
+import net.corda.core.contracts.Amount
 import net.corda.core.contracts.POUNDS
 import net.corda.core.contracts.issuedBy
 import net.corda.core.crypto.Party
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.toFuture
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
-import net.corda.flows.CashFlowResult
 import net.corda.node.driver.DriverBasedTest
 import net.corda.node.driver.NodeHandle
 import net.corda.node.driver.driver
-import net.corda.node.services.config.configureTestSSL
-import net.corda.node.services.messaging.ArtemisMessagingComponent
-import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
@@ -28,14 +27,14 @@ import java.util.*
 import kotlin.test.assertEquals
 
 class DistributedServiceTests : DriverBasedTest() {
-    lateinit var alice: NodeInfo
+    lateinit var alice: NodeHandle
     lateinit var notaries: List<NodeHandle>
     lateinit var aliceProxy: CordaRPCOps
     lateinit var raftNotaryIdentity: Party
     lateinit var notaryStateMachines: Observable<Pair<NodeInfo, StateMachineUpdate>>
 
     override fun setup() = driver {
-        // Start Alice and 3 raft notaries
+        // Start Alice and 3 notaries in a RAFT cluster
         val clusterSize = 3
         val testUser = User("test", "test", permissions = setOf(startFlowPermission<CashFlow>()))
         val aliceFuture = startNode("Alice", rpcUsers = listOf(testUser))
@@ -46,7 +45,7 @@ class DistributedServiceTests : DriverBasedTest() {
                 type = RaftValidatingNotaryService.type
         )
 
-        alice = aliceFuture.get().nodeInfo
+        alice = aliceFuture.get()
         val (notaryIdentity, notaryNodes) = notariesFuture.get()
         raftNotaryIdentity = notaryIdentity
         notaries = notaryNodes
@@ -55,14 +54,14 @@ class DistributedServiceTests : DriverBasedTest() {
         assertEquals(notaries.size, notaries.map { it.nodeInfo.legalIdentity }.toSet().size)
 
         // Connect to Alice and the notaries
-        fun connectRpc(node: NodeInfo): CordaRPCOps {
-            val client = CordaRPCClient(ArtemisMessagingComponent.toHostAndPort(node.address), configureTestSSL())
+        fun connectRpc(node: NodeHandle): CordaRPCOps {
+            val client = node.rpcClientToNode()
             client.start("test", "test")
             return client.proxy()
         }
         aliceProxy = connectRpc(alice)
-        val notaryProxies = notaries.map { connectRpc(it.nodeInfo) }
-        notaryStateMachines = Observable.from(notaryProxies.map { proxy ->
+        val rpcClientsToNotaries = notaries.map(::connectRpc)
+        notaryStateMachines = Observable.from(rpcClientsToNotaries.map { proxy ->
             proxy.stateMachinesAndUpdates().second.map { Pair(proxy.nodeIdentity(), it) }
         }).flatMap { it.onErrorResumeNext(Observable.empty()) }.bufferUntilSubscribed()
 
@@ -74,11 +73,10 @@ class DistributedServiceTests : DriverBasedTest() {
     @Test
     fun `requests are distributed evenly amongst the nodes`() {
         // Issue 100 pounds, then pay ourselves 50x2 pounds
-        val issueHandle = aliceProxy.startFlow(::CashFlow, CashCommand.IssueCash(100.POUNDS, OpaqueBytes.of(0), alice.legalIdentity, raftNotaryIdentity))
-        require(issueHandle.returnValue.toBlocking().first() is CashFlowResult.Success)
+        issueCash(100.POUNDS)
+
         for (i in 1..50) {
-            val payHandle = aliceProxy.startFlow(::CashFlow, CashCommand.PayCash(2.POUNDS.issuedBy(alice.legalIdentity.ref(0)), alice.legalIdentity))
-            require(payHandle.returnValue.toBlocking().first() is CashFlowResult.Success)
+            paySelf(2.POUNDS)
         }
 
         // The state machines added in the notaries should map one-to-one to notarisation requests
@@ -104,11 +102,10 @@ class DistributedServiceTests : DriverBasedTest() {
     @Test
     fun `cluster survives if a notary is killed`() {
         // Issue 100 pounds, then pay ourselves 10x5 pounds
-        val issueHandle = aliceProxy.startFlow(::CashFlow, CashCommand.IssueCash(100.POUNDS, OpaqueBytes.of(0), alice.legalIdentity, raftNotaryIdentity))
-        require(issueHandle.returnValue.toBlocking().first() is CashFlowResult.Success)
+        issueCash(100.POUNDS)
+
         for (i in 1..10) {
-            val payHandle = aliceProxy.startFlow(::CashFlow, CashCommand.PayCash(5.POUNDS.issuedBy(alice.legalIdentity.ref(0)), alice.legalIdentity))
-            require(payHandle.returnValue.toBlocking().first() is CashFlowResult.Success)
+            paySelf(5.POUNDS)
         }
 
         // Now kill a notary
@@ -119,8 +116,7 @@ class DistributedServiceTests : DriverBasedTest() {
 
         // Pay ourselves another 20x5 pounds
         for (i in 1..20) {
-            val payHandle = aliceProxy.startFlow(::CashFlow, CashCommand.PayCash(5.POUNDS.issuedBy(alice.legalIdentity.ref(0)), alice.legalIdentity))
-            require(payHandle.returnValue.toBlocking().first() is CashFlowResult.Success)
+            paySelf(5.POUNDS)
         }
 
         val notarisationsPerNotary = HashMap<Party, Int>()
@@ -136,5 +132,19 @@ class DistributedServiceTests : DriverBasedTest() {
 
         println("Notarisation distribution: $notarisationsPerNotary")
         require(notarisationsPerNotary.size == 3)
+    }
+
+    private fun issueCash(amount: Amount<Currency>) {
+        val issueHandle = aliceProxy.startFlow(
+                ::CashFlow,
+                CashCommand.IssueCash(amount, OpaqueBytes.of(0), alice.nodeInfo.legalIdentity, raftNotaryIdentity))
+        issueHandle.returnValue.toFuture().getOrThrow()
+    }
+
+    private fun paySelf(amount: Amount<Currency>) {
+        val payHandle = aliceProxy.startFlow(
+                ::CashFlow,
+                CashCommand.PayCash(amount.issuedBy(alice.nodeInfo.legalIdentity.ref(0)), alice.nodeInfo.legalIdentity))
+        payHandle.returnValue.toFuture().getOrThrow()
     }
 }

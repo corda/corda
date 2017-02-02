@@ -1,0 +1,29 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ProgressTracker.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.utilities</a>&nbsp;/&nbsp;<a href="index.html">ProgressTracker</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">ProgressTracker</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="net.corda.core.utilities.ProgressTracker$<init>(kotlin.Array((net.corda.core.utilities.ProgressTracker.Step)))/steps">steps</span><span class="symbol">:</span>&nbsp;<a href="-step/index.html"><span class="identifier">Step</span></a><span class="symbol">)</span></code>
+<p>A progress tracker helps surface information about the progress of an operation to a user interface or API of some
+kind. It lets you define a set of <emph>steps</emph> that represent an operation. A step is represented by an object (typically
+a singleton).</p>
+<p>Steps may logically be children of other steps, which models the case where a large top level operation involves
+sub-operations which may also have a notion of progress. If a step has children, then the tracker will report the
+steps children as the "next step" after the parent. In other words, a parent step is considered to involve actual
+reportable work and is a thing. If the parent step simply groups other steps, then you'll have to step over it
+manually.</p>
+<p>Each step has a label. It is assumed by default that the label does not change. If you want a label to change, then
+you can emit a <a href="-change/-rendering/index.html">ProgressTracker.Change.Rendering</a> object on the <a href="-step/changes.html">ProgressTracker.Step.changes</a> observable stream
+after it changes. That object will propagate through to the top level trackers <a href="changes.html">changes</a> stream, which renderers can
+subscribe to in order to learn about progress.</p>
+<p>An operation can move both forwards and backwards through steps, thus, a <a href="index.html">ProgressTracker</a> can represent operations
+that include loops.</p>
+<p>A progress tracker is <emph>not</emph> thread safe. You may move events from the thread making progress to another thread by
+using the <a href="#">Observable</a> subscribeOn call.</p>
+</BODY>
+</HTML>

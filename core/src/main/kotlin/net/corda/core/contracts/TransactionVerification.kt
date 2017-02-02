@@ -97,6 +97,9 @@ sealed class TransactionVerificationException(val tx: LedgerTransaction, cause: 
     class SignersMissing(tx: LedgerTransaction, val missing: List<CompositeKey>) : TransactionVerificationException(tx, null) {
         override fun toString() = "Signers missing: ${missing.joinToString()}"
     }
+    class DuplicateInputStates(tx: LedgerTransaction, val duplicates: Set<StateRef>) : TransactionVerificationException(tx, null) {
+        override fun toString() = "Duplicate inputs: ${duplicates.joinToString()}"
+    }
 
     class InvalidNotaryChange(tx: LedgerTransaction) : TransactionVerificationException(tx, null)
     class NotaryChangeInWrongTransactionType(tx: LedgerTransaction, val outputNotary: Party) : TransactionVerificationException(tx, null) {

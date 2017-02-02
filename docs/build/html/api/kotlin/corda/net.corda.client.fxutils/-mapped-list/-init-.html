@@ -1,0 +1,16 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>MappedList.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.client.fxutils</a>&nbsp;/&nbsp;<a href="index.html">MappedList</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">MappedList</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils.MappedList$<init>(javafx.collections.ObservableList((net.corda.client.fxutils.MappedList.A)), kotlin.Function1((net.corda.client.fxutils.MappedList.A, net.corda.client.fxutils.MappedList.B)))/list">list</span><span class="symbol">:</span>&nbsp;<span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils.MappedList$<init>(javafx.collections.ObservableList((net.corda.client.fxutils.MappedList.A)), kotlin.Function1((net.corda.client.fxutils.MappedList.A, net.corda.client.fxutils.MappedList.B)))/function">function</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span></code>
+<p>This is a variant of <a href="#">EasyBind.map</a> where the mapped list is backed, therefore the mapping function will only be run
+when an element is inserted or updated.
+Use this instead of <a href="#">EasyBind.map</a> to trade off memory vs CPU, or if (god forbid) the mapped function is side-effecting.</p>
+</BODY>
+</HTML>

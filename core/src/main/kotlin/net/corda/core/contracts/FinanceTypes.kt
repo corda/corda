@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.annotations.VisibleForTesting
 import java.math.BigDecimal
+import java.math.BigInteger
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -34,6 +35,19 @@ import java.util.*
  * @param T the type of the token, for example [Currency].
  */
 data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
+    companion object {
+        /**
+         * Build an amount from a decimal representation. For example, with an input of "12.34" GBP,
+         * returns an amount with a quantity of "1234".
+         *
+         * @see Amount<Currency>.toDecimal
+         */
+        fun fromDecimal(quantity: BigDecimal, currency: Currency) : Amount<Currency> {
+            val longQuantity = quantity.movePointRight(currency.defaultFractionDigits).toLong()
+            return Amount(longQuantity, currency)
+        }
+    }
+
     init {
         // Negative amounts are of course a vital part of any ledger, but negative values are only valid in certain
         // contexts: you cannot send a negative amount of cash, but you can (sometimes) have a negative balance.
@@ -41,7 +55,12 @@ data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
         require(quantity >= 0) { "Negative amounts are not allowed: $quantity" }
     }
 
-    constructor(amount: BigDecimal, currency: T) : this(amount.toLong(), currency)
+    /**
+     * Construct the amount using the given decimal value as quantity. Any fractional part
+     * is discarded. To convert and use the fractional part, see [fromDecimal].
+     */
+    constructor(quantity: BigDecimal, token: T) : this(quantity.toLong(), token)
+    constructor(quantity: BigInteger, token: T) : this(quantity.toLong(), token)
 
     operator fun plus(other: Amount<T>): Amount<T> {
         checkCurrency(other)
@@ -69,6 +88,14 @@ data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
         return quantity.compareTo(other.quantity)
     }
 }
+
+/**
+ * Convert a currency [Amount] to a decimal representation. For example, with an amount with a quantity
+ * of "1234" GBP, returns "12.34".
+ *
+ * @see Amount.Companion.fromDecimal
+ */
+fun Amount<Currency>.toDecimal() : BigDecimal = BigDecimal(quantity).movePointLeft(token.defaultFractionDigits)
 
 fun <T> Iterable<Amount<T>>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
 fun <T> Iterable<Amount<T>>.sumOrThrow() = reduce { left, right -> left + right }

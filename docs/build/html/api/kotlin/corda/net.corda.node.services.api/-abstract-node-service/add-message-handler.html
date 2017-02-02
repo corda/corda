@@ -1,0 +1,37 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>AbstractNodeService.addMessageHandler - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.api</a>&nbsp;/&nbsp;<a href="index.html">AbstractNodeService</a>&nbsp;/&nbsp;<a href=".">addMessageHandler</a><br/>
+<br/>
+<h1>addMessageHandler</h1>
+
+<p><a name="net.corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((net.corda.node.services.api.AbstractNodeService.addMessageHandler.Q, net.corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((net.corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))"></a>
+<code><span class="keyword">protected</span> <span class="keyword">inline</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="keyword">reified</span>&nbsp;<span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.flows/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a><span class="symbol">, </span><span class="keyword">reified</span>&nbsp;<span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((net.corda.node.services.api.AbstractNodeService.addMessageHandler.Q, net.corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((net.corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="keyword">crossinline</span> <span class="identifier" id="net.corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((net.corda.node.services.api.AbstractNodeService.addMessageHandler.Q, net.corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((net.corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="keyword">crossinline</span> <span class="identifier" id="net.corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((net.corda.node.services.api.AbstractNodeService.addMessageHandler.Q, net.corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((net.corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/exceptionConsumer">exceptionConsumer</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code>
+<p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
+common boilerplate code. Exceptions are caught and passed to the provided consumer.  If you just want a simple
+acknowledgement response with no content, use <a href="#">Ack</a>.</p>
+<h3>Parameters</h3>
+
+<p><a name="topic"></a>
+<code>topic</code> - the topic, without the default session ID postfix (".0).
+<p><a name="handler"></a>
+<code>handler</code> - a function to handle the deserialised request and return an optional response (if return type not Unit)
+<p><a name="exceptionConsumer"></a>
+<code>exceptionConsumer</code> - a function to which any thrown exception is passed.
+<p><a name="net.corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((net.corda.node.services.api.AbstractNodeService.addMessageHandler.Q, net.corda.node.services.api.AbstractNodeService.addMessageHandler.R)))"></a>
+<code><span class="keyword">protected</span> <span class="keyword">inline</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="keyword">reified</span>&nbsp;<span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.flows/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a><span class="symbol">, </span><span class="keyword">reified</span>&nbsp;<span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((net.corda.node.services.api.AbstractNodeService.addMessageHandler.Q, net.corda.node.services.api.AbstractNodeService.addMessageHandler.R)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="keyword">crossinline</span> <span class="identifier" id="net.corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((net.corda.node.services.api.AbstractNodeService.addMessageHandler.Q, net.corda.node.services.api.AbstractNodeService.addMessageHandler.R)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code>
+<p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
+common boilerplate code. Exceptions are propagated to the messaging layer.  If you just want a simple
+acknowledgement response with no content, use <a href="#">Ack</a>.</p>
+<h3>Parameters</h3>
+
+<p><a name="topic"></a>
+<code>topic</code> - the topic, without the default session ID postfix (".0).
+<p><a name="handler"></a>
+<code>handler</code> - a function to handle the deserialised request and return an optional response (if return type not Unit).
+</BODY>
+</HTML>

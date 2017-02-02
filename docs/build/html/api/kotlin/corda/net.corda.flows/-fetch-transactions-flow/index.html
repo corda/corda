@@ -1,0 +1,73 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>FetchTransactionsFlow - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href=".">FetchTransactionsFlow</a><br/>
+<br/>
+<h1>FetchTransactionsFlow</h1>
+<code><span class="keyword">class </span><span class="identifier">FetchTransactionsFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-fetch-data-flow/index.html"><span class="identifier">FetchDataFlow</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code>
+<p>Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.</p>
+<p>A malicious response in which the data provided by the remote peer does not hash to the requested hash results in
+<a href="../-fetch-data-flow/-downloaded-vs-requested-data-mismatch/index.html">FetchDataFlow.DownloadedVsRequestedDataMismatch</a> being thrown. If the remote peer doesn't have an entry, it
+results in a <a href="../-fetch-data-flow/-hash-not-found/index.html">FetchDataFlow.HashNotFound</a> exception. Note that returned transactions are not inserted into
+the database, because it's up to the caller to actually verify the transactions are valid.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">FetchTransactionsFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.FetchTransactionsFlow$<init>(kotlin.collections.Set((net.corda.core.crypto.SecureHash)), net.corda.core.crypto.Party)/requests">requests</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.flows.FetchTransactionsFlow$<init>(kotlin.collections.Set((net.corda.core.crypto.SecureHash)), net.corda.core.crypto.Party)/otherSide">otherSide</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span></code>
+<p>Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-fetch-data-flow/other-side.html">otherSide</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">otherSide</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-fetch-data-flow/requests.html">requests</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">requests</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="load.html">load</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">load</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.FetchTransactionsFlow$load(net.corda.core.crypto.SecureHash)/txid">txid</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">?</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-fetch-data-flow/call.html">call</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-fetch-data-flow/-result/index.html"><span class="identifier">Result</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>This is where you fill out your business logic. The returned object will usually be ignored, but can be
+helpful if this flow is meant to be used as a subflow.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

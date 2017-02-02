@@ -44,7 +44,8 @@ import kotlin.concurrent.thread
 @ThreadSafe
 class InMemoryMessagingNetwork(
         val sendManuallyPumped: Boolean,
-        val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random()
+        val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
+        private val messagesInFlight: ReusableLatch = ReusableLatch()
 ) : SingletonSerializeAsToken() {
     companion object {
         val MESSAGES_LOG_NAME = "messages"
@@ -78,14 +79,13 @@ class InMemoryMessagingNetwork(
     // Holds the mapping from services to peers advertising the service.
     private val serviceToPeersMapping = HashMap<ServiceHandle, LinkedHashSet<PeerHandle>>()
 
-    val messagesInFlight = ReusableLatch()
-
     @Suppress("unused") // Used by the visualiser tool.
     /** A stream of (sender, message, recipients) triples */
     val receivedMessages: Observable<MessageTransfer>
         get() = _receivedMessages
 
     val endpoints: List<InMemoryMessaging> @Synchronized get() = handleEndpointMap.values.toList()
+    fun endpoint(peer: PeerHandle): InMemoryMessaging? = handleEndpointMap.get(peer)
 
     /**
      * Creates a node and returns the new object that identifies its location on the network to senders, and the

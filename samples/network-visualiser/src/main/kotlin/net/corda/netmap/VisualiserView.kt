@@ -225,14 +225,14 @@ internal class VisualiserView() {
         styleChoice.value = displayStyle
 
         val dropShadow = Pane().apply { styleClass += "drop-shadow-pane-horizontal"; minHeight = 8.0 }
-        val logoImage = ImageView(javaClass.getResource("R3 logo.png").toExternalForm())
+        val logoImage = ImageView(javaClass.getResource("Corda logo.png").toExternalForm())
         logoImage.fitHeight = 65.0
         logoImage.isPreserveRatio = true
-        val logoLabel = HBox(logoImage, VBox(
-                Label("D I S T R I B U T E D   L E D G E R   G R O U P").apply { styleClass += "dlg-label" },
+        val logoLabel = HBox(logoImage,
                 Label("Network Simulator").apply { styleClass += "logo-label" }
-        ))
+        )
         logoLabel.spacing = 10.0
+        logoLabel.alignment = Pos.CENTER_LEFT
         HBox.setHgrow(logoLabel, Priority.ALWAYS)
         logoLabel.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_PREF_SIZE)
         dateLabel = Label("").apply { styleClass += "date-label" }

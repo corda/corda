@@ -63,7 +63,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     networkMap "Notary"
     node {
         name "Notary"
-        dirName "notary"
         nearestCity "London"
         advertisedServices = ["corda.notary.validating"]
         artemisPort 10002
@@ -72,26 +71,30 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     }
     node {
         name "BankOfCorda"
-        dirName "node-bank-of-corda"
         nearestCity "London"
-        advertisedServices = []
+        advertisedServices = ["corda.issuer.USD"]
         artemisPort 10004
         webPort 10005
         cordapps = []
         rpcUsers = [
                 ['user' : "user1",
                  'password' : "test",
-                 'permissions' : ["StartFlow.net.corda.flows.CashFlow"]]
+                 'permissions' : ["StartFlow.net.corda.flows.CashFlow",
+                                  "StartFlow.net.corda.flows.IssuerFlow\$IssuanceRequester"]]
         ]
     }
     node {
         name "BigCorporation"
-        dirName "node-big-corp"
         nearestCity "New York"
         advertisedServices = []
         artemisPort 10006
         webPort 10007
         cordapps = []
+        rpcUsers = [
+                ['user' : "user1",
+                 'password' : "test",
+                 'permissions' : ["StartFlow.net.corda.flows.CashFlow"]]
+        ]
     }
 }
 

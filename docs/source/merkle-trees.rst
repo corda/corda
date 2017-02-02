@@ -127,5 +127,5 @@ Or combine the two steps together:
 
 .. note:: The way the ``FilteredTransaction`` is constructed ensures that after signing of the root hash it's impossible to add or remove
     leaves. However, it can happen that having transaction with multiple commands one party reveals only subset of them to the Oracle.
-    As signing is done now over the merkle root hash, the service signs all commands of given type, even though it didn't see
+    As signing is done now over the Merkle root hash, the service signs all commands of given type, even though it didn't see
     all of them. This issue will be handled after implementing partial signatures.

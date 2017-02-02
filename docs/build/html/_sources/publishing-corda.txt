@@ -24,11 +24,11 @@ To publish the codebase locally to Maven Local you must run:
 Publishing to Jcenter
 ---------------------
 
-.. note:: The module you wish to publish must be linked to jcenter in bintray. Only the founding account can do this.
+.. note:: The module you wish to publish must be linked to jcenter in Bintray. Only the founding account can do this.
 
 To publish to Jcenter you must first have the following;
 
-1. An account on bintray in the R3 organisation
+1. An account on Bintray in the R3 organisation
 2. Our GPG key's passphrase for signing the binaries to publish
 
 Getting Setup
@@ -37,7 +37,7 @@ Getting Setup
 You must now set the following environment variables:
 
 * CORDA_BINTRAY_USER your Bintray username
-* CORDA_BINTRAY_KEY to your bintray API key (found at: https://bintray.com/profile/edit)
+* CORDA_BINTRAY_KEY to your Bintray API key (found at: https://bintray.com/profile/edit)
 * CORDA_BINTRAY_GPG_PASSPHRASE to our GPG passphrase
 
 Publishing

@@ -1,15 +1,17 @@
 package net.corda.core.node.services
 
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
+import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import rx.Observable
+import java.io.File
+import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -162,11 +164,7 @@ interface VaultService {
      * Provide a [Future] for when a [StateRef] is consumed, which can be very useful in building tests.
      */
     fun whenConsumed(ref: StateRef): ListenableFuture<Vault.Update> {
-        val future = SettableFuture.create<Vault.Update>()
-        updates.filter { it.consumed.any { it.ref == ref } }.first().subscribe {
-            future.set(it)
-        }
-        return future
+        return updates.filter { it.consumed.any { it.ref == ref } }.toFuture()
     }
 
     /**
@@ -220,6 +218,24 @@ interface KeyManagementService {
     fun freshKey(): KeyPair
 }
 
+// TODO: Move to a more appropriate location
+/**
+ * An interface that denotes a service that can accept file uploads.
+ */
+interface FileUploader {
+    /**
+     * Accepts the data in the given input stream, and returns some sort of useful return message that will be sent
+     * back to the user in the response.
+     */
+    fun upload(file: InputStream): String
+
+    /**
+     * Check if this service accepts this type of upload. For example if you are uploading interest rates this could
+     * be "my-service-interest-rates". Type here does not refer to file extentions or MIME types.
+     */
+    fun accepts(type: String): Boolean
+}
+
 /**
  * A sketch of an interface to a simple key/value storage system. Intended for persistence of simple blobs like
  * transactions, serialised flow state machines and so on. Again, this isn't intended to imply lack of SQL or
@@ -235,6 +251,10 @@ interface StorageService {
 
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage
+
+    @Suppress("DEPRECATION")
+    @Deprecated("This service will be removed in a future milestone")
+    val uploaders: List<FileUploader>
 
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage
 }

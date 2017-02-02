@@ -1,0 +1,22 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NotaryFlow.Client.<init> - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href="../index.html">NotaryFlow</a>&nbsp;/&nbsp;<a href="index.html">Client</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+
+<p><code><span class="identifier">Client</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.NotaryFlow.Client$<init>(net.corda.core.transactions.SignedTransaction)/stx">stx</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span></code>
+<p><code><span class="identifier">Client</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.NotaryFlow.Client$<init>(net.corda.core.transactions.SignedTransaction, net.corda.core.utilities.ProgressTracker)/stx">stx</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.flows.NotaryFlow.Client$<init>(net.corda.core.transactions.SignedTransaction, net.corda.core.utilities.ProgressTracker)/progressTracker">progressTracker</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a><span class="symbol">)</span></code>
+<p>A flow to be used for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
+timestamp is correct and none of its inputs have been used in another completed transaction.</p>
+<h3>Exceptions</h3>
+
+<p><a name="NotaryException"></a>
+<code>NotaryException</code> - in case the any of the inputs to the transaction have been consumed
+    by another transaction or the timestamp is invalid.
+</BODY>
+</HTML>

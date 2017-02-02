@@ -1,0 +1,107 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NodeLoginModule - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href=".">NodeLoginModule</a><br/>
+<br/>
+<h1>NodeLoginModule</h1>
+<code><span class="keyword">class </span><span class="identifier">NodeLoginModule</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/javax/security/auth/spi/LoginModule.html"><span class="identifier">LoginModule</span></a></code>
+<p>Clients must connect to us with a username and password and must use TLS. If a someone connects with
+<a href="../-artemis-messaging-component/-n-o-d-e_-u-s-e-r.html">ArtemisMessagingComponent.NODE_USER</a> then we confirm it's just us as the node by checking their TLS certificate
+is the same as our one in our key store. Then they're given full access to all valid queues. If they connect with
+<a href="../-artemis-messaging-component/-p-e-e-r_-u-s-e-r.html">ArtemisMessagingComponent.PEER_USER</a> then we confirm they belong on our P2P network by checking their root CA is
+the same as our root CA. If that's the case the only access they're given is the ablility send to our P2P address.
+In both cases the messages these authenticated nodes send to us are tagged with their subject DN and we assume
+the CN within that is their legal name.
+Otherwise if the username is neither of the above we assume it's an RPC user and authenticate against our list of
+valid RPC users. RPC clients are given permission to perform RPC and nothing else.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">NodeLoginModule</span><span class="symbol">(</span><span class="symbol">)</span></code>
+<p>Clients must connect to us with a username and password and must use TLS. If a someone connects with
+<a href="../-artemis-messaging-component/-n-o-d-e_-u-s-e-r.html">ArtemisMessagingComponent.NODE_USER</a> then we confirm it's just us as the node by checking their TLS certificate
+is the same as our one in our key store. Then they're given full access to all valid queues. If they connect with
+<a href="../-artemis-messaging-component/-p-e-e-r_-u-s-e-r.html">ArtemisMessagingComponent.PEER_USER</a> then we confirm they belong on our P2P network by checking their root CA is
+the same as our root CA. If that's the case the only access they're given is the ablility send to our P2P address.
+In both cases the messages these authenticated nodes send to us are tagged with their subject DN and we assume
+the CN within that is their legal name.
+Otherwise if the username is neither of the above we assume it's an RPC user and authenticate against our list of
+valid RPC users. RPC clients are given permission to perform RPC and nothing else.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="abort.html">abort</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">abort</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="commit.html">commit</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">commit</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="initialize.html">initialize</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">initialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeLoginModule$initialize(javax.security.auth.Subject, javax.security.auth.callback.CallbackHandler, kotlin.collections.Map((kotlin.String, kotlin.Any)), kotlin.collections.Map((kotlin.String, kotlin.Any)))/subject">subject</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/javax/security/auth/Subject.html"><span class="identifier">Subject</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeLoginModule$initialize(javax.security.auth.Subject, javax.security.auth.callback.CallbackHandler, kotlin.collections.Map((kotlin.String, kotlin.Any)), kotlin.collections.Map((kotlin.String, kotlin.Any)))/callbackHandler">callbackHandler</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/javax/security/auth/callback/CallbackHandler.html"><span class="identifier">CallbackHandler</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeLoginModule$initialize(javax.security.auth.Subject, javax.security.auth.callback.CallbackHandler, kotlin.collections.Map((kotlin.String, kotlin.Any)), kotlin.collections.Map((kotlin.String, kotlin.Any)))/sharedState">sharedState</span><span class="symbol">:</span>&nbsp;<span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeLoginModule$initialize(javax.security.auth.Subject, javax.security.auth.callback.CallbackHandler, kotlin.collections.Map((kotlin.String, kotlin.Any)), kotlin.collections.Map((kotlin.String, kotlin.Any)))/options">options</span><span class="symbol">:</span>&nbsp;<span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="login.html">login</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">login</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="logout.html">logout</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">logout</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-n-o-d-e_-r-o-l-e.html">NODE_ROLE</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">NODE_ROLE</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-p-e-e-r_-r-o-l-e.html">PEER_ROLE</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">PEER_ROLE</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-r-p-c_-r-o-l-e.html">RPC_ROLE</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">RPC_ROLE</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="log.html">log</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">log</span><span class="symbol">: </span><span class="identifier">Logger</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -47,11 +47,8 @@ A base contract representing debt of X amount of currency CCY from party A to pa
 #### ``And contract1 ... contractN``
 A combinator over a list of contracts. Each contract in list will create a separate independent contract state. The ``And`` combinator cannot be root in a contract.
 
-#### ``Action name, condition, actors, contract``
-An action combinator. This declares a named action that can be taken by anyone of the actors given that _condition_ is met. If the action is performed the contract state transitions into the specificed contract.
-
-#### ``Or action1 ... actionN``
-A combinator that can only be used on action contracts. This means only one of the action can be executed. Should any one action be executed, all other actions are discarded.
+#### ``Action [name, condition, contract]``
+An action combinator. This declares a list of named actions, only one can be taken and only if the condition is satisfied. If the action is performed the contract state transitions into the specificed contract.
 
 #### ``RollOut startDate endDate frequency contractTemplate``
 A combinator for rolling out a date sequence using specified template

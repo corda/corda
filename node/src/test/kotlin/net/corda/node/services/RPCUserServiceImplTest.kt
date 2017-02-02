@@ -5,6 +5,7 @@ import net.corda.node.services.config.FullNodeConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.nio.file.Paths
 
 class RPCUserServiceImplTest {
 
@@ -69,6 +70,6 @@ class RPCUserServiceImplTest {
     }
 
     private fun loadWithContents(configString: String): RPCUserServiceImpl {
-        return RPCUserServiceImpl(FullNodeConfiguration(ConfigFactory.parseString(configString)))
+        return RPCUserServiceImpl(FullNodeConfiguration(Paths.get("."), ConfigFactory.parseString(configString)))
     }
 }

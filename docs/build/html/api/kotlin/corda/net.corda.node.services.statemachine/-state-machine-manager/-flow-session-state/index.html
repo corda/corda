@@ -1,0 +1,63 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>StateMachineManager.FlowSessionState - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.node.services.statemachine</a>&nbsp;/&nbsp;<a href="../index.html">StateMachineManager</a>&nbsp;/&nbsp;<a href=".">FlowSessionState</a><br/>
+<br/>
+<h1>FlowSessionState</h1>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">FlowSessionState</span></code>
+<p>FlowSessionState describes the session's state.</p>
+<p><a href="-initiating/index.html">Initiating</a> is pre-handshake. <a href="-initiating/other-party.html">Initiating.otherParty</a> at this point holds a <a href="../../../net.corda.core.crypto/-party/index.html">Party</a> corresponding to either a
+    specific peer or a service.
+<a href="-initiated/index.html">Initiated</a> is post-handshake. At this point <a href="-initiating/other-party.html">Initiating.otherParty</a> will have been resolved to a specific peer
+    <a href="-initiated/peer-party.html">Initiated.peerParty</a>, and the peer's sessionId has been initialised.</p>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-initiated/index.html">Initiated</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Initiated</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowSessionState</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-initiating/index.html">Initiating</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Initiating</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowSessionState</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="send-to-party.html">sendToParty</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">sendToParty</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-initiated/index.html">Initiated</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Initiated</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowSessionState</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-initiating/index.html">Initiating</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Initiating</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowSessionState</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

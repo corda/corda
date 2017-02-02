@@ -1,0 +1,39 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>MessagingService.addMessageHandler - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.messaging</a>&nbsp;/&nbsp;<a href="index.html">MessagingService</a>&nbsp;/&nbsp;<a href=".">addMessageHandler</a><br/>
+<br/>
+<h1>addMessageHandler</h1>
+
+<p><a name="net.corda.core.messaging.MessagingService$addMessageHandler(kotlin.String, kotlin.Long, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))"></a>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging.MessagingService$addMessageHandler(kotlin.String, kotlin.Long, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span>&nbsp;<span class="symbol">=</span>&nbsp;""<span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging.MessagingService$addMessageHandler(kotlin.String, kotlin.Long, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span>&nbsp;<span class="symbol">=</span>&nbsp;DEFAULT_SESSION_ID<span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging.MessagingService$addMessageHandler(kotlin.String, kotlin.Long, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../-received-message/index.html"><span class="identifier">ReceivedMessage</span></a><span class="symbol">,</span>&nbsp;<a href="../-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code>
+<p>The provided function will be invoked for each received message whose topic matches the given string.  The callback
+will run on threads provided by the messaging service, and the callback is expected to be thread safe as a result.</p>
+<p>The returned object is an opaque handle that may be used to un-register handlers later with <a href="remove-message-handler.html">removeMessageHandler</a>.
+The handle is passed to the callback as well, to avoid race conditions whereby the callback wants to unregister
+itself and yet addMessageHandler hasn't returned the handle yet.</p>
+<h3>Parameters</h3>
+
+<p><a name="topic"></a>
+<code>topic</code> - identifier for the general subject of the message, for example "platform.network_map.fetch".
+The topic can be the empty string to match all messages (session ID must be <a href="../../net.corda.core.node.services/-d-e-f-a-u-l-t_-s-e-s-s-i-o-n_-i-d.html">DEFAULT_SESSION_ID</a>).
+<p><a name="sessionID"></a>
+<code>sessionID</code> - identifier for the session the message is part of. For services listening before
+a session is established, use <a href="../../net.corda.core.node.services/-d-e-f-a-u-l-t_-s-e-s-s-i-o-n_-i-d.html">DEFAULT_SESSION_ID</a>.
+<p><a name="net.corda.core.messaging.MessagingService$addMessageHandler(net.corda.core.messaging.TopicSession, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))"></a>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging.MessagingService$addMessageHandler(net.corda.core.messaging.TopicSession, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging.MessagingService$addMessageHandler(net.corda.core.messaging.TopicSession, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../-received-message/index.html"><span class="identifier">ReceivedMessage</span></a><span class="symbol">,</span>&nbsp;<a href="../-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code>
+<p>The provided function will be invoked for each received message whose topic and session matches.  The callback
+will run on threads provided by the messaging service, and the callback is expected to be thread safe as a result.</p>
+<p>The returned object is an opaque handle that may be used to un-register handlers later with <a href="remove-message-handler.html">removeMessageHandler</a>.
+The handle is passed to the callback as well, to avoid race conditions whereby the callback wants to unregister
+itself and yet addMessageHandler hasn't returned the handle yet.</p>
+<h3>Parameters</h3>
+
+<p><a name="topicSession"></a>
+<code>topicSession</code> - identifier for the topic and session to listen for messages arriving on.
+</BODY>
+</HTML>

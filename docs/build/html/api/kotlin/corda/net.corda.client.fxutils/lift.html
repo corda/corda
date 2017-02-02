@@ -1,0 +1,19 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>lift - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href="index.html">net.corda.client.fxutils</a>&nbsp;/&nbsp;<a href=".">lift</a><br/>
+<br/>
+<h1>lift</h1>
+<a name="net.corda.client.fxutils$lift(net.corda.client.fxutils.lift.A)"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span> <span class="identifier">A</span><span class="symbol">.</span><span class="identifier">lift</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span></code>
+<p>val aliceHeight: ObservableValue = (..)
+val bobHeight: ObservableValue = (..)
+fun sumHeight(a: Long, b: Long): Long { .. }</p>
+<p>val aliceBobSumHeight = ::sumHeight.lift(aliceHeight, bobHeight)
+val aliceHeightPlus2 = ::sumHeight.lift(aliceHeight, 2L.lift())</p>
+</BODY>
+</HTML>

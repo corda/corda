@@ -1,0 +1,21 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ArtemisMessagingComponent.ServiceAddress.<init> - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href="../index.html">ArtemisMessagingComponent</a>&nbsp;/&nbsp;<a href="index.html">ServiceAddress</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">ServiceAddress</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent.ServiceAddress$<init>(net.corda.core.crypto.CompositeKey)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span></code>
+<p><a href="index.html">ServiceAddress</a> implements <a href="../../../net.corda.core.messaging/-message-recipient-group.html">MessageRecipientGroup</a>. It holds a queue associated with a service advertised by
+zero or more nodes. Each advertising node has an associated consumer.</p>
+<p>By sending to such an address Artemis will pick a consumer (uses Round Robin by default) and sends the message
+there. We use this to establish sessions involving service counterparties.</p>
+<h3>Parameters</h3>
+
+<p><a name="identity"></a>
+<code>identity</code> - The service identity's owning key.
+</BODY>
+</HTML>

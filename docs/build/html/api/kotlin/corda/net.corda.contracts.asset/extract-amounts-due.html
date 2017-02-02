@@ -1,0 +1,17 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>extractAmountsDue - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href="index.html">net.corda.contracts.asset</a>&nbsp;/&nbsp;<a href=".">extractAmountsDue</a><br/>
+<br/>
+<h1>extractAmountsDue</h1>
+<a name="net.corda.contracts.asset$extractAmountsDue(net.corda.contracts.asset.Obligation.Terms((net.corda.contracts.asset.extractAmountsDue.P)), kotlin.collections.Iterable((net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.extractAmountsDue.P)))))"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span> <span class="identifier">extractAmountsDue</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset$extractAmountsDue(net.corda.contracts.asset.Obligation.Terms((net.corda.contracts.asset.extractAmountsDue.P)), kotlin.collections.Iterable((net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.extractAmountsDue.P)))))/product">product</span><span class="symbol">:</span>&nbsp;<a href="-obligation/-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.asset$extractAmountsDue(net.corda.contracts.asset.Obligation.Terms((net.corda.contracts.asset.extractAmountsDue.P)), kotlin.collections.Iterable((net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.extractAmountsDue.P)))))/states">states</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">Pair</span><span class="symbol">&lt;</span><a href="../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">,</span>&nbsp;<a href="../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="-obligation/-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Convert a list of settlement states into total from each obligor to a beneficiary.</p>
+<p><strong>Return</strong><br/>
+a map of obligor/beneficiary pairs to the balance due.</p>
+</BODY>
+</HTML>

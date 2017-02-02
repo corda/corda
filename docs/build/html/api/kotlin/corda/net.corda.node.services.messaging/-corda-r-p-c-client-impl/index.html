@@ -1,0 +1,65 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CordaRPCClientImpl - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href=".">CordaRPCClientImpl</a><br/>
+<br/>
+<h1>CordaRPCClientImpl</h1>
+<code><span class="keyword">class </span><span class="identifier">CordaRPCClientImpl</span></code>
+<p>Core RPC engine implementation, to learn how to use RPC you should be looking at <a href="../-corda-r-p-c-client/index.html">CordaRPCClient</a>.</p>
+<h1>Design notes</h1>
+<p>The way RPCs are handled is fairly standard except for the handling of observables. When an RPC might return
+an <a href="#">Observable</a> it is specially tagged. This causes the client to create a new transient queue for the
+receiving of observables and their observations with a random ID in the name. This ID is sent to the server in
+a message header. All observations are sent via this single queue.</p>
+<p>The reason for doing it this way and not the more obvious approach of one-queue-per-observable is that we want
+the queues to be <emph>transient</emph>, meaning their lifetime in the broker is tied to the session that created them.
+A server side observable and its associated queue is not a cost-free thing, let alone the memory and resources
+needed to actually generate the observations themselves, therefore we want to ensure these cannot leak. A
+transient queue will be deleted automatically if the client session terminates, which by default happens on
+disconnect but can also be configured to happen after a short delay (this allows clients to e.g. switch IP
+address). On the server the deletion of the observations queue triggers unsubscription from the associated
+observables, which in turn may then be garbage collected.</p>
+<p>Creating a transient queue requires a roundtrip to the broker and thus doing an RPC that could return
+observables takes two server roundtrips instead of one. That's why we require RPCs to be marked with
+<a href="../../net.corda.core.messaging/-r-p-c-returns-observables/index.html">RPCReturnsObservables</a> as needing this special treatment instead of always doing it.</p>
+<p>If the Artemis/JMS APIs allowed us to create transient queues assigned to someone else then we could
+potentially use a different design in which the node creates new transient queues (one per observable) on the
+fly. The client would then have to watch out for this and start consuming those queues as they were created.</p>
+<p>We use one queue per RPC because we don't know ahead of time how many observables the server might return and
+often the server doesn't know either, which pushes towards a single queue design, but at the same time the
+processing of observations returned by an RPC might be striped across multiple threads and we'd like
+backpressure management to not be scoped per client process but with more granularity. So we end up with
+a compromise where the unit of backpressure management is the response to a single RPC.</p>
+<p>TODO: Backpressure isn't propagated all the way through the MQ broker at the moment.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">CordaRPCClientImpl</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClientImpl$<init>(org.apache.activemq.artemis.api.core.client.ClientSession, java.util.concurrent.locks.ReentrantLock, kotlin.String)/session">session</span><span class="symbol">:</span>&nbsp;<span class="identifier">ClientSession</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClientImpl$<init>(org.apache.activemq.artemis.api.core.client.ClientSession, java.util.concurrent.locks.ReentrantLock, kotlin.String)/sessionLock">sessionLock</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/locks/ReentrantLock.html"><span class="identifier">ReentrantLock</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClientImpl$<init>(org.apache.activemq.artemis.api.core.client.ClientSession, java.util.concurrent.locks.ReentrantLock, kotlin.String)/username">username</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span></code>
+<p>Core RPC engine implementation, to learn how to use RPC you should be looking at <a href="../-corda-r-p-c-client/index.html">CordaRPCClient</a>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="proxy-for.html">proxyFor</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-r-p-c-ops/index.html"><span class="identifier">RPCOps</span></a><span class="symbol">&gt;</span> <span class="identifier">proxyFor</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClientImpl$proxyFor(java.lang.Class((net.corda.node.services.messaging.CordaRPCClientImpl.proxyFor.T)), java.time.Duration, kotlin.Int)/rpcInterface">rpcInterface</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClientImpl$proxyFor(java.lang.Class((net.corda.node.services.messaging.CordaRPCClientImpl.proxyFor.T)), java.time.Duration, kotlin.Int)/timeout">timeout</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClientImpl$proxyFor(java.lang.Class((net.corda.node.services.messaging.CordaRPCClientImpl.proxyFor.T)), java.time.Duration, kotlin.Int)/minVersion">minVersion</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;0<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code>
+<p>Builds a proxy for the given type, which must descend from <a href="../../net.corda.core.messaging/-r-p-c-ops/index.html">RPCOps</a>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

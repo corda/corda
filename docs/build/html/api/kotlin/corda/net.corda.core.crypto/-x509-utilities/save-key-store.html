@@ -1,0 +1,24 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>X509Utilities.saveKeyStore - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.crypto</a>&nbsp;/&nbsp;<a href="index.html">X509Utilities</a>&nbsp;/&nbsp;<a href=".">saveKeyStore</a><br/>
+<br/>
+<h1>saveKeyStore</h1>
+<a name="net.corda.core.crypto.X509Utilities$saveKeyStore(java.security.KeyStore, java.nio.file.Path, kotlin.String)"></a>
+<code><span class="keyword">fun </span><span class="identifier">saveKeyStore</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.X509Utilities$saveKeyStore(java.security.KeyStore, java.nio.file.Path, kotlin.String)/keyStore">keyStore</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyStore.html"><span class="identifier">KeyStore</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.crypto.X509Utilities$saveKeyStore(java.security.KeyStore, java.nio.file.Path, kotlin.String)/keyStoreFilePath">keyStoreFilePath</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.crypto.X509Utilities$saveKeyStore(java.security.KeyStore, java.nio.file.Path, kotlin.String)/storePassword">storePassword</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Helper method save KeyStore to storage</p>
+<h3>Parameters</h3>
+
+<p><a name="keyStore"></a>
+<code>keyStore</code> - the KeyStore to persist
+<p><a name="keyStoreFilePath"></a>
+<code>keyStoreFilePath</code> - the file location to save to
+<p><a name="storePassword"></a>
+<code>storePassword</code> - password to access the store in future. This does not have to be the same password as any keys stored,
+but for SSL purposes this is recommended.
+</BODY>
+</HTML>

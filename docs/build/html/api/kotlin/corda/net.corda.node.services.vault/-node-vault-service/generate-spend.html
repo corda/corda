@@ -1,0 +1,22 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NodeVaultService.generateSpend - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.vault</a>&nbsp;/&nbsp;<a href="index.html">NodeVaultService</a>&nbsp;/&nbsp;<a href=".">generateSpend</a><br/>
+<br/>
+<h1>generateSpend</h1>
+<a name="net.corda.node.services.vault.NodeVaultService$generateSpend(net.corda.core.transactions.TransactionBuilder, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.CompositeKey, kotlin.collections.Set((net.corda.core.crypto.Party)))"></a>
+<code><span class="keyword">fun </span><span class="identifier">generateSpend</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.vault.NodeVaultService$generateSpend(net.corda.core.transactions.TransactionBuilder, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.CompositeKey, kotlin.collections.Set((net.corda.core.crypto.Party)))/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.vault.NodeVaultService$generateSpend(net.corda.core.transactions.TransactionBuilder, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.CompositeKey, kotlin.collections.Set((net.corda.core.crypto.Party)))/amount">amount</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.vault.NodeVaultService$generateSpend(net.corda.core.transactions.TransactionBuilder, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.CompositeKey, kotlin.collections.Set((net.corda.core.crypto.Party)))/to">to</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.vault.NodeVaultService$generateSpend(net.corda.core.transactions.TransactionBuilder, net.corda.core.contracts.Amount((java.util.Currency)), net.corda.core.crypto.CompositeKey, kotlin.collections.Set((net.corda.core.crypto.Party)))/onlyFromParties">onlyFromParties</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Overrides <a href="../../net.corda.core.node.services/-vault-service/generate-spend.html">VaultService.generateSpend</a></p>
+<p>Generate a transaction that moves an amount of currency to the given pubkey.</p>
+<h3>Parameters</h3>
+
+<p><a name="onlyFromParties"></a>
+<code>onlyFromParties</code> - if non-null, the asset states will be filtered to only include those issued by the set
+    of given parties. This can be useful if the party you're trying to pay has expectations
+    about which type of asset claims they are willing to accept.
+</BODY>
+</HTML>

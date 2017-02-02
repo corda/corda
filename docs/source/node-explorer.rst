@@ -92,7 +92,7 @@ Login
 Dashboard
   The dashboard shows the top level state of node and vault.
   Currently, it shows your cash balance and the numbers of transaction executed.
-  The dashboard is intended to house widgets from different CordApp's and provide useful information to system admin at a glance. 
+  The dashboard is intended to house widgets from different CordApps and provide useful information to system admin at a glance. 
 
 .. image:: resources/explorer/dashboard.png
   
@@ -126,7 +126,7 @@ Transactions
 Network
   The network view shows the network information on the world map. Currently only the user's node is rendered on the map. 
   This will be extended to other peers in a future release.
-  The map provides a intuitive way of visualizing the Corda network and the participants. 
+  The map provides an intuitive way of visualizing the Corda network and the participants. 
 
 .. image:: resources/explorer/network.png
 

@@ -1,0 +1,22 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>Obligation.generateCloseOutNetting - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.contracts.asset</a>&nbsp;/&nbsp;<a href="index.html">Obligation</a>&nbsp;/&nbsp;<a href=".">generateCloseOutNetting</a><br/>
+<br/>
+<h1>generateCloseOutNetting</h1>
+<a name="net.corda.contracts.asset.Obligation$generateCloseOutNetting(net.corda.core.transactions.TransactionBuilder, net.corda.core.crypto.CompositeKey, kotlin.Array((net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.Obligation.P)))))"></a>
+<code><span class="keyword">fun </span><span class="identifier">generateCloseOutNetting</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset.Obligation$generateCloseOutNetting(net.corda.core.transactions.TransactionBuilder, net.corda.core.crypto.CompositeKey, kotlin.Array((net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.Obligation.P)))))/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.asset.Obligation$generateCloseOutNetting(net.corda.core.transactions.TransactionBuilder, net.corda.core.crypto.CompositeKey, kotlin.Array((net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.Obligation.P)))))/signer">signer</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">, </span><span class="keyword">vararg</span> <span class="identifier" id="net.corda.contracts.asset.Obligation$generateCloseOutNetting(net.corda.core.transactions.TransactionBuilder, net.corda.core.crypto.CompositeKey, kotlin.Array((net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.Obligation.P)))))/states">states</span><span class="symbol">:</span>&nbsp;<a href="-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Generate a transaction performing close-out netting of two or more states.</p>
+<h3>Parameters</h3>
+
+<p><a name="signer"></a>
+<code>signer</code> - the party who will sign the transaction. Must be one of the obligor or beneficiary.
+<p><a name="states"></a>
+<code>states</code> - two or more states, which must be compatible for bilateral netting (same issuance definitions,
+and same parties involved).
+</BODY>
+</HTML>

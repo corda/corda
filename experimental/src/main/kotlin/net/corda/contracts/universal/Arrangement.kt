@@ -30,8 +30,7 @@ data class Obligation(val amount: Perceivable<BigDecimal>, val currency: Currenc
 // The ``And`` combinator cannot be root in a arrangement.
 data class And(val arrangements: Set<Arrangement>) : Arrangement
 
-data class Action(val name: String, val condition: Perceivable<Boolean>,
-                  val actors: Set<Party>, val arrangement: Arrangement)
+data class Action(val name: String, val condition: Perceivable<Boolean>, val arrangement: Arrangement)
 
 // An action combinator. This declares a list of named action that can be taken by anyone of the actors given that
 // _condition_ is met. If the action is performed the arrangement state transitions into the specified arrangement.

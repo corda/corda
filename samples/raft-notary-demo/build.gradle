@@ -77,7 +77,7 @@ publishing {
 task generateNotaryIdentity(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = "net.corda.node.utilities.ServiceIdentityGeneratorKt"
-    def nodeDirs = ["$deployTo/notary1", "$deployTo/notary2", "$deployTo/notary3"].join(",")
+    def nodeDirs = ["$deployTo/Notary1", "$deployTo/Notary2", "$deployTo/Notary3"].join(",")
     args = [nodeDirs, notaryType, notaryName]
 }
 
@@ -86,7 +86,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
     networkMap "Notary 1"
     node {
         name "Notary 1"
-        dirName "notary1"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
         artemisPort 10002
@@ -96,7 +95,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
     }
     node {
         name "Notary 2"
-        dirName "notary2"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
         artemisPort 10004
@@ -107,7 +105,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
     }
     node {
         name "Notary 3"
-        dirName "notary3"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
         artemisPort 10006
@@ -118,7 +115,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
     }
     node {
         name "Party"
-        dirName "party"
         nearestCity "London"
         advertisedServices = []
         artemisPort 10008
@@ -127,7 +123,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
     }
     node {
         name "Counterparty"
-        dirName "counterparty"
         nearestCity "New York"
         advertisedServices = []
         artemisPort 10010

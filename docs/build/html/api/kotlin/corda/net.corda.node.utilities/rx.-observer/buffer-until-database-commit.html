@@ -1,0 +1,19 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>bufferUntilDatabaseCommit - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.utilities</a>&nbsp;/&nbsp;<a href="index.html">rx.Observer</a>&nbsp;/&nbsp;<a href=".">bufferUntilDatabaseCommit</a><br/>
+<br/>
+<h1>bufferUntilDatabaseCommit</h1>
+<a name="net.corda.node.utilities$bufferUntilDatabaseCommit(rx.Observer((net.corda.node.utilities.bufferUntilDatabaseCommit.T)))"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">Observer</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">bufferUntilDatabaseCommit</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Observer</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Buffer observations until after the current database transaction has been closed.  Observations are never
+dropped, simply delayed.</p>
+<p>Primarily for use by component authors to publish observations during database transactions without racing against
+closing the database transaction.</p>
+<p>For examples, see the call hierarchy of this function.</p>
+</BODY>
+</HTML>

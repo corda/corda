@@ -6,7 +6,6 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
-import net.corda.core.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.CordaPluginRegistry
@@ -17,9 +16,6 @@ import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.node.driver.driver
 import net.corda.node.services.User
-import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.config.NodeSSLConfiguration
-import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import org.graphstream.graph.Edge
@@ -41,9 +37,7 @@ enum class PrintOrVisualise {
 }
 
 fun main(args: Array<String>) {
-    if (args.size < 1) {
-        throw IllegalArgumentException("Usage: <binary> [Print|Visualise]")
-    }
+    require(args.isNotEmpty()) { "Usage: <binary> [Print|Visualise]" }
     val printOrVisualise = PrintOrVisualise.valueOf(args[0])
 
     val baseDirectory = Paths.get("build/rpc-api-tutorial")
@@ -52,15 +46,10 @@ fun main(args: Array<String>) {
     driver(driverDirectory = baseDirectory) {
         startNode("Notary", advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
         val node = startNode("Alice", rpcUsers = listOf(user)).get()
-        val sslConfig = object : NodeSSLConfiguration {
-            override val certificatesPath = baseDirectory / "Alice" / "certificates"
-            override val keyStorePassword = "cordacadevpass"
-            override val trustStorePassword = "trustpass"
-        }
         // END 1
 
         // START 2
-        val client = CordaRPCClient(FullNodeConfiguration(node.config).artemisAddress, sslConfig)
+        val client = node.rpcClientToNode()
         client.start("user", "password")
         val proxy = client.proxy()
 

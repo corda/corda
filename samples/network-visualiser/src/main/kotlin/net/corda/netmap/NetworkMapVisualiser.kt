@@ -17,7 +17,9 @@ import net.corda.core.then
 import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.VisualiserViewModel.Style
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.node.services.statemachine.SessionConfirm
+import net.corda.node.services.statemachine.SessionEnd
+import net.corda.node.services.statemachine.SessionInit
 import net.corda.simulation.IRSSimulation
 import net.corda.simulation.Simulation
 import net.corda.testing.node.InMemoryMessagingNetwork
@@ -349,13 +351,12 @@ class NetworkMapVisualiser : Application() {
         // Network map push acknowledgements are boring.
         if (NetworkMapService.PUSH_ACK_FLOW_TOPIC in transfer.message.topicSession.topic) return false
         val message = transfer.message.data.deserialize<Any>()
-        val messageClassType = message.javaClass.name
-        when (messageClassType) {
-            StateMachineManager.SessionEnd::class.java.name -> return false
-            StateMachineManager.SessionConfirm::class.java.name -> return false
-            StateMachineManager.SessionInit::class.java.name -> if ((message as StateMachineManager.SessionInit).firstPayload == null) return false
+        return when (message) {
+            is SessionEnd -> false
+            is SessionConfirm -> false
+            is SessionInit -> message.firstPayload != null
+            else -> true
         }
-        return true
     }
 }
 

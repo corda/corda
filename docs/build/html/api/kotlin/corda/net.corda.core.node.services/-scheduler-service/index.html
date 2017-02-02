@@ -1,0 +1,53 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>SchedulerService - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.node.services</a>&nbsp;/&nbsp;<a href=".">SchedulerService</a><br/>
+<br/>
+<h1>SchedulerService</h1>
+<code><span class="keyword">interface </span><span class="identifier">SchedulerService</span></code>
+<p>Provides access to schedule activity at some point in time.  This interface might well be expanded to
+increase the feature set in the future.</p>
+<p>If the point in time is in the past, the expectation is that the activity will happen shortly after it is scheduled.</p>
+<p>The main consumer initially is an observer of the vault to schedule activities based on transactions as they are
+recorded.</p>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="schedule-state-activity.html">scheduleStateActivity</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">scheduleStateActivity</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.SchedulerService$scheduleStateActivity(net.corda.core.contracts.ScheduledStateRef)/action">action</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-scheduled-state-ref/index.html"><span class="identifier">ScheduledStateRef</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Schedule a new activity for a TX output, probably because it was just produced.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="unschedule-state-activity.html">unscheduleStateActivity</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">unscheduleStateActivity</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.SchedulerService$unscheduleStateActivity(net.corda.core.contracts.StateRef)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Unschedule all activity for a TX output, probably because it was consumed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.node.services.events/-node-scheduler-service/index.html">NodeSchedulerService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeSchedulerService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SchedulerService</span><span class="symbol">, </span><a href="../../net.corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code>
+<p>A first pass of a simple SchedulerService that works with <a href="../../net.corda.node.utilities/-mutable-clock/index.html">MutableClock</a>s for testing, demonstrations and simulations
+that also encompasses the <a href="#">Vault</a> observer for processing transactions.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

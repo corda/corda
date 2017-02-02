@@ -1,0 +1,20 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>MessagingService.send - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.messaging</a>&nbsp;/&nbsp;<a href="index.html">MessagingService</a>&nbsp;/&nbsp;<a href=".">send</a><br/>
+<br/>
+<h1>send</h1>
+<a name="net.corda.core.messaging.MessagingService$send(net.corda.core.messaging.Message, net.corda.core.messaging.MessageRecipients)"></a>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging.MessagingService$send(net.corda.core.messaging.Message, net.corda.core.messaging.MessageRecipients)/message">message</span><span class="symbol">:</span>&nbsp;<a href="../-message/index.html"><span class="identifier">Message</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging.MessagingService$send(net.corda.core.messaging.Message, net.corda.core.messaging.MessageRecipients)/target">target</span><span class="symbol">:</span>&nbsp;<a href="../-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Sends a message to the given receiver. The details of how receivers are identified is up to the messaging
+implementation: the type system provides an opaque high level view, with more fine grained control being
+available via type casting. Once this function returns the message is queued for delivery but not necessarily
+delivered: if the recipients are offline then the message could be queued hours or days later.</p>
+<p>There is no way to know if a message has been received. If your flow requires this, you need the recipient
+to send an ACK message back.</p>
+</BODY>
+</HTML>

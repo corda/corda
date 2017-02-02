@@ -1,0 +1,189 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.node.services.messaging - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.node.services.messaging</a><br/>
+<br/>
+<h2>Package net.corda.node.services.messaging</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-artemis-messaging-component/index.html">ArtemisMessagingComponent</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ArtemisMessagingComponent</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code>
+<p>The base class for Artemis services that defines shared data structures and SSL transport configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-artemis-messaging-server/index.html">ArtemisMessagingServer</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingServer</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a></code>
+<p>This class configures and manages an Apache Artemis message queue broker.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-class-serializer/index.html">ClassSerializer</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">ClassSerializer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Serializer</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-client-r-p-c-request-message/index.html">ClientRPCRequestMessage</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ClientRPCRequestMessage</span></code>
+<p>The contents of an RPC request message, separated from the MQ layer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-corda-r-p-c-client/index.html">CordaRPCClient</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">CordaRPCClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/Closeable.html"><span class="identifier">Closeable</span></a><span class="symbol">, </span><a href="-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a></code>
+<p>An RPC client connects to the specified server and allows you to make calls to the server that perform various
+useful tasks. See the documentation for <a href="-corda-r-p-c-client/proxy.html">proxy</a> or review the docsite to learn more about how this API works.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-corda-r-p-c-client-impl/index.html">CordaRPCClientImpl</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">CordaRPCClientImpl</span></code>
+<p>Core RPC engine implementation, to learn how to use RPC you should be looking at <a href="-corda-r-p-c-client/index.html">CordaRPCClient</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-marshalled-observation/index.html">MarshalledObservation</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">MarshalledObservation</span></code>
+<p>Used in the RPC wire protocol to wrap an observation with the handle of the observable it's intended for.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-node-login-module/index.html">NodeLoginModule</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeLoginModule</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/javax/security/auth/spi/LoginModule.html"><span class="identifier">LoginModule</span></a></code>
+<p>Clients must connect to us with a username and password and must use TLS. If a someone connects with
+<a href="-artemis-messaging-component/-n-o-d-e_-u-s-e-r.html">ArtemisMessagingComponent.NODE_USER</a> then we confirm it's just us as the node by checking their TLS certificate
+is the same as our one in our key store. Then they're given full access to all valid queues. If they connect with
+<a href="-artemis-messaging-component/-p-e-e-r_-u-s-e-r.html">ArtemisMessagingComponent.PEER_USER</a> then we confirm they belong on our P2P network by checking their root CA is
+the same as our root CA. If that's the case the only access they're given is the ablility send to our P2P address.
+In both cases the messages these authenticated nodes send to us are tagged with their subject DN and we assume
+the CN within that is their legal name.
+Otherwise if the username is neither of the above we assume it's an RPC user and authenticate against our list of
+valid RPC users. RPC clients are given permission to perform RPC and nothing else.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-node-messaging-client/index.html">NodeMessagingClient</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeMessagingClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a><span class="symbol">, </span><a href="../net.corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code>
+<p>This class implements the <a href="../net.corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+Artemis is a message queue broker and here we run a client connecting to the specified broker instance
+<a href="-artemis-messaging-server/index.html">ArtemisMessagingServer</a>. It's primarily concerned with peer-to-peer messaging.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-r-p-c-dispatcher/index.html">RPCDispatcher</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">RPCDispatcher</span></code>
+<p>Intended to service transient clients only (not p2p nodes) for short-lived, transient request/response pairs.
+If you need robustness, this is the wrong system. If you don't want a response, this is probably the
+wrong system (you could just send a message). If you want complex customisation of how requests/responses
+are handled, this is probably the wrong system.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-verifying-netty-connector-factory/index.html">VerifyingNettyConnectorFactory</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">VerifyingNettyConnectorFactory</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NettyConnectorFactory</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Annotations</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-r-p-c-since-version/index.html">RPCSinceVersion</a></td>
+<td>
+<code><span class="keyword">annotation</span> <span class="keyword">class </span><span class="identifier">RPCSinceVersion</span></code>
+<p>Records the protocol version in which this RPC was added.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-permission-exception/index.html">PermissionException</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">PermissionException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/RuntimeException.html"><span class="identifier">RuntimeException</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-r-p-c-exception/index.html">RPCException</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">RPCException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/RuntimeException.html"><span class="identifier">RuntimeException</span></a></code>
+<p>Thrown to indicate a fatal error in the RPC system itself, as opposed to an error generated by the invoked
+method.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-c-u-r-r-e-n-t_-r-p-c_-u-s-e-r.html">CURRENT_RPC_USER</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">CURRENT_RPC_USER</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/ThreadLocal.html"><span class="identifier">ThreadLocal</span></a><span class="symbol">&lt;</span><a href="../net.corda.node.services/-user/index.html"><span class="identifier">User</span></a><span class="symbol">&gt;</span></code>
+<p>This is available to RPC implementations to query the validated <a href="../net.corda.node.services/-user/index.html">User</a> that is calling it. Each user has a set of
+permissions they're entitled to which can be used to control access.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="rpc-log.html">rpcLog</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">rpcLog</span><span class="symbol">: </span><span class="identifier">Logger</span></code>
+<p>Global RPC logger</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="create-r-p-c-kryo.html">createRPCKryo</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">createRPCKryo</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging$createRPCKryo(com.esotericsoftware.kryo.Serializer((rx.Observable((kotlin.Any)))))/observableSerializer">observableSerializer</span><span class="symbol">:</span>&nbsp;<span class="identifier">Serializer</span><span class="symbol">&lt;</span><span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">Any</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Kryo</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="require-permission.html">requirePermission</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">requirePermission</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging$requirePermission(kotlin.String)/permission">permission</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Helper method which checks that the current RPC user is entitled for the given permission. Throws a <a href="-permission-exception/index.html">PermissionException</a> otherwise.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

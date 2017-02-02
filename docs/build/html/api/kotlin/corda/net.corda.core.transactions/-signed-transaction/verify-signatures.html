@@ -1,0 +1,26 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>SignedTransaction.verifySignatures - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.transactions</a>&nbsp;/&nbsp;<a href="index.html">SignedTransaction</a>&nbsp;/&nbsp;<a href=".">verifySignatures</a><br/>
+<br/>
+<h1>verifySignatures</h1>
+<a name="net.corda.core.transactions.SignedTransaction$verifySignatures(kotlin.Array((net.corda.core.crypto.CompositeKey)))"></a>
+<code><span class="keyword">fun </span><span class="identifier">verifySignatures</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="net.corda.core.transactions.SignedTransaction$verifySignatures(kotlin.Array((net.corda.core.crypto.CompositeKey)))/allowedToBeMissing">allowedToBeMissing</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a></code>
+<p>Verifies the signatures on this transaction and throws if any are missing which aren't passed as parameters.
+In this context, "verifying" means checking they are valid signatures and that their public keys are in
+the contained transactions <a href="../-base-transaction/must-sign.html">BaseTransaction.mustSign</a> property.</p>
+<p>Normally you would not provide any keys to this function, but if you're in the process of building a partial
+transaction and you want to access the contents before you've signed it, you can specify your own keys here
+to bypass that check.</p>
+<h3>Exceptions</h3>
+
+<p><a name="SignatureException"></a>
+<code>SignatureException</code> - if any signatures are invalid or unrecognised.
+<p><a name="SignaturesMissingException"></a>
+<code>SignaturesMissingException</code> - if any signatures should have been present but were not.
+</BODY>
+</HTML>

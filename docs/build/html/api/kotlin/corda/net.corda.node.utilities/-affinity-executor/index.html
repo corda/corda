@@ -1,0 +1,112 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>AffinityExecutor - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.utilities</a>&nbsp;/&nbsp;<a href=".">AffinityExecutor</a><br/>
+<br/>
+<h1>AffinityExecutor</h1>
+<code><span class="keyword">interface </span><span class="identifier">AffinityExecutor</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a></code>
+<p>An extended executor interface that supports thread affinity assertions and short circuiting. This can be useful
+for ensuring code runs on the right thread, and also for unit testing.</p>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-gate/index.html">Gate</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Gate</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AffinityExecutor</span></code>
+<p>An executor useful for unit tests: allows the current thread to block until a command arrives from another
+thread, which is then executed. Inbound closures/commands stack up until they are cleared by looping.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-service-affinity-executor/index.html">ServiceAffinityExecutor</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">ServiceAffinityExecutor</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AffinityExecutor</span><span class="symbol">, </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/ThreadPoolExecutor.html"><span class="identifier">ThreadPoolExecutor</span></a></code>
+<p>An executor backed by thread pool (which may often have a single thread) which makes it easy to schedule
+tasks in the future and verify code is running on the executor.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="is-on-thread.html">isOnThread</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">isOnThread</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Returns true if the current thread is equal to the thread this executor is backed by.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="check-on-thread.html">checkOnThread</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">checkOnThread</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Throws an IllegalStateException if the current thread is not one of the threads this executor is backed by.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="execute-a-s-a-p.html">executeASAP</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">executeASAP</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AffinityExecutor$executeASAP(kotlin.Function0((kotlin.Unit)))/runnable">runnable</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>If isOnThread() then runnable is invoked immediately, otherwise the closure is queued onto the backing thread.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="fetch-from.html">fetchFrom</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">fetchFrom</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.AffinityExecutor$fetchFrom(kotlin.Function0((net.corda.node.utilities.AffinityExecutor.fetchFrom.T)))/fetcher">fetcher</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code>
+<p>Runs the given function on the executor, blocking until the result is available. Be careful not to deadlock this
+way! Make sure the executor can't possibly be waiting for the calling thread.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="flush.html">flush</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">flush</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Run the executor until there are no tasks pending and none executing.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-gate/index.html">Gate</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Gate</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AffinityExecutor</span></code>
+<p>An executor useful for unit tests: allows the current thread to block until a command arrives from another
+thread, which is then executed. Inbound closures/commands stack up until they are cleared by looping.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-service-affinity-executor/index.html">ServiceAffinityExecutor</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">ServiceAffinityExecutor</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AffinityExecutor</span><span class="symbol">, </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/ThreadPoolExecutor.html"><span class="identifier">ThreadPoolExecutor</span></a></code>
+<p>An executor backed by thread pool (which may often have a single thread) which makes it easy to schedule
+tasks in the future and verify code is running on the executor.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

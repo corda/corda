@@ -1,0 +1,16 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TransientProperty.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core</a>&nbsp;/&nbsp;<a href="index.html">TransientProperty</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">TransientProperty</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.TransientProperty$<init>(kotlin.Function0((net.corda.core.TransientProperty.T)))/initializer">initializer</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span></code>
+<p>A simple wrapper that enables the use of Kotlin's "val x by TransientProperty { ... }" syntax. Such a property
+will not be serialized to disk, and if it's missing (or the first time it's accessed), the initializer will be
+used to set it up. Note that the initializer will be called with the TransientProperty object locked.</p>
+</BODY>
+</HTML>

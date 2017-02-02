@@ -83,6 +83,33 @@ class TransactionTests {
     }
 
     @Test
+    fun `transaction verification fails for duplicate inputs`() {
+        val baseOutState = TransactionState(DummyContract.SingleOwnerState(0, ALICE_PUBKEY), DUMMY_NOTARY)
+        val stateRef = StateRef(SecureHash.randomSHA256(), 0)
+        val stateAndRef = StateAndRef(baseOutState, stateRef)
+        val inputs = listOf(stateAndRef, stateAndRef)
+        val outputs = listOf(baseOutState)
+        val commands = emptyList<AuthenticatedObject<CommandData>>()
+        val attachments = emptyList<Attachment>()
+        val id = SecureHash.randomSHA256()
+        val signers = listOf(DUMMY_NOTARY_KEY.public.composite)
+        val timestamp: Timestamp? = null
+        val transaction: LedgerTransaction = LedgerTransaction(
+                inputs,
+                outputs,
+                commands,
+                attachments,
+                id,
+                DUMMY_NOTARY,
+                signers,
+                timestamp,
+                TransactionType.General()
+        )
+
+        assertFailsWith<TransactionVerificationException.DuplicateInputStates> { transaction.type.verify(transaction) }
+    }
+
+    @Test
     fun `general transactions cannot change notary`() {
         val notary: Party = DUMMY_NOTARY
         val inState = TransactionState(DummyContract.SingleOwnerState(0, ALICE_PUBKEY), notary)

@@ -34,9 +34,12 @@
   
 
   
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Writing flow tests" href="flow-testing.html"/>
-        <link rel="prev" title="Building Transactions" href="tutorial-building-transactions.html"/> 
+        <link rel="prev" title="Building transactions" href="tutorial-building-transactions.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -81,7 +84,7 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
 <br>
 <a href="https://discourse.corda.net">Discourse Forums</a>
 <br>
@@ -98,27 +101,26 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
-<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Key concepts</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-ecosystem.html">Corda ecosystem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-core-types.html">Core types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-financial-model.html">Financial model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-flow-framework.html">Flow framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-consensus-notaries.html">Consensus and notaries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-vault.html">Vault</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-security-model.html">Security model</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-cordapp-template">Running the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#interacting-with-the-cordapp-template">Interacting with the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#extending-the-cordapp-template">Extending the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -137,9 +139,9 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Writing flows</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#theory">Theory</a></li>
@@ -158,15 +160,14 @@
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
@@ -176,14 +177,13 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
-<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
 <li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
 <li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
@@ -237,9 +237,9 @@
   <script type="text/javascript" src="_static/jquery.js"></script>
 <script type="text/javascript" src="_static/codesets.js"></script><div class="section" id="writing-flows">
 <h1>Writing flows<a class="headerlink" href="#writing-flows" title="Permalink to this headline">¶</a></h1>
-<p>This article explains our approach to modelling financial flows in code. It explains how the
-platform&#8217;s state machine framework is used, and takes you through the code for a simple 2-party asset trading flow
-which is included in the source.</p>
+<p>This article explains our approach to modelling business processes and the lower level network protocols that implement
+them. It explains how the platform&#8217;s flow framework is used, and takes you through the code for a simple
+2-party asset trading flow which is included in the source.</p>
 <div class="section" id="introduction">
 <h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
 <p>Shared distributed ledgers are interesting because they allow many different, mutually distrusting parties to
@@ -273,7 +273,7 @@ be temporarily moved off-chain and traded at high speed between two parties in p
 Java and took over a month of full time work to develop. Most of that code is concerned with the details of persistence,
 message passing, lifecycle management, error handling and callback management. Because the business logic is quite
 spread out the code can be difficult to read and debug.</p>
-<p>As small contract-specific trading flows are a common occurence in finance, we provide a framework for the
+<p>As small contract-specific trading flows are a common occurrence in finance, we provide a framework for the
 construction of them that automatically handles many of the concerns outlined above.</p>
 </div>
 <div class="section" id="theory">
@@ -312,7 +312,7 @@ it lacks a signature from S authorising movement of the asset.</li>
 <li>S signs it and hands the now finalised <code class="docutils literal"><span class="pre">SignedTransaction</span></code> back to B.</li>
 </ol>
 <p>You can find the implementation of this flow in the file <code class="docutils literal"><span class="pre">finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt</span></code>.</p>
-<p>Assuming no malicious termination, they both end the flow being in posession of a valid, signed transaction that
+<p>Assuming no malicious termination, they both end the flow being in possession of a valid, signed transaction that
 represents an atomic asset swap.</p>
 <p>Note that it&#8217;s the <em>seller</em> who initiates contact with the buyer, not vice-versa as you might imagine.</p>
 <p>We start by defining a wrapper that namespaces the flow code, two functions to start either the buy or sell side
@@ -371,7 +371,7 @@ simply flow messages or exceptions. The other two represent the buyer and seller
 <p>Going through the data needed to become a seller, we have:</p>
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">otherParty:</span> <span class="pre">Party</span></code> - the party with which you are trading.</li>
-<li><code class="docutils literal"><span class="pre">notaryNode:</span> <span class="pre">NodeInfo</span></code> - the entry in the network map for the chosen notary. See &#8220;<a class="reference internal" href="consensus.html"><span class="doc">Consensus model</span></a>&#8221; for more
+<li><code class="docutils literal"><span class="pre">notaryNode:</span> <span class="pre">NodeInfo</span></code> - the entry in the network map for the chosen notary. See &#8220;<span class="xref doc">consensus</span>&#8221; for more
 information on notaries.</li>
 <li><code class="docutils literal"><span class="pre">assetToSell:</span> <span class="pre">StateAndRef&lt;OwnableState&gt;</span></code> - a pointer to the ledger entry that represents the thing being sold.</li>
 <li><code class="docutils literal"><span class="pre">price:</span> <span class="pre">Amount&lt;Currency&gt;</span></code> - the agreed on price that the asset is being sold for (without an issuer constraint).</li>
@@ -602,96 +602,98 @@ future version of the code.</p>
 <div class="section" id="implementing-the-buyer">
 <h2>Implementing the buyer<a class="headerlink" href="#implementing-the-buyer" title="Permalink to this headline">¶</a></h2>
 <p>OK, let&#8217;s do the same for the buyer side:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        @Suspendable
-        override fun call(): SignedTransaction {
-            val tradeRequest = receiveAndValidateTradeRequest()
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>@Suspendable
+override fun call(): SignedTransaction {
+    val tradeRequest = receiveAndValidateTradeRequest()
 
-            progressTracker.currentStep = SIGNING
-            val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
-            val stx = signWithOurKeys(cashSigningPubKeys, ptx)
+    progressTracker.currentStep = SIGNING
+    val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
+    val stx = signWithOurKeys(cashSigningPubKeys, ptx)
 
-            val signatures = swapSignaturesWithSeller(stx)
+    val signatures = swapSignaturesWithSeller(stx)
 
-            logger.trace { &quot;Got signatures from seller, verifying ... &quot; }
+    logger.trace { &quot;Got signatures from seller, verifying ... &quot; }
 
-            val fullySigned = stx + signatures.sellerSig + signatures.notarySig
-            fullySigned.verifySignatures()
+    val fullySigned = stx + signatures.sellerSig + signatures.notarySig
+    fullySigned.verifySignatures()
 
-            logger.trace { &quot;Signatures received are valid. Trade complete! :-)&quot; }
-            return fullySigned
-        }
+    logger.trace { &quot;Signatures received are valid. Trade complete! :-)&quot; }
+    return fullySigned
+}
 
-        @Suspendable
-        private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
-            progressTracker.currentStep = RECEIVING
-            // Wait for a trade request to come in from the other side
-            val maybeTradeRequest = receive&lt;SellerTradeInfo&gt;(otherParty)
+@Suspendable
+private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
+    progressTracker.currentStep = RECEIVING
+    // Wait for a trade request to come in from the other side
+    val maybeTradeRequest = receive&lt;SellerTradeInfo&gt;(otherParty)
 
-            progressTracker.currentStep = VERIFYING
-            maybeTradeRequest.unwrap {
-                // What is the seller trying to sell us?
-                val asset = it.assetForSale.state.data
-                val assetTypeName = asset.javaClass.name
-                logger.trace { &quot;Got trade request for a $assetTypeName: ${it.assetForSale}&quot; }
+    progressTracker.currentStep = VERIFYING
+    maybeTradeRequest.unwrap {
+        // What is the seller trying to sell us?
+        val asset = it.assetForSale.state.data
+        val assetTypeName = asset.javaClass.name
+        logger.trace { &quot;Got trade request for a $assetTypeName: ${it.assetForSale}&quot; }
 
-                if (it.price &gt; acceptablePrice)
-                    throw UnacceptablePriceException(it.price)
-                if (!typeToBuy.isInstance(asset))
-                    throw AssetMismatchException(typeToBuy.name, assetTypeName)
+        if (it.price &gt; acceptablePrice)
+            throw UnacceptablePriceException(it.price)
+        if (!typeToBuy.isInstance(asset))
+            throw AssetMismatchException(typeToBuy.name, assetTypeName)
 
-                // Check the transaction that contains the state which is being resolved.
-                // We only have a hash here, so if we don&#39;t know it already, we have to ask for it.
-                subFlow(ResolveTransactionsFlow(setOf(it.assetForSale.ref.txhash), otherParty))
+        // Check the transaction that contains the state which is being resolved.
+        // We only have a hash here, so if we don&#39;t know it already, we have to ask for it.
+        subFlow(ResolveTransactionsFlow(setOf(it.assetForSale.ref.txhash), otherParty))
 
-                return it
-            }
-        }
+        return it
+    }
+}
 
-        @Suspendable
-        private fun swapSignaturesWithSeller(stx: SignedTransaction): SignaturesFromSeller {
-            progressTracker.currentStep = SWAPPING_SIGNATURES
-            logger.trace { &quot;Sending partially signed transaction to seller&quot; }
+@Suspendable
+private fun swapSignaturesWithSeller(stx: SignedTransaction): SignaturesFromSeller {
+    progressTracker.currentStep = SWAPPING_SIGNATURES
+    logger.trace { &quot;Sending partially signed transaction to seller&quot; }
 
-            // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
+    // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-            return sendAndReceive&lt;SignaturesFromSeller&gt;(otherParty, stx).unwrap { it }
-        }
+    return sendAndReceive&lt;SignaturesFromSeller&gt;(otherParty, stx).unwrap { it }
+}
 
-        private fun signWithOurKeys(cashSigningPubKeys: List&lt;CompositeKey&gt;, ptx: TransactionBuilder): SignedTransaction {
-            // Now sign the transaction with whatever keys we need to move the cash.
-            for (publicKey in cashSigningPubKeys.keys) {
-                val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
-                ptx.signWith(KeyPair(publicKey, privateKey))
-            }
+private fun signWithOurKeys(cashSigningPubKeys: List&lt;CompositeKey&gt;, ptx: TransactionBuilder): SignedTransaction {
+    // Now sign the transaction with whatever keys we need to move the cash.
+    for (publicKey in cashSigningPubKeys.keys) {
+        val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
+        ptx.signWith(KeyPair(publicKey, privateKey))
+    }
 
-            return ptx.toSignedTransaction(checkSufficientSignatures = false)
-        }
+    return ptx.toSignedTransaction(checkSufficientSignatures = false)
+}
 
-        private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair&lt;TransactionBuilder, List&lt;CompositeKey&gt;&gt; {
-            val ptx = TransactionType.General.Builder(notary)
+private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair&lt;TransactionBuilder, List&lt;CompositeKey&gt;&gt; {
+    val ptx = TransactionType.General.Builder(notary)
 
-            // Add input and output states for the movement of cash, by using the Cash contract to generate the states
-            val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey)
+    // Add input and output states for the movement of cash, by using the Cash contract to generate the states
+    val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey)
 
-            // Add inputs/outputs/a command for the movement of the asset.
-            tx.addInputState(tradeRequest.assetForSale)
+    // Add inputs/outputs/a command for the movement of the asset.
+    tx.addInputState(tradeRequest.assetForSale)
 
-            // Just pick some new public key for now. This won&#39;t be linked with our identity in any way, which is what
-            // we want for privacy reasons: the key is here ONLY to manage and control ownership, it is not intended to
-            // reveal who the owner actually is. The key management service is expected to derive a unique key from some
-            // initial seed in order to provide privacy protection.
-            val freshKey = serviceHub.keyManagementService.freshKey()
-            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public.composite)
-            tx.addOutputState(state, tradeRequest.assetForSale.state.notary)
-            tx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
+    // Just pick some new public key for now. This won&#39;t be linked with our identity in any way, which is what
+    // we want for privacy reasons: the key is here ONLY to manage and control ownership, it is not intended to
+    // reveal who the owner actually is. The key management service is expected to derive a unique key from some
+    // initial seed in order to provide privacy protection.
+    val freshKey = serviceHub.keyManagementService.freshKey()
+    val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public.composite)
+    tx.addOutputState(state, tradeRequest.assetForSale.state.notary)
+    tx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
 
-            // And add a request for timestamping: it may be that none of the contracts need this! But it can&#39;t hurt
-            // to have one.
-            val currentTime = serviceHub.clock.instant()
-            tx.setTime(currentTime, 30.seconds)
-            return Pair(tx, cashSigningPubKeys)
-        }
+    // And add a request for timestamping: it may be that none of the contracts need this! But it can&#39;t hurt
+    // to have one.
+    val currentTime = serviceHub.clock.instant()
+    tx.setTime(currentTime, 30.seconds)
+    return Pair(tx, cashSigningPubKeys)
+}
 </pre></div>
+</div>
 </div>
 <p>This code is longer but no more complicated. Here are some things to pay attention to:</p>
 <ol class="arabic simple">
@@ -720,15 +722,63 @@ may need to be informed. It may be rendered via an API, in a GUI, onto a termina
 stage in a piece of work. It is therefore typical to use singletons that subclass <code class="docutils literal"><span class="pre">Step</span></code>, which may be defined easily
 in one line when using Kotlin. Typical steps might be &#8220;Waiting for response from peer&#8221;, &#8220;Waiting for signature to be
 approved&#8221;, &#8220;Downloading and verifying data&#8221; etc.</p>
+<p>A flow might declare some steps with code inside the flow class like this:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">open</span> <span class="k">class</span> <span class="nc">Buyer</span><span class="p">(</span><span class="k">val</span> <span class="py">otherParty</span><span class="p">:</span> <span class="n">Party</span><span class="p">,</span>
+                 <span class="k">val</span> <span class="py">notary</span><span class="p">:</span> <span class="n">Party</span><span class="p">,</span>
+                 <span class="k">val</span> <span class="py">acceptablePrice</span><span class="p">:</span> <span class="n">Amount</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;,</span>
+                 <span class="k">val</span> <span class="py">typeToBuy</span><span class="p">:</span> <span class="n">Class</span><span class="p">&lt;</span><span class="k">out</span> <span class="n">OwnableState</span><span class="p">&gt;)</span> <span class="p">:</span> <span class="n">FlowLogic</span><span class="p">&lt;</span><span class="n">SignedTransaction</span><span class="p">&gt;()</span> <span class="p">{</span>
+
+    <span class="k">object</span> <span class="nc">RECEIVING</span> <span class="p">:</span> <span class="n">ProgressTracker</span><span class="p">.</span><span class="n">Step</span><span class="p">(</span><span class="s">&quot;Waiting for seller trading info&quot;</span><span class="p">)</span>
+
+    <span class="k">object</span> <span class="nc">VERIFYING</span> <span class="p">:</span> <span class="n">ProgressTracker</span><span class="p">.</span><span class="n">Step</span><span class="p">(</span><span class="s">&quot;Verifying seller assets&quot;</span><span class="p">)</span>
+
+    <span class="k">object</span> <span class="nc">SIGNING</span> <span class="p">:</span> <span class="n">ProgressTracker</span><span class="p">.</span><span class="n">Step</span><span class="p">(</span><span class="s">&quot;Generating and signing transaction proposal&quot;</span><span class="p">)</span>
+
+    <span class="k">object</span> <span class="nc">SWAPPING_SIGNATURES</span> <span class="p">:</span> <span class="n">ProgressTracker</span><span class="p">.</span><span class="n">Step</span><span class="p">(</span><span class="s">&quot;Swapping signatures with the seller&quot;</span><span class="p">)</span>
+
+    <span class="k">override</span> <span class="k">val</span> <span class="py">progressTracker</span> <span class="p">=</span> <span class="n">ProgressTracker</span><span class="p">(</span><span class="n">RECEIVING</span><span class="p">,</span> <span class="n">VERIFYING</span><span class="p">,</span> <span class="n">SIGNING</span><span class="p">,</span> <span class="n">SWAPPING_SIGNATURES</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">private</span> <span class="kd">final</span> <span class="n">ProgressTracker</span> <span class="n">progressTracker</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ProgressTracker</span><span class="o">(</span>
+        <span class="n">CONSTRUCTING_OFFER</span><span class="o">,</span>
+        <span class="n">SENDING_OFFER_AND_RECEIVING_PARTIAL_TRANSACTION</span><span class="o">,</span>
+        <span class="n">VERIFYING</span>
+<span class="o">);</span>
+
+<span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">ProgressTracker</span><span class="o">.</span><span class="na">Step</span> <span class="n">CONSTRUCTING_OFFER</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ProgressTracker</span><span class="o">.</span><span class="na">Step</span><span class="o">(</span>
+        <span class="s">&quot;Constructing proposed purchase order.&quot;</span><span class="o">);</span>
+<span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">ProgressTracker</span><span class="o">.</span><span class="na">Step</span> <span class="n">SENDING_OFFER_AND_RECEIVING_PARTIAL_TRANSACTION</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ProgressTracker</span><span class="o">.</span><span class="na">Step</span><span class="o">(</span>
+        <span class="s">&quot;Sending purchase order to seller for review, and receiving partially signed transaction from seller in return.&quot;</span><span class="o">);</span>
+<span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">ProgressTracker</span><span class="o">.</span><span class="na">Step</span> <span class="n">VERIFYING</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ProgressTracker</span><span class="o">.</span><span class="na">Step</span><span class="o">(</span>
+        <span class="s">&quot;Verifying signatures and contract constraints.&quot;</span><span class="o">);</span>
+</pre></div>
+</div>
+</div>
 <p>Each step exposes a label. By default labels are fixed, but by subclassing <code class="docutils literal"><span class="pre">RelabelableStep</span></code>
 you can make a step that can update its label on the fly. That&#8217;s useful for steps that want to expose non-structured
 progress information like the current file being downloaded. By defining your own step types, you can export progress
 in a way that&#8217;s both human readable and machine readable.</p>
 <p>Progress trackers are hierarchical. Each step can be the parent for another tracker. By altering the
-<code class="docutils literal"><span class="pre">ProgressTracker.childrenFor[step]</span> <span class="pre">=</span> <span class="pre">tracker</span></code> map, a tree of steps can be created. It&#8217;s allowed to alter the hierarchy
+<code class="docutils literal"><span class="pre">ProgressTracker.childrenFor</span></code> map, a tree of steps can be created. It&#8217;s allowed to alter the hierarchy
 at runtime, on the fly, and the progress renderers will adapt to that properly. This can be helpful when you don&#8217;t
-fully know ahead of time what steps will be required. If you _do_ know what is required, configuring as much of the
-hierarchy ahead of time is a good idea, as that will help the users see what is coming up.</p>
+fully know ahead of time what steps will be required. If you <em>do</em> know what is required, configuring as much of the
+hierarchy ahead of time is a good idea, as that will help the users see what is coming up. You can pre-configure
+steps by overriding the <code class="docutils literal"><span class="pre">Step</span></code> class like this:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        <span class="k">object</span> <span class="nc">NOTARY</span> <span class="p">:</span> <span class="n">ProgressTracker</span><span class="p">.</span><span class="n">Step</span><span class="p">(</span><span class="s">&quot;Getting notary signature&quot;</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">override</span> <span class="k">fun</span> <span class="nf">childProgressTracker</span><span class="p">()</span> <span class="p">=</span> <span class="n">FinalityFlow</span><span class="p">.</span><span class="n">tracker</span><span class="p">()</span>
+        <span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">ProgressTracker</span><span class="o">.</span><span class="na">Step</span> <span class="n">COMMITTING</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ProgressTracker</span><span class="o">.</span><span class="na">Step</span><span class="o">(</span><span class="s">&quot;Committing to the ledger.&quot;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="nd">@Nullable</span> <span class="nd">@Override</span> <span class="kd">public</span> <span class="n">ProgressTracker</span> <span class="nf">childProgressTracker</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">FinalityFlow</span><span class="o">.</span><span class="na">Companion</span><span class="o">.</span><span class="na">tracker</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">};</span>
+</pre></div>
+</div>
+</div>
 <p>Every tracker has not only the steps given to it at construction time, but also the singleton
 <code class="docutils literal"><span class="pre">ProgressTracker.UNSTARTED</span></code> step and the <code class="docutils literal"><span class="pre">ProgressTracker.DONE</span></code> step. Once a tracker has become <code class="docutils literal"><span class="pre">DONE</span></code> its
 position may not be modified again (because e.g. the UI may have been removed/cleaned up), but until that point, the
@@ -744,7 +794,7 @@ overriding the <code class="docutils literal"><span class="pre">flowTracker</spa
 <code class="docutils literal"><span class="pre">FlowLogic.subFlow</span></code> method is used, then the tracker of the sub-flow will be made a child of the current
 step in the parent flow automatically, if the parent is using tracking in the first place. The framework will also
 automatically set the current step to <code class="docutils literal"><span class="pre">DONE</span></code> for you, when the flow is finished.</p>
-<p>Because a flow may sometimes wish to configure the children in its progress hierarchy _before_ the sub-flow
+<p>Because a flow may sometimes wish to configure the children in its progress hierarchy <em>before</em> the sub-flow
 is constructed, for sub-flows that always follow the same outline regardless of their parameters it&#8217;s conventional
 to define a companion object/static method (for Kotlin/Java respectively) that constructs a tracker, and then allow
 the sub-flow to have the tracker it will use be passed in as a parameter. This allows all trackers to be built
@@ -795,7 +845,7 @@ reporting logic, or anything else that might be required as part of a communicat
         <a href="flow-testing.html" class="btn btn-neutral float-right" title="Writing flow tests" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="tutorial-building-transactions.html" class="btn btn-neutral" title="Building Transactions" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="tutorial-building-transactions.html" class="btn btn-neutral" title="Building transactions" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

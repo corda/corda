@@ -1,6 +1,5 @@
 package net.corda.node.utilities.certsigning
 
-import joptsimple.OptionParser
 import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
@@ -9,12 +8,12 @@ import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.core.crypto.X509Utilities.addOrReplaceCertificate
 import net.corda.core.crypto.X509Utilities.addOrReplaceKey
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.config.ConfigHelper
+import net.corda.node.ArgsParser
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.getValue
+import net.corda.node.utilities.certsigning.CertificateSigner.Companion.log
 import java.net.URL
-import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.cert.Certificate
 import kotlin.system.exitProcess
@@ -32,16 +31,16 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
     }
 
     fun buildKeyStore() {
-        config.certificatesPath.createDirectories()
+        config.certificatesDirectory.createDirectories()
 
-        val caKeyStore = X509Utilities.loadOrCreateKeyStore(config.keyStorePath, config.keyStorePassword)
+        val caKeyStore = X509Utilities.loadOrCreateKeyStore(config.keyStoreFile, config.keyStorePassword)
 
         if (!caKeyStore.containsAlias(CORDA_CLIENT_CA)) {
             // No certificate found in key store, create certificate signing request and post request to signing server.
             log.info("No certificate found in key store, creating certificate signing request...")
 
             // Create or load key pair from the key store.
-            val keyPair = X509Utilities.loadOrCreateKeyPairFromKeyStore(config.keyStorePath, config.keyStorePassword,
+            val keyPair = X509Utilities.loadOrCreateKeyPairFromKeyStore(config.keyStoreFile, config.keyStorePassword,
                     config.keyStorePassword, CORDA_CLIENT_CA_PRIVATE_KEY) {
                 X509Utilities.createSelfSignedCACert(config.myLegalName)
             }
@@ -59,15 +58,15 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
             // Assumes certificate chain always starts with client certificate and end with root certificate.
             caKeyStore.addOrReplaceCertificate(CORDA_CLIENT_CA, certificates.first())
 
-            X509Utilities.saveKeyStore(caKeyStore, config.keyStorePath, config.keyStorePassword)
+            X509Utilities.saveKeyStore(caKeyStore, config.keyStoreFile, config.keyStorePassword)
 
             // Save certificates to trust store.
-            val trustStore = X509Utilities.loadOrCreateKeyStore(config.trustStorePath, config.trustStorePassword)
+            val trustStore = X509Utilities.loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword)
 
             // Assumes certificate chain always starts with client certificate and end with root certificate.
             trustStore.addOrReplaceCertificate(CORDA_ROOT_CA, certificates.last())
 
-            X509Utilities.saveKeyStore(trustStore, config.trustStorePath, config.trustStorePassword)
+            X509Utilities.saveKeyStore(trustStore, config.trustStoreFile, config.trustStorePassword)
         } else {
             log.trace("Certificate already exists, exiting certificate signer...")
         }
@@ -97,7 +96,7 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
      * @return Request ID return from the server.
      */
     private fun submitCertificateSigningRequest(keyPair: KeyPair): String {
-        val requestIdStore = config.certificatesPath / "certificate-request-id.txt"
+        val requestIdStore = config.certificatesDirectory / "certificate-request-id.txt"
         // Retrieve request id from file if exists, else post a request to server.
         return if (!requestIdStore.exists()) {
             val request = X509Utilities.createCertificateSigningRequest(config.myLegalName, config.nearestCity, config.emailAddress, keyPair)
@@ -112,30 +111,21 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
     }
 }
 
-object ParamsSpec {
-    val parser = OptionParser()
-    val baseDirectoryArg = parser.accepts("base-dir", "Working directory of Corda Node.").withRequiredArg().defaultsTo(".")
-    val configFileArg = parser.accepts("config-file", "The path to the config file.").withRequiredArg()
-}
-
 fun main(args: Array<String>) {
+    val argsParser = ArgsParser()
     val cmdlineOptions = try {
-        ParamsSpec.parser.parse(*args)
+        argsParser.parse(*args)
     } catch (ex: Exception) {
-        CertificateSigner.log.error("Unable to parse args", ex)
-        ParamsSpec.parser.printHelpOn(System.out)
+        log.error("Unable to parse args", ex)
+        argsParser.printHelp(System.out)
         exitProcess(1)
     }
-    val baseDirectoryPath = Paths.get(cmdlineOptions.valueOf(ParamsSpec.baseDirectoryArg))
-    val configFile = if (cmdlineOptions.has(ParamsSpec.configFileArg)) Paths.get(cmdlineOptions.valueOf(ParamsSpec.configFileArg)) else null
-
-    val config = ConfigHelper.loadConfig(baseDirectoryPath, configFile, allowMissingConfig = true).let { config ->
-        object : NodeConfiguration by FullNodeConfiguration(config) {
-            val certificateSigningService: URL by config
-        }
+    val config = cmdlineOptions.loadConfig(allowMissingConfig = true)
+    val configuration = object : NodeConfiguration by FullNodeConfiguration(cmdlineOptions.baseDirectory, config) {
+        val certificateSigningService: URL by config
     }
 
     // TODO: Use HTTPS instead
-    CertificateSigner(config, HTTPCertificateSigningService(config.certificateSigningService)).buildKeyStore()
+    CertificateSigner(configuration, HTTPCertificateSigningService(configuration.certificateSigningService)).buildKeyStore()
 }
 

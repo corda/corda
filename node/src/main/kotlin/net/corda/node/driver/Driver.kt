@@ -2,8 +2,6 @@
 
 package net.corda.node.driver
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.module.SimpleModule
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -12,6 +10,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.core.*
 import net.corda.core.crypto.Party
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
@@ -19,12 +18,15 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.messaging.ArtemisMessagingServer
+import net.corda.node.services.config.SSLConfiguration
+import net.corda.node.services.messaging.ArtemisMessagingComponent
+import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.utilities.JsonSupport
 import net.corda.node.utilities.ServiceIdentityGenerator
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.slf4j.Logger
 import java.io.File
 import java.net.*
@@ -34,13 +36,11 @@ import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.util.*
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
-import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.*
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
+
 
 /**
  * This file defines a small "Driver" DSL for starting up nodes that is only intended for development, demos and tests.
@@ -84,6 +84,13 @@ interface DriverDSLExposedInterface {
             type: ServiceType = RaftValidatingNotaryService.type,
             rpcUsers: List<User> = emptyList()): Future<Pair<Party, List<NodeHandle>>>
 
+    /**
+     * Starts a web server for a node
+     *
+     * @param handle The handle for the node that this webserver connects to via RPC.
+     */
+    fun startWebserver(handle: NodeHandle): ListenableFuture<HostAndPort>
+
     fun waitForAllNodesToFinish()
 }
 
@@ -94,9 +101,12 @@ interface DriverDSLInternalInterface : DriverDSLExposedInterface {
 
 data class NodeHandle(
         val nodeInfo: NodeInfo,
-        val config: Config,
+        val rpc: CordaRPCOps,
+        val configuration: FullNodeConfiguration,
         val process: Process
-)
+) {
+    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.artemisAddress, configuration)
+}
 
 sealed class PortAllocation {
     abstract fun nextPort(): Int
@@ -107,7 +117,7 @@ sealed class PortAllocation {
         override fun nextPort() = portCounter.andIncrement
     }
 
-    class RandomFree() : PortAllocation() {
+    object RandomFree : PortAllocation() {
         override fun nextPort(): Int {
             return ServerSocket().use {
                 it.bind(InetSocketAddress(0))
@@ -153,7 +163,7 @@ fun <A> driver(
         driverDsl = DriverDSL(
                 portAllocation = portAllocation,
                 debugPortAllocation = debugPortAllocation,
-                driverDirectory = driverDirectory,
+                driverDirectory = driverDirectory.toAbsolutePath(),
                 useTestClock = useTestClock,
                 isDebug = isDebug
         ),
@@ -185,6 +195,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         return returnValue
     } catch (exception: Throwable) {
         println("Driver shutting down because of exception $exception")
+        exception.printStackTrace()
         throw exception
     } finally {
         driverDsl.shutdown()
@@ -260,7 +271,7 @@ open class DriverDSL(
         val isDebug: Boolean
 ) : DriverDSLInternalInterface {
     private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
-    private val networkMapName = "NetworkMapService"
+    private val networkMapLegalName = "NetworkMapService"
     private val networkMapAddress = portAllocation.nextHostAndPort()
 
     class State {
@@ -291,9 +302,7 @@ open class DriverDSL(
 
     override fun shutdown() {
         state.locked {
-            clients.forEach {
-                it.stop()
-            }
+            clients.forEach(NodeMessagingClient::stop)
             registeredProcesses.forEach {
                 it.get().destroy()
             }
@@ -318,24 +327,16 @@ open class DriverDSL(
         executorService.shutdown()
     }
 
-    private fun queryNodeInfo(webAddress: HostAndPort): NodeInfo? {
-        val url = URL("http://$webAddress/api/info")
-        try {
-            val conn = url.openConnection() as HttpURLConnection
-            conn.requestMethod = "GET"
-            if (conn.responseCode != 200) {
-                log.error("Received response code ${conn.responseCode} from $url during startup.")
-                return null
+    private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration): ListenableFuture<CordaRPCOps> {
+        val client = CordaRPCClient(nodeAddress, sslConfig)
+        return poll(executorService, "for RPC connection") {
+            try {
+                client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
+                return@poll client.proxy()
+            } catch(e: Exception) {
+                log.error("Exception $e, Retrying RPC connection at $nodeAddress")
+                null
             }
-            // For now the NodeInfo is tunneled in its Kryo format over the Node's Web interface.
-            val om = ObjectMapper()
-            val module = SimpleModule("NodeInfo")
-            module.addDeserializer(NodeInfo::class.java, JsonSupport.NodeInfoDeserializer)
-            om.registerModule(module)
-            return om.readValue(conn.inputStream, NodeInfo::class.java)
-        } catch(e: Exception) {
-            log.error("Could not query node info at $url due to an exception.", e)
-            return null
         }
     }
 
@@ -349,11 +350,13 @@ open class DriverDSL(
         val baseDirectory = driverDirectory / name
         val configOverrides = mapOf(
                 "myLegalName" to name,
-                "basedir" to baseDirectory.normalize().toString(),
                 "artemisAddress" to messagingAddress.toString(),
                 "webAddress" to apiAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
-                "networkMapAddress" to networkMapAddress.toString(),
+                "networkMapService" to mapOf(
+                        "address" to networkMapAddress.toString(),
+                        "legalName" to networkMapLegalName
+                ),
                 "useTestClock" to useTestClock,
                 "rpcUsers" to rpcUsers.map {
                     mapOf(
@@ -364,16 +367,23 @@ open class DriverDSL(
                 }
         ) + customOverrides
 
-        val config = ConfigHelper.loadConfig(
-                baseDirectoryPath = baseDirectory,
-                allowMissingConfig = true,
-                configOverrides = configOverrides
+        val configuration = FullNodeConfiguration(
+                baseDirectory,
+                ConfigHelper.loadConfig(
+                        baseDirectory = baseDirectory,
+                        allowMissingConfig = true,
+                        configOverrides = configOverrides
+                )
         )
 
-        val startNode = startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort)
-        registerProcess(startNode)
-        return startNode.map {
-            NodeHandle(queryNodeInfo(apiAddress)!!, config, it)
+        val processFuture = startNode(executorService, configuration, quasarJarPath, debugPort)
+        registerProcess(processFuture)
+        return processFuture.flatMap { process ->
+            establishRpc(messagingAddress, configuration).flatMap { rpc ->
+                rpc.waitUntilRegisteredWithNetworkMap().toFuture().map {
+                    NodeHandle(rpc.nodeIdentity(), rpc, configuration, process)
+                }
+            }
         }
     }
 
@@ -408,36 +418,60 @@ open class DriverDSL(
         }
     }
 
+    private fun queryWebserver(configuration: FullNodeConfiguration): HostAndPort? {
+        val protocol = if (configuration.useHTTPS) {
+            "https://"
+        } else {
+            "http://"
+        }
+        val url = URL(protocol + configuration.webAddress.toString() + "/api/status")
+        val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
+
+        while (true) try {
+            val response = client.newCall(Request.Builder().url(url).build()).execute()
+            if (response.isSuccessful && (response.body().string() == "started")) {
+                return configuration.webAddress
+            }
+        } catch(e: ConnectException) {
+            log.debug("Retrying webserver info at ${configuration.webAddress}")
+        }
+    }
+
+    override fun startWebserver(handle: NodeHandle): ListenableFuture<HostAndPort> {
+        val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
+
+        return future {
+            registerProcess(DriverDSL.startWebserver(executorService, handle.configuration, debugPort))
+            queryWebserver(handle.configuration)!!
+        }
+    }
+
     override fun start() {
         startNetworkMapService()
     }
 
     private fun startNetworkMapService(): ListenableFuture<Process> {
-        val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
-        val baseDirectory = driverDirectory / networkMapName
+        val baseDirectory = driverDirectory / networkMapLegalName
         val config = ConfigHelper.loadConfig(
-                baseDirectoryPath = baseDirectory,
+                baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = mapOf(
-                        "myLegalName" to networkMapName,
-                        "basedir" to baseDirectory.normalize().toString(),
+                        "myLegalName" to networkMapLegalName,
                         "artemisAddress" to networkMapAddress.toString(),
-                        "webAddress" to apiAddress.toString(),
                         "extraAdvertisedServiceIds" to "",
                         "useTestClock" to useTestClock
                 )
         )
 
         log.info("Starting network-map-service")
-        val startNode = startNode(executorService, FullNodeConfiguration(config), quasarJarPath, debugPort)
+        val startNode = startNode(executorService, FullNodeConfiguration(baseDirectory, config), quasarJarPath, debugPort)
         registerProcess(startNode)
         return startNode
     }
 
     companion object {
-
         val name = arrayOf(
                 "Alice",
                 "Bob",
@@ -453,9 +487,57 @@ open class DriverDSL(
                 debugPort: Int?
         ): ListenableFuture<Process> {
             // Write node.conf
-            writeConfig(nodeConf.basedir, "node.conf", nodeConf.config)
+            writeConfig(nodeConf.baseDirectory, "node.conf", nodeConf.config)
 
-            val className = "net.corda.node.MainKt" // cannot directly get class for this, so just use string
+            val className = "net.corda.node.Corda" // cannot directly get class for this, so just use string
+            val separator = System.getProperty("file.separator")
+            val classpath = System.getProperty("java.class.path")
+            val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
+
+            val debugPortArg = if (debugPort != null)
+                "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort"
+            else
+                ""
+
+            val additionalKeys = listOf("amq.delivery.delay.ms")
+
+            val systemArgs = mutableMapOf(
+                    "name" to nodeConf.myLegalName,
+                    "visualvm.display.name" to "Corda"
+            )
+
+            for (key in additionalKeys) {
+                if (System.getProperty(key) != null) {
+                    systemArgs.set(key, System.getProperty(key))
+                }
+            }
+
+            val javaArgs = listOf(path) +
+                    systemArgs.map { "-D${it.key}=${it.value}" } +
+                    listOf(
+                            "-javaagent:$quasarJarPath",
+                            debugPortArg,
+                            "-Xmx200m",
+                            "-XX:+UseG1GC",
+                            "-cp", classpath,
+                            className,
+                            "--base-directory=${nodeConf.baseDirectory}"
+                    ).filter(String::isNotEmpty)
+            val builder = ProcessBuilder(javaArgs)
+            builder.redirectError(Paths.get("error.$className.log").toFile())
+            builder.inheritIO()
+            builder.directory(nodeConf.baseDirectory.toFile())
+            val process = builder.start()
+            // TODO There is a race condition here. Even though the messaging address is bound it may be the case that
+            // the handlers for the advertised services are not yet registered. Needs rethinking.
+            return addressMustBeBound(executorService, nodeConf.artemisAddress).map { process }
+        }
+
+        private fun startWebserver(
+                executorService: ScheduledExecutorService,
+                nodeConf: FullNodeConfiguration,
+                debugPort: Int?): ListenableFuture<Process> {
+            val className = "net.corda.node.Corda" // cannot directly get class for this, so just use string
             val separator = System.getProperty("file.separator")
             val classpath = System.getProperty("java.class.path")
             val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
@@ -466,21 +548,17 @@ open class DriverDSL(
                 emptyList()
 
             val javaArgs = listOf(path) +
-                    listOf("-Dname=${nodeConf.myLegalName}", "-javaagent:$quasarJarPath") + debugPortArg +
-                    listOf("-cp", classpath, className) +
-                    "--base-directory=${nodeConf.basedir}"
+                    listOf("-Dname=node-${nodeConf.artemisAddress}-webserver") + debugPortArg +
+                    listOf(
+                            "-cp", classpath, className,
+                            "--base-directory", nodeConf.baseDirectory.toString(),
+                            "--webserver")
             val builder = ProcessBuilder(javaArgs)
             builder.redirectError(Paths.get("error.$className.log").toFile())
             builder.inheritIO()
-            builder.directory(nodeConf.basedir.toFile())
+            builder.directory(nodeConf.baseDirectory.toFile())
             val process = builder.start()
-            return Futures.allAsList(
-                    addressMustBeBound(executorService, nodeConf.artemisAddress),
-                    // TODO There is a race condition here. Even though the messaging address is bound it may be the case that
-                    // the handlers for the advertised services are not yet registered. A hacky workaround is that we wait for
-                    // the web api address to be bound as well, as that starts after the services. Needs rethinking.
-                    addressMustBeBound(executorService, nodeConf.webAddress)
-            ).map { process }
+            return addressMustBeBound(executorService, nodeConf.webAddress).map { process }
         }
     }
 }

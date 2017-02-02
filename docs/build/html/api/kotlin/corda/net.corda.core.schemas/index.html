@@ -1,0 +1,52 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.core.schemas - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.core.schemas</a><br/>
+<br/>
+<h2>Package net.corda.core.schemas</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-mapped-schema/index.html">MappedSchema</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">MappedSchema</span></code>
+<p>A database schema that might be configured for this node.  As well as a name and version for identifying the schema,
+also list the classes that may be used in the generated object graph in order to configure the ORM tool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-persistent-state/index.html">PersistentState</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">PersistentState</span></code>
+<p>A super class for all mapped states exported to a schema that ensures the <a href="../net.corda.core.contracts/-state-ref/index.html">StateRef</a> appears on the database row.  The
+<a href="../net.corda.core.contracts/-state-ref/index.html">StateRef</a> will be set to the correct value by the framework (there's no need to set during mapping generation by the state itself).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-persistent-state-ref/index.html">PersistentStateRef</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">PersistentStateRef</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/Serializable.html"><span class="identifier">Serializable</span></a></code>
+<p>Embedded <a href="../net.corda.core.contracts/-state-ref/index.html">StateRef</a> representation used in state mapping.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-queryable-state/index.html">QueryableState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">QueryableState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a></code>
+<p>A contract state that may be mapped to database schemas configured for this node to support querying for,
+or filtering of, states.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

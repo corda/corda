@@ -1,0 +1,52 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ApiUtils - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.utilities</a>&nbsp;/&nbsp;<a href=".">ApiUtils</a><br/>
+<br/>
+<h1>ApiUtils</h1>
+<code><span class="keyword">class </span><span class="identifier">ApiUtils</span></code>
+<p>Utility functions to reduce boilerplate when developing HTTP APIs</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">ApiUtils</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.utilities.ApiUtils$<init>(net.corda.core.messaging.CordaRPCOps)/rpc">rpc</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a><span class="symbol">)</span></code>
+<p>Utility functions to reduce boilerplate when developing HTTP APIs</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="rpc.html">rpc</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">rpc</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="with-party.html">withParty</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">withParty</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.utilities.ApiUtils$withParty(kotlin.String, kotlin.Function1((kotlin.String, javax.ws.rs.core.Response)), kotlin.Function1((net.corda.core.crypto.Party, javax.ws.rs.core.Response)))/partyKeyStr">partyKeyStr</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.utilities.ApiUtils$withParty(kotlin.String, kotlin.Function1((kotlin.String, javax.ws.rs.core.Response)), kotlin.Function1((net.corda.core.crypto.Party, javax.ws.rs.core.Response)))/notFound">notFound</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">String</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/javax/ws/rs/core/Response.html"><span class="identifier">Response</span></a>&nbsp;<span class="symbol">=</span>&nbsp;defaultNotFound<span class="symbol">, </span><span class="identifier" id="net.corda.core.utilities.ApiUtils$withParty(kotlin.String, kotlin.Function1((kotlin.String, javax.ws.rs.core.Response)), kotlin.Function1((net.corda.core.crypto.Party, javax.ws.rs.core.Response)))/found">found</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/javax/ws/rs/core/Response.html"><span class="identifier">Response</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/javax/ws/rs/core/Response.html"><span class="identifier">Response</span></a></code>
+<p>Get a party and then execute the passed function with the party public key as a parameter.
+Usage: withParty(key) { doSomethingWith(it) }</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

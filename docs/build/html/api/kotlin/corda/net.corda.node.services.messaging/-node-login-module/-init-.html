@@ -1,0 +1,22 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NodeLoginModule.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href="index.html">NodeLoginModule</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">NodeLoginModule</span><span class="symbol">(</span><span class="symbol">)</span></code>
+<p>Clients must connect to us with a username and password and must use TLS. If a someone connects with
+<a href="../-artemis-messaging-component/-n-o-d-e_-u-s-e-r.html">ArtemisMessagingComponent.NODE_USER</a> then we confirm it's just us as the node by checking their TLS certificate
+is the same as our one in our key store. Then they're given full access to all valid queues. If they connect with
+<a href="../-artemis-messaging-component/-p-e-e-r_-u-s-e-r.html">ArtemisMessagingComponent.PEER_USER</a> then we confirm they belong on our P2P network by checking their root CA is
+the same as our root CA. If that's the case the only access they're given is the ablility send to our P2P address.
+In both cases the messages these authenticated nodes send to us are tagged with their subject DN and we assume
+the CN within that is their legal name.
+Otherwise if the username is neither of the above we assume it's an RPC user and authenticate against our list of
+valid RPC users. RPC clients are given permission to perform RPC and nothing else.</p>
+</BODY>
+</HTML>

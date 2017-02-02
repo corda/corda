@@ -34,6 +34,9 @@
   
 
   
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="#"/>
         <link rel="next" title="What’s included?" href="inthebox.html"/> 
 
@@ -80,7 +83,7 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
 <br>
 <a href="https://discourse.corda.net">Discourse Forums</a>
 <br>
@@ -97,27 +100,26 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
-<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Key concepts</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-ecosystem.html">Corda ecosystem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-core-types.html">Core types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-financial-model.html">Financial model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-flow-framework.html">Flow framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-consensus-notaries.html">Consensus and notaries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-vault.html">Vault</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-security-model.html">Security model</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-cordapp-template">Running the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#interacting-with-the-cordapp-template">Interacting with the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#extending-the-cordapp-template">Extending the CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -136,23 +138,22 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
@@ -162,14 +163,13 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
-<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
 <li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
 <li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
@@ -225,49 +225,54 @@
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">This build of the docs is from the &#8220;latest&#8221; branch, not a milestone release. It may not reflect the
-current state of the code. <a class="reference external" href="https://docs.corda.net/releases/release-M6.0/">Read the docs for M6</a>.</p>
+current state of the code. <a class="reference external" href="https://docs.corda.net/releases/release-M7.0/">Read the docs for milestone release M7</a>.</p>
 </div>
-<p>This is the developer guide for Corda, a proposed architecture for distributed ledgers. Here are the sources
-of documentation you may find useful, from highest level to lowest:</p>
-<ol class="arabic simple">
-<li>The <a class="reference external" href="_static/corda-introductory-whitepaper.pdf">Introductory white paper</a> describes the motivating vision and background of the project. It is the kind
-of document your boss should read. It describes why the project exists and briefly compares it to alternative
-systems on the market.</li>
-<li>The <a class="reference external" href="_static/corda-technical-whitepaper.pdf">Technical white paper</a> describes the entire intended design from beginning to end. It is the kind of
-document that you should read, or at least, read parts of. Note that because the technical white paper
-describes the intended end state, it does not always align with the implementation.</li>
-<li>This user guide. It describes <em>how</em> to use the system to write apps, as currently implemented. It assumes
-you already have read the relevant sections of the technology white paper and now wish to learn how to use it.</li>
-<li>The <a class="reference external" href="api/index.html">API docs</a>.</li>
-</ol>
-<p>Read on to learn:</p>
-<div class="toctree-wrapper compound" id="getting-started">
-<p class="caption"><span class="caption-text">Getting started</span><a class="headerlink" href="#getting-started" title="Permalink to this toctree">¶</a></p>
+<p><a class="reference external" href="https://www.corda.net/">Corda</a> is an open-source distributed ledger platform. The latest <em>milestone</em> (i.e. stable)
+release is M7. The codebase is on <a class="reference external" href="https://github.com/corda">GitHub</a>, and our community can be found on
+<a class="reference external" href="https://slack.corda.net/">Slack</a> and in our <a class="reference external" href="https://discourse.corda.net/">forum</a>.</p>
+<p>If you&#8217;re new to Corda, you should start by learning about its motivating vision and architecture. A good introduction
+is the <a class="reference external" href="https://vimeo.com/192757743/c2ec39c1e1">Introduction to Corda webinar</a> and the <a class="reference external" href="_static/corda-introductory-whitepaper.pdf">Introductory white paper</a>. As
+they become more familiar with Corda, readers with a technical background will also want to dive into the <a class="reference external" href="_static/corda-technical-whitepaper.pdf">Technical white paper</a>,
+which describes the platform&#8217;s envisioned end-state.</p>
+<p>Corda is designed so that developers can easily extend its functionality by writing CorDapps
+(<strong>Cor</strong>da <strong>D</strong>istributed <strong>App</strong>lication<strong>s</strong>). Some example CorDapps are available in the Corda repo&#8217;s
+<a class="reference external" href="https://github.com/corda/corda/tree/master/samples">samples</a> directory. To run these yourself, make
+sure you follow the instructions in <a class="reference internal" href="getting-set-up.html"><span class="doc">Getting set up</span></a>, then go to
+<a class="reference internal" href="running-the-demos.html"><span class="doc">Running the demos</span></a>.</p>
+<p>If, after running the demos, you&#8217;re interested in writing your own CorDapps, a template CorDapp is available on
+<a class="reference external" href="https://github.com/corda/cordapp-template">Github</a>. To get it running, follow the instructions in the
+<a class="reference external" href="https://github.com/corda/cordapp-template/blob/master/README.md">readme</a>, or watch the
+<a class="reference external" href="https://vimeo.com/192797322/aab499b152">Corda Developers Tutorial</a>.</p>
+<p>From there, you&#8217;ll be in a position to start extending the example CorDapp yourself (e.g. by writing new states, contracts,
+and/or flows). For this, you&#8217;ll want to refer to this docsite, and to the <a class="reference external" href="https://docs.corda.net/tutorial-contract.html">tutorials</a>
+in particular. If you get stuck, get in touch on <a class="reference external" href="https://slack.corda.net/">Slack</a> or the <a class="reference external" href="https://discourse.corda.net/">forum</a>.</p>
+<p>Once you&#8217;re familiar with Corda and CorDapp development, we&#8217;d encourage you to get involved in the development of the
+platform itself. Find out more about <a class="reference external" href="https://github.com/corda/corda/wiki/Corda's-Open-Source-Approach">contributing to Corda</a>.</p>
+</div>
+<div class="section" id="documentation-contents">
+<h1>Documentation Contents:<a class="headerlink" href="#documentation-contents" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Getting started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="getting-set-up.html#a-jvm">A JVM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting-set-up.html#intellij">IntelliJ</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting-set-up.html#kotlin">Kotlin</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting-set-up.html#version-control-via-git">Version control via Git</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting-set-up.html#gradle">Gradle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-set-up.html#software-requirements">Software requirements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="getting-set-up.html#corda-source-code">Corda source code</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting-set-up.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-set-up.html#next-steps">Next steps</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="getting-set-up-fault-finding.html#intellij-issues">IntelliJ issues</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting-set-up-fault-finding.html#kotlin-issues">Kotlin issues</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting-set-up-fault-finding.html#gradle-issues">Gradle issues</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting-set-up-fault-finding.html#doing-it-without-intellij">Doing it without IntelliJ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting-set-up-fault-finding.html#milestone-releases">Milestone releases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-set-up-fault-finding.html#java-issues">Java issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-set-up-fault-finding.html#idea-issues">IDEA issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-set-up-fault-finding.html#other-common-issues">Other common issues</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#important-common-instructions-for-all-demos">Important : Common Instructions for all demos</a></li>
 <li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#trader-demo">Trader demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#irs-demo">IRS demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#attachment-demo">Attachment demo</a></li>
-<li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#distributed-notary-demo">Distributed Notary demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#raft-notary-demo">Raft Notary demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#bank-of-corda-demo">Bank Of Corda demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="running-the-demos.html#simm-and-portfolio-demo-aka-the-initial-margin-agreement-demo">SIMM and Portfolio Demo - aka the Initial Margin Agreement Demo</a></li>
 </ul>
@@ -280,55 +285,52 @@ you already have read the relevant sections of the technology white paper and no
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound" id="key-concepts">
-<p class="caption"><span class="caption-text">Key concepts</span><a class="headerlink" href="#key-concepts" title="Permalink to this toctree">¶</a></p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Key concepts</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="data-model.html#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="data-model.html#comparison-with-bitcoin">Comparison with Bitcoin</a></li>
-<li class="toctree-l2"><a class="reference internal" href="data-model.html#comparison-with-ethereum">Comparison with Ethereum</a></li>
-<li class="toctree-l2"><a class="reference internal" href="data-model.html#rationale-for-and-tradeoffs-in-adopting-a-utxo-style-model">Rationale for and tradeoffs in adopting a UTXO-style model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="data-model.html#rationale">Rationale</a></li>
-<li class="toctree-l2"><a class="reference internal" href="data-model.html#pros">Pros</a></li>
-<li class="toctree-l2"><a class="reference internal" href="data-model.html#cons">Cons</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-ecosystem.html">Corda ecosystem</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-ecosystem.html#cordapps">CorDapps</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#amount">Amount</a></li>
-<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#state">State</a></li>
-<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#namedbyhash-and-uniqueidentifier">NamedByHash and UniqueIdentifier</a></li>
-<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#fungibleassets-and-cash">FungibleAssets and Cash</a></li>
-<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#transaction-lifecycle-types">Transaction lifecycle types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#party-and-publickey">Party and PublicKey</a></li>
-<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#multi-signature-support">Multi-signature support</a></li>
-<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#date-support">Date support</a></li>
-<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#cryptography-maths-support">Cryptography &amp; maths support</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-data-model.html">Data model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-data-model.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-data-model.html#states">States</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-data-model.html#contracts">Contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-data-model.html#transactions">Transactions</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="merkle-trees.html#merkle-trees-in-corda">Merkle trees in Corda</a></li>
-<li class="toctree-l2"><a class="reference internal" href="merkle-trees.html#hiding-data">Hiding data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="merkle-trees.html#example-of-usage">Example of usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-core-types.html">Core types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-core-types.html#state-and-references">State and References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-core-types.html#namedbyhash-and-uniqueidentifier">NamedByHash and UniqueIdentifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-core-types.html#transaction-lifecycle-types">Transaction lifecycle types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-core-types.html#party-and-compositekey">Party and CompositeKey</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-core-types.html#multi-signature-support">Multi-signature support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-core-types.html#date-support">Date support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-core-types.html#cryptography-and-maths-support">Cryptography and maths support</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="consensus.html#notary">Notary</a></li>
-<li class="toctree-l2"><a class="reference internal" href="consensus.html#validation">Validation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="consensus.html#timestamping">Timestamping</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-financial-model.html">Financial model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-financial-model.html#amount">Amount</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-financial-model.html#financial-states">Financial states</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="clauses.html#basic-clause-structure">Basic clause structure</a></li>
-<li class="toctree-l2"><a class="reference internal" href="clauses.html#composition-clauses">Composition clauses</a></li>
-<li class="toctree-l2"><a class="reference internal" href="clauses.html#other-types-of-clauses">Other types of clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-flow-framework.html">Flow framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-consensus-notaries.html">Consensus and notaries</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-consensus-notaries.html#consensus-model">Consensus model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-consensus-notaries.html#notary">Notary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-consensus-notaries.html#validation">Validation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts-consensus-notaries.html#timestamping">Timestamping</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-vault.html">Vault</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-security-model.html">Security model</a></li>
 </ul>
 </div>
-<div class="toctree-wrapper compound" id="cordapps">
-<p class="caption"><span class="caption-text">CorDapps</span><a class="headerlink" href="#cordapps" title="Permalink to this toctree">¶</a></p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#app-plugins">App plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#services">Services</a></li>
 <li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#starting-nodes">Starting nodes</a></li>
@@ -337,49 +339,22 @@ you already have read the relevant sections of the technology white paper and no
 <li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#debugging-your-node">Debugging your node</a></li>
 <li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#viewing-persisted-state-of-your-node">Viewing persisted state of your node</a></li>
 <li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#building-against-corda">Building against Corda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#building-gradle-plugins">Building Gradle plugins</a></li>
-<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#using-gradle-plugins">Using Gradle plugins</a></li>
-<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#template-build-gradle">Template build.gradle</a></li>
-<li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#cordformation">Cordformation</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#background">Background</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#getting-started">Getting started</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#working-from-milestone-releases">Working from milestone releases</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#using-a-snapshot-release">Using a SNAPSHOT release</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#opening-the-cordapp-template-with-intellij">Opening the CorDapp Template with IntelliJ</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-cordapp-template">Running the CorDapp template</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#running-the-cordapp-template-from-the-command-line">Running the CorDapp template from the command line</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#running-cordapps-on-separate-machines">Running CorDapps on separate machines</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#running-the-example-cordapp-via-intellij">Running the example CorDapp via IntelliJ</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#interacting-with-the-cordapp-template">Interacting with the CorDapp template</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#via-http">Via HTTP</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#using-the-h2-web-console">Using the h2 web console</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#using-the-example-rpc-client">Using the Example RPC client</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#extending-the-cordapp-template">Extending the CorDapp template</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#cordapp-template-project-structure">CorDapp-template Project Structure</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#the-build-gradle-file">The build.gradle file</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#service-provider-configuration-file">Service Provider Configuration File</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#re-deploying-your-nodes-locally">Re-Deploying Your Nodes Locally</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#running-nodes-across-machines">Running Nodes Across Machines</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#debugging-your-cordapp">Debugging your CorDapp</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#running-the-cordapp-template">Running the CorDapp template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#interacting-with-the-cordapp-template">Interacting with the CorDapp template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-cordapp.html#extending-the-cordapp-template">Extending the CorDapp template</a></li>
 </ul>
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound" id="the-corda-node">
-<p class="caption"><span class="caption-text">The Corda node</span><a class="headerlink" href="#the-corda-node" title="Permalink to this toctree">¶</a></p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="clientrpc.html#security">Security</a></li>
@@ -407,6 +382,7 @@ you already have read the relevant sections of the technology white paper and no
 <li class="toctree-l2"><a class="reference internal" href="node-administration.html#logging">Logging</a></li>
 <li class="toctree-l2"><a class="reference internal" href="node-administration.html#database-access">Database access</a></li>
 <li class="toctree-l2"><a class="reference internal" href="node-administration.html#monitoring-your-node">Monitoring your node</a></li>
+<li class="toctree-l2"><a class="reference internal" href="node-administration.html#memory-usage-and-tuning">Memory usage and tuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="node-administration.html#uploading-and-downloading-attachments">Uploading and downloading attachments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="node-administration.html#uploading-interest-rate-fixes">Uploading interest rate fixes</a></li>
 </ul>
@@ -443,8 +419,8 @@ you already have read the relevant sections of the technology white paper and no
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound" id="tutorials">
-<p class="caption"><span class="caption-text">Tutorials</span><a class="headerlink" href="#tutorials" title="Permalink to this toctree">¶</a></p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#where-to-put-your-code">Where to put your code</a></li>
@@ -464,8 +440,8 @@ you already have read the relevant sections of the technology white paper and no
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#what-are-clauses-and-why-to-use-them">What are clauses and why to use them?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#how-clauses-work">How clauses work?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#what-are-clauses-and-why-use-them">What are clauses and why use them?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#how-do-clauses-work">How do clauses work?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#commercial-paper-class">Commercial paper class</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#simple-clauses">Simple Clauses</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-contract-clauses.html#group-clause">Group clause</a></li>
@@ -478,13 +454,13 @@ you already have read the relevant sections of the technology white paper and no
 <li class="toctree-l2"><a class="reference internal" href="tutorial-test-dsl.html#chaining-transactions">Chaining transactions</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-clientrpc-api.html#registering-classes-from-your-cordapp-with-rpc-kryo">Registering classes from your CorDapp with RPC Kryo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-clientrpc-api.html#security">Security</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-building-transactions.html#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-building-transactions.html#the-basic-lifecycle-of-transactions">The Basic Lifecycle Of Transactions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-building-transactions.html#gathering-inputs">Gathering Inputs</a></li>
@@ -518,20 +494,11 @@ you already have read the relevant sections of the technology white paper and no
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="oracles.html#introduction">Introduction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oracles.html#the-two-basic-approaches">The two basic approaches</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oracles.html#asserting-continuously-varying-data">Asserting continuously varying data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oracles.html#hiding-transaction-data-from-the-oracle">Hiding transaction data from the oracle</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oracles.html#pay-per-play-oracles">Pay-per-play oracles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="oracles.html#introduction-to-oracles">Introduction to oracles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="oracles.html#implement-the-core-classes">Implement the core classes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oracles.html#binding-to-the-network-via-cordapp-plugin">Binding to the network via CorDapp plugin</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oracles.html#providing-client-sub-flows-for-querying-and-signing">Providing client sub-flows for querying and signing</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-attachments.html#attachments-demo">Attachments demo</a></li>
 </ul>
@@ -544,24 +511,30 @@ you already have read the relevant sections of the technology white paper and no
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound" id="other">
-<p class="caption"><span class="caption-text">Other</span><a class="headerlink" href="#other" title="Permalink to this toctree">¶</a></p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="network-simulator.html#what-it-is-and-is-not">What it is and is not</a></li>
 <li class="toctree-l2"><a class="reference internal" href="network-simulator.html#interface">Interface</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="initial-margin-agreement.html#simm-introduction">SIMM introduction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="initial-margin-agreement.html#process-steps">Process steps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="initial-margin-agreement.html#running-the-app">Running the app</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="clauses.html#basic-clause-structure">Basic clause structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clauses.html#composition-clauses">Composition clauses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clauses.html#other-types-of-clauses">Other types of clauses</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="merkle-trees.html#merkle-trees-in-corda">Merkle trees in Corda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="merkle-trees.html#hiding-data">Hiding data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="merkle-trees.html#example-of-usage">Example of usage</a></li>
 </ul>
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound" id="component-library">
-<p class="caption"><span class="caption-text">Component library</span><a class="headerlink" href="#component-library" title="Permalink to this toctree">¶</a></p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="contract-catalogue.html#cash">Cash</a></li>
@@ -578,8 +551,8 @@ you already have read the relevant sections of the technology white paper and no
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound" id="appendix">
-<p class="caption"><span class="caption-text">Appendix</span><a class="headerlink" href="#appendix" title="Permalink to this toctree">¶</a></p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="loadtesting.html#configuration-of-the-load-testing-cluster">Configuration of the load testing cluster</a></li>
@@ -588,13 +561,8 @@ you already have read the relevant sections of the technology white paper and no
 <li class="toctree-l2"><a class="reference internal" href="loadtesting.html#how-to-write-a-load-test">How to write a load test</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="setting-up-a-corda-network.html#certificates">Certificates</a></li>
-<li class="toctree-l2"><a class="reference internal" href="setting-up-a-corda-network.html#configuration">Configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="setting-up-a-corda-network.html#starting-the-nodes">Starting the nodes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="setting-up-a-corda-network.html#logging">Logging</a></li>
-<li class="toctree-l2"><a class="reference internal" href="setting-up-a-corda-network.html#connecting-to-the-nodes">Connecting to the nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a><ul>
@@ -602,9 +570,13 @@ you already have read the relevant sections of the technology white paper and no
 <li class="toctree-l2"><a class="reference internal" href="secure-coding-guidelines.html#contracts">Contracts</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
-<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-8">Milestone 8</a></li>
+<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-7">Milestone 7</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-6">Milestone 6</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-5">Milestone 5</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-4">Milestone 4</a></li>
@@ -628,6 +600,7 @@ you already have read the relevant sections of the technology white paper and no
 <li class="toctree-l2"><a class="reference internal" href="building-the-docs.html#build">Build</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
 <li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="publishing-corda.html#before-publishing">Before Publishing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="publishing-corda.html#publishing-locally">Publishing Locally</a></li>
@@ -646,8 +619,8 @@ you already have read the relevant sections of the technology white paper and no
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound" id="glossary">
-<p class="caption"><span class="caption-text">Glossary</span><a class="headerlink" href="#glossary" title="Permalink to this toctree">¶</a></p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>

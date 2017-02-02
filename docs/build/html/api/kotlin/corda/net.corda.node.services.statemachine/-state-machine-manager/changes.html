@@ -1,0 +1,17 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>StateMachineManager.changes - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.statemachine</a>&nbsp;/&nbsp;<a href="index.html">StateMachineManager</a>&nbsp;/&nbsp;<a href=".">changes</a><br/>
+<br/>
+<h1>changes</h1>
+<a name="net.corda.node.services.statemachine.StateMachineManager$changes"></a>
+<code><span class="keyword">val </span><span class="identifier">changes</span><span class="symbol">: </span><span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="-change/index.html"><span class="identifier">Change</span></a><span class="symbol">&gt;</span></code>
+<p>An observable that emits triples of the changing flow, the type of change, and a process-specific ID number
+which may change across restarts.</p>
+<p>We use assignment here so that multiple subscribers share the same wrapped Observable.</p>
+</BODY>
+</HTML>

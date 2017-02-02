@@ -131,7 +131,7 @@ inline fun MessagingService.runOnNextMessage(topicSession: TopicSession, crossin
 
 /**
  * Returns a [ListenableFuture] of the next message payload ([Message.data]) which is received on the given topic and sessionId.
- * The payload is deserilaized to an object of type [M]. Any exceptions thrown will be captured by the future.
+ * The payload is deserialized to an object of type [M]. Any exceptions thrown will be captured by the future.
  */
 fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long): ListenableFuture<M> {
     val messageFuture = SettableFuture.create<M>()

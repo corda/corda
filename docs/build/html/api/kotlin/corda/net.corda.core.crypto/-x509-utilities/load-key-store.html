@@ -1,0 +1,38 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>X509Utilities.loadKeyStore - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.crypto</a>&nbsp;/&nbsp;<a href="index.html">X509Utilities</a>&nbsp;/&nbsp;<a href=".">loadKeyStore</a><br/>
+<br/>
+<h1>loadKeyStore</h1>
+
+<p><a name="net.corda.core.crypto.X509Utilities$loadKeyStore(java.nio.file.Path, kotlin.String)"></a>
+<code><span class="keyword">fun </span><span class="identifier">loadKeyStore</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.X509Utilities$loadKeyStore(java.nio.file.Path, kotlin.String)/keyStoreFilePath">keyStoreFilePath</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.crypto.X509Utilities$loadKeyStore(java.nio.file.Path, kotlin.String)/storePassword">storePassword</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyStore.html"><span class="identifier">KeyStore</span></a></code>
+<p>Helper method to open an existing keystore for modification/read</p>
+<h3>Parameters</h3>
+
+<p><a name="keyStoreFilePath"></a>
+<code>keyStoreFilePath</code> - location of KeyStore file which must exist, or this will throw FileNotFoundException
+<p><a name="storePassword"></a>
+<code>storePassword</code> - password to open the store. This does not have to be the same password as any keys stored,
+but for SSL purposes this is recommended.
+<p><strong>Return</strong><br/>
+returns the KeyStore opened</p>
+
+<p><a name="net.corda.core.crypto.X509Utilities$loadKeyStore(java.io.InputStream, kotlin.String)"></a>
+<code><span class="keyword">fun </span><span class="identifier">loadKeyStore</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.X509Utilities$loadKeyStore(java.io.InputStream, kotlin.String)/input">input</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.crypto.X509Utilities$loadKeyStore(java.io.InputStream, kotlin.String)/storePassword">storePassword</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyStore.html"><span class="identifier">KeyStore</span></a></code>
+<p>Helper method to open an existing keystore for modification/read</p>
+<h3>Parameters</h3>
+
+<p><a name="input"></a>
+<code>input</code> - stream containing a KeyStore e.g. loaded from a resource file
+<p><a name="storePassword"></a>
+<code>storePassword</code> - password to open the store. This does not have to be the same password as any keys stored,
+but for SSL purposes this is recommended.
+<p><strong>Return</strong><br/>
+returns the KeyStore opened</p>
+</BODY>
+</HTML>

@@ -1,0 +1,21 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>E2ETestKeyManagementService.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.keys</a>&nbsp;/&nbsp;<a href="index.html">E2ETestKeyManagementService</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">E2ETestKeyManagementService</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.keys.E2ETestKeyManagementService$<init>(kotlin.collections.Set((java.security.KeyPair)))/initialKeys">initialKeys</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>A simple in-memory KMS that doesn't bother saving keys to disk. A real implementation would:</p>
+<ul><li>Probably be accessed via the network layer as an internal node service i.e. via a message queue, so it can run
+on a separate/firewalled service.</li>
+<li>Use the flow framework so requests to fetch keys can be suspended whilst a human signs off on the request.</li>
+<li>Use deterministic key derivation.</li>
+<li>Possibly have some sort of TREZOR-like two-factor authentication ability.</li>
+</ul>
+<p>etc.</p>
+</BODY>
+</HTML>

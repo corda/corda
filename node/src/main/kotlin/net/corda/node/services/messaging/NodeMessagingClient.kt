@@ -14,10 +14,11 @@ import net.corda.core.utilities.trace
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Outbound
+import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
-import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
-import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
+import org.apache.activemq.artemis.api.core.Message.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
 import org.bouncycastle.asn1.x500.X500Name
@@ -48,13 +49,13 @@ import javax.annotation.concurrent.ThreadSafe
  * @param serverHostPort The address of the broker instance to connect to (might be running in the same process)
  * @param myIdentity Either the public key to be used as the ArtemisMQ address and queue name for the node globally, or null to indicate
  * that this is a NetworkMapService node which will be bound globally to the name "networkmap"
- * @param executor An executor to run received message tasks upon.
+ * @param nodeExecutor An executor to run received message tasks upon.
  */
 @ThreadSafe
 class NodeMessagingClient(override val config: NodeConfiguration,
                           val serverHostPort: HostAndPort,
                           val myIdentity: CompositeKey?,
-                          val executor: AffinityExecutor,
+                          val nodeExecutor: AffinityExecutor,
                           val database: Database,
                           val networkMapRegistrationFuture: ListenableFuture<Unit>) : ArtemisMessagingComponent(), MessagingServiceInternal {
     companion object {
@@ -66,13 +67,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         // confusion.
         const val TOPIC_PROPERTY = "platform-topic"
         const val SESSION_ID_PROPERTY = "session-id"
-
-        /**
-         * This should be the only way to generate an ArtemisAddress and that only of the remote NetworkMapService node.
-         * All other addresses come from the NetworkMapCache, or myAddress below.
-         * The node will populate with their own identity based address when they register with the NetworkMapService.
-         */
-        fun makeNetworkMapAddress(hostAndPort: HostAndPort): SingleMessageRecipient = NetworkMapAddress(hostAndPort)
+        val AMQ_DELAY = Integer.valueOf(System.getProperty("amq.delivery.delay.ms", "0"))
     }
 
     private class InnerState {
@@ -92,6 +87,9 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     data class Handler(val topicSession: TopicSession,
                        val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
+    /** An executor for sending messages */
+    private val messagingExecutor = AffinityExecutor.ServiceAffinityExecutor("${config.myLegalName} Messaging", 1)
+
     /**
      * Apart from the NetworkMapService this is the only other address accessible to the node outside of lookups against the NetworkMapCache.
      */
@@ -105,12 +103,12 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     }
 
     private val processedMessages: MutableSet<UUID> = Collections.synchronizedSet(
-        object : AbstractJDBCHashSet<UUID, Table>(Table, loadOnInit = true) {
-            override fun elementFromRow(row: ResultRow): UUID = row[table.uuid]
-            override fun addElementToInsert(insert: InsertStatement, entry: UUID, finalizables: MutableList<() -> Unit>) {
-                insert[table.uuid] = entry
-            }
-        })
+            object : AbstractJDBCHashSet<UUID, Table>(Table, loadOnInit = true) {
+                override fun elementFromRow(row: ResultRow): UUID = row[table.uuid]
+                override fun addElementToInsert(insert: InsertStatement, entry: UUID, finalizables: MutableList<() -> Unit>) {
+                    insert[table.uuid] = entry
+                }
+            })
 
     fun start(rpcOps: RPCOps, userService: RPCUserService) {
         state.locked {
@@ -118,7 +116,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             started = true
 
             log.info("Connecting to server: $serverHostPort")
-            val tcpTransport = tcpTransport(ConnectionDirection.OUTBOUND, serverHostPort.hostText, serverHostPort.port)
+            // TODO Add broker CN to config for host verification in case the embedded broker isn't used
+            val tcpTransport = tcpTransport(Outbound(), serverHostPort.hostText, serverHostPort.port)
             val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
             clientFactory = locator.createSessionFactory()
 
@@ -210,7 +209,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             check(started) { "start must be called first" }
             check(!running) { "run can't be called twice" }
             running = true
-            rpcDispatcher!!.start(rpcConsumer!!, rpcNotificationConsumer!!, executor)
+            rpcDispatcher!!.start(rpcConsumer!!, rpcNotificationConsumer!!, nodeExecutor)
             p2pConsumer!!
         }
 
@@ -292,7 +291,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             //
             // Note that handlers may re-enter this class. We aren't holding any locks and methods like
             // start/run/stop have re-entrancy assertions at the top, so it is OK.
-            executor.fetchFrom {
+            nodeExecutor.fetchFrom {
                 databaseTransaction(database) {
                     if (msg.uniqueMessageId in processedMessages) {
                         log.trace { "Discard duplicate message ${msg.uniqueMessageId} for ${msg.topicSession}" }
@@ -335,7 +334,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             p2pConsumer = null
             prevRunning
         }
-        if (running && !executor.isOnThread) {
+        if (running && !nodeExecutor.isOnThread) {
             // Wait for the main loop to notice the consumer has gone and finish up.
             shutdownLatch.await()
         }
@@ -358,32 +357,39 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     }
 
     override fun send(message: Message, target: MessageRecipients) {
-        state.locked {
-            val mqAddress = getMQAddress(target)
-            val artemisMessage = session!!.createMessage(true).apply {
-                val sessionID = message.topicSession.sessionID
-                putStringProperty(TOPIC_PROPERTY, message.topicSession.topic)
-                putLongProperty(SESSION_ID_PROPERTY, sessionID)
-                writeBodyBufferBytes(message.data)
-                // Use the magic deduplication property built into Artemis as our message identity too
-                putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString()))
-            }
+        // We have to perform sending on a different thread pool, since using the same pool for messaging and
+        // fibers leads to Netty buffer memory leaks, caused by both Netty and Quasar fiddling with thread-locals.
+        messagingExecutor.fetchFrom {
+            state.locked {
+                val mqAddress = getMQAddress(target)
+                val artemisMessage = session!!.createMessage(true).apply {
+                    val sessionID = message.topicSession.sessionID
+                    putStringProperty(TOPIC_PROPERTY, message.topicSession.topic)
+                    putLongProperty(SESSION_ID_PROPERTY, sessionID)
+                    writeBodyBufferBytes(message.data)
+                    // Use the magic deduplication property built into Artemis as our message identity too
+                    putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString()))
 
-            log.info("Send to: $mqAddress topic: ${message.topicSession.topic} sessionID: ${message.topicSession.sessionID} " +
-                    "uuid: ${message.uniqueMessageId}")
-            producer!!.send(mqAddress, artemisMessage)
+                    // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
+                    if (AMQ_DELAY > 0 && message.topicSession.topic == StateMachineManager.sessionTopic.topic) {
+                        putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + AMQ_DELAY);
+                    }
+                }
+                log.info("Send to: $mqAddress topic: ${message.topicSession.topic} sessionID: ${message.topicSession.sessionID} " +
+                        "uuid: ${message.uniqueMessageId}")
+                producer!!.send(mqAddress, artemisMessage)
+            }
         }
     }
 
-    private fun getMQAddress(target: MessageRecipients): SimpleString {
+
+    private fun getMQAddress(target: MessageRecipients): String {
         return if (target == myAddress) {
             // If we are sending to ourselves then route the message directly to our P2P queue.
-            SimpleString(P2P_QUEUE)
+            P2P_QUEUE
         } else {
             // Otherwise we send the message to an internal queue for the target residing on our broker. It's then the
             // broker's job to route the message to the target's P2P queue.
-            // TODO Make sure that if target is a service that we're part of and the broker routes the message back to us
-            // it doesn't cause any issues.
             val internalTargetQueue = (target as? ArtemisAddress)?.queueName ?: throw IllegalArgumentException("Not an Artemis address")
             createQueueIfAbsent(internalTargetQueue)
             internalTargetQueue
@@ -391,9 +397,9 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     }
 
     /** Attempts to create a durable queue on the broker which is bound to an address of the same name. */
-    private fun createQueueIfAbsent(queueName: SimpleString) {
+    private fun createQueueIfAbsent(queueName: String) {
         state.alreadyLocked {
-            val queueQuery = session!!.queueQuery(queueName)
+            val queueQuery = session!!.queueQuery(SimpleString(queueName))
             if (!queueQuery.isExists) {
                 log.info("Create fresh queue $queueName bound on same address")
                 session!!.createQueue(queueName, queueName, true)
@@ -433,13 +439,15 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     private fun createRPCDispatcher(ops: RPCOps, userService: RPCUserService, nodeLegalName: String) =
             object : RPCDispatcher(ops, userService, nodeLegalName) {
                 override fun send(data: SerializedBytes<*>, toAddress: String) {
-                    state.locked {
-                        val msg = session!!.createMessage(false).apply {
-                            writeBodyBufferBytes(data.bytes)
-                            // Use the magic deduplication property built into Artemis as our message identity too
-                            putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+                    messagingExecutor.fetchFrom {
+                        state.locked {
+                            val msg = session!!.createMessage(false).apply {
+                                writeBodyBufferBytes(data.bytes)
+                                // Use the magic deduplication property built into Artemis as our message identity too
+                                putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+                            }
+                            producer!!.send(toAddress, msg)
                         }
-                        producer!!.send(toAddress, msg)
                     }
                 }
             }

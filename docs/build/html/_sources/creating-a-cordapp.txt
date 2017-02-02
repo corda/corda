@@ -1,7 +1,7 @@
-CorDapps Background
-===================
+CorDapp basics
+==============
 
-A Cordapp is an application that runs on the Corda platform using the platform APIs and plugin system. They are self
+A CorDapp is an application that runs on the Corda platform using the platform APIs and plugin system. They are self
 contained in separate JARs from the node server JAR that are created and distributed.
 
 App plugins
@@ -36,9 +36,8 @@ This will output the node JAR to ``build/libs/corda.jar`` and several sample/sta
 node setups to ``build/nodes``. For now you can use the ``build/nodes/nodea`` configuration as a template.
 
 Each node server by default must have a ``node.conf`` file in the current working directory. After first
-execution of the node server there will be many other configuration and persistence files created in a node
-workspace directory. This is specified as the basedir property of the node.conf file, or else can be overidden
-using ``--base-directory=<workspace>``.
+execution of the node server there will be many other configuration and persistence files created in this
+workspace directory. The directory can be overridden by the ``--base-directory=<workspace>`` command line argument.
 
 .. note:: Outside of development environments do not store your node directories in the build folder.
 
@@ -69,7 +68,7 @@ The configuration file and workspace paths can be overidden on the command line 
 
 ``java -jar corda.jar --config-file=test.conf --base-directory=/opt/r3corda/nodes/test``.
 
-Otherwise the workspace folder for the node is created based upon the ``basedir`` property in the ``node.conf`` file and if this is relative it is applied relative to the current working path.
+Otherwise the workspace folder for the node is the current working path.
 
 Debugging your node
 -------------------
@@ -92,9 +91,9 @@ The user name and password for the login are as per the node data source configu
 The name and column layout of the internal node tables is in a state of flux and should not be relied upon to remain static
 at the present time, and should certainly be treated as read-only.
 
-.. _CordaPluginRegistry: api/net.corda.core.node/-corda-plugin-registry/index.html
-.. _PluginServiceHub: api/net.corda.core.node/-plugin-service-hub/index.html
-.. _ServiceHub: api/net.corda.core.node/-service-hub/index.html
+.. _CordaPluginRegistry: api/kotlin/corda/net.corda.core.node/-corda-plugin-registry/index.html
+.. _PluginServiceHub: api/kotlin/corda/net.corda.core.node/-plugin-service-hub/index.html
+.. _ServiceHub: api/kotlin/corda/net.corda.core.node/-service-hub/index.html
 
 Building against Corda
 ----------------------
@@ -112,15 +111,15 @@ This will publish corda-$version.jar, finance-$version.jar, core-$version.jar an
 group net.corda. You can now depend on these as you normally would a Maven dependency.
 
 Gradle plugins for CorDapps
-===========================
+---------------------------
 
-There are several Gradle plugins that reduce your build.gradle boilerplate and make development of Cordapps easier.
+There are several Gradle plugins that reduce your build.gradle boilerplate and make development of CorDapps easier.
 The available plugins are in the gradle-plugins directory of the Corda repository.
 
 Building Gradle plugins
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
-To install to your local Maven repository the plugins that Cordapp gradle files require, run the following from the
+To install to your local Maven repository the plugins that CorDapp gradle files require, run the following from the
 root of the Corda project:
 
 .. code-block:: text
@@ -130,15 +129,15 @@ root of the Corda project:
 The plugins will now be installed to your local Maven repository in ~/.m2 on Unix and %HOMEPATH%\.m2 on Windows.
 
 Using Gradle plugins
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
-To use the plugins, if you are not already using the Cordapp template project, you must modify your build.gradle. Add
+To use the plugins, if you are not already using the CorDapp template project, you must modify your build.gradle. Add
 the following segments to the relevant part of your build.gradle.
 
 Template build.gradle
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
-To build against Corda and the plugins that cordapps use, update your build.gradle to contain the following:
+To build against Corda and the plugins that CorDapps use, update your build.gradle to contain the following:
 
 .. code-block:: groovy
 
@@ -179,7 +178,7 @@ To build against Corda and the plugins that cordapps use, update your build.grad
 
     ... your tasks ...
 
-    // Standard way to publish Cordapps to maven local with the maven-publish and publish-utils plugin.
+    // Standard way to publish CorDapps to maven local with the maven-publish and publish-utils plugin.
     publishing {
         publications {
             jarAndSources(MavenPublication) {
@@ -194,9 +193,9 @@ To build against Corda and the plugins that cordapps use, update your build.grad
 
 
 Cordformation
--------------
+~~~~~~~~~~~~~
 
-Cordformation is the local node deployment system for Cordapps, the nodes generated are intended to be used for
+Cordformation is the local node deployment system for CorDapps, the nodes generated are intended to be used for
 experimenting, debugging, and testing node configurations and setups but not intended for production or testnet
 deployment.
 
@@ -209,10 +208,9 @@ is a three node example;
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         directory "./build/nodes" // The output directory
-        networkMap "Controller" // The artemis address of the node named here will be used as the networkMapAddress on all other nodes.
+        networkMap "Controller" // The artemis address of the node named here will be used as the networkMapService.address on all other nodes.
         node {
             name "Controller"
-            dirName "controller"
             nearestCity "London"
             advertisedServices = [ "corda.notary.validating" ]
             artemisPort 12345
@@ -221,7 +219,6 @@ is a three node example;
         }
         node {
             name "NodeA"
-            dirName "nodea"
             nearestCity "London"
             advertisedServices = []
             artemisPort 31337
@@ -230,7 +227,6 @@ is a three node example;
         }
         node {
             name "NodeB"
-            dirName "nodeb"
             nearestCity "New York"
             advertisedServices = []
             artemisPort 31338
@@ -247,5 +243,5 @@ at present) to run the nodes with one command (``runnodes``). On MacOS X this sc
 terminal tab, and on Linux it will open up a new XTerm for each node. On Windows the (``runnodes.bat``) script will run
 one node per window.
 
-Other cordapps can also be specified if they are already specified as classpath or compile dependencies in your
+Other CorDapps can also be specified if they are already specified as classpath or compile dependencies in your
 ``build.gradle``.

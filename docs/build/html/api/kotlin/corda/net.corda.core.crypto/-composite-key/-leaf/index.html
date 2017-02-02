@@ -1,0 +1,118 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CompositeKey.Leaf - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.core.crypto</a>&nbsp;/&nbsp;<a href="../index.html">CompositeKey</a>&nbsp;/&nbsp;<a href=".">Leaf</a><br/>
+<br/>
+<h1>Leaf</h1>
+<code><span class="keyword">class </span><span class="identifier">Leaf</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../index.html"><span class="identifier">CompositeKey</span></a></code>
+<p>The leaf node of the tree – a wrapper around a <a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html">PublicKey</a> primitive</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">Leaf</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.CompositeKey.Leaf$<init>(java.security.PublicKey)/publicKey">publicKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span></code>
+<p>The leaf node of the tree – a wrapper around a <a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html">PublicKey</a> primitive</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="keys.html">keys</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">keys</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code>
+<p>Returns all <a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html">PublicKey</a>s contained within the tree leaves</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="public-key.html">publicKey</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">publicKey</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../single-key.html">singleKey</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">singleKey</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code>
+<p>Returns the enclosed <a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html">PublicKey</a> for a <a href="../index.html">CompositeKey</a> with a single leaf node</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="equals.html">equals</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">equals</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.CompositeKey.Leaf$equals(kotlin.Any)/other">other</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="hash-code.html">hashCode</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">hashCode</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="is-fulfilled-by.html">isFulfilledBy</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">isFulfilledBy</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.CompositeKey.Leaf$isFulfilledBy(kotlin.collections.Iterable((java.security.PublicKey)))/keys">keys</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Checks whether <a href="is-fulfilled-by.html#net.corda.core.crypto.CompositeKey.Leaf$isFulfilledBy(kotlin.collections.Iterable((java.security.PublicKey)))/keys">keys</a> match a sufficient amount of leaf nodes</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="to-string.html">toString</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../contains-any.html">containsAny</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">containsAny</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.CompositeKey$containsAny(kotlin.collections.Iterable((java.security.PublicKey)))/otherKeys">otherKeys</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Checks whether any of the given <a href="../keys.html">keys</a> matches a leaf on the tree</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../is-fulfilled-by.html">isFulfilledBy</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">isFulfilledBy</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.CompositeKey$isFulfilledBy(java.security.PublicKey)/key">key</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../to-base58-string.html">toBase58String</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toBase58String</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code>
+<p>This is generated by serializing the composite key with Kryo, and encoding the resulting bytes in base58.
+A custom serialization format is being used.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>
