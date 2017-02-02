@@ -31,6 +31,8 @@ import org.jetbrains.exposed.sql.Database
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.time.Clock
 import javax.management.ObjectName
 import javax.servlet.*
@@ -99,6 +101,27 @@ class Node(override val configuration: FullNodeConfiguration,
     private var shutdownThread: Thread? = null
 
     private lateinit var userService: RPCUserService
+
+    init {
+        checkVersionUnchanged()
+    }
+
+    /**
+     * Abort starting the node if an existing deployment with a different version is detected in the current directory.
+     * The current version is expected to be specified as a system property. If not provided, the check will be ignored.
+     */
+    private fun checkVersionUnchanged() {
+        val currentVersion = System.getProperty("corda.version") ?: return
+        val versionFile = Paths.get("version")
+        if (Files.exists(versionFile)) {
+            val existingVersion = Files.readAllLines(versionFile)[0]
+            check(existingVersion == currentVersion) {
+                "Version change detected - current: $currentVersion, existing: $existingVersion. Node upgrades are not yet supported."
+            }
+        } else {
+            Files.write(versionFile, currentVersion.toByteArray())
+        }
+    }
 
     override fun makeMessagingService(): MessagingServiceInternal {
         userService = RPCUserServiceImpl(configuration)
