@@ -11,18 +11,16 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.flows.NotaryChangeFlow.Instigator
 import net.corda.flows.StateReplacementException
-import net.corda.flows.StateReplacementRefused
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.node.MockNetwork
-import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class NotaryChangeTests {
@@ -37,7 +35,6 @@ class NotaryChangeTests {
         net = MockNetwork()
         oldNotaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
-                keyPair = DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
         clientNodeA = net.createNode(networkMapAddress = oldNotaryNode.info.address)
         clientNodeB = net.createNode(networkMapAddress = oldNotaryNode.info.address)
@@ -84,8 +81,9 @@ class NotaryChangeTests {
 
         net.runNetwork()
 
-        val ex = assertFailsWith(StateReplacementException::class) { future.resultFuture.getOrThrow() }
-        assertThat(ex.error).isInstanceOf(StateReplacementRefused::class.java)
+        assertThatExceptionOfType(StateReplacementException::class.java).isThrownBy {
+            future.resultFuture.getOrThrow()
+        }
     }
 
     @Test

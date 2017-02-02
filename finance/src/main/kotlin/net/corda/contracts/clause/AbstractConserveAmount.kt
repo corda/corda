@@ -45,6 +45,7 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
      * the responsibility of the caller to check that they do not attempt to exit funds held by others.
      * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
      */
+    @Throws(InsufficientBalanceException::class)
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
                      assetStates: List<StateAndRef<S>>,
                      deriveState: (TransactionState<S>, Amount<Issued<T>>, CompositeKey) -> TransactionState<S>,

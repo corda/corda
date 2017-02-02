@@ -9,6 +9,7 @@ import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
+import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.CordaRPCClient
@@ -52,7 +53,9 @@ class NodeMonitorModel {
      * TODO provide an unsubscribe mechanism
      */
     fun register(nodeHostAndPort: HostAndPort, sslConfig: SSLConfiguration, username: String, password: String) {
-        val client = CordaRPCClient(nodeHostAndPort, sslConfig)
+        val client = CordaRPCClient(nodeHostAndPort, sslConfig){
+            maxRetryInterval = 10.seconds.toMillis()
+        }
         client.start(username, password)
         val proxy = client.proxy()
 

@@ -1,5 +1,7 @@
 package net.corda.node.services.api
 
+import net.corda.core.crypto.SecureHash
+import net.corda.core.node.services.FileUploader
 import java.io.InputStream
 
 /**
@@ -7,16 +9,12 @@ import java.io.InputStream
  *
  * TODO: In future, also accept uploads over the MQ interface too.
  */
-interface AcceptsFileUpload {
+interface AcceptsFileUpload: FileUploader {
     /** A string that prefixes the URLs, e.g. "attachments" or "interest-rates". Should be OK for URLs. */
     val dataTypePrefix: String
 
     /** What file extensions are acceptable for the file to be handed to upload() */
     val acceptableFileExtensions: List<String>
 
-    /**
-     * Accepts the data in the given input stream, and returns some sort of useful return message that will be sent
-     * back to the user in the response.
-     */
-    fun upload(data: InputStream): String
+    override fun accepts(prefix: String) = prefix == dataTypePrefix
 }

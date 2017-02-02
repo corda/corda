@@ -3,6 +3,14 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
+Milestone 8
+-----------
+
+* API:
+
+    * ``Party`` equality is now based on the owning key, rather than the owning key and name. This is important for
+      party anonymisation to work, as each key must identify exactly one party.
+
 Milestone 7
 -----------
 

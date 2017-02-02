@@ -6,6 +6,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.signWithECDSA
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowException
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
@@ -13,7 +14,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.UntrustworthyData
 
 object NotaryFlow {
 
@@ -29,9 +29,7 @@ object NotaryFlow {
         constructor(stx: SignedTransaction) : this(stx, Client.tracker())
 
         companion object {
-
             object REQUESTING : ProgressTracker.Step("Requesting signature by Notary service")
-
             object VALIDATING : ProgressTracker.Step("Validating response from Notary service")
 
             fun tracker() = ProgressTracker(REQUESTING, VALIDATING)
@@ -40,6 +38,7 @@ object NotaryFlow {
         lateinit var notaryParty: Party
 
         @Suspendable
+        @Throws(NotaryException::class)
         override fun call(): DigitalSignature.WithKey {
             progressTracker.currentStep = REQUESTING
             val wtx = stx.tx
@@ -53,27 +52,18 @@ object NotaryFlow {
                 throw NotaryException(NotaryError.SignaturesMissing(ex))
             }
 
-            val response = sendAndReceive<Result>(notaryParty, SignRequest(stx))
-
-            return validateResponse(response)
-        }
-
-        @Throws(NotaryException::class, IllegalStateException::class)
-        private fun validateResponse(response: UntrustworthyData<Result>): DigitalSignature.WithKey {
-            return response.unwrap { notaryResult ->
-                progressTracker.currentStep = VALIDATING
-                when (notaryResult) {
-                    is Result.Success -> {
-                        validateSignature(notaryResult.sig, stx.id.bytes)
-                        notaryResult.sig
-                    }
-                    is Result.Error -> {
-                        if (notaryResult.error is NotaryError.Conflict)
-                            notaryResult.error.conflict.verified()
-                        throw NotaryException(notaryResult.error)
-                    }
-                    else -> throw IllegalStateException("Received invalid result from Notary service '$notaryParty'")
+            val response = try {
+                sendAndReceive<DigitalSignature.WithKey>(notaryParty, SignRequest(stx))
+            } catch (e: NotaryException) {
+                if (e.error is NotaryError.Conflict) {
+                    e.error.conflict.verified()
                 }
+                throw e
+            }
+
+            return response.unwrap { sig ->
+                validateSignature(sig, stx.id.bytes)
+                sig
             }
         }
 
@@ -101,17 +91,11 @@ object NotaryFlow {
             val stx = receive<SignRequest>(otherSide).unwrap { it.tx }
             val wtx = stx.tx
 
-            val result = try {
-                validateTimestamp(wtx)
-                beforeCommit(stx)
-                commitInputStates(wtx)
-                val sig = sign(stx.id.bytes)
-                Result.Success(sig)
-            } catch(e: NotaryException) {
-                Result.Error(e.error)
-            }
-
-            send(otherSide, result)
+            validateTimestamp(wtx)
+            beforeCommit(stx)
+            commitInputStates(wtx)
+            val sig = sign(stx.id.bytes)
+            send(otherSide, sig)
         }
 
         private fun validateTimestamp(tx: WireTransaction) {
@@ -164,15 +148,9 @@ object NotaryFlow {
     }
 
     data class SignRequest(val tx: SignedTransaction)
-
-    sealed class Result {
-        class Error(val error: NotaryError) : Result()
-        class Success(val sig: DigitalSignature.WithKey) : Result()
-    }
-
 }
 
-class NotaryException(val error: NotaryError) : Exception() {
+class NotaryException(val error: NotaryError) : FlowException() {
     override fun toString() = "${super.toString()}: Error response from Notary - $error"
 }
 

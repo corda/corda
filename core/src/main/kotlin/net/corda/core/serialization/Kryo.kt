@@ -11,6 +11,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
 import com.esotericsoftware.kryo.serializers.MapSerializer
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
+import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
@@ -402,12 +403,10 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         // serialise the Kryo object itself when suspending a fiber. That's dumb, useless AND can cause crashes, so
         // we avoid it here.
         register(Kryo::class.java, object : Serializer<Kryo>() {
-            override fun write(kryo: Kryo, output: Output, obj: Kryo) {
-            }
-
             override fun read(kryo: Kryo, input: Input, type: Class<Kryo>): Kryo {
                 return createKryo((Fiber.getFiberSerializer() as KryoSerializer).kryo)
             }
+            override fun write(kryo: Kryo, output: Output, obj: Kryo) {}
         })
 
         register(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
@@ -441,6 +440,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
         addDefaultSerializer(BufferedInputStream::class.java, InputStreamSerializer)
 
+        UnmodifiableCollectionsSerializer.registerSerializers(k)
         ImmutableListSerializer.registerSerializers(k)
         ImmutableSetSerializer.registerSerializers(k)
         ImmutableSortedSetSerializer.registerSerializers(k)

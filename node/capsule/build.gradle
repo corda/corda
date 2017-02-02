@@ -69,6 +69,10 @@ task buildCordaJAR(type: FatCapsule, dependsOn: ['buildCertSigningRequestUtility
         // If you change these flags, please also update Driver.kt
         jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
     }
+
+    manifest {
+        attributes('Corda-Version': corda_version)
+    }
 }
 
 task buildCertSigningRequestUtilityJAR(type: FatCapsule) {

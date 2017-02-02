@@ -47,9 +47,8 @@ object FixingFlow {
 
             // validate the party that initiated is the one on the deal and that the recipient corresponds with it.
             // TODO: this is in no way secure and will be replaced by general session initiation logic in the future
-            val myName = serviceHub.myInfo.legalIdentity.name
             // Also check we are one of the parties
-            deal.parties.filter { it.name == myName }.single()
+            require(deal.parties.count { it.owningKey == serviceHub.myInfo.legalIdentity.owningKey } == 1)
 
             return handshake
         }
@@ -60,8 +59,7 @@ object FixingFlow {
             val fixOf = deal.nextFixingOf()!!
 
             // TODO Do we need/want to substitute in new public keys for the Parties?
-            val myName = serviceHub.myInfo.legalIdentity.name
-            val myOldParty = deal.parties.single { it.name == myName }
+            val myOldParty = deal.parties.single { it.owningKey == serviceHub.myInfo.legalIdentity.owningKey }
 
             val newDeal = deal
 
@@ -109,8 +107,8 @@ object FixingFlow {
         }
 
         override val myKeyPair: KeyPair get() {
-            val myName = serviceHub.myInfo.legalIdentity.name
-            val myKeys = dealToFix.state.data.parties.filter { it.name == myName }.single().owningKey.keys
+            val myCompositeKey = serviceHub.myInfo.legalIdentity.owningKey
+            val myKeys = dealToFix.state.data.parties.filter { it.owningKey == myCompositeKey }.single().owningKey.keys
             return serviceHub.keyManagementService.toKeyPair(myKeys)
         }
 
@@ -144,13 +142,12 @@ object FixingFlow {
         override fun call(): Unit {
             progressTracker.nextStep()
             val dealToFix = serviceHub.loadState(ref)
-            // TODO: this is not the eventual mechanism for identifying the parties
             val fixableDeal = (dealToFix.data as FixableDealState)
-            val sortedParties = fixableDeal.parties.sortedBy { it.name }
-            if (sortedParties[0].name == serviceHub.myInfo.legalIdentity.name) {
+            val parties = fixableDeal.parties.filter { it.owningKey != serviceHub.myInfo.legalIdentity.owningKey }
+            if (parties.isNotEmpty()) {
                 val fixing = FixingSession(ref, fixableDeal.oracleType)
                 // Start the Floater which will then kick-off the Fixer
-                subFlow(Floater(sortedParties[1], fixing))
+                subFlow(Floater(parties.first(), fixing))
             }
         }
     }

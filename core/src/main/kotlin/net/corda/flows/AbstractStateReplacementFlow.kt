@@ -8,6 +8,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.signWithECDSA
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.recordTransactions
 import net.corda.core.transactions.SignedTransaction
@@ -27,26 +28,22 @@ import net.corda.flows.AbstractStateReplacementFlow.Instigator
  * Finally, [Instigator] sends the transaction containing all signatures back to each participant so they can record it and
  * use the new updated state for future transactions.
  */
-abstract class AbstractStateReplacementFlow<T> {
-    interface Proposal<out T> {
-        val stateRef: StateRef
-        val modification: T
-        val stx: SignedTransaction
-    }
+abstract class AbstractStateReplacementFlow {
+    data class Proposal<out T>(val stateRef: StateRef, val modification: T, val stx: SignedTransaction)
 
-    abstract class Instigator<out S : ContractState, T>(val originalState: StateAndRef<S>,
-                                                        val modification: T,
-                                                        override val progressTracker: ProgressTracker = tracker()) : FlowLogic<StateAndRef<S>>() {
+    abstract class Instigator<out S : ContractState, out T>(
+            val originalState: StateAndRef<S>,
+            val modification: T,
+            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<StateAndRef<S>>() {
         companion object {
-
             object SIGNING : ProgressTracker.Step("Requesting signatures from other parties")
-
             object NOTARY : ProgressTracker.Step("Requesting notary signature")
 
             fun tracker() = ProgressTracker(SIGNING, NOTARY)
         }
 
         @Suspendable
+        @Throws(StateReplacementException::class)
         override fun call(): StateAndRef<S> {
             val (stx, participants) = assembleTx()
 
@@ -66,7 +63,6 @@ abstract class AbstractStateReplacementFlow<T> {
             return finalTx.tx.outRef(0)
         }
 
-        abstract protected fun assembleProposal(stateRef: StateRef, modification: T, stx: SignedTransaction): Proposal<T>
         abstract protected fun assembleTx(): Pair<SignedTransaction, Iterable<CompositeKey>>
 
         @Suspendable
@@ -89,59 +85,55 @@ abstract class AbstractStateReplacementFlow<T> {
 
         @Suspendable
         private fun getParticipantSignature(party: Party, stx: SignedTransaction): DigitalSignature.WithKey {
-            val proposal = assembleProposal(originalState.ref, modification, stx)
-
-            val response = sendAndReceive<Result>(party, proposal)
-            val participantSignature = response.unwrap {
-                if (it.sig == null) throw StateReplacementException(it.error!!)
-                else {
-                    check(party.owningKey.isFulfilledBy(it.sig.by)) { "Not signed by the required participant" }
-                    it.sig.verifyWithECDSA(stx.id)
-                    it.sig
-                }
+            val proposal = Proposal(originalState.ref, modification, stx)
+            val response = sendAndReceive<DigitalSignature.WithKey>(party, proposal)
+            return response.unwrap {
+                check(party.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
+                it.verifyWithECDSA(stx.id)
+                it
             }
-
-            return participantSignature
         }
 
         @Suspendable
         private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = NOTARY
-            return subFlow(NotaryFlow.Client(stx))
+            try {
+                return subFlow(NotaryFlow.Client(stx))
+            } catch (e: NotaryException) {
+                throw StateReplacementException("Unable to notarise state change", e)
+            }
         }
     }
 
-    abstract class Acceptor<T>(val otherSide: Party,
-                               override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
-
+    abstract class Acceptor<in T>(val otherSide: Party,
+                                  override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
         companion object {
             object VERIFYING : ProgressTracker.Step("Verifying state replacement proposal")
-
             object APPROVING : ProgressTracker.Step("State replacement approved")
 
-            object REJECTING : ProgressTracker.Step("State replacement rejected")
-
-            fun tracker() = ProgressTracker(VERIFYING, APPROVING, REJECTING)
+            fun tracker() = ProgressTracker(VERIFYING, APPROVING)
         }
 
         @Suspendable
+        @Throws(StateReplacementException::class)
         override fun call() {
             progressTracker.currentStep = VERIFYING
             val maybeProposal: UntrustworthyData<Proposal<T>> = receive(otherSide)
-            try {
-                val stx: SignedTransaction = maybeProposal.unwrap { verifyProposal(maybeProposal).stx }
-                verifyTx(stx)
-                approve(stx)
-            } catch(e: Exception) {
-                // TODO: catch only specific exceptions. However, there are numerous validation exceptions
-                //       that might occur (tx validation/resolution, invalid proposal). Need to rethink how
-                //       we manage exceptions and maybe introduce some platform exception hierarchy
-                val myIdentity = serviceHub.myInfo.legalIdentity
-                val state = maybeProposal.unwrap { it.stateRef }
-                val reason = StateReplacementRefused(myIdentity, state, e.message)
-
-                reject(reason)
+            val stx: SignedTransaction = maybeProposal.unwrap {
+                verifyProposal(it)
+                verifyTx(it.stx)
+                it.stx
             }
+            approve(stx)
+        }
+
+        @Suspendable
+        private fun verifyTx(stx: SignedTransaction) {
+            checkMySignatureRequired(stx.tx)
+            checkDependenciesValid(stx)
+            // We expect stx to have insufficient signatures, so we convert the WireTransaction to the LedgerTransaction
+            // here, thus bypassing the sufficient-signatures check.
+            stx.tx.toLedgerTransaction(serviceHub).verify()
         }
 
         @Suspendable
@@ -149,8 +141,7 @@ abstract class AbstractStateReplacementFlow<T> {
             progressTracker.currentStep = APPROVING
 
             val mySignature = sign(stx)
-            val response = Result.noError(mySignature)
-            val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(otherSide, response)
+            val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(otherSide, mySignature)
 
             // TODO: This step should not be necessary, as signatures are re-checked in verifySignatures.
             val allSignatures = swapSignatures.unwrap { signatures ->
@@ -163,28 +154,13 @@ abstract class AbstractStateReplacementFlow<T> {
             serviceHub.recordTransactions(finalTx)
         }
 
-        @Suspendable
-        private fun reject(e: StateReplacementRefused) {
-            progressTracker.currentStep = REJECTING
-            val response = Result.withError(e)
-            send(otherSide, response)
-        }
-
         /**
          * Check the state change proposal to confirm that it's acceptable to this node. Rules for verification depend
          * on the change proposed, and may further depend on the node itself (for example configuration). The
-         * proposal is returned if acceptable, otherwise an exception is thrown.
+         * proposal is returned if acceptable, otherwise a [StateReplacementException] is thrown.
          */
-        abstract protected fun verifyProposal(maybeProposal: UntrustworthyData<Proposal<T>>): Proposal<T>
-
-        @Suspendable
-        private fun verifyTx(stx: SignedTransaction) {
-            checkMySignatureRequired(stx.tx)
-            checkDependenciesValid(stx)
-            // We expect stx to have insufficient signatures, so we convert the WireTransaction to the LedgerTransaction
-            // here, thus bypassing the sufficient-signatures check.
-            stx.tx.toLedgerTransaction(serviceHub).verify()
-        }
+        @Throws(StateReplacementException::class)
+        abstract protected fun verifyProposal(proposal: Proposal<T>)
 
         private fun checkMySignatureRequired(tx: WireTransaction) {
             // TODO: use keys from the keyManagementService instead
@@ -202,20 +178,7 @@ abstract class AbstractStateReplacementFlow<T> {
             return myKey.signWithECDSA(stx.id)
         }
     }
-
-    // TODO: similar classes occur in other places (NotaryFlow), need to consolidate
-    data class Result private constructor(val sig: DigitalSignature.WithKey?, val error: StateReplacementRefused?) {
-        companion object {
-            fun withError(error: StateReplacementRefused) = Result(null, error)
-            fun noError(sig: DigitalSignature.WithKey) = Result(sig, null)
-        }
-    }
 }
 
-
-/** Thrown when a participant refuses the proposed state replacement */
-class StateReplacementRefused(val identity: Party, val state: StateRef, val detail: String?) {
-    override fun toString() = "A participant $identity refused to change state $state: " + (detail ?: "no reason provided")
-}
-
-class StateReplacementException(val error: StateReplacementRefused) : Exception("State change failed - $error")
+open class StateReplacementException @JvmOverloads constructor(message: String? = null, cause: Throwable? = null)
+    : FlowException(message, cause)

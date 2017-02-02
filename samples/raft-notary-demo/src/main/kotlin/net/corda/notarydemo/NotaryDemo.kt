@@ -24,7 +24,6 @@ fun main(args: Array<String>) {
 
 /** Interface for using the notary demo API from a client. */
 private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
-
     private val notary by lazy {
         rpc.networkMapUpdates().first.first { it.advertisedServices.any { it.info.type.isNotary() } }.notaryIdentity
     }
@@ -37,17 +36,21 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
         private val TRANSACTION_COUNT = 10
     }
 
-    /** Makes a call to the demo api to start transaction notarisation. */
+    /** Makes calls to the node rpc to start transaction notarisation. */
     fun startNotarisation() {
-        val response = notarise(TRANSACTION_COUNT)
-        println(response)
+        notarise(TRANSACTION_COUNT)
     }
 
-    fun notarise(count: Int): String {
+    fun notarise(count: Int) {
         val transactions = buildTransactions(count)
         val signers = notariseTransactions(transactions)
+        val transactionSigners = transactions.zip(signers).map {
+            val (tx, signer) = it
+            "Tx [${tx.tx.id.prefixChars()}..] signed by $signer"
+        }.joinToString("\n")
 
-        return buildResponse(transactions, signers)
+        println("Notary: \"${notary.name}\", with composite key: ${notary.owningKey}\n" +
+                "Notarised ${transactions.size} transactions:\n" + transactionSigners)
     }
 
     /**
@@ -72,20 +75,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
         val signatureFutures = transactions.map {
             rpc.startFlow(NotaryFlow::Client, it).returnValue.toBlocking().toFuture()
         }
-        val signers = signatureFutures.map { it.get().by.toStringShort() }
-        return signers
-    }
-
-    /** Builds a response for the caller containing the list of transaction ids and corresponding signer keys. */
-    private fun buildResponse(transactions: List<SignedTransaction>, signers: List<String>): String {
-        val transactionSigners = transactions.zip(signers).map {
-            val (tx, signer) = it
-            "Tx [${tx.tx.id.prefixChars()}..] signed by $signer"
-        }.joinToString("\n")
-
-        val response = "Notary: \"${notary.name}\", with composite key: ${notary.owningKey}\n" +
-                "Notarised ${transactions.size} transactions:\n" + transactionSigners
-        return response
+        return signatureFutures.map { it.get().by.toStringShort() }
     }
 }
 

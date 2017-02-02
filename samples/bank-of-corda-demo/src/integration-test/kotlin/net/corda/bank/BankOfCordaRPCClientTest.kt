@@ -24,8 +24,8 @@ class BankOfCordaRPCClientTest {
         driver(dsl = {
             val user = User("user1", "test", permissions = setOf(startFlowPermission<IssuanceRequester>()))
             val (nodeBankOfCorda, nodeBigCorporation) = Futures.allAsList(
-                startNode("BankOfCorda", setOf(ServiceInfo(SimpleNotaryService.type)), listOf(user)),
-                startNode("BigCorporation", rpcUsers = listOf(user))
+                    startNode("BankOfCorda", setOf(ServiceInfo(SimpleNotaryService.type)), listOf(user)),
+                    startNode("BigCorporation", rpcUsers = listOf(user))
             ).getOrThrow()
 
             // Bank of Corda RPC Client

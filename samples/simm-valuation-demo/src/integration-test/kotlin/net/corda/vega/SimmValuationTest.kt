@@ -1,9 +1,9 @@
 package net.corda.vega
 
+import com.google.common.util.concurrent.Futures
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
-import net.corda.node.driver.NodeHandle
 import net.corda.node.driver.driver
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.IntegrationTestCategory
@@ -12,14 +12,11 @@ import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.api.SwapDataView
-import net.corda.vega.portfolio.Portfolio
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
-import java.util.*
-import java.util.concurrent.Future
 
-class SimmValuationTest: IntegrationTestCategory {
+class SimmValuationTest : IntegrationTestCategory {
     private companion object {
         // SIMM demo can only currently handle one valuation date due to a lack of market data or a market data source.
         val valuationDate = LocalDate.parse("2016-06-06")
@@ -31,21 +28,18 @@ class SimmValuationTest: IntegrationTestCategory {
     @Test fun `runs SIMM valuation demo`() {
         driver(isDebug = true) {
             startNode("Controller", setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
-            val nodeA = getSimmNodeApi(startNode(nodeALegalName))
-            val nodeB = getSimmNodeApi(startNode(nodeBLegalName))
-            val nodeBParty = getPartyWithName(nodeA, nodeBLegalName)
-            val nodeAParty = getPartyWithName(nodeB, nodeALegalName)
+            val (nodeA, nodeB) = Futures.allAsList(startNode(nodeALegalName), startNode(nodeBLegalName)).getOrThrow()
+            val (nodeAApi, nodeBApi) = Futures.allAsList(startWebserver(nodeA), startWebserver(nodeB))
+                    .getOrThrow()
+                    .map { HttpApi.fromHostAndPort(it, "api/simmvaluationdemo") }
+            val nodeBParty = getPartyWithName(nodeAApi, nodeBLegalName)
+            val nodeAParty = getPartyWithName(nodeBApi, nodeALegalName)
 
-            assert(createTradeBetween(nodeA, nodeBParty, testTradeId))
-            assert(tradeExists(nodeB, nodeAParty, testTradeId))
-            assert(runValuationsBetween(nodeA, nodeBParty))
-            assert(valuationExists(nodeB, nodeAParty))
+            assert(createTradeBetween(nodeAApi, nodeBParty, testTradeId))
+            assert(tradeExists(nodeBApi, nodeAParty, testTradeId))
+            assert(runValuationsBetween(nodeAApi, nodeBParty))
+            assert(valuationExists(nodeBApi, nodeAParty))
         }
-    }
-
-    private fun getSimmNodeApi(futureNode: Future<NodeHandle>): HttpApi {
-        val nodeAddr = futureNode.getOrThrow().configuration.webAddress
-        return HttpApi.fromHostAndPort(nodeAddr, "api/simmvaluationdemo")
     }
 
     private fun getPartyWithName(partyApi: HttpApi, countryparty: String): PortfolioApi.ApiParty =
