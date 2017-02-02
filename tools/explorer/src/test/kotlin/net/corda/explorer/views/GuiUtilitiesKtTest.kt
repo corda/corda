@@ -8,7 +8,7 @@ import java.util.*
 class GuiUtilitiesKtTest {
     @Test
     fun `test to string with suffix`() {
-        //required for this test to be independent of the default Locale
+        //Required for this test to be independent of the default Locale.
         val ds = DecimalFormatSymbols(Locale.getDefault()).decimalSeparator
 
         assertEquals("10${ds}5k", 10500.toStringWithSuffix())
