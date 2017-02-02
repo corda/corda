@@ -38,6 +38,15 @@ class LoginView : View() {
     private val keyStorePasswordProperty by objectProperty(SettingsModel::keyStorePasswordProperty)
     private val trustStorePasswordProperty by objectProperty(SettingsModel::trustStorePasswordProperty)
 
+    private var sslConfigValue: SSLConfiguration = object : SSLConfiguration {
+        override val certificatesDirectory: Path get() = certificatesDir.get()
+        override val keyStorePassword: String get() = keyStorePasswordProperty.get()
+        override val trustStorePassword: String get() = trustStorePasswordProperty.get()
+    }
+    var sslConfig : SSLConfiguration
+        get() = sslConfigValue
+        set(value) { sslConfigValue = value }
+
     fun login(host: String?, port: Int, username: String, password: String) {
         getModel<NodeMonitorModel>().register(HostAndPort.fromParts(host, port), configureSSL(), username, password)
     }
@@ -84,11 +93,6 @@ class LoginView : View() {
     }
 
     private fun configureSSL(): SSLConfiguration {
-        val sslConfig = object : SSLConfiguration {
-            override val certificatesDirectory: Path get() = certificatesDir.get()
-            override val keyStorePassword: String get() = keyStorePasswordProperty.get()
-            override val trustStorePassword: String get() = trustStorePasswordProperty.get()
-        }
         // TODO : Don't use dev certificates.
         return if (sslConfig.keyStoreFile.exists()) sslConfig else configureTestSSL().apply {
             alert(Alert.AlertType.WARNING, "", "KeyStore not found in certificates directory.\nDEV certificates will be used by default.")

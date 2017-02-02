@@ -26,6 +26,7 @@ import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.driver.PortAllocation
 import net.corda.node.driver.driver
 import net.corda.node.services.User
+import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -34,6 +35,7 @@ import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.App
 import tornadofx.addStageIcon
 import tornadofx.find
+import java.nio.file.Paths
 import java.util.*
 
 /**
@@ -64,6 +66,12 @@ class Main : App(MainView::class) {
 
         if ((hostname != null) && (port != null) && (username != null) && (password != null)) {
             try {
+                // Allow us optionally to override the SSL configuration too.
+                val sslConfig = getSSLConfig()
+                if (sslConfig != null) {
+                    loginView.sslConfig = sslConfig
+                }
+
                 loginView.login(hostname, port, username, password)
                 isLoggedIn = true
             } catch (e: Exception) {
@@ -80,13 +88,29 @@ class Main : App(MainView::class) {
 
     private fun asInteger(s: String?): Int? {
         if (s == null) {
-            return null;
+            return null
         }
 
         try {
-            return s.toInt();
+            return s.toInt()
         } catch (e: NumberFormatException) {
             return null
+        }
+    }
+
+    private fun getSSLConfig(): SSLConfiguration? {
+        val certificatesDir = parameters.named["certificatesDir"]
+        val keyStorePassword = parameters.named["keyStorePassword"]
+        val trustStorePassword = parameters.named["trustStorePassword"]
+
+        return if ((certificatesDir != null) && (keyStorePassword != null) && (trustStorePassword != null)) {
+            object: SSLConfiguration {
+                override val certificatesDirectory = Paths.get(certificatesDir)
+                override val keyStorePassword: String = keyStorePassword
+                override val trustStorePassword: String = trustStorePassword
+            }
+        } else {
+            null
         }
     }
 
