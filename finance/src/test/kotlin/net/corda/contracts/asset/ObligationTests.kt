@@ -143,7 +143,7 @@ class ObligationTests {
             // Move fails: not allowed to summon money.
             tweak {
                 command(DUMMY_PUBKEY_1) { Obligation.Commands.Move() }
-                this `fails with` "for reference [00] at issuer MegaCorp the amounts balance"
+                this `fails with` "the amounts balance"
             }
 
             // Issue works.
@@ -609,7 +609,7 @@ class ObligationTests {
         transaction {
             input { inState }
             output { outState `issued by` MINI_CORP }
-            this `fails with` "for reference [00] at issuer MegaCorp the amounts balance"
+            this `fails with` "the amounts balance"
         }
         // Can't mix currencies.
         transaction {
@@ -636,7 +636,7 @@ class ObligationTests {
             input { inState `issued by` MINI_CORP }
             output { outState }
             command(DUMMY_PUBKEY_1) { Obligation.Commands.Move() }
-            this `fails with` "for reference [00] at issuer MiniCorp the amounts balance"
+            this `fails with` "the amounts balance"
         }
     }
 
@@ -678,10 +678,10 @@ class ObligationTests {
 
             command(DUMMY_PUBKEY_1) { Obligation.Commands.Move() }
 
-            this `fails with` "for reference [00] at issuer MegaCorp the amounts balance"
+            this `fails with` "the amounts balance"
 
             command(DUMMY_PUBKEY_1) { Obligation.Commands.Exit(Amount(200.DOLLARS.quantity, inState.amount.token.copy(product = megaCorpDollarSettlement))) }
-            this `fails with` "for reference [00] at issuer MegaCorp the amounts balance"
+            this `fails with` "the amounts balance"
 
             command(DUMMY_PUBKEY_1) { Obligation.Commands.Exit(Amount(200.POUNDS.quantity, inState.amount.token.copy(product = megaCorpPoundSettlement))) }
             this.verifies()
@@ -698,13 +698,13 @@ class ObligationTests {
             // Can't merge them together.
             tweak {
                 output { inState.copy(beneficiary = DUMMY_PUBKEY_2, quantity = 200000L) }
-                this `fails with` "for reference [00] at issuer MegaCorp the amounts balance"
+                this `fails with` "the amounts balance"
             }
             // Missing MiniCorp deposit
             tweak {
                 output { inState.copy(beneficiary = DUMMY_PUBKEY_2) }
                 output { inState.copy(beneficiary = DUMMY_PUBKEY_2) }
-                this `fails with` "for reference [00] at issuer MegaCorp the amounts balance"
+                this `fails with` "the amounts balance"
             }
 
             // This works.
