@@ -1,6 +1,7 @@
 package net.corda.irs.api
 
 import net.corda.core.contracts.filterStatesOfType
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.loggerFor
@@ -66,12 +67,12 @@ class InterestRateSwapAPI(val rpc: CordaRPCOps) {
     @Path("deals")
     @Consumes(MediaType.APPLICATION_JSON)
     fun storeDeal(newDeal: InterestRateSwap.State): Response {
-        try {
-            rpc.startFlow(AutoOfferFlow::Requester, newDeal).returnValue.toBlocking().first()
-            return Response.created(URI.create(generateDealLink(newDeal))).build()
+        return try {
+            rpc.startFlow(AutoOfferFlow::Requester, newDeal).returnValue.getOrThrow()
+            Response.created(URI.create(generateDealLink(newDeal))).build()
         } catch (ex: Throwable) {
             logger.info("Exception when creating deal: $ex")
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.toString()).build()
+            Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.toString()).build()
         }
     }
 
@@ -94,7 +95,7 @@ class InterestRateSwapAPI(val rpc: CordaRPCOps) {
         val priorDemoDate = fetchDemoDate()
         // Can only move date forwards
         if (newDemoDate.isAfter(priorDemoDate)) {
-            rpc.startFlow(UpdateBusinessDayFlow::Broadcast, newDemoDate).returnValue.toBlocking().first()
+            rpc.startFlow(UpdateBusinessDayFlow::Broadcast, newDemoDate).returnValue.getOrThrow()
             return Response.ok().build()
         }
         val msg = "demodate is already $priorDemoDate and can only be updated with a later date"
@@ -113,7 +114,7 @@ class InterestRateSwapAPI(val rpc: CordaRPCOps) {
     @Path("restart")
     @Consumes(MediaType.APPLICATION_JSON)
     fun exitServer(): Response {
-        rpc.startFlow(ExitServerFlow::Broadcast, 83).returnValue.toBlocking().first()
+        rpc.startFlow(ExitServerFlow::Broadcast, 83).returnValue.getOrThrow()
         return Response.ok().build()
     }
 }

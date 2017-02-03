@@ -15,7 +15,6 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
-import net.corda.core.toObservable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.messaging.requirePermission
 import net.corda.node.services.startFlowPermission
@@ -97,7 +96,7 @@ class CordaRPCOpsImpl(
         return FlowHandle(
                 id = stateMachine.id,
                 progress = stateMachine.logic.track()?.second ?: Observable.empty(),
-                returnValue = stateMachine.resultFuture.toObservable()
+                returnValue = stateMachine.resultFuture
         )
     }
 
@@ -111,7 +110,7 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered.toObservable()
+    override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered
     override fun partyFromKey(key: CompositeKey) = services.identityService.partyFromKey(key)
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)
 

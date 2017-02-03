@@ -380,7 +380,7 @@ open class DriverDSL(
         registerProcess(processFuture)
         return processFuture.flatMap { process ->
             establishRpc(messagingAddress, configuration).flatMap { rpc ->
-                rpc.waitUntilRegisteredWithNetworkMap().toFuture().map {
+                rpc.waitUntilRegisteredWithNetworkMap().map {
                     NodeHandle(rpc.nodeIdentity(), rpc, configuration, process)
                 }
             }

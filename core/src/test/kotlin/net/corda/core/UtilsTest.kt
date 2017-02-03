@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.*
 import org.junit.Test
 import rx.subjects.PublishSubject
 import java.util.*
+import java.util.concurrent.CancellationException
 
 class UtilsTest {
     @Test
@@ -43,5 +44,17 @@ class UtilsTest {
         assertThatThrownBy {
             future.getOrThrow()
         }.isSameAs(exception)
+    }
+
+    @Test
+    fun `toFuture - cancel`() {
+        val subject = PublishSubject.create<String>()
+        val future = subject.toFuture()
+        future.cancel(false)
+        assertThat(subject.hasObservers()).isFalse()
+        subject.onNext("Hello")
+        assertThatExceptionOfType(CancellationException::class.java).isThrownBy {
+            future.get()
+        }
     }
 }

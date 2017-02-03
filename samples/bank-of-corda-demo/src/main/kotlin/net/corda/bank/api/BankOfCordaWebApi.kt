@@ -1,13 +1,14 @@
 package net.corda.bank.api
 
-import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.currency
+import net.corda.core.flows.FlowException
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.loggerFor
+import net.corda.flows.IssuerFlow.IssuanceRequester
 import java.time.LocalDateTime
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
@@ -46,12 +47,13 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
 
         // invoke client side of Issuer Flow: IssuanceRequester
         // The line below blocks and waits for the future to resolve.
-        val result = rpc.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty).returnValue.toBlocking().first()
-        if (result is SignedTransaction) {
-            logger.info("Issue request completed successfully: ${params}")
-            return Response.status(Response.Status.CREATED).build()
-        } else {
-            return Response.status(Response.Status.BAD_REQUEST).build()
+        val status = try {
+            rpc.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty).returnValue.getOrThrow()
+            logger.info("Issue request completed successfully: $params")
+            Response.Status.CREATED
+        } catch (e: FlowException) {
+            Response.Status.BAD_REQUEST
         }
+        return Response.status(status).build()
     }
 }

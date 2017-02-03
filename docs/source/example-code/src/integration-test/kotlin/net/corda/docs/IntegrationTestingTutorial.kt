@@ -9,7 +9,6 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.toFuture
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.node.driver.driver
@@ -87,7 +86,7 @@ class IntegrationTestingTutorial {
                         amount = i.DOLLARS.issuedBy(alice.nodeInfo.legalIdentity.ref(issueRef)),
                         recipient = alice.nodeInfo.legalIdentity
                 ))
-                flowHandle.returnValue.toFuture().getOrThrow()
+                flowHandle.returnValue.getOrThrow()
             }
 
             aliceVaultUpdates.expectEvents {

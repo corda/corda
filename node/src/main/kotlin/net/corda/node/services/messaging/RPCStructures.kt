@@ -8,9 +8,10 @@ import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.esotericsoftware.kryo.serializers.JavaSerializer
 import com.google.common.net.HostAndPort
+import com.google.common.util.concurrent.ListenableFuture
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
+import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
 import net.corda.contracts.asset.Cash
 import net.corda.core.ErrorOr
@@ -19,6 +20,8 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.IllegalFlowLogicException
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.StateMachineInfo
@@ -26,12 +29,15 @@ import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.serialization.*
+import net.corda.core.toFuture
+import net.corda.core.toObservable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.User
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.node.services.messaging.ArtemisMessagingComponent.NetworkMapAddress
+import net.corda.node.services.statemachine.FlowSessionException
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -138,6 +144,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(Array<Any>(0,{}).javaClass)
         register(Class::class.java, ClassSerializer)
 
+        UnmodifiableCollectionsSerializer.registerSerializers(this)
         ImmutableListSerializer.registerSerializers(this)
         ImmutableSetSerializer.registerSerializers(this)
         ImmutableSortedSetSerializer.registerSerializers(this)
@@ -207,16 +214,18 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(SimpleString::class.java)
         register(ServiceEntry::class.java)
         // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
+        register(Array<StackTraceElement>::class, read = { kryo, input -> emptyArray() }, write = { kryo, output, obj -> })
+        register(FlowException::class.java)
+        register(FlowSessionException::class.java)
+        register(IllegalFlowLogicException::class.java)
         register(RuntimeException::class.java)
         register(IllegalArgumentException::class.java)
         register(ArrayIndexOutOfBoundsException::class.java)
         register(IndexOutOfBoundsException::class.java)
-        // Kryo couldn't serialize Collections.unmodifiableCollection in Throwable correctly, causing null pointer exception when try to access the deserialize object.
-        register(NoSuchElementException::class.java, JavaSerializer())
+        register(NoSuchElementException::class.java)
         register(RPCException::class.java)
-        register(Array<StackTraceElement>::class.java, read = { kryo, input -> emptyArray() }, write = { kryo, output, o -> })
-        register(Collections.unmodifiableList(emptyList<String>()).javaClass)
         register(PermissionException::class.java)
+        register(Throwable::class.java)
         register(FlowHandle::class.java)
         register(KryoException::class.java)
         register(StringBuffer::class.java)
@@ -229,20 +238,45 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         pluginRegistries.forEach { it.registerRPCKryoTypes(this) }
     }
 
-    // Helper method, attempt to reduce boiler plate code
-    private fun <T> register(type: Class<T>, read: (Kryo, Input) -> T, write: (Kryo, Output, T) -> Unit) {
-        register(type, object : Serializer<T>() {
-            override fun read(kryo: Kryo, input: Input, type: Class<T>): T = read(kryo, input)
-            override fun write(kryo: Kryo, output: Output, o: T) = write(kryo, output, o)
-        })
+    // TODO: workaround to prevent Observable registration conflict when using plugin registered kyro classes
+    private val observableRegistration: Registration? = observableSerializer?.let { register(Observable::class.java, it, 10000) }
+
+    private val listenableFutureRegistration: Registration? = observableSerializer?.let {
+        // Register ListenableFuture by making use of Observable serialisation.
+        // TODO Serialisation could be made more efficient as a future can only emit one value (or exception)
+        @Suppress("UNCHECKED_CAST")
+        register(ListenableFuture::class,
+                read = { kryo, input -> it.read(kryo, input, Observable::class.java as Class<Observable<Any>>).toFuture() },
+                write = { kryo, output, obj -> it.write(kryo, output, obj.toObservable()) }
+        )
     }
 
-    // TODO: workaround to prevent Observable registration conflict when using plugin registered kyro classes
-    val observableRegistration: Registration? = if (observableSerializer != null) register(Observable::class.java, observableSerializer, 10000) else null
+    // Avoid having to worry about the subtypes of FlowException by converting all of them to just FlowException.
+    // This is a temporary hack until a proper serialisation mechanism is in place.
+    private val flowExceptionRegistration: Registration = register(
+            FlowException::class,
+            read = { kryo, input ->
+                val message = input.readString()
+                val cause = kryo.readObjectOrNull(input, Throwable::class.java)
+                FlowException(message, cause)
+            },
+            write = { kryo, output, obj ->
+                // The subclass may have overridden toString so we use that
+                val message = if (obj.javaClass != FlowException::class.java) obj.toString() else obj.message
+                output.writeString(message)
+                kryo.writeObjectOrNull(output, obj.cause, Throwable::class.java)
+            }
+    )
 
     override fun getRegistration(type: Class<*>): Registration {
         if (Observable::class.java.isAssignableFrom(type))
-            return observableRegistration ?: throw IllegalStateException("This RPC was not annotated with @RPCReturnsObservables")
+            return observableRegistration ?:
+                    throw IllegalStateException("This RPC was not annotated with @RPCReturnsObservables")
+        if (ListenableFuture::class.java.isAssignableFrom(type))
+            return listenableFutureRegistration ?:
+                    throw IllegalStateException("This RPC was not annotated with @RPCReturnsObservables")
+        if (FlowException::class.java.isAssignableFrom(type))
+            return flowExceptionRegistration
         return super.getRegistration(type)
     }
 }
