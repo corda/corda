@@ -25,15 +25,15 @@ class WireTransaction(
         /** Pointers to the input states on the ledger, identified by (tx identity hash, output index). */
         override val inputs: List<StateRef>,
         /** Hashes of the ZIP/JAR files that are needed to interpret the contents of this wire transaction. */
-        val attachments: List<SecureHash>,
+        override val attachments: List<SecureHash>,
         outputs: List<TransactionState<ContractState>>,
         /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
-        val commands: List<Command>,
+        override val commands: List<Command>,
         notary: Party?,
         signers: List<CompositeKey>,
         type: TransactionType,
         timestamp: Timestamp?
-) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp) {
+) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp), TraversableTransaction {
     init {
         checkInvariants()
     }
@@ -42,14 +42,7 @@ class WireTransaction(
     @Volatile @Transient private var cachedBytes: SerializedBytes<WireTransaction>? = null
     val serialized: SerializedBytes<WireTransaction> get() = cachedBytes ?: serialize().apply { cachedBytes = this }
 
-    //We need cashed leaves hashes and whole tree for an id and Partial Merkle Tree calculation.
-    @Volatile @Transient private var cachedLeavesHashes: List<SecureHash>? = null
-    val allLeavesHashes: List<SecureHash> get() = cachedLeavesHashes ?: calculateLeavesHashes().apply { cachedLeavesHashes = this }
-
-    @Volatile @Transient var cachedTree: MerkleTree? = null
-    val merkleTree: MerkleTree get() = cachedTree ?: MerkleTree.getMerkleTree(allLeavesHashes).apply { cachedTree = this }
-
-    override val id: SecureHash get() = merkleTree.hash
+    override val id: SecureHash by lazy { getMerkleTree().hash }
 
     companion object {
         fun deserialize(data: SerializedBytes<WireTransaction>, kryo: Kryo = THREAD_LOCAL_KRYO.get()): WireTransaction {
@@ -89,6 +82,39 @@ class WireTransaction(
         }
         val resolvedInputs = inputs.map { StateAndRef(services.loadState(it), it) }
         return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, mustSign, timestamp, type)
+    }
+
+    /**
+     * Build filtered transaction using provided filtering functions.
+     */
+    fun buildFilteredTransaction(filtering: (Any) -> Boolean): FilteredTransaction {
+        return FilteredTransaction.buildMerkleTransaction(this, filtering)
+    }
+
+    /**
+     * Builds whole Merkle tree for a transaction.
+     */
+    fun getMerkleTree(): MerkleTree {
+        return MerkleTree.getMerkleTree(calculateLeavesHashes())
+    }
+
+    /**
+     * Construction of partial transaction from WireTransaction based on filtering.
+     * @param filtering filtering over the whole WireTransaction
+     * @returns FilteredLeaves used in PartialMerkleTree calculation and verification.
+     */
+    fun filterWithFun(filtering: (Any) -> Boolean): FilteredLeaves {
+        fun notNullFalse(elem: Any?): Any? = if(elem == null || !filtering(elem)) null else elem
+        return FilteredLeaves(
+                inputs.filter { filtering(it) },
+                attachments.filter { filtering(it) },
+                outputs.filter { filtering(it) },
+                commands.filter { filtering(it) },
+                notNullFalse(notary) as Party?,
+                mustSign.filter { filtering(it) },
+                notNullFalse(type) as TransactionType?,
+                notNullFalse(timestamp) as Timestamp?
+        )
     }
 
     override fun toString(): String {
