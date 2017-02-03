@@ -239,8 +239,11 @@ those for ``NodeInterestRates.Oracle``.
    :start-after: DOCSTART 1
    :end-before: DOCEND 1
 
-You'll note that the ``FixSignFlow`` requires a ``FilterFuns`` instance with the appropriate filter to include only
-the ``Fix`` commands.  You can find a further explanation of this in :doc:`merkle-trees`.
+You'll note that the ``FixSignFlow`` requires a ``FilterTransaction`` instance which includes only ``Fix`` commands.
+You can find a further explanation of this in :doc:`merkle-trees`. Below you will see how to build such transaction with
+hidden fields.
+
+.. _filtering_ref:
 
 Using an oracle
 ---------------
@@ -260,8 +263,9 @@ As you can see, this:
 2. Does some quick validation.
 3. Adds the command to the transaction containing the fact to be signed for by the oracle.
 4. Calls an extension point that allows clients to generate output states based on the fact from the oracle.
-5. Requests the signature from the oracle using the client sub-flow for signing from above.
-6. Adds the signature returned from the oracle.
+5. Builds filtered transaction based on filtering function extended from ``RatesFixFlow``.
+6. Requests the signature from the oracle using the client sub-flow for signing from above.
+7. Adds the signature returned from the oracle.
 
 Here's an example of it in action from ``FixingFlow.Fixer``.
 
@@ -269,3 +273,8 @@ Here's an example of it in action from ``FixingFlow.Fixer``.
    :language: kotlin
    :start-after: DOCSTART 1
    :end-before: DOCEND 1
+
+.. note::
+    When overriding be careful when making the sub-class an anonymous or inner class (object declarations in Kotlin),
+    because that kind of classes can access variables from the enclosing scope and cause serialization problems when
+    checkpointed.
