@@ -14,7 +14,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 fun main(args: Array<String>) {
-    val host = HostAndPort.fromString("localhost:10002")
+    val host = HostAndPort.fromString("localhost:10001")
     println("Connecting to the recipient node ($host)")
     CordaRPCClient(host, sslConfigFor("nodeb", "build/notary-demo-nodes/Party/certificates")).use("demo", "demo") {
         val api = NotaryDemoClientApi(this)
