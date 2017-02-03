@@ -68,14 +68,7 @@ object FixingFlow {
             val oracleParty = oracle.serviceIdentities(handshake.payload.oracleType).first()
 
             // DOCSTART 1
-            fun filtering(elem: Any): Boolean {
-                return when (elem) {
-                    is Command -> oracleParty.owningKey in elem.signers && elem.value is Fix
-                    else -> false
-                }
-            }
-
-            val addFixing = object : RatesFixFlow(ptx, ::filtering, oracleParty, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
+            val addFixing = object : RatesFixFlow(ptx, oracleParty, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
                 @Suspendable
                 override fun beforeSigning(fix: Fix) {
                     newDeal.generateFix(ptx, StateAndRef(txState, handshake.payload.ref), fix)
@@ -83,6 +76,14 @@ object FixingFlow {
                     // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
                     // to have one.
                     ptx.setTime(serviceHub.clock.instant(), 30.seconds)
+                }
+
+                @Suspendable
+                override fun filtering(elem: Any): Boolean {
+                    return when (elem) {
+                        is Command -> oracleParty.owningKey in elem.signers && elem.value is Fix
+                        else -> false
+                    }
                 }
             }
             subFlow(addFixing)

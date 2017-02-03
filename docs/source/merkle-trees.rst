@@ -78,13 +78,7 @@ as in IRSDemo example. Then we can construct ``FilteredTransaction``:
         val wtx: WireTransaction = partialTx.toWireTransaction()
         val ftx: FilteredTransaction = wtx.buildFilteredTransaction(filtering)
 
-In the Oracle example this step takes place in ``RatesFixFlow``:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-        val flow = RatesFixFlow(partialTx, ::filtering, oracle, fixOf, "0.675".bd, "0.1".bd)
+In the Oracle example this step takes place in ``RatesFixFlow`` by overriding ``filtering`` function, see: :ref:`filtering_ref`
 
 
 ``FilteredTransaction`` holds ``filteredLeaves`` (data that we wanted to reveal) and Merkle branch for them.
@@ -106,7 +100,7 @@ In the Oracle example this step takes place in ``RatesFixFlow``:
 
 Above code snippet is taken from ``NodeInterestRates.kt`` file and implements a signing part of an Oracle.
 You can check only leaves using ``leaves.checkWithFun { check(it) }`` and then verify obtained ``FilteredTransaction``
-to see if data from ``PartialMerkleTree`` belongs to ``WireTransaction`` with provided id. All you need is the root hash
+to see if data from ``PartialMerkleTree`` belongs to ``WireTransaction`` with provided ``id``. All you need is the root hash
 of the full transaction:
 
 .. container:: codeset

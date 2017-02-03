@@ -27,12 +27,10 @@ import java.util.*
  * @throws FixOutOfRange if the returned fix was further away from the expected rate by the given amount.
  */
 open class RatesFixFlow(protected val tx: TransactionBuilder,
-                        /** Filtering functions over transaction, used to build partial transaction presented to oracle. */
-                        private val filtering: (Any) -> Boolean,
-                        private val oracle: Party,
-                        private val fixOf: FixOf,
-                        private val expectedRate: BigDecimal,
-                        private val rateTolerance: BigDecimal,
+                        protected val oracle: Party,
+                        protected val fixOf: FixOf,
+                        protected val expectedRate: BigDecimal,
+                        protected val rateTolerance: BigDecimal,
                         override val progressTracker: ProgressTracker = RatesFixFlow.tracker(fixOf.name)) : FlowLogic<Unit>() {
 
     companion object {
@@ -58,7 +56,8 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         tx.addCommand(fix, oracle.owningKey)
         beforeSigning(fix)
         progressTracker.currentStep = SIGNING
-        val signature = subFlow(FixSignFlow(tx, oracle, filtering))
+        val mtx = tx.toWireTransaction().buildFilteredTransaction({ filtering(it) })
+        val signature = subFlow(FixSignFlow(tx, oracle, mtx))
         tx.addSignatureUnchecked(signature)
     }
     // DOCEND 2
@@ -70,6 +69,15 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     @Suspendable
     protected open fun beforeSigning(fix: Fix) {
     }
+
+    /**
+     * Filtering functions over transaction, used to build partial transaction with partial Merkle tree presented to oracle.
+     * When overriding be careful when making the sub-class an anonymous or inner class (object declarations in Kotlin),
+     * because that kind of classes can access variables from the enclosing scope and cause serialization problems when
+     * checkpointed.
+     */
+    @Suspendable
+    protected open fun filtering(elem: Any): Boolean = false
 
     private fun checkFixIsNearExpected(fix: Fix) {
         val delta = (fix.value - expectedRate).abs()
@@ -97,13 +105,11 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     }
 
     class FixSignFlow(val tx: TransactionBuilder, val oracle: Party,
-                      val filtering: (Any) -> Boolean) : FlowLogic<DigitalSignature.LegallyIdentifiable>() {
+                      val partialMerkleTx: FilteredTransaction) : FlowLogic<DigitalSignature.LegallyIdentifiable>() {
         @Suspendable
         override fun call(): DigitalSignature.LegallyIdentifiable {
             val wtx = tx.toWireTransaction()
-            val partialMerkleTx = wtx.buildFilteredTransaction(filtering)
             val rootHash = wtx.id
-
             val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(oracle, SignRequest(rootHash, partialMerkleTx))
             return resp.unwrap { sig ->
                 check(sig.signer == oracle)
