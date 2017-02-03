@@ -19,20 +19,21 @@ class AttachmentDemoTest {
                 startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.Companion.type)))
             ).getOrThrow()
 
-            val senderThread = CompletableFuture.runAsync {
+            val senderThread = CompletableFuture.supplyAsync {
                 nodeA.rpcClientToNode().use(demoUser[0].username, demoUser[0].password) {
                     sender(this)
                 }
-            }
-            val recipientThread = CompletableFuture.runAsync {
+            }.exceptionally { it.printStackTrace() }
+
+            val recipientThread = CompletableFuture.supplyAsync{
                 nodeB.rpcClientToNode().use(demoUser[0].username, demoUser[0].password) {
                     recipient(this)
                 }
-            }
+            }.exceptionally { it.printStackTrace() }
 
-            // Just check they don't throw any exceptions.d
-            recipientThread.get()
+            // Just check they finish and don't throw any exceptions.
             senderThread.get()
+            recipientThread.get()
         }, isDebug = true)
     }
 }
