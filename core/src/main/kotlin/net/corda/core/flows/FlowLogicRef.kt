@@ -8,6 +8,7 @@ import java.lang.reflect.Type
 import java.util.*
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
+import kotlin.reflect.jvm.javaConstructor
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.primaryConstructor
 
@@ -63,13 +64,37 @@ class FlowLogicRefFactory(private val flowWhitelist: Map<String, Set<String>>) :
     }
 
     /**
-     * Create a [FlowLogicRef] for the Kotlin primary constructor or Java constructor and the given args.
+     * Create a [FlowLogicRef] by matching against the available constructors and the given args.
      */
     fun create(type: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
-        val constructor = type.kotlin.primaryConstructor ?: return createJava(type, *args)
-        if (constructor.parameters.size < args.size) {
-            throw IllegalFlowLogicException(type, "due to too many arguments supplied to kotlin primary constructor")
+        // If it's not a Kotlin class, do the Java path.
+        if (type.kotlin.primaryConstructor == null)
+            return createJava(type, *args)
+
+        // Find the right constructor to use, based on passed argument types. This is for when we don't know
+        // the right argument names.
+        //
+        // TODO: This is used via RPC but it's probably better if we pass in argument names and values explicitly
+        // to avoid guessing which constructor too use.
+        val argTypes = args.map { it?.javaClass }
+        val constructor = try {
+            type.kotlin.constructors.single { ctor ->
+                // Get the types of the arguments, always boxed (as that's what we get in the invocation).
+                val ctorTypes = ctor.javaConstructor!!.parameterTypes.map { Primitives.wrap(it) }
+                if (argTypes.size != ctorTypes.size)
+                    return@single false
+                for ((argType, ctorType) in argTypes.zip(ctorTypes)) {
+                    if (argType == null) continue   // Try and find a match based on the other arguments.
+                    if (!ctorType.isAssignableFrom(argType)) return@single false
+                }
+                true
+            }
+        } catch (e: IllegalArgumentException) {
+            throw IllegalFlowLogicException(type, "due to ambiguous match against the constructors: $argTypes")
+        } catch (e: NoSuchElementException) {
+            throw IllegalFlowLogicException(type, "due to missing constructor for arguments: $argTypes")
         }
+
         // Build map of args from array
         val argsMap = args.zip(constructor.parameters).map { Pair(it.second.name!!, it.first) }.toMap()
         return createKotlin(type, argsMap)
