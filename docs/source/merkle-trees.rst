@@ -15,17 +15,17 @@ You can read more on the concept `here <https://en.wikipedia.org/wiki/Merkle_tre
 Merkle trees in Corda
 ---------------------
 
-Transactions are split into leaves, each of them contains either input, output, command or attachment. Other fields like
-timestamp or signers are not used in the calculation.
-Next, the Merkle tree is built in the normal way by hashing the concatenation
-of nodes’ hashes below the current one together. It’s visible on the example image below, where ``H`` denotes sha256 function,
-"+" - concatenation.
+Transactions are split into leaves, each of them contains either input, output, command or attachment. Additionally, in
+transaction id calculation we use other fields of ``WireTransaction`` like timestamp, notary, type and signers.
+Next, the Merkle tree is built in the normal way by hashing the concatenation of nodes’ hashes below the current one together.
+It’s visible on the example image below, where ``H`` denotes sha256 function, "+" - concatenation.
 
 .. image:: resources/merkleTree.png
 
-The transaction has one input state, one output and three commands. If a tree is not a full binary tree, the rightmost nodes are
-duplicated in hash calculation (dotted lines).
-
+The transaction has two input states, one of output, attachment and command each and timestamp. For brevity we didn't
+include all leaves on the diagram (type, notary and signers are presented as one leaf labelled Rest - in reality
+they are separate leaves). Notice that if a tree is not a full binary tree, leaves are padded to the nearest power
+of 2 with zero hash (since finding a pre-image of sha256(x) == 0 is hard computational task) - marked light green above.
 Finally, the hash of the root is the identifier of the transaction, it's also used for signing and verification of data integrity.
 Every change in transaction on a leaf level will change its identifier.
 
@@ -39,9 +39,11 @@ to that particular transaction.
 
 .. image:: resources/partialMerkle.png
 
-In the example above, the red node is the one holding data for signing Oracle service. Blue nodes' hashes form the Partial Merkle
-Tree, dotted ones are not included. Having the command that should be in a red node place and branch we are able to calculate
-root of this tree and compare it with original transaction identifier - we have a proof that this command belongs to this transaction.
+In the example above, the node ``H(f)`` is the one holding command data for signing by Oracle service. Blue leaf ``H(g)`` is also
+included since it's holding timestamp information. Nodes labelled ``Provided`` form the Partial Merkle Tree, black ones
+are omitted. Having timestamp with the command that should be in a violet node place and branch we are able to calculate
+root of this tree and compare it with original transaction identifier - we have a proof that this command and timestamp
+belong to this transaction.
 
 Example of usage
 ----------------
@@ -50,36 +52,34 @@ Let’s focus on a code example. We want to construct a transaction with command
 :doc:`oracles`.
 After construction of a partial transaction, with included ``Fix`` commands in it, we want to send it to the Oracle for checking
 and signing. To do so we need to specify which parts of the transaction are going to be revealed. That can be done by constructing
-filtering functions for inputs, outputs, attachments and commands separately. If a function is not provided by default none
-of the elements from this group will be included in a Partial Merkle Tree.
+filtering function over fields of ``WireTransaction`` of type ``(Any) -> Boolean``.
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
-        val partialTx  = ...
+        val partialTx = ...
         val oracle: Party = ...
-        fun filterCommands(c: Command) = oracle.owningKey in c.signers && c.value is Fix
-        val filterFuns = FilterFuns(filterCommands = ::filterCommands)
+        fun filtering(elem: Any): Boolean {
+                return when (elem) {
+                    is Command -> oracleParty.owningKey in elem.signers && elem.value is Fix
+                    else -> false
+                }
+        }
 
 Assuming that we already assembled partialTx with some commands and know the identity of Oracle service,
-we pass filtering function over commands - ``filterCommands`` to ``FilterFuns``. It filters only
-commands of type ``Fix`` as in IRSDemo example. Then we can construct ``FilteredTransaction``:
+we construct filtering function over commands - ``filtering``. It performs type checking and filters only ``Fix`` commands
+as in IRSDemo example. Then we can construct ``FilteredTransaction``:
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
         val wtx: WireTransaction = partialTx.toWireTransaction()
-        val ftx = FilteredTransaction.buildMerkleTransaction(wtx, filterFuns)
+        val ftx: FilteredTransaction = wtx.buildFilteredTransaction(filtering)
 
-In the Oracle example this step takes place in ``RatesFixFlow``:
+In the Oracle example this step takes place in ``RatesFixFlow`` by overriding ``filtering`` function, see: :ref:`filtering_ref`
 
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-        val flow = RatesFixFlow(partialTx, filterFuns, oracle, fixOf, "0.675".bd, "0.1".bd)
 
 ``FilteredTransaction`` holds ``filteredLeaves`` (data that we wanted to reveal) and Merkle branch for them.
 
@@ -87,14 +87,21 @@ In the Oracle example this step takes place in ``RatesFixFlow``:
 
    .. sourcecode:: kotlin
 
-        // Getting included commands, inputs, outputs, attachments.
+        // Direct accsess to included commands, inputs, outputs, attachments etc.
         val cmds: List<Command> = ftx.filteredLeaves.commands
         val ins: List<StateRef> = ftx.filteredLeaves.inputs
-        val outs: List<TransactionState<ContractState>> = ftx.filteredLeaves.outputs
-        val attchs: List<SecureHash> = ftx.filteredLeaves.attachments
+        val timestamp: Timestamp? = ftx.filteredLeaves.timestamp
+        ...
 
+.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
+    :language: kotlin
+    :start-after: DOCSTART 1
+    :end-before: DOCEND 1
 
-If you want to verify obtained ``FilteredTransaction`` all you need is the root hash of the full transaction:
+Above code snippet is taken from ``NodeInterestRates.kt`` file and implements a signing part of an Oracle.
+You can check only leaves using ``leaves.checkWithFun { check(it) }`` and then verify obtained ``FilteredTransaction``
+to see if data from ``PartialMerkleTree`` belongs to ``WireTransaction`` with provided ``id``. All you need is the root hash
+of the full transaction:
 
 .. container:: codeset
 
@@ -104,6 +111,13 @@ If you want to verify obtained ``FilteredTransaction`` all you need is the root 
                 throw MerkleTreeException("Rate Fix Oracle: Couldn't verify partial Merkle tree.")
         }
 
+Or combine the two steps together:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        ftx.verifyWithFunction(merkleRoot, ::check)
 
 .. note:: The way the ``FilteredTransaction`` is constructed ensures that after signing of the root hash it's impossible to add or remove
     leaves. However, it can happen that having transaction with multiple commands one party reveals only subset of them to the Oracle.
