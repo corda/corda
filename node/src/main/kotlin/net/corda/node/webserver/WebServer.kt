@@ -95,17 +95,14 @@ class WebServer(val config: FullNodeConfiguration) {
             val httpConfiguration = HttpConfiguration()
             httpConfiguration.outputBufferSize = 32768
             val httpConnector = ServerConnector(server, HttpConnectionFactory(httpConfiguration))
-            log.info("Starting webserver on address $address")
             httpConnector.port = address.port
             httpConnector
         }
         server.connectors = arrayOf<Connector>(connector)
 
         server.handler = handlerCollection
-        //runOnStop += Runnable { server.stop() }
         server.start()
-        log.info("Server started")
-        log.info("Embedded web server is listening on", "http://${InetAddress.getLocalHost().hostAddress}:${connector.port}/")
+        log.info("Started webserver on address $address")
         return server
     }
 
