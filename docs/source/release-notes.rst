@@ -9,6 +9,9 @@ Milestone 9
 * API:
 
     * Pseudonymous ``AnonymousParty`` class added as a superclass of ``Party``.
+    * Split ``CashFlow`` into individual ``CashIssueFlow``, ``CashPaymentFlow`` and ``CashExitFlow`` flows, so that fine
+      grained permissions can be applied. Added ``CashFlowCommand`` for use-cases where cash flow triggers need to be
+      captured in an object that can be passed around.
 
 Milestone 8
 -----------

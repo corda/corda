@@ -19,7 +19,9 @@ import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.CashFlow
+import net.corda.flows.CashExitFlow
+import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
 import net.corda.node.driver.DriverBasedTest
 import net.corda.node.driver.driver
 import net.corda.node.services.User
@@ -48,7 +50,11 @@ class NodeMonitorModelTest : DriverBasedTest() {
     lateinit var newNode: (String) -> NodeInfo
 
     override fun setup() = driver {
-        val cashUser = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>()))
+        val cashUser = User("user1", "test", permissions = setOf(
+                startFlowPermission<CashIssueFlow>(),
+                startFlowPermission<CashPaymentFlow>(),
+                startFlowPermission<CashExitFlow>())
+        )
         val aliceNodeFuture = startNode("Alice", rpcUsers = listOf(cashUser))
         val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
 
@@ -93,12 +99,12 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     @Test
     fun `cash issue works end to end`() {
-        rpc.startFlow(::CashFlow, CashFlow.Command.IssueCash(
-                amount = Amount(100, USD),
-                issueRef = OpaqueBytes(ByteArray(1, { 1 })),
-                recipient = aliceNode.legalIdentity,
-                notary = notaryNode.notaryIdentity
-        ))
+        rpc.startFlow(::CashIssueFlow,
+                Amount(100, USD),
+                OpaqueBytes(ByteArray(1, { 1 })),
+                aliceNode.legalIdentity,
+                notaryNode.notaryIdentity
+        )
 
         vaultUpdates.expectEvents(isStrict = false) {
             sequence(
@@ -118,17 +124,17 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     @Test
     fun `cash issue and move`() {
-        rpc.startFlow(::CashFlow, CashFlow.Command.IssueCash(
-                amount = Amount(100, USD),
-                issueRef = OpaqueBytes(ByteArray(1, { 1 })),
-                recipient = aliceNode.legalIdentity,
-                notary = notaryNode.notaryIdentity
-        )).returnValue.getOrThrow()
+        rpc.startFlow(::CashIssueFlow,
+                Amount(100, USD),
+                OpaqueBytes(ByteArray(1, { 1 })),
+                aliceNode.legalIdentity,
+                notaryNode.notaryIdentity
+        ).returnValue.getOrThrow()
 
-        rpc.startFlow(::CashFlow, CashFlow.Command.PayCash(
-                amount = Amount(100, Issued(PartyAndReference(aliceNode.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
-                recipient = aliceNode.legalIdentity
-        ))
+        rpc.startFlow(::CashPaymentFlow,
+                Amount(100, Issued(PartyAndReference(aliceNode.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
+                aliceNode.legalIdentity
+        )
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null
