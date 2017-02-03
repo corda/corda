@@ -25,8 +25,8 @@ class NodeConfig(
         get() = networkMapValue
         set(value) { networkMapValue = value }
 
-    private val userMap: Map<String, String>
-    val user: Map<String, String>
+    private val userMap: Map<String, Any>
+    val user: Map<String, Any>
         get() = userMap
 
     val ssl: SSLConfiguration = object : SSLConfiguration {
@@ -50,10 +50,24 @@ class NodeConfig(
                     .withValue("h2port", valueFor(h2Port))
                     .withValue("useTestClock", valueFor(true))
 
+    val isCashIssuer : Boolean
+        get() {
+            extraServices.forEach {
+                if (it.startsWith("corda.issuer.")) {
+                    return true
+                }
+            }
+            return false
+        }
+
     init {
-        userMap = mapOf(
-            Pair("password", "letmein"),
-            Pair("user", "guest")
+        userMap = mapOf<String, Any>(
+                Pair<String, Any>("password", "letmein"),
+                Pair<String, Any>("user", "guest"),
+                Pair<String, Any>("permissions", listOf(
+                    "StartFlow.net.corda.flows.CashFlow",
+                    "StartFlow.net.corda.flows.IssuerFlow\$IssuanceRequester"
+                ))
         )
     }
 
