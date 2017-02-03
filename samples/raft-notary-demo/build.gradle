@@ -85,11 +85,31 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
     directory deployTo
     networkMap "Notary 1"
     node {
+        name "Party"
+        nearestCity "London"
+        advertisedServices = []
+        artemisPort 10002
+        webPort 10003
+        cordapps = []
+        rpcUsers = [['user': "demo", 'password': "demo", 'permissions': [
+                'StartFlow.net.corda.notarydemo.flows.DummyIssueAndMove',
+                'StartFlow.net.corda.flows.NotaryFlow$Client'
+        ]]]
+    }
+    node {
+        name "Counterparty"
+        nearestCity "New York"
+        advertisedServices = []
+        artemisPort 10004
+        webPort 10005
+        cordapps = []
+    }
+    node {
         name "Notary 1"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        artemisPort 10002
-        webPort 10009
+        artemisPort 10007
+        webPort 10008
         cordapps = []
         notaryNodePort 11002
     }
@@ -97,8 +117,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
         name "Notary 2"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        artemisPort 10004
-        webPort 10005
+        artemisPort 10010
+        webPort 10011
         cordapps = []
         notaryNodePort 11004
         notaryClusterAddresses = ["localhost:11002"]
@@ -107,27 +127,11 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
         name "Notary 3"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        artemisPort 10006
-        webPort 10007
+        artemisPort 10013
+        webPort 10014
         cordapps = []
         notaryNodePort 11006
         notaryClusterAddresses = ["localhost:11002"]
-    }
-    node {
-        name "Party"
-        nearestCity "London"
-        advertisedServices = []
-        artemisPort 10008
-        webPort 10003
-        cordapps = []
-    }
-    node {
-        name "Counterparty"
-        nearestCity "New York"
-        advertisedServices = []
-        artemisPort 10010
-        webPort 10011
-        cordapps = []
     }
 }
 
