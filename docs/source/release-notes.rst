@@ -10,7 +10,7 @@ Milestone 8
 
 * The Corda node no longer runs an internal web server, it's now run in a separate process. Driver and Cordformation have
   been updated to reflect this change.
-  Existing CorDapps should be updated with additional calls to the new ``startWebserver()`` interface in their Driver logic.
+  Existing CorDapps should be updated with additional calls to the new ``startWebserver()`` interface in their Driver logic (if they use the driver e.g. in integration tests).
   See the IRS demo for an example.
 
 * Data model: ``Party`` equality is now based on the owning key, rather than the owning key and name. This is important for
@@ -27,7 +27,10 @@ Milestone 8
     * Key Concepts section revamped with new structure and content.
     * Added more details to :doc:`getting-set-up` page.
 
-* Flow framework: improved exception handling and other tweaks.
+* Flow framework: improved exception handling with the introduction of ``FlowException``. If this or a subtype is thrown
+  inside a flow it will propagate to all counterparty flows and subsequently be thrown by them as well. Existing flows such as
+  ``NotaryFlow.Client/Service`` and others have been modified to throw a ``FlowException`` (in this particular case a 
+  ``NotaryException``) instead of sending back error responses.
 
 * Notary flow: Provide complete details of underlying error when contract validation fails.
 
