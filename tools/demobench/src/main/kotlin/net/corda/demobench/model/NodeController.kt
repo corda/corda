@@ -14,7 +14,10 @@ class NodeController : Controller() {
     private val FIRST_PORT = 10000
 
     private val baseDir = Paths.get("work", localDir).toAbsolutePath()
+    private val pluginDir = Paths.get("plugins").toAbsolutePath()
     private val jvm by inject<JVMConfig>()
+
+    private val bankOfCorda = pluginDir.resolve("bank-of-corda.jar").toFile()
 
     private val cordaPath = Paths.get("corda", "corda.jar").toAbsolutePath()
     private val command = jvm.commandFor(cordaPath)
@@ -73,11 +76,18 @@ class NodeController : Controller() {
 
         if (nodeDir.mkdirs()) {
             try {
-                // Write this nodes configuration file into its working directory.
+                // Write this node's configuration file into its working directory.
                 val confFile = nodeDir.resolve("node.conf")
                 val fileData = config.toFileConfig
                 confFile.writeText(fileData.root().render(renderOptions))
 
+                // Nodes cannot issue cash unless they contain the "Bank of Corda" plugin.
+                if (config.isCashIssuer && bankOfCorda.isFile()) {
+                    log.info("Installing 'Bank of Corda' plugin")
+                    bankOfCorda.copyTo(nodeDir.resolve("plugins").resolve(bankOfCorda.name))
+                }
+
+                // Execute the Corda node
                 pty.run(command, System.getenv(), nodeDir.toString())
                 log.info("Launched node: " + config.legalName)
                 return true

@@ -17,7 +17,6 @@ import net.corda.demobench.rpc.NodeRPC
 import net.corda.demobench.ui.PropertyLabel
 import tornadofx.Fragment
 import tornadofx.vgrow
-import java.util.*
 
 class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
@@ -82,7 +81,7 @@ class NodeTerminalView : Fragment() {
                     val statesInVault = ops.vaultAndUpdates()
                     val cashBalances = ops.getCashBalances().entries.joinToString(
                         separator = ", ",
-                        transform = { e -> "%s %s".format(e.value, e.key.currencyCode) }
+                        transform = { e -> e.value.toString() }
                     )
 
                     Platform.runLater {
