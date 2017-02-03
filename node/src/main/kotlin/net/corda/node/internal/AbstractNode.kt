@@ -81,9 +81,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
 
         val defaultFlowWhiteList: Map<Class<out FlowLogic<*>>, Set<Class<*>>> = mapOf(
-                CashFlow::class.java to setOf(CashFlow.Command.IssueCash::class.java,
-                        CashFlow.Command.PayCash::class.java,
-                        CashFlow.Command.ExitCash::class.java),
                 CashExitFlow::class.java to setOf(Amount::class.java, PartyAndReference::class.java),
                 CashIssueFlow::class.java to setOf(Amount::class.java, OpaqueBytes::class.java, Party::class.java),
                 CashPaymentFlow::class.java to setOf(Amount::class.java, Party::class.java),

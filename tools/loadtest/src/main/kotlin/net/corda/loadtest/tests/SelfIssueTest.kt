@@ -13,7 +13,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.toFuture
 import net.corda.flows.CashException
-import net.corda.flows.CashFlow
+import net.corda.flows.CashFlowCommand
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeHandle
 import org.slf4j.LoggerFactory
@@ -23,7 +23,7 @@ private val log = LoggerFactory.getLogger("SelfIssue")
 
 // DOCS START 1
 data class SelfIssueCommand(
-        val command: CashFlow.Command.IssueCash,
+        val command: CashFlowCommand.IssueCash,
         val node: NodeHandle
 )
 
@@ -64,7 +64,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
 
         execute = { command ->
             try {
-                val result = command.node.connection.proxy.startFlow(::CashFlow, command.command).returnValue.getOrThrow()
+                val result = command.command.startFlow(command.node.connection.proxy).returnValue.getOrThrow()
                 log.info("Success: $result")
             } catch (e: FlowException) {
                 log.error("Failure", e)

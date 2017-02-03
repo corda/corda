@@ -14,7 +14,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.toFuture
 import net.corda.flows.CashException
-import net.corda.flows.CashFlow
+import net.corda.flows.CashFlowCommand
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeHandle
 import org.slf4j.LoggerFactory
@@ -29,18 +29,18 @@ private val log = LoggerFactory.getLogger("CrossCash")
  */
 
 data class CrossCashCommand(
-        val command: CashFlow.Command,
+        val command: CashFlowCommand,
         val node: NodeHandle
 ) {
     override fun toString(): String {
         return when (command) {
-            is CashFlow.Command.IssueCash -> {
+            is CashFlowCommand.IssueCash -> {
                 "ISSUE ${node.info.legalIdentity} -> ${command.recipient} : ${command.amount}"
             }
-            is CashFlow.Command.PayCash -> {
+            is CashFlowCommand.PayCash -> {
                 "MOVE ${node.info.legalIdentity} -> ${command.recipient} : ${command.amount}"
             }
-            is CashFlow.Command.ExitCash -> {
+            is CashFlowCommand.ExitCash -> {
                 "EXIT ${node.info.legalIdentity} : ${command.amount}"
             }
         }
@@ -146,7 +146,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
 
         interpret = { state, command ->
             when (command.command) {
-                is CashFlow.Command.IssueCash -> {
+                is CashFlowCommand.IssueCash -> {
                     val newDiffQueues = state.copyQueues()
                     val originators = newDiffQueues.getOrPut(command.command.recipient, { HashMap() })
                     val issuer = command.node.info.legalIdentity
@@ -156,7 +156,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                     queue.add(Pair(issuer, quantity))
                     CrossCashState(state.nodeVaults, newDiffQueues)
                 }
-                is CashFlow.Command.PayCash -> {
+                is CashFlowCommand.PayCash -> {
                     val newNodeVaults = state.copyVaults()
                     val newDiffQueues = state.copyQueues()
                     val recipientOriginators = newDiffQueues.getOrPut(command.command.recipient, { HashMap() })
@@ -183,7 +183,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                     recipientQueue.add(Pair(issuer, quantity))
                     CrossCashState(newNodeVaults, newDiffQueues)
                 }
-                is CashFlow.Command.ExitCash -> {
+                is CashFlowCommand.ExitCash -> {
                     val newNodeVaults = state.copyVaults()
                     val issuer = command.node.info.legalIdentity
                     val quantity = command.command.amount.quantity
@@ -209,7 +209,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
 
         execute = { command ->
             try {
-                val result = command.node.connection.proxy.startFlow(::CashFlow, command.command).returnValue.getOrThrow()
+                val result = command.command.startFlow(command.node.connection.proxy).returnValue.getOrThrow()
                 log.info("Success: $result")
             } catch (e: FlowException) {
                 log.error("Failure", e)

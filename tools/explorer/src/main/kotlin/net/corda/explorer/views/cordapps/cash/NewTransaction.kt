@@ -28,7 +28,7 @@ import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.views.bigDecimalFormatter
 import net.corda.explorer.views.byteFormatter
 import net.corda.explorer.views.stringConverter
-import net.corda.flows.CashFlow
+import net.corda.flows.CashFlowCommand
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.Fragment
@@ -87,7 +87,7 @@ class NewTransaction : Fragment() {
             }
             dialog.show()
             runAsync {
-                val handle = if (it is CashFlow.Command.IssueCash) {
+                val handle = if (it is CashFlowCommand.IssueCash) {
                     myIdentity.value?.let { myIdentity ->
                         rpcProxy.value!!.startFlow(::IssuanceRequester,
                                 it.amount,
@@ -96,7 +96,7 @@ class NewTransaction : Fragment() {
                                 myIdentity.legalIdentity)
                     }
                 } else {
-                    rpcProxy.value!!.startFlow(::CashFlow, it)
+                    it.startFlow(rpcProxy.value!!)
                 }
                 val response = try {
                     handle?.returnValue?.getOrThrow()
@@ -110,9 +110,9 @@ class NewTransaction : Fragment() {
                     Alert.AlertType.ERROR to response.message
                 } else {
                     val type = when (command) {
-                        is CashFlow.Command.IssueCash -> "Cash Issued"
-                        is CashFlow.Command.ExitCash -> "Cash Exited"
-                        is CashFlow.Command.PayCash -> "Cash Paid"
+                        is CashFlowCommand.IssueCash -> "Cash Issued"
+                        is CashFlowCommand.ExitCash -> "Cash Exited"
+                        is CashFlowCommand.PayCash -> "Cash Paid"
                     }
                     Alert.AlertType.INFORMATION to "$type \nTransaction ID : ${(response as SignedTransaction).id}"
                 }
@@ -127,7 +127,7 @@ class NewTransaction : Fragment() {
         }
     }
 
-    private fun dialog(window: Window) = Dialog<CashFlow.Command>().apply {
+    private fun dialog(window: Window) = Dialog<CashFlowCommand>().apply {
         dialogPane = root
         initOwner(window)
         setResultConverter {
@@ -136,10 +136,10 @@ class NewTransaction : Fragment() {
             when (it) {
                 executeButton -> when (transactionTypeCB.value) {
                     CashTransaction.Issue -> {
-                        CashFlow.Command.IssueCash(Amount(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.legalIdentity, notaries.first().notaryIdentity)
+                        CashFlowCommand.IssueCash(Amount(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.legalIdentity, notaries.first().notaryIdentity)
                     }
-                    CashTransaction.Pay -> CashFlow.Command.PayCash(Amount(amount.value, Issued(PartyAndReference(issuerChoiceBox.value, issueRef), currencyChoiceBox.value)), partyBChoiceBox.value.legalIdentity)
-                    CashTransaction.Exit -> CashFlow.Command.ExitCash(Amount(amount.value, currencyChoiceBox.value), issueRef)
+                    CashTransaction.Pay -> CashFlowCommand.PayCash(Amount(amount.value, Issued(PartyAndReference(issuerChoiceBox.value, issueRef), currencyChoiceBox.value)), partyBChoiceBox.value.legalIdentity)
+                    CashTransaction.Exit -> CashFlowCommand.ExitCash(Amount(amount.value, currencyChoiceBox.value), issueRef)
                     else -> null
                 }
                 else -> null
