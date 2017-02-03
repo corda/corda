@@ -6,10 +6,7 @@ package net.corda.core
 import com.google.common.base.Function
 import com.google.common.base.Throwables
 import com.google.common.io.ByteStreams
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
-import com.google.common.util.concurrent.SettableFuture
+import com.google.common.util.concurrent.*
 import kotlinx.support.jdk7.use
 import net.corda.core.crypto.newSecureRandom
 import org.slf4j.Logger
@@ -115,7 +112,7 @@ inline fun <T> SettableFuture<T>.catch(block: () -> T) {
     }
 }
 
-fun <A> ListenableFuture<A>.toObservable(): Observable<A> {
+fun <A> ListenableFuture<out A>.toObservable(): Observable<A> {
     return Observable.create { subscriber ->
         success {
             subscriber.onNext(it)
@@ -384,15 +381,24 @@ fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
 
 /**
  * Returns a [ListenableFuture] bound to the *first* item emitted by this Observable. The future will complete with a
- * NoSuchElementException if no items are emitted or any other error thrown by the Observable.
+ * NoSuchElementException if no items are emitted or any other error thrown by the Observable. If it's cancelled then
+ * it will unsubscribe from the observable.
  */
-fun <T> Observable<T>.toFuture(): ListenableFuture<T> {
-    val future = SettableFuture.create<T>()
-    first().subscribe(
-            { future.set(it) },
-            { future.setException(it) }
-    )
-    return future
+fun <T> Observable<T>.toFuture(): ListenableFuture<T> = ObservableToFuture(this)
+
+private class ObservableToFuture<T>(observable: Observable<T>) : AbstractFuture<T>(), Observer<T> {
+    private val subscription = observable.first().subscribe(this)
+    override fun onNext(value: T) {
+        set(value)
+    }
+    override fun onError(e: Throwable) {
+        setException(e)
+    }
+    override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
+        subscription.unsubscribe()
+        return super.cancel(mayInterruptIfRunning)
+    }
+    override fun onCompleted() {}
 }
 
 /** Return the sum of an Iterable of [BigDecimal]s. */

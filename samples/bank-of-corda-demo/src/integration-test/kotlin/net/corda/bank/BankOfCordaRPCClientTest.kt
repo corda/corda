@@ -5,7 +5,6 @@ import net.corda.core.contracts.DOLLARS
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.driver.driver
 import net.corda.node.services.User
@@ -16,7 +15,6 @@ import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.sequence
 import org.junit.Test
-import kotlin.test.assertTrue
 
 class BankOfCordaRPCClientTest {
     @Test
@@ -45,13 +43,12 @@ class BankOfCordaRPCClientTest {
             val vaultUpdatesBigCorp = bigCorpProxy.vaultAndUpdates().second
 
             // Kick-off actual Issuer Flow
-            val result = bocProxy.startFlow(
+            bocProxy.startFlow(
                     ::IssuanceRequester,
                     1000.DOLLARS,
                     nodeBigCorporation.nodeInfo.legalIdentity,
                     BOC_PARTY_REF,
-                    nodeBankOfCorda.nodeInfo.legalIdentity).returnValue.toBlocking().first()
-            assertTrue { result is SignedTransaction }
+                    nodeBankOfCorda.nodeInfo.legalIdentity).returnValue.getOrThrow()
 
             // Check Bank of Corda Vault Updates
             vaultUpdatesBoc.expectEvents {

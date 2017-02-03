@@ -124,7 +124,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                 recipient = aliceNode.legalIdentity,
                 notary = notaryNode.notaryIdentity
-        )).returnValue.toBlocking().first()
+        )).returnValue.getOrThrow()
 
         rpc.startFlow(::CashFlow, CashCommand.PayCash(
                 amount = Amount(100, Issued(PartyAndReference(aliceNode.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),

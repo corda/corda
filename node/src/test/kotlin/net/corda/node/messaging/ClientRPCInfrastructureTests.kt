@@ -1,8 +1,13 @@
 package net.corda.node.messaging
 
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.RPCReturnsObservables
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.success
 import net.corda.core.utilities.LogHelper
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.User
@@ -120,30 +125,31 @@ class ClientRPCInfrastructureTests {
         @RPCReturnsObservables
         fun makeComplicatedObservable(): Observable<Pair<String, Observable<String>>>
 
+        @RPCReturnsObservables
+        fun makeListenableFuture(): ListenableFuture<Int>
+
+        @RPCReturnsObservables
+        fun makeComplicatedListenableFuture(): ListenableFuture<Pair<String, ListenableFuture<String>>>
+
         @RPCSinceVersion(2)
         fun addedLater()
 
         fun captureUser(): String
     }
 
-    lateinit var complicatedObservable: Observable<Pair<String, Observable<String>>>
+    private lateinit var complicatedObservable: Observable<Pair<String, Observable<String>>>
+    private lateinit var complicatedListenableFuturee: ListenableFuture<Pair<String, ListenableFuture<String>>>
 
     inner class TestOpsImpl : TestOps {
         override val protocolVersion = 1
-
         override fun barf(): Unit = throw IllegalArgumentException("Barf!")
-
-        override fun void() {
-        }
-
+        override fun void() {}
         override fun someCalculation(str: String, num: Int) = "$str $num"
-
         override fun makeObservable(): Observable<Int> = Observable.just(1, 2, 3, 4)
-
+        override fun makeListenableFuture(): ListenableFuture<Int> = Futures.immediateFuture(1)
         override fun makeComplicatedObservable() = complicatedObservable
-
+        override fun makeComplicatedListenableFuture(): ListenableFuture<Pair<String, ListenableFuture<String>>> = complicatedListenableFuturee
         override fun addedLater(): Unit = throw UnsupportedOperationException("not implemented")
-
         override fun captureUser(): String = CURRENT_RPC_USER.get().username
     }
 
@@ -213,6 +219,41 @@ class ClientRPCInfrastructureTests {
     }
 
     @Test
+    fun `simple ListenableFuture`() {
+        val value = proxy.makeListenableFuture().getOrThrow()
+        assertThat(value).isEqualTo(1)
+    }
+
+    @Test
+    fun `complex ListenableFuture`() {
+        val serverQuote = SettableFuture.create<Pair<String, ListenableFuture<String>>>()
+        complicatedListenableFuturee = serverQuote
+
+        val twainQuote = "Mark Twain" to Futures.immediateFuture("I have never let my schooling interfere with my education.")
+
+        val clientQuotes = LinkedBlockingQueue<String>()
+        val clientFuture = proxy.makeComplicatedListenableFuture()
+
+        clientFuture.success {
+            val name = it.first
+            it.second.success {
+                clientQuotes += "Quote by $name: $it"
+            }
+        }
+
+        val rpcQueuesQuery = SimpleString("clients.${authenticatedUser.username}.rpc.*")
+        assertEquals(2, clientSession.addressQuery(rpcQueuesQuery).queueNames.size)
+
+        assertThat(clientQuotes).isEmpty()
+
+        serverQuote.set(twainQuote)
+        assertThat(clientQuotes.take()).isEqualTo("Quote by Mark Twain: I have never let my schooling interfere with my education.")
+
+        // TODO This final assert sometimes fails because the relevant queue hasn't been removed yet
+//        assertEquals(1, clientSession.addressQuery(rpcQueuesQuery).queueNames.size)
+    }
+
+    @Test
     fun versioning() {
         assertFailsWith<UnsupportedOperationException> { proxy.addedLater() }
     }
@@ -221,5 +262,4 @@ class ClientRPCInfrastructureTests {
     fun `authenticated user is available to RPC`() {
         assertThat(proxy.captureUser()).isEqualTo(authenticatedUser.username)
     }
-
 }

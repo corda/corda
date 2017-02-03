@@ -368,9 +368,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun endAllFiberSessions(fiber: FlowStateMachineImpl<*>, errorResponse: Pair<FlowException, Boolean>?) {
-        // TODO Blanking the stack trace prevents the receiving flow from filling in its own stack trace
-//        @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-//        (errorResponse?.first as java.lang.Throwable?)?.stackTrace = emptyArray()
         openSessions.values.removeIf { session ->
             if (session.fiber == fiber) {
                 session.endSession(errorResponse)
