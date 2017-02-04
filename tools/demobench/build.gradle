@@ -19,6 +19,8 @@ apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'application'
 
+evaluationDependsOn(':tools:explorer:capsule')
+
 sourceCompatibility = 1.8
 mainClassName = 'net.corda.demobench.DemoBench'
 applicationDefaultJvmArgs = ['-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig']
@@ -86,13 +88,16 @@ distributions {
             into('lib/win') {
                 from 'libs/win'
             }
-//            from(project(':tools:explorer:capsule').tasks.buildExplorerJAR) {
-//                into 'explorer'
-//            }
+            from(project(':tools:explorer:capsule').tasks.buildExplorerJAR) {
+                rename 'node-explorer-(.*)', 'node-explorer.jar'
+                into 'explorer'
+            }
             from(project(':node:capsule').tasks.buildCordaJAR) {
+                rename 'corda-(.*)', 'corda.jar'
                 into 'corda'
             }
             from(project(':samples:bank-of-corda-demo').jar) {
+                rename 'bank-of-corda-demo-(.*)', 'bank-of-corda.jar'
                 into 'plugins'
             }
        }
