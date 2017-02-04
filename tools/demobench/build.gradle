@@ -54,6 +54,7 @@ dependencies {
     compile "net.java.dev.jna:jna-platform:$jna_version"
     compile "com.google.guava:guava:$guava_version"
     compile "com.sparetimelabs:purejavacomm:$purejavacomm_version"
+    compile "org.apache.logging.log4j:log4j-to-slf4j:$log4j_version"
     compile "org.slf4j:log4j-over-slf4j:$slf4j_version"
     compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
@@ -66,9 +67,11 @@ dependencies {
 }
 
 // We don't want the Node to drag these transitive dependencies in either!
-configurations.compile.exclude module: 'commons-logging'
-configurations.compile.exclude module: 'log4j-slf4j-impl'
-configurations.compile.exclude module: 'log4j-core'
+configurations.all {
+    exclude module: 'commons-logging'
+    exclude module: 'log4j-slf4j-impl'
+    exclude module: 'log4j-core'
+}
 
 jar {
     manifest {
