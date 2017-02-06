@@ -463,7 +463,7 @@ class Obligation<P> : Contract {
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
     fun generateIssue(tx: TransactionBuilder,
-                      obligor: AnonymousParty,
+                      obligor: AbstractParty,
                       issuanceDef: Terms<P>,
                       pennies: Long,
                       beneficiary: CompositeKey,
@@ -707,9 +707,9 @@ fun <P> Iterable<ContractState>.sumObligationsOrZero(issuanceDef: Issued<Obligat
         = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrZero(issuanceDef)
 
 infix fun <T> Obligation.State<T>.at(dueBefore: Instant) = copy(template = template.copy(dueBefore = dueBefore))
-infix fun <T> Obligation.State<T>.between(parties: Pair<AnonymousParty, CompositeKey>) = copy(obligor = parties.first.toAnonymous(), beneficiary = parties.second)
+infix fun <T> Obligation.State<T>.between(parties: Pair<AbstractParty, CompositeKey>) = copy(obligor = parties.first.toAnonymous(), beneficiary = parties.second)
 infix fun <T> Obligation.State<T>.`owned by`(owner: CompositeKey) = copy(beneficiary = owner)
-infix fun <T> Obligation.State<T>.`issued by`(party: AnonymousParty) = copy(obligor = party.toAnonymous())
+infix fun <T> Obligation.State<T>.`issued by`(party: AbstractParty) = copy(obligor = party.toAnonymous())
 // For Java users:
 @Suppress("unused") fun <T> Obligation.State<T>.ownedBy(owner: CompositeKey) = copy(beneficiary = owner)
 

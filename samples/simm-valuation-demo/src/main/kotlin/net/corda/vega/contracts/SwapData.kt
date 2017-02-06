@@ -9,7 +9,7 @@ import com.opengamma.strata.product.common.BuySell
 import com.opengamma.strata.product.swap.SwapTrade
 import com.opengamma.strata.product.swap.type.FixedIborSwapConvention
 import com.opengamma.strata.product.swap.type.FixedIborSwapConventions
-import net.corda.core.crypto.AnonymousParty
+import net.corda.core.crypto.AbstractParty
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import java.math.BigDecimal
@@ -48,7 +48,7 @@ data class SwapData(
         val notional: BigDecimal,
         val fixedRate: BigDecimal) {
 
-    fun getLegForParty(party: AnonymousParty): Leg {
+    fun getLegForParty(party: AbstractParty): Leg {
         return if (party == buyer.second) FixedLeg(notional) else FloatingLeg(notional)
     }
 

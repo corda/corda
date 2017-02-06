@@ -6,7 +6,7 @@ import net.corda.client.mock.pickOne
 import net.corda.client.mock.replicatePoisson
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.USD
-import net.corda.core.crypto.AnonymousParty
+import net.corda.core.crypto.AbstractParty
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
@@ -28,9 +28,9 @@ data class SelfIssueCommand(
 )
 
 data class SelfIssueState(
-        val vaultsSelfIssued: Map<AnonymousParty, Long>
+        val vaultsSelfIssued: Map<AbstractParty, Long>
 ) {
-    fun copyVaults(): HashMap<AnonymousParty, Long> {
+    fun copyVaults(): HashMap<AbstractParty, Long> {
         return HashMap(vaultsSelfIssued)
     }
 }
@@ -72,14 +72,14 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
         },
 
         gatherRemoteState = { previousState ->
-            val selfIssueVaults = HashMap<AnonymousParty, Long>()
+            val selfIssueVaults = HashMap<AbstractParty, Long>()
             simpleNodes.forEach { node ->
                 val vault = node.connection.proxy.vaultAndUpdates().first
                 vault.forEach {
                     val state = it.state.data
                     if (state is Cash.State) {
                         val issuer = state.amount.token.issuer.party
-                        if (issuer == node.info.legalIdentity as AnonymousParty) {
+                        if (issuer == node.info.legalIdentity as AbstractParty) {
                             selfIssueVaults.put(issuer, (selfIssueVaults[issuer] ?: 0L) + state.amount.quantity)
                         }
                     }
