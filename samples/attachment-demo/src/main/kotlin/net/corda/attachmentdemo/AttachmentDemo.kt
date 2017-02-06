@@ -42,14 +42,14 @@ fun main(args: Array<String>) {
         Role.SENDER -> {
             val host = HostAndPort.fromString("localhost:10004")
             println("Connecting to sender node ($host)")
-            CordaRPCClient(host, sslConfigFor("nodea", options.valueOf(certsPath))).use("demo", "demo") {
+            CordaRPCClient(host, sslConfigFor("BankA", options.valueOf(certsPath))).use("demo", "demo") {
                 sender(this)
             }
         }
         Role.RECIPIENT -> {
             val host = HostAndPort.fromString("localhost:10006")
             println("Connecting to the recipient node ($host)")
-            CordaRPCClient(host, sslConfigFor("nodeb", options.valueOf(certsPath))).use("demo", "demo") {
+            CordaRPCClient(host, sslConfigFor("BankB", options.valueOf(certsPath))).use("demo", "demo") {
                 recipient(this)
             }
         }

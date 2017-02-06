@@ -452,13 +452,16 @@ open class DriverDSL(
 
     private fun startNetworkMapService(): ListenableFuture<Process> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-
+        val apiAddress = portAllocation.nextHostAndPort().toString()
         val baseDirectory = driverDirectory / networkMapLegalName
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = mapOf(
                         "myLegalName" to networkMapLegalName,
+                        // TODO: remove the webAddress as NMS doesn't need to run a web server. This will cause all
+                        //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
+                        "webAddress" to apiAddress,
                         "artemisAddress" to networkMapAddress.toString(),
                         "extraAdvertisedServiceIds" to "",
                         "useTestClock" to useTestClock
