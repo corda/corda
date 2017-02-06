@@ -84,7 +84,7 @@ class NodeController : Controller() {
                 confFile.writeText(fileData.root().render(renderOptions))
 
                 // Nodes cannot issue cash unless they contain the "Bank of Corda" plugin.
-                if (config.isCashIssuer && bankOfCorda.isFile()) {
+                if (config.isCashIssuer && bankOfCorda.isFile) {
                     log.info("Installing 'Bank of Corda' plugin")
                     bankOfCorda.copyTo(nodeDir.resolve("plugins").resolve(bankOfCorda.name))
                 }

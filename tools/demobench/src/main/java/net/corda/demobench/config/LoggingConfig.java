@@ -1,9 +1,10 @@
 package net.corda.demobench.config;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.logging.LogManager;
 
 /**
@@ -24,8 +25,8 @@ public class LoggingConfig {
         ClassLoader classLoader = LoggingConfig.class.getClassLoader();
         InputStream input = classLoader.getResourceAsStream("logging.properties");
         if (input == null) {
-            File javaHome = new File(System.getProperty("java.home"));
-            input = new FileInputStream(new File(new File(javaHome, "lib"), "logging.properties"));
+            Path javaHome = Paths.get(System.getProperty("java.home"));
+            input = Files.newInputStream(javaHome.resolve("lib").resolve("logging.properties"));
         }
         return input;
     }
