@@ -9,7 +9,7 @@ class Explorer(val explorerController: ExplorerController) : AutoCloseable {
     private val executor = Executors.newSingleThreadExecutor()
     private var process: Process? = null
 
-    fun open(config: NodeConfig, onExit: (c: NodeConfig) -> Unit) {
+    fun open(config: NodeConfig, onExit: (NodeConfig) -> Unit) {
         val p = explorerController.execute(
               "--host=localhost",
               "--port=${config.artemisPort}",

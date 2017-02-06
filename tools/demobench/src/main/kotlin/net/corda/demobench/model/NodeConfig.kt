@@ -72,7 +72,7 @@ private fun <T> valueFor(any: T): ConfigValue? = ConfigValueFactory.fromAnyRef(a
 
 private fun addressValueFor(port: Int) = valueFor("localhost:$port")
 
-private fun <T> optional(path: String, obj: T?, body: (c: Config, o: T) -> Config): Config {
+private fun <T> optional(path: String, obj: T?, body: (Config, T) -> Config): Config {
     val config = ConfigFactory.empty()
     return if (obj == null) config else body(config, obj).atPath(path)
 }
