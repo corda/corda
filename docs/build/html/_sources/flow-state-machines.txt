@@ -111,8 +111,8 @@ each side.
 
       object TwoPartyTradeFlow {
 
-          class UnacceptablePriceException(val givenPrice: Amount<Currency>) : Exception("Unacceptable price: $givenPrice")
-          class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
+          class UnacceptablePriceException(val givenPrice: Amount<Currency>) : FlowException("Unacceptable price: $givenPrice")
+          class AssetMismatchException(val expectedTypeName: String, val typeName: String) : FlowException() {
               override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
           }
 
@@ -241,17 +241,11 @@ Let's implement the ``Seller.call`` method. This will be run when the flow is in
 
 .. container:: codeset
 
-   .. sourcecode:: kotlin
-
-      @Suspendable
-      override fun call(): SignedTransaction {
-          val partialTX: SignedTransaction = receiveAndCheckProposedTransaction()
-          val ourSignature: DigitalSignature.WithKey = computeOurSignature(partialTX)
-          val allPartySignedTx = partialTX + ourSignature
-          val notarySignature = getNotarySignature(allPartySignedTx)
-          val result: SignedTransaction = sendSignatures(allPartySignedTx, ourSignature, notarySignature)
-          return result
-      }
+    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt
+            :language: kotlin
+            :start-after: DOCSTART 4
+            :end-before: DOCEND 4
+            :dedent: 4
 
 Here we see the outline of the procedure. We receive a proposed trade transaction from the buyer and check that it's
 valid. The buyer has already attached their signature before sending it. Then we calculate and attach our own signature so that the transaction is
@@ -265,31 +259,11 @@ Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
 
 .. container:: codeset
 
-   .. sourcecode:: kotlin
-
-      @Suspendable
-      private fun receiveAndCheckProposedTransaction(): SignedTransaction {
-          // Make the first message we'll send to kick off the flow.
-          val myPublicKey = myKeyPair.public.composite
-          val hello = SellerTradeInfo(assetToSell, price, myPublicKey)
-
-          val maybeSTX = sendAndReceive<SignedTransaction>(otherSide, hello)
-
-          maybeSTX.unwrap {
-              // Check that the tx proposed by the buyer is valid.
-              val wtx: WireTransaction = it.verifySignatures(myPublicKey, notaryNode.notaryIdentity.owningKey)
-              logger.trace { "Received partially signed transaction: ${it.id}" }
-
-              // Download and check all the things that this transaction depends on and verify it is contract-valid,
-              // even though it is missing signatures.
-              subFlow(ResolveTransactionsFlow(wtx, otherParty))
-
-              if (wtx.outputs.map { it.data }.sumCashBy(myPublicKey).withoutIssuer() != price)
-                  throw IllegalArgumentException("Transaction is not sending us the right amount of cash")
-
-              return it
-          }
-      }
+    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt
+            :language: kotlin
+            :start-after: DOCSTART 5
+            :end-before: DOCEND 5
+            :dedent: 4
 
 Let's break this down. We fill out the initial flow message with the trade info, and then call ``sendAndReceive``.
 This function takes a few arguments:
@@ -333,6 +307,26 @@ Our "scrubbing" has three parts:
 2. We resolve the transaction, which we will cover below.
 3. We verify that the transaction is paying us the demanded price.
 
+Exception handling
+------------------
+
+Flows can throw exceptions to prematurely terminate their execution. The flow framework gives special treatment to
+``FlowException`` and its subtypes. These exceptions are treated as error responses of the flow and are propagated
+to all counterparties it is communicating with. The receiving flows will throw the same exception the next time they do
+a ``receive`` or ``sendAndReceive`` and thus end the flow session. If the receiver was invoked via ``subFlow`` (details below)
+then the exception can  be caught there enabling re-invocation of the sub-flow.
+
+If the exception thrown by the erroring flow is not a ``FlowException`` it will still terminate but will not propagate to
+the other counterparties. Instead they will be informed the flow has terminated and will themselves be terminated with a
+generic exception.
+
+.. note:: A future version will extend this to give the node administrator more control on what to do with such erroring
+    flows.
+
+Throwing a ``FlowException`` enables a flow to reject a piece of data it has received back to the sender. This is typically
+done in the ``unwrap`` method of the received ``UntrustworthyData``. In the above example the seller checks the price
+and throws ``FlowException`` if it's invalid. It's then up to the buyer to either try again with a better price or give up.
+
 Sub-flows
 ---------
 
@@ -340,13 +334,11 @@ Flows can be composed via nesting. Invoking a sub-flow looks similar to an ordin
 
 .. container:: codeset
 
-   .. sourcecode:: kotlin
-
-      @Suspendable
-      private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.LegallyIdentifiable {
-          progressTracker.currentStep = NOTARY
-          return subFlow(NotaryFlow.Client(stx))
-      }
+    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt
+            :language: kotlin
+            :start-after: DOCSTART 6
+            :end-before: DOCEND 6
+            :dedent: 4
 
 In this code snippet we are using the ``NotaryFlow.Client`` to request notarisation of the transaction.
 We simply create the flow object via its constructor, and then pass it to the ``subFlow`` method which
@@ -372,18 +364,11 @@ Here's the rest of the code:
 
 .. container:: codeset
 
-   .. sourcecode:: kotlin
-
-      open fun calculateOurSignature(partialTX: SignedTransaction) = myKeyPair.signWithECDSA(partialTX.id)
-
-      @Suspendable
-      private fun sendSignatures(allPartySignedTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
-                                 notarySignature: DigitalSignature.WithKey): SignedTransaction {
-          val fullySigned = allPartySignedTX + notarySignature
-          logger.trace { "Built finished transaction, sending back to secondary!" }
-          send(otherSide, SignaturesFromSeller(ourSignature, notarySignature))
-          return fullySigned
-      }
+    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt
+            :language: kotlin
+            :start-after: DOCSTART 7
+            :end-before: DOCEND 7
+            :dedent: 4
 
 It's all pretty straightforward from now on. Here ``id`` is the secure hash representing the serialised
 transaction, and we just use our private key to calculate a signature over it. As a reminder, in Corda signatures do
@@ -413,7 +398,7 @@ OK, let's do the same for the buyer side:
          :language: kotlin
          :start-after: DOCSTART 1
          :end-before: DOCEND 1
-         :dedent: 8
+         :dedent: 4
 
 This code is longer but no more complicated. Here are some things to pay attention to:
 
@@ -452,7 +437,6 @@ A flow might declare some steps with code inside the flow class like this:
             :start-after: DOCSTART 2
             :end-before: DOCSTART 1
             :dedent: 4
-
 
     .. sourcecode:: java
 
@@ -547,7 +531,7 @@ The flow framework is a key part of the platform and will be extended in major w
 the features we have planned:
 
 * Identity based addressing
-* Exception propagation and management, with a "flow hospital" tool to manually provide solutions to unavoidable
+* Exception management, with a "flow hospital" tool to manually provide solutions to unavoidable
   problems (e.g. the other side doesn't know the trade)
 * Being able to interact with internal apps and tools via RPC
 * Being able to interact with people, either via some sort of external ticketing system, or email, or a custom UI.
