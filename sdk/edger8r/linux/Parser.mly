@@ -390,7 +390,7 @@ param_type: attr_block all_type {
             (* thinking about 'user_defined_type var[4]' *)
             fun is_ary ->
             if is_ary then Ast.PTPtr($2, attr)
-            else failwithf "`%s' is considerred plain type but decorated with pointer attributes" s
+            else failwithf "`%s' is considered a plain type but decorated with pointer attributes" s
         | _ ->
            fun is_ary ->
            if is_ary then Ast.PTPtr($2, get_ptr_attr $1)
