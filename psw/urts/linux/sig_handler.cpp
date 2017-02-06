@@ -130,7 +130,7 @@ void sig_handler(int signum, siginfo_t* siginfo, void *priv)
         }
         //If we can't fix the exception within enclave, then give the handle to other signal hanlder.
         //Call the previous signal handler. The default signal handler should terminate the application.
-        
+
         enclave->rdunlock();
         CEnclavePool::instance()->unref_enclave(enclave);
     }
@@ -248,11 +248,11 @@ int do_ecall(const int fn, const void *ocall_table, const void *ms, CTrustThread
     return status;
 }
 
-int do_ocall(const bridge_fn_t bridge, void *ms)
+int do_ocall(const bridge_fn_t bridge, sgx_enclave_id_t enclave_id, void *ms)
 {
     int error = SGX_ERROR_UNEXPECTED;
 
-    error = bridge(ms);
+    error = bridge(enclave_id, ms);
 
     save_and_clean_xfeature_regs(NULL);
 

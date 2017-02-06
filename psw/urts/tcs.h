@@ -36,6 +36,7 @@
 #include "se_wrapper.h"
 #include "util.h"
 #include "sgx_error.h"
+#include "sgx_eid.h"
 #include "se_debugger_lib.h"
 #include "se_lock.hpp"
 #include <vector>
@@ -43,7 +44,7 @@
 
 using namespace std;
 
-typedef int (*bridge_fn_t)(const void*);
+typedef int (*bridge_fn_t)(sgx_enclave_id_t enclave_id, const void*);
 
 class CEnclave;
 
@@ -87,7 +88,7 @@ protected:
     inline CTrustThread * get_free_thread();
     int bind_thread(const se_thread_id_t thread_id, CTrustThread * const trust_thread);
     CTrustThread * get_bound_thread(const se_thread_id_t thread_id);
-    
+
     vector<CTrustThread *>                  m_free_thread_vector;
     Node<se_thread_id_t, CTrustThread *>    *m_thread_list;
     Mutex                                   m_thread_mutex; //protect both thread_cache list and fress tcs list. The mutex is recursive.

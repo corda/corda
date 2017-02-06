@@ -86,10 +86,15 @@ type ptr_attr = {
   pa_chkptr     : bool;       (* Whether to generate code to check pointer *)
 }
 
+type non_ptr_attr = {
+  npa_enclave_id : bool;
+}
+let default_non_ptr_attr = { npa_enclave_id = false; }
+
 (* parameter type *)
 type parameter_type =
-  | PTVal of atype            (* Passed by value *)
-  | PTPtr of atype * ptr_attr (* Passed by address *)
+  | PTVal of atype * non_ptr_attr (* Passed by value *)
+  | PTPtr of atype * ptr_attr     (* Passed by address *)
 
 type call_conv = CC_CDECL | CC_STDCALL | CC_FASTCALL | CC_NONE
 
@@ -241,7 +246,7 @@ let rec get_tystr (ty: atype) =
 (* Get the plain `atype' from a `parameter_type'. *)
 let get_param_atype (pt: parameter_type) =
   match pt with
-    | PTVal t      -> t
+    | PTVal (t, _) -> t
     | PTPtr (t, _) -> t
 
 (* Convert attr_value to string *)

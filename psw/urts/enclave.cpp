@@ -43,7 +43,7 @@
 using namespace std;
 
 int do_ecall(const int fn, const void *ocall_table, const void *ms, CTrustThread *trust_thread);
-int do_ocall(const bridge_fn_t bridge, void *ms);
+int do_ocall(const bridge_fn_t bridge, sgx_enclave_id_t enclave_id, void *ms);
 
 CEnclave::CEnclave(CLoader &ldr)
     : m_loader(ldr)
@@ -193,7 +193,7 @@ int CEnclave::ocall(const unsigned int proc, const sgx_ocall_table_t *ocall_tabl
 
     se_rdunlock(&m_rwlock);
     bridge_fn_t bridge = reinterpret_cast<bridge_fn_t>(ocall_table->ocall[proc]);
-    error = do_ocall(bridge, ms);
+    error = do_ocall(bridge, m_enclave_id, ms);
 
     if (!se_try_rdlock(&m_rwlock))
     {
@@ -478,7 +478,7 @@ bool CEnclave::update_trust_thread_debug_flag(void* tcs_address, uint8_t debug_f
 
     if(debug_info->enclave_type == ET_DEBUG)
     {
-       
+
          if(!se_write_process_mem(pid, reinterpret_cast<unsigned char *>(tcs_address) + sizeof(uint64_t), &debug_flag2, sizeof(uint64_t), NULL))
               return FALSE;
 
@@ -490,13 +490,13 @@ bool CEnclave::update_trust_thread_debug_flag(void* tcs_address, uint8_t debug_f
 bool CEnclave::update_debug_flag(uint8_t debug_flag)
 {
     debug_tcs_info_t* tcs_list_entry = m_enclave_info.tcs_list;
-    
+
     while(tcs_list_entry)
     {
          if(!update_trust_thread_debug_flag(tcs_list_entry->TCS_address, debug_flag))
               return FALSE;
 
-         tcs_list_entry = tcs_list_entry->next_tcs_info;     
+         tcs_list_entry = tcs_list_entry->next_tcs_info;
     }
 
     return TRUE;
