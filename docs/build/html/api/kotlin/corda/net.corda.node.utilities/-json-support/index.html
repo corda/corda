@@ -11,6 +11,7 @@
 <code><span class="keyword">object </span><span class="identifier">JsonSupport</span></code>
 <p>Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
 the java.time API, some core types, and Kotlin data classes.</p>
+<p>TODO: This does not belong in node. It should be moved to the client module or a dedicated webserver module.</p>
 <h3>Types</h3>
 <table>
 <tbody>
@@ -34,6 +35,12 @@ the java.time API, some core types, and Kotlin data classes.</p>
 </tr>
 <tr>
 <td>
+<a href="-identity-object-mapper/index.html">IdentityObjectMapper</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">IdentityObjectMapper</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-party-object-mapper/index.html"><span class="identifier">PartyObjectMapper</span></a><span class="symbol">, </span><span class="identifier">ObjectMapper</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="-local-date-deserializer/index.html">LocalDateDeserializer</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">LocalDateDeserializer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">JsonDeserializer</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">&gt;</span></code></td>
@@ -43,6 +50,12 @@ the java.time API, some core types, and Kotlin data classes.</p>
 <a href="-local-date-key-deserializer/index.html">LocalDateKeyDeserializer</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">LocalDateKeyDeserializer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">KeyDeserializer</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-no-party-object-mapper/index.html">NoPartyObjectMapper</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NoPartyObjectMapper</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-party-object-mapper/index.html"><span class="identifier">PartyObjectMapper</span></a><span class="symbol">, </span><span class="identifier">ObjectMapper</span></code></td>
 </tr>
 <tr>
 <td>
@@ -64,6 +77,12 @@ the java.time API, some core types, and Kotlin data classes.</p>
 </tr>
 <tr>
 <td>
+<a href="-party-object-mapper/index.html">PartyObjectMapper</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">PartyObjectMapper</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="-party-serializer/index.html">PartySerializer</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">PartySerializer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">JsonSerializer</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span></code></td>
@@ -82,6 +101,12 @@ the java.time API, some core types, and Kotlin data classes.</p>
 </tr>
 <tr>
 <td>
+<a href="-rpc-object-mapper/index.html">RpcObjectMapper</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">RpcObjectMapper</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-party-object-mapper/index.html"><span class="identifier">PartyObjectMapper</span></a><span class="symbol">, </span><span class="identifier">ObjectMapper</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="-secure-hash-deserializer/index.html">SecureHashDeserializer</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">SecureHashDeserializer</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">JsonDeserializer</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
@@ -93,12 +118,6 @@ the java.time API, some core types, and Kotlin data classes.</p>
 <a href="-secure-hash-serializer/index.html">SecureHashSerializer</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">SecureHashSerializer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">JsonSerializer</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-service-hub-object-mapper/index.html">ServiceHubObjectMapper</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">ServiceHubObjectMapper</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ObjectMapper</span></code></td>
 </tr>
 <tr>
 <td>
@@ -132,7 +151,19 @@ the java.time API, some core types, and Kotlin data classes.</p>
 <td>
 <a href="create-default-mapper.html">createDefaultMapper</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">createDefaultMapper</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.JsonSupport$createDefaultMapper(net.corda.core.node.services.IdentityService)/identities">identities</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObjectMapper</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">createDefaultMapper</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.JsonSupport$createDefaultMapper(net.corda.core.messaging.CordaRPCOps)/rpc">rpc</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObjectMapper</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="create-in-memory-mapper.html">createInMemoryMapper</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">createInMemoryMapper</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.utilities.JsonSupport$createInMemoryMapper(net.corda.core.node.services.IdentityService)/identityService">identityService</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObjectMapper</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="create-non-rpc-mapper.html">createNonRpcMapper</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">createNonRpcMapper</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObjectMapper</span></code></td>
 </tr>
 </tbody>
 </table>

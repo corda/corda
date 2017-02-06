@@ -8,6 +8,12 @@
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.flows</a>&nbsp;/&nbsp;<a href="index.html">FlowException</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
 <br/>
 <h1>&lt;init&gt;</h1>
-<code><span class="identifier">FlowException</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowException$<init>(kotlin.String)/message">message</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span></code>
+<code><span class="identifier">FlowException</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowException$<init>(kotlin.String, kotlin.Throwable)/message">message</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowException$<init>(kotlin.String, kotlin.Throwable)/cause">cause</span><span class="symbol">:</span>&nbsp;<span class="identifier">Throwable</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span></code>
+<p>Exception which can be thrown by a <a href="../-flow-logic/index.html">FlowLogic</a> at any point in its logic to unexpectedly bring it to a permanent end.
+The exception will propagate to all counterparty flows and will be thrown on their end the next time they wait on a
+<a href="../-flow-logic/receive.html">FlowLogic.receive</a> or <a href="../-flow-logic/send-and-receive.html">FlowLogic.sendAndReceive</a>. Any flow which no longer needs to do a receive, or has already ended,
+will not receive the exception (if this is required then have them wait for a confirmation message).</p>
+<p><a href="index.html">FlowException</a> (or a subclass) can be a valid expected response from a flow, particularly ones which act as a service.
+It is recommended a <a href="../-flow-logic/index.html">FlowLogic</a> document the <a href="index.html">FlowException</a> types it can throw.</p>
 </BODY>
 </HTML>

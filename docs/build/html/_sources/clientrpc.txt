@@ -46,6 +46,14 @@ through to the server where the corresponding server-side observables are also u
    a warning printed to the logs and the proxy will be closed for you. But don't rely on this, as garbage
    collection is non-deterministic.
 
+Futures
+-------
+
+A method can also return a ``ListenableFuture`` in its object graph and it will be treated in a similar manner to
+observables, including needing to mark the RPC with the ``@RPCReturnsObservables`` annotation. Unlike for an observable,
+once the single value (or an exception) has been received all server-side resources will be released automatically. Calling
+the ``cancel`` method on the future will unsubscribe it from any future value and release any resources.
+
 Versioning
 ----------
 

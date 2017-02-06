@@ -8,7 +8,7 @@
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href=".">NotaryChangeFlow</a><br/>
 <br/>
 <h1>NotaryChangeFlow</h1>
-<code><span class="keyword">object </span><span class="identifier">NotaryChangeFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-abstract-state-replacement-flow/index.html"><span class="identifier">AbstractStateReplacementFlow</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span></code>
+<code><span class="keyword">object </span><span class="identifier">NotaryChangeFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-abstract-state-replacement-flow/index.html"><span class="identifier">AbstractStateReplacementFlow</span></a></code>
 <p>A flow to be used for changing a state's Notary. This is required since all input states to a transaction
 must point to the same notary.</p>
 <p>The <a href="-instigator/index.html">Instigator</a> assembles the transaction for notary replacement and sends out change proposals to all participants
@@ -28,13 +28,7 @@ use the new updated state for future transactions.</p>
 <td>
 <a href="-instigator/index.html">Instigator</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Instigator</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-abstract-state-replacement-flow/-instigator/index.html"><span class="identifier">Instigator</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-proposal/index.html">Proposal</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Proposal</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-abstract-state-replacement-flow/-proposal/index.html"><span class="identifier">Proposal</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">class </span><span class="identifier">Instigator</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-abstract-state-replacement-flow/-instigator/index.html"><span class="identifier">Instigator</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

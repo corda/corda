@@ -1,0 +1,22 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TTxState.participants - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">com.cordatest</a>&nbsp;/&nbsp;<a href="index.html">TTxState</a>&nbsp;/&nbsp;<a href=".">participants</a><br/>
+<br/>
+<h1>participants</h1>
+<a name="com.cordatest.TTxState$participants"></a>
+<code><span class="keyword">val </span><span class="identifier">participants</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span></code>
+<p>Overrides <a href="../../net.corda.core.contracts/-contract-state/participants.html">ContractState.participants</a></p>
+<p>A <emph>participant</emph> is any party that is able to consume this state in a valid transaction.</p>
+<p>The list of participants is required for certain types of transactions. For example, when changing the notary
+for this state (<a href="#">TransactionType.NotaryChange</a>), every participant has to be involved and approve the transaction
+so that they receive the updated state, and don't end up in a situation where they can no longer use a state
+they possess, since someone consumed that state during the notary change process.</p>
+<p>The participants list should normally be derived from the contents of the state. E.g. for <a href="#">Cash</a> the participants
+list should just contain the owner.</p>
+</BODY>
+</HTML>
