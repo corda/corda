@@ -16,7 +16,7 @@ Milestone 8
 * Data model: ``Party`` equality is now based on the owning key, rather than the owning key and name. This is important for
   party anonymisation to work, as each key must identify exactly one party.
 
-* Contracts: Created new composite clauses called ``AllOf``, ``AnyOf`` and ``FirstOf`` to replace ``AllComposition``, ``AnyComposition``
+* Contracts: created new composite clauses called ``AllOf``, ``AnyOf`` and ``FirstOf`` to replace ``AllComposition``, ``AnyComposition``
   and ``FirstComposition``, as this is significantly clearer in intent. ``AnyOf`` also enforces that at least one subclause
   must match, whereas ``AnyComposition`` would accept no matches.
 
@@ -29,10 +29,10 @@ Milestone 8
 
 * Flow framework: improved exception handling with the introduction of ``FlowException``. If this or a subtype is thrown
   inside a flow it will propagate to all counterparty flows and subsequently be thrown by them as well. Existing flows such as
-  ``NotaryFlow.Client/Service`` and others have been modified to throw a ``FlowException`` (in this particular case a 
+  ``NotaryFlow.Client/Service`` and others have been modified to throw a ``FlowException`` (in this particular case a
   ``NotaryException``) instead of sending back error responses.
 
-* Notary flow: Provide complete details of underlying error when contract validation fails.
+* Notary flow: provide complete details of underlying error when contract validation fails.
 
 Milestone 7
 -----------
