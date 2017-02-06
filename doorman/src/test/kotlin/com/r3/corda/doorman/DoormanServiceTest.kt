@@ -1,12 +1,10 @@
-package com.r3.corda.netpermission
+package com.r3.corda.doorman
 
 import com.google.common.net.HostAndPort
 import com.nhaarman.mockito_kotlin.*
-import com.r3.corda.netpermission.CertificateSigningServer.Companion.hostAndPort
-import com.r3.corda.netpermission.internal.CertificateSigningService
-import com.r3.corda.netpermission.internal.persistence.CertificateResponse
-import com.r3.corda.netpermission.internal.persistence.CertificationData
-import com.r3.corda.netpermission.internal.persistence.CertificationRequestStorage
+import com.r3.corda.doorman.persistence.CertificateResponse
+import com.r3.corda.doorman.persistence.CertificationRequestData
+import com.r3.corda.doorman.persistence.CertificationRequestStorage
 import net.corda.core.crypto.CertificateStream
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.X509Utilities
@@ -27,18 +25,18 @@ import java.util.zip.ZipInputStream
 import javax.ws.rs.core.MediaType
 import kotlin.test.assertEquals
 
-class CertificateSigningServiceTest {
+class DoormanServiceTest {
     private val rootCA = X509Utilities.createSelfSignedCACert("Corda Node Root CA")
     private val intermediateCA = X509Utilities.createSelfSignedCACert("Corda Node Intermediate CA")
-    private lateinit var signingServer: CertificateSigningServer
+    private lateinit var doormanServer: DoormanServer
 
     private fun startSigningServer(storage: CertificationRequestStorage) {
-        signingServer = CertificateSigningServer(HostAndPort.fromParts("localhost", 0), CertificateSigningService(intermediateCA, rootCA.certificate, storage))
+        doormanServer = DoormanServer(HostAndPort.fromParts("localhost", 0), DoormanWebService(intermediateCA, rootCA.certificate, storage))
     }
 
     @After
     fun close() {
-        signingServer.close()
+        doormanServer.close()
     }
 
     @Test
@@ -74,8 +72,8 @@ class CertificateSigningServiceTest {
             }
             on { approveRequest(eq(id), any()) }.then {
                 @Suppress("UNCHECKED_CAST")
-                val certGen = it.arguments[1] as ((CertificationData) -> Certificate)
-                val request = CertificationData("", "", X509Utilities.createCertificateSigningRequest("LegalName", "London", "admin@test.com", keyPair))
+                val certGen = it.arguments[1] as ((CertificationRequestData) -> Certificate)
+                val request = CertificationRequestData("", "", X509Utilities.createCertificateSigningRequest("LegalName", "London", "admin@test.com", keyPair))
                 certificateStore[id] = certGen(request)
                 Unit
             }
@@ -123,7 +121,7 @@ class CertificateSigningServiceTest {
     }
 
     private fun submitRequest(request: PKCS10CertificationRequest): String {
-        val conn = URL("http://${signingServer.server.hostAndPort()}/api/certificate").openConnection() as HttpURLConnection
+        val conn = URL("http://${doormanServer.hostAndPort}/api/certificate").openConnection() as HttpURLConnection
         conn.doOutput = true
         conn.requestMethod = "POST"
         conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM)
@@ -132,7 +130,7 @@ class CertificateSigningServiceTest {
     }
 
     private fun pollForResponse(id: String): PollResponse {
-        val url = URL("http://${signingServer.server.hostAndPort()}/api/certificate/$id")
+        val url = URL("http://${doormanServer.hostAndPort}/api/certificate/$id")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
 

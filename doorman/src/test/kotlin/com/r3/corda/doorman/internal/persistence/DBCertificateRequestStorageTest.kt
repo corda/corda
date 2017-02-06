@@ -1,5 +1,8 @@
-package com.r3.corda.netpermission.internal.persistence
+package com.r3.corda.doorman.internal.persistence
 
+import com.r3.corda.doorman.persistence.CertificateResponse
+import com.r3.corda.doorman.persistence.CertificationRequestData
+import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
 import net.corda.core.crypto.X509Utilities
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -119,9 +122,9 @@ class DBCertificateRequestStorageTest {
         assertThat(response.message).contains(",")
     }
 
-    private fun createRequest(legalName: String): Pair<CertificationData, KeyPair> {
+    private fun createRequest(legalName: String): Pair<CertificationRequestData, KeyPair> {
         val keyPair = X509Utilities.generateECDSAKeyPairForSSL()
-        val request = CertificationData(
+        val request = CertificationRequestData(
                 "hostname",
                 "0.0.0.0",
                 X509Utilities.createCertificateSigningRequest(legalName, "London", "admin@test.com", keyPair))

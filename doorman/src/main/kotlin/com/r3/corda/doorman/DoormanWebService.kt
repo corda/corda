@@ -1,8 +1,8 @@
-package com.r3.corda.netpermission.internal
+package com.r3.corda.doorman
 
-import com.r3.corda.netpermission.internal.persistence.CertificateResponse
-import com.r3.corda.netpermission.internal.persistence.CertificationData
-import com.r3.corda.netpermission.internal.persistence.CertificationRequestStorage
+import com.r3.corda.doorman.persistence.CertificateResponse
+import com.r3.corda.doorman.persistence.CertificationRequestData
+import com.r3.corda.doorman.persistence.CertificationRequestStorage
 import net.corda.core.crypto.X509Utilities.CACertAndKey
 import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.core.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
@@ -25,7 +25,7 @@ import javax.ws.rs.core.Response.Status.UNAUTHORIZED
  * Provides functionality for asynchronous submission of certificate signing requests and retrieval of the results.
  */
 @Path("")
-class CertificateSigningService(val intermediateCACertAndKey: CACertAndKey, val rootCert: Certificate, val storage: CertificationRequestStorage) {
+class DoormanWebService(val intermediateCACertAndKey: CACertAndKey, val rootCert: Certificate, val storage: CertificationRequestStorage) {
     @Context lateinit var request: HttpServletRequest
     /**
      * Accept stream of [PKCS10CertificationRequest] from user and persists in [CertificationRequestStorage] for approval.
@@ -42,7 +42,7 @@ class CertificateSigningService(val intermediateCACertAndKey: CACertAndKey, val 
         // TODO: Certificate signing request verifications.
         // TODO: Use jira api / slack bot to semi automate the approval process?
         // TODO: Acknowledge to user we have received the request via email?
-        val requestId = storage.saveRequest(CertificationData(request.remoteHost, request.remoteAddr, certificationRequest))
+        val requestId = storage.saveRequest(CertificationRequestData(request.remoteHost, request.remoteAddr, certificationRequest))
         return ok(requestId).build()
     }
 

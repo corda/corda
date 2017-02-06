@@ -13,9 +13,9 @@ repositories {
     }
 }
 
-task buildCertSignerJAR(type: FatCapsule, dependsOn: 'jar') {
-    applicationClass 'com.r3.corda.netpermission.MainKt'
-    archiveName 'certSigner.jar'
+task buildDoormanJAR(type: FatCapsule, dependsOn: 'jar') {
+    applicationClass 'com.r3.corda.doorman.MainKt'
+    archiveName 'doorman.jar'
 
     capsuleManifest {
         systemProperties['log4j.configuration'] = 'log4j2.xml'

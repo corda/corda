@@ -1,8 +1,7 @@
-package com.r3.corda.netpermission
+package com.r3.corda.doorman
 
 import com.google.common.net.HostAndPort
-import com.r3.corda.netpermission.internal.CertificateSigningService
-import com.r3.corda.netpermission.internal.persistence.DBCertificateRequestStorage
+import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
 import net.corda.core.crypto.X509Utilities
@@ -30,20 +29,22 @@ import kotlin.system.exitProcess
  *  The server will require keystorePath, keystore password and key password via command line input.
  *  The Intermediate CA certificate,Intermediate CA private key and Root CA Certificate should use alias name specified in [X509Utilities]
  */
-class CertificateSigningServer(val webServerAddr: HostAndPort, val certSigningService: CertificateSigningService) : Closeable {
+class DoormanServer(val webServerAddr: HostAndPort, val doormanWebService: DoormanWebService) : Closeable {
     companion object {
-        val log = loggerFor<CertificateSigningServer>()
-        fun Server.hostAndPort(): HostAndPort {
-            val connector = server.connectors.first() as ServerConnector
-            return HostAndPort.fromParts(connector.host, connector.localPort)
-        }
+        val log = loggerFor<DoormanServer>()
     }
 
-    val server: Server = initWebServer()
+    private val server: Server = initWebServer()
+    val hostAndPort: HostAndPort get() = server.connectors
+            .map { it as? ServerConnector }
+            .filterNotNull()
+            .map { HostAndPort.fromParts(it.host, it.localPort) }
+            .first()
 
     override fun close() {
         log.info("Shutting down CertificateSigningService...")
         server.stop()
+        server.join()
     }
 
     private fun initWebServer(): Server {
@@ -53,7 +54,7 @@ class CertificateSigningServer(val webServerAddr: HostAndPort, val certSigningSe
                 addHandler(buildServletContextHandler())
             }
             start()
-            log.info("CertificateSigningService started on ${server.hostAndPort()}")
+            log.info("CertificateSigningService started on $hostAndPort")
         }
     }
 
@@ -62,7 +63,7 @@ class CertificateSigningServer(val webServerAddr: HostAndPort, val certSigningSe
             contextPath = "/"
             val resourceConfig = ResourceConfig().apply {
                 // Add your API provider classes (annotated for JAX-RS) here
-                register(certSigningService)
+                register(doormanWebService)
             }
             val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply {
                 initOrder = 0  // Initialise at server start
@@ -79,7 +80,7 @@ object ParamsSpec {
 }
 
 fun main(args: Array<String>) {
-    val log = CertificateSigningServer.log
+    val log = DoormanServer.log
     log.info("Starting certificate signing server.")
     try {
         ParamsSpec.parser.parse(*args)
@@ -97,9 +98,8 @@ fun main(args: Array<String>) {
 
         // Create DB connection.
         val (datasource, database) = configureDatabase(config.getProperties("dataSourceProperties"))
-
         val storage = DBCertificateRequestStorage(database)
-        val service = CertificateSigningService(intermediateCACertAndKey, rootCA, storage)
+        val service = DoormanWebService(intermediateCACertAndKey, rootCA, storage)
 
         // Background thread approving all request periodically.
         var stopSigner = false
@@ -123,14 +123,12 @@ fun main(args: Array<String>) {
             null
         }
 
-        CertificateSigningServer(HostAndPort.fromParts(config.getString("host"), config.getInt("port")), service).use {
+        DoormanServer(HostAndPort.fromParts(config.getString("host"), config.getInt("port")), service).use {
             Runtime.getRuntime().addShutdownHook(thread(false) {
                 stopSigner = true
                 certSinger?.join()
-                it.close()
                 datasource.close()
             })
-            it.server.join()
         }
     }
 }
