@@ -38,6 +38,10 @@ class NodeTerminalView : Fragment() {
     private var rpc: NodeRPC? = null
     private var pty: R3Pty? = null
 
+    init {
+        root.vgrow = Priority.ALWAYS
+    }
+
     fun open(config: NodeConfig) {
         nodeName.text = config.legalName
         p2pPort.value = config.artemisPort.toString()
@@ -75,26 +79,31 @@ class NodeTerminalView : Fragment() {
                 })
             }
 
-            rpc = NodeRPC(config, { ops ->
-                try {
-                    val verifiedTx = ops.verifiedTransactions()
-                    val statesInVault = ops.vaultAndUpdates()
-                    val cashBalances = ops.getCashBalances().entries.joinToString(
-                        separator = ", ",
-                        transform = { e -> e.value.toString() }
-                    )
-
-                    Platform.runLater {
-                        states.value = statesInVault.first.size.toString()
-                        transactions.value = verifiedTx.first.size.toString()
-                        balance.value = cashBalances
-                    }
-                } catch (e: Exception) {
-                    log.warning("RPC failed: " + e)
-                }
-            })
+            /*
+             * Start RPC client that will update node statistics on UI.
+             */
+            rpc = launchRPC(config)
         })
     }
+
+    fun launchRPC(config: NodeConfig) = NodeRPC(config, { ops ->
+        try {
+            val verifiedTx = ops.verifiedTransactions()
+            val statesInVault = ops.vaultAndUpdates()
+            val cashBalances = ops.getCashBalances().entries.joinToString(
+                separator = ", ",
+                transform = { e -> e.value.toString() }
+            )
+
+            Platform.runLater {
+                states.value = statesInVault.first.size.toString()
+                transactions.value = verifiedTx.first.size.toString()
+                balance.value = cashBalances
+            }
+        } catch (e: Exception) {
+            log.warning("RPC failed: " + e)
+        }
+    })
 
     fun close() {
         explorer.close()
@@ -105,10 +114,6 @@ class NodeTerminalView : Fragment() {
 
     fun refreshTerminal() {
         // TODO - Force a repaint somehow? My naive attempts have not worked.
-    }
-
-    init {
-        root.vgrow = Priority.ALWAYS
     }
 
     class TerminalSettingsProvider : DefaultSettingsProvider() {

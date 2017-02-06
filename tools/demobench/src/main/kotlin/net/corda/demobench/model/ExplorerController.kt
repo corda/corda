@@ -6,8 +6,11 @@ import java.nio.file.Paths
 class ExplorerController : Controller() {
 
     private val jvm by inject<JVMConfig>()
-
     private val explorerPath = Paths.get("explorer", "node-explorer.jar").toAbsolutePath()
+
+    init {
+        log.info("Explorer JAR: " + explorerPath)
+    }
 
     internal fun execute(vararg args: String): Process {
         return jvm.execute(explorerPath, *args)
@@ -17,7 +20,4 @@ class ExplorerController : Controller() {
         return Explorer(this)
     }
 
-    init {
-        log.info("Explorer JAR: " + explorerPath)
-    }
 }

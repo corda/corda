@@ -35,7 +35,7 @@ class NodeConfig(
         override val keyStorePassword: String = "cordacadevpass"
     }
 
-    val toFileConfig : Config
+    val toFileConfig: Config
         get() = ConfigFactory.empty()
                     .withValue("myLegalName", valueFor(legalName))
                     .withValue("artemisAddress", addressValueFor(artemisPort))
@@ -50,36 +50,27 @@ class NodeConfig(
                     .withValue("h2port", valueFor(h2Port))
                     .withValue("useTestClock", valueFor(true))
 
-    val isCashIssuer : Boolean
-        get() {
-            extraServices.forEach {
-                if (it.startsWith("corda.issuer.")) {
-                    return true
+    val isCashIssuer: Boolean
+        get() = extraServices.any {
+                    it.startsWith("corda.issuer.")
                 }
-            }
-            return false
-        }
 
     init {
         userMap = mapOf<String, Any>(
-                Pair<String, Any>("password", "letmein"),
-                Pair<String, Any>("user", "guest"),
-                Pair<String, Any>("permissions", listOf(
+                "password" to "letmein",
+                "user" to "guest",
+                "permissions" to listOf(
                     "StartFlow.net.corda.flows.CashFlow",
                     "StartFlow.net.corda.flows.IssuerFlow\$IssuanceRequester"
-                ))
+                )
         )
     }
 
 }
 
-private fun <T> valueFor(any: T): ConfigValue? {
-    return ConfigValueFactory.fromAnyRef(any)
-}
+private fun <T> valueFor(any: T): ConfigValue? = ConfigValueFactory.fromAnyRef(any)
 
-private fun addressValueFor(port: Int): ConfigValue? {
-    return valueFor("localhost:%d".format(port))
-}
+private fun addressValueFor(port: Int) = valueFor("localhost:$port")
 
 private fun <T> optional(path: String, obj: T?, body: (c: Config, o: T) -> Config): Config {
     val config = ConfigFactory.empty()

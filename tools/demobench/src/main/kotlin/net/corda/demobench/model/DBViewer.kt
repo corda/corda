@@ -15,28 +15,6 @@ class DBViewer : AutoCloseable {
     private val pool = Executors.newCachedThreadPool()
     private val t = Thread("DBViewer")
 
-    override fun close() {
-        webServer.shutdown()
-        pool.shutdown()
-        t.join()
-    }
-
-    fun openBrowser(h2Port: Int) {
-        val conn = JdbcUtils.getConnection(
-            org.h2.Driver::class.jvmName,
-            "jdbc:h2:tcp://localhost:%d/node".format(h2Port),
-            "sa",
-            ""
-        )
-
-        val url = (webServer.service as LocalWebServer).addSession(conn)
-        log.info("Session: {}", url)
-
-        pool.execute {
-            Server.openBrowser(url)
-        }
-    }
-
     init {
         val ws = LocalWebServer()
         webServer = Server(ws, "-webPort", "0")
@@ -48,6 +26,28 @@ class DBViewer : AutoCloseable {
 
         t.run {
             webServer.start()
+        }
+    }
+
+    override fun close() {
+        webServer.shutdown()
+        pool.shutdown()
+        t.join()
+    }
+
+    fun openBrowser(h2Port: Int) {
+        val conn = JdbcUtils.getConnection(
+            org.h2.Driver::class.jvmName,
+            "jdbc:h2:tcp://localhost:$h2Port/node",
+            "sa",
+            ""
+        )
+
+        val url = (webServer.service as LocalWebServer).addSession(conn)
+        log.info("Session: {}", url)
+
+        pool.execute {
+            Server.openBrowser(url)
         }
     }
 
