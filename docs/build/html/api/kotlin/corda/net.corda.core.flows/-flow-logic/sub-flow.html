@@ -19,5 +19,10 @@ current step in this flow's progress tracker.</p>
 <code>shareParentSessions</code> - In certain situations the need arises to use the same sessions the parent flow has
 already established. However this also prevents the subflow from creating new sessions with those parties.
 For this reason the default value is false.
+<h3>Exceptions</h3>
+
+<p><a name="FlowException"></a>
+<code>FlowException</code> - This is either thrown by <a href="sub-flow.html#net.corda.core.flows.FlowLogic$subFlow(net.corda.core.flows.FlowLogic((net.corda.core.flows.FlowLogic.subFlow.R)), kotlin.Boolean)/subLogic">subLogic</a> itself or propagated from any of the remote
+<a href="index.html">FlowLogic</a>s it communicated with. A subflow retry can be done by catching this exception.
 </BODY>
 </HTML>

@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="The Corda plugin framework" href="corda-plugins.html"/>
         <link rel="prev" title="Node administration" href="node-administration.html"/> 
@@ -346,13 +343,18 @@ here must be externally accessible when running nodes across a cluster of machin
 <tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first">The address of the ArtemisMQ broker instance. If not provided the node will run one locally.</p>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">webAddress:</th><td class="field-body"><p class="first">The host and port on which the node is available for web operations.</p>
+<tr class="field-even field"><th class="field-name">webAddress:</th><td class="field-body"><p class="first">The host and port on which the bundled webserver will listen if it is started.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">If HTTPS is enabled then the browser security checks will require that the accessing url host name is one
 of either the machine name, fully qualified machine name, or server IP address to line up with the Subject Alternative
 Names contained within the development certificates. This is addition to requiring the <code class="docutils literal"><span class="pre">/config/dev/corda_dev_ca.cer</span></code>
 root certificate be installed as a Trusted CA.</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The driver will not automatically create a webserver instance, but the Cordformation will. If this field
+is present the web server will start.</p>
 </div>
 </td>
 </tr>

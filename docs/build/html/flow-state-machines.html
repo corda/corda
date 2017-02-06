@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Writing flow tests" href="flow-testing.html"/>
         <link rel="prev" title="Building transactions" href="tutorial-building-transactions.html"/> 
@@ -149,6 +146,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l2"><a class="reference internal" href="#suspendable-functions">Suspendable functions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#starting-your-flow">Starting your flow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#implementing-the-seller">Implementing the seller</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#exception-handling">Exception handling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#sub-flows">Sub-flows</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#implementing-the-buyer">Implementing the buyer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#progress-tracking">Progress tracking</a></li>
@@ -326,8 +324,8 @@ write them and the approach is the same.</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">object</span> <span class="nc">TwoPartyTradeFlow</span> <span class="p">{</span>
 
-    <span class="k">class</span> <span class="nc">UnacceptablePriceException</span><span class="p">(</span><span class="k">val</span> <span class="py">givenPrice</span><span class="p">:</span> <span class="n">Amount</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;)</span> <span class="p">:</span> <span class="n">Exception</span><span class="p">(</span><span class="s">&quot;Unacceptable price: $givenPrice&quot;</span><span class="p">)</span>
-    <span class="k">class</span> <span class="nc">AssetMismatchException</span><span class="p">(</span><span class="k">val</span> <span class="py">expectedTypeName</span><span class="p">:</span> <span class="n">String</span><span class="p">,</span> <span class="k">val</span> <span class="py">typeName</span><span class="p">:</span> <span class="n">String</span><span class="p">)</span> <span class="p">:</span> <span class="n">Exception</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">class</span> <span class="nc">UnacceptablePriceException</span><span class="p">(</span><span class="k">val</span> <span class="py">givenPrice</span><span class="p">:</span> <span class="n">Amount</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;)</span> <span class="p">:</span> <span class="n">FlowException</span><span class="p">(</span><span class="s">&quot;Unacceptable price: $givenPrice&quot;</span><span class="p">)</span>
+    <span class="k">class</span> <span class="nc">AssetMismatchException</span><span class="p">(</span><span class="k">val</span> <span class="py">expectedTypeName</span><span class="p">:</span> <span class="n">String</span><span class="p">,</span> <span class="k">val</span> <span class="py">typeName</span><span class="p">:</span> <span class="n">String</span><span class="p">)</span> <span class="p">:</span> <span class="n">FlowException</span><span class="p">()</span> <span class="p">{</span>
         <span class="k">override</span> <span class="k">fun</span> <span class="nf">toString</span><span class="p">()</span> <span class="p">=</span> <span class="s">&quot;The submitted asset didn&#39;t match the expected type: $expectedTypeName vs $typeName&quot;</span>
     <span class="p">}</span>
 
@@ -449,15 +447,15 @@ is a seller (<code class="docutils literal"><span class="pre">Seller::class</spa
 <h2>Implementing the seller<a class="headerlink" href="#implementing-the-seller" title="Permalink to this headline">¶</a></h2>
 <p>Let&#8217;s implement the <code class="docutils literal"><span class="pre">Seller.call</span></code> method. This will be run when the flow is invoked.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Suspendable</span>
-<span class="k">override</span> <span class="k">fun</span> <span class="nf">call</span><span class="p">():</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
-    <span class="k">val</span> <span class="py">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">receiveAndCheckProposedTransaction</span><span class="p">()</span>
-    <span class="k">val</span> <span class="py">ourSignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span> <span class="p">=</span> <span class="n">computeOurSignature</span><span class="p">(</span><span class="n">partialTX</span><span class="p">)</span>
-    <span class="k">val</span> <span class="py">allPartySignedTx</span> <span class="p">=</span> <span class="n">partialTX</span> <span class="p">+</span> <span class="n">ourSignature</span>
-    <span class="k">val</span> <span class="py">notarySignature</span> <span class="p">=</span> <span class="n">getNotarySignature</span><span class="p">(</span><span class="n">allPartySignedTx</span><span class="p">)</span>
-    <span class="k">val</span> <span class="py">result</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">sendSignatures</span><span class="p">(</span><span class="n">allPartySignedTx</span><span class="p">,</span> <span class="n">ourSignature</span><span class="p">,</span> <span class="n">notarySignature</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">result</span>
-<span class="p">}</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>    <span class="n">@Suspendable</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">call</span><span class="p">():</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
+        <span class="k">val</span> <span class="py">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">receiveAndCheckProposedTransaction</span><span class="p">()</span>
+        <span class="k">val</span> <span class="py">ourSignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span> <span class="p">=</span> <span class="n">calculateOurSignature</span><span class="p">(</span><span class="n">partialTX</span><span class="p">)</span>
+        <span class="k">val</span> <span class="py">allPartySignedTx</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">partialTX</span> <span class="p">+</span> <span class="n">ourSignature</span>
+        <span class="k">val</span> <span class="py">notarySignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span> <span class="p">=</span> <span class="n">getNotarySignature</span><span class="p">(</span><span class="n">allPartySignedTx</span><span class="p">)</span>
+        <span class="k">val</span> <span class="py">result</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">sendSignatures</span><span class="p">(</span><span class="n">allPartySignedTx</span><span class="p">,</span> <span class="n">ourSignature</span><span class="p">,</span> <span class="n">notarySignature</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+    <span class="p">}</span>
 </pre></div>
 </div>
 </div>
@@ -470,29 +468,36 @@ as the notary may validate the signatures as well as verifying for itself the tr
 Finally, we hand back to the code that invoked the flow the finished transaction.</p>
 <p>Let&#8217;s fill out the <code class="docutils literal"><span class="pre">receiveAndCheckProposedTransaction()</span></code> method.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Suspendable</span>
-<span class="k">private</span> <span class="k">fun</span> <span class="nf">receiveAndCheckProposedTransaction</span><span class="p">():</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
-    <span class="c1">// Make the first message we&#39;ll send to kick off the flow.</span>
-    <span class="k">val</span> <span class="py">myPublicKey</span> <span class="p">=</span> <span class="n">myKeyPair</span><span class="p">.</span><span class="k">public</span><span class="p">.</span><span class="n">composite</span>
-    <span class="k">val</span> <span class="py">hello</span> <span class="p">=</span> <span class="n">SellerTradeInfo</span><span class="p">(</span><span class="n">assetToSell</span><span class="p">,</span> <span class="n">price</span><span class="p">,</span> <span class="n">myPublicKey</span><span class="p">)</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>    <span class="n">@Suspendable</span>
+    <span class="k">private</span> <span class="k">fun</span> <span class="nf">receiveAndCheckProposedTransaction</span><span class="p">():</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
+        <span class="n">progressTracker</span><span class="p">.</span><span class="n">currentStep</span> <span class="p">=</span> <span class="n">AWAITING_PROPOSAL</span>
 
-    <span class="k">val</span> <span class="py">maybeSTX</span> <span class="p">=</span> <span class="n">sendAndReceive</span><span class="p">&lt;</span><span class="n">SignedTransaction</span><span class="p">&gt;(</span><span class="n">otherSide</span><span class="p">,</span> <span class="n">hello</span><span class="p">)</span>
+        <span class="k">val</span> <span class="py">myPublicKey</span> <span class="p">=</span> <span class="n">myKeyPair</span><span class="p">.</span><span class="k">public</span><span class="p">.</span><span class="n">composite</span>
+        <span class="c1">// Make the first message we&#39;ll send to kick off the flow.</span>
+        <span class="k">val</span> <span class="py">hello</span> <span class="p">=</span> <span class="n">SellerTradeInfo</span><span class="p">(</span><span class="n">assetToSell</span><span class="p">,</span> <span class="n">price</span><span class="p">,</span> <span class="n">myPublicKey</span><span class="p">)</span>
 
-    <span class="n">maybeSTX</span><span class="p">.</span><span class="n">unwrap</span> <span class="p">{</span>
-        <span class="c1">// Check that the tx proposed by the buyer is valid.</span>
-        <span class="k">val</span> <span class="py">wtx</span><span class="p">:</span> <span class="n">WireTransaction</span> <span class="p">=</span> <span class="n">it</span><span class="p">.</span><span class="n">verifySignatures</span><span class="p">(</span><span class="n">myPublicKey</span><span class="p">,</span> <span class="n">notaryNode</span><span class="p">.</span><span class="n">notaryIdentity</span><span class="p">.</span><span class="n">owningKey</span><span class="p">)</span>
-        <span class="n">logger</span><span class="p">.</span><span class="n">trace</span> <span class="p">{</span> <span class="s">&quot;Received partially signed transaction: ${it.id}&quot;</span> <span class="p">}</span>
+        <span class="k">val</span> <span class="py">maybeSTX</span> <span class="p">=</span> <span class="n">sendAndReceive</span><span class="p">&lt;</span><span class="n">SignedTransaction</span><span class="p">&gt;(</span><span class="n">otherParty</span><span class="p">,</span> <span class="n">hello</span><span class="p">)</span>
 
-        <span class="c1">// Download and check all the things that this transaction depends on and verify it is contract-valid,</span>
-        <span class="c1">// even though it is missing signatures.</span>
-        <span class="n">subFlow</span><span class="p">(</span><span class="n">ResolveTransactionsFlow</span><span class="p">(</span><span class="n">wtx</span><span class="p">,</span> <span class="n">otherParty</span><span class="p">))</span>
+        <span class="n">progressTracker</span><span class="p">.</span><span class="n">currentStep</span> <span class="p">=</span> <span class="n">VERIFYING</span>
 
-        <span class="k">if</span> <span class="p">(</span><span class="n">wtx</span><span class="p">.</span><span class="n">outputs</span><span class="p">.</span><span class="n">map</span> <span class="p">{</span> <span class="n">it</span><span class="p">.</span><span class="k">data</span> <span class="p">}.</span><span class="n">sumCashBy</span><span class="p">(</span><span class="n">myPublicKey</span><span class="p">).</span><span class="n">withoutIssuer</span><span class="p">()</span> <span class="p">!=</span> <span class="n">price</span><span class="p">)</span>
-            <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;Transaction is not sending us the right amount of cash&quot;</span><span class="p">)</span>
+        <span class="n">maybeSTX</span><span class="p">.</span><span class="n">unwrap</span> <span class="p">{</span>
+            <span class="n">progressTracker</span><span class="p">.</span><span class="n">nextStep</span><span class="p">()</span>
 
-        <span class="k">return</span> <span class="n">it</span>
+            <span class="c1">// Check that the tx proposed by the buyer is valid.</span>
+            <span class="k">val</span> <span class="py">wtx</span><span class="p">:</span> <span class="n">WireTransaction</span> <span class="p">=</span> <span class="n">it</span><span class="p">.</span><span class="n">verifySignatures</span><span class="p">(</span><span class="n">myPublicKey</span><span class="p">,</span> <span class="n">notaryNode</span><span class="p">.</span><span class="n">notaryIdentity</span><span class="p">.</span><span class="n">owningKey</span><span class="p">)</span>
+            <span class="n">logger</span><span class="p">.</span><span class="n">trace</span> <span class="p">{</span> <span class="s">&quot;Received partially signed transaction: ${it.id}&quot;</span> <span class="p">}</span>
+
+            <span class="c1">// Download and check all the things that this transaction depends on and verify it is contract-valid,</span>
+            <span class="c1">// even though it is missing signatures.</span>
+            <span class="n">subFlow</span><span class="p">(</span><span class="n">ResolveTransactionsFlow</span><span class="p">(</span><span class="n">wtx</span><span class="p">,</span> <span class="n">otherParty</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="n">wtx</span><span class="p">.</span><span class="n">outputs</span><span class="p">.</span><span class="n">map</span> <span class="p">{</span> <span class="n">it</span><span class="p">.</span><span class="k">data</span> <span class="p">}.</span><span class="n">sumCashBy</span><span class="p">(</span><span class="n">myPublicKey</span><span class="p">).</span><span class="n">withoutIssuer</span><span class="p">()</span> <span class="p">!=</span> <span class="n">price</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">throw</span> <span class="n">FlowException</span><span class="p">(</span><span class="s">&quot;Transaction is not sending us the right amount of cash&quot;</span><span class="p">)</span>
+            <span class="p">}</span>
+
+            <span class="k">return</span> <span class="n">it</span>
+        <span class="p">}</span>
     <span class="p">}</span>
-<span class="p">}</span>
 </pre></div>
 </div>
 </div>
@@ -536,15 +541,34 @@ because of course we didn&#8217;t sign it yet, and also the signature of the not
 <li>We verify that the transaction is paying us the demanded price.</li>
 </ol>
 </div>
+<div class="section" id="exception-handling">
+<h2>Exception handling<a class="headerlink" href="#exception-handling" title="Permalink to this headline">¶</a></h2>
+<p>Flows can throw exceptions to prematurely terminate their execution. The flow framework gives special treatment to
+<code class="docutils literal"><span class="pre">FlowException</span></code> and its subtypes. These exceptions are treated as error responses of the flow and are propagated
+to all counterparties it is communicating with. The receiving flows will throw the same exception the next time they do
+a <code class="docutils literal"><span class="pre">receive</span></code> or <code class="docutils literal"><span class="pre">sendAndReceive</span></code> and thus end the flow session. If the receiver was invoked via <code class="docutils literal"><span class="pre">subFlow</span></code> (details below)
+then the exception can  be caught there enabling re-invocation of the sub-flow.</p>
+<p>If the exception thrown by the erroring flow is not a <code class="docutils literal"><span class="pre">FlowException</span></code> it will still terminate but will not propagate to
+the other counterparties. Instead they will be informed the flow has terminated and will themselves be terminated with a
+generic exception.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">A future version will extend this to give the node administrator more control on what to do with such erroring
+flows.</p>
+</div>
+<p>Throwing a <code class="docutils literal"><span class="pre">FlowException</span></code> enables a flow to reject a piece of data it has received back to the sender. This is typically
+done in the <code class="docutils literal"><span class="pre">unwrap</span></code> method of the received <code class="docutils literal"><span class="pre">UntrustworthyData</span></code>. In the above example the seller checks the price
+and throws <code class="docutils literal"><span class="pre">FlowException</span></code> if it&#8217;s invalid. It&#8217;s then up to the buyer to either try again with a better price or give up.</p>
+</div>
 <div class="section" id="sub-flows">
 <h2>Sub-flows<a class="headerlink" href="#sub-flows" title="Permalink to this headline">¶</a></h2>
 <p>Flows can be composed via nesting. Invoking a sub-flow looks similar to an ordinary function call:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Suspendable</span>
-<span class="k">private</span> <span class="k">fun</span> <span class="nf">getNotarySignature</span><span class="p">(</span><span class="n">stx</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">):</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span> <span class="p">{</span>
-    <span class="n">progressTracker</span><span class="p">.</span><span class="n">currentStep</span> <span class="p">=</span> <span class="n">NOTARY</span>
-    <span class="k">return</span> <span class="n">subFlow</span><span class="p">(</span><span class="n">NotaryFlow</span><span class="p">.</span><span class="n">Client</span><span class="p">(</span><span class="n">stx</span><span class="p">))</span>
-<span class="p">}</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>    <span class="n">@Suspendable</span>
+    <span class="k">private</span> <span class="k">fun</span> <span class="nf">getNotarySignature</span><span class="p">(</span><span class="n">stx</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">):</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span> <span class="p">{</span>
+        <span class="n">progressTracker</span><span class="p">.</span><span class="n">currentStep</span> <span class="p">=</span> <span class="n">NOTARY</span>
+        <span class="k">return</span> <span class="n">subFlow</span><span class="p">(</span><span class="n">NotaryFlow</span><span class="p">.</span><span class="n">Client</span><span class="p">(</span><span class="n">stx</span><span class="p">))</span>
+    <span class="p">}</span>
 </pre></div>
 </div>
 </div>
@@ -569,16 +593,23 @@ leak will come later.</p>
 well (but having handled the fact that some signatures are missing ourselves).</p>
 <p>Here&#8217;s the rest of the code:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">open</span> <span class="k">fun</span> <span class="nf">calculateOurSignature</span><span class="p">(</span><span class="n">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">)</span> <span class="p">=</span> <span class="n">myKeyPair</span><span class="p">.</span><span class="n">signWithECDSA</span><span class="p">(</span><span class="n">partialTX</span><span class="p">.</span><span class="n">id</span><span class="p">)</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>    <span class="k">open</span> <span class="k">fun</span> <span class="nf">calculateOurSignature</span><span class="p">(</span><span class="n">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">):</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span> <span class="p">{</span>
+        <span class="n">progressTracker</span><span class="p">.</span><span class="n">currentStep</span> <span class="p">=</span> <span class="n">SIGNING</span>
+        <span class="k">return</span> <span class="n">myKeyPair</span><span class="p">.</span><span class="n">signWithECDSA</span><span class="p">(</span><span class="n">partialTX</span><span class="p">.</span><span class="n">id</span><span class="p">)</span>
+    <span class="p">}</span>
 
-<span class="n">@Suspendable</span>
-<span class="k">private</span> <span class="k">fun</span> <span class="nf">sendSignatures</span><span class="p">(</span><span class="n">allPartySignedTX</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">,</span> <span class="n">ourSignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span><span class="p">,</span>
-                           <span class="n">notarySignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span><span class="p">):</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
-    <span class="k">val</span> <span class="py">fullySigned</span> <span class="p">=</span> <span class="n">allPartySignedTX</span> <span class="p">+</span> <span class="n">notarySignature</span>
-    <span class="n">logger</span><span class="p">.</span><span class="n">trace</span> <span class="p">{</span> <span class="s">&quot;Built finished transaction, sending back to secondary!&quot;</span> <span class="p">}</span>
-    <span class="n">send</span><span class="p">(</span><span class="n">otherSide</span><span class="p">,</span> <span class="n">SignaturesFromSeller</span><span class="p">(</span><span class="n">ourSignature</span><span class="p">,</span> <span class="n">notarySignature</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">fullySigned</span>
-<span class="p">}</span>
+    <span class="n">@Suspendable</span>
+    <span class="k">private</span> <span class="k">fun</span> <span class="nf">sendSignatures</span><span class="p">(</span><span class="n">allPartySignedTx</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">,</span>
+                               <span class="n">ourSignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span><span class="p">,</span>
+                               <span class="n">notarySignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span><span class="p">):</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
+        <span class="n">progressTracker</span><span class="p">.</span><span class="n">currentStep</span> <span class="p">=</span> <span class="n">SENDING_SIGS</span>
+        <span class="k">val</span> <span class="py">fullySigned</span> <span class="p">=</span> <span class="n">allPartySignedTx</span> <span class="p">+</span> <span class="n">notarySignature</span>
+
+        <span class="n">logger</span><span class="p">.</span><span class="n">trace</span> <span class="p">{</span> <span class="s">&quot;Built finished transaction, sending back to secondary!&quot;</span> <span class="p">}</span>
+
+        <span class="n">send</span><span class="p">(</span><span class="n">otherParty</span><span class="p">,</span> <span class="n">SignaturesFromSeller</span><span class="p">(</span><span class="n">ourSignature</span><span class="p">,</span> <span class="n">notarySignature</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">fullySigned</span>
+    <span class="p">}</span>
 </pre></div>
 </div>
 </div>
@@ -603,95 +634,95 @@ future version of the code.</p>
 <h2>Implementing the buyer<a class="headerlink" href="#implementing-the-buyer" title="Permalink to this headline">¶</a></h2>
 <p>OK, let&#8217;s do the same for the buyer side:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>@Suspendable
-override fun call(): SignedTransaction {
-    val tradeRequest = receiveAndValidateTradeRequest()
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>    @Suspendable
+    override fun call(): SignedTransaction {
+        val tradeRequest = receiveAndValidateTradeRequest()
 
-    progressTracker.currentStep = SIGNING
-    val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
-    val stx = signWithOurKeys(cashSigningPubKeys, ptx)
+        progressTracker.currentStep = SIGNING
+        val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
+        val stx = signWithOurKeys(cashSigningPubKeys, ptx)
 
-    val signatures = swapSignaturesWithSeller(stx)
+        val signatures = swapSignaturesWithSeller(stx)
 
-    logger.trace { &quot;Got signatures from seller, verifying ... &quot; }
+        logger.trace { &quot;Got signatures from seller, verifying ... &quot; }
 
-    val fullySigned = stx + signatures.sellerSig + signatures.notarySig
-    fullySigned.verifySignatures()
+        val fullySigned = stx + signatures.sellerSig + signatures.notarySig
+        fullySigned.verifySignatures()
 
-    logger.trace { &quot;Signatures received are valid. Trade complete! :-)&quot; }
-    return fullySigned
-}
-
-@Suspendable
-private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
-    progressTracker.currentStep = RECEIVING
-    // Wait for a trade request to come in from the other side
-    val maybeTradeRequest = receive&lt;SellerTradeInfo&gt;(otherParty)
-
-    progressTracker.currentStep = VERIFYING
-    maybeTradeRequest.unwrap {
-        // What is the seller trying to sell us?
-        val asset = it.assetForSale.state.data
-        val assetTypeName = asset.javaClass.name
-        logger.trace { &quot;Got trade request for a $assetTypeName: ${it.assetForSale}&quot; }
-
-        if (it.price &gt; acceptablePrice)
-            throw UnacceptablePriceException(it.price)
-        if (!typeToBuy.isInstance(asset))
-            throw AssetMismatchException(typeToBuy.name, assetTypeName)
-
-        // Check the transaction that contains the state which is being resolved.
-        // We only have a hash here, so if we don&#39;t know it already, we have to ask for it.
-        subFlow(ResolveTransactionsFlow(setOf(it.assetForSale.ref.txhash), otherParty))
-
-        return it
-    }
-}
-
-@Suspendable
-private fun swapSignaturesWithSeller(stx: SignedTransaction): SignaturesFromSeller {
-    progressTracker.currentStep = SWAPPING_SIGNATURES
-    logger.trace { &quot;Sending partially signed transaction to seller&quot; }
-
-    // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
-
-    return sendAndReceive&lt;SignaturesFromSeller&gt;(otherParty, stx).unwrap { it }
-}
-
-private fun signWithOurKeys(cashSigningPubKeys: List&lt;CompositeKey&gt;, ptx: TransactionBuilder): SignedTransaction {
-    // Now sign the transaction with whatever keys we need to move the cash.
-    for (publicKey in cashSigningPubKeys.keys) {
-        val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
-        ptx.signWith(KeyPair(publicKey, privateKey))
+        logger.trace { &quot;Signatures received are valid. Trade complete! :-)&quot; }
+        return fullySigned
     }
 
-    return ptx.toSignedTransaction(checkSufficientSignatures = false)
-}
+    @Suspendable
+    private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
+        progressTracker.currentStep = RECEIVING
+        // Wait for a trade request to come in from the other side
+        val maybeTradeRequest = receive&lt;SellerTradeInfo&gt;(otherParty)
 
-private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair&lt;TransactionBuilder, List&lt;CompositeKey&gt;&gt; {
-    val ptx = TransactionType.General.Builder(notary)
+        progressTracker.currentStep = VERIFYING
+        maybeTradeRequest.unwrap {
+            // What is the seller trying to sell us?
+            val asset = it.assetForSale.state.data
+            val assetTypeName = asset.javaClass.name
+            logger.trace { &quot;Got trade request for a $assetTypeName: ${it.assetForSale}&quot; }
 
-    // Add input and output states for the movement of cash, by using the Cash contract to generate the states
-    val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey)
+            if (it.price &gt; acceptablePrice)
+                throw UnacceptablePriceException(it.price)
+            if (!typeToBuy.isInstance(asset))
+                throw AssetMismatchException(typeToBuy.name, assetTypeName)
 
-    // Add inputs/outputs/a command for the movement of the asset.
-    tx.addInputState(tradeRequest.assetForSale)
+            // Check the transaction that contains the state which is being resolved.
+            // We only have a hash here, so if we don&#39;t know it already, we have to ask for it.
+            subFlow(ResolveTransactionsFlow(setOf(it.assetForSale.ref.txhash), otherParty))
 
-    // Just pick some new public key for now. This won&#39;t be linked with our identity in any way, which is what
-    // we want for privacy reasons: the key is here ONLY to manage and control ownership, it is not intended to
-    // reveal who the owner actually is. The key management service is expected to derive a unique key from some
-    // initial seed in order to provide privacy protection.
-    val freshKey = serviceHub.keyManagementService.freshKey()
-    val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public.composite)
-    tx.addOutputState(state, tradeRequest.assetForSale.state.notary)
-    tx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
+            return it
+        }
+    }
 
-    // And add a request for timestamping: it may be that none of the contracts need this! But it can&#39;t hurt
-    // to have one.
-    val currentTime = serviceHub.clock.instant()
-    tx.setTime(currentTime, 30.seconds)
-    return Pair(tx, cashSigningPubKeys)
-}
+    @Suspendable
+    private fun swapSignaturesWithSeller(stx: SignedTransaction): SignaturesFromSeller {
+        progressTracker.currentStep = SWAPPING_SIGNATURES
+        logger.trace { &quot;Sending partially signed transaction to seller&quot; }
+
+        // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
+
+        return sendAndReceive&lt;SignaturesFromSeller&gt;(otherParty, stx).unwrap { it }
+    }
+
+    private fun signWithOurKeys(cashSigningPubKeys: List&lt;CompositeKey&gt;, ptx: TransactionBuilder): SignedTransaction {
+        // Now sign the transaction with whatever keys we need to move the cash.
+        for (publicKey in cashSigningPubKeys.keys) {
+            val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
+            ptx.signWith(KeyPair(publicKey, privateKey))
+        }
+
+        return ptx.toSignedTransaction(checkSufficientSignatures = false)
+    }
+
+    private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair&lt;TransactionBuilder, List&lt;CompositeKey&gt;&gt; {
+        val ptx = TransactionType.General.Builder(notary)
+
+        // Add input and output states for the movement of cash, by using the Cash contract to generate the states
+        val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey)
+
+        // Add inputs/outputs/a command for the movement of the asset.
+        tx.addInputState(tradeRequest.assetForSale)
+
+        // Just pick some new public key for now. This won&#39;t be linked with our identity in any way, which is what
+        // we want for privacy reasons: the key is here ONLY to manage and control ownership, it is not intended to
+        // reveal who the owner actually is. The key management service is expected to derive a unique key from some
+        // initial seed in order to provide privacy protection.
+        val freshKey = serviceHub.keyManagementService.freshKey()
+        val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public.composite)
+        tx.addOutputState(state, tradeRequest.assetForSale.state.notary)
+        tx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
+
+        // And add a request for timestamping: it may be that none of the contracts need this! But it can&#39;t hurt
+        // to have one.
+        val currentTime = serviceHub.clock.instant()
+        tx.setTime(currentTime, 30.seconds)
+        return Pair(tx, cashSigningPubKeys)
+    }
 </pre></div>
 </div>
 </div>
@@ -730,11 +761,8 @@ approved&#8221;, &#8220;Downloading and verifying data&#8221; etc.</p>
                  <span class="k">val</span> <span class="py">typeToBuy</span><span class="p">:</span> <span class="n">Class</span><span class="p">&lt;</span><span class="k">out</span> <span class="n">OwnableState</span><span class="p">&gt;)</span> <span class="p">:</span> <span class="n">FlowLogic</span><span class="p">&lt;</span><span class="n">SignedTransaction</span><span class="p">&gt;()</span> <span class="p">{</span>
 
     <span class="k">object</span> <span class="nc">RECEIVING</span> <span class="p">:</span> <span class="n">ProgressTracker</span><span class="p">.</span><span class="n">Step</span><span class="p">(</span><span class="s">&quot;Waiting for seller trading info&quot;</span><span class="p">)</span>
-
     <span class="k">object</span> <span class="nc">VERIFYING</span> <span class="p">:</span> <span class="n">ProgressTracker</span><span class="p">.</span><span class="n">Step</span><span class="p">(</span><span class="s">&quot;Verifying seller assets&quot;</span><span class="p">)</span>
-
     <span class="k">object</span> <span class="nc">SIGNING</span> <span class="p">:</span> <span class="n">ProgressTracker</span><span class="p">.</span><span class="n">Step</span><span class="p">(</span><span class="s">&quot;Generating and signing transaction proposal&quot;</span><span class="p">)</span>
-
     <span class="k">object</span> <span class="nc">SWAPPING_SIGNATURES</span> <span class="p">:</span> <span class="n">ProgressTracker</span><span class="p">.</span><span class="n">Step</span><span class="p">(</span><span class="s">&quot;Swapping signatures with the seller&quot;</span><span class="p">)</span>
 
     <span class="k">override</span> <span class="k">val</span> <span class="py">progressTracker</span> <span class="p">=</span> <span class="n">ProgressTracker</span><span class="p">(</span><span class="n">RECEIVING</span><span class="p">,</span> <span class="n">VERIFYING</span><span class="p">,</span> <span class="n">SIGNING</span><span class="p">,</span> <span class="n">SWAPPING_SIGNATURES</span><span class="p">)</span>
@@ -824,7 +852,7 @@ flows for this reason (see &#8220;<a class="reference internal" href="event-sche
 the features we have planned:</p>
 <ul class="simple">
 <li>Identity based addressing</li>
-<li>Exception propagation and management, with a &#8220;flow hospital&#8221; tool to manually provide solutions to unavoidable
+<li>Exception management, with a &#8220;flow hospital&#8221; tool to manually provide solutions to unavoidable
 problems (e.g. the other side doesn&#8217;t know the trade)</li>
 <li>Being able to interact with internal apps and tools via RPC</li>
 <li>Being able to interact with people, either via some sort of external ticketing system, or email, or a custom UI.

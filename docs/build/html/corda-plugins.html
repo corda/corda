@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Brief introduction to the node services" href="node-services.html"/>
         <link rel="prev" title="Node configuration" href="corda-configuration-file.html"/> 
@@ -250,20 +247,15 @@ of the node internal subsystems.</p>
 extensions to be created, or registered at startup. In particular:</p>
 <blockquote>
 <div><p>a. The <code class="docutils literal"><span class="pre">webApis</span></code> property is a list of JAX-RS annotated REST access
-classes. These classes will be constructed by the embedded web server
-and must have a single argument constructor taking a <code class="docutils literal"><span class="pre">ServiceHub</span></code>
-reference. This reference provides access to functions such as querying
-for states through the <code class="docutils literal"><span class="pre">VaultService</span></code> interface, or access to the
-<code class="docutils literal"><span class="pre">NetworkMapCache</span></code> to identify services on remote nodes. The framework will
-provide a database transaction in scope during the lifetime of the web
-call, so full access to database data is valid. Unlike
-<code class="docutils literal"><span class="pre">servicePlugins</span></code> the <code class="docutils literal"><span class="pre">webApis</span></code> cannot register new protocols, or
-initiate threads. (N.B. The intent is to move the Web support into a
-separate helper process using the RPC mechanism to control access.)</p>
+classes. These classes will be constructed by the bundled web server
+and must have a single argument constructor taking a <code class="docutils literal"><span class="pre">CordaRPCOps</span></code>
+reference. This will allow it to communicate with the node process
+via the RPC interface. These web APIs will not be available if the
+bundled web server is not started.</p>
 <p>b. The <code class="docutils literal"><span class="pre">staticServeDirs</span></code> property maps static web content to virtual
 paths and allows simple web demos to be distributed within the CorDapp
-jars. (N.B. The intent is to move the Web support into a separate helper
-process using the RPC mechanism to control access.)</p>
+jars. These static serving directories will not be available if the
+bundled web server is not started.</p>
 <p>c. The <code class="docutils literal"><span class="pre">requiredFlows</span></code> property is used to declare new protocols in
 the plugin jar. Specifically the property must return a map with a key
 naming each exposed top level flow class and a value which is a set

@@ -8,7 +8,7 @@
 <a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.contracts</a>&nbsp;/&nbsp;<a href="../index.html">CommercialPaperLegacy</a>&nbsp;/&nbsp;<a href=".">State</a><br/>
 <br/>
 <h1>State</h1>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-ownable-state/index.html"><span class="identifier">OwnableState</span></a></code>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">, </span><span class="identifier">ICommercialPaperState</span></code>
 <h3>Constructors</h3>
 <table>
 <tbody>
@@ -80,19 +80,19 @@
 <td>
 <a href="with-face-value.html">withFaceValue</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">withFaceValue</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaperLegacy.State$withFaceValue(net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((java.util.Currency)))))/newFaceValue">newFaceValue</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">withFaceValue</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaperLegacy.State$withFaceValue(net.corda.core.contracts.Amount((net.corda.core.contracts.Issued((java.util.Currency)))))/newFaceValue">newFaceValue</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ICommercialPaperState</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="with-issuance.html">withIssuance</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">withIssuance</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaperLegacy.State$withIssuance(net.corda.core.contracts.PartyAndReference)/newIssuance">newIssuance</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">withIssuance</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaperLegacy.State$withIssuance(net.corda.core.contracts.PartyAndReference)/newIssuance">newIssuance</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ICommercialPaperState</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="with-maturity-date.html">withMaturityDate</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">withMaturityDate</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaperLegacy.State$withMaturityDate(java.time.Instant)/newMaturityDate">newMaturityDate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">withMaturityDate</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaperLegacy.State$withMaturityDate(java.time.Instant)/newMaturityDate">newMaturityDate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ICommercialPaperState</span></code></td>
 </tr>
 <tr>
 <td>
@@ -106,7 +106,7 @@
 <td>
 <a href="with-owner.html">withOwner</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">withOwner</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaperLegacy.State$withOwner(net.corda.core.crypto.CompositeKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">withOwner</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.CommercialPaperLegacy.State$withOwner(net.corda.core.crypto.CompositeKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ICommercialPaperState</span></code></td>
 </tr>
 <tr>
 <td>

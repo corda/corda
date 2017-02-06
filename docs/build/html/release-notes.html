@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Code style guide" href="codestyle.html"/>
         <link rel="prev" title="Release process" href="release-process.html"/> 
@@ -238,13 +235,36 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <div class="section" id="milestone-8">
 <h2>Milestone 8<a class="headerlink" href="#milestone-8" title="Permalink to this headline">¶</a></h2>
 <ul>
-<li><p class="first">API:</p>
+<li><p class="first">Node memory usage and performance improvements, demo nodes now only require 200 MB heap space to run.</p>
+</li>
+<li><p class="first">The Corda node no longer runs an internal web server, it&#8217;s now run in a separate process. Driver and Cordformation have
+been updated to reflect this change.
+Existing CorDapps should be updated with additional calls to the new <code class="docutils literal"><span class="pre">startWebserver()</span></code> interface in their Driver logic (if they use the driver e.g. in integration tests).
+See the IRS demo for an example.</p>
+</li>
+<li><p class="first">Data model: <code class="docutils literal"><span class="pre">Party</span></code> equality is now based on the owning key, rather than the owning key and name. This is important for
+party anonymisation to work, as each key must identify exactly one party.</p>
+</li>
+<li><p class="first">Contracts: created new composite clauses called <code class="docutils literal"><span class="pre">AllOf</span></code>, <code class="docutils literal"><span class="pre">AnyOf</span></code> and <code class="docutils literal"><span class="pre">FirstOf</span></code> to replace <code class="docutils literal"><span class="pre">AllComposition</span></code>, <code class="docutils literal"><span class="pre">AnyComposition</span></code>
+and <code class="docutils literal"><span class="pre">FirstComposition</span></code>, as this is significantly clearer in intent. <code class="docutils literal"><span class="pre">AnyOf</span></code> also enforces that at least one subclause
+must match, whereas <code class="docutils literal"><span class="pre">AnyComposition</span></code> would accept no matches.</p>
+</li>
+<li><p class="first">Explorer: the user can now configure certificate path and keystore/truststore password on the login screen.</p>
+</li>
+<li><p class="first">Documentation:</p>
 <blockquote>
 <div><ul class="simple">
-<li><code class="docutils literal"><span class="pre">Party</span></code> equality is now based on the owning key, rather than the owning key and name. This is important for
-party anonymisation to work, as each key must identify exactly one party.</li>
+<li>Key Concepts section revamped with new structure and content.</li>
+<li>Added more details to <a class="reference internal" href="getting-set-up.html"><span class="doc">Getting set up</span></a> page.</li>
 </ul>
 </div></blockquote>
+</li>
+<li><p class="first">Flow framework: improved exception handling with the introduction of <code class="docutils literal"><span class="pre">FlowException</span></code>. If this or a subtype is thrown
+inside a flow it will propagate to all counterparty flows and subsequently be thrown by them as well. Existing flows such as
+<code class="docutils literal"><span class="pre">NotaryFlow.Client/Service</span></code> and others have been modified to throw a <code class="docutils literal"><span class="pre">FlowException</span></code> (in this particular case a
+<code class="docutils literal"><span class="pre">NotaryException</span></code>) instead of sending back error responses.</p>
+</li>
+<li><p class="first">Notary flow: provide complete details of underlying error when contract validation fails.</p>
 </li>
 </ul>
 </div>
