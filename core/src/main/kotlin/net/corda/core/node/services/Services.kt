@@ -216,7 +216,7 @@ interface VaultService {
 }
 
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)
-inline fun <reified T : DealState> VaultService.dealsWith(party: Party) = linearHeadsOfType<T>().values.filter {
+inline fun <reified T : DealState> VaultService.dealsWith(party: AnonymousParty) = linearHeadsOfType<T>().values.filter {
     it.state.data.parties.any { it == party }
 }
 

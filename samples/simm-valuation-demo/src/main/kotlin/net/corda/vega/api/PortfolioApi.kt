@@ -4,6 +4,7 @@ import com.opengamma.strata.basics.currency.MultiCurrencyAmount
 import net.corda.core.contracts.DealState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.filterStatesOfType
+import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.getOrThrow
@@ -33,7 +34,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     private val ownParty: Party get() = rpc.nodeIdentity().legalIdentity
     private val portfolioUtils = PortfolioApiUtils(ownParty)
 
-    private inline fun <reified T : DealState> dealsWith(party: Party): List<StateAndRef<T>> {
+    private inline fun <reified T : DealState> dealsWith(party: AnonymousParty): List<StateAndRef<T>> {
         return rpc.vaultAndUpdates().first.filterStatesOfType<T>().filter { it.state.data.parties.any { it == party } }
     }
 
@@ -220,7 +221,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         return withParty(partyName) { party ->
             withPortfolio(party) { state ->
                 if (state.valuation != null) {
-                    val isValuer = state.valuer.name == ownParty.name
+                    val isValuer = state.valuer as AnonymousParty == ownParty
                     val rawMtm = state.valuation.presentValues.map {
                         it.value.amounts.first().amount
                     }.reduce { a, b -> a + b }

@@ -2,7 +2,7 @@ package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.DealState
-import net.corda.core.crypto.Party
+import net.corda.core.crypto.AnonymousParty
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PluginServiceHub
@@ -65,7 +65,7 @@ object AutoOfferFlow {
             require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
             val notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
             // need to pick which ever party is not us
-            val otherParty = notUs(dealToBeOffered.parties).single()
+            val otherParty = notUs(dealToBeOffered.parties).map { serviceHub.identityService.partyFromAnonymous(it) }.requireNoNulls().single()
             progressTracker.currentStep = DEALING
             val myKey = serviceHub.legalIdentityKey
             val instigator = Instigator(
@@ -78,8 +78,8 @@ object AutoOfferFlow {
             return stx
         }
 
-        private fun notUs(parties: List<Party>): List<Party> {
-            val notUsParties: MutableList<Party> = arrayListOf()
+        private fun <T: AnonymousParty> notUs(parties: List<T>): List<T> {
+            val notUsParties: MutableList<T> = arrayListOf()
             for (party in parties) {
                 if (serviceHub.myInfo.legalIdentity != party) {
                     notUsParties.add(party)

@@ -23,5 +23,6 @@ import java.security.PublicKey
 class Party(val name: String, owningKey: CompositeKey) : AnonymousParty(owningKey) {
     /** A helper constructor that converts the given [PublicKey] in to a [CompositeKey] with a single node */
     constructor(name: String, owningKey: PublicKey) : this(name, owningKey.composite)
-    override fun toString() = "${owningKey.toBase58String()} ($name)"
+    override fun toAnonymous(): AnonymousParty = AnonymousParty(owningKey)
+    override fun toString() = "${owningKey.toBase58String()} (${name})"
 }

@@ -15,6 +15,7 @@ open class AnonymousParty(val owningKey: CompositeKey) {
     /** Anonymised parties do not include any detail apart from owning key, so equality is dependent solely on the key */
     override fun equals(other: Any?): Boolean = other is AnonymousParty && this.owningKey == other.owningKey
     override fun hashCode(): Int = owningKey.hashCode()
+    open fun toAnonymous() : AnonymousParty = this
     // Use the key as the bulk of the toString(), but include a human readable identifier as well, so that [Party]
     // can put in the key and actual name
     override fun toString() = "${owningKey.toBase58String()} <Anonymous>"

@@ -75,8 +75,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
 
         fun createAll(): List<SimulatedNode> {
-            return bankLocations.map {
-                network.createNode(networkMap.info.address, start = false, nodeFactory = this) as SimulatedNode
+            return bankLocations.mapIndexed { i, location ->
+                // Use deterministic seeds so the simulation is stable. Needed so that party owning keys are stable.
+                network.createNode(networkMap.info.address, start = false, nodeFactory = this, entropyRoot = BigInteger.valueOf(i.toLong())) as SimulatedNode
             }
         }
     }

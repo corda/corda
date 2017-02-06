@@ -16,10 +16,7 @@ import de.javakaffee.kryoserializers.guava.*
 import net.corda.contracts.asset.Cash
 import net.corda.core.ErrorOr
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.IllegalFlowLogicException
 import net.corda.core.flows.StateMachineRunId
@@ -140,6 +137,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(SignedTransaction::class.java, ImmutableClassSerializer(SignedTransaction::class))
         register(WireTransaction::class.java, WireTransactionSerializer)
         register(SerializedBytes::class.java, SerializedBytesSerializer)
+        register(AnonymousParty::class.java)
         register(Party::class.java)
         register(Array<Any>(0,{}).javaClass)
         register(Class::class.java, ClassSerializer)

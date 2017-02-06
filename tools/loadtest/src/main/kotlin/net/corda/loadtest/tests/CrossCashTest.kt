@@ -7,7 +7,6 @@ import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.AnonymousParty
-import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
@@ -108,7 +107,7 @@ data class CrossCashState(
                             it.value.map {
                                 val notifier = it.key
                                 "        $notifier: [" + it.value.map {
-                                    Issued(PartyAndReference(it.first, OpaqueBytes.of(0)), it.second)
+                                    Issued(PartyAndReference(it.first.toAnonymous(), OpaqueBytes.of(0)), it.second)
                                 }.joinToString(",") + "]"
                             }.joinToString("\n")
                 }.joinToString("\n")
@@ -126,7 +125,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                             val quantities = state.nodeVaults[node.info.legalIdentity] ?: mapOf()
                             val possibleRecipients = nodeMap.keys.toList()
                             val moves = quantities.map {
-                                it.value.toDouble() / 1000 to generateMove(it.value, USD, it.key, possibleRecipients)
+                                it.value.toDouble() / 1000 to generateMove(it.value, USD, it.key.toAnonymous(), possibleRecipients)
                             }
                             val exits = quantities.mapNotNull {
                                 if (it.key == node.info.legalIdentity) {

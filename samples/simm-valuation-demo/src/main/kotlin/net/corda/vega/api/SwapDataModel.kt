@@ -27,7 +27,7 @@ data class SwapDataModel(
      */
     fun toData(buyer: Party, seller: Party): SwapData {
         return SwapData(
-                Pair("swap", id), Pair("party", buyer.name), Pair("party", seller.name), description, tradeDate, convention, startDate, endDate, notional, fixedRate
+                Pair("swap", id), Pair("party", buyer.owningKey), Pair("party", seller.owningKey), description, tradeDate, convention, startDate, endDate, notional, fixedRate
         )
     }
 }

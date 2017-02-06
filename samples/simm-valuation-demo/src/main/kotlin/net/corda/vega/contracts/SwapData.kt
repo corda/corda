@@ -9,6 +9,8 @@ import com.opengamma.strata.product.common.BuySell
 import com.opengamma.strata.product.swap.SwapTrade
 import com.opengamma.strata.product.swap.type.FixedIborSwapConvention
 import com.opengamma.strata.product.swap.type.FixedIborSwapConventions
+import net.corda.core.crypto.AnonymousParty
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -36,8 +38,8 @@ data class FloatingLeg(val _notional: BigDecimal, override val notional: BigDeci
  */
 data class SwapData(
         val id: Pair<String, String>,
-        val buyer: Pair<String, String>,
-        val seller: Pair<String, String>,
+        val buyer: Pair<String, CompositeKey>,
+        val seller: Pair<String, CompositeKey>,
         val description: String,
         val tradeDate: LocalDate,
         val convention: String,
@@ -46,8 +48,8 @@ data class SwapData(
         val notional: BigDecimal,
         val fixedRate: BigDecimal) {
 
-    fun getLegForParty(party: Party): Leg {
-        return if (party.name == buyer.second) FixedLeg(notional) else FloatingLeg(notional)
+    fun getLegForParty(party: AnonymousParty): Leg {
+        return if (party == buyer.second) FixedLeg(notional) else FloatingLeg(notional)
     }
 
     fun toFixedLeg(): SwapTrade {
@@ -58,11 +60,11 @@ data class SwapData(
         return getTrade(BuySell.SELL, Pair("party", seller.second))
     }
 
-    private fun getTrade(buySell: BuySell, party: Pair<String, String>): SwapTrade {
+    private fun getTrade(buySell: BuySell, party: Pair<String, CompositeKey>): SwapTrade {
         val tradeInfo = TradeInfo.builder()
                 .id(StandardId.of(id.first, id.second))
                 .addAttribute(TradeAttributeType.DESCRIPTION, description)
-                .counterparty(StandardId.of(party.first, party.second))
+                .counterparty(StandardId.of(party.first, party.second.toBase58String()))
                 .build()
         // TODO: Fix below to be correct - change tenor and reference data
         return getSwapConvention(convention).createTrade(startDate, Tenor.TENOR_4Y, buySell, notional.toDouble(), fixedRate.toDouble(), ReferenceData.standard())

@@ -30,7 +30,7 @@ data class SwapDataView(
 fun SwapData.toView(viewingParty: Party, portfolio: Portfolio? = null,
                     presentValue: MultiCurrencyAmount? = null,
                     IM: InitialMarginTriple? = null): SwapDataView {
-    val isBuyer = viewingParty.name == buyer.second
+    val isBuyer = viewingParty.owningKey == buyer.second
     val trade = if (isBuyer) toFixedLeg() else toFloatingLeg()
     val leg = getLegForParty(viewingParty)
     val sdv = SwapDataView(
