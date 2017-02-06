@@ -22,12 +22,12 @@ object IRSTradeFlow {
             val notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
             val myIdentity = serviceHub.myInfo.legalIdentity
             val (buyer, seller) =
-                    if (swap.buyer.second == myIdentity.name) {
+                    if (swap.buyer.second == myIdentity.owningKey) {
                         Pair(myIdentity, otherParty)
                     } else {
                         Pair(otherParty, myIdentity)
                     }
-            val offer = IRSState(swap, buyer, seller, OGTrade())
+            val offer = IRSState(swap, buyer.toAnonymous(), seller.toAnonymous(), OGTrade())
 
             logger.info("Handshake finished, sending IRS trade offer message")
             val otherPartyAgreeFlag = sendAndReceive<Boolean>(otherParty, OfferMessage(notary, offer)).unwrap { it }

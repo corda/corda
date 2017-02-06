@@ -2,6 +2,7 @@ package net.corda.irs.contract
 
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
+import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
@@ -304,7 +305,7 @@ class InterestRateSwap() : Contract {
     }
 
     open class FixedLeg(
-            var fixedRatePayer: Party,
+            var fixedRatePayer: AnonymousParty,
             notional: Amount<Currency>,
             paymentFrequency: Frequency,
             effectiveDate: LocalDate,
@@ -343,7 +344,7 @@ class InterestRateSwap() : Contract {
         override fun hashCode() = super.hashCode() + 31 * Objects.hash(fixedRatePayer, fixedRate, rollConvention)
 
         // Can't autogenerate as not a data class :-(
-        fun copy(fixedRatePayer: Party = this.fixedRatePayer,
+        fun copy(fixedRatePayer: AnonymousParty = this.fixedRatePayer,
                  notional: Amount<Currency> = this.notional,
                  paymentFrequency: Frequency = this.paymentFrequency,
                  effectiveDate: LocalDate = this.effectiveDate,
@@ -365,7 +366,7 @@ class InterestRateSwap() : Contract {
     }
 
     open class FloatingLeg(
-            var floatingRatePayer: Party,
+            var floatingRatePayer: AnonymousParty,
             notional: Amount<Currency>,
             paymentFrequency: Frequency,
             effectiveDate: LocalDate,
@@ -423,7 +424,7 @@ class InterestRateSwap() : Contract {
                 index, indexSource, indexTenor)
 
 
-        fun copy(floatingRatePayer: Party = this.floatingRatePayer,
+        fun copy(floatingRatePayer: AnonymousParty = this.floatingRatePayer,
                  notional: Amount<Currency> = this.notional,
                  paymentFrequency: Frequency = this.paymentFrequency,
                  effectiveDate: LocalDate = this.effectiveDate,
@@ -672,7 +673,7 @@ class InterestRateSwap() : Contract {
             return fixedLeg.fixedRatePayer.owningKey.containsAny(ourKeys) || floatingLeg.floatingRatePayer.owningKey.containsAny(ourKeys)
         }
 
-        override val parties: List<Party>
+        override val parties: List<AnonymousParty>
             get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
 
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {

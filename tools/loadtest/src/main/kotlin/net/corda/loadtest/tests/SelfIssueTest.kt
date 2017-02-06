@@ -79,7 +79,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
                     val state = it.state.data
                     if (state is Cash.State) {
                         val issuer = state.amount.token.issuer.party
-                        if (issuer == node.info.legalIdentity) {
+                        if (issuer == node.info.legalIdentity as AnonymousParty) {
                             selfIssueVaults.put(issuer, (selfIssueVaults[issuer] ?: 0L) + state.amount.quantity)
                         }
                     }

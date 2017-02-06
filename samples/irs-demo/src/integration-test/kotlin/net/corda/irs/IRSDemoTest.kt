@@ -2,6 +2,7 @@ package net.corda.irs
 
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
+import net.corda.core.crypto.Party
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.irs.api.NodeInterestRates
@@ -44,7 +45,7 @@ class IRSDemoTest : IntegrationTestCategory {
             val nextFixingDates = getFixingDateObservable(nodeA.configuration)
 
             runUploadRates(controllerAddr)
-            runTrade(nodeAAddr)
+            runTrade(nodeAAddr, nodeA.nodeInfo.legalIdentity, nodeB.nodeInfo.legalIdentity)
             // Wait until the initial trade and all scheduled fixings up to the current date have finished
             nextFixingDates.first { it == null || it > currentDate }
 
@@ -72,9 +73,11 @@ class IRSDemoTest : IntegrationTestCategory {
         assert(putJson(url, "\"$futureDate\""))
     }
 
-    private fun runTrade(nodeAddr: HostAndPort) {
+    private fun runTrade(nodeAddr: HostAndPort, fixedRatePayer: Party, floatingRatePayer: Party) {
         val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example-irs-trade.json"))
         val tradeFile = fileContents.replace("tradeXXX", "trade1")
+                .replace("fixedRatePayerKey", fixedRatePayer.owningKey.toBase58String())
+                .replace("floatingRatePayerKey", floatingRatePayer.owningKey.toBase58String())
         val url = URL("http://$nodeAddr/api/irs/deals")
         assert(postJson(url, tradeFile))
     }

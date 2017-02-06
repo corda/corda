@@ -290,7 +290,7 @@ interface DealState : LinearState {
      * separate process exchange certificates to ascertain identities. Thus decoupling identities from
      * [ContractState]s.
      * */
-    val parties: List<Party>
+    val parties: List<AnonymousParty>
 
     /**
      * Generate a partial transaction representing an agreement (command) to this deal, allowing a general
@@ -351,6 +351,7 @@ inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filt
  * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the party.
  */
 data class PartyAndReference(val party: AnonymousParty, val reference: OpaqueBytes) {
+    constructor(party: Party, reference: OpaqueBytes) : this(party.toAnonymous(), reference)
     override fun toString() = "${party}$reference"
 }
 

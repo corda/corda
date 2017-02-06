@@ -1,6 +1,7 @@
 package net.corda.vega.contracts
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogicRefFactory
@@ -17,16 +18,16 @@ import java.time.temporal.ChronoUnit
  */
 data class PortfolioState(val portfolio: List<StateRef>,
                           override val contract: PortfolioSwap,
-                          private val _parties: Pair<Party, Party>,
+                          private val _parties: Pair<AnonymousParty, AnonymousParty>,
                           val valuationDate: LocalDate,
                           val valuation: PortfolioValuation? = null,
                           override val linearId: UniqueIdentifier = UniqueIdentifier())
     : RevisionedState<PortfolioState.Update>, SchedulableState, DealState {
     data class Update(val portfolio: List<StateRef>? = null, val valuation: PortfolioValuation? = null)
 
-    override val parties: List<Party> get() = _parties.toList()
+    override val parties: List<AnonymousParty> get() = _parties.toList()
     override val ref: String = linearId.toString()
-    val valuer: Party get() = parties[0]
+    val valuer: AnonymousParty get() = parties[0]
 
     override val participants: List<CompositeKey>
         get() = parties.map { it.owningKey }
