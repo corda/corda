@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
 import kotlin.reflect.jvm.jvmName
 
-
 class DBViewer : AutoCloseable {
     private val log = LoggerFactory.getLogger(DBViewer::class.java)
 

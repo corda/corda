@@ -3,7 +3,6 @@ package net.corda.demobench.model
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
 
-
 class Explorer(val explorerController: ExplorerController) : AutoCloseable {
     private val log = LoggerFactory.getLogger(Explorer::class.java)
 

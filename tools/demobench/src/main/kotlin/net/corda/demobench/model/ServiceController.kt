@@ -7,10 +7,8 @@ import java.util.*
 
 class ServiceController : Controller() {
 
-    private var serviceSet : List<String>
-
-    val services : List<String>
-       get() = serviceSet
+    private var serviceSet: List<String>
+    val services: List<String> get() = serviceSet
 
     init {
         /*

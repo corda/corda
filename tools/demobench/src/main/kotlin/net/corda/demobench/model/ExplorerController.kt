@@ -12,12 +12,8 @@ class ExplorerController : Controller() {
         log.info("Explorer JAR: " + explorerPath)
     }
 
-    internal fun execute(vararg args: String): Process {
-        return jvm.execute(explorerPath, *args)
-    }
+    internal fun execute(vararg args: String) = jvm.execute(explorerPath, *args)
 
-    fun explorer(): Explorer {
-        return Explorer(this)
-    }
+    fun explorer() = Explorer(this)
 
 }

@@ -60,6 +60,9 @@ dependencies {
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
     compile "ch.qos.logback:logback-classic:$logback_version"
     compile "com.typesafe:config:$typesafe_config_version"
+
+    // These libraries don't exist in any Maven repository I can find.
+    // See: https://github.com/JetBrains/jediterm
     compile ':jediterm-terminal-2.5'
     compile ':pty4j-0.7.2'
 
