@@ -10,15 +10,13 @@ import org.slf4j.LoggerFactory
 
 class NodeRPC(config: NodeConfig, invoke: (ops: CordaRPCOps) -> Unit): AutoCloseable {
     private val log = LoggerFactory.getLogger(NodeRPC::class.java)
-    private val ONE_SECOND = SECONDS.toMillis(1)
+
+    companion object Data {
+        private val ONE_SECOND = SECONDS.toMillis(1)
+    }
 
     private val rpcClient = CordaRPCClient(HostAndPort.fromParts("localhost", config.artemisPort), config.ssl)
     private val timer = Timer()
-
-    override fun close() {
-        timer.cancel()
-        rpcClient.close()
-    }
 
     init {
         val setupTask = object : TimerTask() {
@@ -46,4 +44,10 @@ class NodeRPC(config: NodeConfig, invoke: (ops: CordaRPCOps) -> Unit): AutoClose
         // Wait 5 seconds for the node to start, and then poll once per second.
         timer.schedule(setupTask, 5 * ONE_SECOND, ONE_SECOND)
     }
+
+    override fun close() {
+        timer.cancel()
+        rpcClient.close()
+    }
+
 }

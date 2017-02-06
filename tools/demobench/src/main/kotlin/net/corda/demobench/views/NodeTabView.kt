@@ -14,8 +14,10 @@ class NodeTabView : Fragment() {
 
     private val main by inject<DemoBenchView>()
 
-    private val INTEGER_FORMAT = DecimalFormat()
-    private val NOT_NUMBER = "[^\\d]".toRegex()
+    private companion object Data {
+        val INTEGER_FORMAT = DecimalFormat()
+        val NOT_NUMBER = "[^\\d]".toRegex()
+    }
 
     private val model = NodeDataModel()
     private val nodeController by inject<NodeController>()

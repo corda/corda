@@ -13,12 +13,12 @@ class Explorer(val explorerController: ExplorerController) : AutoCloseable {
     fun open(config: NodeConfig, onExit: (c: NodeConfig) -> Unit) {
         val p = explorerController.execute(
               "--host=localhost",
-              "--port=%d".format(config.artemisPort),
-              "--username=%s".format(config.user["user"]),
-              "--password=%s".format(config.user["password"]),
-              "--certificatesDir=%s".format(config.ssl.certificatesDirectory),
-              "--keyStorePassword=%s".format(config.ssl.keyStorePassword),
-              "--trustStorePassword=%s".format(config.ssl.trustStorePassword)
+              "--port=${config.artemisPort}",
+              "--username=${config.user["user"]}",
+              "--password=${config.user["password"]}",
+              "--certificatesDir=${config.ssl.certificatesDirectory}",
+              "--keyStorePassword=${config.ssl.keyStorePassword}",
+              "--trustStorePassword=${config.ssl.trustStorePassword}"
         )
         process = p
 

@@ -11,7 +11,9 @@ import net.corda.demobench.pty.R3Pty
 import tornadofx.Controller
 
 class NodeController : Controller() {
-    private val FIRST_PORT = 10000
+    companion object Data {
+        private const val FIRST_PORT = 10000
+    }
 
     private val baseDir = Paths.get("work", localDir).toAbsolutePath()
     private val pluginDir = Paths.get("plugins").toAbsolutePath()
@@ -28,6 +30,11 @@ class NodeController : Controller() {
     private val port = AtomicInteger(FIRST_PORT)
 
     private var networkMapConfig: NetworkMapConfig? = null
+
+    init {
+        log.info("Base directory: " + baseDir)
+        log.info("Corda JAR: " + cordaPath)
+    }
 
     fun validate(nodeData: NodeData): NodeConfig? {
         val config = NodeConfig(
@@ -51,16 +58,11 @@ class NodeController : Controller() {
         return config
     }
 
-    val nextPort: Int
-        get() { return port.andIncrement }
+    val nextPort: Int get() = port.andIncrement
 
-    fun keyExists(key: String): Boolean {
-        return nodes.keys.contains(key)
-    }
+    fun keyExists(key: String) = nodes.keys.contains(key)
 
-    fun nameExists(name: String): Boolean {
-        return keyExists(toKey(name))
-    }
+    fun nameExists(name: String) = keyExists(toKey(name))
 
     fun chooseNetworkMap(config: NodeConfig) {
         if (networkMapConfig != null) {
@@ -104,8 +106,4 @@ class NodeController : Controller() {
         get() = SimpleDateFormat("yyyyMMddHHmmss")
                     .format(Date(ManagementFactory.getRuntimeMXBean().startTime))
 
-    init {
-        log.info("Base directory: " + baseDir)
-        log.info("Corda JAR: " + cordaPath)
-    }
 }

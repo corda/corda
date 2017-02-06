@@ -12,17 +12,6 @@ class ServiceController : Controller() {
     val services : List<String>
        get() = serviceSet
 
-    private fun loadConf(url: URL): List<String> {
-        val set = TreeSet<String>()
-        InputStreamReader(url.openStream()).readLines().forEach {
-            val service = it.trim()
-            set.add(service)
-
-            log.info("Supports: " + service)
-        }
-        return set.toList()
-    }
-
     init {
         /*
          * Load our list of known extra Corda services.
@@ -34,4 +23,18 @@ class ServiceController : Controller() {
             loadConf(serviceConf)
         }
     }
+
+    private fun loadConf(url: URL): List<String> {
+        val set = TreeSet<String>()
+        InputStreamReader(url.openStream()).useLines {
+            sq -> sq.forEach {
+                val service = it.trim()
+                set.add(service)
+
+                log.info("Supports: " + service)
+            }
+        }
+        return set.toList()
+    }
+
 }

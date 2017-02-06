@@ -2,9 +2,6 @@ package org.h2.server.web
 
 import java.sql.Connection
 
-/**
- *
- */
 class LocalWebServer : WebServer() {
 
     /**
