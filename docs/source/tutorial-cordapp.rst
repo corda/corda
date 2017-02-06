@@ -37,7 +37,7 @@ defines four nodes:
 * **NodeB**
 * **NodeC**
 
-The nodes can generate IOUs and send the to other nodes. The flows used to facilitate the agreement process always results in 
+The nodes can generate IOUs and send them to other nodes. The flows used to facilitate the agreement process always results in 
 an agreement with the recipient as long as the IOU meets the contract constraints which are defined in ``IOUContract.kt``.
 
 All agreed IOUs between NodeA and NodeB become "shared facts" between NodeA and NodeB. But note that NodeC
