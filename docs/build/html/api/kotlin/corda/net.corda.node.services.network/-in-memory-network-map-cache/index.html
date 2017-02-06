@@ -119,6 +119,14 @@ updates.</p>
 </tr>
 <tr>
 <td>
+<a href="get-node-by-legal-identity-key.html">getNodeByLegalIdentityKey</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">getNodeByLegalIdentityKey</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.network.InMemoryNetworkMapCache$getNodeByLegalIdentityKey(net.corda.core.crypto.CompositeKey)/compositeKey">compositeKey</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span></code>
+<p>Look up the node info for a specific peer key.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="get-party-info.html">getPartyInfo</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">getPartyInfo</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.network.InMemoryNetworkMapCache$getPartyInfo(net.corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-party-info/index.html"><span class="identifier">PartyInfo</span></a><span class="symbol">?</span></code>
@@ -167,14 +175,6 @@ first subscriber is registered so as to avoid racing with early updates.</p>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">getAnyNotary</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$getAnyNotary(net.corda.core.node.services.ServiceType)/type">type</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span></code>
 <p>Returns a notary identity advertised by any of the nodes on the network (chosen at random)</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../../net.corda.core.node.services/-network-map-cache/get-node-by-legal-identity-key.html">getNodeByLegalIdentityKey</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">getNodeByLegalIdentityKey</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$getNodeByLegalIdentityKey(net.corda.core.crypto.CompositeKey)/compositeKey">compositeKey</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span></code>
-<p>Look up the node info for a specific peer key.</p>
 </td>
 </tr>
 <tr>

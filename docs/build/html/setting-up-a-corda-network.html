@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Secure coding guidelines" href="secure-coding-guidelines.html"/>
         <link rel="prev" title="Load testing" href="loadtesting.html"/> 
@@ -287,13 +284,20 @@ devMode : true
 </pre></div>
 </div>
 <p>The most important fields regarding network configuration are:</p>
-<ul class="simple">
-<li><code class="docutils literal"><span class="pre">artemisAddress</span></code>: This specifies a host and port. Note that the address bound will <strong>NOT</strong> be <code class="docutils literal"><span class="pre">my-corda-node</span></code>,
+<ul>
+<li><p class="first"><code class="docutils literal"><span class="pre">artemisAddress</span></code>: This specifies a host and port. Note that the address bound will <strong>NOT</strong> be <code class="docutils literal"><span class="pre">my-corda-node</span></code>,
 but rather <code class="docutils literal"><span class="pre">::</span></code> (all addresses on all interfaces). The hostname specified is the hostname <em>that must be externally
-resolvable by other nodes in the network</em>. In the above configuration this is the resolvable name of a machine in a vpn.</li>
-<li><code class="docutils literal"><span class="pre">webAddress</span></code>: The address the webserver should bind. Note that the port should be distinct from that of <code class="docutils literal"><span class="pre">artemisAddress</span></code>.</li>
-<li><code class="docutils literal"><span class="pre">networkMapService</span></code>: Details of the node running the network map service. If it&#8217;s this node that&#8217;s running the service
-then this field must not be specified.</li>
+resolvable by other nodes in the network</em>. In the above configuration this is the resolvable name of a machine in a vpn.</p>
+</li>
+<li><dl class="first docutils">
+<dt><code class="docutils literal"><span class="pre">webAddress</span></code>: The address the webserver should bind. Note that the port should be distinct from that of <code class="docutils literal"><span class="pre">artemisAddress</span></code></dt>
+<dd><p class="first last">if they are on the same machine.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">networkMapService</span></code>: Details of the node running the network map service. If it&#8217;s this node that&#8217;s running the service
+then this field must not be specified.</p>
+</li>
 </ul>
 </div>
 <div class="section" id="starting-the-nodes">

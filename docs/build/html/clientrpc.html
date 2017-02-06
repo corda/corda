@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Networking and messaging" href="messaging.html"/>
         <link rel="prev" title="The CorDapp template" href="tutorial-cordapp.html"/> 
@@ -127,6 +124,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Client RPC</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#security">Security</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#observables">Observables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#futures">Futures</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#versioning">Versioning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#thread-safety">Thread safety</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#error-handling">Error handling</a></li>
@@ -273,6 +271,13 @@ through to the server where the corresponding server-side observables are also u
 a warning printed to the logs and the proxy will be closed for you. But don&#8217;t rely on this, as garbage
 collection is non-deterministic.</p>
 </div>
+</div>
+<div class="section" id="futures">
+<h2>Futures<a class="headerlink" href="#futures" title="Permalink to this headline">¶</a></h2>
+<p>A method can also return a <code class="docutils literal"><span class="pre">ListenableFuture</span></code> in its object graph and it will be treated in a similar manner to
+observables, including needing to mark the RPC with the <code class="docutils literal"><span class="pre">&#64;RPCReturnsObservables</span></code> annotation. Unlike for an observable,
+once the single value (or an exception) has been received all server-side resources will be released automatically. Calling
+the <code class="docutils literal"><span class="pre">cancel</span></code> method on the future will unsubscribe it from any future value and release any resources.</p>
 </div>
 <div class="section" id="versioning">
 <h2>Versioning<a class="headerlink" href="#versioning" title="Permalink to this headline">¶</a></h2>

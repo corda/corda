@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Client RPC API tutorial" href="tutorial-clientrpc-api.html"/>
         <link rel="prev" title="Writing a contract test" href="tutorial-test-dsl.html"/> 
@@ -326,7 +323,7 @@ receiving 1,2,...10 dollars from Alice in some unspecified order.</p>
                         <span class="n">amount</span> <span class="p">=</span> <span class="n">i</span><span class="p">.</span><span class="n">DOLLARS</span><span class="p">.</span><span class="n">issuedBy</span><span class="p">(</span><span class="n">alice</span><span class="p">.</span><span class="n">nodeInfo</span><span class="p">.</span><span class="n">legalIdentity</span><span class="p">.</span><span class="n">ref</span><span class="p">(</span><span class="n">issueRef</span><span class="p">)),</span>
                         <span class="n">recipient</span> <span class="p">=</span> <span class="n">alice</span><span class="p">.</span><span class="n">nodeInfo</span><span class="p">.</span><span class="n">legalIdentity</span>
                 <span class="p">))</span>
-                <span class="n">assert</span><span class="p">(</span><span class="n">flowHandle</span><span class="p">.</span><span class="n">returnValue</span><span class="p">.</span><span class="n">toBlocking</span><span class="p">().</span><span class="n">first</span><span class="p">()</span> <span class="k">is</span> <span class="n">CashFlowResult</span><span class="p">.</span><span class="n">Success</span><span class="p">)</span>
+                <span class="n">flowHandle</span><span class="p">.</span><span class="n">returnValue</span><span class="p">.</span><span class="n">getOrThrow</span><span class="p">()</span>
             <span class="p">}</span>
 
             <span class="n">aliceVaultUpdates</span><span class="p">.</span><span class="n">expectEvents</span> <span class="p">{</span>

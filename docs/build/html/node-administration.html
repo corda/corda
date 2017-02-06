@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Node configuration" href="corda-configuration-file.html"/>
         <link rel="prev" title="Persistence" href="persistence.html"/> 
@@ -231,8 +228,9 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
             
   <div class="section" id="node-administration">
 <h1>Node administration<a class="headerlink" href="#node-administration" title="Permalink to this headline">¶</a></h1>
-<p>When a node is running, it exposes an embedded database server, an embedded web server that lets you monitor it,
-you can upload and download attachments, access a REST API and so on.</p>
+<p>When a node is running, it exposes an RPC interface that lets you monitor it,
+you can upload and download attachments, access a REST API and so on. A bundled
+Jetty web server exposes the same interface over HTTP.</p>
 <div class="section" id="logging">
 <h2>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h2>
 <p>In the default configuration logs are stored to the logs subdirectory of the node directory and are rotated from time to time. You can
