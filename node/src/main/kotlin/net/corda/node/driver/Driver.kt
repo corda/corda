@@ -459,6 +459,8 @@ open class DriverDSL(
                 allowMissingConfig = true,
                 configOverrides = mapOf(
                         "myLegalName" to networkMapLegalName,
+                        // TODO: remove the webAddress as NMS doesn't need to run a web server. This will cause all
+                        //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
                         "webAddress" to apiAddress,
                         "artemisAddress" to networkMapAddress.toString(),
                         "extraAdvertisedServiceIds" to "",
