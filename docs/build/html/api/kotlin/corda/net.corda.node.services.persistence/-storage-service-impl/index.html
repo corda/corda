@@ -39,6 +39,12 @@
 </tr>
 <tr>
 <td>
+<a href="uploaders.html">uploaders</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">uploaders</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-file-uploader/index.html"><span class="identifier">FileUploader</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="validated-transactions.html">validatedTransactions</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">validatedTransactions</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-transaction-storage/index.html"><span class="identifier">TransactionStorage</span></a></code>
@@ -46,6 +52,17 @@
 The signatures aren't technically needed after that point, but we keep them around so that we can relay
 the transaction data to other nodes that need it.</p>
 </td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="init-uploaders.html">initUploaders</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">initUploaders</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.persistence.StorageServiceImpl$initUploaders(kotlin.collections.List((net.corda.core.node.services.FileUploader)))/uploadersList">uploadersList</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-file-uploader/index.html"><span class="identifier">FileUploader</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 </tbody>
 </table>

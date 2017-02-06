@@ -8,7 +8,7 @@
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.messaging</a>&nbsp;/&nbsp;<a href="index.html">FlowHandle</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
 <br/>
 <h1>&lt;init&gt;</h1>
-<code><span class="identifier">FlowHandle</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging.FlowHandle$<init>(net.corda.core.flows.StateMachineRunId, rx.Observable((kotlin.String)), rx.Observable((net.corda.core.messaging.FlowHandle.A)))/id">id</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-state-machine-run-id/index.html"><span class="identifier">StateMachineRunId</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging.FlowHandle$<init>(net.corda.core.flows.StateMachineRunId, rx.Observable((kotlin.String)), rx.Observable((net.corda.core.messaging.FlowHandle.A)))/progress">progress</span><span class="symbol">:</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging.FlowHandle$<init>(net.corda.core.flows.StateMachineRunId, rx.Observable((kotlin.String)), rx.Observable((net.corda.core.messaging.FlowHandle.A)))/returnValue">returnValue</span><span class="symbol">:</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<code><span class="identifier">FlowHandle</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging.FlowHandle$<init>(net.corda.core.flows.StateMachineRunId, rx.Observable((kotlin.String)), com.google.common.util.concurrent.ListenableFuture((net.corda.core.messaging.FlowHandle.A)))/id">id</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-state-machine-run-id/index.html"><span class="identifier">StateMachineRunId</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging.FlowHandle$<init>(net.corda.core.flows.StateMachineRunId, rx.Observable((kotlin.String)), com.google.common.util.concurrent.ListenableFuture((net.corda.core.messaging.FlowHandle.A)))/progress">progress</span><span class="symbol">:</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging.FlowHandle$<init>(net.corda.core.flows.StateMachineRunId, rx.Observable((kotlin.String)), com.google.common.util.concurrent.ListenableFuture((net.corda.core.messaging.FlowHandle.A)))/returnValue">returnValue</span><span class="symbol">:</span>&nbsp;<span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">)</span></code>
 <p><a href="index.html">FlowHandle</a> is a serialisable handle for the started flow, parameterised by the type of the flow's return value.</p>
 <h3>Parameters</h3>
 
@@ -17,8 +17,6 @@
 <p><a name="progress"></a>
 <code>progress</code> - The stream of progress tracker events.
 <p><a name="returnValue"></a>
-<code>returnValue</code> - An Observable emitting a single event containing the flow's return value.
-    To block on this value:
-      val returnValue = rpc.startFlow(::MyFlow).returnValue.toBlocking().first()
+<code>returnValue</code> - A <a href="#">ListenableFuture</a> of the flow's return value.
 </BODY>
 </HTML>

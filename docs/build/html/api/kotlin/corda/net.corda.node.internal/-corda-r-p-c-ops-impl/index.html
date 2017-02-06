@@ -78,7 +78,7 @@ thread (i.e. serially). Arguments are serialised and deserialised automatically.
 <a href="current-node-time.html">currentNodeTime</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">currentNodeTime</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a></code>
-<p>Returns the node-local current time.</p>
+<p>Returns the node's current time.</p>
 </td>
 </tr>
 <tr>
@@ -155,6 +155,12 @@ such mappings as well.</p>
 </tr>
 <tr>
 <td>
+<a href="upload-file.html">uploadFile</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">uploadFile</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.internal.CordaRPCOpsImpl$uploadFile(kotlin.String, kotlin.String, java.io.InputStream)/dataType">dataType</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.internal.CordaRPCOpsImpl$uploadFile(kotlin.String, kotlin.String, java.io.InputStream)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.internal.CordaRPCOpsImpl$uploadFile(kotlin.String, kotlin.String, java.io.InputStream)/file">file</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="vault-and-updates.html">vaultAndUpdates</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">vaultAndUpdates</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
@@ -167,6 +173,15 @@ such mappings as well.</p>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">verifiedTransactions</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
 <p>Returns a pair of all recorded transactions and an observable of future recorded ones.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="wait-until-registered-with-network-map.html">waitUntilRegisteredWithNetworkMap</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">waitUntilRegisteredWithNetworkMap</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code>
+<p>Returns a <a href="#">ListenableFuture</a> which completes when the node has registered wih the network map service. It can also
+complete with an exception if it is unable to.</p>
 </td>
 </tr>
 </tbody>

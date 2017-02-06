@@ -1,3 +1,4 @@
+com.cordatest
 net.corda.client.fxutils
 net.corda.client.mock
 net.corda.client.model
@@ -21,7 +22,6 @@ net.corda.core.transactions
 net.corda.core.utilities
 net.corda.flows
 net.corda.node
-net.corda.node.api
 net.corda.node.driver
 net.corda.node.internal
 net.corda.node.serialization
@@ -38,7 +38,10 @@ net.corda.node.services.schema
 net.corda.node.services.statemachine
 net.corda.node.services.transactions
 net.corda.node.services.vault
-net.corda.node.servlets
 net.corda.node.utilities
 net.corda.node.utilities.certsigning
+net.corda.node.webserver
+net.corda.node.webserver.api
+net.corda.node.webserver.internal
+net.corda.node.webserver.servlets
 net.corda.schemas

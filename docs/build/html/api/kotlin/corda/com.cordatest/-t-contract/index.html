@@ -1,0 +1,54 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TContract - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">com.cordatest</a>&nbsp;/&nbsp;<a href=".">TContract</a><br/>
+<br/>
+<h1>TContract</h1>
+<code><span class="keyword">class </span><span class="identifier">TContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">TContract</span><span class="symbol">(</span><span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="legal-contract-reference.html">legalContractReference</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">legalContractReference</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code>
+<p>Unparsed reference to the natural language contract that this code is supposed to express (usually a hash of
+the contract's contents).</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="verify.html">verify</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.cordatest.TContract$verify(net.corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.
+Must throw an exception if there's a problem that should prevent state transition. Takes a single object
+rather than an argument so that additional data can be added without breaking binary compatibility with
+existing contract code.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>
