@@ -1,5 +1,7 @@
 package net.corda.core.crypto
 
+import net.corda.core.contracts.PartyAndReference
+import net.corda.core.serialization.OpaqueBytes
 import java.security.PublicKey
 
 /**
@@ -9,7 +11,7 @@ import java.security.PublicKey
  * cryptographic public key primitives into a tree structure.
  *
  * For example: Alice has two key pairs (pub1/priv1 and pub2/priv2), and wants to be able to sign transactions with either of them.
- * Her advertised [Party] then has a legal [name] "Alice" and an [owingKey] "pub1 or pub2".
+ * Her advertised [Party] then has a legal [name] "Alice" and an [owningKey] "pub1 or pub2".
  *
  * [Party] is also used for service identities. E.g. Alice may also be running an interest rate oracle on her Corda node,
  * which requires a separate signing key (and an identifying name). Services can also be distributed – run by a coordinated
@@ -20,9 +22,11 @@ import java.security.PublicKey
  *
  * @see CompositeKey
  */
-class Party(val name: String, owningKey: CompositeKey) : AnonymousParty(owningKey) {
+class Party(val name: String, owningKey: CompositeKey) : AbstractParty(owningKey) {
     /** A helper constructor that converts the given [PublicKey] in to a [CompositeKey] with a single node */
     constructor(name: String, owningKey: PublicKey) : this(name, owningKey.composite)
     override fun toAnonymous(): AnonymousParty = AnonymousParty(owningKey)
     override fun toString() = "${owningKey.toBase58String()} (${name})"
+
+    override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this.toAnonymous(), bytes)
 }
