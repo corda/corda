@@ -1,4 +1,4 @@
-package com.r3.corda.netpermission.internal.persistence
+package com.r3.corda.doorman.persistence
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.commonName
@@ -29,7 +29,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
         }
     }
 
-    override fun saveRequest(certificationData: CertificationData): String {
+    override fun saveRequest(certificationData: CertificationRequestData): String {
         val legalName = certificationData.request.subject.commonName
         val requestId = SecureHash.randomSHA256().toString()
         databaseTransaction(database) {
@@ -83,7 +83,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
         }
     }
 
-    override fun approveRequest(requestId: String, certificateGenerator: (CertificationData) -> Certificate) {
+    override fun approveRequest(requestId: String, certificateGenerator: (CertificationRequestData) -> Certificate) {
         databaseTransaction(database) {
             val request = singleRequestWhere { DataTable.requestId eq requestId and DataTable.processTimestamp.isNull() }
             if (request != null) {
@@ -109,7 +109,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
         }
     }
 
-    override fun getRequest(requestId: String): CertificationData? {
+    override fun getRequest(requestId: String): CertificationRequestData? {
         return databaseTransaction(database) {
             singleRequestWhere { DataTable.requestId eq requestId }
         }
@@ -121,10 +121,10 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
         }
     }
 
-    private fun singleRequestWhere(where: SqlExpressionBuilder.() -> Op<Boolean>): CertificationData? {
+    private fun singleRequestWhere(where: SqlExpressionBuilder.() -> Op<Boolean>): CertificationRequestData? {
         return DataTable
                 .select(where)
-                .map { CertificationData(it[DataTable.hostName], it[DataTable.ipAddress], deserializeFromBlob(it[DataTable.request])) }
+                .map { CertificationRequestData(it[DataTable.hostName], it[DataTable.ipAddress], deserializeFromBlob(it[DataTable.request])) }
                 .singleOrNull()
     }
 }
