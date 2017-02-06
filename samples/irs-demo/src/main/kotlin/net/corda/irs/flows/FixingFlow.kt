@@ -147,11 +147,12 @@ object FixingFlow {
             progressTracker.nextStep()
             val dealToFix = serviceHub.loadState(ref)
             val fixableDeal = (dealToFix.data as FixableDealState)
-            val parties = fixableDeal.parties.filter { it.owningKey != serviceHub.myInfo.legalIdentity.owningKey }
-            if (parties.isNotEmpty()) {
+            val parties = fixableDeal.parties.sortedBy { it.owningKey.toBase58String() }
+            val myKey = serviceHub.myInfo.legalIdentity.owningKey
+            if (parties[0].owningKey == myKey) {
                 val fixing = FixingSession(ref, fixableDeal.oracleType)
                 // Start the Floater which will then kick-off the Fixer
-                subFlow(Floater(parties.first(), fixing))
+                subFlow(Floater(parties[1], fixing))
             }
         }
     }
