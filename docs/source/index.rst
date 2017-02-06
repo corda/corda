@@ -19,7 +19,7 @@ Corda is designed so that developers can easily extend its functionality by writ
 sure you follow the instructions in :doc:`getting-set-up`, then go to 
 :doc:`running-the-demos`.
 
-If, after running the demos, you're interested in writing your own CorDapps, a template CorDapp is available on 
+If, after running the demos, you're interested in writing your own CorDapps, a template CorDapp is available at
 `Github <https://github.com/corda/cordapp-template>`_. To get it running, follow the instructions in the 
 `readme <https://github.com/corda/cordapp-template/blob/master/README.md>`_, or watch the 
 `Corda Developers Tutorial <https://vimeo.com/192797322/aab499b152>`_.
