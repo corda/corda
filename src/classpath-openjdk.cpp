@@ -669,6 +669,10 @@ class MyClasspath : public Classpath {
 #  ifdef PLATFORM_WINDOWS
     expect(t, loadLibrary(t, libraryPath, "msvcr100", true, true));
 #  endif
+    // necessary for using OpenJDK builds from
+    // https://github.com/ojdkbuild/ojdkbuild:
+    loadLibrary(t, libraryPath, "ojdkbuild_zlib", true, true, false);
+
     expect(t, loadLibrary(t, libraryPath, "verify", true, true));
     expect(t, loadLibrary(t, libraryPath, "java", true, true));
 #endif  // not AVIAN_OPENJDK_SRC
