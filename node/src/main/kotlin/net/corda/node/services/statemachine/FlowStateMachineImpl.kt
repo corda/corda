@@ -7,11 +7,13 @@ import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.random63BitValue
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.ServiceHubInternal
@@ -72,7 +74,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
     }
 
+    // This state IS serialised, as we need it to know what the fiber is waiting for.
     internal val openSessions = HashMap<Pair<FlowLogic<*>, Party>, FlowSession>()
+    internal var waitingForLedgerCommitOf: SecureHash? = null
 
     init {
         logic.stateMachine = this
@@ -172,6 +176,16 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
     }
 
+    @Suspendable
+    override fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction {
+        waitingForLedgerCommitOf = hash
+        logger.info("Waiting for transaction $hash to commit")
+        suspend(WaitForLedgerCommit(hash, sessionFlow.stateMachine as FlowStateMachineImpl<*>))
+        logger.info("Transaction $hash has committed to the ledger, resuming")
+        val stx = serviceHub.storageService.validatedTransactions.getTransaction(hash)
+        return stx ?: throw IllegalStateException("We were resumed after waiting for $hash but it wasn't found in our local storage")
+    }
+
     private fun createSessionData(session: FlowSession, payload: Any): SessionData {
         val sessionState = session.state
         val peerSessionId = when (sessionState) {
@@ -266,10 +280,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     private fun suspend(ioRequest: FlowIORequest) {
-        // we have to pass the Thread local Transaction across via a transient field as the Fiber Park swaps them out.
+        // We have to pass the thread local database transaction across via a transient field as the fiber park
+        // swaps them out.
         txTrampoline = TransactionManager.currentOrNull()
         StrandLocalTransactionManager.setThreadLocalTx(null)
-        ioRequest.session.waitingForResponse = (ioRequest is ReceiveRequest<*>)
+        if (ioRequest is SessionedFlowIORequest)
+            ioRequest.session.waitingForResponse = (ioRequest is ReceiveRequest<*>)
 
         var exceptionDuringSuspend: Throwable? = null
         parkAndSerialize { fiber, serializer ->

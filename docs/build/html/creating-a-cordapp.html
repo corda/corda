@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="The CorDapp template" href="tutorial-cordapp.html"/>
         <link rel="prev" title="Security model" href="key-concepts-security-model.html"/> 
@@ -251,10 +248,10 @@ contained in separate JARs from the node server JAR that are created and distrib
 <p>To create an app plugin you must you must extend from <a class="reference external" href="api/kotlin/corda/net.corda.core.node/-corda-plugin-registry/index.html">CordaPluginRegistry</a>. The JavaDoc contains
 specific details of the implementation, but you can extend the server in the following ways:</p>
 <ol class="arabic simple">
-<li>Required flows: Specify which flows will be whitelisted for use in your web APIs.</li>
+<li>Required flows: Specify which flows will be whitelisted for use in your RPC calls.</li>
 <li>Service plugins: Register your services (see below).</li>
-<li>Web APIs: You may register your own endpoints under /api/ of the built-in web server.</li>
-<li>Static web endpoints: You may register your own static serving directories for serving web content.</li>
+<li>Web APIs: You may register your own endpoints under /api/ of the bundled web server.</li>
+<li>Static web endpoints: You may register your own static serving directories for serving web content from the web server.</li>
 <li>Registering your additional classes used in RPC.</li>
 </ol>
 </div>

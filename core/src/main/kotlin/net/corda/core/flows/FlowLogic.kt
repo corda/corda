@@ -2,7 +2,9 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.SecureHash
 import net.corda.core.node.ServiceHub
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
@@ -169,6 +171,16 @@ abstract class FlowLogic<out T> {
         return progressTracker?.let {
             Pair(it.currentStep.toString(), it.changes.map { it.toString() })
         }
+    }
+
+    /**
+     * Suspends the flow until the transaction with the specified ID is received, successfully verified and
+     * sent to the vault for processing. Note that this call suspends until the transaction is considered
+     * valid by the local node, but that doesn't imply the vault will consider it relevant.
+     */
+    @Suspendable
+    fun waitForLedgerCommit(hash: SecureHash): SignedTransaction {
+        return stateMachine.waitForLedgerCommit(hash, this)
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////

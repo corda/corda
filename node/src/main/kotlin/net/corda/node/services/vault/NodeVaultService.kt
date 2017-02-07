@@ -195,13 +195,6 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         }
     }
 
-    /**
-     * Generate a transaction that moves an amount of currency to the given pubkey.
-     *
-     * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
-     *                        of given parties. This can be useful if the party you're trying to pay has expectations
-     *                        about which type of asset claims they are willing to accept.
-     */
     override fun generateSpend(tx: TransactionBuilder,
                                amount: Amount<Currency>,
                                to: CompositeKey,

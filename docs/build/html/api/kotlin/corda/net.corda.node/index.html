@@ -19,9 +19,44 @@
 </tr>
 <tr>
 <td>
+<a href="-client/index.html">Client</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Client</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="-cmd-line-options/index.html">CmdLineOptions</a></td>
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">CmdLineOptions</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-connection-direction/index.html">ConnectionDirection</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">ConnectionDirection</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-server/index.html">Server</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Server</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-p2-p_-q-u-e-u-e.html">P2P_QUEUE</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">P2P_QUEUE</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="name-to-address.html">nameToAddress</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">nameToAddress</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">String</span><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -32,6 +67,7 @@
 <td>
 <a href="main.html">main</a></td>
 <td>
+<code><span class="keyword">fun </span><span class="identifier">main</span><span class="symbol">(</span><span class="identifier" id="net.corda.node$main(kotlin.Array((kotlin.String)))/args">args</span><span class="symbol">:</span>&nbsp;<span class="identifier">Array</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
 <code><span class="keyword">fun </span><span class="identifier">main</span><span class="symbol">(</span><span class="identifier" id="net.corda.node$main(kotlin.Array((kotlin.String)))/args">args</span><span class="symbol">:</span>&nbsp;<span class="identifier">Array</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
@@ -41,6 +77,12 @@
 <code><span class="keyword">fun </span><span class="identifier">printBasicNodeInfo</span><span class="symbol">(</span><span class="identifier" id="net.corda.node$printBasicNodeInfo(kotlin.String, kotlin.String)/description">description</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node$printBasicNodeInfo(kotlin.String, kotlin.String)/info">info</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
 <p>Used for useful info that we always want to show, even when not logging to the console</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="tcp-transport.html">tcpTransport</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">tcpTransport</span><span class="symbol">(</span><span class="identifier" id="net.corda.node$tcpTransport(net.corda.node.ConnectionDirection, kotlin.String, kotlin.Int)/direction">direction</span><span class="symbol">:</span>&nbsp;<a href="-connection-direction/index.html"><span class="identifier">ConnectionDirection</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node$tcpTransport(net.corda.node.ConnectionDirection, kotlin.String, kotlin.Int)/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node$tcpTransport(net.corda.node.ConnectionDirection, kotlin.String, kotlin.Int)/port">port</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">TransportConfiguration</span></code></td>
 </tr>
 </tbody>
 </table>

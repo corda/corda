@@ -123,9 +123,8 @@ class CashFlow(val command: CashCommand, override val progressTracker: ProgressT
         Cash().generateIssue(builder, req.amount.issuedBy(issuer), req.recipient.owningKey, req.notary)
         val myKey = serviceHub.legalIdentityKey
         builder.signWith(myKey)
-        val tx = builder.toSignedTransaction(checkSufficientSignatures = true)
-        // Issuance transactions do not need to be notarised, so we can skip directly to broadcasting it
-        subFlow(BroadcastTransactionFlow(tx, setOf(req.recipient)))
+        val tx = builder.toSignedTransaction()
+        subFlow(FinalityFlow(tx))
         return tx
     }
 }

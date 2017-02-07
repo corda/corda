@@ -15,7 +15,7 @@
 <td>
 <a href="-abstract-state-replacement-flow/index.html">AbstractStateReplacementFlow</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractStateReplacementFlow</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractStateReplacementFlow</span></code>
 <p>Abstract flow to be used for replacing one state with another, for example when changing the notary of a state.
 Notably this requires a one to one replacement of states, states cannot be split, merged or issued as part of these
 flows.</p>
@@ -42,15 +42,9 @@ flows.</p>
 <td>
 <a href="-cash-flow/index.html">CashFlow</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">CashFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><a href="-cash-flow-result/index.html"><span class="identifier">CashFlowResult</span></a><span class="symbol">&gt;</span></code>
+<code><span class="keyword">class </span><span class="identifier">CashFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><a href="../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code>
 <p>Initiates a flow that produces an Issue/Move or Exit Cash transaction.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="-cash-flow-result/index.html">CashFlowResult</a></td>
-<td>
-<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">CashFlowResult</span></code></td>
 </tr>
 <tr>
 <td>
@@ -98,7 +92,7 @@ server acting as an issuer (see <a href="../net.corda.core.contracts/-issued/ind
 <td>
 <a href="-notary-change-flow/index.html">NotaryChangeFlow</a></td>
 <td>
-<code><span class="keyword">object </span><span class="identifier">NotaryChangeFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-state-replacement-flow/index.html"><span class="identifier">AbstractStateReplacementFlow</span></a><span class="symbol">&lt;</span><a href="../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span></code>
+<code><span class="keyword">object </span><span class="identifier">NotaryChangeFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-state-replacement-flow/index.html"><span class="identifier">AbstractStateReplacementFlow</span></a></code>
 <p>A flow to be used for changing a state's Notary. This is required since all input states to a transaction
 must point to the same notary.</p>
 </td>
@@ -131,14 +125,6 @@ checked again.</p>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">ServiceRequestMessage</span></code>
 <p>Abstract superclass for request messages sent to services which expect a reply.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="-state-replacement-refused/index.html">StateReplacementRefused</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">StateReplacementRefused</span></code>
-<p>Thrown when a participant refuses the proposed state replacement</p>
 </td>
 </tr>
 <tr>
@@ -176,21 +162,21 @@ indeed valid.</p>
 <tbody>
 <tr>
 <td>
-<a href="-input-state-ref-resolve-failed/index.html">InputStateRefResolveFailed</a></td>
+<a href="-cash-exception/index.html">CashException</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">InputStateRefResolveFailed</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+<code><span class="keyword">class </span><span class="identifier">CashException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-exception/index.html"><span class="identifier">FlowException</span></a></code></td>
 </tr>
 <tr>
 <td>
 <a href="-notary-exception/index.html">NotaryException</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">NotaryException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+<code><span class="keyword">class </span><span class="identifier">NotaryException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-exception/index.html"><span class="identifier">FlowException</span></a></code></td>
 </tr>
 <tr>
 <td>
 <a href="-state-replacement-exception/index.html">StateReplacementException</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">StateReplacementException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">StateReplacementException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-exception/index.html"><span class="identifier">FlowException</span></a></code></td>
 </tr>
 </tbody>
 </table>
