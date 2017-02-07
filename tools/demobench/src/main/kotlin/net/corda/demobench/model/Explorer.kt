@@ -10,7 +10,16 @@ class Explorer(val explorerController: ExplorerController) : AutoCloseable {
     private var process: Process? = null
 
     fun open(config: NodeConfig, onExit: (NodeConfig) -> Unit) {
+        val explorerDir = config.explorerDir.toFile()
+
+        if (!explorerDir.mkdirs()) {
+            log.warn("Failed to create working directory '{}'", explorerDir.getAbsolutePath())
+            onExit(config)
+            return
+        }
+
         val p = explorerController.execute(
+              config.explorerDir,
               "--host=localhost",
               "--port=${config.artemisPort}",
               "--username=${config.user["user"]}",

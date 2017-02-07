@@ -19,6 +19,7 @@ class NodeConfig(
 ) : NetworkMapConfig(legalName, artemisPort) {
 
     val nodeDir: Path = baseDir.resolve(key)
+    val explorerDir: Path = baseDir.resolve("$key-explorer")
 
     val user: Map<String, Any> = mapOf(
         "user" to "guest",

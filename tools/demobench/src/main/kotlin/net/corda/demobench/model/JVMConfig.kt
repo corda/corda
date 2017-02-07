@@ -18,8 +18,8 @@ class JVMConfig : Controller() {
         return arrayOf(javaPath.toString(), "-jar", jarPath.toString(), *args)
     }
 
-    fun execute(jarPath: Path, vararg args: String): Process {
-        return Runtime.getRuntime().exec(commandFor(jarPath, *args))
+    fun execute(jarPath: Path, cwd: Path, vararg args: String): Process {
+        return Runtime.getRuntime().exec(commandFor(jarPath, *args), null, cwd.toFile())
     }
 
 }
