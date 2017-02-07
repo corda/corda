@@ -78,7 +78,10 @@ configurations.all {
 
 jar {
     manifest {
-        attributes 'Main-Class': mainClassName
+        attributes(
+            'Main-Class': mainClassName,
+            'Class-Path': configurations.compile.collect { it.getName() }.join(' ')
+        )
     }
 }
 

@@ -6,7 +6,7 @@ import java.nio.file.Paths
 class ExplorerController : Controller() {
 
     private val jvm by inject<JVMConfig>()
-    private val explorerPath = Paths.get("explorer", "node-explorer.jar").toAbsolutePath()
+    private val explorerPath = jvm.applicationDir.resolve("explorer").resolve("node-explorer.jar")
 
     init {
         log.info("Explorer JAR: " + explorerPath)

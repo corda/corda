@@ -29,6 +29,8 @@ class NodeRPC(config: NodeConfig, invoke: (CordaRPCOps) -> Unit): AutoCloseable 
                     // Cancel the "setup" task now that we've created the RPC client.
                     this.cancel()
 
+                    log.info("Node '{}' is now ready.", config.legalName)
+
                     // Schedule a new task that will refresh the display once per second.
                     timer.schedule(object: TimerTask() {
                         override fun run() {

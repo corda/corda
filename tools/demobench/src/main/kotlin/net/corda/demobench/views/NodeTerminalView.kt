@@ -117,13 +117,9 @@ class NodeTerminalView : Fragment() {
     }
 
     class TerminalSettingsProvider : DefaultSettingsProvider() {
-        override fun getDefaultStyle(): TextStyle {
-            return TextStyle(TerminalColor.WHITE, TerminalColor.BLACK)
-        }
+        override fun getDefaultStyle() = TextStyle(TerminalColor.WHITE, TerminalColor.BLACK)
 
-        override fun emulateX11CopyPaste(): Boolean {
-            return true
-        }
+        override fun emulateX11CopyPaste() = true
     }
 
 }

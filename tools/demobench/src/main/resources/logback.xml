@@ -3,7 +3,7 @@
     <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator"/>
 
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>demobench.log</file>
+        <file>${user.home}/demobench.log</file>
         <append>false</append>
         <encoder>
             <pattern>%date %-5level %c{1} - %msg%n</pattern>

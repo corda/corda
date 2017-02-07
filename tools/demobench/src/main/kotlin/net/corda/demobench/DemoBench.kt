@@ -35,7 +35,18 @@ import tornadofx.addStageIcon
  */
 
 class DemoBench : App(DemoBenchView::class) {
+
+    /*
+     * This entry point is needed by JavaPackager, as
+     * otherwise the packaged application cannot run.
+     */
+    companion object {
+        @JvmStatic
+        fun main(args: Array<String>) = launch(DemoBench::class.java, *args)
+    }
+
     init {
         addStageIcon(Image("r3logo.png"))
     }
 }
+
