@@ -11,17 +11,20 @@ import net.corda.demobench.pty.R3Pty
 import tornadofx.Controller
 
 class NodeController : Controller() {
-    companion object Data {
-        private const val FIRST_PORT = 10000
+    private companion object Data {
+        const val FIRST_PORT = 10000
     }
 
-    private val baseDir = Paths.get("work", localDir).toAbsolutePath()
-    private val pluginDir = Paths.get("plugins").toAbsolutePath()
     private val jvm by inject<JVMConfig>()
+
+    private val localDir = SimpleDateFormat("yyyyMMddHHmmss")
+                   .format(Date(ManagementFactory.getRuntimeMXBean().startTime))
+    private val baseDir = jvm.userHome.resolve("demobench").resolve(localDir)
+    private val pluginDir = jvm.applicationDir.resolve("plugins")
 
     private val bankOfCorda = pluginDir.resolve("bank-of-corda.jar").toFile()
 
-    private val cordaPath = Paths.get("corda", "corda.jar").toAbsolutePath()
+    private val cordaPath = jvm.applicationDir.resolve("corda").resolve("corda.jar")
     private val command = jvm.commandFor(cordaPath)
 
     private val renderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
@@ -101,9 +104,5 @@ class NodeController : Controller() {
             return false
         }
     }
-
-    private val localDir: String
-        get() = SimpleDateFormat("yyyyMMddHHmmss")
-                    .format(Date(ManagementFactory.getRuntimeMXBean().startTime))
 
 }
