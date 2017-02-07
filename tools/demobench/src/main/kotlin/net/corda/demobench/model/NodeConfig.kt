@@ -20,14 +20,14 @@ class NodeConfig(
 
     val nodeDir: Path = baseDir.resolve(key)
 
-    private var networkMapValue: NetworkMapConfig? = null
-    var networkMap : NetworkMapConfig?
-        get() = networkMapValue
-        set(value) { networkMapValue = value }
-
-    private val userMap: Map<String, Any>
-    val user: Map<String, Any>
-        get() = userMap
+    val user: Map<String, Any> = mapOf(
+        "user" to "guest",
+        "password" to "letmein",
+        "permissions" to listOf(
+            "StartFlow.net.corda.flows.CashFlow",
+            "StartFlow.net.corda.flows.IssuerFlow\$IssuanceRequester"
+        )
+    )
 
     val ssl: SSLConfiguration = object : SSLConfiguration {
         override val certificatesDirectory: Path = nodeDir.resolve("certificates")
@@ -35,6 +35,12 @@ class NodeConfig(
         override val keyStorePassword: String = "cordacadevpass"
     }
 
+    var networkMap: NetworkMapConfig? = null
+
+    /*
+     * The configuration object depends upon the networkMap,
+     * which is mutable.
+     */
     val toFileConfig: Config
         get() = ConfigFactory.empty()
                     .withValue("myLegalName", valueFor(legalName))
@@ -46,24 +52,12 @@ class NodeConfig(
                             .withValue("legalName", valueFor(n.legalName))
                     } ))
                     .withValue("webAddress", addressValueFor(webPort))
-                    .withValue("rpcUsers", valueFor(listOf<Any>(user)))
+                    .withValue("rpcUsers", valueFor(listOf(user)))
                     .withValue("h2port", valueFor(h2Port))
                     .withValue("useTestClock", valueFor(true))
 
-    val isCashIssuer: Boolean
-        get() = extraServices.any {
-                    it.startsWith("corda.issuer.")
-                }
-
-    init {
-        userMap = mapOf<String, Any>(
-                "password" to "letmein",
-                "user" to "guest",
-                "permissions" to listOf(
-                    "StartFlow.net.corda.flows.CashFlow",
-                    "StartFlow.net.corda.flows.IssuerFlow\$IssuanceRequester"
-                )
-        )
+    val isCashIssuer: Boolean = extraServices.any {
+        it.startsWith("corda.issuer.")
     }
 
 }
