@@ -1,0 +1,24 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>Node.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.internal</a>&nbsp;/&nbsp;<a href="index.html">Node</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">Node</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.internal.Node$<init>(net.corda.node.services.config.FullNodeConfiguration, kotlin.collections.Set((net.corda.core.node.services.ServiceInfo)), java.time.Clock)/configuration">configuration</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.config/-full-node-configuration/index.html"><span class="identifier">FullNodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.internal.Node$<init>(net.corda.node.services.config.FullNodeConfiguration, kotlin.collections.Set((net.corda.core.node.services.ServiceInfo)), java.time.Clock)/advertisedServices">advertisedServices</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-service-info/index.html"><span class="identifier">ServiceInfo</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.internal.Node$<init>(net.corda.node.services.config.FullNodeConfiguration, kotlin.collections.Set((net.corda.core.node.services.ServiceInfo)), java.time.Clock)/clock">clock</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a>&nbsp;<span class="symbol">=</span>&nbsp;NodeClock()<span class="symbol">)</span></code>
+<p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="../../net.corda.core.node/-service-hub/index.html">ServiceHub</a>,
+loads important data off disk and starts listening for connections.</p>
+<h3>Parameters</h3>
+
+<p><a name="configuration"></a>
+<code>configuration</code> - This is typically loaded from a TypeSafe HOCON configuration file.
+<p><a name="advertisedServices"></a>
+<code>advertisedServices</code> - The services this node advertises. This must be a subset of the services it runs,
+but nodes are not required to advertise services they run (hence subset).
+<p><a name="clock"></a>
+<code>clock</code> - The clock used within the node and by all flows etc.
+</BODY>
+</HTML>

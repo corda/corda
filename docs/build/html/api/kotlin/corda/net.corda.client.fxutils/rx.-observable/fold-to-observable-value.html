@@ -1,0 +1,22 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>foldToObservableValue - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.client.fxutils</a>&nbsp;/&nbsp;<a href="index.html">rx.Observable</a>&nbsp;/&nbsp;<a href=".">foldToObservableValue</a><br/>
+<br/>
+<h1>foldToObservableValue</h1>
+<a name="net.corda.client.fxutils$foldToObservableValue(rx.Observable((net.corda.client.fxutils.foldToObservableValue.A)), net.corda.client.fxutils.foldToObservableValue.B, kotlin.Function2((net.corda.client.fxutils.foldToObservableValue.A, net.corda.client.fxutils.foldToObservableValue.B, )))"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">&gt;</span> <span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">foldToObservableValue</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$foldToObservableValue(rx.Observable((net.corda.client.fxutils.foldToObservableValue.A)), net.corda.client.fxutils.foldToObservableValue.B, kotlin.Function2((net.corda.client.fxutils.foldToObservableValue.A, net.corda.client.fxutils.foldToObservableValue.B, )))/initial">initial</span><span class="symbol">:</span>&nbsp;<span class="identifier">B</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils$foldToObservableValue(rx.Observable((net.corda.client.fxutils.foldToObservableValue.A)), net.corda.client.fxutils.foldToObservableValue.B, kotlin.Function2((net.corda.client.fxutils.foldToObservableValue.A, net.corda.client.fxutils.foldToObservableValue.B, )))/folderFun">folderFun</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">B</span><span class="symbol">&gt;</span></code>
+<p>foldToObservableValue takes an <a href="#">rx.Observable</a> stream and creates an <a href="#">ObservableValue</a> out of it.</p>
+<h3>Parameters</h3>
+
+<p><a name="initial"></a>
+<code>initial</code> - The initial value of the returned observable.
+<p><a name="folderFun"></a>
+<code>folderFun</code> - The transformation function to be called on the observable value when a new element is emitted on
+    the stream.
+</BODY>
+</HTML>

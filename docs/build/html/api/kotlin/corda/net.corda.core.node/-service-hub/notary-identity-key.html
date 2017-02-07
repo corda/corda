@@ -1,0 +1,19 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ServiceHub.notaryIdentityKey - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.node</a>&nbsp;/&nbsp;<a href="index.html">ServiceHub</a>&nbsp;/&nbsp;<a href=".">notaryIdentityKey</a><br/>
+<br/>
+<h1>notaryIdentityKey</h1>
+<a name="net.corda.core.node.ServiceHub$notaryIdentityKey"></a>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">notaryIdentityKey</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code>
+<p>Helper property to shorten code for fetching the Node's KeyPair associated with the
+public notaryIdentity Party from the key management service. It is assumed that this is only
+used in contexts where the Node knows it is hosting a Notary Service. Otherwise, it will throw
+an IllegalArgumentException.
+Typical use is during signing in flows and for unit test signing.</p>
+</BODY>
+</HTML>

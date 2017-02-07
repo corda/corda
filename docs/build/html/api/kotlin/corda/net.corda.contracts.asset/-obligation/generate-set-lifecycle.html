@@ -1,0 +1,20 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>Obligation.generateSetLifecycle - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.contracts.asset</a>&nbsp;/&nbsp;<a href="index.html">Obligation</a>&nbsp;/&nbsp;<a href=".">generateSetLifecycle</a><br/>
+<br/>
+<h1>generateSetLifecycle</h1>
+<a name="net.corda.contracts.asset.Obligation$generateSetLifecycle(net.corda.core.transactions.TransactionBuilder, kotlin.collections.List((net.corda.core.contracts.StateAndRef((net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.Obligation.P)))))), net.corda.contracts.asset.Obligation.Lifecycle, net.corda.core.crypto.Party)"></a>
+<code><span class="keyword">fun </span><span class="identifier">generateSetLifecycle</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset.Obligation$generateSetLifecycle(net.corda.core.transactions.TransactionBuilder, kotlin.collections.List((net.corda.core.contracts.StateAndRef((net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.Obligation.P)))))), net.corda.contracts.asset.Obligation.Lifecycle, net.corda.core.crypto.Party)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.asset.Obligation$generateSetLifecycle(net.corda.core.transactions.TransactionBuilder, kotlin.collections.List((net.corda.core.contracts.StateAndRef((net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.Obligation.P)))))), net.corda.contracts.asset.Obligation.Lifecycle, net.corda.core.crypto.Party)/statesAndRefs">statesAndRefs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.asset.Obligation$generateSetLifecycle(net.corda.core.transactions.TransactionBuilder, kotlin.collections.List((net.corda.core.contracts.StateAndRef((net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.Obligation.P)))))), net.corda.contracts.asset.Obligation.Lifecycle, net.corda.core.crypto.Party)/lifecycle">lifecycle</span><span class="symbol">:</span>&nbsp;<a href="-lifecycle/index.html"><span class="identifier">Lifecycle</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.asset.Obligation$generateSetLifecycle(net.corda.core.transactions.TransactionBuilder, kotlin.collections.List((net.corda.core.contracts.StateAndRef((net.corda.contracts.asset.Obligation.State((net.corda.contracts.asset.Obligation.P)))))), net.corda.contracts.asset.Obligation.Lifecycle, net.corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Generate a transaction changing the lifecycle of one or more state objects.</p>
+<h3>Parameters</h3>
+
+<p><a name="statesAndRefs"></a>
+<code>statesAndRefs</code> - a list of state objects, which MUST all have the same issuance definition. This avoids
+potential complications arising from different deadlines applying to different states.
+</BODY>
+</HTML>

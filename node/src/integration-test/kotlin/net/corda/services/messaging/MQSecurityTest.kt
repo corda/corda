@@ -10,16 +10,20 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.random63BitValue
 import net.corda.core.seconds
+import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.node.services.User
+import net.corda.node.services.config.SSLConfiguration
+import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NETWORK_MAP_ADDRESS
+import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
+import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NETWORK_MAP_QUEUE
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.PEERS_PREFIX
+import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.RPC_QUEUE_REMOVALS_QUEUE
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.RPC_REQUESTS_QUEUE
 import net.corda.node.services.messaging.CordaRPCClientImpl
-import net.corda.node.services.messaging.NodeMessagingClient.Companion.RPC_QUEUE_REMOVALS_QUEUE
 import net.corda.testing.messaging.SimpleMQClient
 import net.corda.testing.node.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
@@ -44,8 +48,8 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     @Before
     fun start() {
-        alice = startNode("Alice", rpcUsers = extraRPCUsers + rpcUser)
-        attacker = SimpleMQClient(alice.configuration.artemisAddress)
+        alice = startNode("Alice", rpcUsers = extraRPCUsers + rpcUser).getOrThrow()
+        attacker = clientTo(alice.configuration.artemisAddress)
         startAttacker(attacker)
     }
 
@@ -70,27 +74,31 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     @Test
-    fun `send message to peer address`() {
+    fun `send message to address of peer which has been communicated with`() {
         val bobParty = startBobAndCommunicateWithAlice()
         assertSendAttackFails("$PEERS_PREFIX${bobParty.owningKey.toBase58String()}")
     }
 
     @Test
+    fun `create queue for peer which has not been communciated with`() {
+        val bob = startNode("Bob").getOrThrow()
+        assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bob.info.legalIdentity.owningKey.toBase58String()}")
+    }
+
+    @Test
     fun `create queue for unknown peer`() {
         val invalidPeerQueue = "$PEERS_PREFIX${generateKeyPair().public.composite.toBase58String()}"
-        assertNonTempQueueCreationAttackFails(invalidPeerQueue, durable = true)
-        assertNonTempQueueCreationAttackFails(invalidPeerQueue, durable = false)
-        assertTempQueueCreationAttackFails(invalidPeerQueue)
+        assertAllQueueCreationAttacksFail(invalidPeerQueue)
     }
 
     @Test
     fun `consume message from network map queue`() {
-        assertConsumeAttackFails(NETWORK_MAP_ADDRESS.toString())
+        assertConsumeAttackFails(NETWORK_MAP_QUEUE)
     }
 
     @Test
     fun `send message to network map address`() {
-        assertSendAttackFails(NETWORK_MAP_ADDRESS.toString())
+        assertSendAttackFails(NETWORK_MAP_QUEUE)
     }
 
     @Test
@@ -133,15 +141,19 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     @Test
-    fun `create random queue`() {
-        val randomQueue = random63BitValue().toString()
-        assertNonTempQueueCreationAttackFails(randomQueue, durable = false)
-        assertNonTempQueueCreationAttackFails(randomQueue, durable = true)
-        assertTempQueueCreationAttackFails(randomQueue)
+    fun `create random internal queue`() {
+        val randomQueue = "$INTERNAL_PREFIX${random63BitValue()}"
+        assertAllQueueCreationAttacksFail(randomQueue)
     }
 
-    fun clientTo(target: HostAndPort): SimpleMQClient {
-        val client = SimpleMQClient(target)
+    @Test
+    fun `create random queue`() {
+        val randomQueue = random63BitValue().toString()
+        assertAllQueueCreationAttacksFail(randomQueue)
+    }
+
+    fun clientTo(target: HostAndPort, config: SSLConfiguration = configureTestSSL()): SimpleMQClient {
+        val client = SimpleMQClient(target, config)
         clients += client
         return client
     }
@@ -162,6 +174,12 @@ abstract class MQSecurityTest : NodeBasedTest() {
         val rpcClient = loginToRPC(alice.configuration.artemisAddress, rpcUser)
         val clientQueueQuery = SimpleString("$CLIENTS_PREFIX${rpcUser.username}.rpc.*")
         return rpcClient.session.addressQuery(clientQueueQuery).queueNames.single().toString()
+    }
+
+    fun assertAllQueueCreationAttacksFail(queue: String) {
+        assertNonTempQueueCreationAttackFails(queue, durable = true)
+        assertNonTempQueueCreationAttackFails(queue, durable = false)
+        assertTempQueueCreationAttackFails(queue)
     }
 
     fun assertTempQueueCreationAttackFails(queue: String) {
@@ -210,7 +228,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     private fun startBobAndCommunicateWithAlice(): Party {
-        val bob = startNode("Bob")
+        val bob = startNode("Bob").getOrThrow()
         bob.services.registerFlowInitiator(SendFlow::class, ::ReceiveFlow)
         val bobParty = bob.info.legalIdentity
         // Perform a protocol exchange to force the peer queue to be created

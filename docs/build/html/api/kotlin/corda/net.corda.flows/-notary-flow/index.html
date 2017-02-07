@@ -1,0 +1,42 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NotaryFlow - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href=".">NotaryFlow</a><br/>
+<br/>
+<h1>NotaryFlow</h1>
+<code><span class="keyword">object </span><span class="identifier">NotaryFlow</span></code>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-client/index.html">Client</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span></code>
+<p>A flow to be used for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
+timestamp is correct and none of its inputs have been used in another completed transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code>
+<p>Checks that the timestamp command is valid (if present) and commits the input state, or returns a conflict
+if any of the input states have been previously committed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-sign-request/index.html">SignRequest</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">SignRequest</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

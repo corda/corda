@@ -1,0 +1,52 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ArtemisMessagingComponent.ServiceAddress - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href="../index.html">ArtemisMessagingComponent</a>&nbsp;/&nbsp;<a href=".">ServiceAddress</a><br/>
+<br/>
+<h1>ServiceAddress</h1>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ServiceAddress</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-artemis-address/index.html"><span class="identifier">ArtemisAddress</span></a><span class="symbol">, </span><a href="../../../net.corda.core.messaging/-message-recipient-group.html"><span class="identifier">MessageRecipientGroup</span></a></code>
+<p>ServiceAddress implements <a href="../../../net.corda.core.messaging/-message-recipient-group.html">MessageRecipientGroup</a>. It holds a queue associated with a service advertised by
+zero or more nodes. Each advertising node has an associated consumer.</p>
+<p>By sending to such an address Artemis will pick a consumer (uses Round Robin by default) and sends the message
+there. We use this to establish sessions involving service counterparties.</p>
+<h3>Parameters</h3>
+
+<p><a name="identity"></a>
+<code>identity</code> - The service identity's owning key.
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">ServiceAddress</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent.ServiceAddress$<init>(net.corda.core.crypto.CompositeKey)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span></code>
+<p>ServiceAddress implements <a href="../../../net.corda.core.messaging/-message-recipient-group.html">MessageRecipientGroup</a>. It holds a queue associated with a service advertised by
+zero or more nodes. Each advertising node has an associated consumer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="identity.html">identity</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">identity</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="queue-name.html">queueName</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">queueName</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

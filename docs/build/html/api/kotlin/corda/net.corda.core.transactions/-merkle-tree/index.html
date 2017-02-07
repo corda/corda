@@ -1,0 +1,99 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>MerkleTree - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.transactions</a>&nbsp;/&nbsp;<a href=".">MerkleTree</a><br/>
+<br/>
+<h1>MerkleTree</h1>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">MerkleTree</span></code>
+<p>Creation and verification of a Merkle Tree for a Wire Transaction.</p>
+<p>See: https://en.wikipedia.org/wiki/Merkle_tree</p>
+<p>Transaction is split into following blocks: inputs, outputs, commands, attachments' refs. Merkle Tree is kept in
+a recursive data structure. Building is done bottom up, from all leaves' hashes.
+If a row in a tree has an odd number of elements - the final hash is hashed with itself.</p>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-duplicated-leaf/index.html">DuplicatedLeaf</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DuplicatedLeaf</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MerkleTree</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-leaf/index.html">Leaf</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Leaf</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MerkleTree</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-node/index.html">Node</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Node</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MerkleTree</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="hash.html">hash</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">hash</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="hash-nodes.html">hashNodes</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">hashNodes</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions.MerkleTree$hashNodes(net.corda.core.transactions.MerkleTree)/right">right</span><span class="symbol">:</span>&nbsp;<span class="identifier">MerkleTree</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">MerkleTree</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="get-merkle-tree.html">getMerkleTree</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getMerkleTree</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions.MerkleTree.Companion$getMerkleTree(kotlin.collections.List((net.corda.core.crypto.SecureHash)))/allLeavesHashes">allLeavesHashes</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">MerkleTree</span></code>
+<p>Merkle tree building using hashes.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-duplicated-leaf/index.html">DuplicatedLeaf</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DuplicatedLeaf</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MerkleTree</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-leaf/index.html">Leaf</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Leaf</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MerkleTree</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-node/index.html">Node</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Node</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MerkleTree</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

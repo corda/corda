@@ -34,13 +34,16 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
     companion object {
         private fun dependencyIDs(wtx: WireTransaction) = wtx.inputs.map { it.txhash }.toSet()
 
-        private fun topologicalSort(transactions: Collection<SignedTransaction>): List<SignedTransaction> {
+        /**
+         * Topologically sorts the given transactions such that dependencies are listed before dependers. */
+        @JvmStatic
+        fun topologicalSort(transactions: Collection<SignedTransaction>): List<SignedTransaction> {
             // Construct txhash -> dependent-txs map
             val forwardGraph = HashMap<SecureHash, HashSet<SignedTransaction>>()
-            transactions.forEach { tx ->
-                tx.tx.inputs.forEach { input ->
+            transactions.forEach { stx ->
+                stx.tx.inputs.forEach { input ->
                     // Note that we use a LinkedHashSet here to make the traversal deterministic (as long as the input list is)
-                    forwardGraph.getOrPut(input.txhash) { LinkedHashSet() }.add(tx)
+                    forwardGraph.getOrPut(input.txhash) { LinkedHashSet() }.add(stx)
                 }
             }
 
@@ -50,16 +53,12 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             fun visit(transaction: SignedTransaction) {
                 if (transaction.id !in visited) {
                     visited.add(transaction.id)
-                    forwardGraph[transaction.id]?.forEach {
-                        visit(it)
-                    }
+                    forwardGraph[transaction.id]?.forEach(::visit)
                     result.add(transaction)
                 }
             }
 
-            transactions.forEach {
-                visit(it)
-            }
+            transactions.forEach(::visit)
 
             result.reverse()
             require(result.size == transactions.size)
@@ -93,6 +92,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
     }
 
     @Suspendable
+    @Throws(FetchDataFlow.HashNotFound::class)
     override fun call(): List<LedgerTransaction> {
         val newTxns: Iterable<SignedTransaction> = topologicalSort(downloadDependencies(txHashes))
 

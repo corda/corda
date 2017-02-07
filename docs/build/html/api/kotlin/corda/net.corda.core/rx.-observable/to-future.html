@@ -1,0 +1,17 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>toFuture - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core</a>&nbsp;/&nbsp;<a href="index.html">rx.Observable</a>&nbsp;/&nbsp;<a href=".">toFuture</a><br/>
+<br/>
+<h1>toFuture</h1>
+<a name="net.corda.core$toFuture(rx.Observable((net.corda.core.toFuture.T)))"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">toFuture</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Returns a <a href="#">ListenableFuture</a> bound to the <emph>first</emph> item emitted by this Observable. The future will complete with a
+NoSuchElementException if no items are emitted or any other error thrown by the Observable. If it's cancelled then
+it will unsubscribe from the observable.</p>
+</BODY>
+</HTML>

@@ -1,0 +1,27 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>FetchDataFlow.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href="index.html">FetchDataFlow</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">FetchDataFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.FetchDataFlow$<init>(kotlin.collections.Set((net.corda.core.crypto.SecureHash)), net.corda.core.crypto.Party)/requests">requests</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.flows.FetchDataFlow$<init>(kotlin.collections.Set((net.corda.core.crypto.SecureHash)), net.corda.core.crypto.Party)/otherSide">otherSide</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span></code>
+<p>An abstract flow for fetching typed data from a remote peer.</p>
+<p>Given a set of hashes (IDs), either loads them from local disk or asks the remote peer to provide them.</p>
+<p>A malicious response in which the data provided by the remote peer does not hash to the requested hash results in
+<a href="-downloaded-vs-requested-data-mismatch/index.html">DownloadedVsRequestedDataMismatch</a> being thrown. If the remote peer doesn't have an entry, it results in a
+<a href="-hash-not-found/index.html">HashNotFound</a> exception being thrown.</p>
+<p>By default this class does not insert data into any local database, if you want to do that after missing items were
+fetched then override <a href="maybe-write-to-disk.html">maybeWriteToDisk</a>. You <emph>must</emph> override <a href="load.html">load</a>. If the wire type is not the same as the
+ultimate type, you must also override <a href="convert.html">convert</a>.</p>
+<h3>Parameters</h3>
+
+<p><a name="T"></a>
+<code>T</code> - The ultimate type of the data being fetched.
+<p><a name="W"></a>
+<code>W</code> - The wire type of the data being fetched, for when it isn't the same as the ultimate type.
+</BODY>
+</HTML>

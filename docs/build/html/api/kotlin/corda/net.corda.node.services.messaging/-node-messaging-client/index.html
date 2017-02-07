@@ -1,0 +1,289 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NodeMessagingClient - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href=".">NodeMessagingClient</a><br/>
+<br/>
+<h1>NodeMessagingClient</h1>
+<code><span class="identifier">@ThreadSafe</span> <span class="keyword">class </span><span class="identifier">NodeMessagingClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a><span class="symbol">, </span><a href="../../net.corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code>
+<p>This class implements the <a href="../../net.corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+Artemis is a message queue broker and here we run a client connecting to the specified broker instance
+<a href="../-artemis-messaging-server/index.html">ArtemisMessagingServer</a>. It's primarily concerned with peer-to-peer messaging.</p>
+<p>Message handlers are run on the provided <a href="../../net.corda.node.utilities/-affinity-executor/index.html">AffinityExecutor</a> synchronously, that is, the Artemis callback threads
+are blocked until the handler is scheduled and completed. This allows backpressure to propagate from the given
+executor through into Artemis and from there, back through to senders.</p>
+<p>An implementation of <a href="../../net.corda.core.messaging/-corda-r-p-c-ops/index.html">CordaRPCOps</a> can be provided. If given, clients using the CordaMQClient RPC library can
+invoke methods on the provided implementation. There is more documentation on this in the docsite and the
+CordaRPCClient class.</p>
+<h3>Parameters</h3>
+
+<p><a name="serverHostPort"></a>
+<code>serverHostPort</code> - The address of the broker instance to connect to (might be running in the same process)
+<p><a name="myIdentity"></a>
+<code>myIdentity</code> - Either the public key to be used as the ArtemisMQ address and queue name for the node globally, or null to indicate
+that this is a NetworkMapService node which will be bound globally to the name "networkmap"
+<p><a name="nodeExecutor"></a>
+<code>nodeExecutor</code> - An executor to run received message tasks upon.
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-handler/index.html">Handler</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Handler</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code>
+<p>A registration to handle messages of different types</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">NodeMessagingClient</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.crypto.CompositeKey, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, com.google.common.util.concurrent.ListenableFuture((kotlin.Unit)))/config">config</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.crypto.CompositeKey, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, com.google.common.util.concurrent.ListenableFuture((kotlin.Unit)))/serverHostPort">serverHostPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">HostAndPort</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.crypto.CompositeKey, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, com.google.common.util.concurrent.ListenableFuture((kotlin.Unit)))/myIdentity">myIdentity</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.crypto.CompositeKey, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, com.google.common.util.concurrent.ListenableFuture((kotlin.Unit)))/nodeExecutor">nodeExecutor</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.utilities/-affinity-executor/index.html"><span class="identifier">AffinityExecutor</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.crypto.CompositeKey, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, com.google.common.util.concurrent.ListenableFuture((kotlin.Unit)))/database">database</span><span class="symbol">:</span>&nbsp;<span class="identifier">Database</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.crypto.CompositeKey, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, com.google.common.util.concurrent.ListenableFuture((kotlin.Unit)))/networkMapRegistrationFuture">networkMapRegistrationFuture</span><span class="symbol">:</span>&nbsp;<span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>This class implements the <a href="../../net.corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+Artemis is a message queue broker and here we run a client connecting to the specified broker instance
+<a href="../-artemis-messaging-server/index.html">ArtemisMessagingServer</a>. It's primarily concerned with peer-to-peer messaging.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="config.html">config</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">config</span><span class="symbol">: </span><a href="../../net.corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></code>
+<p>The config object is used to pass in the passwords for the certificate KeyStore and TrustStore</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="database.html">database</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">database</span><span class="symbol">: </span><span class="identifier">Database</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="my-address.html">myAddress</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">myAddress</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a></code>
+<p>Apart from the NetworkMapService this is the only other address accessible to the node outside of lookups against the NetworkMapCache.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="my-identity.html">myIdentity</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">myIdentity</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="network-map-registration-future.html">networkMapRegistrationFuture</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">networkMapRegistrationFuture</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="node-executor.html">nodeExecutor</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">nodeExecutor</span><span class="symbol">: </span><a href="../../net.corda.node.utilities/-affinity-executor/index.html"><span class="identifier">AffinityExecutor</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="server-host-port.html">serverHostPort</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">serverHostPort</span><span class="symbol">: </span><span class="identifier">HostAndPort</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="add-message-handler.html">addMessageHandler</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(kotlin.String, kotlin.Long, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(kotlin.String, kotlin.Long, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(kotlin.String, kotlin.Long, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-received-message/index.html"><span class="identifier">ReceivedMessage</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code>
+<p>The provided function will be invoked for each received message whose topic matches the given string.  The callback
+will run on threads provided by the messaging service, and the callback is expected to be thread safe as a result.</p>
+<code><span class="keyword">fun </span><span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(net.corda.core.messaging.TopicSession, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$addMessageHandler(net.corda.core.messaging.TopicSession, kotlin.Function2((net.corda.core.messaging.ReceivedMessage, net.corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-received-message/index.html"><span class="identifier">ReceivedMessage</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code>
+<p>The provided function will be invoked for each received message whose topic and session matches.  The callback
+will run on threads provided by the messaging service, and the callback is expected to be thread safe as a result.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="create-message.html">createMessage</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">createMessage</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$createMessage(net.corda.core.messaging.TopicSession, kotlin.ByteArray, java.util.UUID)/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$createMessage(net.corda.core.messaging.TopicSession, kotlin.ByteArray, java.util.UUID)/data">data</span><span class="symbol">:</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$createMessage(net.corda.core.messaging.TopicSession, kotlin.ByteArray, java.util.UUID)/uuid">uuid</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/UUID.html"><span class="identifier">UUID</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a></code>
+<p>Returns an initialised <a href="../../net.corda.core.messaging/-message/index.html">Message</a> with the current time, etc, already filled in.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="get-address-of-party.html">getAddressOfParty</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getAddressOfParty</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$getAddressOfParty(net.corda.core.node.services.PartyInfo)/partyInfo">partyInfo</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-party-info/index.html"><span class="identifier">PartyInfo</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a></code>
+<p>Given information about either a specific node or a service returns its corresponding address</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="remove-message-handler.html">removeMessageHandler</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">removeMessageHandler</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$removeMessageHandler(net.corda.core.messaging.MessageHandlerRegistration)/registration">registration</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Removes a handler given the object returned from <a href="add-message-handler.html">addMessageHandler</a>. The callback will no longer be invoked once
+this method has returned, although executions that are currently in flight will not be interrupted.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="run.html">run</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">run</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Starts the p2p event loop: this method only returns once <a href="stop.html">stop</a> has been called.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="send.html">send</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$send(net.corda.core.messaging.Message, net.corda.core.messaging.MessageRecipients)/message">message</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$send(net.corda.core.messaging.Message, net.corda.core.messaging.MessageRecipients)/target">target</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Sends a message to the given receiver. The details of how receivers are identified is up to the messaging
+implementation: the type system provides an opaque high level view, with more fine grained control being
+available via type casting. Once this function returns the message is queued for delivery but not necessarily
+delivered: if the recipients are offline then the message could be queued hours or days later.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="start.html">start</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">start</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$start(net.corda.core.messaging.RPCOps, net.corda.node.services.RPCUserService)/rpcOps">rpcOps</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-r-p-c-ops/index.html"><span class="identifier">RPCOps</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$start(net.corda.core.messaging.RPCOps, net.corda.node.services.RPCUserService)/userService">userService</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services/-r-p-c-user-service/index.html"><span class="identifier">RPCUserService</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="stop.html">stop</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Initiates shutdown: if called from a thread that isn't controlled by the executor passed to the constructor
+then this will block until all in-flight messages have finished being handled and acknowledged. If called
+from a thread that's a part of the <a href="../../net.corda.node.utilities/-affinity-executor/index.html">AffinityExecutor</a> given to the constructor, it returns immediately and
+shutdown is asynchronous.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-artemis-messaging-component/check-store-passwords.html">checkStorePasswords</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">checkStorePasswords</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Returns nothing if the keystore was opened OK or throws if not. Useful to check the password, as
+unfortunately Artemis tends to bury the exception when the password is wrong.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-artemis-messaging-component/expected-on-default-file-system.html">expectedOnDefaultFileSystem</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">.</span><span class="identifier">expectedOnDefaultFileSystem</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-artemis-messaging-component/tcp-transport.html">tcpTransport</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">tcpTransport</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/direction">direction</span><span class="symbol">:</span>&nbsp;<a href="../-artemis-messaging-component/-connection-direction/index.html"><span class="identifier">ConnectionDirection</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/port">port</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">TransportConfiguration</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-a-m-q_-d-e-l-a-y.html">AMQ_DELAY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">AMQ_DELAY</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-s-e-s-s-i-o-n_-i-d_-p-r-o-p-e-r-t-y.html">SESSION_ID_PROPERTY</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">SESSION_ID_PROPERTY</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-t-o-p-i-c_-p-r-o-p-e-r-t-y.html">TOPIC_PROPERTY</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">TOPIC_PROPERTY</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.messaging/create-message.html">createMessage</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../../net.corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">createMessage</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$createMessage(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.ByteArray)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$createMessage(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.ByteArray)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span>&nbsp;<span class="symbol">=</span>&nbsp;DEFAULT_SESSION_ID<span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$createMessage(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.ByteArray)/data">data</span><span class="symbol">:</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a></code>
+<p>Returns an initialised <a href="../../net.corda.core.messaging/-message/index.html">Message</a> with the current time, etc, already filled in.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.messaging/on-next.html">onNext</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">M</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="../../net.corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">onNext</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$onNext(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$onNext(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long)/sessionId">sessionId</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">M</span><span class="symbol">&gt;</span></code>
+<p>Returns a <a href="#">ListenableFuture</a> of the next message payload (<a href="../../net.corda.core.messaging/-message/data.html">Message.data</a>) which is received on the given topic and sessionId.
+The payload is deserialized to an object of type <a href="#">M</a>. Any exceptions thrown will be captured by the future.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.messaging/run-on-next-message.html">runOnNextMessage</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../../net.corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">runOnNextMessage</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Function1((net.corda.core.messaging.ReceivedMessage, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Function1((net.corda.core.messaging.ReceivedMessage, kotlin.Unit)))/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Function1((net.corda.core.messaging.ReceivedMessage, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-received-message/index.html"><span class="identifier">ReceivedMessage</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Registers a handler for the given topic and session ID that runs the given callback with the message and then removes
+itself. This is useful for one-shot handlers that aren't supposed to stick around permanently. Note that this callback
+doesn't take the registration object, unlike the callback to <a href="../../net.corda.core.messaging/-messaging-service/add-message-handler.html">MessagingService.addMessageHandler</a>, as the handler is
+automatically deregistered before the callback runs.</p>
+<code><span class="keyword">fun </span><a href="../../net.corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">runOnNextMessage</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, net.corda.core.messaging.TopicSession, kotlin.Function1((net.corda.core.messaging.ReceivedMessage, kotlin.Unit)))/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$runOnNextMessage(net.corda.core.messaging.MessagingService, net.corda.core.messaging.TopicSession, kotlin.Function1((net.corda.core.messaging.ReceivedMessage, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../net.corda.core.messaging/-received-message/index.html"><span class="identifier">ReceivedMessage</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Registers a handler for the given topic and session that runs the given callback with the message and then removes
+itself. This is useful for one-shot handlers that aren't supposed to stick around permanently. Note that this callback
+doesn't take the registration object, unlike the callback to <a href="../../net.corda.core.messaging/-messaging-service/add-message-handler.html">MessagingService.addMessageHandler</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.messaging/send.html">send</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../../net.corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$send(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Any, net.corda.core.messaging.MessageRecipients, java.util.UUID)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$send(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Any, net.corda.core.messaging.MessageRecipients, java.util.UUID)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$send(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Any, net.corda.core.messaging.MessageRecipients, java.util.UUID)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$send(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Any, net.corda.core.messaging.MessageRecipients, java.util.UUID)/to">to</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$send(net.corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Any, net.corda.core.messaging.MessageRecipients, java.util.UUID)/uuid">uuid</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/UUID.html"><span class="identifier">UUID</span></a>&nbsp;<span class="symbol">=</span>&nbsp;UUID.randomUUID()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
+<code><span class="keyword">fun </span><a href="../../net.corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$send(net.corda.core.messaging.MessagingService, net.corda.core.messaging.TopicSession, kotlin.Any, net.corda.core.messaging.MessageRecipients, java.util.UUID)/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$send(net.corda.core.messaging.MessagingService, net.corda.core.messaging.TopicSession, kotlin.Any, net.corda.core.messaging.MessageRecipients, java.util.UUID)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$send(net.corda.core.messaging.MessagingService, net.corda.core.messaging.TopicSession, kotlin.Any, net.corda.core.messaging.MessageRecipients, java.util.UUID)/to">to</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$send(net.corda.core.messaging.MessagingService, net.corda.core.messaging.TopicSession, kotlin.Any, net.corda.core.messaging.MessageRecipients, java.util.UUID)/uuid">uuid</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/UUID.html"><span class="identifier">UUID</span></a>&nbsp;<span class="symbol">=</span>&nbsp;UUID.randomUUID()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.flows/send-request.html">sendRequest</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="../../net.corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">sendRequest</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows$sendRequest(net.corda.core.messaging.MessagingService, kotlin.String, net.corda.flows.ServiceRequestMessage, net.corda.core.messaging.MessageRecipients)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.flows$sendRequest(net.corda.core.messaging.MessagingService, kotlin.String, net.corda.flows.ServiceRequestMessage, net.corda.core.messaging.MessageRecipients)/request">request</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.flows/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.flows$sendRequest(net.corda.core.messaging.MessagingService, kotlin.String, net.corda.flows.ServiceRequestMessage, net.corda.core.messaging.MessageRecipients)/target">target</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code>
+<p>Sends a <a href="../../net.corda.flows/-service-request-message/index.html">ServiceRequestMessage</a> to <a href="../../net.corda.flows/send-request.html#net.corda.flows$sendRequest(net.corda.core.messaging.MessagingService, kotlin.String, net.corda.flows.ServiceRequestMessage, net.corda.core.messaging.MessageRecipients)/target">target</a> and returns a <a href="#">ListenableFuture</a> of the response.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,0 +1,59 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CheckpointStorage - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.api</a>&nbsp;/&nbsp;<a href=".">CheckpointStorage</a><br/>
+<br/>
+<h1>CheckpointStorage</h1>
+<code><span class="keyword">interface </span><span class="identifier">CheckpointStorage</span></code>
+<p>Thread-safe storage of fiber checkpoints.</p>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="add-checkpoint.html">addCheckpoint</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addCheckpoint</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.api.CheckpointStorage$addCheckpoint(net.corda.node.services.api.Checkpoint)/checkpoint">checkpoint</span><span class="symbol">:</span>&nbsp;<a href="../-checkpoint/index.html"><span class="identifier">Checkpoint</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Add a new checkpoint to the store.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="for-each.html">forEach</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">forEach</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.api.CheckpointStorage$forEach(kotlin.Function1((net.corda.node.services.api.Checkpoint, kotlin.Boolean)))/block">block</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../-checkpoint/index.html"><span class="identifier">Checkpoint</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Allows the caller to process safely in a thread safe fashion the set of all checkpoints.
+The checkpoints are only valid during the lifetime of a single call to the block, to allow memory management.
+Return false from the block to terminate further iteration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="remove-checkpoint.html">removeCheckpoint</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">removeCheckpoint</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.api.CheckpointStorage$removeCheckpoint(net.corda.node.services.api.Checkpoint)/checkpoint">checkpoint</span><span class="symbol">:</span>&nbsp;<a href="../-checkpoint/index.html"><span class="identifier">Checkpoint</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Remove existing checkpoint from the store. It is an error to attempt to remove a checkpoint which doesn't exist
+in the store. Doing so will throw an <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/IllegalArgumentException.html">IllegalArgumentException</a>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.node.services.persistence/-d-b-checkpoint-storage/index.html">DBCheckpointStorage</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DBCheckpointStorage</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">CheckpointStorage</span></code>
+<p>Simple checkpoint key value storage in DB using the underlying JDBCHashMap and transactional context of the call sites.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

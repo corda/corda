@@ -4,6 +4,7 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.bufferUntilSubscribed
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.map
 import net.corda.core.messaging.MessagingService
@@ -14,6 +15,7 @@ import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.NetworkCacheError
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -25,6 +27,7 @@ import net.corda.node.services.network.NetworkMapService.FetchMapResponse
 import net.corda.node.services.network.NetworkMapService.SubscribeResponse
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.bufferUntilDatabaseCommit
+import net.corda.node.utilities.wrapWithDatabaseTransaction
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.SignatureException
@@ -43,18 +46,36 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override val partyNodes: List<NodeInfo> get() = registeredNodes.map { it.value }
     override val networkMapNodes: List<NodeInfo> get() = getNodesWithService(NetworkMapService.type)
     private val _changed = PublishSubject.create<MapChange>()
-    override val changed: Observable<MapChange> get() = _changed
+    // We use assignment here so that multiple subscribers share the same wrapped Observable.
+    override val changed: Observable<MapChange> = _changed.wrapWithDatabaseTransaction()
     private val changePublisher: rx.Observer<MapChange> get() = _changed.bufferUntilDatabaseCommit()
 
     private val _registrationFuture = SettableFuture.create<Unit>()
     override val mapServiceRegistered: ListenableFuture<Unit> get() = _registrationFuture
 
     private var registeredForPush = false
-    protected var registeredNodes: MutableMap<Party, NodeInfo> = Collections.synchronizedMap(HashMap<Party, NodeInfo>())
+    protected var registeredNodes: MutableMap<CompositeKey, NodeInfo> = Collections.synchronizedMap(HashMap())
+
+    override fun getPartyInfo(party: Party): PartyInfo? {
+        val node = registeredNodes[party.owningKey]
+        if (node != null) {
+            return PartyInfo.Node(node)
+        }
+        for (entry in registeredNodes) {
+            for (service in entry.value.advertisedServices) {
+                if (service.identity == party) {
+                    return PartyInfo.Service(service)
+                }
+            }
+        }
+        return null
+    }
+
+    override fun getNodeByLegalIdentityKey(compositeKey: CompositeKey): NodeInfo? = registeredNodes[compositeKey]
 
     override fun track(): Pair<List<NodeInfo>, Observable<MapChange>> {
         synchronized(_changed) {
-            return Pair(partyNodes, _changed.bufferUntilSubscribed())
+            return Pair(partyNodes, _changed.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 
@@ -92,7 +113,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
     override fun addNode(node: NodeInfo) {
         synchronized(_changed) {
-            val previousNode = registeredNodes.put(node.legalIdentity, node)
+            val previousNode = registeredNodes.put(node.legalIdentity.owningKey, node)
             if (previousNode == null) {
                 changePublisher.onNext(MapChange.Added(node))
             } else if (previousNode != node) {
@@ -103,7 +124,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
     override fun removeNode(node: NodeInfo) {
         synchronized(_changed) {
-            registeredNodes.remove(node.legalIdentity)
+            registeredNodes.remove(node.legalIdentity.owningKey)
             changePublisher.onNext(MapChange.Removed(node))
         }
     }

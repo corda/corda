@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -77,7 +81,12 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -89,26 +98,26 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
-<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Key concepts</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-ecosystem.html">Corda ecosystem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-core-types.html">Core types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-financial-model.html">Financial model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-flow-framework.html">Flow framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-consensus-notaries.html">Consensus and notaries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-vault.html">Vault</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-security-model.html">Security model</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul class="current">
@@ -132,23 +141,22 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
@@ -158,14 +166,15 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
-<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -217,12 +226,15 @@
   <div class="section" id="network-permissioning">
 <h1>Network permissioning<a class="headerlink" href="#network-permissioning" title="Permalink to this headline">¶</a></h1>
 <p>The keystore located in <code class="docutils literal"><span class="pre">&lt;workspace&gt;/certificates/sslkeystore.jks</span></code> is required to connect to the Corda network securely.
-In development mode (when <code class="docutils literal"><span class="pre">devMode</span> <span class="pre">=</span> <span class="pre">true</span></code>, see <a class="reference internal" href="corda-configuration-file.html"><span class="doc">Node configuration</span></a> for more information) a pre-configured keystore will be used if the keystore does not exist.
-This is to ensure developers can get the nodes working as quickly as possible.</p>
-<p>However this is not secure for the real network. This documentation will explain the procedure of obtaining a signed certificate for TestNet.</p>
+In development mode (when <code class="docutils literal"><span class="pre">devMode</span> <span class="pre">=</span> <span class="pre">true</span></code>, see <a class="reference internal" href="corda-configuration-file.html"><span class="doc">Node configuration</span></a> for more information) a pre-configured
+keystore will be used if the keystore does not exist. This is to ensure developers can get the nodes working as quickly
+as possible.</p>
+<p>However this is not secure for the real network. This documentation will explain the procedure of obtaining a signed
+certificate for TestNet.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
-<p class="last">The TestNet has not been setup yet as of Milestone 6 release. You will not be able to connect to the certificate signing server.</p>
+<p class="last">The TestNet has not been setup yet as of Milestone 6 release. You will not be able to connect to the
+certificate signing server.</p>
 </div>
 <div class="section" id="certificate-signing-request-utility">
 <h2>Certificate signing request utility<a class="headerlink" href="#certificate-signing-request-utility" title="Permalink to this headline">¶</a></h2>
@@ -232,14 +244,26 @@ The following information from the node configuration file is needed to generate
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">myLegalName:</th><td class="field-body">Your company&#8217;s legal name. e.g. &#8220;R3 CEV, LLC&#8221;</td>
+<tr class="field-odd field"><th class="field-name">myLegalName:</th><td class="field-body"><p class="first">Your company&#8217;s legal name. e.g. &#8220;Mega Corp LLC&#8221;. This needs to be unique on the network. If another node
+has already been permissioned with this name then the permissioning server will automatically reject the request. The
+request will also be rejected if the name contains a <code class="docutils literal"><span class="pre">=</span></code> or <code class="docutils literal"><span class="pre">,</span></code>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In a future version the uniqueness requirement will be relaxed to a X.500 name. This will allow differentiation
+between entities with the same name.</p>
+</div>
+</td>
 </tr>
-<tr class="field-even field"><th class="field-name">nearestCity:</th><td class="field-body">e.g. &#8220;London&#8221;</td>
+<tr class="field-even field"><th class="field-name">nearestCity:</th><td class="field-body"><p class="first">e.g. &#8220;London&#8221;</p>
+</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">emailAddress:</th><td class="field-body">e.g. &#8220;<a class="reference external" href="mailto:admin&#37;&#52;&#48;company&#46;com">admin<span>&#64;</span>company<span>&#46;</span>com</a>&#8220;</td>
+<tr class="field-odd field"><th class="field-name">emailAddress:</th><td class="field-body"><p class="first">e.g. &#8220;<a class="reference external" href="mailto:admin&#37;&#52;&#48;company&#46;com">admin<span>&#64;</span>company<span>&#46;</span>com</a>&#8220;</p>
+</td>
 </tr>
 <tr class="field-even field"><th class="field-name" colspan="2">certificateSigningService:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body">Certificate signing server URL. A certificate signing server will be hosted by R3 in the near future.  e.g.&#8221;<a class="reference external" href="https://testnet.certificate.corda.net">https://testnet.certificate.corda.net</a>&#8220;</td>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first last">Certificate signing server URL. A certificate signing server will be hosted by R3 in the near
+future.  e.g.&#8221;<a class="reference external" href="https://testnet.certificate.corda.net">https://testnet.certificate.corda.net</a>&#8220;</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -248,23 +272,23 @@ The following information from the node configuration file is needed to generate
 Once the request has been approved and the certificates downloaded from the server, the utility will create the key store and trust store using the certificates and the generated private key.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">You can exit the utility at anytime if the approval process is taking longer then expected. The request process will resume on restart.</p>
+<p class="last">You can exit the utility at any time if the approval process is taking longer than expected. The request process will resume on restart.</p>
 </div>
 <p>This process only needs to be done once when the node connects to the network for the first time, or when the certificate expires.</p>
 </div>
 <div class="section" id="building-the-utility">
 <h2>Building the utility<a class="headerlink" href="#building-the-utility" title="Permalink to this headline">¶</a></h2>
-<p>The utility will be created as part of the main build <code class="docutils literal"><span class="pre">buildCordaJAR</span></code>.
+<p>The utility will be created as part of the gradle <code class="docutils literal"><span class="pre">:node</span></code> module <code class="docutils literal"><span class="pre">buildCordaJAR</span></code> task.
 You can also build the utility JAR by run the following command from the Corda project root directory.</p>
 <p><strong>Windows</strong>:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">gradlew</span><span class="p">.</span><span class="n">bat</span> <span class="n">buildCertSigningRequestUtilityJAR</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">gradlew</span><span class="p">.</span><span class="n">bat</span> <span class="p">:</span><span class="n">node</span><span class="p">:</span><span class="n">buildCertSigningRequestUtilityJAR</span>
 </pre></div>
 </div>
 <p><strong>Other</strong>:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">gradlew</span> <span class="n">buildCertSigningRequestUtilityJAR</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">gradlew</span> <span class="p">:</span><span class="n">node</span><span class="p">:</span><span class="n">buildCertSigningRequestUtilityJAR</span>
 </pre></div>
 </div>
-<p>The utility JAR will be created in <code class="docutils literal"><span class="pre">&lt;Project</span> <span class="pre">Root</span> <span class="pre">Dir&gt;/build/libs/certSigningRequestUtility.jar</span></code></p>
+<p>The utility JAR will be created in <code class="docutils literal"><span class="pre">&lt;Project</span> <span class="pre">Root</span> <span class="pre">Dir&gt;/node/build/libs/certSigningRequestUtility.jar</span></code></p>
 </div>
 <div class="section" id="running-the-utility">
 <h2>Running the utility<a class="headerlink" href="#running-the-utility" title="Permalink to this headline">¶</a></h2>

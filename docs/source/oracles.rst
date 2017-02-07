@@ -13,15 +13,15 @@ affect the validity of transactions.
 The current prototype includes an example oracle that provides an interest rate fixing service. It is used by the
 IRS trading demo app.
 
-Introduction
-------------
+Introduction to oracles
+-----------------------
 
 Oracles are a key concept in the block chain/decentralised ledger space. They can be essential for many kinds of
 application, because we often wish to condition a transaction on some fact being true or false, but the ledger itself
 has a design that is essentially functional: all transactions are *pure* and *immutable*. Phrased another way, a
 smart contract cannot perform any input/output or depend on any state outside of the transaction itself. There is no
 way to download a web page or interact with the user, in a smart contract. It must be this way because everyone must
-be able to independently check a transaction and arrive at an identical conclusion for the ledger to maintan its
+be able to independently check a transaction and arrive at an identical conclusion for the ledger to maintain its
 integrity: if a transaction could evaluate to "valid" on one computer and then "invalid" a few minutes later on a
 different computer, the entire shared ledger concept wouldn't work.
 
@@ -38,7 +38,7 @@ could do an HTTP request: it's possible that an answer would change after being 
 consensus (breaks).
 
 The two basic approaches
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 The architecture provides two ways of implementing oracles with different tradeoffs:
 
@@ -73,7 +73,7 @@ Here's a quick way to decide which approach makes more sense for your data sourc
   attachment.
 
 Asserting continuously varying data
------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Let's look at the interest rates oracle that can be found in the ``NodeInterestRates`` file. This is an example of
 an oracle that uses a command because the current interest rate fix is a constantly changing fact.
@@ -127,7 +127,7 @@ We can schedule for the expected announcement (or publish) time and give a suita
 information being available and the delay to processing becomes significant and may need to be escalated.
 
 Hiding transaction data from the oracle
----------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Because the transaction is sent to the oracle for signing, ordinarily the oracle would be able to see the entire contents
 of that transaction including the inputs, output contract states and all the commands, not just the one (in this case)
@@ -137,7 +137,7 @@ oracle but still allow it to sign it by providing the Merkle hashes for the rema
 more details.
 
 Pay-per-play oracles
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 Because the signature covers the transaction, and transactions may end up being forwarded anywhere, the fact itself
 is independently checkable. However, this approach can still be useful when the data itself costs money, because the act
@@ -150,10 +150,10 @@ where parties are legally identifiable, usage of such a contract would by itself
 punishment.
 
 Implementing an oracle with continuously varying data
-=====================================================
+-----------------------------------------------------
 
 Implement the core classes
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The key is to implement your oracle in a similar way to the ``NodeInterestRates.Oracle`` outline we gave above with
 both ``query`` and ``sign`` methods.  Typically you would want one class that encapsulates the parameters to the ``query``
@@ -194,8 +194,8 @@ Here we can see that there are several steps:
    exactly our data source.  The final step, assuming we have got this far, is to generate a signature for the
    transaction and return it.
 
-Binding to the network via CorDapp plugin
------------------------------------------
+Binding to the network via a CorDapp plugin
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. note:: Before reading any further, we advise that you understand the concept of flows and how to write them and use
    them. See :doc:`flow-state-machines`.  Likewise some understanding of Cordapps, plugins and services will be helpful.
@@ -228,7 +228,7 @@ implementing a plugin.  Don't forget the resources file to register it with the 
    }
 
 Providing client sub-flows for querying and signing
----------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We mentioned the client sub-flow briefly above.  They are the mechanism that clients, in the form of other flows, will
 interact with your oracle.  Typically there will be one for querying and one for signing.  Let's take a look at
@@ -239,14 +239,17 @@ those for ``NodeInterestRates.Oracle``.
    :start-after: DOCSTART 1
    :end-before: DOCEND 1
 
-You'll note that the ``FixSignFlow`` requires a ``FilterFuns`` instance with the appropriate filter to include only
-the ``Fix`` commands.  You can find a further explanation of this in :doc:`merkle-trees`.
+You'll note that the ``FixSignFlow`` requires a ``FilterTransaction`` instance which includes only ``Fix`` commands.
+You can find a further explanation of this in :doc:`merkle-trees`. Below you will see how to build such transaction with
+hidden fields.
+
+.. _filtering_ref:
 
 Using an oracle
-===============
+---------------
 
 The oracle is invoked through sub-flows to query for values, add them to the transaction as commands and then get
-the transaction signed by the the oracle.  Following on from the above examples, this is all encapsulated in a sub-flow
+the transaction signed by the oracle.  Following on from the above examples, this is all encapsulated in a sub-flow
 called ``RatesFixFlow``.  Here's the ``call`` method of that flow.
 
 .. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/flows/RatesFixFlow.kt
@@ -260,8 +263,9 @@ As you can see, this:
 2. Does some quick validation.
 3. Adds the command to the transaction containing the fact to be signed for by the oracle.
 4. Calls an extension point that allows clients to generate output states based on the fact from the oracle.
-5. Requests the signature from the oracle using the client sub-flow for signing from above.
-6. Adds the signature returned from the oracle.
+5. Builds filtered transaction based on filtering function extended from ``RatesFixFlow``.
+6. Requests the signature from the oracle using the client sub-flow for signing from above.
+7. Adds the signature returned from the oracle.
 
 Here's an example of it in action from ``FixingFlow.Fixer``.
 
@@ -269,3 +273,8 @@ Here's an example of it in action from ``FixingFlow.Fixer``.
    :language: kotlin
    :start-after: DOCSTART 1
    :end-before: DOCEND 1
+
+.. note::
+    When overriding be careful when making the sub-class an anonymous or inner class (object declarations in Kotlin),
+    because that kind of classes can access variables from the enclosing scope and cause serialization problems when
+    checkpointed.

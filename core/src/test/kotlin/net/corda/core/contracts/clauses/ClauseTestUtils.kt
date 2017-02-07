@@ -7,6 +7,7 @@ import net.corda.core.contracts.TransactionForContract
 import java.util.concurrent.atomic.AtomicInteger
 
 internal fun matchedClause(counter: AtomicInteger? = null) = object : Clause<ContractState, CommandData, Unit>() {
+    override val requiredCommands: Set<Class<out CommandData>> = emptySet()
     override fun verify(tx: TransactionForContract,
                         inputs: List<ContractState>,
                         outputs: List<ContractState>,

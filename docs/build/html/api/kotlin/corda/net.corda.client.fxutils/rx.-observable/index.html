@@ -1,0 +1,48 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.client.fxutils.rx.Observable - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.client.fxutils</a>&nbsp;/&nbsp;<a href=".">rx.Observable</a><br/>
+<br/>
+<h3>Extensions for rx.Observable</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="fold.html">fold</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">, </span><span class="identifier">R</span><span class="symbol">&gt;</span> <span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">fold</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$fold(rx.Observable((net.corda.client.fxutils.fold.T)), net.corda.client.fxutils.fold.R, kotlin.Function2((net.corda.client.fxutils.fold.R, net.corda.client.fxutils.fold.T, kotlin.Unit)))/accumulator">accumulator</span><span class="symbol">:</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils$fold(rx.Observable((net.corda.client.fxutils.fold.T)), net.corda.client.fxutils.fold.R, kotlin.Function2((net.corda.client.fxutils.fold.R, net.corda.client.fxutils.fold.T, kotlin.Unit)))/folderFun">folderFun</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">R</span><span class="symbol">,</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">R</span></code>
+<p><a href="fold.html">fold</a> takes an <a href="#">rx.Observable</a> stream and applies fold function on it, and collects all elements using the accumulator.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="fold-to-observable-value.html">foldToObservableValue</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">&gt;</span> <span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">foldToObservableValue</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$foldToObservableValue(rx.Observable((net.corda.client.fxutils.foldToObservableValue.A)), net.corda.client.fxutils.foldToObservableValue.B, kotlin.Function2((net.corda.client.fxutils.foldToObservableValue.A, net.corda.client.fxutils.foldToObservableValue.B, )))/initial">initial</span><span class="symbol">:</span>&nbsp;<span class="identifier">B</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils$foldToObservableValue(rx.Observable((net.corda.client.fxutils.foldToObservableValue.A)), net.corda.client.fxutils.foldToObservableValue.B, kotlin.Function2((net.corda.client.fxutils.foldToObservableValue.A, net.corda.client.fxutils.foldToObservableValue.B, )))/folderFun">folderFun</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">B</span><span class="symbol">&gt;</span></code>
+<p><a href="fold-to-observable-value.html">foldToObservableValue</a> takes an <a href="#">rx.Observable</a> stream and creates an <a href="#">ObservableValue</a> out of it.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="record-as-association.html">recordAsAssociation</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">K</span><span class="symbol">&gt;</span> <span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">recordAsAssociation</span><span class="symbol">(</span><span class="identifier" id="net.corda.client.fxutils$recordAsAssociation(rx.Observable((net.corda.client.fxutils.recordAsAssociation.A)), kotlin.Function1((net.corda.client.fxutils.recordAsAssociation.A, net.corda.client.fxutils.recordAsAssociation.K)), kotlin.Function3((net.corda.client.fxutils.recordAsAssociation.K, net.corda.client.fxutils.recordAsAssociation.A, , )))/toKey">toKey</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">K</span><span class="symbol">, </span><span class="identifier" id="net.corda.client.fxutils$recordAsAssociation(rx.Observable((net.corda.client.fxutils.recordAsAssociation.A)), kotlin.Function1((net.corda.client.fxutils.recordAsAssociation.A, net.corda.client.fxutils.recordAsAssociation.K)), kotlin.Function3((net.corda.client.fxutils.recordAsAssociation.K, net.corda.client.fxutils.recordAsAssociation.A, , )))/merge">merge</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">oldValue</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">newValue</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">A</span>&nbsp;<span class="symbol">=</span>&nbsp;{ _key, _oldValue, newValue -&gt; newValue }<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span></code>
+<p>This variant simply associates each event with its key.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="record-in-sequence.html">recordInSequence</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span> <span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">recordInSequence</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span></code>
+<p><a href="record-in-sequence.html">recordInSequence</a> records incoming events on the <a href="#">rx.Observable</a> in sequence.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,0 +1,34 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.core.rx.Observable - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core</a>&nbsp;/&nbsp;<a href=".">rx.Observable</a><br/>
+<br/>
+<h3>Extensions for rx.Observable</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="buffer-until-subscribed.html">bufferUntilSubscribed</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">bufferUntilSubscribed</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Returns an Observable that buffers events until subscribed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="to-future.html">toFuture</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">toFuture</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Returns a <a href="#">ListenableFuture</a> bound to the <emph>first</emph> item emitted by this Observable. The future will complete with a
+NoSuchElementException if no items are emitted or any other error thrown by the Observable. If it's cancelled then
+it will unsubscribe from the observable.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

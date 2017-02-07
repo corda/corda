@@ -14,6 +14,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.unwrap
 import net.corda.flows.FinalityFlow
 import net.corda.flows.ResolveTransactionsFlow
 import java.util.*
@@ -84,12 +85,12 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, request: FxReques
     val (inputs, residual) = gatherOurInputs(serviceHub, sellAmount, request.notary)
 
     // Build and an output state for the counterparty
-    val transferedFundsOutput = Cash.State(sellAmount, request.counterparty.owningKey, null)
+    val transferedFundsOutput = Cash.State(sellAmount, request.counterparty.owningKey)
 
     if (residual > 0L) {
         // Build an output state for the residual change back to us
         val residualAmount = Amount(residual, sellAmount.token)
-        val residualOutput = Cash.State(residualAmount, serviceHub.myInfo.legalIdentity.owningKey, null)
+        val residualOutput = Cash.State(residualAmount, serviceHub.myInfo.legalIdentity.owningKey)
         return FxResponse(inputs, listOf(transferedFundsOutput, residualOutput))
     } else {
         return FxResponse(inputs, listOf(transferedFundsOutput))
@@ -174,7 +175,7 @@ class ForeignExchangeFlow(val tradeId: String,
             withNewSignature // return the almost complete transaction
         }
 
-        // Initiate the standard protocol to notarise and distribute to the involved parties
+        // Initiate the standard protocol to notarise and distribute to the involved parties.
         subFlow(FinalityFlow(allPartySignedTx, setOf(baseCurrencyBuyer, baseCurrencySeller)))
 
         return allPartySignedTx.id

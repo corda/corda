@@ -38,13 +38,18 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
      * the responsibility of the caller to check that they do not exit funds held by others.
      * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
      */
+    @Throws(InsufficientBalanceException::class)
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
-                     assetStates: List<StateAndRef<S>>): CompositeKey
-            = conserveClause.generateExit(tx, amountIssued, assetStates,
-            deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
-            generateMoveCommand = { -> generateMoveCommand() },
-            generateExitCommand = { amount -> generateExitCommand(amount) }
-    )
+                     assetStates: List<StateAndRef<S>>): CompositeKey {
+        return conserveClause.generateExit(
+                tx,
+                amountIssued,
+                assetStates,
+                deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
+                generateMoveCommand = { -> generateMoveCommand() },
+                generateExitCommand = { amount -> generateExitCommand(amount) }
+        )
+    }
 
     abstract fun generateExitCommand(amount: Amount<Issued<T>>): FungibleAsset.Commands.Exit<T>
     abstract fun generateIssueCommand(): FungibleAsset.Commands.Issue

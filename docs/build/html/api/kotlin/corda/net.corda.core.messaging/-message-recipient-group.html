@@ -1,0 +1,28 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>MessageRecipientGroup - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href="index.html">net.corda.core.messaging</a>&nbsp;/&nbsp;<a href=".">MessageRecipientGroup</a><br/>
+<br/>
+<h1>MessageRecipientGroup</h1>
+<code><span class="keyword">interface </span><span class="identifier">MessageRecipientGroup</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-message-recipients.html"><span class="identifier">MessageRecipients</span></a></code>
+<p>A base class for a set of recipients specifically identified by the sender.</p>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../net.corda.node.services.messaging/-artemis-messaging-component/-service-address/index.html">ServiceAddress</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ServiceAddress</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.node.services.messaging/-artemis-messaging-component/-artemis-address/index.html"><span class="identifier">ArtemisAddress</span></a><span class="symbol">, </span><span class="identifier">MessageRecipientGroup</span></code>
+<p><a href="../net.corda.node.services.messaging/-artemis-messaging-component/-service-address/index.html">ServiceAddress</a> implements MessageRecipientGroup. It holds a queue associated with a service advertised by
+zero or more nodes. Each advertising node has an associated consumer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

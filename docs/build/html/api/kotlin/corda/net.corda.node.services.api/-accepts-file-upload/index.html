@@ -1,0 +1,77 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>AcceptsFileUpload - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.api</a>&nbsp;/&nbsp;<a href=".">AcceptsFileUpload</a><br/>
+<br/>
+<h1>AcceptsFileUpload</h1>
+<code><span class="keyword">interface </span><span class="identifier">AcceptsFileUpload</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-file-uploader/index.html"><span class="identifier">FileUploader</span></a></code>
+<p>A service that implements AcceptsFileUpload can have new binary data provided to it via an HTTP upload.</p>
+<p>TODO: In future, also accept uploads over the MQ interface too.</p>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="acceptable-file-extensions.html">acceptableFileExtensions</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">acceptableFileExtensions</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span></code>
+<p>What file extensions are acceptable for the file to be handed to upload()</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="data-type-prefix.html">dataTypePrefix</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">dataTypePrefix</span><span class="symbol">: </span><span class="identifier">String</span></code>
+<p>A string that prefixes the URLs, e.g. "attachments" or "interest-rates". Should be OK for URLs.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="accepts.html">accepts</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">accepts</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.api.AcceptsFileUpload$accepts(kotlin.String)/prefix">prefix</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Check if this service accepts this type of upload. For example if you are uploading interest rates this could
+be "my-service-interest-rates". Type here does not refer to file extentions or MIME types.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.node.services/-file-uploader/upload.html">upload</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">upload</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.FileUploader$upload(java.io.InputStream)/file">file</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code>
+<p>Accepts the data in the given input stream, and returns some sort of useful return message that will be sent
+back to the user in the response.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.node.services.persistence/-node-attachment-service/index.html">NodeAttachmentService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeAttachmentService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">, </span><span class="identifier">AcceptsFileUpload</span></code>
+<p>Stores attachments in the specified local directory, which must exist. Doesn't allow new attachments to be uploaded.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

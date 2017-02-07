@@ -1,8 +1,9 @@
 Node administration
 ===================
 
-When a node is running, it exposes an embedded database server, an embedded web server that lets you monitor it,
-you can upload and download attachments, access a REST API and so on.
+When a node is running, it exposes an RPC interface that lets you monitor it,
+you can upload and download attachments, access a REST API and so on. A bundled
+Jetty web server exposes the same interface over HTTP.
 
 Logging
 -------
@@ -56,8 +57,27 @@ Here are a few ways to build dashboards and extract monitoring data for a node:
 * *Java Mission Control* is a desktop app that can connect to a target JVM that has the right command line flags set
   (or always, if running locally). You can explore what data is available, create graphs of those metrics, and invoke
   management operations like forcing a garbage collection.
+* *VisualVM* is another desktop app that can do fine grained JVM monitoring and sampling. Very useful during development.
 * Cloud metrics services like New Relic also understand JMX, typically, by providing their own agent that uploads the
   data to their service on a regular schedule.
+
+Memory usage and tuning
+-----------------------
+
+All garbage collected programs can run faster if you give them more memory, as they need to collect less
+frequently. As a default JVM will happily consume all the memory on your system if you let it, Corda is
+configured with a relatively small 200mb Java heap by default. When other overheads are added, this yields
+a total memory usage of about 500mb for a node (the overheads come from things like compiled code, metadata,
+off-heap buffers, thread stacks, etc).
+
+If you want to make your node go faster and profiling suggests excessive GC overhead is the cause, or if your
+node is running out of memory, you can give it more by running the node like this:
+
+``java -Xmx1024m -jar corda.jar``
+
+The example command above would give a 1 gigabyte Java heap.
+
+.. note:: Unfortunately the JVM does not let you limit the total memory usage of Java program, just the heap size.
 
 Uploading and downloading attachments
 -------------------------------------

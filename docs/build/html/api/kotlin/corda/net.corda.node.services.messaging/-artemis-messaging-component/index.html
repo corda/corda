@@ -1,0 +1,249 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ArtemisMessagingComponent - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href=".">ArtemisMessagingComponent</a><br/>
+<br/>
+<h1>ArtemisMessagingComponent</h1>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ArtemisMessagingComponent</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code>
+<p>The base class for Artemis services that defines shared data structures and SSL transport configuration.</p>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-artemis-address/index.html">ArtemisAddress</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">ArtemisAddress</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-artemis-peer-address/index.html">ArtemisPeerAddress</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">ArtemisPeerAddress</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-artemis-address/index.html"><span class="identifier">ArtemisAddress</span></a><span class="symbol">, </span><a href="../../net.corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-connection-direction/index.html">ConnectionDirection</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">ConnectionDirection</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-network-map-address/index.html">NetworkMapAddress</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">NetworkMapAddress</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">, </span><a href="-artemis-peer-address/index.html"><span class="identifier">ArtemisPeerAddress</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-node-address/index.html">NodeAddress</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">NodeAddress</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-artemis-peer-address/index.html"><span class="identifier">ArtemisPeerAddress</span></a></code>
+<p>This is the class used to implement <a href="../../net.corda.core.messaging/-single-message-recipient.html">SingleMessageRecipient</a>, for now. Note that in future this class
+may change or evolve and code that relies upon it being a simple host/port may not function correctly.
+For instance it may contain onion routing data.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-service-address/index.html">ServiceAddress</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ServiceAddress</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-artemis-address/index.html"><span class="identifier">ArtemisAddress</span></a><span class="symbol">, </span><a href="../../net.corda.core.messaging/-message-recipient-group.html"><span class="identifier">MessageRecipientGroup</span></a></code>
+<p><a href="-service-address/index.html">ServiceAddress</a> implements <a href="../../net.corda.core.messaging/-message-recipient-group.html">MessageRecipientGroup</a>. It holds a queue associated with a service advertised by
+zero or more nodes. Each advertising node has an associated consumer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">ArtemisMessagingComponent</span><span class="symbol">(</span><span class="symbol">)</span></code>
+<p>The base class for Artemis services that defines shared data structures and SSL transport configuration.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="config.html">config</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">config</span><span class="symbol">: </span><a href="../../net.corda.node.services.config/-s-s-l-configuration/index.html"><span class="identifier">SSLConfiguration</span></a><span class="symbol">?</span></code>
+<p>The config object is used to pass in the passwords for the certificate KeyStore and TrustStore</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="check-store-passwords.html">checkStorePasswords</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">checkStorePasswords</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Returns nothing if the keystore was opened OK or throws if not. Useful to check the password, as
+unfortunately Artemis tends to bury the exception when the password is wrong.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="expected-on-default-file-system.html">expectedOnDefaultFileSystem</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">.</span><span class="identifier">expectedOnDefaultFileSystem</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="tcp-transport.html">tcpTransport</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">tcpTransport</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/direction">direction</span><span class="symbol">:</span>&nbsp;<a href="-connection-direction/index.html"><span class="identifier">ConnectionDirection</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/port">port</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">TransportConfiguration</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.serialization/-singleton-serialize-as-token/to-token.html">toToken</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toToken</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.SingletonSerializeAsToken$toToken(net.corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.serialization/-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-c-l-i-e-n-t-s_-p-r-e-f-i-x.html">CLIENTS_PREFIX</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">CLIENTS_PREFIX</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-i-n-t-e-r-n-a-l_-p-r-e-f-i-x.html">INTERNAL_PREFIX</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">INTERNAL_PREFIX</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-n-e-t-w-o-r-k_-m-a-p_-q-u-e-u-e.html">NETWORK_MAP_QUEUE</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">NETWORK_MAP_QUEUE</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-n-o-d-e_-u-s-e-r.html">NODE_USER</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">NODE_USER</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-n-o-t-i-f-i-c-a-t-i-o-n-s_-a-d-d-r-e-s-s.html">NOTIFICATIONS_ADDRESS</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">NOTIFICATIONS_ADDRESS</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-p2-p_-q-u-e-u-e.html">P2P_QUEUE</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">P2P_QUEUE</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-p-e-e-r-s_-p-r-e-f-i-x.html">PEERS_PREFIX</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">PEERS_PREFIX</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-p-e-e-r_-u-s-e-r.html">PEER_USER</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">PEER_USER</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-r-p-c_-q-u-e-u-e_-r-e-m-o-v-a-l-s_-q-u-e-u-e.html">RPC_QUEUE_REMOVALS_QUEUE</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">RPC_QUEUE_REMOVALS_QUEUE</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-r-p-c_-r-e-q-u-e-s-t-s_-q-u-e-u-e.html">RPC_REQUESTS_QUEUE</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">RPC_REQUESTS_QUEUE</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-s-e-r-v-i-c-e-s_-p-r-e-f-i-x.html">SERVICES_PREFIX</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">SERVICES_PREFIX</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-v-e-r-i-f-y_-p-e-e-r_-c-o-m-m-o-n_-n-a-m-e.html">VERIFY_PEER_COMMON_NAME</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">VERIFY_PEER_COMMON_NAME</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="to-host-and-port.html">toHostAndPort</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toHostAndPort</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent.Companion$toHostAndPort(net.corda.core.messaging.MessageRecipients)/target">target</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">HostAndPort</span></code>
+<p>Assuming the passed in target address is actually an ArtemisAddress will extract the host and port of the node. This should
+only be used in unit tests and the internals of the messaging services to keep addressing opaque for the future.
+N.B. Marked as JvmStatic to allow use in the inherited classes.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-artemis-messaging-server/index.html">ArtemisMessagingServer</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingServer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ArtemisMessagingComponent</span></code>
+<p>This class configures and manages an Apache Artemis message queue broker.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-corda-r-p-c-client/index.html">CordaRPCClient</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">CordaRPCClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/Closeable.html"><span class="identifier">Closeable</span></a><span class="symbol">, </span><span class="identifier">ArtemisMessagingComponent</span></code>
+<p>An RPC client connects to the specified server and allows you to make calls to the server that perform various
+useful tasks. See the documentation for <a href="../-corda-r-p-c-client/proxy.html">proxy</a> or review the docsite to learn more about how this API works.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-node-messaging-client/index.html">NodeMessagingClient</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeMessagingClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ArtemisMessagingComponent</span><span class="symbol">, </span><a href="../../net.corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code>
+<p>This class implements the <a href="../../net.corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+Artemis is a message queue broker and here we run a client connecting to the specified broker instance
+<a href="../-artemis-messaging-server/index.html">ArtemisMessagingServer</a>. It's primarily concerned with peer-to-peer messaging.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

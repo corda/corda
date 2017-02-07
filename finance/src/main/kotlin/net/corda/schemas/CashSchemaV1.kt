@@ -19,9 +19,6 @@ object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version 
     @Entity
     @Table(name = "cash_states")
     class PersistentCashState(
-            @Column(name = "encumbrance")
-            var encumbrance: Int?,
-
             @Column(name = "owner_key")
             var owner: String,
 

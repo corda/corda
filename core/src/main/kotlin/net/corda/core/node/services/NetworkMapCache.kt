@@ -5,9 +5,11 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.Contract
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceEntry
 import net.corda.core.randomOrNull
 import rx.Observable
 
@@ -63,30 +65,21 @@ interface NetworkMapCache {
     /** Look up the node info for a legal name. */
     fun getNodeByLegalName(name: String): NodeInfo? = partyNodes.singleOrNull { it.legalIdentity.name == name }
 
-    /** Look up the node info for a composite key. */
-    fun getNodeByCompositeKey(compositeKey: CompositeKey): NodeInfo? {
-        // Although we should never have more than one match, it is theoretically possible. Report an error if it happens.
-        val candidates = partyNodes.filter {
-            (it.legalIdentity.owningKey == compositeKey)
-                    || it.advertisedServices.any { it.identity.owningKey == compositeKey }
-        }
-        check(candidates.size <= 1) { "Found more than one match for key $compositeKey" }
-        return candidates.singleOrNull()
-    }
-
     /**
-     * Given a [party], returns a node advertising it as an identity. If more than one node found the result
-     * is chosen at random.
-     *
      * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of
      * the services it provides. In case of a distributed service – run by multiple nodes – each participant advertises
-     * the identity of the *whole group*. If the provided [party] is a group identity, multiple nodes advertising it
-     * will be found, and this method will return a randomly chosen one. If [party] is an individual (legal) identity,
-     * we currently assume that it will be advertised by one node only, which will be returned as the result.
+     * the identity of the *whole group*.
      */
-    fun getRepresentativeNode(party: Party): NodeInfo? {
-        return partyNodes.randomOrNull { it.legalIdentity == party || it.advertisedServices.any { it.identity == party } }
+
+    /** Look up the node info for a specific peer key. */
+    fun getNodeByLegalIdentityKey(compositeKey: CompositeKey): NodeInfo?
+    /** Look up all nodes advertising the service owned by [compositeKey] */
+    fun getNodesByAdvertisedServiceIdentityKey(compositeKey: CompositeKey): List<NodeInfo> {
+        return partyNodes.filter { it.advertisedServices.any { it.identity.owningKey == compositeKey } }
     }
+
+    /** Returns information about the party, which may be a specific node or a service */
+    fun getPartyInfo(party: Party): PartyInfo?
 
     /** Gets a notary identity by the given name. */
     fun getNotary(name: String): Party? {

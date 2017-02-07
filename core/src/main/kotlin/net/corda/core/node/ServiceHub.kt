@@ -29,11 +29,12 @@ interface ServiceHub {
     val myInfo: NodeInfo
 
     /**
-     * Given a list of [SignedTransaction]s, writes them to the local storage for validated transactions and then
-     * sends them to the vault for further processing.
+     * Given a [SignedTransaction], writes it to the local storage for validated transactions and then
+     * sends them to the vault for further processing. Expects to be run within a database transaction.
      *
      * @param txs The transactions to record.
      */
+    // TODO: Make this take a single tx.
     fun recordTransactions(txs: Iterable<SignedTransaction>)
 
     /**
@@ -58,6 +59,7 @@ interface ServiceHub {
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
+     * Note that you must be on the server thread to call this method.
      *
      * @throws IllegalFlowLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
      */
@@ -81,7 +83,6 @@ interface ServiceHub {
      * Typical use is during signing in flows and for unit test signing.
      */
     val notaryIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.notaryIdentity.owningKey.keys)
-
 }
 
 /**

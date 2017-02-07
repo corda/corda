@@ -45,12 +45,13 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
      * the responsibility of the caller to check that they do not attempt to exit funds held by others.
      * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
      */
+    @Throws(InsufficientBalanceException::class)
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
                      assetStates: List<StateAndRef<S>>,
                      deriveState: (TransactionState<S>, Amount<Issued<T>>, CompositeKey) -> TransactionState<S>,
                      generateMoveCommand: () -> CommandData,
                      generateExitCommand: (Amount<Issued<T>>) -> CommandData): CompositeKey {
-        val owner = assetStates.map { it.state.data.owner }.toSet().single()
+        val owner = assetStates.map { it.state.data.owner }.toSet().singleOrNull() ?: throw InsufficientBalanceException(amountIssued)
         val currency = amountIssued.token.product
         val amount = Amount(amountIssued.quantity, currency)
         var acceptableCoins = assetStates.filter { ref -> ref.state.data.amount.token == amountIssued.token }
@@ -98,7 +99,7 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
 
         requireThat {
             "there are no zero sized inputs" by inputs.none { it.amount.quantity == 0L }
-            "for reference ${deposit.reference} at issuer ${deposit.party.name} the amounts balance: ${inputAmount.quantity} - ${amountExitingLedger.quantity} != ${outputAmount.quantity}" by
+            "for reference ${deposit.reference} at issuer ${deposit.party} the amounts balance: ${inputAmount.quantity} - ${amountExitingLedger.quantity} != ${outputAmount.quantity}" by
                     (inputAmount == outputAmount + amountExitingLedger)
         }
 

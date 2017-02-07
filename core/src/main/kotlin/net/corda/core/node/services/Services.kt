@@ -1,15 +1,17 @@
 package net.corda.core.node.services
 
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
+import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import rx.Observable
+import java.io.File
+import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -38,7 +40,7 @@ val DEFAULT_SESSION_ID = 0L
  *   Active means they haven't been consumed yet (or we don't know about it).
  *   Relevant means they contain at least one of our pubkeys.
  */
-class Vault(val states: Iterable<StateAndRef<ContractState>>) {
+class Vault(val states: List<StateAndRef<ContractState>>) {
     @Suppress("UNCHECKED_CAST")
     inline fun <reified T : ContractState> statesOfType() = states.filter { it.state.data is T } as List<StateAndRef<T>>
 
@@ -50,7 +52,10 @@ class Vault(val states: Iterable<StateAndRef<ContractState>>) {
      * If the vault observes multiple transactions simultaneously, where some transactions consume the outputs of some of the
      * other transactions observed, then the changes are observed "net" of those.
      */
-    data class Update(val consumed: Set<StateRef>, val produced: Set<StateAndRef<ContractState>>) {
+    data class Update(val consumed: Set<StateAndRef<ContractState>>, val produced: Set<StateAndRef<ContractState>>) {
+        /** Checks whether the update contains a state of the specified type. */
+        inline fun <reified T : ContractState> containsType() = consumed.any { it.state.data is T } || produced.any { it.state.data is T }
+
         /**
          * Combine two updates into a single update with the combined inputs and outputs of the two updates but net
          * any outputs of the left-hand-side (this) that are consumed by the inputs of the right-hand-side (rhs).
@@ -58,12 +63,10 @@ class Vault(val states: Iterable<StateAndRef<ContractState>>) {
          * i.e. the net effect in terms of state live-ness of receiving the combined update is the same as receiving this followed by rhs.
          */
         operator fun plus(rhs: Update): Update {
-            val previouslyProduced = produced.map { it.ref }
-            val previouslyConsumed = consumed
             val combined = Vault.Update(
-                    previouslyConsumed + (rhs.consumed - previouslyProduced),
+                    consumed + (rhs.consumed - produced),
                     // The ordering below matters to preserve ordering of consumed/produced Sets when they are insertion order dependent implementations.
-                    produced.filter { it.ref !in rhs.consumed }.toSet() + rhs.produced)
+                    produced.filter { it !in rhs.consumed }.toSet() + rhs.produced)
             return combined
         }
 
@@ -120,15 +123,7 @@ interface VaultService {
      * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
      * which we have no cash evaluate to null (not present in map), not 0.
      */
-    @Suppress("UNCHECKED_CAST")
     val cashBalances: Map<Currency, Amount<Currency>>
-        get() = currentVault.states.
-                // Select the states we own which are cash, ignore the rest, take the amounts.
-                mapNotNull { (it.state.data as? FungibleAsset<Currency>)?.amount }.
-                // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
-                groupBy { it.token.product }.
-                // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
-                mapValues { it.value.map { Amount(it.quantity, it.token.product) }.sumOrThrow() }
 
     /**
      * Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the
@@ -158,24 +153,18 @@ interface VaultService {
      * Possibly update the vault by marking as spent states that these transactions consume, and adding any relevant
      * new states that they create. You should only insert transactions that have been successfully verified here!
      *
-     * Returns the new vault that resulted from applying the transactions (note: it may quickly become out of date).
-     *
      * TODO: Consider if there's a good way to enforce the must-be-verified requirement in the type system.
      */
-    fun notifyAll(txns: Iterable<WireTransaction>): Vault
+    fun notifyAll(txns: Iterable<WireTransaction>)
 
     /** Same as notifyAll but with a single transaction. */
-    fun notify(tx: WireTransaction): Vault = notifyAll(listOf(tx))
+    fun notify(tx: WireTransaction) = notifyAll(listOf(tx))
 
     /**
      * Provide a [Future] for when a [StateRef] is consumed, which can be very useful in building tests.
      */
     fun whenConsumed(ref: StateRef): ListenableFuture<Vault.Update> {
-        val future = SettableFuture.create<Vault.Update>()
-        updates.filter { ref in it.consumed }.first().subscribe {
-            future.set(it)
-        }
-        return future
+        return updates.filter { it.consumed.any { it.ref == ref } }.toFuture()
     }
 
     /**
@@ -189,10 +178,22 @@ interface VaultService {
     fun getTransactionNotes(txnId: SecureHash): Iterable<String>
 
     /**
-     *  [InsufficientBalanceException] is thrown when a Cash Spending transaction fails because
-     *  there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
-     *  Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
-     **/
+     * Generate a transaction that moves an amount of currency to the given pubkey.
+     *
+     * Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
+     *
+     * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
+     *           to move the cash will be added on top.
+     * @param amount How much currency to send.
+     * @param to a key of the recipient.
+     * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
+     *                        of given parties. This can be useful if the party you're trying to pay has expectations
+     *                        about which type of asset claims they are willing to accept.
+     * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
+     *         the resulting transaction for it to be valid.
+     * @throws InsufficientBalanceException when a cash spending transaction fails because
+     *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
+     */
     @Throws(InsufficientBalanceException::class)
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,
@@ -202,8 +203,7 @@ interface VaultService {
 
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)
 inline fun <reified T : DealState> VaultService.dealsWith(party: Party) = linearHeadsOfType<T>().values.filter {
-    // TODO: Replace name comparison with full party comparison (keys are currenty not equal)
-    it.state.data.parties.any { it.name == party.name }
+    it.state.data.parties.any { it == party }
 }
 
 /**
@@ -229,6 +229,24 @@ interface KeyManagementService {
     fun freshKey(): KeyPair
 }
 
+// TODO: Move to a more appropriate location
+/**
+ * An interface that denotes a service that can accept file uploads.
+ */
+interface FileUploader {
+    /**
+     * Accepts the data in the given input stream, and returns some sort of useful return message that will be sent
+     * back to the user in the response.
+     */
+    fun upload(file: InputStream): String
+
+    /**
+     * Check if this service accepts this type of upload. For example if you are uploading interest rates this could
+     * be "my-service-interest-rates". Type here does not refer to file extentions or MIME types.
+     */
+    fun accepts(type: String): Boolean
+}
+
 /**
  * A sketch of an interface to a simple key/value storage system. Intended for persistence of simple blobs like
  * transactions, serialised flow state machines and so on. Again, this isn't intended to imply lack of SQL or
@@ -244,6 +262,10 @@ interface StorageService {
 
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage
+
+    @Suppress("DEPRECATION")
+    @Deprecated("This service will be removed in a future milestone")
+    val uploaders: List<FileUploader>
 
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage
 }

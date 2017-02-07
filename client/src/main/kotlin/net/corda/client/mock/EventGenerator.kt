@@ -6,6 +6,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.flows.CashCommand
+import java.util.*
 
 /**
  * [Generator]s for incoming/outgoing events to/from the [WalletMonitorService]. Internally it keeps track of owned
@@ -13,15 +14,15 @@ import net.corda.flows.CashCommand
  */
 class EventGenerator(
         val parties: List<Party>,
-        val notary: Party
+        val notary: Party,
+        val currencies: List<Currency> = listOf(USD, GBP, CHF),
+        val issuers: List<Party> = parties
 ) {
-
     private var vault = listOf<StateAndRef<Cash.State>>()
 
     val issuerGenerator =
-            Generator.pickOne(parties).combine(Generator.intRange(0, 1)) { party, ref -> party.ref(ref.toByte()) }
+            Generator.pickOne(issuers).combine(Generator.intRange(0, 1)) { party, ref -> party.ref(ref.toByte()) }
 
-    val currencies = setOf(USD, GBP, CHF).toList() // + Currency.getAvailableCurrencies().toList().subList(0, 3).toSet()).toList()
     val currencyGenerator = Generator.pickOne(currencies)
 
     val issuedGenerator = issuerGenerator.combine(currencyGenerator) { issuer, currency -> Issued(issuer, currency) }
@@ -93,8 +94,11 @@ class EventGenerator(
             1.0 to moveCashGenerator
     )
 
-    val bankOfCordaCommandGenerator = Generator.frequency(
-            0.6 to issueCashGenerator,
+    val bankOfCordaExitGenerator = Generator.frequency(
             0.4 to exitCashGenerator
+    )
+
+    val bankOfCordaIssueGenerator = Generator.frequency(
+            0.6 to issueCashGenerator
     )
 }

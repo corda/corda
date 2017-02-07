@@ -47,13 +47,13 @@ class Obligation<P> : Contract {
          * Parent clause for clauses that operate on grouped states (those which are fungible).
          */
         class Group<P> : GroupClauseVerifier<State<P>, Commands, Issued<Terms<P>>>(
-                AllComposition(
+                AllOf(
                         NoZeroSizedOutputs<State<P>, Commands, Terms<P>>(),
-                        FirstComposition(
+                        FirstOf(
                                 SetLifecycle<P>(),
-                                AllComposition(
+                                AllOf(
                                         VerifyLifecycle<State<P>, Commands, Issued<Terms<P>>, P>(),
-                                        FirstComposition(
+                                        FirstOf(
                                                 Settle<P>(),
                                                 Issue(),
                                                 ConserveAmount()
@@ -190,7 +190,7 @@ class Obligation<P> : Contract {
                     "amount in settle command ${command.value.amount} matches settled total $totalAmountSettled" by (command.value.amount == totalAmountSettled)
                     "signatures are present from all obligors" by command.signers.containsAll(requiredSigners)
                     "there are no zero sized inputs" by inputs.none { it.amount.quantity == 0L }
-                    "at obligor ${obligor.name} the obligations after settlement balance" by
+                    "at obligor ${obligor} the obligations after settlement balance" by
                             (inputAmount == outputAmount + Amount(totalPenniesSettled, groupingKey))
                 }
                 return setOf(command.value)
@@ -364,7 +364,7 @@ class Obligation<P> : Contract {
         data class Exit<P>(override val amount: Amount<Issued<Terms<P>>>) : Commands, FungibleAsset.Commands.Exit<Terms<P>>
     }
 
-    override fun verify(tx: TransactionForContract) = verifyClause<Commands>(tx, FirstComposition<ContractState, Commands, Unit>(
+    override fun verify(tx: TransactionForContract) = verifyClause<Commands>(tx, FirstOf<ContractState, Commands, Unit>(
             Clauses.Net<Commands, P>(),
             Clauses.Group<P>()
     ), tx.commands.select<Obligation.Commands>())
@@ -405,7 +405,7 @@ class Obligation<P> : Contract {
         val owningPubKeys = inputs.filter { it is State<P> }.map { (it as State<P>).beneficiary }.toSet()
         val keysThatSigned = setLifecycleCommand.signers.toSet()
         requireThat {
-            "the owning keys are the same as the signing keys" by keysThatSigned.containsAll(owningPubKeys)
+            "the owning keys are a subset of the signing keys" by keysThatSigned.containsAll(owningPubKeys)
         }
     }
 

@@ -19,7 +19,7 @@ For ``SimpleNotaryService``, simply add the following service id to the list of 
 
   extraAdvertisedServiceIds: "net.corda.notary.simple"
 
-For ``ValidatingNotaryService`` it is:
+For ``ValidatingNotaryService``, it is:
 
 .. parsed-literal::
 

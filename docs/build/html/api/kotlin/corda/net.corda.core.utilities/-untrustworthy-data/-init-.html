@@ -1,0 +1,22 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>UntrustworthyData.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.utilities</a>&nbsp;/&nbsp;<a href="index.html">UntrustworthyData</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">UntrustworthyData</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.utilities.UntrustworthyData$<init>(net.corda.core.utilities.UntrustworthyData.T)/fromUntrustedWorld">fromUntrustedWorld</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span></code>
+<p>A small utility to approximate taint tracking: if a method gives you back one of these, it means the data came from
+a remote source that may be incentivised to pass us junk that violates basic assumptions and thus must be checked
+first. The wrapper helps you to avoid forgetting this vital step. Things you might want to check are:</p>
+<ul><li>Is this object the one you actually expected? Did the other side hand you back something technically valid but
+not what you asked for?</li>
+<li>Is the object disobeying its own invariants?</li>
+<li>Are any objects <emph>reachable</emph> from this object mismatched or not what you expected?</li>
+<li>Is it suspiciously large or small?</li>
+</ul>
+</BODY>
+</HTML>

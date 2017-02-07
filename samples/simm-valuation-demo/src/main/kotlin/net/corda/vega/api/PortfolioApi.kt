@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.filterStatesOfType
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.vega.analytics.InitialMarginTriple
@@ -98,11 +99,9 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     @Path("business-date")
     @Produces(MediaType.APPLICATION_JSON)
     fun getBusinessDate(): Any {
-        return json {
-            obj(
-                    "business-date" to  LocalDateTime.ofInstant(rpc.currentNodeTime(), ZoneId.systemDefault()).toLocalDate()
-            )
-        }
+        return mapOf(
+                "business-date" to LocalDateTime.ofInstant(rpc.currentNodeTime(), ZoneId.systemDefault()).toLocalDate()
+        )
     }
 
     /**
@@ -161,7 +160,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         return withParty(partyName) {
             val buyer = if (swap.buySell.isBuy) ownParty else it
             val seller = if (swap.buySell.isSell) ownParty else it
-            rpc.startFlow(IRSTradeFlow::Requester, swap.toData(buyer, seller), it).returnValue.toBlocking().first()
+            rpc.startFlow(IRSTradeFlow::Requester, swap.toData(buyer, seller), it).returnValue.getOrThrow()
             Response.accepted().entity("{}").build()
         }
     }
@@ -195,12 +194,10 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         return withParty(partyName) { party ->
             val trades = getTradesWith(party)
             val portfolio = Portfolio(trades)
-            val summary = json {
-                obj(
-                        "trades" to portfolio.trades.size,
-                        "notional" to portfolio.getNotionalForParty(ownParty).toDouble()
-                )
-            }
+            val summary = mapOf(
+                    "trades" to portfolio.trades.size,
+                    "notional" to portfolio.getNotionalForParty(ownParty).toDouble()
+            )
             Response.ok().entity(summary).build()
         }
     }
@@ -239,28 +236,23 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         }
     }
 
+    data class ApiParty(val id: String, val text: String)
+    data class AvailableParties(val self: ApiParty, val counterparties: List<ApiParty>)
+
     /**
      * Returns the identity of the current node as well as a list of other counterparties that it is aware of.
      */
     @GET
     @Path("whoami")
     @Produces(MediaType.APPLICATION_JSON)
-    fun getWhoAmI(): Any {
-        val counterParties = rpc.networkMapUpdates().first.filter { it.legalIdentity.name != "NetworkMapService" && it.legalIdentity.name != "Notary" && it.legalIdentity.name != ownParty.name }
-        return json {
-            obj(
-                    "self" to obj(
-                            "id" to ownParty.owningKey.toBase58String(),
-                            "text" to ownParty.name
-                    ),
-                    "counterparties" to counterParties.map {
-                        obj(
-                                "id" to it.legalIdentity.owningKey.toBase58String(),
-                                "text" to it.legalIdentity.name
-                        )
-                    }
-            )
+    fun getWhoAmI(): AvailableParties {
+        val counterParties = rpc.networkMapUpdates().first.filter {
+            it.legalIdentity.name != "NetworkMapService" && it.legalIdentity.name != "Notary" && it.legalIdentity.name != ownParty.name
         }
+
+        return AvailableParties(
+                self = ApiParty(ownParty.owningKey.toBase58String(), ownParty.name),
+                counterparties = counterParties.map { ApiParty(it.legalIdentity.owningKey.toBase58String(), it.legalIdentity.name) })
     }
 
     data class ValuationCreationParams(val valuationDate: LocalDate)
@@ -275,12 +267,12 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     fun startPortfolioCalculations(params: ValuationCreationParams = ValuationCreationParams(LocalDate.of(2016, 6, 6)), @PathParam("party") partyName: String): Response {
         return withParty(partyName) { otherParty ->
             val existingSwap = getPortfolioWith(otherParty)
-            if (existingSwap == null) {
-                rpc.startFlow(SimmFlow::Requester, otherParty, params.valuationDate).returnValue.toBlocking().first()
+            val flowHandle = if (existingSwap == null) {
+                rpc.startFlow(SimmFlow::Requester, otherParty, params.valuationDate)
             } else {
-                val handle = rpc.startFlow(SimmRevaluation::Initiator, getPortfolioStateAndRefWith(otherParty).ref, params.valuationDate)
-                handle.returnValue.toBlocking().first()
+                rpc.startFlow(SimmRevaluation::Initiator, getPortfolioStateAndRefWith(otherParty).ref, params.valuationDate)
             }
+            flowHandle.returnValue.getOrThrow()
 
             withPortfolio(otherParty) { portfolioState ->
                 val portfolio = portfolioState.portfolio.toStateAndRef<IRSState>(rpc).toPortfolio()

@@ -11,7 +11,7 @@ import net.corda.core.createDirectories
 import net.corda.core.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.node.driver.PortAllocation
-import net.corda.node.services.config.NodeSSLConfiguration
+import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.CordaRPCClient
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
@@ -154,8 +154,8 @@ class NodeConnection(
         private val certificatesDirectory: Path
 ) : Closeable {
 
-    private val sslConfig = object : NodeSSLConfiguration {
-        override val certificatesPath = certificatesDirectory
+    private val sslConfig = object : SSLConfiguration {
+        override val certificatesDirectory = this@NodeConnection.certificatesDirectory
         override val keyStorePassword: String get() = "cordacadevpass"
         override val trustStorePassword: String get() = "trustpass"
     }

@@ -11,7 +11,6 @@ tags
 
 .gradle
 local.properties
-/docs/build/doctrees
 
 # General build files
 **/build/*
@@ -34,7 +33,6 @@ lib/dokka.jar
 .idea/libraries
 .idea/shelf
 .idea/dataSources
-.idea/modules.xml
 
 # if you remove the above rule, at least ignore the following:
 

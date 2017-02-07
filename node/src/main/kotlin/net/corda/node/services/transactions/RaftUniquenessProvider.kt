@@ -1,6 +1,7 @@
 package net.corda.node.services.transactions
 
 import com.google.common.net.HostAndPort
+import io.atomix.catalyst.serializer.Serializer
 import io.atomix.catalyst.transport.Address
 import io.atomix.catalyst.transport.Transport
 import io.atomix.catalyst.transport.netty.NettyTransport
@@ -19,7 +20,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.config.NodeSSLConfiguration
+import net.corda.node.services.config.SSLConfiguration
 import org.jetbrains.exposed.sql.Database
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -42,7 +43,7 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterAddresses: List<HostAndPort>,
-                             db: Database, config: NodeSSLConfiguration) : UniquenessProvider, SingletonSerializeAsToken() {
+                             db: Database, config: SSLConfiguration) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
         private val DB_TABLE_NAME = "notary_committed_states"
@@ -62,11 +63,13 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
         val address = Address(myAddress.hostText, myAddress.port)
         val storage = buildStorage(storagePath)
         val transport = buildTransport(config)
+        val serializer = Serializer()
 
         val server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)
                 .withStorage(storage)
                 .withServerTransport(transport)
+                .withSerializer(serializer)
                 .build()
 
         val serverFuture = if (clusterAddresses.isNotEmpty()) {
@@ -81,6 +84,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
         val client = CopycatClient.builder(address)
                 .withTransport(transport) // TODO: use local transport for client-server communications
                 .withConnectionStrategy(ConnectionStrategies.EXPONENTIAL_BACKOFF)
+                .withSerializer(serializer)
                 .build()
         _clientFuture = serverFuture.thenCompose { client.connect(address) }
     }
@@ -92,13 +96,13 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
                 .build()
     }
 
-    private fun buildTransport(config: NodeSSLConfiguration): Transport? {
+    private fun buildTransport(config: SSLConfiguration): Transport? {
         return NettyTransport.builder()
                 .withSsl()
                 .withSslProtocol(SslProtocol.TLSv1_2)
-                .withKeyStorePath(config.keyStorePath.toString())
+                .withKeyStorePath(config.keyStoreFile.toString())
                 .withKeyStorePassword(config.keyStorePassword)
-                .withTrustStorePath(config.trustStorePath.toString())
+                .withTrustStorePath(config.trustStoreFile.toString())
                 .withTrustStorePassword(config.trustStorePassword)
                 .build()
     }

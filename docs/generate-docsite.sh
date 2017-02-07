@@ -7,20 +7,27 @@ if [ ! -e ./gradlew ]; then
     exit 1
 fi
 
-if [ ! -e lib/dokka.jar ]; then
-    echo "Downloading Dokka tool ... "
-    echo
-    wget -O lib/dokka.jar https://github.com/Kotlin/dokka/releases/download/0.9.8/dokka-fatjar.jar
-fi
-
 (
     cd docs
 
     if [ ! -d "virtualenv" ]
     then
-        virtualenv -p python2.7 virtualenv
+        # Check if python2.7 is installed explicitly otherwise fall back to the default python
+        if type "python2.7" > /dev/null; then
+            virtualenv -p python2.7 virtualenv
+        else
+            virtualenv virtualenv
+        fi
     fi
-    . virtualenv/bin/activate
+
+    if [ -d "virtualenv/bin" ]
+    then
+        # it's a Unix system
+        . virtualenv/bin/activate
+    else
+        . virtualenv/Scripts/activate
+    fi
+
     if [ ! -d "virtualenv/lib/python2.7/site-packages/sphinx" ]
     then
         echo "Installing pip dependencies ... "
@@ -30,13 +37,13 @@ fi
     echo "Generating docsite ..."
     echo
 
-    make html
+    make clean html
 )
 
 echo
 echo "Generating API docs ..."
 echo
-java -jar lib/dokka.jar -output docs/build/html/api core/src/main/kotlin finance/src/main/kotlin node/src/main/kotlin client/src/main/kotlin  | grep -v "No documentation for"
+./gradlew apidocs
 
 echo
 echo "Writing robots.txt"

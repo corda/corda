@@ -1,0 +1,77 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>FlowStateMachine - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.flows</a>&nbsp;/&nbsp;<a href=".">FlowStateMachine</a><br/>
+<br/>
+<h1>FlowStateMachine</h1>
+<code><span class="keyword">interface </span><span class="identifier">FlowStateMachine</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code>
+<p>This is an internal interface that is implemented by code in the node module. You should look at <a href="../-flow-logic/index.html">FlowLogic</a>.</p>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="id.html">id</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">id</span><span class="symbol">: </span><a href="../-state-machine-run-id/index.html"><span class="identifier">StateMachineRunId</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="logger.html">logger</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">logger</span><span class="symbol">: </span><span class="identifier">Logger</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="result-future.html">resultFuture</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">resultFuture</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="service-hub.html">serviceHub</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">serviceHub</span><span class="symbol">: </span><a href="../../net.corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="receive.html">receive</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowStateMachine$receive(java.lang.Class((net.corda.core.flows.FlowStateMachine.receive.T)), net.corda.core.crypto.Party, net.corda.core.flows.FlowLogic((kotlin.Any)))/receiveType">receiveType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowStateMachine$receive(java.lang.Class((net.corda.core.flows.FlowStateMachine.receive.T)), net.corda.core.crypto.Party, net.corda.core.flows.FlowLogic((kotlin.Any)))/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowStateMachine$receive(java.lang.Class((net.corda.core.flows.FlowStateMachine.receive.T)), net.corda.core.crypto.Party, net.corda.core.flows.FlowLogic((kotlin.Any)))/sessionFlow">sessionFlow</span><span class="symbol">:</span>&nbsp;<a href="../-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="send.html">send</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowStateMachine$send(net.corda.core.crypto.Party, kotlin.Any, net.corda.core.flows.FlowLogic((kotlin.Any)))/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowStateMachine$send(net.corda.core.crypto.Party, kotlin.Any, net.corda.core.flows.FlowLogic((kotlin.Any)))/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowStateMachine$send(net.corda.core.crypto.Party, kotlin.Any, net.corda.core.flows.FlowLogic((kotlin.Any)))/sessionFlow">sessionFlow</span><span class="symbol">:</span>&nbsp;<a href="../-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="send-and-receive.html">sendAndReceive</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowStateMachine$sendAndReceive(java.lang.Class((net.corda.core.flows.FlowStateMachine.sendAndReceive.T)), net.corda.core.crypto.Party, kotlin.Any, net.corda.core.flows.FlowLogic((kotlin.Any)))/receiveType">receiveType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowStateMachine$sendAndReceive(java.lang.Class((net.corda.core.flows.FlowStateMachine.sendAndReceive.T)), net.corda.core.crypto.Party, kotlin.Any, net.corda.core.flows.FlowLogic((kotlin.Any)))/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowStateMachine$sendAndReceive(java.lang.Class((net.corda.core.flows.FlowStateMachine.sendAndReceive.T)), net.corda.core.crypto.Party, kotlin.Any, net.corda.core.flows.FlowLogic((kotlin.Any)))/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowStateMachine$sendAndReceive(java.lang.Class((net.corda.core.flows.FlowStateMachine.sendAndReceive.T)), net.corda.core.crypto.Party, kotlin.Any, net.corda.core.flows.FlowLogic((kotlin.Any)))/sessionFlow">sessionFlow</span><span class="symbol">:</span>&nbsp;<a href="../-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.node.services.statemachine/-flow-state-machine-impl/index.html">FlowStateMachineImpl</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FlowStateMachineImpl</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Fiber</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier">FlowStateMachine</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

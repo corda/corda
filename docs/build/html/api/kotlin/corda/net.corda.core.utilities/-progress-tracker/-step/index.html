@@ -1,0 +1,302 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ProgressTracker.Step - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.core.utilities</a>&nbsp;/&nbsp;<a href="../index.html">ProgressTracker</a>&nbsp;/&nbsp;<a href=".">Step</a><br/>
+<br/>
+<h1>Step</h1>
+<code><span class="keyword">class </span><span class="identifier">Step</span></code>
+<p>The superclass of all step objects.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">Step</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.utilities.ProgressTracker.Step$<init>(kotlin.String)/label">label</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span></code>
+<p>The superclass of all step objects.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="changes.html">changes</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">changes</span><span class="symbol">: </span><span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="../-change/index.html"><span class="identifier">Change</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="label.html">label</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">label</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="child-progress-tracker.html">childProgressTracker</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">childProgressTracker</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../index.html"><span class="identifier">ProgressTracker</span></a><span class="symbol">?</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-abstract-state-replacement-flow/-acceptor/-a-p-p-r-o-v-i-n-g.html">APPROVING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">APPROVING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-primary/-a-w-a-i-t-i-n-g_-p-r-o-p-o-s-a-l.html">AWAITING_PROPOSAL</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">AWAITING_PROPOSAL</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-trade-flow/-seller/-a-w-a-i-t-i-n-g_-p-r-o-p-o-s-a-l.html">AWAITING_PROPOSAL</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">AWAITING_PROPOSAL</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-issuer-flow/-issuer/-a-w-a-i-t-i-n-g_-r-e-q-u-e-s-t.html">AWAITING_REQUEST</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">AWAITING_REQUEST</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-finality-flow/-b-r-o-a-d-c-a-s-t-i-n-g.html">BROADCASTING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">BROADCASTING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-primary/-c-o-p-y-i-n-g_-t-o_-r-e-g-u-l-a-t-o-r.html">COPYING_TO_REGULATOR</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">COPYING_TO_REGULATOR</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-d-o-n-e/index.html">DONE</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">DONE</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-cash-flow/-e-x-i-t-i-n-g.html">EXITING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">EXITING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-cash-flow/-i-s-s-u-i-n-g.html">ISSUING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">ISSUING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-issuer-flow/-issuer/-i-s-s-u-i-n-g.html">ISSUING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">ISSUING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-finality-flow/-n-o-t-a-r-i-s-i-n-g.html">NOTARISING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">NOTARISING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-abstract-state-replacement-flow/-instigator/-n-o-t-a-r-y.html">NOTARY</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">NOTARY</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-primary/-n-o-t-a-r-y.html">NOTARY</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">NOTARY</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-trade-flow/-seller/-n-o-t-a-r-y/index.html">NOTARY</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">NOTARY</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-cash-flow/-p-a-y-i-n-g.html">PAYING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">PAYING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-secondary/-r-e-c-e-i-v-i-n-g.html">RECEIVING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">RECEIVING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-trade-flow/-buyer/-r-e-c-e-i-v-i-n-g.html">RECEIVING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">RECEIVING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-primary/-r-e-c-o-r-d-i-n-g.html">RECORDING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">RECORDING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-secondary/-r-e-c-o-r-d-i-n-g.html">RECORDING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">RECORDING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-notary-flow/-client/-r-e-q-u-e-s-t-i-n-g.html">REQUESTING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">REQUESTING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.node.services.events/-node-scheduler-service/-run-scheduled/-r-u-n-n-i-n-g.html">RUNNING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">RUNNING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-relabelable-step/index.html">RelabelableStep</a></td>
+<td>
+<code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">RelabelableStep</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code>
+<p>This class makes it easier to relabel a step on the fly, to provide transient information.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-issuer-flow/-issuer/-s-e-n-d-i-n-g_-c-o-n-f-i-r-m.html">SENDING_CONFIRM</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SENDING_CONFIRM</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-primary/-s-e-n-d-i-n-g_-s-i-g-s.html">SENDING_SIGS</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SENDING_SIGS</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-trade-flow/-seller/-s-e-n-d-i-n-g_-s-i-g-s.html">SENDING_SIGS</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SENDING_SIGS</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-abstract-state-replacement-flow/-instigator/-s-i-g-n-i-n-g.html">SIGNING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SIGNING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-primary/-s-i-g-n-i-n-g.html">SIGNING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SIGNING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-secondary/-s-i-g-n-i-n-g.html">SIGNING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SIGNING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-trade-flow/-seller/-s-i-g-n-i-n-g.html">SIGNING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SIGNING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-trade-flow/-buyer/-s-i-g-n-i-n-g.html">SIGNING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SIGNING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-secondary/-s-w-a-p-p-i-n-g_-s-i-g-n-a-t-u-r-e-s.html">SWAPPING_SIGNATURES</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SWAPPING_SIGNATURES</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-trade-flow/-buyer/-s-w-a-p-p-i-n-g_-s-i-g-n-a-t-u-r-e-s.html">SWAPPING_SIGNATURES</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SWAPPING_SIGNATURES</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-issuer-flow/-issuer/-t-r-a-n-s-f-e-r-r-i-n-g.html">TRANSFERRING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">TRANSFERRING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-u-n-s-t-a-r-t-e-d/index.html">UNSTARTED</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">UNSTARTED</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-notary-flow/-client/-v-a-l-i-d-a-t-i-n-g.html">VALIDATING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">VALIDATING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-abstract-state-replacement-flow/-acceptor/-v-e-r-i-f-y-i-n-g.html">VERIFYING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">VERIFYING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-primary/-v-e-r-i-f-y-i-n-g.html">VERIFYING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">VERIFYING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-secondary/-v-e-r-i-f-y-i-n-g.html">VERIFYING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">VERIFYING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-trade-flow/-seller/-v-e-r-i-f-y-i-n-g.html">VERIFYING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">VERIFYING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-trade-flow/-buyer/-v-e-r-i-f-y-i-n-g.html">VERIFYING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">VERIFYING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

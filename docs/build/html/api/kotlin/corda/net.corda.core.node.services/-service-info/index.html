@@ -1,0 +1,73 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>ServiceInfo - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.node.services</a>&nbsp;/&nbsp;<a href=".">ServiceInfo</a><br/>
+<br/>
+<h1>ServiceInfo</h1>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ServiceInfo</span></code>
+<p>A container for additional information for an advertised service.</p>
+<h3>Parameters</h3>
+
+<p><a name="type"></a>
+<code>type</code> - the ServiceType identifier
+<p><a name="name"></a>
+<code>name</code> - the service name, used for differentiating multiple services of the same type. Can also be used as a
+    grouping identifier for nodes collectively running a distributed service.
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">ServiceInfo</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.ServiceInfo$<init>(net.corda.core.node.services.ServiceType, kotlin.String)/type">type</span><span class="symbol">:</span>&nbsp;<a href="../-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.services.ServiceInfo$<init>(net.corda.core.node.services.ServiceType, kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span></code>
+<p>A container for additional information for an advertised service.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="name.html">name</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">name</span><span class="symbol">: </span><span class="identifier">String</span><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="type.html">type</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">type</span><span class="symbol">: </span><a href="../-service-type/index.html"><span class="identifier">ServiceType</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="to-string.html">toString</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="parse.html">parse</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">parse</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.ServiceInfo.Companion$parse(kotlin.String)/encoded">encoded</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ServiceInfo</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

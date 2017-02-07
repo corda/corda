@@ -18,12 +18,17 @@ import java.security.PublicKey
  * cluster of Corda nodes. A [Party] representing a distributed service will use a composite key containing all
  * individual cluster nodes' public keys. Each of the nodes in the cluster will advertise the same group [Party].
  *
+ * Note that equality is based solely on the owning key.
+ *
  * @see CompositeKey
  */
-data class Party(val name: String, val owningKey: CompositeKey) {
+class Party(val name: String, val owningKey: CompositeKey) {
     /** A helper constructor that converts the given [PublicKey] in to a [CompositeKey] with a single node */
     constructor(name: String, owningKey: PublicKey) : this(name, owningKey.composite)
 
+    /** Anonymised parties do not include any detail apart from owning key, so equality is dependent solely on the key */
+    override fun equals(other: Any?): Boolean = other is Party && this.owningKey == other.owningKey
+    override fun hashCode(): Int = owningKey.hashCode()
     override fun toString() = name
 
     fun ref(bytes: OpaqueBytes) = PartyAndReference(this, bytes)

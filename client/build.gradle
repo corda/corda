@@ -51,7 +51,7 @@ dependencies {
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
     compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
 
-    compile "com.google.guava:guava:19.0"
+    compile "com.google.guava:guava:$guava_version"
 
     // ReactFX: Functional reactive UI programming.
     compile 'org.reactfx:reactfx:2.0-M5'
@@ -61,13 +61,13 @@ dependencies {
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
 
     // Unit testing helpers.
-    testCompile 'junit:junit:4.12'
+    testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     testCompile project(':test-utils')
 
     // Integration test helpers
-    integrationTestCompile 'junit:junit:4.12'
+    integrationTestCompile "junit:junit:$junit_version"
 }
 
 task integrationTest(type: Test) {

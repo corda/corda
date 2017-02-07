@@ -15,7 +15,7 @@ import kotlin.test.assertEquals
 class JsonSupportTest {
 
     companion object {
-        val mapper = JsonSupport.createDefaultMapper(MockIdentityService(mutableListOf()))
+        val mapper = JsonSupport.createNonRpcMapper()
     }
 
     @Property

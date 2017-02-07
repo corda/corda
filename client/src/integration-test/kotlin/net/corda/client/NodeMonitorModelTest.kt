@@ -9,7 +9,9 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.getOrThrow
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceInfo
@@ -19,6 +21,7 @@ import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
+import net.corda.node.driver.DriverBasedTest
 import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.config.configureTestSSL
@@ -29,63 +32,42 @@ import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.sequence
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import rx.Observable
-import rx.Observer
-import java.util.concurrent.CountDownLatch
-import kotlin.concurrent.thread
 
-class NodeMonitorModelTest {
+class NodeMonitorModelTest : DriverBasedTest() {
     lateinit var aliceNode: NodeInfo
     lateinit var notaryNode: NodeInfo
-    val stopDriver = CountDownLatch(1)
-    var driverThread: Thread? = null
 
+    lateinit var rpc: CordaRPCOps
     lateinit var stateMachineTransactionMapping: Observable<StateMachineTransactionMapping>
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
     lateinit var progressTracking: Observable<ProgressTrackingEvent>
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update>
     lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
-    lateinit var clientToService: Observer<CashCommand>
     lateinit var newNode: (String) -> NodeInfo
 
-    @Before
-    fun start() {
-        val driverStarted = CountDownLatch(1)
-        driverThread = thread {
-            driver {
-                val cashUser = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>()))
-                val aliceNodeFuture = startNode("Alice", rpcUsers = listOf(cashUser))
-                val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+    override fun setup() = driver {
+        val cashUser = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>()))
+        val aliceNodeFuture = startNode("Alice", rpcUsers = listOf(cashUser))
+        val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
 
-                aliceNode = aliceNodeFuture.getOrThrow().nodeInfo
-                notaryNode = notaryNodeFuture.getOrThrow().nodeInfo
-                newNode = { nodeName -> startNode(nodeName).getOrThrow().nodeInfo }
-                val monitor = NodeMonitorModel()
+        aliceNode = aliceNodeFuture.getOrThrow().nodeInfo
+        notaryNode = notaryNodeFuture.getOrThrow().nodeInfo
+        newNode = { nodeName -> startNode(nodeName).getOrThrow().nodeInfo }
+        val monitor = NodeMonitorModel()
 
-                stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
-                stateMachineUpdates = monitor.stateMachineUpdates.bufferUntilSubscribed()
-                progressTracking = monitor.progressTracking.bufferUntilSubscribed()
-                transactions = monitor.transactions.bufferUntilSubscribed()
-                vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
-                networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
-                clientToService = monitor.clientToService
+        stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
+        stateMachineUpdates = monitor.stateMachineUpdates.bufferUntilSubscribed()
+        progressTracking = monitor.progressTracking.bufferUntilSubscribed()
+        transactions = monitor.transactions.bufferUntilSubscribed()
+        vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
+        networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
 
-                monitor.register(ArtemisMessagingComponent.toHostAndPort(aliceNode.address), configureTestSSL(), cashUser.username, cashUser.password)
-                driverStarted.countDown()
-                stopDriver.await()
-            }
-        }
-        driverStarted.await()
-    }
-
-    @After
-    fun stop() {
-        stopDriver.countDown()
-        driverThread?.join()
+        monitor.register(ArtemisMessagingComponent.toHostAndPort(aliceNode.address), configureTestSSL(), cashUser.username, cashUser.password)
+        rpc = monitor.proxyObservable.value!!
+        runTest()
     }
 
     @Test
@@ -112,7 +94,7 @@ class NodeMonitorModelTest {
 
     @Test
     fun `cash issue works end to end`() {
-        clientToService.onNext(CashCommand.IssueCash(
+        rpc.startFlow(::CashFlow, CashCommand.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                 recipient = aliceNode.legalIdentity,
@@ -137,14 +119,14 @@ class NodeMonitorModelTest {
 
     @Test
     fun `cash issue and move`() {
-        clientToService.onNext(CashCommand.IssueCash(
+        rpc.startFlow(::CashFlow, CashCommand.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                 recipient = aliceNode.legalIdentity,
                 notary = notaryNode.notaryIdentity
-        ))
+        )).returnValue.getOrThrow()
 
-        clientToService.onNext(CashCommand.PayCash(
+        rpc.startFlow(::CashFlow, CashCommand.PayCash(
                 amount = Amount(100, Issued(PartyAndReference(aliceNode.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
                 recipient = aliceNode.legalIdentity
         ))

@@ -1,0 +1,360 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Financial model &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
+        <link rel="next" title="Flow framework" href="key-concepts-flow-framework.html"/>
+        <link rel="prev" title="Core types" href="key-concepts-core-types.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="key-concepts.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-ecosystem.html">Corda ecosystem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-core-types.html">Core types</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Financial model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#amount">Amount</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#financial-states">Financial states</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-flow-framework.html">Flow framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-consensus-notaries.html">Consensus and notaries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-vault.html">Vault</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-security-model.html">Security model</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Financial model</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/key-concepts-financial-model.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="financial-model">
+<h1>Financial model<a class="headerlink" href="#financial-model" title="Permalink to this headline">¶</a></h1>
+<p>Corda provides a large standard library of data types used in financial applications and contract state objects.
+These provide a common language for states and contracts.</p>
+<div class="section" id="amount">
+<h2>Amount<a class="headerlink" href="#amount" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference external" href="api/net.corda.core.contracts/-amount/index.html">Amount</a> class is used to represent an amount of some
+fungible asset. It is a generic class which wraps around a type used to define the underlying product, called
+the <em>token</em>. For instance it can be the standard JDK type <code class="docutils literal"><span class="pre">Currency</span></code>, or an <code class="docutils literal"><span class="pre">Issued</span></code> instance, or this can be
+a more complex type such as an obligation contract issuance definition (which in turn contains a token definition
+for whatever the obligation is to be settled in).</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Fungible is used here to mean that instances of an asset is interchangeable for any other identical instance,
+and that they can be split/merged. For example a £5 note can reasonably be exchanged for any other £5 note, and
+a £10 note can be exchanged for two £5 notes, or vice-versa.</p>
+</div>
+<p>Here are some examples:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="c1">// A quantity of some specific currency like pounds, euros, dollars etc.</span>
+<span class="n">Amount</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;</span>
+<span class="c1">// A quantity of currency that is issued by a specific issuer, for instance central bank vs other bank dollars</span>
+<span class="n">Amount</span><span class="p">&lt;</span><span class="n">Issued</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;&gt;</span>
+<span class="c1">// A quantity of a product governed by specific obligation terms</span>
+<span class="n">Amount</span><span class="p">&lt;</span><span class="n">Obligation</span><span class="p">.</span><span class="n">Terms</span><span class="p">&lt;</span><span class="n">P</span><span class="p">&gt;&gt;</span>
+</pre></div>
+</div>
+</div>
+<p><code class="docutils literal"><span class="pre">Amount</span></code> represents quantities as integers. For currencies the quantity represents pennies, cents or whatever
+else the smallest integer amount for that currency is. You cannot use <code class="docutils literal"><span class="pre">Amount</span></code> to represent negative quantities
+or fractional quantities: if you wish to do this then you must use a different type e.g. <code class="docutils literal"><span class="pre">BigDecimal</span></code>. <code class="docutils literal"><span class="pre">Amount</span></code>
+defines methods to do addition and subtraction and these methods verify that the tokens on both sides of the operator
+are equal (these are operator overloads in Kotlin and can be used as regular methods from Java). There are also
+methods to do multiplication and division by integer amounts.</p>
+<p><code class="docutils literal"><span class="pre">Issued</span></code> refers to a product (which can be cash, a cash-like thing, assets, or generally anything else that&#8217;s
+quantifiable with integer quantities) and an associated <code class="docutils literal"><span class="pre">PartyAndReference</span></code> that describes the issuer of that contract.
+An issued product typically follows a lifecycle which includes issuance, movement and exiting from the ledger (for example,
+see the <code class="docutils literal"><span class="pre">Cash</span></code> contract and its associated <em>state</em> and <em>commands</em>)</p>
+</div>
+<div class="section" id="financial-states">
+<h2>Financial states<a class="headerlink" href="#financial-states" title="Permalink to this headline">¶</a></h2>
+<p>In additional to the common state types, a number of interfaces extend <code class="docutils literal"><span class="pre">ContractState</span></code> to model financial state such as:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt><code class="docutils literal"><span class="pre">LinearState</span></code></dt>
+<dd>A state which has a unique identifier beyond its StateRef and carries it through state transitions.
+Such a state cannot be duplicated, merged or split in a transaction: only continued or deleted. A linear state is
+useful when modelling an indivisible/non-fungible thing like a specific deal, or an asset that can&#8217;t be
+split (like a rare piece of art).</dd>
+<dt><code class="docutils literal"><span class="pre">DealState</span></code></dt>
+<dd>A LinearState representing an agreement between two or more parties. Intended to simplify implementing generic
+protocols that manipulate many agreement types.</dd>
+<dt><code class="docutils literal"><span class="pre">FungibleAsset</span></code></dt>
+<dd>A FungibleAsset is intended to be used for contract states representing assets which are fungible, countable and issued by a
+specific party. States contain assets which are equivalent (such as cash of the same currency), so records of their existence
+can be merged or split as needed where the issuer is the same. For instance, dollars issued by the Fed are fungible and
+countable (in cents), barrels of West Texas crude are fungible and countable (oil from two small containers can be poured into one large
+container), shares of the same class in a specific company are fungible and countable, and so on.</dd>
+</dl>
+</div></blockquote>
+<p>The following diagram illustrates the complete Contract State hierarchy:</p>
+<img alt="_images/financialContractStateModel.png" src="_images/financialContractStateModel.png" />
+<p>Note there are currently two packages, a core library and a finance model specific library.
+Developers may re-use or extend the Finance types directly or write their own by extending the base types from the Core library.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="key-concepts-flow-framework.html" class="btn btn-neutral float-right" title="Flow framework" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="key-concepts-core-types.html" class="btn btn-neutral" title="Core types" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, R3 Limited.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

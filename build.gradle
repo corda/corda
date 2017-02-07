@@ -4,28 +4,37 @@ buildscript {
     file("publish.properties").withInputStream { props.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_version = "0.7-SNAPSHOT"
+    ext.corda_version = "0.9-SNAPSHOT"
     ext.gradle_plugins_version = props.getProperty("gradlePluginsVersion")
+
+    // Dependency versions. Can run 'gradle dependencyUpdates' to find new versions of things.
+    //
+    // TODO: Sort this alphabetically.
     ext.kotlin_version = '1.0.5-2'
-    ext.quasar_version = '0.7.6'
+    ext.quasar_version = '0.7.6'    // TODO: Upgrade to 0.7.7+ when Quasar bug 238 is resolved.
     ext.asm_version = '0.5.3'
-    ext.artemis_version = '1.4.0'
-    ext.jackson_version = '2.8.0.rc2'
+    ext.artemis_version = '1.5.1'
+    ext.jackson_version = '2.8.5'
     ext.jetty_version = '9.3.9.v20160517'
-    ext.jersey_version = '2.23.1'
-    ext.jolokia_version = '2.0.0-M1'
-    ext.assertj_version = '3.5.1'
-    ext.log4j_version = '2.6.2'
-    ext.bouncycastle_version = '1.54'
+    ext.jersey_version = '2.25'
+    ext.jolokia_version = '2.0.0-M3'
+    ext.assertj_version = '3.6.1'
+    ext.log4j_version = '2.7'
+    ext.bouncycastle_version = '1.56'
+    ext.guava_version = '19.0'
+    ext.quickcheck_version = '0.7'
+    ext.okhttp_version = '3.5.0'
+    ext.typesafe_config_version = '1.3.1'
+    ext.junit_version = '4.12'
+    ext.jopt_simple_version = '5.0.2'
+    ext.jansi_version = '1.14'
+    ext.hibernate_version = '5.2.6.Final'
+    ext.dokka_version = '0.9.13'
 
     repositories {
         mavenLocal()
         mavenCentral()
         jcenter()
-        // TODO: Remove this once all packages are published to jcenter or maven central. (M6 or 7).
-        maven {
-            url  "http://r3.bintray.com/corda"
-        }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
@@ -33,9 +42,8 @@ buildscript {
         classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
-
-        // Can run 'gradle dependencyUpdates' to find new versions of things.
-        classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.13.0'
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
     }
 }
 
@@ -51,6 +59,7 @@ apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'org.jetbrains.dokka'
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
@@ -95,7 +104,7 @@ repositories {
 // Required for building out the fat JAR.
 dependencies {
     compile project(':node')
-    compile "com.google.guava:guava:19.0"
+    compile "com.google.guava:guava:$guava_version"
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 }
 
@@ -129,16 +138,13 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     networkMap "Controller"
     node {
         name "Controller"
-        dirName "controller"
         nearestCity "London"
         advertisedServices = ["corda.notary.validating"]
         artemisPort 10002
-        webPort 10003
         cordapps = []
     }
     node {
         name "Bank A"
-        dirName "nodea"
         nearestCity "London"
         advertisedServices = []
         artemisPort 10004
@@ -147,7 +153,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     }
     node {
         name "Bank B"
-        dirName "nodeb"
         nearestCity "New York"
         advertisedServices = []
         artemisPort 10006
@@ -178,3 +183,22 @@ bintrayConfig {
         email = 'dev@corda.net'
     }
 }
+
+// API docs
+
+dokka {
+    moduleName = 'corda'
+    outputDirectory = 'docs/build/html/api/kotlin'
+    processConfigurations = ['compile']
+    sourceDirs = files('core/src/main/kotlin', 'client/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin')
+}
+
+task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
+    moduleName = 'corda'
+    outputFormat = "javadoc"
+    outputDirectory = 'docs/build/html/api/javadoc'
+    processConfigurations = ['compile']
+    sourceDirs = files('core/src/main/kotlin', 'client/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin')
+}
+
+task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])

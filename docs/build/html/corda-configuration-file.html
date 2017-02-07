@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -77,7 +81,12 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -89,26 +98,26 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
-<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Key concepts</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-ecosystem.html">Corda ecosystem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-core-types.html">Core types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-financial-model.html">Financial model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-flow-framework.html">Flow framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-consensus-notaries.html">Consensus and notaries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-vault.html">Vault</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-security-model.html">Security model</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul class="current">
@@ -133,23 +142,22 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
@@ -159,14 +167,15 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
-<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -219,36 +228,42 @@
 <h1>Node configuration<a class="headerlink" href="#node-configuration" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="file-location">
 <h2>File location<a class="headerlink" href="#file-location" title="Permalink to this headline">¶</a></h2>
-<p>The Corda all-in-one <code class="docutils literal"><span class="pre">corda.jar</span></code> file is generated by the <code class="docutils literal"><span class="pre">gradle</span> <span class="pre">buildCordaJAR</span></code> task and defaults to reading configuration from a <code class="docutils literal"><span class="pre">node.conf</span></code> file in the present working directory.
-This behaviour can be overidden using the <code class="docutils literal"><span class="pre">--config-file</span></code> command line option to target configuration files with different names, or different file location (relative paths are relative to the current working directory).
-Also, the <code class="docutils literal"><span class="pre">--base-directory</span></code> command line option alters the Corda node workspace location and if specified a <code class="docutils literal"><span class="pre">node.conf</span></code> configuration file is then expected in the root of the workspace.</p>
-<p>The configuration file templates used for the <code class="docutils literal"><span class="pre">gradle</span> <span class="pre">deployNodes</span></code> task are to be found in the <code class="docutils literal"><span class="pre">/config/dev</span></code> folder. Also note that there is a basic set of defaults loaded from
-the built in resource file <code class="docutils literal"><span class="pre">/node/src/main/resources/reference.conf</span></code> of the <code class="docutils literal"><span class="pre">:node</span></code> gradle module. All properties in this can be overidden in the file configuration
-and for rarely changed properties this defaulting allows the property to be excluded from the configuration file.</p>
+<p>The Corda all-in-one <code class="docutils literal"><span class="pre">corda.jar</span></code> file is generated by the <code class="docutils literal"><span class="pre">gradle</span> <span class="pre">buildCordaJAR</span></code> task and defaults to reading configuration
+from a <code class="docutils literal"><span class="pre">node.conf</span></code> file in the present working directory. This behaviour can be overidden using the <code class="docutils literal"><span class="pre">--config-file</span></code>
+command line option to target configuration files with different names, or different file location (relative paths are
+relative to the current working directory). Also, the <code class="docutils literal"><span class="pre">--base-directory</span></code> command line option alters the Corda node
+workspace location and if specified a <code class="docutils literal"><span class="pre">node.conf</span></code> configuration file is then expected in the root of the workspace.</p>
+<p>The configuration file templates used for the <code class="docutils literal"><span class="pre">gradle</span> <span class="pre">deployNodes</span></code> task are to be found in the <code class="docutils literal"><span class="pre">/config/dev</span></code> folder.
+Also note that there is a basic set of defaults loaded from the built in resource file <code class="docutils literal"><span class="pre">/node/src/main/resources/reference.conf</span></code>
+of the <code class="docutils literal"><span class="pre">:node</span></code> gradle module. All properties in this can be overidden in the file configuration and for rarely changed
+properties this defaulting allows the property to be excluded from the configuration file.</p>
 </div>
 <div class="section" id="format">
 <h2>Format<a class="headerlink" href="#format" title="Permalink to this headline">¶</a></h2>
-<p>Corda uses the Typesafe configuration library to parse the configuration see the <a class="reference external" href="https://github.com/typesafehub/config/">typesafe config on Github</a>  the format of the configuration files can be simple JSON, but for the more powerful substitution features
-uses HOCON format see <a class="reference external" href="https://github.com/typesafehub/config/blob/master/HOCON.md">HOCON documents</a></p>
+<p>The Corda configuration file uses the HOCON format which is superset of JSON. It has several features which makes it
+very useful as a configuration format. Please visit their <a class="reference external" href="https://github.com/typesafehub/config/blob/master/HOCON.md">page</a>
+for further details.</p>
 </div>
 <div class="section" id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
 <p>General node configuration file for hosting the IRSDemo services.</p>
-<div class="highlight-javascript"><div class="highlight"><pre><span></span><span class="nx">basedir</span> <span class="o">:</span> <span class="s2">&quot;./nodea&quot;</span>
-<span class="nx">myLegalName</span> <span class="o">:</span> <span class="s2">&quot;Bank A&quot;</span>
+<div class="highlight-javascript"><div class="highlight"><pre><span></span><span class="nx">myLegalName</span> <span class="o">:</span> <span class="s2">&quot;Bank A&quot;</span>
 <span class="nx">nearestCity</span> <span class="o">:</span> <span class="s2">&quot;London&quot;</span>
 <span class="nx">keyStorePassword</span> <span class="o">:</span> <span class="s2">&quot;cordacadevpass&quot;</span>
 <span class="nx">trustStorePassword</span> <span class="o">:</span> <span class="s2">&quot;trustpass&quot;</span>
 <span class="nx">dataSourceProperties</span> <span class="o">:</span> <span class="p">{</span>
     <span class="nx">dataSourceClassName</span> <span class="o">:</span> <span class="nx">org</span><span class="p">.</span><span class="nx">h2</span><span class="p">.</span><span class="nx">jdbcx</span><span class="p">.</span><span class="nx">JdbcDataSource</span>
-    <span class="s2">&quot;dataSource.url&quot;</span> <span class="o">:</span> <span class="s2">&quot;jdbc:h2:&quot;</span><span class="nx">$</span><span class="p">{</span><span class="nx">basedir</span><span class="p">}</span><span class="s2">&quot;/persistence&quot;</span>
+    <span class="s2">&quot;dataSource.url&quot;</span> <span class="o">:</span> <span class="s2">&quot;jdbc:h2:file:&quot;</span><span class="nx">$</span><span class="p">{</span><span class="nx">basedir</span><span class="p">}</span><span class="s2">&quot;/persistence&quot;</span>
     <span class="s2">&quot;dataSource.user&quot;</span> <span class="o">:</span> <span class="nx">sa</span>
     <span class="s2">&quot;dataSource.password&quot;</span> <span class="o">:</span> <span class="s2">&quot;&quot;</span>
 <span class="p">}</span>
 <span class="nx">artemisAddress</span> <span class="o">:</span> <span class="s2">&quot;my-corda-node:10002&quot;</span>
 <span class="nx">webAddress</span> <span class="o">:</span> <span class="s2">&quot;localhost:10003&quot;</span>
 <span class="nx">extraAdvertisedServiceIds</span><span class="o">:</span> <span class="s2">&quot;corda.interest_rates&quot;</span>
-<span class="nx">networkMapAddress</span> <span class="o">:</span> <span class="s2">&quot;my-network-map:10000&quot;</span>
+<span class="nx">networkMapService</span> <span class="o">:</span> <span class="p">{</span>
+    <span class="nx">address</span> <span class="o">:</span> <span class="s2">&quot;my-network-map:10000&quot;</span>
+    <span class="nx">legalName</span> <span class="o">:</span> <span class="s2">&quot;Network Map Service&quot;</span>
+<span class="p">}</span>
 <span class="nx">useHTTPS</span> <span class="o">:</span> <span class="kc">false</span>
 <span class="nx">rpcUsers</span> <span class="o">:</span> <span class="p">[</span>
     <span class="p">{</span> <span class="nx">user</span><span class="o">=</span><span class="nx">user1</span><span class="p">,</span> <span class="nx">password</span><span class="o">=</span><span class="nx">letmein</span><span class="p">,</span> <span class="nx">permissions</span><span class="o">=</span><span class="p">[</span> <span class="nx">StartProtocol</span><span class="p">.</span><span class="nx">net</span><span class="p">.</span><span class="nx">corda</span><span class="p">.</span><span class="nx">protocols</span><span class="p">.</span><span class="nx">CashProtocol</span> <span class="p">]</span> <span class="p">}</span>
@@ -259,8 +274,7 @@ uses HOCON format see <a class="reference external" href="https://github.com/typ
 </pre></div>
 </div>
 <p>NetworkMapService plus Simple Notary configuration file.</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">basedir</span> <span class="p">:</span> <span class="s">&quot;./nameserver&quot;</span>
-<span class="n">myLegalName</span> <span class="p">:</span> <span class="s">&quot;Notary Service&quot;</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">myLegalName</span> <span class="p">:</span> <span class="s">&quot;Notary Service&quot;</span>
 <span class="n">nearestCity</span> <span class="p">:</span> <span class="s">&quot;London&quot;</span>
 <span class="n">keyStorePassword</span> <span class="p">:</span> <span class="s">&quot;cordacadevpass&quot;</span>
 <span class="n">trustStorePassword</span> <span class="p">:</span> <span class="s">&quot;trustpass&quot;</span>
@@ -276,74 +290,120 @@ uses HOCON format see <a class="reference external" href="https://github.com/typ
 </div>
 <div class="section" id="fields">
 <h2>Fields<a class="headerlink" href="#fields" title="Permalink to this headline">¶</a></h2>
+<p>The available config fields are listed below. <code class="docutils literal"><span class="pre">basedir</span></code> is available as a substitution value, containing the absolute
+path to the node&#8217;s base directory.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">basedir:</th><td class="field-body"><p class="first">This specifies the node workspace folder either as an absolute path, or relative to the current working directory. It can be overidden by the <code class="docutils literal"><span class="pre">--base-directory</span></code> command line option, in which case the the value in the file is ignored and a <code class="docutils literal"><span class="pre">node.conf</span></code> file is expected in that workspace directory as the configuration source.</p>
+<tr class="field-odd field"><th class="field-name">myLegalName:</th><td class="field-body"><p class="first">The legal identity of the node acts as a human readable alias to the node&#8217;s public key and several demos use
+this to lookup the NodeInfo.</p>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">myLegalName:</th><td class="field-body"><p class="first">The legal identity of the node acts as a human readable alias to the node&#8217;s public key and several demos use this to lookup the NodeInfo.</p>
+<tr class="field-even field"><th class="field-name">nearestCity:</th><td class="field-body"><p class="first">The location of the node as used to locate coordinates on the world map when running the network simulator
+demo. See <a class="reference internal" href="network-simulator.html"><span class="doc">Network Simulator</span></a>.</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">nearestCity:</th><td class="field-body"><p class="first">The location of the node as used to locate coordinates on the world map when running the network simulator demo. See <a class="reference internal" href="network-simulator.html"><span class="doc">Network Simulator</span></a>.</p>
+<tr class="field-odd field"><th class="field-name" colspan="2">keyStorePassword:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first">The password to unlock the KeyStore file (<code class="docutils literal"><span class="pre">&lt;workspace&gt;/certificates/sslkeystore.jks</span></code>) containing the
+node certificate and private key.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This is the non-secret value for the development certificates automatically generated during the first node run.
+Longer term these keys will be managed in secure hardware devices.</p>
+</div>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name" colspan="2">keyStorePassword:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first">The password to unlock the KeyStore file (<code class="docutils literal"><span class="pre">&lt;workspace&gt;/certificates/sslkeystore.jks</span></code>) containing the node certificate and private key.</p>
-<p>note:: This is the non-secret value for the development certificates automatically generated during the first node run. Longer term these keys will be managed in secure hardware devices.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name" colspan="2">trustStorePassword:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first">The password to unlock the Trust store file (<code class="docutils literal"><span class="pre">&lt;workspace&gt;/certificates/truststore.jks</span></code>) containing the R3 Corda root certificate. This is the non-secret value for the development certificates automatically generated during the first node run.</p>
+<tr class="field-even field"><th class="field-name" colspan="2">trustStorePassword:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first">The password to unlock the Trust store file (<code class="docutils literal"><span class="pre">&lt;workspace&gt;/certificates/truststore.jks</span></code>) containing
+the Corda network root certificate. This is the non-secret value for the development certificates automatically
+generated during the first node run.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">Longer term these keys will be managed in secure hardware devices.</p>
 </div>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name" colspan="2">dataSourceProperties:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first">This section is used to configure the jdbc connection and database driver used for the nodes persistence. Currently the defaults in <code class="docutils literal"><span class="pre">/node/src/main/resources/reference.conf</span></code> are as shown in the first example. This is currently the only configuration that has been tested, although in the future full support for other storage layers will be validated.</p>
+<tr class="field-odd field"><th class="field-name" colspan="2">dataSourceProperties:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first">This section is used to configure the jdbc connection and database driver used for the nodes persistence.
+Currently the defaults in <code class="docutils literal"><span class="pre">/node/src/main/resources/reference.conf</span></code> are as shown in the first example. This is currently
+the only configuration that has been tested, although in the future full support for other storage layers will be validated.</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">artemisAddress:</th><td class="field-body"><p class="first">The host and port on which the node is available for protocol operations over ArtemisMQ.</p>
+<tr class="field-even field"><th class="field-name">artemisAddress:</th><td class="field-body"><p class="first">The host and port on which the node is available for protocol operations over ArtemisMQ.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">In practice the ArtemisMQ messaging services bind to all local addresses on the specified port. However, note that the host is the included as the advertised entry in the NetworkMapService. As a result the value listed here must be externally accessible when running nodes across a cluster of machines.</p>
+<p class="last">In practice the ArtemisMQ messaging services bind to all local addresses on the specified port. However,
+note that the host is the included as the advertised entry in the NetworkMapService. As a result the value listed
+here must be externally accessible when running nodes across a cluster of machines.</p>
 </div>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name" colspan="2">messagingServerAddress:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first">The address of the ArtemisMQ broker instance. If not provided the node will run one locally.</p>
+<tr class="field-odd field"><th class="field-name" colspan="2">messagingServerAddress:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first">The address of the ArtemisMQ broker instance. If not provided the node will run one locally.</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">webAddress:</th><td class="field-body"><p class="first">The host and port on which the node is available for web operations.</p>
+<tr class="field-even field"><th class="field-name">webAddress:</th><td class="field-body"><p class="first">The host and port on which the bundled webserver will listen if it is started.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">If HTTPS is enabled then the browser security checks will require that the accessing url host name is one of either the machine name, fully qualified machine name, or server IP address to line up with the Subject Alternative Names contained within the development certificates. This is addition to requiring the <code class="docutils literal"><span class="pre">/config/dev/corda_dev_ca.cer</span></code> root certificate be installed as a Trusted CA.</p>
+<p class="last">If HTTPS is enabled then the browser security checks will require that the accessing url host name is one
+of either the machine name, fully qualified machine name, or server IP address to line up with the Subject Alternative
+Names contained within the development certificates. This is addition to requiring the <code class="docutils literal"><span class="pre">/config/dev/corda_dev_ca.cer</span></code>
+root certificate be installed as a Trusted CA.</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The driver will not automatically create a webserver instance, but the Cordformation will. If this field
+is present the web server will start.</p>
 </div>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name" colspan="2">extraAdvertisedServiceIds:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first">A list of ServiceType id strings to be advertised to the NetworkMapService and thus be available when other nodes query the NetworkMapCache for supporting nodes. This can also include plugin services loaded from .jar files in the plugins folder. Optionally, a custom advertised service name can be provided by appending it to the service type id: <code class="docutils literal"><span class="pre">&quot;corda.notary.validating|Notary</span> <span class="pre">A&quot;</span></code></p>
+<tr class="field-odd field"><th class="field-name" colspan="2">extraAdvertisedServiceIds:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first">A list of ServiceType id strings to be advertised to the NetworkMapService and thus be available
+when other nodes query the NetworkMapCache for supporting nodes. This can also include plugin services loaded from .jar
+files in the plugins folder. Optionally, a custom advertised service name can be provided by appending it to the service
+type id: <code class="docutils literal"><span class="pre">&quot;corda.notary.validating|Notary</span> <span class="pre">A&quot;</span></code></p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name" colspan="2">notaryNodeAddress:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first">The host and port to which to bind the embedded Raft server. Required only when running a distributed notary service. A group of Corda nodes can run a distributed notary service by each running an embedded Raft server and joining them to the same cluster to replicate the committed state log. Note that the Raft cluster uses a separate transport layer for communication that does not integrate with ArtemisMQ messaging services.</p>
+<tr class="field-even field"><th class="field-name" colspan="2">notaryNodeAddress:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first">The host and port to which to bind the embedded Raft server. Required only when running a distributed
+notary service. A group of Corda nodes can run a distributed notary service by each running an embedded Raft server and
+joining them to the same cluster to replicate the committed state log. Note that the Raft cluster uses a separate transport</p>
+<blockquote>
+<div><p>layer for communication that does not integrate with ArtemisMQ messaging services.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name" colspan="2">notaryClusterAddresses:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first">List of Raft cluster member addresses used to joining the cluster. At least one of the specified members must be active and be able to communicate with the cluster leader for joining. If empty, a new cluster will be bootstrapped. Required only when running a distributed notary service.</p>
+<tr class="field-odd field"><th class="field-name" colspan="2">notaryClusterAddresses:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first">List of Raft cluster member addresses used to join the cluster. At least one of the specified
+members must be active and be able to communicate with the cluster leader for joining. If empty, a new cluster will be
+bootstrapped. Required only when running a distributed notary service.</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name" colspan="2">networkMapAddress:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first">If <cite>null</cite>, or missing the node is declaring itself as the NetworkMapService host. Otherwise the configuration value is the remote HostAndPort string for the ArtemisMQ service on the hosting node.</p>
+<tr class="field-even field"><th class="field-name" colspan="2">networkMapService:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first">If <cite>null</cite>, or missing the node is declaring itself as the NetworkMapService host. Otherwise this is
+a config object with the details of the network map service:</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">address:</th><td class="field-body">Host and port string of the ArtemisMQ broker hosting the network map node</td>
+</tr>
+<tr class="field-even field"><th class="field-name">legalName:</th><td class="field-body">Legal name of the node. This is required as part of the TLS host verification process. The node will
+reject the connection to the network map service if it provides a TLS common name which doesn&#8217;t match with this value.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">useHTTPS:</th><td class="field-body"><p class="first">If false the node&#8217;s web server will be plain HTTP. If true the node will use the same certificate and private key from the <code class="docutils literal"><span class="pre">&lt;workspace&gt;/certificates/sslkeystore.jks</span></code> file as the ArtemisMQ port for HTTPS. If HTTPS is enabled then unencrypted HTTP traffic to the node&#8217;s <strong>webAddress</strong> port is not supported.</p>
+<tr class="field-odd field"><th class="field-name">useHTTPS:</th><td class="field-body"><p class="first">If false the node&#8217;s web server will be plain HTTP. If true the node will use the same certificate and private
+key from the <code class="docutils literal"><span class="pre">&lt;workspace&gt;/certificates/sslkeystore.jks</span></code> file as the ArtemisMQ port for HTTPS. If HTTPS is enabled
+then unencrypted HTTP traffic to the node&#8217;s <strong>webAddress</strong> port is not supported.</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">rpcUsers:</th><td class="field-body"><p class="first">A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
+<tr class="field-even field"><th class="field-name">rpcUsers:</th><td class="field-body"><p class="first">A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
 following fields:</p>
 <blockquote>
 <div><table class="docutils field-list" frame="void" rules="none">
@@ -362,11 +422,14 @@ following fields:</p>
 <p>If this field is absent or an empty list then RPC is effectively locked down.</p>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">devMode:</th><td class="field-body"><p class="first">This flag indicate if the node is running in development mode. On startup, if the keystore <code class="docutils literal"><span class="pre">&lt;workspace&gt;/certificates/sslkeystore.jks</span></code> does not exist, a developer keystore will be used if <code class="docutils literal"><span class="pre">devMode</span></code> is true. The node will exit if <code class="docutils literal"><span class="pre">devMode</span></code> is false and keystore does not exist.</p>
+<tr class="field-even field"><th class="field-name">devMode:</th><td class="field-body"><p class="first">This flag indicate if the node is running in development mode. On startup, if the keystore <code class="docutils literal"><span class="pre">&lt;workspace&gt;/certificates/sslkeystore.jks</span></code>
+does not exist, a developer keystore will be used if <code class="docutils literal"><span class="pre">devMode</span></code> is true. The node will exit if <code class="docutils literal"><span class="pre">devMode</span></code> is false
+and keystore does not exist.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name" colspan="2">certificateSigningService:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first last">Certificate Signing Server address. It is used by the certificate signing request utility to obtain SSL certificate. (See <a class="reference internal" href="permissioning.html"><span class="doc">Network permissioning</span></a> for more information.)</p>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first last">Certificate Signing Server address. It is used by the certificate signing request utility to
+obtain SSL certificate. (See <a class="reference internal" href="permissioning.html"><span class="doc">Network permissioning</span></a> for more information.)</p>
 </td>
 </tr>
 </tbody>

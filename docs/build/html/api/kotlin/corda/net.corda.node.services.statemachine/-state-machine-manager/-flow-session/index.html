@@ -1,0 +1,71 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>StateMachineManager.FlowSession - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.node.services.statemachine</a>&nbsp;/&nbsp;<a href="../index.html">StateMachineManager</a>&nbsp;/&nbsp;<a href=".">FlowSession</a><br/>
+<br/>
+<h1>FlowSession</h1>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">FlowSession</span></code>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">FlowSession</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.statemachine.StateMachineManager.FlowSession$<init>(net.corda.core.flows.FlowLogic((kotlin.Any)), kotlin.Long, net.corda.core.crypto.Party, net.corda.node.services.statemachine.StateMachineManager.FlowSessionState, kotlin.Boolean)/flow">flow</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.statemachine.StateMachineManager.FlowSession$<init>(net.corda.core.flows.FlowLogic((kotlin.Any)), kotlin.Long, net.corda.core.crypto.Party, net.corda.node.services.statemachine.StateMachineManager.FlowSessionState, kotlin.Boolean)/ourSessionId">ourSessionId</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.statemachine.StateMachineManager.FlowSession$<init>(net.corda.core.flows.FlowLogic((kotlin.Any)), kotlin.Long, net.corda.core.crypto.Party, net.corda.node.services.statemachine.StateMachineManager.FlowSessionState, kotlin.Boolean)/initiatingParty">initiatingParty</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.statemachine.StateMachineManager.FlowSession$<init>(net.corda.core.flows.FlowLogic((kotlin.Any)), kotlin.Long, net.corda.core.crypto.Party, net.corda.node.services.statemachine.StateMachineManager.FlowSessionState, kotlin.Boolean)/state">state</span><span class="symbol">:</span>&nbsp;<a href="../-flow-session-state/index.html"><span class="identifier">FlowSessionState</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.statemachine.StateMachineManager.FlowSession$<init>(net.corda.core.flows.FlowLogic((kotlin.Any)), kotlin.Long, net.corda.core.crypto.Party, net.corda.node.services.statemachine.StateMachineManager.FlowSessionState, kotlin.Boolean)/waitingForResponse">waitingForResponse</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="fiber.html">fiber</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">fiber</span><span class="symbol">: </span><a href="../../-flow-state-machine-impl/index.html"><span class="identifier">FlowStateMachineImpl</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="flow.html">flow</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">flow</span><span class="symbol">: </span><a href="../../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="initiating-party.html">initiatingParty</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">initiatingParty</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="our-session-id.html">ourSessionId</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">ourSessionId</span><span class="symbol">: </span><span class="identifier">Long</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="received-messages.html">receivedMessages</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">receivedMessages</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/ConcurrentLinkedQueue.html"><span class="identifier">ConcurrentLinkedQueue</span></a><span class="symbol">&lt;</span><a href="../../-received-session-message/index.html"><span class="identifier">ReceivedSessionMessage</span></a><span class="symbol">&lt;</span><a href="../../-existing-session-message/index.html"><span class="identifier">ExistingSessionMessage</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="state.html">state</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">state</span><span class="symbol">: </span><a href="../-flow-session-state/index.html"><span class="identifier">FlowSessionState</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="waiting-for-response.html">waitingForResponse</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">waitingForResponse</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,5 +1,5 @@
-Clauses key concepts
-====================
+Clauses
+=======
 
 Basic clause structure
 ----------------------
@@ -34,10 +34,10 @@ is no different than normal contract verification but using clauses it's split i
 When writing a contract you need to override the contract's ``verify`` function which should call ``verifyClause``. See: :ref:`verify_ref`.
 
 .. note:: A clause ``verify`` function returns the set of processed commands, at the end of ``verifyClause`` execution
-    there is a check if all of transaction's commands were matched. If not then an exception is raised. This is done to
+    there is a check if all of transaction's commands were matched. If not, then an exception is raised. This is done to
     enforce that spurious commands cannot be included in a transaction, ensuring that the transaction is as clear as
     possible. As an example imagine a transaction with two commands: ``Move`` and ``Issue`` included, with verification written
-    using ``FirstComposition`` on clauses that require single command set. Thus only one of transaction's commands will match
+    using ``FirstOf`` on clauses that require single command set. Thus only one of transaction's commands will match
     leaving the second unprocessed. It should raise an error - we want to ensure that commands set is minimal to simplify
     analysis of intent of a transaction.
 
@@ -47,14 +47,14 @@ An example ``verify`` from ``Obligation`` contract:
 
    .. sourcecode:: kotlin
 
-        override fun verify(tx: TransactionForContract) = verifyClause<Commands>(tx, FirstComposition<ContractState, Commands, Unit>(
+        override fun verify(tx: TransactionForContract) = verifyClause<Commands>(tx, FirstOf<ContractState, Commands, Unit>(
             Clauses.Net<Commands, P>(),
             Clauses.Group<P>()
         ), tx.commands.select<Obligation.Commands>())
 
 It takes transaction to be verified, and passes it along with a top-level clause and commands to the ``verifyClause``
-function. As you can see above we have used ``FirstComposition`` which is a special type of clause, which extends the
-``CompositeClause`` abstract class (in that particular case, it ensures that either ``Net`` or ``Group`` will run - for explanation see `FirstComposition`_).
+function. As you can see above we have used ``FirstOf`` which is a special type of clause, which extends the
+``CompositeClause`` abstract class (in that particular case, it ensures that either ``Net`` or ``Group`` will run - for explanation see `FirstOf`_).
 It's a type of clause that adds support for encapsulating multiple clauses and defines common behaviour for that composition.
 There is also a ``GroupClauseVerifier`` special clause, which specifies how to group transaction input/output states
 together and passes them to adequate clause for further processing.
@@ -66,37 +66,37 @@ One of the most important concepts of clauses - composition clauses which extend
 providing a range of ways of assembling clauses together. They define a logic of verification execution specifying which clauses
 will be run.
 
-AllComposition
-~~~~~~~~~~~~~~
+AllOf
+~~~~~
 
 **Description**
 
 Composes a number of clauses, such that all of the clauses must run for verification to pass.
 
-.. image:: resources/allCompositionChart.png
+.. image:: resources/allOfChart.png
 
 Short description:
 
-- ``AllComposition`` holds clauses *Cl1,..,Cl5*.
-- Check if all clauses that compose ``AllComposition`` have associated commands in a command set - if not, verification fails.
+- ``AllOf`` holds clauses *Cl1,..,Cl5*.
+- Check if all clauses that compose ``AllOf`` have associated commands in a command set - if not, verification fails.
 - After successful check runs verification logic specific for every clause *Cl1,..,Cl5* from that composition.
 
 **Usage**
 
 See code in `GroupClauseVerifier`_.
 
-AnyComposition
-~~~~~~~~~~~~~~
+AnyOf
+~~~~~
 
 **Description**
 
-Composes a number of clauses, such that 0 or more of the clauses can be run.
+Composes a number of clauses, such that 1 or more of the clauses can be run.
 
-.. image:: resources/anyCompositionChart.png
+.. image:: resources/anyOfChart.png
 
 Short description:
 
-- Checks if zero or more clauses that compose AnyComposition have associated commands in a command set.
+- Checks if one or more clauses that compose AnyOf have associated commands in a command set.
 - After success runs verification logic specific for every *matched* (in this case *Cl2, Cl4, Cl5*) clause from composition.
 
 **Usage**
@@ -108,7 +108,7 @@ Example from ``CommercialPaper.kt``:
     .. sourcecode:: kotlin
 
         class Group : GroupClauseVerifier<State, Commands, Issued<Terms>>(
-            AnyComposition(
+            AnyOf(
                 Redeem(),
                 Move(),
                 Issue())) {
@@ -116,14 +116,14 @@ Example from ``CommercialPaper.kt``:
                     = tx.groupStates<State, Issued<Terms>> { it.token }
         }
 
-FirstComposition
-~~~~~~~~~~~~~~~~
+FirstOf
+~~~~~~~
 
 **Description**
 
 Composes a number of clauses, such that the first match is run, and it errors if none is run.
 
-.. image:: resources/firstCompositionChart.png
+.. image:: resources/firstOfChart.png
 
 Short description:
 
@@ -168,13 +168,13 @@ grouped input and output states with a grouping key used for each group. Example
    .. sourcecode:: kotlin
 
         class Group<P> : GroupClauseVerifier<State<P>, Commands, Issued<Terms<P>>>(
-            AllComposition(
+            AllOf(
                 NoZeroSizedOutputs<State<P>, Commands, Terms<P>>(),
-                FirstComposition(
+                FirstOf(
                     SetLifecycle<P>(),
-                    AllComposition(
+                    AllOf(
                         VerifyLifecycle<State<P>, Commands, Issued<Terms<P>>, P>(),
-                        FirstComposition(
+                        FirstOf(
                             Settle<P>(),
                             Issue(),
                             ConserveAmount()

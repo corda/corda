@@ -17,8 +17,11 @@ sealed class TransactionType {
      *
      * Note: Presence of _signatures_ is not checked, only the public keys to be signed for.
      */
+    @Throws(TransactionVerificationException::class)
     fun verify(tx: LedgerTransaction) {
         require(tx.notary != null || tx.timestamp == null) { "Transactions with timestamps must be notarised." }
+        val duplicates = detectDuplicateInputs(tx)
+        if (duplicates.isNotEmpty()) throw TransactionVerificationException.DuplicateInputStates(tx, duplicates)
         val missing = verifySigners(tx)
         if (missing.isNotEmpty()) throw TransactionVerificationException.SignersMissing(tx, missing.toList())
         verifyTransaction(tx)
@@ -33,6 +36,19 @@ sealed class TransactionType {
         val missing = requiredKeys - tx.mustSign
 
         return missing
+    }
+
+    /** Check that the inputs are unique. */
+    private fun detectDuplicateInputs(tx: LedgerTransaction): Set<StateRef> {
+        var seenInputs = emptySet<StateRef>()
+        var duplicates = emptySet<StateRef>()
+        tx.inputs.forEach { state ->
+            if (seenInputs.contains(state.ref)) {
+                duplicates += state.ref
+            }
+            seenInputs += state.ref
+        }
+        return duplicates
     }
 
     /**
@@ -74,14 +90,14 @@ sealed class TransactionType {
 
         private fun verifyEncumbrances(tx: LedgerTransaction) {
             // Validate that all encumbrances exist within the set of input states.
-            val encumberedInputs = tx.inputs.filter { it.state.data.encumbrance != null }
+            val encumberedInputs = tx.inputs.filter { it.state.encumbrance != null }
             encumberedInputs.forEach { encumberedInput ->
                 val encumbranceStateExists = tx.inputs.any {
-                    it.ref.txhash == encumberedInput.ref.txhash && it.ref.index == encumberedInput.state.data.encumbrance
+                    it.ref.txhash == encumberedInput.ref.txhash && it.ref.index == encumberedInput.state.encumbrance
                 }
                 if (!encumbranceStateExists) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
-                            tx, encumberedInput.state.data.encumbrance!!,
+                            tx, encumberedInput.state.encumbrance!!,
                             TransactionVerificationException.Direction.INPUT
                     )
                 }
@@ -90,7 +106,7 @@ sealed class TransactionType {
             // Check that, in the outputs, an encumbered state does not refer to itself as the encumbrance,
             // and that the number of outputs can contain the encumbrance.
             for ((i, output) in tx.outputs.withIndex()) {
-                val encumbranceIndex = output.data.encumbrance ?: continue
+                val encumbranceIndex = output.encumbrance ?: continue
                 if (encumbranceIndex == i || encumbranceIndex >= tx.outputs.size) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
                             tx, encumbranceIndex,

@@ -22,6 +22,8 @@ import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockIdentityService
+import net.i2p.crypto.eddsa.KeyPairGenerator
+import java.security.SecureRandom
 import java.time.LocalDate
 import java.util.*
 
@@ -30,7 +32,7 @@ import java.util.*
  * A simulation in which banks execute interest rate swaps with each other, including the fixing events.
  */
 class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(networkSendManuallyPumped, runAsync, latencyInjector) {
-    val om = net.corda.node.utilities.JsonSupport.createDefaultMapper(MockIdentityService(network.identities))
+    val om = net.corda.node.utilities.JsonSupport.createInMemoryMapper(MockIdentityService(network.identities))
 
     init {
         currentDateAndTime = LocalDate.of(2016, 3, 8).atStartOfDay()
@@ -120,13 +122,13 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         @Suppress("UNCHECKED_CAST")
         val acceptorTx = node2.initiateSingleShotFlow(Instigator::class) { Acceptor(it) }.flatMap {
-            (it.fsm as FlowStateMachine<SignedTransaction>).resultFuture
+            (it.stateMachine as FlowStateMachine<SignedTransaction>).resultFuture
         }
 
         showProgressFor(listOf(node1, node2))
         showConsensusFor(listOf(node1, node2, regulators[0]))
 
-        val instigator = Instigator(node2.info.legalIdentity, AutoOffer(notary.info.notaryIdentity, irs), node1.keyPair!!)
+        val instigator = Instigator(node2.info.legalIdentity, AutoOffer(notary.info.notaryIdentity, irs), node1.services.legalIdentityKey)
         val instigatorTx: ListenableFuture<SignedTransaction> = node1.services.startFlow(instigator).resultFuture
 
         return Futures.allAsList(instigatorTx, acceptorTx).flatMap { instigatorTx }

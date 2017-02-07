@@ -46,6 +46,14 @@ through to the server where the corresponding server-side observables are also u
    a warning printed to the logs and the proxy will be closed for you. But don't rely on this, as garbage
    collection is non-deterministic.
 
+Futures
+-------
+
+A method can also return a ``ListenableFuture`` in its object graph and it will be treated in a similar manner to
+observables, including needing to mark the RPC with the ``@RPCReturnsObservables`` annotation. Unlike for an observable,
+once the single value (or an exception) has been received all server-side resources will be released automatically. Calling
+the ``cancel`` method on the future will unsubscribe it from any future value and release any resources.
+
 Versioning
 ----------
 
@@ -92,5 +100,5 @@ This will require some familiarity with Kryo.  An example is shown in :doc:`tuto
 .. warning:: We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin
    customisation point will either go away completely or change.
 
-.. _CordaRPCClient: api/net.corda.client/-corda-r-p-c-client/index.html
-.. _CordaRPCOps: api/net.corda.node.services.messaging/-corda-r-p-c-ops/index.html
+.. _CordaRPCClient: api/kotlin/corda/net.corda.client/-corda-r-p-c-client/index.html
+.. _CordaRPCOps: api/kotlin/corda/net.corda.node.services.messaging/-corda-r-p-c-ops/index.html

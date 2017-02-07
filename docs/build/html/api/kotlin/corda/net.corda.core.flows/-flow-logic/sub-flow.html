@@ -1,0 +1,28 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>FlowLogic.subFlow - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.flows</a>&nbsp;/&nbsp;<a href="index.html">FlowLogic</a>&nbsp;/&nbsp;<a href=".">subFlow</a><br/>
+<br/>
+<h1>subFlow</h1>
+<a name="net.corda.core.flows.FlowLogic$subFlow(net.corda.core.flows.FlowLogic((net.corda.core.flows.FlowLogic.subFlow.R)), kotlin.Boolean)"></a>
+<code><span class="identifier">@Suspendable</span> <span class="identifier">@JvmOverloads</span> <span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span> <span class="identifier">subFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$subFlow(net.corda.core.flows.FlowLogic((net.corda.core.flows.FlowLogic.subFlow.R)), kotlin.Boolean)/subLogic">subLogic</span><span class="symbol">:</span>&nbsp;<a href="index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$subFlow(net.corda.core.flows.FlowLogic((net.corda.core.flows.FlowLogic.subFlow.R)), kotlin.Boolean)/shareParentSessions">shareParentSessions</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">R</span></code>
+<p>Invokes the given subflow. This function returns once the subflow completes successfully with the result
+returned by that subflows <a href="call.html">call</a> method. If the subflow has a progress tracker, it is attached to the
+current step in this flow's progress tracker.</p>
+<h3>Parameters</h3>
+
+<p><a name="shareParentSessions"></a>
+<code>shareParentSessions</code> - In certain situations the need arises to use the same sessions the parent flow has
+already established. However this also prevents the subflow from creating new sessions with those parties.
+For this reason the default value is false.
+<h3>Exceptions</h3>
+
+<p><a name="FlowException"></a>
+<code>FlowException</code> - This is either thrown by <a href="sub-flow.html#net.corda.core.flows.FlowLogic$subFlow(net.corda.core.flows.FlowLogic((net.corda.core.flows.FlowLogic.subFlow.R)), kotlin.Boolean)/subLogic">subLogic</a> itself or propagated from any of the remote
+<a href="index.html">FlowLogic</a>s it communicated with. A subflow retry can be done by catching this exception.
+</BODY>
+</HTML>

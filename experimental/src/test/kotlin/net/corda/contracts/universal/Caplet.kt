@@ -4,6 +4,7 @@ import net.corda.core.contracts.FixOf
 import net.corda.core.contracts.Tenor
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.transaction
+import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
@@ -19,8 +20,8 @@ class Caplet {
 
     val contract = arrange {
         actions {
-            (acmeCorp or highStreetBank).may {
-                "exercise".anytime() {
+            (acmeCorp or highStreetBank) may {
+                "exercise" anytime {
                     val floating = interest(notional, "act/365", fix("LIBOR", tradeDate, Tenor("6M")), "2016-04-01", "2016-10-01")
                     val fixed = interest(notional, "act/365", 0.5.bd, "2016-04-01", "2016-10-01")
                     highStreetBank.owes(acmeCorp, (floating - fixed).plus(), currency)
@@ -31,8 +32,8 @@ class Caplet {
 
     val contractFixed = arrange {
         actions {
-            (acmeCorp or highStreetBank).may {
-                "exercise".anytime() {
+            (acmeCorp or highStreetBank) may {
+                "exercise" anytime {
                     val floating = interest(notional, "act/365", 1.0.bd, "2016-04-01", "2016-10-01")
                     val fixed = interest(notional, "act/365", 0.5.bd, "2016-04-01", "2016-10-01")
                     highStreetBank.owes(acmeCorp, (floating - fixed).plus(), currency)
@@ -130,5 +131,15 @@ class Caplet {
             this.verifies()
         }
     }
+
+    @Test @Ignore
+    fun `pretty print`() {
+        println ( prettyPrint(contract) )
+
+        println ( prettyPrint(contractFixed) )
+
+        println ( prettyPrint(contractFinal) )
+    }
+
 
 }

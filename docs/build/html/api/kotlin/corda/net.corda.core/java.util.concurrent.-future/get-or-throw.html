@@ -1,0 +1,15 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>getOrThrow - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core</a>&nbsp;/&nbsp;<a href="index.html">java.util.concurrent.Future</a>&nbsp;/&nbsp;<a href=".">getOrThrow</a><br/>
+<br/>
+<h1>getOrThrow</h1>
+<a name="net.corda.core$getOrThrow(java.util.concurrent.Future((net.corda.core.getOrThrow.T)), java.time.Duration)"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">getOrThrow</span><span class="symbol">(</span><span class="identifier" id="net.corda.core$getOrThrow(java.util.concurrent.Future((net.corda.core.getOrThrow.T)), java.time.Duration)/timeout">timeout</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code>
+<p>Same as <a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html#get()">Future.get</a> but with a more descriptive name, and doesn't throw <a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/ExecutionException.html">ExecutionException</a>, instead throwing its cause</p>
+</BODY>
+</HTML>

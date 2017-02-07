@@ -52,9 +52,6 @@ sourceSets {
 
 dependencies {
     compile project(':finance')
-    testCompile project(':test-utils')
-    testCompile project(':client')
-
     compile "com.google.code.findbugs:jsr305:3.0.1"
 
     // Log4J: logging framework (with SLF4J bindings)
@@ -66,10 +63,10 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
-    compile "com.google.guava:guava:19.0"
+    compile "com.google.guava:guava:$guava_version"
 
     // JOpt: for command line flags.
-    compile "net.sf.jopt-simple:jopt-simple:5.0.2"
+    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
     // Artemis: for reliable p2p message queues.
     compile "org.apache.activemq:artemis-server:${artemis_version}"
@@ -77,7 +74,7 @@ dependencies {
     runtime "org.apache.activemq:artemis-amqp-protocol:${artemis_version}"
 
     // JAnsi: for drawing things to the terminal in nicely coloured ways.
-    compile "org.fusesource.jansi:jansi:1.13"
+    compile "org.fusesource.jansi:jansi:$jansi_version"
 
     // GraphStream: For visualisation
     testCompile "org.graphstream:gs-core:1.3"
@@ -95,7 +92,7 @@ dependencies {
     compile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
     compile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
     compile "javax.servlet:javax.servlet-api:3.1.0"
-    compile "org.jolokia:jolokia-agent-war:2.0.0-M1"
+    compile "org.jolokia:jolokia-agent-war:$jolokia_version"
     compile "commons-fileupload:commons-fileupload:1.3.2"
 
     // Jersey for JAX-RS implementation for use in Jetty
@@ -121,26 +118,30 @@ dependencies {
     compile "com.google.jimfs:jimfs:1.1"
 
     // TypeSafe Config: for simple and human friendly config files.
-    compile "com.typesafe:config:1.3.0"
+    compile "com.typesafe:config:$typesafe_config_version"
 
     // Unit testing helpers.
-    testCompile 'junit:junit:4.12'
+    testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
-
-    testCompile 'com.pholser:junit-quickcheck-core:0.6'
+    testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
+    testCompile "com.nhaarman:mockito-kotlin:1.1.0"
+    testCompile project(':test-utils')
+    testCompile project(':client')
+    testCompile project(':core')
 
     // For H2 database support in persistence
-    compile "com.h2database:h2:1.4.192"
+    compile "com.h2database:h2:1.4.193"
 
     // Exposed: Kotlin SQL library - under evaluation
+    // TODO: Upgrade to Exposed 0.7 (has API changes)
     compile "org.jetbrains.exposed:exposed:0.5.0"
 
     // SQL connection pooling library
-    compile "com.zaxxer:HikariCP:2.4.7"
+    compile "com.zaxxer:HikariCP:2.5.1"
 
     // Hibernate: an object relational mapper for writing state objects to the database automatically.
-    compile "org.hibernate:hibernate-core:5.2.2.Final"
-    compile "org.hibernate:hibernate-java8:5.2.2.Final"
+    compile "org.hibernate:hibernate-core:$hibernate_version"
+    compile "org.hibernate:hibernate-java8:$hibernate_version"
 
     // Capsule is a library for building independently executable fat JARs.
     compile 'co.paralleluniverse:capsule:1.0.3'
@@ -150,10 +151,11 @@ dependencies {
     compile 'io.atomix.copycat:copycat-server:1.1.4'
     compile 'io.atomix.catalyst:catalyst-netty:1.1.1'
 
-    // Integration test helpers
-    integrationTestCompile 'junit:junit:4.12'
+    // OkHTTP: Simple HTTP library.
+    compile "com.squareup.okhttp3:okhttp:$okhttp_version"
 
-    testCompile "com.nhaarman:mockito-kotlin:0.6.1"
+    // Integration test helpers
+    integrationTestCompile "junit:junit:$junit_version"
 }
 
 task integrationTest(type: Test) {

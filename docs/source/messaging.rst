@@ -38,8 +38,7 @@ The network map currently supports:
 * Looking up nodes by service
 * Looking up node for a party
 * Suggesting a node providing a specific service, based on suitability for a contract and parties, for example suggesting
-  an appropriate interest rates oracle for a interest rate swap contract. Currently no recommendation logic is in place.
-  The code simply picks the first registered node that supports the required service.
+  an appropriate interest rates oracle for an interest rate swap contract. Currently no recommendation logic is in place.
 
 Message queues
 --------------
@@ -57,6 +56,14 @@ for maintenance and other minor purposes.
    The queue name ends in the base 58 encoding of the peer's identity key. There is at most one queue per peer. The broker
    creates a bridge from this queue to the peer's ``p2p.inbound`` queue, using the network map service to lookup the
    peer's network address.
+
+:``internal.services.$identity``:
+   These are private queues the node may use to route messages to services. The queue name ends in the base 58 encoding
+   of the service's owning identity key. There is at most one queue per service identity (but note that any one service
+   may have several identities). The broker creates bridges to all nodes in the network advertising the service in
+   question. When a session is initiated with a service counterparty the handshake is pushed onto this queue, and a
+   corresponding bridge is used to forward the message to an advertising peer's p2p queue. Once a peer is picked the
+   session continues on as normal.
 
 :``internal.networkmap``:
    This is another private queue just for the node which functions in a similar manner to the ``internal.peers.*`` queues
@@ -99,6 +106,9 @@ the validated user is the username itself and the RPC framework uses this to det
 
 .. note:: ``Party`` lookup is currently done by the legal name which isn't guaranteed to be unique. A future version will
    use the full X.500 name as it can provide additional structures for uniqueness.
+
+The broker also does host verification when connecting to another peer. It checks that the TLS certificate common name
+matches with the advertised legal name from the network map service.
 
 Messaging types
 ---------------

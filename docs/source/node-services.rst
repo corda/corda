@@ -53,7 +53,7 @@ and remote ``Parties``. It is automatically populated from the
 ``NetworkMapCache`` updates and is used when translating ``CompositeKey`` 
 exposed in transactions into fully populated ``Party`` identities. This 
 service is also used in the default JSON mapping of parties in the web 
-server, thus allowing the party names to be used to refer to other node 
+server, thus allowing the party names to be used to refer to other nodes' 
 legal identities. In the future the Identity service will be made 
 persistent and extended to allow anonymised session keys to be used in 
 flows where the well-known ``CompositeKey`` of nodes need to be hidden 
@@ -346,3 +346,11 @@ external legacy systems by insertion of unpacked data into existing
 tables. To enable these features the contract state must implement the 
 ``QueryableState`` interface to define the mappings. 
 
+Node Web Server
+---------------
+
+A web server comes bundled with the node by default, but is not started
+automatically. This web server exposes both RPC backed API calls and
+static content serving. The web server is not automatically started,
+you must explicitly start it in the node driver or define a web port
+in your `Cordformation`_ configuration.

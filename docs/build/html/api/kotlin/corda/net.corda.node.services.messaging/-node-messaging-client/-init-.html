@@ -1,0 +1,31 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NodeMessagingClient.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href="index.html">NodeMessagingClient</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">NodeMessagingClient</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.crypto.CompositeKey, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, com.google.common.util.concurrent.ListenableFuture((kotlin.Unit)))/config">config</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.crypto.CompositeKey, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, com.google.common.util.concurrent.ListenableFuture((kotlin.Unit)))/serverHostPort">serverHostPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">HostAndPort</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.crypto.CompositeKey, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, com.google.common.util.concurrent.ListenableFuture((kotlin.Unit)))/myIdentity">myIdentity</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.crypto.CompositeKey, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, com.google.common.util.concurrent.ListenableFuture((kotlin.Unit)))/nodeExecutor">nodeExecutor</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.utilities/-affinity-executor/index.html"><span class="identifier">AffinityExecutor</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.crypto.CompositeKey, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, com.google.common.util.concurrent.ListenableFuture((kotlin.Unit)))/database">database</span><span class="symbol">:</span>&nbsp;<span class="identifier">Database</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.NodeMessagingClient$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.crypto.CompositeKey, net.corda.node.utilities.AffinityExecutor, org.jetbrains.exposed.sql.Database, com.google.common.util.concurrent.ListenableFuture((kotlin.Unit)))/networkMapRegistrationFuture">networkMapRegistrationFuture</span><span class="symbol">:</span>&nbsp;<span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>This class implements the <a href="../../net.corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+Artemis is a message queue broker and here we run a client connecting to the specified broker instance
+<a href="../-artemis-messaging-server/index.html">ArtemisMessagingServer</a>. It's primarily concerned with peer-to-peer messaging.</p>
+<p>Message handlers are run on the provided <a href="../../net.corda.node.utilities/-affinity-executor/index.html">AffinityExecutor</a> synchronously, that is, the Artemis callback threads
+are blocked until the handler is scheduled and completed. This allows backpressure to propagate from the given
+executor through into Artemis and from there, back through to senders.</p>
+<p>An implementation of <a href="../../net.corda.core.messaging/-corda-r-p-c-ops/index.html">CordaRPCOps</a> can be provided. If given, clients using the CordaMQClient RPC library can
+invoke methods on the provided implementation. There is more documentation on this in the docsite and the
+CordaRPCClient class.</p>
+<h3>Parameters</h3>
+
+<p><a name="serverHostPort"></a>
+<code>serverHostPort</code> - The address of the broker instance to connect to (might be running in the same process)
+<p><a name="myIdentity"></a>
+<code>myIdentity</code> - Either the public key to be used as the ArtemisMQ address and queue name for the node globally, or null to indicate
+that this is a NetworkMapService node which will be bound globally to the name "networkmap"
+<p><a name="nodeExecutor"></a>
+<code>nodeExecutor</code> - An executor to run received message tasks upon.
+</BODY>
+</HTML>

@@ -4,8 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.unwrap
 import net.corda.flows.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.flows.FetchDataFlow.HashNotFound
 import java.util.*
@@ -30,14 +32,15 @@ abstract class FetchDataFlow<T : NamedByHash, in W : Any>(
         protected val requests: Set<SecureHash>,
         protected val otherSide: Party) : FlowLogic<FetchDataFlow.Result<T>>() {
 
-    open class BadAnswer : Exception()
-    class HashNotFound(val requested: SecureHash) : BadAnswer()
-    class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : BadAnswer()
+    class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : IllegalArgumentException()
+    class DownloadedVsRequestedSizeMismatch(val requested: Int, val got: Int) : IllegalArgumentException()
+    class HashNotFound(val requested: SecureHash) : FlowException()
 
     data class Request(val hashes: List<SecureHash>)
     data class Result<out T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
 
     @Suspendable
+    @Throws(HashNotFound::class)
     override fun call(): Result<T> {
         // Load the items we have from disk and figure out which we're missing.
         val (fromDisk, toFetch) = loadWhatWeHave()
@@ -48,7 +51,7 @@ abstract class FetchDataFlow<T : NamedByHash, in W : Any>(
             logger.trace("Requesting ${toFetch.size} dependency(s) for verification")
 
             // TODO: Support "large message" response streaming so response sizes are not limited by RAM.
-            val maybeItems = sendAndReceive<ArrayList<W?>>(otherSide, Request(toFetch))
+            val maybeItems = sendAndReceive<ArrayList<W>>(otherSide, Request(toFetch))
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
             val downloaded = validateFetchResponse(maybeItems, toFetch)
             maybeWriteToDisk(downloaded)
@@ -78,22 +81,19 @@ abstract class FetchDataFlow<T : NamedByHash, in W : Any>(
     @Suppress("UNCHECKED_CAST")
     protected open fun convert(wire: W): T = wire as T
 
-    private fun validateFetchResponse(maybeItems: UntrustworthyData<ArrayList<W?>>,
-                                      requests: List<SecureHash>): List<T> =
-            maybeItems.unwrap { response ->
-                if (response.size != requests.size)
-                    throw BadAnswer()
-                for ((index, resp) in response.withIndex()) {
-                    if (resp == null) throw HashNotFound(requests[index])
-                }
-                val answers = response.requireNoNulls().map { convert(it) }
-                // Check transactions actually hash to what we requested, if this fails the remote node
-                // is a malicious flow violator or buggy.
-                for ((index, item) in answers.withIndex())
-                    if (item.id != requests[index])
-                        throw DownloadedVsRequestedDataMismatch(requests[index], item.id)
-
-                answers
+    private fun validateFetchResponse(maybeItems: UntrustworthyData<ArrayList<W>>,
+                                      requests: List<SecureHash>): List<T> {
+        return maybeItems.unwrap { response ->
+            if (response.size != requests.size)
+                throw DownloadedVsRequestedSizeMismatch(requests.size, response.size)
+            val answers = response.map { convert(it) }
+            // Check transactions actually hash to what we requested, if this fails the remote node
+            // is a malicious flow violator or buggy.
+            for ((index, item) in answers.withIndex()) {
+                if (item.id != requests[index])
+                    throw DownloadedVsRequestedDataMismatch(requests[index], item.id)
             }
-
+            answers
+        }
+    }
 }

@@ -4,24 +4,28 @@ package net.corda.testing
 
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import com.typesafe.config.Config
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.node.internal.AbstractNode
+import net.corda.node.internal.NetworkMapInfo
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.services.statemachine.StateMachineManager.Change
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.testing.node.MockIdentityService
 import net.corda.testing.node.MockServices
-import rx.Subscriber
+import net.corda.testing.node.makeTestDataSourceProperties
 import java.net.ServerSocket
+import java.nio.file.Path
 import java.security.KeyPair
+import java.util.*
 import kotlin.reflect.KClass
 
 /**
@@ -66,6 +70,11 @@ val CHARLIE: Party get() = Party("Charlie", CHARLIE_PUBKEY)
 
 val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP: Party get() = Party("MiniCorp", MINI_CORP_PUBKEY)
+
+val BOC_KEY: KeyPair by lazy { generateKeyPair() }
+val BOC_PUBKEY: CompositeKey get() = BOC_KEY.public.composite
+val BOC: Party get() = Party("BankOfCorda", BOC_PUBKEY)
+val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 
@@ -131,26 +140,21 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
 inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
         markerClass: KClass<out FlowLogic<*>>,
         noinline flowFactory: (Party) -> P): ListenableFuture<P> {
+    val future = smm.changes.filter { it.addOrRemove == ADD && it.logic is P }.map { it.logic as P }.toFuture()
     services.registerFlowInitiator(markerClass, flowFactory)
-
-    val future = SettableFuture.create<P>()
-
-    val subscriber = object : Subscriber<Change>() {
-        override fun onNext(change: Change) {
-            if (change.addOrRemove == ADD) {
-                unsubscribe()
-                future.set(change.logic as P)
-            }
-        }
-        override fun onError(e: Throwable) {
-            future.setException(e)
-        }
-        override fun onCompleted() {}
-    }
-
-    smm.changes.subscribe(subscriber)
-
     return future
 }
+
+data class TestNodeConfiguration(
+        override val baseDirectory: Path,
+        override val myLegalName: String,
+        override val networkMapService: NetworkMapInfo?,
+        override val keyStorePassword: String = "cordacadevpass",
+        override val trustStorePassword: String = "trustpass",
+        override val dataSourceProperties: Properties = makeTestDataSourceProperties(myLegalName),
+        override val nearestCity: String = "Null Island",
+        override val emailAddress: String = "",
+        override val exportJMXto: String = "",
+        override val devMode: Boolean = true) : NodeConfiguration
 
 fun Config.getHostAndPort(name: String) = HostAndPort.fromString(getString(name))

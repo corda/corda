@@ -1,3 +1,7 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
 
 
 <!DOCTYPE html>
@@ -31,8 +35,8 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Building Transactions" href="tutorial-building-transactions.html"/>
-        <link rel="prev" title="Integration Test Tutorial" href="tutorial-integration-testing.html"/> 
+        <link rel="next" title="Building transactions" href="tutorial-building-transactions.html"/>
+        <link rel="prev" title="Integration testing" href="tutorial-integration-testing.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -77,7 +81,12 @@
 
           
 <br>
-<a href="api/index.html">API reference</a>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
 
         </div>
 
@@ -89,26 +98,26 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
-<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Getting set up: troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Key concepts</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses key concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-ecosystem.html">Corda ecosystem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-core-types.html">Core types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-financial-model.html">Financial model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-flow-framework.html">Flow framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-consensus-notaries.html">Consensus and notaries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-vault.html">Vault</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-security-model.html">Security model</a></li>
 </ul>
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapps Background</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html#gradle-plugins-for-cordapps">Gradle plugins for CorDapps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp Template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#running-the-sample-cordapp">Running the Sample CorDapp</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html#using-the-sample-cordapp">Using the sample CorDapp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -127,27 +136,26 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration Test Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Client RPC API tutorial</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#registering-classes-from-your-cordapp-with-rpc-kryo">Registering classes from your CorDapp with RPC Kryo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#security">Security</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building Transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#implementing-an-oracle-with-continuously-varying-data">Implementing an oracle with continuously varying data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="oracles.html#using-an-oracle">Using an oracle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="initial-margin-agreement.html">Initial margin agreements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Component library</span></p>
 <ul>
@@ -157,14 +165,15 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">Introduction - What is a corda network?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html#setting-up-your-own-network">Setting up your own network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
-<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Glossary</span></p>
 <ul>
@@ -222,32 +231,25 @@ simple visualisation on top. For an explanation on how the RPC works
 see <a class="reference internal" href="clientrpc.html"><span class="doc">Client RPC</span></a>.</p>
 <p>We start off by connecting to the node itself. For the purposes of the tutorial we will use the Driver to start up a notary and a node that issues/exits and moves Cash around for herself. To authenticate we will use the certificates of the nodes directly.</p>
 <p>Note how we configure the node to create a user that has permission to start the CashFlow.</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>enum class PrintOrVisualise {
-    Print,
-    Visualise
-}
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">enum</span> <span class="k">class</span> <span class="nc">PrintOrVisualise</span> <span class="p">{</span>
+    <span class="n">Print</span><span class="p">,</span>
+    <span class="n">Visualise</span>
+<span class="p">}</span>
 
-fun main(args: Array&lt;String&gt;) {
-    if (args.size &lt; 1) {
-        throw IllegalArgumentException(&quot;Usage: &lt;binary&gt; [Print|Visualise]&quot;)
-    }
-    val printOrVisualise = PrintOrVisualise.valueOf(args[0])
+<span class="k">fun</span> <span class="nf">main</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="n">Array</span><span class="p">&lt;</span><span class="n">String</span><span class="p">&gt;)</span> <span class="p">{</span>
+    <span class="n">require</span><span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="n">isNotEmpty</span><span class="p">())</span> <span class="p">{</span> <span class="s">&quot;Usage: &lt;binary&gt; [Print|Visualise]&quot;</span> <span class="p">}</span>
+    <span class="k">val</span> <span class="py">printOrVisualise</span> <span class="p">=</span> <span class="n">PrintOrVisualise</span><span class="p">.</span><span class="n">valueOf</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="m">0</span><span class="p">])</span>
 
-    val baseDirectory = Paths.get(&quot;build/rpc-api-tutorial&quot;)
-    val user = User(&quot;user&quot;, &quot;password&quot;, permissions = setOf(startFlowPermission&lt;CashFlow&gt;()))
+    <span class="k">val</span> <span class="py">baseDirectory</span> <span class="p">=</span> <span class="n">Paths</span><span class="p">.</span><span class="k">get</span><span class="p">(</span><span class="s">&quot;build/rpc-api-tutorial&quot;</span><span class="p">)</span>
+    <span class="k">val</span> <span class="py">user</span> <span class="p">=</span> <span class="n">User</span><span class="p">(</span><span class="s">&quot;user&quot;</span><span class="p">,</span> <span class="s">&quot;password&quot;</span><span class="p">,</span> <span class="n">permissions</span> <span class="p">=</span> <span class="n">setOf</span><span class="p">(</span><span class="n">startFlowPermission</span><span class="p">&lt;</span><span class="n">CashFlow</span><span class="p">&gt;()))</span>
 
-    driver(driverDirectory = baseDirectory) {
-        startNode(&quot;Notary&quot;, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
-        val node = startNode(&quot;Alice&quot;, rpcUsers = listOf(user)).get()
-        val sslConfig = object : NodeSSLConfiguration {
-            override val certificatesPath = baseDirectory / &quot;Alice&quot; / &quot;certificates&quot;
-            override val keyStorePassword = &quot;cordacadevpass&quot;
-            override val trustStorePassword = &quot;trustpass&quot;
-        }
+    <span class="n">driver</span><span class="p">(</span><span class="n">driverDirectory</span> <span class="p">=</span> <span class="n">baseDirectory</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">startNode</span><span class="p">(</span><span class="s">&quot;Notary&quot;</span><span class="p">,</span> <span class="n">advertisedServices</span> <span class="p">=</span> <span class="n">setOf</span><span class="p">(</span><span class="n">ServiceInfo</span><span class="p">(</span><span class="n">ValidatingNotaryService</span><span class="p">.</span><span class="n">type</span><span class="p">)))</span>
+        <span class="k">val</span> <span class="py">node</span> <span class="p">=</span> <span class="n">startNode</span><span class="p">(</span><span class="s">&quot;Alice&quot;</span><span class="p">,</span> <span class="n">rpcUsers</span> <span class="p">=</span> <span class="n">listOf</span><span class="p">(</span><span class="n">user</span><span class="p">)).</span><span class="k">get</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>Now we can connect to the node itself using a valid RPC login. We login using the configured user.</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        <span class="k">val</span> <span class="py">client</span> <span class="p">=</span> <span class="n">CordaRPCClient</span><span class="p">(</span><span class="n">FullNodeConfiguration</span><span class="p">(</span><span class="n">node</span><span class="p">.</span><span class="n">config</span><span class="p">).</span><span class="n">artemisAddress</span><span class="p">,</span> <span class="n">sslConfig</span><span class="p">)</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        <span class="k">val</span> <span class="py">client</span> <span class="p">=</span> <span class="n">node</span><span class="p">.</span><span class="n">rpcClientToNode</span><span class="p">()</span>
         <span class="n">client</span><span class="p">.</span><span class="n">start</span><span class="p">(</span><span class="s">&quot;user&quot;</span><span class="p">,</span> <span class="s">&quot;password&quot;</span><span class="p">)</span>
         <span class="k">val</span> <span class="py">proxy</span> <span class="p">=</span> <span class="n">client</span><span class="p">.</span><span class="n">proxy</span><span class="p">()</span>
 
@@ -257,60 +259,6 @@ fun main(args: Array&lt;String&gt;) {
 </pre></div>
 </div>
 <p>We start generating transactions in a different thread (<code class="docutils literal"><span class="pre">generateTransactions</span></code> to be defined later) using <code class="docutils literal"><span class="pre">proxy</span></code>, which exposes the full RPC interface of the node:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>    /**
-     * Returns a pair of currently in-progress state machine infos and an observable of future state machine adds/removes.
-     */
-    @RPCReturnsObservables
-    fun stateMachinesAndUpdates(): Pair&lt;List&lt;StateMachineInfo&gt;, Observable&lt;StateMachineUpdate&gt;&gt;
-
-    /**
-     * Returns a pair of head states in the vault and an observable of future updates to the vault.
-     */
-    @RPCReturnsObservables
-    fun vaultAndUpdates(): Pair&lt;List&lt;StateAndRef&lt;ContractState&gt;&gt;, Observable&lt;Vault.Update&gt;&gt;
-
-    /**
-     * Returns a pair of all recorded transactions and an observable of future recorded ones.
-     */
-    @RPCReturnsObservables
-    fun verifiedTransactions(): Pair&lt;List&lt;SignedTransaction&gt;, Observable&lt;SignedTransaction&gt;&gt;
-
-    /**
-     * Returns a snapshot list of existing state machine id - recorded transaction hash mappings, and a stream of future
-     * such mappings as well.
-     */
-    @RPCReturnsObservables
-    fun stateMachineRecordedTransactionMapping(): Pair&lt;List&lt;StateMachineTransactionMapping&gt;, Observable&lt;StateMachineTransactionMapping&gt;&gt;
-
-    /**
-     * Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.
-     */
-    @RPCReturnsObservables
-    fun networkMapUpdates(): Pair&lt;List&lt;NodeInfo&gt;, Observable&lt;NetworkMapCache.MapChange&gt;&gt;
-
-    /**
-     * Start the given flow with the given arguments, returning an [Observable] with a single observation of the
-     * result of running the flow.
-     */
-    @RPCReturnsObservables
-    fun &lt;T : Any&gt; startFlowDynamic(logicType: Class&lt;out FlowLogic&lt;T&gt;&gt;, vararg args: Any?): FlowHandle&lt;T&gt;
-
-    /**
-     * Returns Node&#39;s identity, assuming this will not change while the node is running.
-     */
-    fun nodeIdentity(): NodeInfo
-
-    /*
-     * Add note(s) to an existing Vault transaction
-     */
-    fun addVaultTransactionNote(txnId: SecureHash, txnNote: String)
-
-    /*
-     * Retrieve existing note(s) for a given Vault transaction
-     */
-    fun getVaultTransactionNotes(txnId: SecureHash): Iterable&lt;String&gt;
-</pre></div>
-</div>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">This API is evolving and will continue to grow as new functionality and features added to Corda are made available to RPC clients.</p>
@@ -418,7 +366,7 @@ requests or responses with the <cite>Kryo</cite> instance RPC uses.  Here&#8217;
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>See more on plugins in <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">CorDapps Background</span></a>.</p>
+<p>See more on plugins in <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">CorDapp basics</span></a>.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin
@@ -466,7 +414,7 @@ Currently the only permission type defined is <em>StartFlow</em>, which defines 
 </pre></div>
 </div>
 <p>See more on security in <a class="reference internal" href="secure-coding-guidelines.html"><span class="doc">Secure coding guidelines</span></a>,  node configuration in <a class="reference internal" href="corda-configuration-file.html"><span class="doc">Node configuration</span></a> and
-Cordformation in <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">CorDapps Background</span></a></p>
+Cordformation in <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">CorDapp basics</span></a></p>
 </div>
 </div>
 
@@ -477,10 +425,10 @@ Cordformation in <a class="reference internal" href="creating-a-cordapp.html"><s
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="tutorial-building-transactions.html" class="btn btn-neutral float-right" title="Building Transactions" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="tutorial-building-transactions.html" class="btn btn-neutral float-right" title="Building transactions" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="tutorial-integration-testing.html" class="btn btn-neutral" title="Integration Test Tutorial" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="tutorial-integration-testing.html" class="btn btn-neutral" title="Integration testing" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

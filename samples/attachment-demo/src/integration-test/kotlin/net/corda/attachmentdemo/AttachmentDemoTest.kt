@@ -1,37 +1,39 @@
 package net.corda.attachmentdemo
 
+import com.google.common.util.concurrent.Futures
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.driver.driver
+import net.corda.node.services.User
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.testing.getHostAndPort
 import org.junit.Test
-import kotlin.concurrent.thread
+import java.util.concurrent.CompletableFuture
 
 class AttachmentDemoTest {
     @Test fun `runs attachment demo`() {
         driver(dsl = {
-            startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.Companion.type)))
-            val nodeAFuture = startNode("Bank A")
-            val nodeBApiAddr = startNode("Bank B").getOrThrow().config.getHostAndPort("webAddress")
+            val demoUser = listOf(User("demo", "demo", setOf("StartFlow.net.corda.flows.FinalityFlow")))
+            val (nodeA, nodeB) = Futures.allAsList(
+                startNode("Bank A", rpcUsers = demoUser),
+                startNode("Bank B", rpcUsers = demoUser),
+                startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.Companion.type)))
+            ).getOrThrow()
 
-            val nodeA = nodeAFuture.getOrThrow()
-            val nodeAApiAddr = nodeA.config.getHostAndPort("webAddress")
+            val senderThread = CompletableFuture.supplyAsync {
+                nodeA.rpcClientToNode().use(demoUser[0].username, demoUser[0].password) {
+                    sender(this)
+                }
+            }.exceptionally { it.printStackTrace() }
 
-            var recipientReturn: Boolean? = null
-            var senderReturn: Boolean? = null
-            val recipientThread = thread {
-                recipientReturn = AttachmentDemoClientApi(nodeAApiAddr).runRecipient()
-            }
-            val senderThread = thread {
-                val counterpartyKey = nodeA.nodeInfo.legalIdentity.owningKey.toBase58String()
-                senderReturn = AttachmentDemoClientApi(nodeBApiAddr).runSender(counterpartyKey)
-            }
-            recipientThread.join()
-            senderThread.join()
+            val recipientThread = CompletableFuture.supplyAsync{
+                nodeB.rpcClientToNode().use(demoUser[0].username, demoUser[0].password) {
+                    recipient(this)
+                }
+            }.exceptionally { it.printStackTrace() }
 
-            assert(recipientReturn == true)
-            assert(senderReturn == true)
+            // Just check they finish and don't throw any exceptions.
+            senderThread.get()
+            recipientThread.get()
         }, isDebug = true)
     }
 }

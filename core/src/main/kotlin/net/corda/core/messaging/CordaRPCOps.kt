@@ -1,5 +1,6 @@
 package net.corda.core.messaging
 
+import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.CompositeKey
@@ -23,8 +24,12 @@ data class StateMachineInfo(
 )
 
 sealed class StateMachineUpdate(val id: StateMachineRunId) {
-    class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate(stateMachineInfo.id)
-    class Removed(id: StateMachineRunId) : StateMachineUpdate(id)
+    class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate(stateMachineInfo.id) {
+        override fun toString() = "Added($id, ${stateMachineInfo.flowLogicClassName})"
+    }
+    class Removed(id: StateMachineRunId) : StateMachineUpdate(id) {
+        override fun toString() = "Removed($id)"
+    }
 }
 
 /**
@@ -98,10 +103,21 @@ interface CordaRPCOps : RPCOps {
      */
     fun uploadAttachment(jar: InputStream): SecureHash
 
+    @Suppress("DEPRECATION")
+    @Deprecated("This service will be removed in a future milestone")
+    fun uploadFile(dataType: String, name: String?, file: InputStream): String
+
     /**
-     * Returns the node-local current time.
+     * Returns the node's current time.
      */
     fun currentNodeTime(): Instant
+
+    /**
+     * Returns a [ListenableFuture] which completes when the node has registered wih the network map service. It can also
+     * complete with an exception if it is unable to.
+     */
+    @RPCReturnsObservables
+    fun waitUntilRegisteredWithNetworkMap(): ListenableFuture<Unit>
 
     // TODO These need rethinking. Instead of these direct calls we should have a way of replicating a subset of
     // the node's state locally and query that directly.
@@ -165,12 +181,10 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow
  *
  * @param id The started state machine's ID.
  * @param progress The stream of progress tracker events.
- * @param returnValue An Observable emitting a single event containing the flow's return value.
- *     To block on this value:
- *       val returnValue = rpc.startFlow(::MyFlow).returnValue.toBlocking().first()
+ * @param returnValue A [ListenableFuture] of the flow's return value.
  */
 data class FlowHandle<A>(
         val id: StateMachineRunId,
         val progress: Observable<String>,
-        val returnValue: Observable<A>
+        val returnValue: ListenableFuture<A>
 )

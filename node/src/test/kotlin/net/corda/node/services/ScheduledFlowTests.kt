@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.CordaPluginRegistry
@@ -20,7 +19,6 @@ import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import java.security.PublicKey
 import java.time.Instant
@@ -100,7 +98,6 @@ class ScheduledFlowTests {
         net = MockNetwork(threadPerNode = true)
         notaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
-                keyPair = DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
         nodeA = net.createNode(notaryNode.info.address, start = false)
         nodeB = net.createNode(notaryNode.info.address, start = false)
@@ -128,10 +125,7 @@ class ScheduledFlowTests {
         assertTrue("Must be processed", stateFromB.state.data.processed)
     }
 
-    @Ignore
     @Test
-    // TODO I need to investigate why we get very very occasional SessionInit failures
-    // during notarisation.
     fun `Run a whole batch of scheduled flows`() {
         val N = 100
         for (i in 0..N - 1) {

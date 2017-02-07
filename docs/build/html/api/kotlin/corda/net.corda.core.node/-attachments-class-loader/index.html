@@ -1,0 +1,67 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>AttachmentsClassLoader - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.node</a>&nbsp;/&nbsp;<a href=".">AttachmentsClassLoader</a><br/>
+<br/>
+<h1>AttachmentsClassLoader</h1>
+<code><span class="keyword">class </span><span class="identifier">AttachmentsClassLoader</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/SecureClassLoader.html"><span class="identifier">SecureClassLoader</span></a></code>
+<p>A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
+need to provide JAR streams, and so could be fetched from a database, local disk, etc. Constructing an
+AttachmentsClassLoader is somewhat expensive, as every attachment is scanned to ensure that there are no overlapping
+file paths.</p>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-overlapping-attachments/index.html">OverlappingAttachments</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">OverlappingAttachments</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">AttachmentsClassLoader</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.AttachmentsClassLoader$<init>(kotlin.collections.List((net.corda.core.contracts.Attachment)), java.lang.ClassLoader)/attachments">attachments</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-attachment/index.html"><span class="identifier">Attachment</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.AttachmentsClassLoader$<init>(kotlin.collections.List((net.corda.core.contracts.Attachment)), java.lang.ClassLoader)/parent">parent</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/ClassLoader.html"><span class="identifier">ClassLoader</span></a>&nbsp;<span class="symbol">=</span>&nbsp;ClassLoader.getSystemClassLoader()<span class="symbol">)</span></code>
+<p>A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
+need to provide JAR streams, and so could be fetched from a database, local disk, etc. Constructing an
+AttachmentsClassLoader is somewhat expensive, as every attachment is scanned to ensure that there are no overlapping
+file paths.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="find-class.html">findClass</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">findClass</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.AttachmentsClassLoader$findClass(kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="find-resource.html">findResource</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">findResource</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.AttachmentsClassLoader$findResource(kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/net/URL.html"><span class="identifier">URL</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="get-resource-as-stream.html">getResourceAsStream</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getResourceAsStream</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.AttachmentsClassLoader$getResourceAsStream(kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">?</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

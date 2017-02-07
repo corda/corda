@@ -1,0 +1,58 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>FungibleAsset.Commands.Exit - corda</title>
+<link rel="stylesheet" href="../../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href="../../index.html">FungibleAsset</a>&nbsp;/&nbsp;<a href="../index.html">Commands</a>&nbsp;/&nbsp;<a href=".">Exit</a><br/>
+<br/>
+<h1>Exit</h1>
+<code><span class="keyword">interface </span><span class="identifier">Exit</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../index.html"><span class="identifier">Commands</span></a></code>
+<p>A command stating that money has been withdrawn from the shared ledger and is now accounted for
+in some other way.</p>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="amount.html">amount</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">amount</span><span class="symbol">: </span><a href="../../../-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../../-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../../../net.corda.contracts.asset/-cash/-commands/-exit/index.html">Exit</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Exit</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../../net.corda.contracts.asset/-cash/-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">, </span><span class="identifier">Exit</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code>
+<p>A command stating that money has been withdrawn from the shared ledger and is now accounted for
+in some other way.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../../../net.corda.contracts.asset/-commodity-contract/-commands/-exit/index.html">Exit</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Exit</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../../net.corda.contracts.asset/-commodity-contract/-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">, </span><span class="identifier">Exit</span><span class="symbol">&lt;</span><a href="../../../-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code>
+<p>A command stating that money has been withdrawn from the shared ledger and is now accounted for
+in some other way.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../../../net.corda.contracts.asset/-obligation/-commands/-exit/index.html">Exit</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Exit</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../../net.corda.contracts.asset/-obligation/-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">, </span><span class="identifier">Exit</span><span class="symbol">&lt;</span><a href="../../../../net.corda.contracts.asset/-obligation/-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>A command stating that the debt is being released by the beneficiary. Normally would indicate
+either settlement outside of the ledger, or that the obligor is unable to pay.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

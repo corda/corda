@@ -1,0 +1,18 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>DistributedImmutableMap.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.transactions</a>&nbsp;/&nbsp;<a href="index.html">DistributedImmutableMap</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">DistributedImmutableMap</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.transactions.DistributedImmutableMap$<init>(org.jetbrains.exposed.sql.Database, kotlin.String)/db">db</span><span class="symbol">:</span>&nbsp;<span class="identifier">Database</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.transactions.DistributedImmutableMap$<init>(org.jetbrains.exposed.sql.Database, kotlin.String)/tableName">tableName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span></code>
+<p>A distributed map state machine that doesn't allow overriding values. The state machine is replicated
+across a Copycat Raft cluster.</p>
+<p>The map contents are backed by a JDBC table. State re-synchronisation is achieved by periodically persisting snapshots
+to disk, and sharing them across the cluster. A new node joining the cluster will have to obtain and install a snapshot
+containing the entire JDBC table contents.</p>
+</BODY>
+</HTML>

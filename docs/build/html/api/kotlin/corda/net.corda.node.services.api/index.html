@@ -1,0 +1,95 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>net.corda.node.services.api - corda</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.node.services.api</a><br/>
+<br/>
+<h2>Package net.corda.node.services.api</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-abstract-node-service/index.html">AbstractNodeService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractNodeService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code>
+<p>Abstract superclass for services that a node can host, which provides helper functions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-accepts-file-upload/index.html">AcceptsFileUpload</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">AcceptsFileUpload</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.node.services/-file-uploader/index.html"><span class="identifier">FileUploader</span></a></code>
+<p>A service that implements AcceptsFileUpload can have new binary data provided to it via an HTTP upload.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-checkpoint/index.html">Checkpoint</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Checkpoint</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-checkpoint-storage/index.html">CheckpointStorage</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">CheckpointStorage</span></code>
+<p>Thread-safe storage of fiber checkpoints.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-messaging-service-builder/index.html">MessagingServiceBuilder</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MessagingServiceBuilder</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a><span class="symbol">&gt;</span></code>
+<p>This class lets you start up a <a href="../net.corda.core.messaging/-messaging-service/index.html">MessagingService</a>. Its purpose is to stop you from getting access to the methods
+on the messaging service interface until you have successfully started up the system. One of these objects should
+be the only way to obtain a reference to a <a href="../net.corda.core.messaging/-messaging-service/index.html">MessagingService</a>. Startup may be a slow process: some implementations
+may let you cast the returned future to an object that lets you get status info.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-messaging-service-internal/index.html">MessagingServiceInternal</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MessagingServiceInternal</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-monitoring-service/index.html">MonitoringService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">MonitoringService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code>
+<p>Provides access to various metrics and ways to notify monitoring services of things, for sysadmin purposes.
+This is not an interface because it is too lightweight to bother mocking out.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-regulator-service/index.html">RegulatorService</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">RegulatorService</span></code>
+<p>Placeholder interface for regulator services.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-schema-service/index.html">SchemaService</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">SchemaService</span></code>
+<p>A configuration and customisation point for Object Relational Mapping of contract state objects.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-service-hub-internal/index.html">ServiceHubInternal</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ServiceHubInternal</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.node/-plugin-service-hub/index.html"><span class="identifier">PluginServiceHub</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

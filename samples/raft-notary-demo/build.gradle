@@ -42,7 +42,7 @@ configurations {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    testCompile group: 'junit', name: 'junit', version: '4.11'
+    testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
@@ -77,7 +77,7 @@ publishing {
 task generateNotaryIdentity(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = "net.corda.node.utilities.ServiceIdentityGeneratorKt"
-    def nodeDirs = ["$deployTo/notary1", "$deployTo/notary2", "$deployTo/notary3"].join(",")
+    def nodeDirs = ["$deployTo/Notary1", "$deployTo/Notary2", "$deployTo/Notary3"].join(",")
     args = [nodeDirs, notaryType, notaryName]
 }
 
@@ -85,54 +85,53 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
     directory deployTo
     networkMap "Notary 1"
     node {
+        name "Party"
+        nearestCity "London"
+        advertisedServices = []
+        artemisPort 10002
+        webPort 10003
+        cordapps = []
+        rpcUsers = [['user': "demo", 'password': "demo", 'permissions': [
+                'StartFlow.net.corda.notarydemo.flows.DummyIssueAndMove',
+                'StartFlow.net.corda.flows.NotaryFlow$Client'
+        ]]]
+    }
+    node {
+        name "Counterparty"
+        nearestCity "New York"
+        advertisedServices = []
+        artemisPort 10004
+        webPort 10005
+        cordapps = []
+    }
+    node {
         name "Notary 1"
-        dirName "notary1"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        artemisPort 10002
-        webPort 10009
+        artemisPort 10007
+        webPort 10008
         cordapps = []
         notaryNodePort 11002
     }
     node {
         name "Notary 2"
-        dirName "notary2"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        artemisPort 10004
-        webPort 10005
+        artemisPort 10010
+        webPort 10011
         cordapps = []
         notaryNodePort 11004
         notaryClusterAddresses = ["localhost:11002"]
     }
     node {
         name "Notary 3"
-        dirName "notary3"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        artemisPort 10006
-        webPort 10007
+        artemisPort 10013
+        webPort 10014
         cordapps = []
         notaryNodePort 11006
         notaryClusterAddresses = ["localhost:11002"]
-    }
-    node {
-        name "Party"
-        dirName "party"
-        nearestCity "London"
-        advertisedServices = []
-        artemisPort 10008
-        webPort 10003
-        cordapps = []
-    }
-    node {
-        name "Counterparty"
-        dirName "counterparty"
-        nearestCity "New York"
-        advertisedServices = []
-        artemisPort 10010
-        webPort 10011
-        cordapps = []
     }
 }
 

@@ -1,0 +1,23 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>MappedSchema.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.schemas</a>&nbsp;/&nbsp;<a href="index.html">MappedSchema</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">MappedSchema</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.schemas.MappedSchema$<init>(java.lang.Class((kotlin.Any)), kotlin.Int, kotlin.collections.Iterable((java.lang.Class((kotlin.Any)))))/schemaFamily">schemaFamily</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.schemas.MappedSchema$<init>(java.lang.Class((kotlin.Any)), kotlin.Int, kotlin.collections.Iterable((java.lang.Class((kotlin.Any)))))/version">version</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.schemas.MappedSchema$<init>(java.lang.Class((kotlin.Any)), kotlin.Int, kotlin.collections.Iterable((java.lang.Class((kotlin.Any)))))/mappedTypes">mappedTypes</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span></code>
+<p>A database schema that might be configured for this node.  As well as a name and version for identifying the schema,
+also list the classes that may be used in the generated object graph in order to configure the ORM tool.</p>
+<h3>Parameters</h3>
+
+<p><a name="schemaFamily"></a>
+<code>schemaFamily</code> - A class to fully qualify the name of a schema family (i.e. excludes version)
+<p><a name="version"></a>
+<code>version</code> - The version number of this instance within the family.
+<p><a name="mappedTypes"></a>
+<code>mappedTypes</code> - The JPA entity classes that the ORM layer needs to be configure with for this schema.
+</BODY>
+</HTML>

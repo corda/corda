@@ -1,0 +1,72 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>Obligation.Terms - corda</title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.contracts.asset</a>&nbsp;/&nbsp;<a href="../index.html">Obligation</a>&nbsp;/&nbsp;<a href=".">Terms</a><br/>
+<br/>
+<h1>Terms</h1>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Terms</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code>
+<p>Subset of state, containing the elements specified when issuing a new settlement contract.</p>
+<h3>Parameters</h3>
+
+<p><a name="P"></a>
+<code>P</code> - the product the obligation is for payment of.
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">Terms</span><span class="symbol">(</span><span class="identifier" id="net.corda.contracts.asset.Obligation.Terms$<init>(net.corda.core.utilities.NonEmptySet((net.corda.core.crypto.SecureHash)), net.corda.core.utilities.NonEmptySet((net.corda.core.contracts.Issued((net.corda.contracts.asset.Obligation.Terms.P)))), java.time.Instant, java.time.Duration)/acceptableContracts">acceptableContracts</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.utilities/-non-empty-set/index.html"><span class="identifier">NonEmptySet</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.asset.Obligation.Terms$<init>(net.corda.core.utilities.NonEmptySet((net.corda.core.crypto.SecureHash)), net.corda.core.utilities.NonEmptySet((net.corda.core.contracts.Issued((net.corda.contracts.asset.Obligation.Terms.P)))), java.time.Instant, java.time.Duration)/acceptableIssuedProducts">acceptableIssuedProducts</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.utilities/-non-empty-set/index.html"><span class="identifier">NonEmptySet</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.asset.Obligation.Terms$<init>(net.corda.core.utilities.NonEmptySet((net.corda.core.crypto.SecureHash)), net.corda.core.utilities.NonEmptySet((net.corda.core.contracts.Issued((net.corda.contracts.asset.Obligation.Terms.P)))), java.time.Instant, java.time.Duration)/dueBefore">dueBefore</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.contracts.asset.Obligation.Terms$<init>(net.corda.core.utilities.NonEmptySet((net.corda.core.crypto.SecureHash)), net.corda.core.utilities.NonEmptySet((net.corda.core.contracts.Issued((net.corda.contracts.asset.Obligation.Terms.P)))), java.time.Instant, java.time.Duration)/timeTolerance">timeTolerance</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Duration.ofSeconds(30)<span class="symbol">)</span></code>
+<p>Subset of state, containing the elements specified when issuing a new settlement contract.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="acceptable-contracts.html">acceptableContracts</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">acceptableContracts</span><span class="symbol">: </span><a href="../../../net.corda.core.utilities/-non-empty-set/index.html"><span class="identifier">NonEmptySet</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span></code>
+<p>The hash of the asset contract we're willing to accept in payment for this debt.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="acceptable-issued-products.html">acceptableIssuedProducts</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">acceptableIssuedProducts</span><span class="symbol">: </span><a href="../../../net.corda.core.utilities/-non-empty-set/index.html"><span class="identifier">NonEmptySet</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>The parties whose assets we are willing to accept in payment for this debt.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="due-before.html">dueBefore</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">dueBefore</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a></code>
+<p>When the contract must be settled by.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="product.html">product</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">product</span><span class="symbol">: </span><span class="identifier">P</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="time-tolerance.html">timeTolerance</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">timeTolerance</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,0 +1,27 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>SignedTransaction.toLedgerTransaction - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.transactions</a>&nbsp;/&nbsp;<a href="index.html">SignedTransaction</a>&nbsp;/&nbsp;<a href=".">toLedgerTransaction</a><br/>
+<br/>
+<h1>toLedgerTransaction</h1>
+<a name="net.corda.core.transactions.SignedTransaction$toLedgerTransaction(net.corda.core.node.ServiceHub)"></a>
+<code><span class="keyword">fun </span><span class="identifier">toLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions.SignedTransaction$toLedgerTransaction(net.corda.core.node.ServiceHub)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a></code>
+<p>Calls <a href="verify-signatures.html">verifySignatures</a> to check all required signatures are present, and then calls
+<a href="../-wire-transaction/to-ledger-transaction.html">WireTransaction.toLedgerTransaction</a> with the passed in <a href="../../net.corda.core.node/-service-hub/index.html">ServiceHub</a> to resolve the dependencies,
+returning an unverified LedgerTransaction.</p>
+<h3>Exceptions</h3>
+
+<p><a name="FileNotFoundException"></a>
+<code>FileNotFoundException</code> - if a required attachment was not found in storage.
+<p><a name="TransactionResolutionException"></a>
+<code>TransactionResolutionException</code> - if an input points to a transaction not found in storage.
+<p><a name="SignatureException"></a>
+<code>SignatureException</code> - if any signatures were invalid or unrecognised
+<p><a name="SignaturesMissingException"></a>
+<code>SignaturesMissingException</code> - if any signatures that should have been present are missing.
+</BODY>
+</HTML>

@@ -35,8 +35,8 @@ rate value becoming available and then the curved arrow indicates to which perio
 
 .. image:: contract-irs.png
 
-Two days (by convention, although this can be modified), before the value date (ie the start of the swap) in the red
-period the reference rate is observed from an oracle and fixed in the instance at 1.1%. At the end of the accrual period,
+Two days (by convention, although this can be modified) before the value date (i.e. at the start of the swap) in the red
+period, the reference rate is observed from an oracle and fixed - in this instance, at 1.1%. At the end of the accrual period,
 there is an obligation from the floating leg payer of 1.1% * notional amount * days in the accrual period / 360.
 (Also note that the result of "days in the accrual period / 360" is also known as the day count factor, although other
 conventions are allowed and will be supported). This amount is then paid at a determined time at the end of the accrual period.
@@ -57,7 +57,7 @@ To see the minimum dataset required for the creation of an IRS, refer to ``IRSTe
 function ``IRSTests.createDummyIRS()``. Implicitly, when the agree function is called, the floating leg and fixed
 leg payment schedules are created (more details below) and can be queried.
 
-Once an IRS hase been agreed, then the the only valid operation is to apply a fixing on one of the entries in the
+Once an IRS has been agreed, then the only valid operation is to apply a fixing on one of the entries in the
 ``Calculation.floatingLegPaymentSchedule`` map. Fixes do not have to be applied in order (although it does make most
 sense to do them so).
 
@@ -86,7 +86,7 @@ option), a termination date (and optional adjustment), the day count basis for d
 and calendar for the payment as well as the accrual adjustment options.
 
 The ``FixedLeg`` contains all the details for the ``CommonLeg`` as well as payer details, the rate the leg is fixed at
-and the date roll convention (ie what to do if the calculated date lands on a bank holiday or weekend).
+and the date roll convention (i.e. what to do if the calculated date lands on a bank holiday or weekend).
 
 The ``FloatingLeg`` contains all the details for the CommonLeg and payer details, roll convention, the fixing roll
 convention, which day of the month the reset is calculated, the frequency period of the fixing, the fixing calendar and

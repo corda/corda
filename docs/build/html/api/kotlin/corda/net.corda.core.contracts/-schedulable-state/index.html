@@ -1,0 +1,62 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>SchedulableState - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href=".">SchedulableState</a><br/>
+<br/>
+<h1>SchedulableState</h1>
+<code><span class="keyword">interface </span><span class="identifier">SchedulableState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a></code>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-contract-state/contract.html">contract</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">contract</span><span class="symbol">: </span><a href="../-contract/index.html"><span class="identifier">Contract</span></a></code>
+<p>An instance of the contract class that will verify this state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-contract-state/participants.html">participants</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">participants</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span></code>
+<p>A <emph>participant</emph> is any party that is able to consume this state in a valid transaction.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="next-scheduled-activity.html">nextScheduledActivity</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">nextScheduledActivity</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.contracts.SchedulableState$nextScheduledActivity(net.corda.core.contracts.StateRef, net.corda.core.flows.FlowLogicRefFactory)/thisStateRef">thisStateRef</span><span class="symbol">:</span>&nbsp;<a href="../-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.contracts.SchedulableState$nextScheduledActivity(net.corda.core.contracts.StateRef, net.corda.core.flows.FlowLogicRefFactory)/flowLogicRefFactory">flowLogicRefFactory</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic-ref-factory/index.html"><span class="identifier">FlowLogicRefFactory</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-scheduled-activity/index.html"><span class="identifier">ScheduledActivity</span></a><span class="symbol">?</span></code>
+<p>Indicate whether there is some activity to be performed at some future point in time with respect to this
+<a href="../-contract-state/index.html">ContractState</a>, what that activity is and at what point in time it should be initiated.
+This can be used to implement deadlines for payment or processing of financial instruments according to a schedule.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../hash.html">hash</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">.</span><span class="identifier">hash</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code>
+<p>Returns the SHA-256 hash of the serialised contents of this state (not cached!)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

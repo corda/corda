@@ -1,0 +1,42 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TTxState.contract - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">com.cordatest</a>&nbsp;/&nbsp;<a href="index.html">TTxState</a>&nbsp;/&nbsp;<a href=".">contract</a><br/>
+<br/>
+<h1>contract</h1>
+<a name="com.cordatest.TTxState$contract"></a>
+<code><span class="keyword">val </span><span class="identifier">contract</span><span class="symbol">: </span><a href="../../net.corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code>
+<p>Overrides <a href="../../net.corda.core.contracts/-contract-state/contract.html">ContractState.contract</a></p>
+<p>An instance of the contract class that will verify this state.</p>
+<h1>Discussion</h1>
+<p>This field is not the final design, it's just a piece of temporary scaffolding. Once the contract sandbox is
+further along, this field will become a description of which attachments are acceptable for defining the
+contract.</p>
+<p>Recall that an attachment is a zip file that can be referenced from any transaction. The contents of the
+attachments are merged together and cannot define any overlapping files, thus for any given transaction there
+is a miniature file system in which each file can be precisely mapped to the defining attachment.</p>
+<p>Attachments may contain many things (data files, legal documents, etc) but mostly they contain JVM bytecode.
+The class files inside define not only <a href="../../net.corda.core.contracts/-contract/index.html">Contract</a> implementations but also the classes that define the states.
+Within the rest of a transaction, user-providable components are referenced by name only.</p>
+<p>This means that a smart contract in Corda does two things:</p>
+<ol><li>Define the data structures that compose the ledger (the states)</li>
+<li>Define the rules for updating those structures</li>
+</ol>
+<p>The first is merely a utility role ... in theory contract code could manually parse byte streams by hand.
+The second is vital to the integrity of the ledger. So this field needs to be able to express constraints like:</p>
+<ul><li>Only attachment 733c350f396a727655be1363c06635ba355036bd54a5ed6e594fd0b5d05f42f6 may be used with this state.</li>
+<li>Any attachment signed by public key 2d1ce0e330c52b8055258d776c40 may be used with this state.</li>
+<li>Attachments (1, 2, 3) may all be used with this state.</li>
+</ul>
+<p>and so on. In this way it becomes possible for the business logic governing a state to be evolved, if the
+constraints are flexible enough.</p>
+<p>Because contract classes often also define utilities that generate relevant transactions, and because attachments
+cannot know their own hashes, we will have to provide various utilities to assist with obtaining the right
+code constraints from within the contract code itself.</p>
+<p>TODO: Implement the above description. See COR-226</p>
+</BODY>
+</HTML>

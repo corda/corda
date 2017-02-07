@@ -3,13 +3,18 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.SecureHash
 import net.corda.core.node.ServiceHub
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
 import java.util.*
 
+/**
+ * A unique identifier for a single state machine run, valid across node restarts. Note that a single run always
+ * has at least one flow, but that flow may also invoke sub-flows: they all share the same run id.
+ */
 data class StateMachineRunId private constructor(val uuid: UUID) {
-
     companion object {
         fun createRandom(): StateMachineRunId = StateMachineRunId(UUID.randomUUID())
         fun wrap(uuid: UUID): StateMachineRunId = StateMachineRunId(uuid)
@@ -18,34 +23,25 @@ data class StateMachineRunId private constructor(val uuid: UUID) {
     override fun toString(): String = "[$uuid]"
 }
 
-/**
- * A FlowStateMachine instance is a suspendable fiber that delegates all actual logic to a [FlowLogic] instance.
- * For any given flow there is only one PSM, even if that flow invokes subflows.
- *
- * These classes are created by the [StateMachineManager] when a new flow is started at the topmost level. If
- * a flow invokes a sub-flow, then it will pass along the PSM to the child. The call method of the topmost
- * logic element gets to return the value that the entire state machine resolves to.
- */
+/** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */
 interface FlowStateMachine<R> {
     @Suspendable
-    fun <T : Any> sendAndReceive(otherParty: Party,
+    fun <T : Any> sendAndReceive(receiveType: Class<T>,
+                                 otherParty: Party,
                                  payload: Any,
-                                 receiveType: Class<T>,
                                  sessionFlow: FlowLogic<*>): UntrustworthyData<T>
 
     @Suspendable
-    fun <T : Any> receive(otherParty: Party, receiveType: Class<T>, sessionFlow: FlowLogic<*>): UntrustworthyData<T>
+    fun <T : Any> receive(receiveType: Class<T>, otherParty: Party, sessionFlow: FlowLogic<*>): UntrustworthyData<T>
 
     @Suspendable
     fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>)
 
+    @Suspendable
+    fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction
+
     val serviceHub: ServiceHub
     val logger: Logger
-
-    /** Unique ID for this machine run, valid across restarts */
     val id: StateMachineRunId
-    /** This future will complete when the call method returns. */
     val resultFuture: ListenableFuture<R>
 }
-
-class FlowSessionException(message: String) : Exception(message)

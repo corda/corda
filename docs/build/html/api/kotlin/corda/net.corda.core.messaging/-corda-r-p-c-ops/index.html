@@ -1,0 +1,188 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CordaRPCOps - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.messaging</a>&nbsp;/&nbsp;<a href=".">CordaRPCOps</a><br/>
+<br/>
+<h1>CordaRPCOps</h1>
+<code><span class="keyword">interface </span><span class="identifier">CordaRPCOps</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-r-p-c-ops/index.html"><span class="identifier">RPCOps</span></a></code>
+<p>RPC operations that the node exposes to clients using the Java client library. These can be called from
+client apps and are implemented by the node in the <a href="#">CordaRPCOpsImpl</a> class.</p>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-r-p-c-ops/protocol-version.html">protocolVersion</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">protocolVersion</span><span class="symbol">: </span><span class="identifier">Int</span></code>
+<p>Returns the RPC protocol version. Exists since version 0 so guaranteed to be present.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="add-vault-transaction-note.html">addVaultTransactionNote</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addVaultTransactionNote</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging.CordaRPCOps$addVaultTransactionNote(net.corda.core.crypto.SecureHash, kotlin.String)/txnId">txnId</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging.CordaRPCOps$addVaultTransactionNote(net.corda.core.crypto.SecureHash, kotlin.String)/txnNote">txnNote</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="attachment-exists.html">attachmentExists</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">attachmentExists</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging.CordaRPCOps$attachmentExists(net.corda.core.crypto.SecureHash)/id">id</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Checks whether an attachment with the given hash is stored on the node.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="current-node-time.html">currentNodeTime</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">currentNodeTime</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a></code>
+<p>Returns the node's current time.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="get-vault-transaction-notes.html">getVaultTransactionNotes</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getVaultTransactionNotes</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging.CordaRPCOps$getVaultTransactionNotes(net.corda.core.crypto.SecureHash)/txnId">txnId</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="network-map-updates.html">networkMapUpdates</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">networkMapUpdates</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-network-map-cache/-map-change/index.html"><span class="identifier">MapChange</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="node-identity.html">nodeIdentity</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">nodeIdentity</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a></code>
+<p>Returns Node's identity, assuming this will not change while the node is running.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="party-from-key.html">partyFromKey</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">partyFromKey</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging.CordaRPCOps$partyFromKey(net.corda.core.crypto.CompositeKey)/key">key</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span></code>
+<p>Returns the <a href="../../net.corda.core.crypto/-party/index.html">Party</a> corresponding to the given key, if found.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="party-from-name.html">partyFromName</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">partyFromName</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging.CordaRPCOps$partyFromName(kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span></code>
+<p>Returns the <a href="../../net.corda.core.crypto/-party/index.html">Party</a> with the given name as it's <a href="../../net.corda.core.crypto/-party/name.html">Party.name</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="start-flow-dynamic.html">startFlowDynamic</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">startFlowDynamic</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging.CordaRPCOps$startFlowDynamic(java.lang.Class((net.corda.core.flows.FlowLogic((net.corda.core.messaging.CordaRPCOps.startFlowDynamic.T)))), kotlin.Array((kotlin.Any)))/logicType">logicType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="keyword">vararg</span> <span class="identifier" id="net.corda.core.messaging.CordaRPCOps$startFlowDynamic(java.lang.Class((net.corda.core.flows.FlowLogic((net.corda.core.messaging.CordaRPCOps.startFlowDynamic.T)))), kotlin.Array((kotlin.Any)))/args">args</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-flow-handle/index.html"><span class="identifier">FlowHandle</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>Start the given flow with the given arguments, returning an <a href="#">Observable</a> with a single observation of the
+result of running the flow.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="state-machine-recorded-transaction-mapping.html">stateMachineRecordedTransactionMapping</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">stateMachineRecordedTransactionMapping</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-state-machine-transaction-mapping/index.html"><span class="identifier">StateMachineTransactionMapping</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-state-machine-transaction-mapping/index.html"><span class="identifier">StateMachineTransactionMapping</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Returns a snapshot list of existing state machine id - recorded transaction hash mappings, and a stream of future
+such mappings as well.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="state-machines-and-updates.html">stateMachinesAndUpdates</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">stateMachinesAndUpdates</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-state-machine-info/index.html"><span class="identifier">StateMachineInfo</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="../-state-machine-update/index.html"><span class="identifier">StateMachineUpdate</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Returns a pair of currently in-progress state machine infos and an observable of future state machine adds/removes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="upload-attachment.html">uploadAttachment</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">uploadAttachment</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging.CordaRPCOps$uploadAttachment(java.io.InputStream)/jar">jar</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code>
+<p>Uploads a jar to the node, returns it's hash.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="upload-file.html">uploadFile</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><s><span class="identifier">uploadFile</span></s><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging.CordaRPCOps$uploadFile(kotlin.String, kotlin.String, java.io.InputStream)/dataType">dataType</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging.CordaRPCOps$uploadFile(kotlin.String, kotlin.String, java.io.InputStream)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging.CordaRPCOps$uploadFile(kotlin.String, kotlin.String, java.io.InputStream)/file">file</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="vault-and-updates.html">vaultAndUpdates</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">vaultAndUpdates</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.node.services/-vault/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Returns a pair of head states in the vault and an observable of future updates to the vault.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="verified-transactions.html">verifiedTransactions</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">verifiedTransactions</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Returns a pair of all recorded transactions and an observable of future recorded ones.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="wait-until-registered-with-network-map.html">waitUntilRegisteredWithNetworkMap</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">waitUntilRegisteredWithNetworkMap</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code>
+<p>Returns a <a href="#">ListenableFuture</a> which completes when the node has registered wih the network map service. It can also
+complete with an exception if it is unable to.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../start-flow.html">startFlow</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span> <span class="identifier">CordaRPCOps</span><span class="symbol">.</span><span class="identifier">startFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function0((net.corda.core.messaging.startFlow.R)))/flowConstructor">flowConstructor</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-flow-handle/index.html"><span class="identifier">FlowHandle</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<p>These allow type safe invocations of flows from Kotlin, e.g.:</p>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span> <span class="identifier">CordaRPCOps</span><span class="symbol">.</span><span class="identifier">startFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function1((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A)/flowConstructor">flowConstructor</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function1((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A)/arg0">arg0</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-flow-handle/index.html"><span class="identifier">FlowHandle</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span> <span class="identifier">CordaRPCOps</span><span class="symbol">.</span><span class="identifier">startFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function2((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B)/flowConstructor">flowConstructor</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function2((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B)/arg0">arg0</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function2((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B)/arg1">arg1</span><span class="symbol">:</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-flow-handle/index.html"><span class="identifier">FlowHandle</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">, </span><span class="identifier">C</span><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span> <span class="identifier">CordaRPCOps</span><span class="symbol">.</span><span class="identifier">startFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function3((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C)/flowConstructor">flowConstructor</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">B</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function3((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C)/arg0">arg0</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function3((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C)/arg1">arg1</span><span class="symbol">:</span>&nbsp;<span class="identifier">B</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function3((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C)/arg2">arg2</span><span class="symbol">:</span>&nbsp;<span class="identifier">C</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-flow-handle/index.html"><span class="identifier">FlowHandle</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">, </span><span class="identifier">C</span><span class="symbol">, </span><span class="identifier">D</span><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span> <span class="identifier">CordaRPCOps</span><span class="symbol">.</span><span class="identifier">startFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function4((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.D, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.D)/flowConstructor">flowConstructor</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">B</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">D</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function4((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.D, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.D)/arg0">arg0</span><span class="symbol">:</span>&nbsp;<span class="identifier">A</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function4((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.D, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.D)/arg1">arg1</span><span class="symbol">:</span>&nbsp;<span class="identifier">B</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function4((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.D, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.D)/arg2">arg2</span><span class="symbol">:</span>&nbsp;<span class="identifier">C</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.messaging$startFlow(net.corda.core.messaging.CordaRPCOps, kotlin.Function4((net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.D, net.corda.core.messaging.startFlow.R)), net.corda.core.messaging.startFlow.A, net.corda.core.messaging.startFlow.B, net.corda.core.messaging.startFlow.C, net.corda.core.messaging.startFlow.D)/arg3">arg3</span><span class="symbol">:</span>&nbsp;<span class="identifier">D</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-flow-handle/index.html"><span class="identifier">FlowHandle</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.node.internal/-corda-r-p-c-ops-impl/index.html">CordaRPCOpsImpl</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">CordaRPCOpsImpl</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">CordaRPCOps</span></code>
+<p>Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
+thread (i.e. serially). Arguments are serialised and deserialised automatically.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

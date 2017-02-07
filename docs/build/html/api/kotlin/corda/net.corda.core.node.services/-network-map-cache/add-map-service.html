@@ -1,0 +1,27 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>NetworkMapCache.addMapService - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.node.services</a>&nbsp;/&nbsp;<a href="index.html">NetworkMapCache</a>&nbsp;/&nbsp;<a href=".">addMapService</a><br/>
+<br/>
+<h1>addMapService</h1>
+<a name="net.corda.core.node.services.NetworkMapCache$addMapService(net.corda.core.messaging.MessagingService, net.corda.core.messaging.SingleMessageRecipient, kotlin.Boolean, kotlin.Int)"></a>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addMapService</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$addMapService(net.corda.core.messaging.MessagingService, net.corda.core.messaging.SingleMessageRecipient, kotlin.Boolean, kotlin.Int)/net">net</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$addMapService(net.corda.core.messaging.MessagingService, net.corda.core.messaging.SingleMessageRecipient, kotlin.Boolean, kotlin.Int)/networkMapAddress">networkMapAddress</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$addMapService(net.corda.core.messaging.MessagingService, net.corda.core.messaging.SingleMessageRecipient, kotlin.Boolean, kotlin.Int)/subscribe">subscribe</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$addMapService(net.corda.core.messaging.MessagingService, net.corda.core.messaging.SingleMessageRecipient, kotlin.Boolean, kotlin.Int)/ifChangedSinceVer">ifChangedSinceVer</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ListenableFuture</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code>
+<p>Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
+updates.</p>
+<h3>Parameters</h3>
+
+<p><a name="net"></a>
+<code>net</code> - the network messaging service.
+<p><a name="networkMapAddress"></a>
+<code>networkMapAddress</code> - the network map service to fetch current state from.
+<p><a name="subscribe"></a>
+<code>subscribe</code> - if the cache should subscribe to updates.
+<p><a name="ifChangedSinceVer"></a>
+<code>ifChangedSinceVer</code> - an optional version number to limit updating the map based on. If the latest map
+version is less than or equal to the given version, no update is fetched.
+</BODY>
+</HTML>

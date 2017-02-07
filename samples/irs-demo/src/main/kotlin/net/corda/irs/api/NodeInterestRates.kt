@@ -14,6 +14,7 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 import net.corda.irs.flows.FixingFlow
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.services.api.AcceptsFileUpload
@@ -192,30 +193,26 @@ object NodeInterestRates {
             if (!ftx.verify(merkleRoot)) {
                 throw MerkleTreeException("Rate Fix Oracle: Couldn't verify partial Merkle tree.")
             }
-
-            // Reject if we have something different than only commands.
-            val leaves = ftx.filteredLeaves
-            require(leaves.inputs.isEmpty() && leaves.outputs.isEmpty() && leaves.attachments.isEmpty())
-
-            val fixes: List<Fix> = ftx.filteredLeaves.commands.
-                    filter { identity.owningKey in it.signers && it.value is Fix }.
-                    map { it.value as Fix }
-
-            // Reject signing attempt if we received more commands than we should.
-            if (fixes.size != ftx.filteredLeaves.commands.size)
-                throw IllegalArgumentException()
-
-            // Reject this signing attempt if there are no commands of the right kind.
-            if (fixes.isEmpty())
-                throw IllegalArgumentException()
-
-            // For each fix, verify that the data is correct.
-            val knownFixes = knownFixes // Snapshot
-            for (fix in fixes) {
+            // Performing validation of obtained FilteredLeaves.
+            fun commandValidator(elem: Command): Boolean {
+                if (!(identity.owningKey in elem.signers && elem.value is Fix))
+                    throw IllegalArgumentException("Oracle received unknown command (not in signers or not Fix).")
+                val fix = elem.value as Fix
                 val known = knownFixes[fix.of]
                 if (known == null || known != fix)
                     throw UnknownFix(fix.of)
+                return true
             }
+
+            fun check(elem: Any): Boolean {
+                return when (elem) {
+                    is Command -> commandValidator(elem)
+                    else -> throw IllegalArgumentException("Oracle received data of different type than expected.")
+                }
+            }
+            val leaves = ftx.filteredLeaves
+            if (!leaves.checkWithFun(::check))
+                throw IllegalArgumentException()
 
             // It all checks out, so we can return a signature.
             //

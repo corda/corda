@@ -1,0 +1,141 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CordaRPCClient - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href=".">CordaRPCClient</a><br/>
+<br/>
+<h1>CordaRPCClient</h1>
+<code><span class="identifier">@ThreadSafe</span> <span class="keyword">class </span><span class="identifier">CordaRPCClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/Closeable.html"><span class="identifier">Closeable</span></a><span class="symbol">, </span><a href="../-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a></code>
+<p>An RPC client connects to the specified server and allows you to make calls to the server that perform various
+useful tasks. See the documentation for <a href="proxy.html">proxy</a> or review the docsite to learn more about how this API works.</p>
+<h3>Parameters</h3>
+
+<p><a name="host"></a>
+<code>host</code> - The hostname and messaging port of the node.
+<p><a name="config"></a>
+<code>config</code> - If specified, the SSL configuration to use. If not specified, SSL will be disabled and the node will not be authenticated, nor will RPC traffic be encrypted.
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">CordaRPCClient</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$<init>(com.google.common.net.HostAndPort, net.corda.node.services.config.SSLConfiguration, kotlin.Function1((org.apache.activemq.artemis.api.core.client.ServerLocator, kotlin.Unit)))/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">HostAndPort</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$<init>(com.google.common.net.HostAndPort, net.corda.node.services.config.SSLConfiguration, kotlin.Function1((org.apache.activemq.artemis.api.core.client.ServerLocator, kotlin.Unit)))/config">config</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.config/-s-s-l-configuration/index.html"><span class="identifier">SSLConfiguration</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$<init>(com.google.common.net.HostAndPort, net.corda.node.services.config.SSLConfiguration, kotlin.Function1((org.apache.activemq.artemis.api.core.client.ServerLocator, kotlin.Unit)))/serviceConfigurationOverride">serviceConfigurationOverride</span><span class="symbol">:</span>&nbsp;<span class="identifier">ServerLocator</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span></code>
+<p>An RPC client connects to the specified server and allows you to make calls to the server that perform various
+useful tasks. See the documentation for <a href="proxy.html">proxy</a> or review the docsite to learn more about how this API works.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="config.html">config</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">config</span><span class="symbol">: </span><a href="../../net.corda.node.services.config/-s-s-l-configuration/index.html"><span class="identifier">SSLConfiguration</span></a><span class="symbol">?</span></code>
+<p>The config object is used to pass in the passwords for the certificate KeyStore and TrustStore</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="host.html">host</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">host</span><span class="symbol">: </span><span class="identifier">HostAndPort</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="service-configuration-override.html">serviceConfigurationOverride</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">serviceConfigurationOverride</span><span class="symbol">: </span><span class="identifier">ServerLocator</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="close.html">close</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">close</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Shuts down the client and lets the server know it can free the used resources (in a nice way).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="proxy.html">proxy</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">proxy</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$proxy(java.time.Duration, kotlin.Int)/timeout">timeout</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$proxy(java.time.Duration, kotlin.Int)/minVersion">minVersion</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;0<span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.messaging/-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a></code>
+<p>Returns a fresh proxy that lets you invoke RPCs on the server. Calls on it block, and if the server throws an
+exception then it will be rethrown on the client. Proxies are thread safe but only one RPC can be in flight at
+once. If you'd like to perform multiple RPCs in parallel, use this function multiple times to get multiple
+proxies.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="start.html">start</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">start</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$start(kotlin.String, kotlin.String)/username">username</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$start(kotlin.String, kotlin.String)/password">password</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">CordaRPCClient</span></code>
+<p>Opens the connection to the server with the given username and password, then returns itself.
+Registers a JVM shutdown hook to cleanly disconnect.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="use.html">use</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">use</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$use(kotlin.String, kotlin.String, kotlin.Function1((net.corda.core.messaging.CordaRPCOps, net.corda.node.services.messaging.CordaRPCClient.use.T)))/username">username</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$use(kotlin.String, kotlin.String, kotlin.Function1((net.corda.core.messaging.CordaRPCOps, net.corda.node.services.messaging.CordaRPCClient.use.T)))/password">password</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$use(kotlin.String, kotlin.String, kotlin.Function1((net.corda.core.messaging.CordaRPCOps, net.corda.node.services.messaging.CordaRPCClient.use.T)))/block">block</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.messaging/-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code>
+<p>A convenience function that opens a connection with the given credentials, executes the given code block with all
+available RPCs in scope and shuts down the RPC connection again. It's meant for quick prototyping and demos. For
+more control you probably want to control the lifecycle of the client and proxies independently, as well as
+configuring a timeout and other such features via the <a href="proxy.html">proxy</a> method.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-artemis-messaging-component/check-store-passwords.html">checkStorePasswords</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">checkStorePasswords</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Returns nothing if the keystore was opened OK or throws if not. Useful to check the password, as
+unfortunately Artemis tends to bury the exception when the password is wrong.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-artemis-messaging-component/expected-on-default-file-system.html">expectedOnDefaultFileSystem</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">.</span><span class="identifier">expectedOnDefaultFileSystem</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-artemis-messaging-component/tcp-transport.html">tcpTransport</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">tcpTransport</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/direction">direction</span><span class="symbol">:</span>&nbsp;<a href="../-artemis-messaging-component/-connection-direction/index.html"><span class="identifier">ConnectionDirection</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/port">port</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">TransportConfiguration</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="log.html">log</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">log</span><span class="symbol">: </span><span class="identifier">Logger</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>
