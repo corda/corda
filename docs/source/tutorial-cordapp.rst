@@ -9,7 +9,7 @@ The example CorDapp
 
 .. note:: The example CorDapp was previously hosted in the `cordapp-template <https://github.com/corda/cordapp-template>`_ repository. It has now been 
    moved into a new `cordapp-tutorial <https://github.com/corda/cordapp-tutorial>`_ repository. Going forward, the cordapp-template repo will contain an 
-   actual CorDapp template.
+   actual CorDapp template, which should be used as the basis for your CorDapps going forward.
 
 This guide covers how to get started with the example CorDapp. Please note there are several Corda repositories:
 
@@ -460,7 +460,7 @@ To create an IOU from NodeA to NodeB, use:
 
 .. sourcecode:: bash
 
-  echo '{"orderNumber": "1","deliveryDate": "2018-09-15","deliveryAddress": {"city": "London","country": "UK"},"items" : [{"name": "widget","amount": "3"},{"name": "thing","amount": "4"}]}' | cURL -T - -H 'Content-Type: application/json' http://localhost:10005/api/example/NodeB/create-iou
+  echo '{"value": "1"}' | cURL -T - -H 'Content-Type: application/json' http://localhost:10005/api/example/NodeB/create-iou
 
 Note the port number ``10005`` (NodeA) and NodeB referenced in the API end-point path. This command instructs NodeA to
 create and send an IOU to NodeB. Upon verification and completion of the process, both nodes (but not NodeC) will
