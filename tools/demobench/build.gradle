@@ -5,7 +5,7 @@ buildscript {
     ext.purejavacomm_version = '0.0.17'
     ext.guava_version = '14.0.1'
     ext.slf4j_version = '1.7.22'
-    ext.logback_version = '1.1.3'
+    ext.logback_version = '1.1.10'
 
     ext.java_home = System.properties.'java.home'
     ext.pkg_source = 'build/packagesrc'
