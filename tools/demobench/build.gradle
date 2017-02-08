@@ -125,11 +125,6 @@ distributions {
 task javapackage {
 
     doLast {
-        ant.taskdef(
-            resource: 'com/sun/javafx/tools/ant/antlib.xml',
-            classpath: "${pkg_source}:${java_home}/../lib/ant-javafx.jar"
-        )
-
         ant.delete(dir: "${pkg_source}")
         ant.delete(dir: 'build/exedir')
 
@@ -141,6 +136,11 @@ task javapackage {
                 filter(token: 'pkg_version', value: "${pkg_version}")
             }
         }
+
+        ant.taskdef(
+            resource: 'com/sun/javafx/tools/ant/antlib.xml',
+            classpath: "${pkg_source}:${java_home}/../lib/ant-javafx.jar"
+        )
 
         ant.deploy(nativeBundles: 'rpm', outdir: 'build/exedir', outfile: 'DemoBench', verbose: 'true') {
             application(name: 'DemoBench', version: "$pkg_version", mainClass: "$mainClassName")
