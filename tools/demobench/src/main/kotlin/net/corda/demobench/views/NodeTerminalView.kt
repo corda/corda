@@ -86,7 +86,12 @@ class NodeTerminalView : Fragment() {
         })
     }
 
-    fun launchRPC(config: NodeConfig) = NodeRPC(config, { ops ->
+    fun enable() {
+        launchExplorerButton.isDisable = false
+        viewDatabaseButton.isDisable = false
+    }
+
+    fun launchRPC(config: NodeConfig) = NodeRPC(config, start = { enable() }, invoke = { ops ->
         try {
             val verifiedTx = ops.verifiedTransactions()
             val statesInVault = ops.vaultAndUpdates()

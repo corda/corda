@@ -8,7 +8,7 @@ import net.corda.demobench.model.NodeConfig
 import net.corda.node.services.messaging.CordaRPCClient
 import org.slf4j.LoggerFactory
 
-class NodeRPC(config: NodeConfig, invoke: (CordaRPCOps) -> Unit): AutoCloseable {
+class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Unit): AutoCloseable {
     private val log = LoggerFactory.getLogger(NodeRPC::class.java)
 
     companion object Data {
@@ -30,6 +30,7 @@ class NodeRPC(config: NodeConfig, invoke: (CordaRPCOps) -> Unit): AutoCloseable 
                     this.cancel()
 
                     log.info("Node '{}' is now ready.", config.legalName)
+                    start()
 
                     // Schedule a new task that will refresh the display once per second.
                     timer.schedule(object: TimerTask() {
