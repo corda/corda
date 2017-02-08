@@ -73,6 +73,8 @@ class NodeTabView : Fragment() {
                                 error("Port number required")
                             } else if (it.contains(NOT_NUMBER)) {
                                 error("Invalid port number")
+                            } else if (!nodeController.isPortAvailable(it.toInt())) {
+                                error("Port $it is unavailable")
                             } else {
                                 null
                             }
@@ -88,6 +90,8 @@ class NodeTabView : Fragment() {
                                 error("Port number required")
                             } else if (it.contains(NOT_NUMBER)) {
                                 error("Invalid port number")
+                            } else if (!nodeController.isPortAvailable(it.toInt())) {
+                                error("Port $it is unavailable")
                             } else {
                                 null
                             }
@@ -103,6 +107,8 @@ class NodeTabView : Fragment() {
                                 error("Port number required")
                             } else if (it.contains(NOT_NUMBER)) {
                                 error("Invalid port number")
+                            } else if (!nodeController.isPortAvailable(it.toInt())) {
+                                error("Port $it is unavailable")
                             } else {
                                 null
                             }
@@ -112,7 +118,7 @@ class NodeTabView : Fragment() {
             }
 
             fieldset("Services") {
-                listview(serviceController.services.observable()) {
+                listview(availableServices.observable()) {
                     selectionModel.selectionMode = MULTIPLE
                     model.item.extraServices.set(selectionModel.selectedItems)
                 }
@@ -130,6 +136,9 @@ class NodeTabView : Fragment() {
     }
 
     val nodeTab = CloseableTab("New Node", root)
+
+    private val availableServices: List<String>
+        get() = if (nodeController.hasNetworkMap()) serviceController.services else serviceController.notaries
 
     fun launch() {
         model.commit()

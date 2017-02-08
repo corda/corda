@@ -2,17 +2,20 @@ package net.corda.demobench.model
 
 import com.typesafe.config.ConfigRenderOptions
 import java.lang.management.ManagementFactory
-import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import net.corda.demobench.pty.R3Pty
 import tornadofx.Controller
+import java.io.IOException
+import java.net.ServerSocket
 
 class NodeController : Controller() {
     private companion object Data {
         const val FIRST_PORT = 10000
+        const val MIN_PORT = 1024
+        const val MAX_PORT = 65535
     }
 
     private val jvm by inject<JVMConfig>()
@@ -63,12 +66,27 @@ class NodeController : Controller() {
 
     val nextPort: Int get() = port.andIncrement
 
+    fun isPortAvailable(port: Int): Boolean {
+        if ((port >= MIN_PORT) && (port <= MAX_PORT)) {
+            try {
+                ServerSocket(port).close()
+                return true
+            } catch (e: IOException) {
+                return false
+            }
+        } else {
+            return false
+        }
+    }
+
     fun keyExists(key: String) = nodes.keys.contains(key)
 
     fun nameExists(name: String) = keyExists(toKey(name))
 
+    fun hasNetworkMap(): Boolean = networkMapConfig != null
+
     fun chooseNetworkMap(config: NodeConfig) {
-        if (networkMapConfig != null) {
+        if (hasNetworkMap()) {
             config.networkMap = networkMapConfig
         } else {
             networkMapConfig = config
