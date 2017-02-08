@@ -89,7 +89,9 @@ Our flow has two parties (B and S for buyer and seller) and will proceed as foll
 2. B sends to S a ``SignedTransaction`` that includes the state as input, B's cash as input, the state with the new
    owner key as output, and any change cash as output. It contains a single signature from B but isn't valid because
    it lacks a signature from S authorising movement of the asset.
-3. S signs it and hands the now finalised ``SignedTransaction`` back to B.
+3. S signs it and *finalises* the transaction. This means sending it to the notary, which checks the transaction for
+   validity, recording the transaction in the local vault, and then sending it back to B who also checks it and commits
+   the transaction to their local vault.
 
 You can find the implementation of this flow in the file ``finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt``.
 
@@ -98,8 +100,7 @@ represents an atomic asset swap.
 
 Note that it's the *seller* who initiates contact with the buyer, not vice-versa as you might imagine.
 
-We start by defining a wrapper that namespaces the flow code, two functions to start either the buy or sell side
-of the flow, and two classes that will contain the flow definition. We also pick what data will be used by
+We start by defining two classes that will contain the flow definition. We also pick what data will be used by
 each side.
 
 .. note:: The code samples in this tutorial are only available in Kotlin, but you can use any JVM language to
@@ -110,7 +111,6 @@ each side.
    .. sourcecode:: kotlin
 
       object TwoPartyTradeFlow {
-
           class UnacceptablePriceException(val givenPrice: Amount<Currency>) : FlowException("Unacceptable price: $givenPrice")
           class AssetMismatchException(val expectedTypeName: String, val typeName: String) : FlowException() {
               override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
@@ -188,8 +188,6 @@ and try again.
 
 .. note:: Java 9 is likely to remove this pre-marking requirement completely.
 
-.. note:: Accessing the vault from inside an @Suspendable function (e.g. via ``serviceHub.vaultService``) can cause a serialisation error when the fiber suspends. Instead, vault access should be performed from a helper non-suspendable function, which you then call from the @Suspendable function. We are working to fix this.
-
 Starting your flow
 ------------------
 
@@ -248,12 +246,11 @@ Let's implement the ``Seller.call`` method. This will be run when the flow is in
             :dedent: 4
 
 Here we see the outline of the procedure. We receive a proposed trade transaction from the buyer and check that it's
-valid. The buyer has already attached their signature before sending it. Then we calculate and attach our own signature so that the transaction is
-now signed by both the buyer and the seller. We then send this request to a notary to assert with another signature that the
-timestamp in the transaction (if any) is valid and there are no double spends, and send back both
-our signature and the notaries signature. Note we should not send to the notary until all other required signatures have been appended
-as the notary may validate the signatures as well as verifying for itself the transactional integrity.
-Finally, we hand back to the code that invoked the flow the finished transaction.
+valid. The buyer has already attached their signature before sending it. Then we calculate and attach our own signature
+so that the transaction is now signed by both the buyer and the seller. We then *finalise* this transaction by sending
+it to a notary to assert (with another signature) that the timestamp in the transaction (if any) is valid and there are no
+double spends. Finally, after the finalisation process is complete, we retrieve the now fully signed transaction from
+local storage. It will have the same ID as the one we started with but more signatures.
 
 Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
 
@@ -327,24 +324,39 @@ Throwing a ``FlowException`` enables a flow to reject a piece of data it has rec
 done in the ``unwrap`` method of the received ``UntrustworthyData``. In the above example the seller checks the price
 and throws ``FlowException`` if it's invalid. It's then up to the buyer to either try again with a better price or give up.
 
-Sub-flows
----------
+Sub-flows and finalisation
+--------------------------
 
 Flows can be composed via nesting. Invoking a sub-flow looks similar to an ordinary function call:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt
-            :language: kotlin
-            :start-after: DOCSTART 6
-            :end-before: DOCEND 6
-            :dedent: 4
+   .. sourcecode:: kotlin
 
-In this code snippet we are using the ``NotaryFlow.Client`` to request notarisation of the transaction.
+      @Suspendable
+      fun call() {
+          val unnotarisedTransaction = ...
+          subFlow(FinalityFlow(unnotarisedTransaction))
+      }
+
+   .. sourcecode:: java
+
+      @Suspendable
+      public void call() throws FlowException {
+          SignedTransaction unnotarisedTransaction = ...
+          subFlow(new FinalityFlow(unnotarisedTransaction))
+      }
+
+In this code snippet we are using the ``FinalityFlow`` to finish off the transaction. It will:
+
+* Send the transaction to the chosen notary and, if necessary, satisfy the notary that the transaction is valid.
+* Record the transaction in the local vault, if it is relevant (i.e. involves the owner of the node).
+* Send the fully signed transaction to the other participants for recording as well.
+
 We simply create the flow object via its constructor, and then pass it to the ``subFlow`` method which
 returns the result of the flow's execution directly. Behind the scenes all this is doing is wiring up progress
-tracking (discussed more below) and then running the objects ``call`` method. Because this little helper method can
-be on the stack when network IO takes place, we mark it as ``@Suspendable``.
+tracking (discussed more below) and then running the objects ``call`` method. Because the sub-flow might suspend,
+we must mark the method that invokes it as suspendable.
 
 Going back to the previous code snippet, we use a sub-flow called ``ResolveTransactionsFlow``. This is
 responsible for downloading and checking all the dependencies of a transaction, which in Corda are always retrievable
@@ -360,32 +372,11 @@ objects, but we don't need them here so we just ignore the return value.
 After the dependencies, we check the proposed trading transaction for validity by running the contracts for that as
 well (but having handled the fact that some signatures are missing ourselves).
 
-Here's the rest of the code:
-
-.. container:: codeset
-
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt
-            :language: kotlin
-            :start-after: DOCSTART 7
-            :end-before: DOCEND 7
-            :dedent: 4
-
-It's all pretty straightforward from now on. Here ``id`` is the secure hash representing the serialised
-transaction, and we just use our private key to calculate a signature over it. As a reminder, in Corda signatures do
-not cover other signatures: just the core of the transaction data.
-
-In ``sendSignatures``, we take the two signatures we obtained and add them to the partial transaction we were sent.
-There is an overload for the + operator so signatures can be added to a SignedTransaction easily. Finally, we wrap the
-two signatures in a simple wrapper message class and send it back. The send won't block waiting for an acknowledgement,
-but the underlying message queue software will retry delivery if the other side has gone away temporarily.
-
-You can also see that every flow instance has a logger (using the SLF4J API) which you can use to log progress
-messages.
-
-.. warning:: This sample code is **not secure**. Other than not checking for all possible invalid constructions, if the
-   seller stops before sending the finalised transaction to the buyer, the seller is left with a valid transaction
-   but the buyer isn't, so they can't spend the asset they just purchased! This sort of thing will be fixed in a
-   future version of the code.
+.. warning:: If the seller stops before sending the finalised transaction to the buyer, the seller is left with a
+   valid transaction but the buyer isn't, so they can't spend the asset they just purchased! This sort of thing is not
+   always a risk (as the seller may not gain anything from that sort of behaviour except a lawsuit), but if it is, a future
+   version of the platform will allow you to ask the notary to send you the transaction as well, in case your counterparty
+   does not. This is not the default because it reveals more private info to the notary.
 
 Implementing the buyer
 ----------------------
@@ -403,12 +394,11 @@ OK, let's do the same for the buyer side:
 This code is longer but no more complicated. Here are some things to pay attention to:
 
 1. We do some sanity checking on the received message to ensure we're being offered what we expected to be offered.
-2. We create a cash spend in the normal way, by using ``VaultService.generateSpend``. See the vault documentation if this
-   part isn't clear.
+2. We create a cash spend using ``VaultService.generateSpend``. You can read the vault documentation to learn more about this.
 3. We access the *service hub* when we need it to access things that are transient and may change or be recreated
    whilst a flow is suspended, things like the wallet or the network map.
-4. Finally, we send the unfinished, invalid transaction to the seller so they can sign it. They are expected to send
-   back to us a ``SignaturesFromSeller``, which once we verify it, should be the final outcome of the trade.
+4. We send the unfinished, invalid transaction to the seller so they can sign it and finalise it.
+5. Finally, we wait for the finished transaction to arrive in our local storage and vault.
 
 As you can see, the flow logic is straightforward and does not contain any callbacks or network glue code, despite
 the fact that it takes minimal resources and can survive node restarts.
@@ -435,7 +425,7 @@ A flow might declare some steps with code inside the flow class like this:
     .. literalinclude:: ../../finance/src/main/kotlin/net/corda/flows/TwoPartyTradeFlow.kt
             :language: kotlin
             :start-after: DOCSTART 2
-            :end-before: DOCSTART 1
+            :end-before: DOCEND 2
             :dedent: 4
 
     .. sourcecode:: java

@@ -34,6 +34,9 @@
   
 
   
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Running the demos" href="running-the-demos.html"/>
         <link rel="prev" title="Getting set up" href="getting-set-up.html"/> 
@@ -137,7 +140,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The example CorDapp</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -242,8 +245,8 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="milestone-releases">
 <h2>Milestone releases<a class="headerlink" href="#milestone-releases" title="Permalink to this headline">¶</a></h2>
-<p>When you clone the corda or cordapp-template repos, they will default to the master branch. The master branch is being continuously developed upon, and its features may not align with the state of Corda as described in the docs. Additionally, the master branch of the CorDapp Template may break in response to changes in the main corda repo.</p>
-<p>When developing on Corda, you should always check out the latest stable branch instead, by running <code class="docutils literal"><span class="pre">git</span> <span class="pre">checkout</span> <span class="pre">release-M7</span></code>.</p>
+<p>When you clone the corda or cordapp-template repos, they will default to the master branch. The master branch is being continuously developed upon, and its features may not align with the state of Corda as described in the docs. Additionally, the master branch of the CorDapp template may break in response to changes in the main corda repo.</p>
+<p>When developing on Corda, you should always check out the latest milestone (i.e. stable) branch instead. For example, to check out milestone 7, you&#8217;d run <code class="docutils literal"><span class="pre">git</span> <span class="pre">checkout</span> <span class="pre">release-M7</span></code>.</p>
 </div>
 <div class="section" id="java-issues">
 <h2>Java issues<a class="headerlink" href="#java-issues" title="Permalink to this headline">¶</a></h2>
@@ -253,7 +256,8 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </div>
 <div class="section" id="unresolved-reference-javafx">
 <h3>&#8220;Unresolved reference: javafx&#8221;<a class="headerlink" href="#unresolved-reference-javafx" title="Permalink to this headline">¶</a></h3>
-<p>JavaFX is not bundled with OpenJDK. If you are using OpenJDK and get an &#8216;Unresolved reference: javafx&#8217; error, this means that you need to install OpenJFX. Do this by running <code class="docutils literal"><span class="pre">sudo</span> <span class="pre">apt</span> <span class="pre">install</span> <span class="pre">openjfx</span></code>, and possibly <code class="docutils literal"><span class="pre">sudo</span> <span class="pre">apt</span> <span class="pre">install</span> <span class="pre">libopenjfx-jav</span></code>.</p>
+<p>JavaFX is not bundled with OpenJDK. If you are using OpenJDK and get an &#8216;Unresolved reference: javafx&#8217; error, this means that you need to install OpenJFX.</p>
+<p>If you have APT installed and OpenJFX is part of your Unix distribution&#8217;s package list, you can do this by running <code class="docutils literal"><span class="pre">sudo</span> <span class="pre">apt</span> <span class="pre">install</span> <span class="pre">openjfx</span></code>, and possibly <code class="docutils literal"><span class="pre">sudo</span> <span class="pre">apt</span> <span class="pre">install</span> <span class="pre">libopenjfx-jav</span></code>. Other users will want to refer to the guide <a class="reference external" href="https://wiki.openjdk.java.net/display/OpenJFX/Building+OpenJFX">here</a>, or to the list of Community Builds <a class="reference external" href="https://wiki.openjdk.java.net/display/OpenJFX/Community+Builds">here</a>.</p>
 </div>
 </div>
 <div class="section" id="idea-issues">
