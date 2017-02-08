@@ -7,32 +7,28 @@ import java.util.*
 
 class ServiceController : Controller() {
 
-    private var serviceSet: List<String>
-    val services: List<String> get() = serviceSet
+    val services: List<String> = loadConf(javaClass.classLoader.getResource("services.conf"))
 
-    init {
-        /*
-         * Load our list of known extra Corda services.
-         */
-        val serviceConf = javaClass.classLoader.getResource("services.conf")
-        serviceSet = if (serviceConf == null) {
-            emptyList<String>()
+    val notaries: List<String> = services.filter { it.startsWith("corda.notary.") }.toList()
+
+    /*
+     * Load our list of known extra Corda services.
+     */
+    private fun loadConf(url: URL?): List<String> {
+        if (url == null) {
+            return emptyList()
         } else {
-            loadConf(serviceConf)
-        }
-    }
+            val set = TreeSet<String>()
+            InputStreamReader(url.openStream()).useLines {
+                sq -> sq.forEach {
+                    val service = it.trim()
+                    set.add(service)
 
-    private fun loadConf(url: URL): List<String> {
-        val set = TreeSet<String>()
-        InputStreamReader(url.openStream()).useLines {
-            sq -> sq.forEach {
-                val service = it.trim()
-                set.add(service)
-
-                log.info("Supports: " + service)
+                    log.info("Supports: " + service)
+                }
             }
+            return set.toList()
         }
-        return set.toList()
     }
 
 }
