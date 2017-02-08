@@ -51,7 +51,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient override lateinit var serviceHub: ServiceHubInternal
     @Transient internal lateinit var database: Database
     @Transient internal lateinit var actionOnSuspend: (FlowIORequest) -> Unit
-    @Transient internal lateinit var actionOnEnd: (Pair<FlowException, Boolean>?) -> Unit
+    @Transient internal lateinit var actionOnEnd: (Throwable?, Boolean) -> Unit
     @Transient internal var fromCheckpoint: Boolean = false
     @Transient private var txTrampoline: Transaction? = null
 
@@ -76,7 +76,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     // This state IS serialised, as we need it to know what the fiber is waiting for.
     internal val openSessions = HashMap<Pair<FlowLogic<*>, Party>, FlowSession>()
-    internal var waitingForLedgerCommitOf: SecureHash? = null
+    internal var waitingForResponse: WaitingRequest? = null
 
     init {
         logic.stateMachine = this
@@ -91,11 +91,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         } catch (e: FlowException) {
             // Check if the FlowException was propagated by looking at where the stack trace originates (see suspendAndExpectReceive).
             val propagated = e.stackTrace[0].className == javaClass.name
-            actionOnEnd(Pair(e, propagated))
+            actionOnEnd(e, propagated)
             _resultFuture?.setException(e)
             return
         } catch (t: Throwable) {
-            actionOnEnd(null)
+            actionOnEnd(t, false)
             _resultFuture?.setException(t)
             throw ExecutionException(t)
         }
@@ -105,7 +105,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 .filter { it.state is FlowSessionState.Initiating }
                 .forEach { it.waitForConfirmation() }
         // This is to prevent actionOnEnd being called twice if it throws an exception
-        actionOnEnd(null)
+        actionOnEnd(null, false)
         _resultFuture?.set(result)
     }
 
@@ -136,10 +136,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                                           sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
         val session = getConfirmedSession(otherParty, sessionFlow)
         return if (session == null) {
+            val newSession = startNewSession(otherParty, sessionFlow, payload, waitForConfirmation = true)
             // Only do a receive here as the session init has carried the payload
-            receiveInternal<SessionData>(startNewSession(otherParty, sessionFlow, payload, waitForConfirmation = true))
+            receiveInternal<SessionData>(newSession, receiveType)
         } else {
-            sendAndReceiveInternal<SessionData>(session, createSessionData(session, payload))
+            sendAndReceiveInternal<SessionData>(session, createSessionData(session, payload), receiveType)
         }.checkPayloadIs(receiveType)
     }
 
@@ -147,8 +148,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun <T : Any> receive(receiveType: Class<T>,
                                    otherParty: Party,
                                    sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
-        val session = getConfirmedSession(otherParty, sessionFlow) ?: startNewSession(otherParty, sessionFlow, null, waitForConfirmation = true)
-        return receiveInternal<SessionData>(session).checkPayloadIs(receiveType)
+        val session = getConfirmedSession(otherParty, sessionFlow) ?:
+                startNewSession(otherParty, sessionFlow, null, waitForConfirmation = true)
+        return receiveInternal<SessionData>(session, receiveType).checkPayloadIs(receiveType)
     }
 
     @Suspendable
@@ -167,7 +169,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      */
     @Suspendable
     private fun FlowSession.waitForConfirmation() {
-        val (peerParty, sessionInitResponse) = receiveInternal<SessionInitResponse>(this)
+        val (peerParty, sessionInitResponse) = receiveInternal<SessionInitResponse>(this, null)
         if (sessionInitResponse is SessionConfirm) {
             state = FlowSessionState.Initiated(peerParty, sessionInitResponse.initiatedSessionId)
         } else {
@@ -178,12 +180,19 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction {
-        waitingForLedgerCommitOf = hash
         logger.info("Waiting for transaction $hash to commit")
         suspend(WaitForLedgerCommit(hash, sessionFlow.stateMachine as FlowStateMachineImpl<*>))
-        logger.info("Transaction $hash has committed to the ledger, resuming")
         val stx = serviceHub.storageService.validatedTransactions.getTransaction(hash)
-        return stx ?: throw IllegalStateException("We were resumed after waiting for $hash but it wasn't found in our local storage")
+        if (stx != null) return stx
+        // If the tx isn't committed then we may have been resumed due to an session ending in an error
+        for (session in openSessions.values) {
+            for (receivedMessage in session.receivedMessages) {
+                if (receivedMessage.message is ErrorSessionEnd) {
+                    session.erroredEnd(receivedMessage.message)
+                }
+            }
+        }
+        throw IllegalStateException("We were resumed after waiting for $hash but it wasn't found in our local storage")
     }
 
     private fun createSessionData(session: FlowSession, payload: Any): SessionData {
@@ -200,14 +209,17 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         suspend(SendOnly(session, message))
     }
 
-    private inline fun <reified M : ExistingSessionMessage> receiveInternal(session: FlowSession): ReceivedSessionMessage<M> {
-        return suspendAndExpectReceive(ReceiveOnly(session, M::class.java))
+    private inline fun <reified M : ExistingSessionMessage> receiveInternal(
+            session: FlowSession,
+            userReceiveType: Class<*>?): ReceivedSessionMessage<M> {
+        return waitForMessage(ReceiveOnly(session, M::class.java), userReceiveType)
     }
 
     private inline fun <reified M : ExistingSessionMessage> sendAndReceiveInternal(
             session: FlowSession,
-            message: SessionMessage): ReceivedSessionMessage<M> {
-        return suspendAndExpectReceive(SendAndReceive(session, message, M::class.java))
+            message: SessionMessage,
+            userReceiveType: Class<*>?): ReceivedSessionMessage<M> {
+        return waitForMessage(SendAndReceive(session, message, M::class.java), userReceiveType)
     }
 
     @Suspendable
@@ -241,51 +253,72 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    @Suppress("UNCHECKED_CAST", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-    private fun <M : ExistingSessionMessage> suspendAndExpectReceive(receiveRequest: ReceiveRequest<M>): ReceivedSessionMessage<M> {
-        val session = receiveRequest.session
-        fun getReceivedMessage(): ReceivedSessionMessage<ExistingSessionMessage>? = session.receivedMessages.poll()
+    private fun <M : ExistingSessionMessage> waitForMessage(
+            receiveRequest: ReceiveRequest<M>,
+            userReceiveType: Class<*>?): ReceivedSessionMessage<M> {
+        val receivedMessage = receiveRequest.suspendAndExpectReceive()
+        return receivedMessage.confirmReceiveType(receiveRequest, userReceiveType)
+    }
 
-        val polledMessage = getReceivedMessage()
-        val receivedMessage = if (polledMessage != null) {
-            if (receiveRequest is SendAndReceive) {
+    @Suspendable
+    private fun ReceiveRequest<*>.suspendAndExpectReceive(): ReceivedSessionMessage<*> {
+        fun pollForMessage() = session.receivedMessages.poll()
+
+        val polledMessage = pollForMessage()
+        return if (polledMessage != null) {
+            if (this is SendAndReceive) {
                 // We've already received a message but we suspend so that the send can be performed
-                suspend(receiveRequest)
+                suspend(this)
             }
             polledMessage
         } else {
             // Suspend while we wait for a receive
-            suspend(receiveRequest)
-            getReceivedMessage() ?:
-                    throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but instead " +
-                            "got nothing for $receiveRequest")
-        }
-
-        if (receiveRequest.receiveType.isInstance(receivedMessage.message)) {
-            return receivedMessage as ReceivedSessionMessage<M>
-        } else if (receivedMessage.message is SessionEnd) {
-            openSessions.values.remove(session)
-            if (receivedMessage.message.errorResponse != null) {
-                (receivedMessage.message.errorResponse as java.lang.Throwable).fillInStackTrace()
-                throw receivedMessage.message.errorResponse
-            } else {
-                throw FlowSessionException("${session.state.sendToParty} has ended their flow but we were expecting " +
-                        "to receive ${receiveRequest.receiveType.simpleName} from them")
-            }
-        } else {
-            throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but instead got " +
-                    "${receivedMessage.message} for $receiveRequest")
+            suspend(this)
+            pollForMessage() ?:
+                    throw IllegalStateException("Was expecting a ${receiveType.simpleName} but instead got nothing for $this")
         }
     }
 
+    private fun <M : ExistingSessionMessage> ReceivedSessionMessage<*>.confirmReceiveType(
+            receiveRequest: ReceiveRequest<M>,
+            userReceiveType: Class<*>?): ReceivedSessionMessage<M> {
+        val session = receiveRequest.session
+        val receiveType = receiveRequest.receiveType
+        if (receiveType.isInstance(message)) {
+            @Suppress("UNCHECKED_CAST")
+            return this as ReceivedSessionMessage<M>
+        } else if (message is SessionEnd) {
+            openSessions.values.remove(session)
+            if (message is ErrorSessionEnd) {
+                session.erroredEnd(message)
+            } else {
+                val expectedType = userReceiveType?.name ?: receiveType.simpleName
+                throw FlowSessionException("Counterparty flow on ${session.state.sendToParty} has completed without " +
+                        "sending a $expectedType")
+            }
+        } else {
+            throw IllegalStateException("Was expecting a ${receiveType.simpleName} but instead got $message for $receiveRequest")
+        }
+    }
+
+    private fun FlowSession.erroredEnd(end: ErrorSessionEnd): Nothing {
+        if (end.errorResponse != null) {
+            @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+            (end.errorResponse as java.lang.Throwable).fillInStackTrace()
+            throw end.errorResponse
+        } else {
+            throw FlowSessionException("Counterparty flow on ${state.sendToParty} had an internal error and has terminated")
+        }
+    }
+    
     @Suspendable
     private fun suspend(ioRequest: FlowIORequest) {
         // We have to pass the thread local database transaction across via a transient field as the fiber park
         // swaps them out.
         txTrampoline = TransactionManager.currentOrNull()
         StrandLocalTransactionManager.setThreadLocalTx(null)
-        if (ioRequest is SessionedFlowIORequest)
-            ioRequest.session.waitingForResponse = (ioRequest is ReceiveRequest<*>)
+        if (ioRequest is WaitingRequest)
+            waitingForResponse = ioRequest
 
         var exceptionDuringSuspend: Throwable? = null
         parkAndSerialize { fiber, serializer ->
