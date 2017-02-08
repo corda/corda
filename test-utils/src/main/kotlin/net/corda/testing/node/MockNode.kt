@@ -282,6 +282,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      * parameter set to -1 (the default) which simply runs as many rounds as necessary to result in network
      * stability (no nodes sent any messages in the last round).
      */
+    @JvmOverloads
     fun runNetwork(rounds: Int = -1) {
         check(!networkSendManuallyPumped)
         fun pumpAll() = messagingNetwork.endpoints.map { it.pumpReceive(false) }
@@ -324,6 +325,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      * Sets up a network with the requested number of nodes (defaulting to two), with one or more service nodes that
      * run a notary, network map, any oracles etc. Can't be combined with [createTwoNodes].
      */
+    @JvmOverloads
     fun createSomeNodes(numPartyNodes: Int = 2, nodeFactory: Factory = defaultFactory, notaryKeyPair: KeyPair? = DUMMY_NOTARY_KEY): BasketOfNodes {
         require(nodes.isEmpty())
         val notaryServiceInfo = ServiceInfo(SimpleNotaryService.type)
