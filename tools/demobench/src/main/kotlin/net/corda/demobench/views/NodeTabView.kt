@@ -73,10 +73,17 @@ class NodeTabView : Fragment() {
                                 error("Port number required")
                             } else if (it.contains(NOT_NUMBER)) {
                                 error("Invalid port number")
-                            } else if (!nodeController.isPortAvailable(it.toInt())) {
-                                error("Port $it is unavailable")
                             } else {
-                                null
+                                val port = it.toInt()
+                                if (!nodeController.isPortAvailable(port)) {
+                                    error("Port $it is unavailable")
+                                } else if (port == model.webPort.value) {
+                                    error("Clashes with web port")
+                                } else if (port == model.h2Port.value) {
+                                    error("Clashes with database port")
+                                } else {
+                                    null
+                                }
                             }
                         }
                     }
@@ -90,10 +97,17 @@ class NodeTabView : Fragment() {
                                 error("Port number required")
                             } else if (it.contains(NOT_NUMBER)) {
                                 error("Invalid port number")
-                            } else if (!nodeController.isPortAvailable(it.toInt())) {
-                                error("Port $it is unavailable")
                             } else {
-                                null
+                                val port = it.toInt()
+                                if (!nodeController.isPortAvailable(port)) {
+                                    error("Port $it is unavailable")
+                                } else if (port == model.artemisPort.value) {
+                                    error("Clashes with P2P port")
+                                } else if (port == model.h2Port.value) {
+                                    error("Clashes with database port")
+                                } else {
+                                    null
+                                }
                             }
                         }
                     }
@@ -107,10 +121,17 @@ class NodeTabView : Fragment() {
                                 error("Port number required")
                             } else if (it.contains(NOT_NUMBER)) {
                                 error("Invalid port number")
-                            } else if (!nodeController.isPortAvailable(it.toInt())) {
-                                error("Port $it is unavailable")
                             } else {
-                                null
+                                val port = it.toInt()
+                                if (!nodeController.isPortAvailable(port)) {
+                                    error("Port $it is unavailable")
+                                } else if (port == model.artemisPort.value) {
+                                    error("Clashes with P2P port")
+                                } else if (port == model.webPort.value) {
+                                    error("Clashes with web port")
+                                } else {
+                                    null
+                                }
                             }
                         }
                     }
