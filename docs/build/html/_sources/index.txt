@@ -19,10 +19,8 @@ Corda is designed so that developers can easily extend its functionality by writ
 sure you follow the instructions in :doc:`getting-set-up`, then go to
 :doc:`running-the-demos`.
 
-If, after running the demos, you're interested in writing your own CorDapps, a template CorDapp is available on
-`Github <https://github.com/corda/cordapp-template>`_. To get it running, follow the instructions in the
-`readme <https://github.com/corda/cordapp-template/blob/master/README.md>`_, or watch the
-`Corda Developers Tutorial <https://vimeo.com/192797322/aab499b152>`_.
+If, after running the demos, you're interested in writing your own CorDapps, you can use the 
+`CorDapp template <https://github.com/corda/cordapp-template>`_ as a base. A simple example CorDapp built upon the template is available `here <https://github.com/corda/cordapp-tutorial>`_, and a video primer on basic CorDapp structure is available `here <https://vimeo.com/192797322/aab499b152>`_.
 
 From there, you'll be in a position to start extending the example CorDapp yourself (e.g. by writing new states, contracts,
 and/or flows). For this, you'll want to refer to this docsite, and to the `tutorials <https://docs.corda.net/tutorial-contract.html>`_
