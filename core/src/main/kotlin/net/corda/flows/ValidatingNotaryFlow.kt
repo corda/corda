@@ -7,6 +7,7 @@ import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.unwrap
 import java.security.SignatureException
 
 /**
@@ -19,21 +20,18 @@ class ValidatingNotaryFlow(otherSide: Party,
                            timestampChecker: TimestampChecker,
                            uniquenessProvider: UniquenessProvider) :
         NotaryFlow.Service(otherSide, timestampChecker, uniquenessProvider) {
-
+    /**
+     * The received transaction is checked for contract-validity, which requires fully resolving it into a
+     * [TransactionForVerification], for which the caller also has to to reveal the whole transaction
+     * dependency chain.
+     */
     @Suspendable
-    override fun beforeCommit(stx: SignedTransaction) {
-        try {
-            checkSignatures(stx)
-            val wtx = stx.tx
-            resolveTransaction(wtx)
-            wtx.toLedgerTransaction(serviceHub).verify()
-        } catch (e: Exception) {
-            when (e) {
-                is TransactionVerificationException -> NotaryException(NotaryError.TransactionInvalid(e.toString()))
-                is SignatureException -> throw NotaryException(NotaryError.SignaturesInvalid(e.toString()))
-                else -> throw e
-            }
-        }
+    override fun receiveAndVerifyTx(): TransactionParts {
+        val stx = receive<SignedTransaction>(otherSide).unwrap { it }
+        checkSignatures(stx)
+        val wtx = stx.tx
+        validateTransaction(wtx)
+        return TransactionParts(wtx.id, wtx.inputs, wtx.timestamp)
     }
 
     private fun checkSignatures(stx: SignedTransaction) {
@@ -45,7 +43,19 @@ class ValidatingNotaryFlow(otherSide: Party,
     }
 
     @Suspendable
-    private fun resolveTransaction(wtx: WireTransaction) {
-        subFlow(ResolveTransactionsFlow(wtx, otherSide))
+    fun validateTransaction(wtx: WireTransaction) {
+        try {
+            resolveTransaction(wtx)
+            wtx.toLedgerTransaction(serviceHub).verify()
+        } catch (e: Exception) {
+            throw when (e) {
+                is TransactionVerificationException -> NotaryException(NotaryError.TransactionInvalid(e.toString()))
+                is SignatureException -> NotaryException(NotaryError.SignaturesInvalid(e.toString()))
+                else -> e
+            }
+        }
     }
+
+    @Suspendable
+    private fun resolveTransaction(wtx: WireTransaction) = subFlow(ResolveTransactionsFlow(wtx, otherSide))
 }
