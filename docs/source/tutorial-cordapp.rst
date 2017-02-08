@@ -4,14 +4,18 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-The CorDapp template
-====================
+The example CorDapp
+===================
 
-This guide covers how to get started with the `cordapp-template`. Please note there are two Corda repositories:
+.. note:: The example CorDapp was previously hosted in the `cordapp-template <https://github.com/corda/cordapp-template>`_ repository. It has now been 
+   moved into a new `cordapp-tutorial <https://github.com/corda/cordapp-tutorial>`_ repository. Going forward, the cordapp-template repo will contain an 
+   actual CorDapp template, which should be used as the basis for your CorDapps going forward.
 
-* ``corda`` which contains the core platform code and sample CorDapps.
-* ``cordapp-template`` which contains a template CorDapp you can use to bootstrap your own CorDapps. It is the subject
-  of this tutorial and should help you understand the basics of building a CorDapp.
+This guide covers how to get started with the example CorDapp. Please note there are several Corda repositories:
+
+* `corda <https://github.com/corda/corda>`_ which contains the core platform code and sample CorDapps.
+* `cordapp-tutorial <https://github.com/corda/cordapp-tutorial>`_ which contains an example CorDapp you can use to bootstrap your own CorDapps. It is the subject of this tutorial and should help you understand the basics of building a CorDapp.
+* `cordapp-template <https://github.com/corda/cordapp-template>`_ which contains a bare-bones template on which to build your own CorDapps.
 
 We recommend you read the non-technical white paper and technical white paper before you get started with Corda:
 
@@ -25,30 +29,29 @@ We recommend you read the non-technical white paper and technical white paper be
 Background
 ----------
 
-The Example CorDapp implements a basic scenario where a buyer wishes to submit purchase orders to a seller. The scenario
+The Example CorDapp implements a basic scenario where one party wishes to send an IOU to another party. The scenario
 defines four nodes:
 
-* **Controller** which hosts the network map service and validating notary service.
-* **NodeA** who is the buyer.
-* **NodeB** who is the seller.
-* **NodeC** an unrelated third party.
+* **Controller**, which hosts the network map service and validating notary service
+* **NodeA**
+* **NodeB**
+* **NodeC**
 
-NodeA can generate purchase orders for lists and quantities of items and associated metadata such as delivery address
-and delivery date. The flows used to facilitate the agreement process always results in an agreement with the seller as
-long as the purchase order meets the contract constraints which are defined in ``PurchaseOrderContract.kt``.
+The nodes can generate IOUs and send them to other nodes. The flows used to facilitate the agreement process always results in 
+an agreement with the recipient as long as the IOU meets the contract constraints which are defined in ``IOUContract.kt``.
 
-All agreed purchase orders between NodeA and NodeB become "shared facts" between NodeA and NodeB. But note that NodeC
-won't see any of these transactions or have copies of any of the resulting ``PurchaseOrderState`` objects. This is
+All agreed IOUs between NodeA and NodeB become "shared facts" between NodeA and NodeB. But note that NodeC
+won't see any of these transactions or have copies of any of the resulting ``IOUState`` objects. This is
 because data is only propagated on a need-to-know basis.
 
 Getting started
 ---------------
 
-There are two ways to get started with the CorDapp template. You can either work from a milestone release of Corda or a
+There are two ways to get started with the example CorDapp. You can either work from a milestone release of Corda or a
 SNAPSHOT release of Corda.
 
 **Using a monthly Corda milestone release.** If you wish to develop your CorDapp using the most recent milestone release
-then you can get started simply by cloning the ``cordapp-template`` repository. Gradle will grab all the required dependencies
+then you can get started simply by cloning the ``cordapp-tutorial`` repository. Gradle will grab all the required dependencies
 for you from our `public Maven repository <https://bintray.com/r3/corda>`_.
 
 **Using a Corda SNAPSHOT build.** Alternatively, if you wish to work from the master branch of the Corda repo which contains
@@ -69,21 +72,21 @@ The process for developing your CorDapp from a milestone release is the most sim
 approach.
 
 We publish all our milestone releases to a public Maven repository on a monthly basis. As such, Gradle will automatically
-grab the appropriately versioned (specified in the ``cordapp-template``'s ``build.gradle`` file) dependencies for you from Maven.
-All you have to do is check out the release tag of the template version you wish to use.
+grab the appropriately versioned (specified in the ``cordapp-tutorial``'s ``build.gradle`` file) dependencies for you from Maven.
+All you have to do is check out the release tag of the tutorial version you wish to use.
 
-By default, the ``master`` branch of the ``cordapp-template`` points to a SNAPSHOT release of Corda, this is because it is
+By default, the ``master`` branch of the ``cordapp-tutorial`` points to a SNAPSHOT release of Corda, this is because it is
 being constantly updated to reflect the changes in the master branch of the `corda` repository.
 
 .. note:: If you wish to use a SNAPSHOT release then follow the instructions below: `Using a SNAPSHOT release`_.
 
-To clone the ``cordapp-template`` repository, use the following command:
+To clone the ``cordapp-tutorial`` repository, use the following command:
 
-``git clone https://github.com/corda/cordapp-template``
+``git clone https://github.com/corda/cordapp-tutorial``
 
 Now change directories to the freshly cloned repo:
 
-``cd cordapp-template``
+``cd cordapp-tutorial``
 
 To enumerate all the tagged releases. Use:
 
@@ -95,7 +98,7 @@ To checkout a specific tag, use:
 
 where ``local_branch_name`` is a name of your choice and ``tag_name`` is the name of the tag you wish to checkout.
 
-Gradle will handle all the dependencies for you. Now you are now ready to get started `building the CorDapp Template`_.
+Gradle will handle all the dependencies for you. Now you are now ready to get started `building the example CorDapp`_.
 
 Using a SNAPSHOT release
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -145,7 +148,7 @@ where ``local_branch_name`` is a name of your choice and ``remote_branch_name`` 
 to checkout.
 
 .. note:: When working with ``master`` you will have access to the most up-to-date feature set. However you will be
-  potentially sacrificing stability. We will endeavour to keep the ``master`` branch of the ``cordapp-template`` repo in sync
+  potentially sacrificing stability. We will endeavour to keep the ``master`` branch of the ``cordapp-tutorial`` repo in sync
   with the ``master`` branch of ``corda`` repo. A milestone tagged release would be more stable for CorDapp development.
 
 The next step is to publish the Corda JARs to your local Maven repository. By default the Maven local repository can be
@@ -198,13 +201,13 @@ and to check out an open feature branch, use:
 Once you have published the Corda JARs to your local Maven repository, you are ready to get started building your
 CorDapp using the latest Corda features.
 
-Opening the CorDapp Template with IntelliJ
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Opening the example CorDapp with IntelliJ
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For those familiar with IntelliJ, you can skip this section.
 
 As noted in the getting started guide, we recommend using the IntelliJ IDE. Assuming you have already downloaded and
-installed IntelliJ, lets now open the CorDapp Template with IntelliJ.
+installed IntelliJ, lets now open the example CorDapp with IntelliJ.
 
 **For those completely new to IntelliJ**
 
@@ -213,7 +216,7 @@ Firstly, load up IntelliJ. A dialogue will appear:
 .. image:: resources/intellij-welcome.png
   :width: 400
 
-Click open, then navigate to the folder where you cloned the ``cordapp-template`` and click OK.
+Click open, then navigate to the folder where you cloned the ``cordapp-tutorial`` and click OK.
 
 Next, IntelliJ will show a bunch of pop-up windows. One of which requires our attention:
 
@@ -227,14 +230,14 @@ dialogue, simply close and re-open IntelliJ again to see it again.
 **Alternative approach**
 
 Alternatively, one can instruct IntelliJ to create a new project through cloning a repository. From the IntelliJ welcome
-dialogue (shown above), opt to 'check out from version control', then select git and enter the git URL for the CorDapp template
-(https://github.com/corda/cordapp-template). You'll then need to import the Gradle project when prompted, as explained above.
+dialogue (shown above), opt to 'check out from version control', then select git and enter the git URL for the example CorDapp 
+(https://github.com/corda/cordapp-tutorial). You'll then need to import the Gradle project when prompted, as explained above.
 
 **If you already have IntelliJ open**
 
-From the ``File`` menu, navigate to ``Open ...`` and then navigate to the directory where you cloned the ``cordapp-template``.
+From the ``File`` menu, navigate to ``Open ...`` and then navigate to the directory where you cloned the ``cordapp-tutorial``.
 Alternatively, if you wish to clone from github directly then navigate to ``File > New > Project from existing sources ...``
-and enter the URL to the CorDapp Template (specified above). When instructed, be sure to import the Gradle project when prompted.
+and enter the URL to the example CorDapp (specified above). When instructed, be sure to import the Gradle project when prompted.
 
 **The Gradle plugin**
 
@@ -242,30 +245,30 @@ IntelliJ can be used to run Gradle tasks through the Gradle plugin which can be 
 All the Gradle projects are listed in the window on the right hand side of the IDE. Click on a project, then 'tasks' to
 see all available Gradle tasks.
 
-* For the CorDapp Template repo there will only be one Gradle project listed.
+* For the example CorDapp repo there will only be one Gradle project listed.
 * For the Corda repo there will be many project listed, the root project ``corda`` and associated sub-projects: ``core``,
   ``finance``, ``node``, etc.
 
-.. note:: It's worth noting that when you change branch in the CorDapp template, the ``corda_version`` will change to
+.. note:: It's worth noting that when you change branch in the example CorDapp, the ``corda_version`` will change to
    reflect the version of the branch you are working from.
 
 To execute a task, double click it. The output will be shown in a console window.
 
-Building the CorDapp template
------------------------------
+Building the example CorDapp
+----------------------------
 
 **From the command line**
 
-Firstly, return to your terminal window used above and make sure you are in the ``cordapp-template`` directory.
+Firstly, return to your terminal window used above and make sure you are in the ``cordapp-tutorial`` directory.
 
-To build the CorDapp template use the following command:
+To build the example CorDapp use the following command:
 
 Unix/Mac OSX: ``./gradlew deployNodes``
 
 Windows: ``gradlew.bat deployNodes``
 
-This build process will build the example CorDapp defined in the CorDapp template source. CorDapps can be written in 
-any language targeting the JVM. In our case, we've provided the template source in both Kotlin (``/kotlin/src``) and 
+This build process will build the example CorDapp defined in the example CorDapp source. CorDapps can be written in 
+any language targeting the JVM. In our case, we've provided the example source in both Kotlin (``/kotlin/src``) and 
 Java (``/java/src``) Since both sets of source files are functionally identical, we will refer to the Kotlin build 
 throughout the documentation.
 
@@ -276,7 +279,7 @@ The ``deployNodes`` Gradle task allows you easily create a formation of Corda no
 we are creating ``four`` nodes.
 
 After the building process has finished to see the newly built nodes, you can navigate to the ``kotlin/build/nodes`` folder
-located in the ``cordapp-template`` root directory. You can ignore the other folders in ``/build`` for now. The ``nodes``
+located in the ``cordapp-tutorial`` root directory. You can ignore the other folders in ``/build`` for now. The ``nodes``
 folder has the following structure:
 
 .. sourcecode:: none
@@ -317,10 +320,10 @@ Open the Gradle window by selecting ``View > Tool windows > Gradle`` from the ma
 open on the right hand side of the IDE. Expand `tasks` and then expand `other`. Double click on `deployNodes`. Gradle will
 start the build process and output progress to a console window in the IDE.
 
-Running the CorDapp template
-----------------------------
+Running the example CorDapp
+---------------------------
 
-Running the CorDapp template from the command line
+Running the example CorDapp from the command line
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To run the sample CorDapp navigate to the ``kotlin/build/nodes`` folder and execute the ``runnodes`` shell script with:
@@ -342,7 +345,7 @@ message and some pertinent config information, see below:
 
   --- DEVELOPER SNAPSHOT ------------------------------------------------------------
 
-  Logs can be found in                    : /Users/rogerwillis/Documents/Corda/cordapp-template/kotlin/build/nodes/nodea/logs
+  Logs can be found in                    : /Users/rogerwillis/Documents/Corda/cordapp-tutorial/kotlin/build/nodes/nodea/logs
   Database connection URL is              : jdbc:h2:tcp://10.18.0.196:50661/node
   Node listening on address               : localhost:10004
   Loaded plugins                          : com.example.plugin.ExamplePlugin
@@ -416,14 +419,14 @@ To stop the nodes, press the red "stop" button at the top right-hand side of the
 
 The node driver can also be used to as a basis for `debugging your CorDapp`_
 
-Interacting with the CorDapp template
--------------------------------------
+Interacting with the example CorDapp
+------------------------------------
 
 Via HTTP
 ~~~~~~~~
 
 The CorDapp defines a few HTTP API end-points and also serves some static web content. The end-points allow you to
-list purchase orders and add purchase orders.
+list IOUs and add IOUs.
 
 The nodes can be found using the following port numbers, defined in build.gradle and the respective node.conf file for
 each node found in `kotlin/build/nodes/NodeX`` etc:
@@ -440,32 +443,32 @@ served are as follows:
 
 * ``/api/example/me``
 * ``/api/example/peers``
-* ``/api/example/purchase-orders``
-* ``/api/example/{COUNTERPARTY}/create-purchase-order``
+* ``/api/example/ious``
+* ``/api/example/{COUNTERPARTY}/create-iou``
 
 The static web content is served from ``/web/example``.
 
-A purchase order can be created via accessing the ``api/example/create-purchase-order`` end-point directly or through the
+An IOU can be created via accessing the ``api/example/create-iou`` end-point directly or through the
 the web form hosted at ``/web/example``.
 
  .. warning:: **The content in ``web/example`` is only available for demonstration purposes and does not implement any
   anti-XSS, anti-XSRF or any other security techniques. Do not copy such code directly into products meant for production use.**
 
-**Submitting a purchase order via HTTP API:**
+**Submitting an IOU via HTTP API:**
 
-To create a purchase order from NodeA to NodeB, use:
+To create an IOU from NodeA to NodeB, use:
 
 .. sourcecode:: bash
 
-  echo '{"orderNumber": "1","deliveryDate": "2018-09-15","deliveryAddress": {"city": "London","country": "UK"},"items" : [{"name": "widget","amount": "3"},{"name": "thing","amount": "4"}]}' | cURL -T - -H 'Content-Type: application/json' http://localhost:10005/api/example/NodeB/create-purchase-order
+  echo '{"value": "1"}' | cURL -T - -H 'Content-Type: application/json' http://localhost:10005/api/example/NodeB/create-iou
 
 Note the port number ``10005`` (NodeA) and NodeB referenced in the API end-point path. This command instructs NodeA to
-create and send a purchase order to NodeB. Upon verification and completion of the process, both nodes (but not NodeC) will
-have a signed, notarised copy of the purchase order.
+create and send an IOU to NodeB. Upon verification and completion of the process, both nodes (but not NodeC) will
+have a signed, notarised copy of the IOU.
 
-**Submitting a purchase order via web/example:**
+**Submitting an IOU via web/example:**
 
-Navigate to the "create purchase order" button at the top left of the page, enter in the purchase order details e.g.
+Navigate to the "create IOU" button at the top left of the page, and enter the IOU details - e.g.
 
 .. sourcecode:: none
 
@@ -478,20 +481,22 @@ Navigate to the "create purchase order" button at the top left of the page, ente
   Item amount:   5
 
 and click submit (note you can add additional item types and amounts). Upon pressing submit, the modal dialogue should close.
-To check what validation is performed over the purchase order data, have a look at the ``PurchaseOrderContract.Place`` class in
-``PurchaseOrderContract.kt`` which defines the following contract constraints (among others not included here):
+To check what validation is performed over the IOU data, have a look at the ``IOUContract.Create`` class in
+``IOUContract.kt`` which defines the following contract constraints (among others not included here):
 
 .. sourcecode:: kotlin
 
-  // Purchase order specific constraints.
-  "We only deliver to the UK." by (out.po.deliveryAddress.country == "UK")
-  "You must order at least one type of item." by (out.po.items.size > 0)
-  "You cannot order zero or negative amounts of an item." by (out.po.items.map(Item::amount).all { it > 0 })
-  "You can only order up to 10 items at a time." by (out.po.items.map(Item::amount).sum() <= 10)
-  val time = tx.timestamp?.midpoint
-  "The delivery date must be in the future." by (out.po.deliveryDate.toInstant() > time)
+  // Generic constraints around the IOU transaction.
+  "No inputs should be consumed when issuing an IOU." by (tx.inputs.isEmpty())
+  "Only one output state should be created." by (tx.outputs.size == 1)
+  val out = tx.outputs.single() as IOUState
+  "The sender and the recipient cannot be the same entity." by (out.sender != out.recipient)
+  "All of the participants must be signers." by (command.signers.containsAll(out.participants))
 
-**Once a purchase order has been submitted:**
+  // IOU-specific constraints.
+  "The IOU's value must be non-negative." by (out.iou.value > 0)
+
+**Once an IOU has been submitted:**
 
 Inspect the terminal windows for the nodes. Assume all of the above contract constraints are met, you should see some
 activity in the terminal windows for NodeA and NodeB (note: the green ticks are only visible on unix/mac):
@@ -500,29 +505,25 @@ activity in the terminal windows for NodeA and NodeB (note: the green ticks are 
 
 .. sourcecode:: none
 
-  ✅  Constructing proposed purchase order.
-  ✅  Sending purchase order to seller for review.
-  ✅  Received partially signed transaction from seller.
-  ✅  Verifying signatures and contract constraints.
-  ✅  Signing transaction with our private key.
-  ✅  Obtaining notary signature.
-      ✅  Requesting signature by Notary service
-      ✅  Validating response from Notary service
-  ✅  Recording transaction in vault.
-  ✅  Sending fully signed transaction to seller.
-  ✅  Done
+✅  Generating transaction based on new IOU.
+✅  Verifying contract constraints.
+✅  Signing transaction with our private key.
+✅  Sending proposed transaction to recipient for review.
+✅  Done
 
 *NodeB:*
 
 .. sourcecode:: none
 
-  ✅  Receiving proposed purchase order from buyer.
-  ✅  Generating transaction based on proposed purchase order.
-  ✅  Signing proposed transaction with our private key.
-  ✅  Sending partially signed transaction to buyer and wait for a response.
-  ✅  Verifying signatures and contract constraints.
-  ✅  Recording transaction in vault.
-  ✅  Done
+✅  Receiving proposed transaction from sender.
+✅  Verifying signatures and contract constraints.
+✅  Signing proposed transaction with our private key.
+✅  Obtaining notary signature and recording transaction.
+    ✅  Requesting signature by notary service
+        ✅  Requesting signature by Notary service
+        ✅  Validating response from Notary service
+    ✅  Broadcasting transaction to participants
+✅  Done
 
 *NodeC:*
 
@@ -530,12 +531,12 @@ activity in the terminal windows for NodeA and NodeB (note: the green ticks are 
 
   You shouldn't see any activity.
 
-Next you can view the newly created purchase order by accessing the vault of NodeA or NodeB:
+Next you can view the newly created IOU by accessing the vault of NodeA or NodeB:
 
 *Via the HTTP API:*
 
-For NodeA. navigate to http://localhost:10005/api/example/purchase-orders. For NodeB,
-navigate to http://localhost:10007/api/example/purchase-orders.
+For NodeA. navigate to http://localhost:10005/api/example/ious. For NodeB,
+navigate to http://localhost:10007/api/example/ious.
 
 *Via web/example:*
 
@@ -575,9 +576,9 @@ Using the Example RPC client
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``/src/main/kotlin/com/example/client/ExampleClientRPC.kt`` file is a simple utility which uses the client RPC library
-to connect to a node and log the 'placed' purchase orders. It will log any existing purchase orders and listen for any future
-purchase orders. If you haven't placed any purchase orders when you connect to one of the Nodes via RPC then the client will log
-and future purchase orders which are agreed.
+to connect to a node and log the created IOUs. It will log any existing IOUs and listen for any future
+IOUs. If you haven't created any IOUs when you connect to one of the Nodes via RPC then the client will log
+and future IOUs which are agreed.
 
 To build the client use the following gradle task:
 
@@ -600,17 +601,17 @@ application see:
 * :doc:`Client RPC documentation <clientrpc>`
 * :doc:`Client RPC tutorial <tutorial-clientrpc-api>`
 
-Extending the CorDapp template
-------------------------------
+Extending the example CorDapp
+-----------------------------
 
-CorDapp-template project structure
+cordapp-tutorial project structure
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The CorDapp template has the following directory structure:
+The example CorDapp has the following directory structure:
 
 .. sourcecode:: none
 
-    . cordapp-template
+    . cordapp-tutorial
     ├── README.md
     ├── LICENSE
     ├── build.gradle
@@ -624,7 +625,7 @@ The CorDapp template has the following directory structure:
     ├── lib
     │   ├── ...
     ├── settings.gradle
-    ├── kotlin
+    ├── kotlin-source
     │   └── src
     │       ├── main
     │       │   ├── kotlin
@@ -636,10 +637,10 @@ The CorDapp template has the following directory structure:
     │       │   │           ├── client
     │       │   │           │   └── ExampleClientRPC.kt
     │       │   │           ├── contract
-    │       │   │           │   ├── PurchaseOrderContract.kt
-    │       │   │           │   └── PurchaseOrderState.kt
+    │       │   │           │   ├── IOUContract.kt
+    │       │   │           │   └── IOUState.kt
     │       │   │           ├── model
-    │       │   │           │   └── PurchaseOrder.kt
+    │       │   │           │   └── IOU.kt
     │       │   │           ├── plugin
     │       │   │           │   └── ExamplePlugin.kt
     │       │   │           └── flow
@@ -666,7 +667,7 @@ The CorDapp template has the following directory structure:
     │           │       └── example
     │           │           └── ExampleTest.kt
     │           └── resources
-    └── java
+    └── java-source
         └── src
             ├── main
             │   ├── java
@@ -678,10 +679,10 @@ The CorDapp template has the following directory structure:
             │   │           ├── client
             │   │           │   └── ExampleClientRPC.java
             │   │           ├── contract
-            │   │           │   ├── PurchaseOrderContract.java
-            │   │           │   └── PurchaseOrderState.java
+            │   │           │   ├── IOUContract.java
+            │   │           │   └── IOUState.java
             │   │           ├── model
-            │   │           │   └── PurchaseOrder.java
+            │   │           │   └── IOU.java
             │   │           ├── plugin
             │   │           │   └── ExamplePlugin.java
             │   │           └── flow
@@ -740,8 +741,8 @@ things.
 
 If you are working from a Corda SNAPSHOT release which you have publish to Maven local then ensure that
 ``corda_version`` is the same as the version of the Corda core modules you published to Maven local. If not then change the
-``kotlin_version`` property. Also, if you are working from a previous milestone release, then be sure to ``git checkout``
-the correct version of the CorDapp template from the ``cordapp-template`` repo.
+``kotlin_version`` property. Also, if you are working from a previous cordapp-tutorial milestone release, then be sure to ``git checkout``
+the correct version of the example CorDapp from the ``cordapp-tutorial`` repo.
 
 .. sourcecode:: groovy
 
@@ -824,7 +825,7 @@ like to deploy for testing. See further details below:
 You can add any number of nodes, with any number of services / CorDapps by editing the templates in ``deployNodes``. The
 only requirement is that you must specify a node to run as the network map service and one as the notary service.
 
-.. note:: CorDapps in the current cordapp-template project are automatically registered with all nodes defined in
+.. note:: CorDapps in the current cordapp-tutorial project are automatically registered with all nodes defined in
   ``deployNodes``, although we expect this to change in the near future.
 
 .. warning:: Make sure that there are no port clashes!
@@ -834,7 +835,7 @@ When you are finished editing your *CordFormation* the changes will be reflected
 Service Provider Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you are building a CorDapp from scratch or adding a new CorDapp to the CorDapp-template project then you must provide
+If you are building a CorDapp from scratch or adding a new CorDapp to the cordapp-tutorial project then you must provide
 a reference to your sub-class of ``CordaPluginRegistry`` in the provider-configuration file in located in the ``resources/META-INF/services`` directory.
 
 Re-Deploying Your Nodes Locally
@@ -881,8 +882,8 @@ controller node is running and to its legal name (e.g. `networkMapService.addres
 `networkMapService.legalName=controller`) (please note that the controller will not have the `networkMapService` config)
 
 Each machine should now run its nodes using `runnodes` or `runnodes.bat` 
-files. Once they are up and running, the nodes should be able to place 
-purchase orders among themselves in the same way as when they were running on 
+files. Once they are up and running, the nodes should be able to create 
+IOUs among themselves in the same way as when they were running on 
 the same machine.
 
 Debugging your CorDapp
