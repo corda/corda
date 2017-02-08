@@ -32,9 +32,8 @@ sealed class MerkleTree(val hash: SecureHash) {
             var n = allLeavesHashes.size
             if (isPow2(n)) return allLeavesHashes
             val paddedHashes = ArrayList<SecureHash>(allLeavesHashes)
-            while (!isPow2(n)) {
+            while (!isPow2(n++)) {
                 paddedHashes.add(SecureHash.zeroHash)
-                n++
             }
             return paddedHashes
         }
@@ -51,16 +50,14 @@ sealed class MerkleTree(val hash: SecureHash) {
                 return lastNodesList[0] //Root reached.
             } else {
                 val newLevelHashes: MutableList<MerkleTree> = ArrayList()
-                var i = 0
                 val n = lastNodesList.size
-                while (i < n) {
+                require((n and 1) == 0) { "Sanity check: number of nodes should be even." }
+                for (i in 0..n-2 step 2) {
                     val left = lastNodesList[i]
-                    require(i+1 <= n-1) { "Sanity check: number of nodes should be even." }
                     val right = lastNodesList[i+1]
                     val newHash = left.hash.hashConcat(right.hash)
                     val combined = Node(newHash, left, right)
                     newLevelHashes.add(combined)
-                    i += 2
                 }
                 return buildMerkleTree(newLevelHashes)
             }
