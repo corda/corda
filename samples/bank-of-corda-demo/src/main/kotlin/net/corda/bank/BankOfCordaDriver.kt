@@ -22,6 +22,9 @@ fun main(args: Array<String>) {
     BankOfCordaDriver().main(args)
 }
 
+val BANK_USERNAME = "bankUser"
+val BIGCORP_USERNAME = "bigCorpUser"
+
 private class BankOfCordaDriver {
     enum class Role {
         ISSUE_CASH_RPC,
@@ -48,10 +51,11 @@ private class BankOfCordaDriver {
         val role = options.valueOf(roleArg)!!
         if (role == Role.ISSUER) {
             driver(dsl = {
-                val user = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>(), startFlowPermission<IssuerFlow.IssuanceRequester>()))
+                val bankUser = User(BANK_USERNAME, "test", permissions = setOf(startFlowPermission<CashFlow>(), startFlowPermission<IssuerFlow.IssuanceRequester>()))
+                val bigCorpUser = User(BIGCORP_USERNAME, "test", permissions = setOf(startFlowPermission<CashFlow>()))
                 startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.type)))
-                val bankOfCorda = startNode("BankOfCorda", rpcUsers = listOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
-                startNode("BigCorporation", rpcUsers = listOf(user))
+                val bankOfCorda = startNode("BankOfCorda", rpcUsers = listOf(bankUser), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
+                startNode("BigCorporation", rpcUsers = listOf(bigCorpUser))
                 startWebserver(bankOfCorda.get())
                 waitForAllNodesToFinish()
             }, isDebug = true)
