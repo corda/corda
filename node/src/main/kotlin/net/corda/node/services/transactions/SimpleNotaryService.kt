@@ -4,6 +4,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.flows.NonValidatingNotaryFlow
 import net.corda.flows.NotaryFlow
 import net.corda.node.services.api.ServiceHubInternal
 
@@ -16,6 +17,6 @@ class SimpleNotaryService(services: ServiceHubInternal,
     }
 
     override fun createFlow(otherParty: Party): NotaryFlow.Service {
-        return NotaryFlow.Service(otherParty, timestampChecker, uniquenessProvider)
+        return NonValidatingNotaryFlow(otherParty, timestampChecker, uniquenessProvider)
     }
 }
