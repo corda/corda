@@ -25,8 +25,8 @@
                     </children>
                 </VBox>
                 <Pane prefHeight="200.0" prefWidth="200.0" HBox.hgrow="ALWAYS" />
-                <Button fx:id="viewDatabaseButton" mnemonicParsing="false" prefHeight="92.0" prefWidth="115.0" styleClass="big-button" text="View&#10;Database" textAlignment="CENTER" />
-                <Button fx:id="launchExplorerButton" mnemonicParsing="false" prefHeight="92.0" prefWidth="115.0" styleClass="big-button" text="Launch&#10;Explorer" textAlignment="CENTER" />
+                <Button fx:id="viewDatabaseButton" disable="true" mnemonicParsing="false" prefHeight="92.0" prefWidth="115.0" styleClass="big-button" text="View&#10;Database" textAlignment="CENTER" />
+                <Button fx:id="launchExplorerButton" disable="true" mnemonicParsing="false" prefHeight="92.0" prefWidth="115.0" styleClass="big-button" text="Launch&#10;Explorer" textAlignment="CENTER" />
             </children>
         </HBox>
     </children>
