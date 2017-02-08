@@ -186,6 +186,10 @@ by using the H2 web console:
   located in the ``node`` directory and locate the compile step for ``com.h2database``. Use a client of the same
   major version - even if still in beta.
 
+- If you are uncertain as to which version of h2 to install or if you have connectivity issues, refer to ``build.gradle``
+  located in the ``node`` directory and locate for the compile step for ``com.h2database``. Use a client of the same
+  major version - even if still in beta.
+
 - The H2 web console should start up in a web browser tab. To connect we first need to obtain a JDBC connection string.
   Each node outputs its connection string in the terminal window as it starts up. In a terminal window where a node is running,
   look for the following string:
