@@ -34,6 +34,9 @@
   
 
   
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Contract catalogue" href="contract-catalogue.html"/>
         <link rel="prev" title="Clauses" href="clauses.html"/> 
@@ -117,7 +120,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The example CorDapp</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -236,15 +239,16 @@ Merkle trees are widely used in peer-to-peer networks, blockchain systems and gi
 You can read more on the concept <a class="reference external" href="https://en.wikipedia.org/wiki/Merkle_tree">here</a>.</p>
 <div class="section" id="merkle-trees-in-corda">
 <h2>Merkle trees in Corda<a class="headerlink" href="#merkle-trees-in-corda" title="Permalink to this headline">¶</a></h2>
-<p>Transactions are split into leaves, each of them contains either input, output, command or attachment. Other fields like
-timestamp or signers are not used in the calculation.
-Next, the Merkle tree is built in the normal way by hashing the concatenation
-of nodes’ hashes below the current one together. It’s visible on the example image below, where <code class="docutils literal"><span class="pre">H</span></code> denotes sha256 function,
-&#8220;+&#8221; - concatenation.</p>
+<p>Transactions are split into leaves, each of them contains either input, output, command or attachment. Additionally, in
+transaction id calculation we use other fields of <code class="docutils literal"><span class="pre">WireTransaction</span></code> like timestamp, notary, type and signers.
+Next, the Merkle tree is built in the normal way by hashing the concatenation of nodes’ hashes below the current one together.
+It’s visible on the example image below, where <code class="docutils literal"><span class="pre">H</span></code> denotes sha256 function, &#8220;+&#8221; - concatenation.</p>
 <img alt="_images/merkleTree.png" src="_images/merkleTree.png" />
-<p>The transaction has one input state, one output and three commands. If a tree is not a full binary tree, the rightmost nodes are
-duplicated in hash calculation (dotted lines).</p>
-<p>Finally, the hash of the root is the identifier of the transaction, it&#8217;s also used for signing and verification of data integrity.
+<p>The transaction has two input states, one of output, attachment and command each and timestamp. For brevity we didn&#8217;t
+include all leaves on the diagram (type, notary and signers are presented as one leaf labelled Rest - in reality
+they are separate leaves). Notice that if a tree is not a full binary tree, leaves are padded to the nearest power
+of 2 with zero hash (since finding a pre-image of sha256(x) == 0 is hard computational task) - marked light green above.
+Finally, the hash of the root is the identifier of the transaction, it&#8217;s also used for signing and verification of data integrity.
 Every change in transaction on a leaf level will change its identifier.</p>
 </div>
 <div class="section" id="hiding-data">
@@ -254,9 +258,11 @@ Every change in transaction on a leaf level will change its identifier.</p>
 Then that hash is compared with the hash of a whole transaction and if they match it means that data we obtained belongs
 to that particular transaction.</p>
 <img alt="_images/partialMerkle.png" src="_images/partialMerkle.png" />
-<p>In the example above, the red node is the one holding data for signing Oracle service. Blue nodes&#8217; hashes form the Partial Merkle
-Tree, dotted ones are not included. Having the command that should be in a red node place and branch we are able to calculate
-root of this tree and compare it with original transaction identifier - we have a proof that this command belongs to this transaction.</p>
+<p>In the example above, the node <code class="docutils literal"><span class="pre">H(f)</span></code> is the one holding command data for signing by Oracle service. Blue leaf <code class="docutils literal"><span class="pre">H(g)</span></code> is also
+included since it&#8217;s holding timestamp information. Nodes labelled <code class="docutils literal"><span class="pre">Provided</span></code> form the Partial Merkle Tree, black ones
+are omitted. Having timestamp with the command that should be in a violet node place and branch we are able to calculate
+root of this tree and compare it with original transaction identifier - we have a proof that this command and timestamp
+belong to this transaction.</p>
 </div>
 <div class="section" id="example-of-usage">
 <h2>Example of usage<a class="headerlink" href="#example-of-usage" title="Permalink to this headline">¶</a></h2>
@@ -264,46 +270,87 @@ root of this tree and compare it with original transaction identifier - we have 
 <a class="reference internal" href="oracles.html"><span class="doc">Writing oracle services</span></a>.
 After construction of a partial transaction, with included <code class="docutils literal"><span class="pre">Fix</span></code> commands in it, we want to send it to the Oracle for checking
 and signing. To do so we need to specify which parts of the transaction are going to be revealed. That can be done by constructing
-filtering functions for inputs, outputs, attachments and commands separately. If a function is not provided by default none
-of the elements from this group will be included in a Partial Merkle Tree.</p>
+filtering function over fields of <code class="docutils literal"><span class="pre">WireTransaction</span></code> of type <code class="docutils literal"><span class="pre">(Any)</span> <span class="pre">-&gt;</span> <span class="pre">Boolean</span></code>.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="py">partialTx</span>  <span class="p">=</span> <span class="p">...</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="py">partialTx</span> <span class="p">=</span> <span class="p">...</span>
 <span class="k">val</span> <span class="py">oracle</span><span class="p">:</span> <span class="n">Party</span> <span class="p">=</span> <span class="p">...</span>
-<span class="k">fun</span> <span class="nf">filterCommands</span><span class="p">(</span><span class="n">c</span><span class="p">:</span> <span class="n">Command</span><span class="p">)</span> <span class="p">=</span> <span class="n">oracle</span><span class="p">.</span><span class="n">owningKey</span> <span class="k">in</span> <span class="n">c</span><span class="p">.</span><span class="n">signers</span> <span class="p">&amp;&amp;</span> <span class="n">c</span><span class="p">.</span><span class="n">value</span> <span class="k">is</span> <span class="n">Fix</span>
-<span class="k">val</span> <span class="py">filterFuns</span> <span class="p">=</span> <span class="n">FilterFuns</span><span class="p">(</span><span class="n">filterCommands</span> <span class="p">=</span> <span class="o">::</span><span class="n">filterCommands</span><span class="p">)</span>
+<span class="k">fun</span> <span class="nf">filtering</span><span class="p">(</span><span class="n">elem</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span> <span class="n">Boolean</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="k">when</span> <span class="p">(</span><span class="n">elem</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">is</span> <span class="n">Command</span> <span class="p">-&gt;</span> <span class="n">oracleParty</span><span class="p">.</span><span class="n">owningKey</span> <span class="k">in</span> <span class="n">elem</span><span class="p">.</span><span class="n">signers</span> <span class="p">&amp;&amp;</span> <span class="n">elem</span><span class="p">.</span><span class="n">value</span> <span class="k">is</span> <span class="n">Fix</span>
+            <span class="k">else</span> <span class="p">-&gt;</span> <span class="k">false</span>
+        <span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </div>
 <p>Assuming that we already assembled partialTx with some commands and know the identity of Oracle service,
-we pass filtering function over commands - <code class="docutils literal"><span class="pre">filterCommands</span></code> to <code class="docutils literal"><span class="pre">FilterFuns</span></code>. It filters only
-commands of type <code class="docutils literal"><span class="pre">Fix</span></code> as in IRSDemo example. Then we can construct <code class="docutils literal"><span class="pre">FilteredTransaction</span></code>:</p>
+we construct filtering function over commands - <code class="docutils literal"><span class="pre">filtering</span></code>. It performs type checking and filters only <code class="docutils literal"><span class="pre">Fix</span></code> commands
+as in IRSDemo example. Then we can construct <code class="docutils literal"><span class="pre">FilteredTransaction</span></code>:</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="py">wtx</span><span class="p">:</span> <span class="n">WireTransaction</span> <span class="p">=</span> <span class="n">partialTx</span><span class="p">.</span><span class="n">toWireTransaction</span><span class="p">()</span>
-<span class="k">val</span> <span class="py">ftx</span> <span class="p">=</span> <span class="n">FilteredTransaction</span><span class="p">.</span><span class="n">buildMerkleTransaction</span><span class="p">(</span><span class="n">wtx</span><span class="p">,</span> <span class="n">filterFuns</span><span class="p">)</span>
+<span class="k">val</span> <span class="py">ftx</span><span class="p">:</span> <span class="n">FilteredTransaction</span> <span class="p">=</span> <span class="n">wtx</span><span class="p">.</span><span class="n">buildFilteredTransaction</span><span class="p">(</span><span class="n">filtering</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<p>In the Oracle example this step takes place in <code class="docutils literal"><span class="pre">RatesFixFlow</span></code>:</p>
-<div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="py">flow</span> <span class="p">=</span> <span class="n">RatesFixFlow</span><span class="p">(</span><span class="n">partialTx</span><span class="p">,</span> <span class="n">filterFuns</span><span class="p">,</span> <span class="n">oracle</span><span class="p">,</span> <span class="n">fixOf</span><span class="p">,</span> <span class="s">&quot;0.675&quot;</span><span class="p">.</span><span class="n">bd</span><span class="p">,</span> <span class="s">&quot;0.1&quot;</span><span class="p">.</span><span class="n">bd</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
+<p>In the Oracle example this step takes place in <code class="docutils literal"><span class="pre">RatesFixFlow</span></code> by overriding <code class="docutils literal"><span class="pre">filtering</span></code> function, see: <a class="reference internal" href="oracles.html#filtering-ref"><span class="std std-ref">Using an oracle</span></a></p>
 <p><code class="docutils literal"><span class="pre">FilteredTransaction</span></code> holds <code class="docutils literal"><span class="pre">filteredLeaves</span></code> (data that we wanted to reveal) and Merkle branch for them.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="c1">// Getting included commands, inputs, outputs, attachments.</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="c1">// Direct accsess to included commands, inputs, outputs, attachments etc.</span>
 <span class="k">val</span> <span class="py">cmds</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">Command</span><span class="p">&gt;</span> <span class="p">=</span> <span class="n">ftx</span><span class="p">.</span><span class="n">filteredLeaves</span><span class="p">.</span><span class="n">commands</span>
 <span class="k">val</span> <span class="py">ins</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">StateRef</span><span class="p">&gt;</span> <span class="p">=</span> <span class="n">ftx</span><span class="p">.</span><span class="n">filteredLeaves</span><span class="p">.</span><span class="n">inputs</span>
-<span class="k">val</span> <span class="py">outs</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">TransactionState</span><span class="p">&lt;</span><span class="n">ContractState</span><span class="p">&gt;&gt;</span> <span class="p">=</span> <span class="n">ftx</span><span class="p">.</span><span class="n">filteredLeaves</span><span class="p">.</span><span class="n">outputs</span>
-<span class="k">val</span> <span class="py">attchs</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">SecureHash</span><span class="p">&gt;</span> <span class="p">=</span> <span class="n">ftx</span><span class="p">.</span><span class="n">filteredLeaves</span><span class="p">.</span><span class="n">attachments</span>
+<span class="k">val</span> <span class="py">timestamp</span><span class="p">:</span> <span class="n">Timestamp</span><span class="p">?</span> <span class="p">=</span> <span class="n">ftx</span><span class="p">.</span><span class="n">filteredLeaves</span><span class="p">.</span><span class="n">timestamp</span>
+<span class="p">...</span>
 </pre></div>
 </div>
 </div>
-<p>If you want to verify obtained <code class="docutils literal"><span class="pre">FilteredTransaction</span></code> all you need is the root hash of the full transaction:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        <span class="k">fun</span> <span class="nf">sign</span><span class="p">(</span><span class="n">ftx</span><span class="p">:</span> <span class="n">FilteredTransaction</span><span class="p">,</span> <span class="n">merkleRoot</span><span class="p">:</span> <span class="n">SecureHash</span><span class="p">):</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(!</span><span class="n">ftx</span><span class="p">.</span><span class="n">verify</span><span class="p">(</span><span class="n">merkleRoot</span><span class="p">))</span> <span class="p">{</span>
+                <span class="k">throw</span> <span class="n">MerkleTreeException</span><span class="p">(</span><span class="s">&quot;Rate Fix Oracle: Couldn&#39;t verify partial Merkle tree.&quot;</span><span class="p">)</span>
+            <span class="p">}</span>
+            <span class="c1">// Performing validation of obtained FilteredLeaves.</span>
+            <span class="k">fun</span> <span class="nf">commandValidator</span><span class="p">(</span><span class="n">elem</span><span class="p">:</span> <span class="n">Command</span><span class="p">):</span> <span class="n">Boolean</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="p">(!(</span><span class="n">identity</span><span class="p">.</span><span class="n">owningKey</span> <span class="k">in</span> <span class="n">elem</span><span class="p">.</span><span class="n">signers</span> <span class="p">&amp;&amp;</span> <span class="n">elem</span><span class="p">.</span><span class="n">value</span> <span class="k">is</span> <span class="n">Fix</span><span class="p">))</span>
+                    <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;Oracle received unknown command (not in signers or not Fix).&quot;</span><span class="p">)</span>
+                <span class="k">val</span> <span class="py">fix</span> <span class="p">=</span> <span class="n">elem</span><span class="p">.</span><span class="n">value</span> <span class="k">as</span> <span class="n">Fix</span>
+                <span class="k">val</span> <span class="py">known</span> <span class="p">=</span> <span class="n">knownFixes</span><span class="p">[</span><span class="n">fix</span><span class="p">.</span><span class="n">of</span><span class="p">]</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">known</span> <span class="p">==</span> <span class="k">null</span> <span class="p">||</span> <span class="n">known</span> <span class="p">!=</span> <span class="n">fix</span><span class="p">)</span>
+                    <span class="k">throw</span> <span class="n">UnknownFix</span><span class="p">(</span><span class="n">fix</span><span class="p">.</span><span class="n">of</span><span class="p">)</span>
+                <span class="k">return</span> <span class="k">true</span>
+            <span class="p">}</span>
+
+            <span class="k">fun</span> <span class="nf">check</span><span class="p">(</span><span class="n">elem</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span> <span class="n">Boolean</span> <span class="p">{</span>
+                <span class="k">return</span> <span class="k">when</span> <span class="p">(</span><span class="n">elem</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="k">is</span> <span class="n">Command</span> <span class="p">-&gt;</span> <span class="n">commandValidator</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+                    <span class="k">else</span> <span class="p">-&gt;</span> <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;Oracle received data of different type than expected.&quot;</span><span class="p">)</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="k">val</span> <span class="py">leaves</span> <span class="p">=</span> <span class="n">ftx</span><span class="p">.</span><span class="n">filteredLeaves</span>
+            <span class="k">if</span> <span class="p">(!</span><span class="n">leaves</span><span class="p">.</span><span class="n">checkWithFun</span><span class="p">(</span><span class="o">::</span><span class="n">check</span><span class="p">))</span>
+                <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">()</span>
+
+            <span class="c1">// It all checks out, so we can return a signature.</span>
+            <span class="c1">//</span>
+            <span class="c1">// Note that we will happily sign an invalid transaction, as we are only being presented with a filtered</span>
+            <span class="c1">// version so we can&#39;t resolve or check it ourselves. However, that doesn&#39;t matter much, as if we sign</span>
+            <span class="c1">// an invalid transaction the signature is worthless.</span>
+            <span class="k">return</span> <span class="n">signingKey</span><span class="p">.</span><span class="n">signWithECDSA</span><span class="p">(</span><span class="n">merkleRoot</span><span class="p">.</span><span class="n">bytes</span><span class="p">,</span> <span class="n">identity</span><span class="p">)</span>
+        <span class="p">}</span>
+</pre></div>
+</div>
+<p>Above code snippet is taken from <code class="docutils literal"><span class="pre">NodeInterestRates.kt</span></code> file and implements a signing part of an Oracle.
+You can check only leaves using <code class="docutils literal"><span class="pre">leaves.checkWithFun</span> <span class="pre">{</span> <span class="pre">check(it)</span> <span class="pre">}</span></code> and then verify obtained <code class="docutils literal"><span class="pre">FilteredTransaction</span></code>
+to see if data from <code class="docutils literal"><span class="pre">PartialMerkleTree</span></code> belongs to <code class="docutils literal"><span class="pre">WireTransaction</span></code> with provided <code class="docutils literal"><span class="pre">id</span></code>. All you need is the root hash
+of the full transaction:</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="p">(!</span><span class="n">ftx</span><span class="p">.</span><span class="n">verify</span><span class="p">(</span><span class="n">merkleRoot</span><span class="p">)){</span>
         <span class="k">throw</span> <span class="n">MerkleTreeException</span><span class="p">(</span><span class="s">&quot;Rate Fix Oracle: Couldn&#39;t verify partial Merkle tree.&quot;</span><span class="p">)</span>
 <span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>Or combine the two steps together:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">ftx</span><span class="p">.</span><span class="n">verifyWithFunction</span><span class="p">(</span><span class="n">merkleRoot</span><span class="p">,</span> <span class="o">::</span><span class="n">check</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
