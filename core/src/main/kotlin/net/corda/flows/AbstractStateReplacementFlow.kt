@@ -16,8 +16,6 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
-import net.corda.flows.AbstractStateReplacementFlow.Acceptor
-import net.corda.flows.AbstractStateReplacementFlow.Instigator
 
 /**
  * Abstract flow to be used for replacing one state with another, for example when changing the notary of a state.
@@ -25,7 +23,6 @@ import net.corda.flows.AbstractStateReplacementFlow.Instigator
  * flows.
  */
 abstract class AbstractStateReplacementFlow {
-
     /**
      * The [Proposal] contains the details of proposed state modification.
      * This is the message sent by the [Instigator] to all participants([Acceptor]) during the state replacement process.
