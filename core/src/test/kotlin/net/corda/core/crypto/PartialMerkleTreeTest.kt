@@ -113,7 +113,7 @@ class PartialMerkleTreeTest {
         assertTrue(mt.filteredLeaves.timestamp != null)
         assertEquals(null, mt.filteredLeaves.type)
         assertEquals(null, mt.filteredLeaves.notary)
-        assert(mt.verify(testTx.id))
+        assert(mt.verify())
     }
 
     @Test
@@ -131,7 +131,7 @@ class PartialMerkleTreeTest {
         assertTrue(mt.filteredLeaves.inputs.isEmpty())
         assertTrue(mt.filteredLeaves.outputs.isEmpty())
         assertTrue(mt.filteredLeaves.timestamp == null)
-        assertFailsWith<MerkleTreeException> { mt.verify(testTx.id) }
+        assertFailsWith<MerkleTreeException> { mt.verify() }
     }
 
     // Partial Merkle Tree building tests
