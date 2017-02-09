@@ -8,7 +8,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.utilities.Emoji
-import net.corda.flows.CashCommand
 import net.corda.flows.CashFlow
 import net.corda.flows.ContractUpgradeFlow
 import net.corda.flows.FinalityFlow
@@ -91,7 +90,7 @@ class ContractUpgradeFlowTest {
     @Test
     fun `upgrade Cash to v2`() {
         // Create some cash.
-        val result = a.services.startFlow(CashFlow(CashCommand.IssueCash(Amount(1000, USD), OpaqueBytes.of(1), a.info.legalIdentity, notary))).resultFuture
+        val result = a.services.startFlow(CashFlow(CashFlow.Command.IssueCash(Amount(1000, USD), OpaqueBytes.of(1), a.info.legalIdentity, notary))).resultFuture
         mockNet.runNetwork()
         val stateAndRef = result.getOrThrow().tx.outRef<Cash.State>(0)
         // Starts contract upgrade flow.
