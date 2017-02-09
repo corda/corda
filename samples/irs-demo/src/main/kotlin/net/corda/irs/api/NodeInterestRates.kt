@@ -79,7 +79,7 @@ object NodeInterestRates {
             @Suspendable
             override fun call() {
                 val request = receive<RatesFixFlow.SignRequest>(otherParty).unwrap { it }
-                send(otherParty, service.oracle.sign(request.ftx, request.rootHash))
+                send(otherParty, service.oracle.sign(request.ftx))
             }
         }
 
@@ -189,8 +189,8 @@ object NodeInterestRates {
         //      Oracle gets signing request for only some of them with a valid partial tree? We sign over a whole transaction.
         //      It will be fixed by adding partial signatures later.
         // DOCSTART 1
-        fun sign(ftx: FilteredTransaction, merkleRoot: SecureHash): DigitalSignature.LegallyIdentifiable {
-            if (!ftx.verify(merkleRoot)) {
+        fun sign(ftx: FilteredTransaction): DigitalSignature.LegallyIdentifiable {
+            if (!ftx.verify()) {
                 throw MerkleTreeException("Rate Fix Oracle: Couldn't verify partial Merkle tree.")
             }
             // Performing validation of obtained FilteredLeaves.
@@ -219,7 +219,7 @@ object NodeInterestRates {
             // Note that we will happily sign an invalid transaction, as we are only being presented with a filtered
             // version so we can't resolve or check it ourselves. However, that doesn't matter much, as if we sign
             // an invalid transaction the signature is worthless.
-            return signingKey.signWithECDSA(merkleRoot.bytes, identity)
+            return signingKey.signWithECDSA(ftx.rootHash.bytes, identity)
         }
         // DOCEND 1
     }

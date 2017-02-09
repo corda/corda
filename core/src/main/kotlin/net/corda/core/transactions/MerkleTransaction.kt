@@ -80,10 +80,12 @@ class FilteredLeaves(
 
 /**
  * Class representing merkleized filtered transaction.
+ * @param rootHash Merkle tree root hash.
  * @param filteredLeaves Leaves included in a filtered transaction.
  * @param partialMerkleTree Merkle branch needed to verify filteredLeaves.
  */
-class FilteredTransaction(
+class FilteredTransaction private constructor(
+        val rootHash: SecureHash,
         val filteredLeaves: FilteredLeaves,
         val partialMerkleTree: PartialMerkleTree
 ) {
@@ -99,26 +101,26 @@ class FilteredTransaction(
             val filteredLeaves = wtx.filterWithFun(filtering)
             val merkleTree = wtx.getMerkleTree()
             val pmt = PartialMerkleTree.build(merkleTree, filteredLeaves.calculateLeavesHashes())
-            return FilteredTransaction(filteredLeaves, pmt)
+            return FilteredTransaction(merkleTree.hash, filteredLeaves, pmt)
         }
     }
 
     /**
-     * Runs verification of Partial Merkle Branch with merkleRootHash.
+     * Runs verification of Partial Merkle Branch against [rootHash].
      */
     @Throws(MerkleTreeException::class)
-    fun verify(merkleRootHash: SecureHash): Boolean {
+    fun verify(): Boolean {
         val hashes: List<SecureHash> = filteredLeaves.calculateLeavesHashes()
         if (hashes.isEmpty())
             throw MerkleTreeException("Transaction without included leaves.")
-        return partialMerkleTree.verify(merkleRootHash, hashes)
+        return partialMerkleTree.verify(rootHash, hashes)
     }
 
     /**
-     * Runs verification of Partial Merkle Branch with merkleRootHash. Checks filteredLeaves with provided checkingFun.
+     * Runs verification of Partial Merkle Branch against [rootHash]. Checks filteredLeaves with provided checkingFun.
      */
     @Throws(MerkleTreeException::class)
-    fun verifyWithFunction(merkleRootHash: SecureHash, checkingFun: (Any) -> Boolean): Boolean {
-        return verify(merkleRootHash) && filteredLeaves.checkWithFun { checkingFun(it) }
+    fun verifyWithFunction(checkingFun: (Any) -> Boolean): Boolean {
+        return verify() && filteredLeaves.checkWithFun { checkingFun(it) }
     }
 }
