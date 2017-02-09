@@ -14,7 +14,7 @@ class DummyIssueAndMove(private val notary: Party, private val counterpartyNode:
         val random = Random()
         val myKeyPair = serviceHub.legalIdentityKey
         // Self issue an asset
-        val issueTx = DummyContract.generateInitial(serviceHub.myInfo.legalIdentity.ref(0), random.nextInt(), notary).apply {
+        val issueTx = DummyContract.generateInitial(random.nextInt(), notary, serviceHub.myInfo.legalIdentity.ref(0)).apply {
             signWith(myKeyPair)
         }
         serviceHub.recordTransactions(issueTx.toSignedTransaction())
