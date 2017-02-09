@@ -125,9 +125,8 @@ fun generateKeyPair(): KeyPair = KeyPairGenerator().generateKeyPair()
  * @param entropy the seed in form of BigInteger.
  * @return the generated EdDSA keypair.
  */
-fun entropyToKeyPair(entropy: BigInteger): KeyPair {
-    return deterministicKeyPair(entropy.toByteArray())
-}
+fun entropyToKeyPair(entropy: BigInteger): KeyPair =
+        deterministicKeyPair(entropy.toByteArray())
 
 /**
  * Returns a deterministically generated key pair from a given private key and an index (similarly to BIP32 hardened keys).
@@ -138,9 +137,8 @@ fun entropyToKeyPair(entropy: BigInteger): KeyPair {
  * @param index a number input that will be concatenated to the  parent key to form the final seed.
  * @return the generated EdDSA keypair.
  */
-fun privKeyToNewKeyPair(parentPrivateKey: EdDSAPrivateKey, index: Int): KeyPair {
-    return deterministicKeyPair(parentPrivateKey.abyte.plus(index.bytes()))
-}
+fun privKeyToNewKeyPair(parentPrivateKey: EdDSAPrivateKey, index: Int): KeyPair =
+        deterministicKeyPair(parentPrivateKey.abyte.plus(index.bytes()))
 
 /**
  * Returns a deterministically generated key pair from a provided seed. This is useful for deterministic
@@ -161,11 +159,11 @@ fun deterministicKeyPair(bytes: ByteArray): KeyPair {
  * Extension function to return the ByteArray representation of an Int.
  * TODO: check which of the bytes() and bytesV2() performs better
  */
-fun Int.bytes()  =
+fun Int.bytes() =
         byteArrayOf(this.ushr(24).toByte(), this.ushr(16).toByte(), this.ushr(8).toByte(), this.toByte())
 
 /*
  * Extension function to return the ByteArray representation of an Int.
  */
-fun Int.bytesV2()  =
+fun Int.bytesV2() =
         ByteBuffer.allocate(4).putInt(this).array()
