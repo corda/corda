@@ -8,10 +8,10 @@ class JVMConfig : Controller() {
 
     val userHome: Path = Paths.get(System.getProperty("user.home")).toAbsolutePath()
     val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
-    val applicationDir = Paths.get(System.getProperty("user.dir")).toAbsolutePath()
+    val applicationDir: Path = Paths.get(System.getProperty("user.dir")).toAbsolutePath()
 
     init {
-        log.info("Java executable: " + javaPath)
+        log.info("Java executable: $javaPath")
     }
 
     fun commandFor(jarPath: Path, vararg args: String): Array<String> {

@@ -24,7 +24,7 @@ class ServiceController : Controller() {
                     val service = it.trim()
                     set.add(service)
 
-                    log.info("Supports: " + service)
+                    log.info("Supports: $service")
                 }
             }
             return set.toList()

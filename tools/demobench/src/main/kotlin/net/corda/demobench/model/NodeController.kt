@@ -38,8 +38,8 @@ class NodeController : Controller() {
     private var networkMapConfig: NetworkMapConfig? = null
 
     init {
-        log.info("Base directory: " + baseDir)
-        log.info("Corda JAR: " + cordaPath)
+        log.info("Base directory: $baseDir")
+        log.info("Corda JAR: $cordaPath")
     }
 
     fun validate(nodeData: NodeData): NodeConfig? {
@@ -54,7 +54,7 @@ class NodeController : Controller() {
         )
 
         if (nodes.putIfAbsent(config.key, config) != null) {
-            log.warning("Node with key '" + config.key + "' already exists.")
+            log.warning("Node with key '${config.key}' already exists.")
             return null
         }
 
@@ -62,6 +62,14 @@ class NodeController : Controller() {
         chooseNetworkMap(config)
 
         return config
+    }
+
+    fun dispose(config: NodeConfig) {
+        config.state = NodeState.DEAD
+
+        if (config.networkMap == null) {
+            log.warning("Network map service (Node '${config.legalName}') has exited.")
+        }
     }
 
     val nextPort: Int get() = port.andIncrement
@@ -90,7 +98,7 @@ class NodeController : Controller() {
             config.networkMap = networkMapConfig
         } else {
             networkMapConfig = config
-            log.info("Network map provided by: " + config.legalName)
+            log.info("Network map provided by: ${config.legalName}")
         }
     }
 
@@ -112,7 +120,7 @@ class NodeController : Controller() {
 
                 // Execute the Corda node
                 pty.run(command, System.getenv(), nodeDir.toString())
-                log.info("Launched node: " + config.legalName)
+                log.info("Launched node: ${config.legalName}")
                 return true
             } catch (e: Exception) {
                 log.severe("Failed to launch Corda:" + e)

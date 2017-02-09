@@ -13,8 +13,8 @@ class DemoBenchView : View("Corda Demo Bench") {
 
     override val root by fxml<Parent>()
 
-    val addNodeButton by fxid<Button>()
-    val nodeTabPane by fxid<TabPane>()
+    private val addNodeButton by fxid<Button>()
+    private val nodeTabPane by fxid<TabPane>()
 
     init {
         importStylesheet("/net/corda/demobench/style.css")
@@ -52,5 +52,11 @@ class DemoBenchView : View("Corda Demo Bench") {
 
     fun enableAddNodes() {
         addNodeButton.isDisable = false
+    }
+
+    fun forceAtLeastOneTab() {
+        if (nodeTabPane.tabs.isEmpty()) {
+            addNodeButton.fire()
+        }
     }
 }
