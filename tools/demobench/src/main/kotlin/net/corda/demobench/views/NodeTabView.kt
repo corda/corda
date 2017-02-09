@@ -1,8 +1,10 @@
 package net.corda.demobench.views
 
 import java.text.DecimalFormat
+import javafx.application.Platform
 import javafx.scene.control.SelectionMode.MULTIPLE
 import javafx.util.converter.NumberStringConverter
+import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.NodeController
 import net.corda.demobench.model.NodeDataModel
 import net.corda.demobench.model.ServiceController
@@ -146,7 +148,7 @@ class NodeTabView : Fragment() {
             }
 
             button("Create Node") {
-                setOnAction() {
+                setOnAction {
                     if (model.validate()) {
                         launch()
                         main.enableAddNodes()
@@ -160,23 +162,6 @@ class NodeTabView : Fragment() {
 
     private val availableServices: List<String>
         get() = if (nodeController.hasNetworkMap()) serviceController.services else serviceController.notaries
-
-    fun launch() {
-        model.commit()
-        val config = nodeController.validate(model.item)
-        if (config != null) {
-            nodeConfigView.isVisible = false
-            nodeTab.text = config.legalName
-            nodeTerminalView.open(config)
-
-            nodeTab.setOnSelectionChanged {
-                if (nodeTab.isSelected) {
-                    // Doesn't work yet
-                    nodeTerminalView.refreshTerminal()
-                }
-            }
-        }
-    }
 
     init {
         INTEGER_FORMAT.isGroupingUsed = false
@@ -192,5 +177,30 @@ class NodeTabView : Fragment() {
         model.artemisPort.value = nodeController.nextPort
         model.webPort.value = nodeController.nextPort
         model.h2Port.value = nodeController.nextPort
+    }
+
+    fun launch() {
+        model.commit()
+        val config = nodeController.validate(model.item)
+        if (config != null) {
+            nodeConfigView.isVisible = false
+            nodeTab.text = config.legalName
+            nodeTerminalView.open(config, onExit = { onTabClose(config) })
+
+            nodeTab.setOnSelectionChanged {
+                if (nodeTab.isSelected) {
+                    // Doesn't work yet
+                    nodeTerminalView.refreshTerminal()
+                }
+            }
+        }
+    }
+
+    private fun onTabClose(config: NodeConfig) {
+        Platform.runLater {
+            nodeTab.requestClose()
+            nodeController.dispose(config)
+            main.forceAtLeastOneTab()
+        }
     }
 }

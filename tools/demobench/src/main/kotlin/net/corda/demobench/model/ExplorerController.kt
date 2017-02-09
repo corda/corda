@@ -10,7 +10,7 @@ class ExplorerController : Controller() {
     private val explorerPath = jvm.applicationDir.resolve("explorer").resolve("node-explorer.jar")
 
     init {
-        log.info("Explorer JAR: " + explorerPath)
+        log.info("Explorer JAR: $explorerPath")
     }
 
     internal fun execute(cwd: Path, vararg args: String) = jvm.execute(explorerPath, cwd, *args)

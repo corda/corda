@@ -38,6 +38,8 @@ class NodeConfig(
 
     var networkMap: NetworkMapConfig? = null
 
+    var state: NodeState = NodeState.STARTING
+
     /*
      * The configuration object depends upon the networkMap,
      * which is mutable.

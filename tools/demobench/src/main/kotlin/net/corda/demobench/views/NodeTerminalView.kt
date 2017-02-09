@@ -42,7 +42,7 @@ class NodeTerminalView : Fragment() {
         root.vgrow = Priority.ALWAYS
     }
 
-    fun open(config: NodeConfig) {
+    fun open(config: NodeConfig, onExit: () -> Unit) {
         nodeName.text = config.legalName
         p2pPort.value = config.artemisPort.toString()
 
@@ -55,7 +55,7 @@ class NodeTerminalView : Fragment() {
         root.isVisible = true
 
         SwingUtilities.invokeLater({
-            val r3pty = R3Pty(config.legalName, TerminalSettingsProvider(), Dimension(160, 80))
+            val r3pty = R3Pty(config.legalName, TerminalSettingsProvider(), Dimension(160, 80), onExit)
             pty = r3pty
 
             swingTerminal.content = r3pty.terminal
@@ -86,12 +86,15 @@ class NodeTerminalView : Fragment() {
         })
     }
 
-    fun enable() {
+    fun enable(config: NodeConfig) {
+        config.state = NodeState.RUNNING
+        log.info("Node '${config.legalName}' is now ready.")
+
         launchExplorerButton.isDisable = false
         viewDatabaseButton.isDisable = false
     }
 
-    fun launchRPC(config: NodeConfig) = NodeRPC(config, start = { enable() }, invoke = { ops ->
+    fun launchRPC(config: NodeConfig) = NodeRPC(config, start = { enable(config) }, invoke = { ops ->
         try {
             val verifiedTx = ops.verifiedTransactions()
             val statesInVault = ops.vaultAndUpdates()

@@ -29,7 +29,7 @@ class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Un
                     // Cancel the "setup" task now that we've created the RPC client.
                     this.cancel()
 
-                    log.info("Node '{}' is now ready.", config.legalName)
+                    // Run "start-up" task, now that the RPC client is ready.
                     start()
 
                     // Schedule a new task that will refresh the display once per second.
