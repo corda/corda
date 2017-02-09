@@ -8,9 +8,9 @@ buildscript {
     ext.logback_version = '1.1.10'
 
     ext.java_home = System.properties.'java.home'
-    ext.pkg_source = 'build/packagesrc'
-    ext.dist_name = "demobench-${version}"
-    ext.dist_source = "${pkg_source}/${dist_name}"
+    ext.pkg_source = "$buildDir/packagesrc"
+    ext.dist_name = "demobench-$version"
+    ext.dist_source = "$pkg_source/$dist_name"
     ext.pkg_version = "$version".indexOf('-') >= 0 ? "$version".substring(0, "$version".indexOf('-')) : "$version"
 
     repositories {
@@ -120,36 +120,40 @@ distributions {
 }
 
 /*
- * Invokes the JavaPackager Ant task, using the ZIP distribution as source.
+ * Bundles the application using JavaPackager,
+ * using the ZIP distribution as source.
  */
-task javapackage {
+task javapackage(dependsOn: 'distZip') {
 
     doLast {
-        ant.delete(dir: "${pkg_source}")
-        ant.delete(dir: 'build/exedir')
+        delete(["$pkg_source", "$buildDir/exedir"])
 
-        ant.unzip(src: "build/distributions/${dist_name}.zip", dest: "${pkg_source}")
+        copy {
+            from(zipTree("$buildDir/distributions/${dist_name}.zip"))
+            into "$pkg_source"
+        }
 
-        ant.copy(todir: "${pkg_source}/package", filtering: 'true') {
-            fileset(dir: 'package')
-            filterset(begintoken: '@', endtoken: '@') {
-                filter(token: 'pkg_version', value: "${pkg_version}")
+        copy {
+            from("$projectDir/package")
+            filter {
+                line -> line.replaceAll('@pkg_version@', "$pkg_version")
             }
+            into "$pkg_source/package"
         }
 
         ant.taskdef(
             resource: 'com/sun/javafx/tools/ant/antlib.xml',
-            classpath: "${pkg_source}:${java_home}/../lib/ant-javafx.jar"
+            classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
         )
 
-        ant.deploy(nativeBundles: 'rpm', outdir: 'build/exedir', outfile: 'DemoBench', verbose: 'true') {
+        ant.deploy(nativeBundles: 'rpm', outdir: "$buildDir/exedir", outfile: 'DemoBench', verbose: 'true') {
             application(name: 'DemoBench', version: "$pkg_version", mainClass: "$mainClassName")
             resources {
-                fileset(dir: "${dist_source}/lib", type: 'jar') {
+                fileset(dir: "$dist_source/lib", type: 'jar') {
                     include(name: '*.jar')
                 }
 
-                fileset(dir: "${dist_source}/lib", type: 'native') {
+                fileset(dir: "$dist_source/lib", type: 'native') {
                     include(name: "macosx/**/*.dylib")
                     include(name: "win/**/*.dll")
                     include(name: "win/**/*.exe")
