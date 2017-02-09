@@ -464,26 +464,6 @@ interface UpgradedContract<in OldState : ContractState, out NewState : ContractS
      * that the class is incompatible, or that the data inside the state object cannot be upgraded for some reason.
      */
     fun upgrade(state: OldState): NewState
-
-    companion object {
-        fun verify(tx: TransactionForContract) {
-            // Contract Upgrade transaction should have 1 input, 1 output and 1 command.
-            verify(tx.inputs.single(), tx.outputs.single(), tx.commands.map { Command(it.value, it.signers) }.single())
-        }
-
-        fun verify(input: ContractState, output: ContractState, commandData: Command) {
-            val command = commandData.value as UpgradeCommand
-            val participants: Set<CompositeKey> = input.participants.toSet()
-            val keysThatSigned: Set<CompositeKey> = commandData.signers.toSet()
-            val upgradedContract = command.upgradedContractClass.newInstance() as UpgradedContract<ContractState, *>
-            requireThat {
-                "The signing keys include all participant keys" by keysThatSigned.containsAll(participants)
-                "Inputs state reference the legacy contract" by (input.contract.javaClass == upgradedContract.legacyContract.javaClass)
-                "Outputs state reference the upgraded contract" by (output.contract.javaClass == command.upgradedContractClass)
-                "Output state must be an upgraded version of the input state" by (output == upgradedContract.upgrade(input))
-            }
-        }
-    }
 }
 
 /**

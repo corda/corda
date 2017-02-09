@@ -19,6 +19,26 @@ import net.corda.flows.ContractUpgradeFlow.Instigator
  * use the new updated state for future transactions.
  */
 object ContractUpgradeFlow {
+    @JvmStatic
+    fun verify(tx: TransactionForContract) {
+        // Contract Upgrade transaction should have 1 input, 1 output and 1 command.
+        verify(tx.inputs.single(), tx.outputs.single(), tx.commands.map { Command(it.value, it.signers) }.single())
+    }
+
+    @JvmStatic
+    fun verify(input: ContractState, output: ContractState, commandData: Command) {
+        val command = commandData.value as UpgradeCommand
+        val participants: Set<CompositeKey> = input.participants.toSet()
+        val keysThatSigned: Set<CompositeKey> = commandData.signers.toSet()
+        val upgradedContract = command.upgradedContractClass.newInstance() as UpgradedContract<ContractState, *>
+        requireThat {
+            "The signing keys include all participant keys" by keysThatSigned.containsAll(participants)
+            "Inputs state reference the legacy contract" by (input.contract.javaClass == upgradedContract.legacyContract.javaClass)
+            "Outputs state reference the upgraded contract" by (output.contract.javaClass == command.upgradedContractClass)
+            "Output state must be an upgraded version of the input state" by (output == upgradedContract.upgrade(input))
+        }
+    }
+
     private fun <OldState : ContractState, NewState : ContractState> assembleBareTx(
             stateRef: StateAndRef<OldState>,
             upgradedContractClass: Class<UpgradedContract<OldState, NewState>>
@@ -57,7 +77,7 @@ object ContractUpgradeFlow {
                 "The proposed upgrade ${proposal.modification.javaClass} is a trusted upgrade path" by (proposal.modification == authorisedUpgrade)
                 "The proposed tx matches the expected tx for this upgrade" by (proposedTx == expectedTx)
             }
-            UpgradedContract.verify(oldStateAndRef.state.data, expectedTx.outRef<ContractState>(0).state.data, expectedTx.commands.single())
+            ContractUpgradeFlow.verify(oldStateAndRef.state.data, expectedTx.outRef<ContractState>(0).state.data, expectedTx.commands.single())
         }
     }
 }
