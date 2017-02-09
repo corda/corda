@@ -9,12 +9,12 @@ class CloseableTab(text: String, content: Node) : Tab(text, content) {
 
     fun requestClose() {
         val b = behaviour
-        if (b.canCloseTab(this)) {
+        if ((b != null) && b.canCloseTab(this)) {
             b.closeTab(this)
         }
     }
 
-    private val behaviour: TabPaneBehavior
-        get() = (tabPane.skin as TabPaneSkin).behavior
+    private val behaviour: TabPaneBehavior?
+        get() = (tabPane.skin as TabPaneSkin?)?.behavior
 
 }
