@@ -32,7 +32,7 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}/opt
 cp -r %{_sourcedir}/DemoBench %{buildroot}/opt
 mkdir -p %{buildroot}/opt/DemoBench/runtime/bin
-cp %{_javaHome}/bin/java %{buildroot}/opt/DemoBench/runtime/bin
+cp %{_javaHome}/jre/bin/java %{buildroot}/opt/DemoBench/runtime/bin
 
 %files
 
