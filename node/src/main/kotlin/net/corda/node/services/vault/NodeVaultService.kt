@@ -337,14 +337,27 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         return Vault.Update(consumedStates, ourNewStates.toHashSet())
     }
 
-    private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>): Boolean {
-        return if (state is OwnableState) {
-            state.owner.containsAny(ourKeys)
-        } else if (state is LinearState) {
-            // It's potentially of interest to the vault
-            state.isRelevant(ourKeys)
-        } else {
-            false
+    // TODO : Persists this in DB.
+    private val authorisedUpgrade = mutableMapOf<StateRef, Class<UpgradedContract<*, *>>>()
+
+    override fun getAuthorisedContractUpgrade(ref: StateRef) = authorisedUpgrade[ref]
+
+    override fun authoriseContractUpgrade(stateAndRef: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>) {
+        val upgrade = upgradedContractClass.newInstance()
+        if (upgrade.legacyContract.javaClass != stateAndRef.state.data.contract.javaClass) {
+            throw IllegalArgumentException("The contract state cannot be upgraded using provided UpgradedContract.")
         }
+        authorisedUpgrade.put(stateAndRef.ref, upgradedContractClass)
+    }
+
+    override fun deauthoriseContractUpgrade(stateAndRef: StateAndRef<*>) {
+        authorisedUpgrade.remove(stateAndRef.ref)
+    }
+
+    private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
+        is OwnableState -> state.owner.containsAny(ourKeys)
+    // It's potentially of interest to the vault
+        is LinearState -> state.isRelevant(ourKeys)
+        else -> false
     }
 }

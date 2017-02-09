@@ -2,6 +2,7 @@ package net.corda.node.internal
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.UpgradedContract
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -102,6 +103,8 @@ class CordaRPCOpsImpl(
 
     override fun attachmentExists(id: SecureHash) = services.storageService.attachments.openAttachment(id) != null
     override fun uploadAttachment(jar: InputStream) = services.storageService.attachments.importAttachment(jar)
+    override fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>) = services.vaultService.authoriseContractUpgrade(state, upgradedContractClass)
+    override fun deauthoriseContractUpgrade(state: StateAndRef<*>) = services.vaultService.deauthoriseContractUpgrade(state)
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
     @Suppress("OverridingDeprecatedMember", "DEPRECATION")
     override fun uploadFile(dataType: String, name: String?, file: InputStream): String {
