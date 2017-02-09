@@ -103,7 +103,7 @@ class NodeTerminalView : Fragment() {
             Platform.runLater {
                 states.value = statesInVault.first.size.toString()
                 transactions.value = verifiedTx.first.size.toString()
-                balance.value = cashBalances
+                balance.value = if (cashBalances.isNullOrEmpty()) "0" else cashBalances
             }
         } catch (e: Exception) {
             log.warning("RPC failed: " + e)
