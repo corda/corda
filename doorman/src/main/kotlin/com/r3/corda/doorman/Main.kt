@@ -4,6 +4,7 @@ import com.google.common.net.HostAndPort
 import com.r3.corda.doorman.OptionParserHelper.toConfigWithOptions
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
 import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
+import net.corda.core.createDirectories
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.X509Utilities.CACertAndKey
 import net.corda.core.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
@@ -42,16 +43,14 @@ import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
 /**
- *  CertificateSigningServer runs on Jetty server and provide certificate signing service via http.
+ *  DoormanServer runs on Jetty server and provide certificate signing service via http.
  *  The server will require keystorePath, keystore password and key password via command line input.
  *  The Intermediate CA certificate,Intermediate CA private key and Root CA Certificate should use alias name specified in [X509Utilities]
  */
-class DoormanServer(webServerAddr: HostAndPort, val caCertAndKey: CACertAndKey, val rootCACert: Certificate, val storage: CertificationRequestStorage) : Closeable {
-    companion object {
-        val log = loggerFor<DoormanServer>()
-    }
+val logger = loggerFor<DoormanServer>()
 
-    val server: Server = Server(InetSocketAddress(webServerAddr.hostText, webServerAddr.port)).apply {
+class DoormanServer(webServerAddr: HostAndPort, val caCertAndKey: CACertAndKey, val rootCACert: Certificate, val storage: CertificationRequestStorage) : Closeable {
+    private val server: Server = Server(InetSocketAddress(webServerAddr.hostText, webServerAddr.port)).apply {
         server.handler = HandlerCollection().apply {
             addHandler(buildServletContextHandler())
         }
@@ -64,15 +63,15 @@ class DoormanServer(webServerAddr: HostAndPort, val caCertAndKey: CACertAndKey, 
             .first()
 
     override fun close() {
-        log.info("Shutting down Doorman Web Services...")
+        logger.info("Shutting down Doorman Web Services...")
         server.stop()
         server.join()
     }
 
     fun start() {
-        log.info("Starting Doorman Web Services...")
+        logger.info("Starting Doorman Web Services...")
         server.start()
-        log.info("Doorman Web Services started on $hostAndPort")
+        logger.info("Doorman Web Services started on $hostAndPort")
     }
 
     private fun buildServletContextHandler(): ServletContextHandler {
@@ -90,7 +89,7 @@ class DoormanServer(webServerAddr: HostAndPort, val caCertAndKey: CACertAndKey, 
     }
 }
 
-class DoormanParameters(args: Array<String>) {
+private class DoormanParameters(args: Array<String>) {
     private val argConfig = args.toConfigWithOptions {
         accepts("basedir", "Overriding configuration filepath, default to current directory.").withRequiredArg().describedAs("filepath")
         accepts("keygen", "Generate CA keypair and certificate using provide Root CA key.").withOptionalArg()
@@ -113,7 +112,7 @@ class DoormanParameters(args: Array<String>) {
     val caPrivateKeyPassword: String? by config.getOrElse { null }
     val rootKeystorePassword: String? by config.getOrElse { null }
     val rootPrivateKeyPassword: String? by config.getOrElse { null }
-    val approveAll: Boolean by config
+    val approveAll: Boolean by config.getOrElse { false }
     val host: String by config
     val port: Int by config
     val dataSourceProperties: Properties by  config
@@ -127,21 +126,25 @@ class DoormanParameters(args: Array<String>) {
     }
 }
 
-fun main(args: Array<String>) {
-    fun readPassword(fmt: String): String {
-        return if (System.console() != null) {
-            String(System.console().readPassword(fmt))
-        } else {
-            print(fmt)
-            readLine()!!
-        }
+/** Read password from console, do a readLine instead if console is null (e.g. when debugging in IDE). */
+private fun readPassword(fmt: String): String {
+    return if (System.console() != null) {
+        String(System.console().readPassword(fmt))
+    } else {
+        print(fmt)
+        readLine()!!
     }
+}
+
+fun main(args: Array<String>) {
     DoormanParameters(args).run {
-        val log = DoormanServer.log
         when (mode) {
             DoormanParameters.Mode.ROOT_KEYGEN -> {
                 println("Generating Root CA keypair and certificate.")
+                // Get password from console if not in config.
                 val rootKeystorePassword = rootKeystorePassword ?: readPassword("Root Keystore Password : ")
+                // Ensure folder exists.
+                rootStorePath.parent.createDirectories()
                 val rootStore = loadOrCreateKeyStore(rootStorePath, rootKeystorePassword)
                 val rootPrivateKeyPassword = rootPrivateKeyPassword ?: readPassword("Root Private Key Password : ")
 
@@ -160,7 +163,8 @@ fun main(args: Array<String>) {
                 println(loadKeyStore(rootStorePath, rootKeystorePassword).getCertificate(CORDA_ROOT_CA_PRIVATE_KEY).publicKey)
             }
             DoormanParameters.Mode.CA_KEYGEN -> {
-                println("Generating Intermediate CA keypair and certificate.")
+                println("Generating Intermediate CA keypair and certificate using root keystore $rootStorePath.")
+                // Get password from console if not in config.
                 val rootKeystorePassword = rootKeystorePassword ?: readPassword("Root Keystore Password : ")
                 val rootPrivateKeyPassword = rootPrivateKeyPassword ?: readPassword("Root Private Key Password : ")
                 val rootKeyStore = loadKeyStore(rootStorePath, rootKeystorePassword)
@@ -169,6 +173,8 @@ fun main(args: Array<String>) {
 
                 val keystorePassword = keystorePassword ?: readPassword("Keystore Password : ")
                 val caPrivateKeyPassword = caPrivateKeyPassword ?: readPassword("CA Private Key Password : ")
+                // Ensure folder exists.
+                keystorePath.parent.createDirectories()
                 val keyStore = loadOrCreateKeyStore(keystorePath, keystorePassword)
 
                 if (keyStore.containsAlias(CORDA_INTERMEDIATE_CA_PRIVATE_KEY)) {
@@ -186,21 +192,20 @@ fun main(args: Array<String>) {
                 println(loadKeyStore(keystorePath, keystorePassword).getCertificate(CORDA_INTERMEDIATE_CA_PRIVATE_KEY).publicKey)
             }
             DoormanParameters.Mode.DOORMAN -> {
-                log.info("Starting certificate signing server.")
-
+                logger.info("Starting Doorman server.")
+                // Get password from console if not in config.
                 val keystorePassword = keystorePassword ?: readPassword("Keystore Password : ")
                 val caPrivateKeyPassword = caPrivateKeyPassword ?: readPassword("CA Private Key Password : ")
-
                 val keystore = X509Utilities.loadKeyStore(keystorePath, keystorePassword)
                 val rootCACert = keystore.getCertificateChain(CORDA_INTERMEDIATE_CA_PRIVATE_KEY).last()
                 val caCertAndKey = X509Utilities.loadCertificateAndKey(keystore, caPrivateKeyPassword, CORDA_INTERMEDIATE_CA_PRIVATE_KEY)
-
                 // Create DB connection.
                 val (datasource, database) = configureDatabase(dataSourceProperties)
                 val storage = DBCertificateRequestStorage(database)
                 // Daemon thread approving all request periodically.
-                val approvalThread = if (approveAll) {
-                    thread(name = "Request Approval Daemon") {
+                if (approveAll) {
+                    thread(name = "Request Approval Daemon", isDaemon = true) {
+                        logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing request.")
                         while (true) {
                             sleep(10.seconds.toMillis())
                             for (id in storage.getPendingRequestIds()) {
@@ -210,17 +215,14 @@ fun main(args: Array<String>) {
                                                 if (it.ipAddress == it.hostName) listOf() else listOf(it.hostName), listOf(it.ipAddress))
                                     }
                                 })
-                                log.info("Approved $id")
+                                logger.info("Approved request $id")
                             }
                         }
                     }
-                } else null
-                DoormanServer(HostAndPort.fromParts(host, port), caCertAndKey, rootCACert, storage).use {
-                    it.start()
-                    it.server.join()
-                    approvalThread?.interrupt()
-                    approvalThread?.join()
                 }
+                val doorman = DoormanServer(HostAndPort.fromParts(host, port), caCertAndKey, rootCACert, storage)
+                doorman.start()
+                Runtime.getRuntime().addShutdownHook(thread(start = false) { doorman.close() })
             }
         }
     }
