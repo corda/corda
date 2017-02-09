@@ -1,0 +1,15 @@
+This JAR contains executable versions of 'Covered Software' distributed under the terms of the Common Development and Distribution License and/or the GNU General Public License with ClassPath exception.
+
+Source code versions of the Covered Software are available online from their source projects via the links indicated below.
+
+--------------------
+
+JAX-RS API - licensed under CDDL-1.0 (https://opensource.org/licenses/cddl1.php)
+Source code available at: https://java.net/projects/jax-rs-spec/sources/api/show
+
+Jersey - dual-licensed under CDDL-1.0 and GPL 2.0 with ClassPath exception (https://jersey.java.net/license.html)
+Source code available at: https://maven.java.net/content/repositories/releases/org/glassfish/jersey/
+
+HK2 - dual-licensed under CDDL-1.0 and GPL 2.0 with ClassPath exception (https://hk2.java.net/2.5.0-b32/license.html)
+Source code available at: https://java.net/projects/hk2/sources/git/show
+
