@@ -185,7 +185,7 @@ class NodeTabView : Fragment() {
         if (config != null) {
             nodeConfigView.isVisible = false
             nodeTab.text = config.legalName
-            nodeTerminalView.open(config, onExit = { onTabClose(config) })
+            nodeTerminalView.open(config, onExit = { onTerminalExit(config) })
 
             nodeTab.setOnSelectionChanged {
                 if (nodeTab.isSelected) {
@@ -196,7 +196,7 @@ class NodeTabView : Fragment() {
         }
     }
 
-    private fun onTabClose(config: NodeConfig) {
+    private fun onTerminalExit(config: NodeConfig) {
         Platform.runLater {
             nodeTab.requestClose()
             nodeController.dispose(config)

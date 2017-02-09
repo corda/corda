@@ -33,6 +33,7 @@ class NodeTerminalView : Fragment() {
     private val viewDatabaseButton by fxid<Button>()
     private val launchExplorerButton by fxid<Button>()
 
+    private var isClosed: Boolean = false
     private val explorer = explorerController.explorer()
     private val viewer = DBViewer()
     private var rpc: NodeRPC? = null
@@ -114,10 +115,13 @@ class NodeTerminalView : Fragment() {
     })
 
     fun close() {
-        explorer.close()
-        viewer.close()
-        rpc?.close()
-        pty?.close()
+        if (!isClosed) {
+            explorer.close()
+            viewer.close()
+            rpc?.close()
+            pty?.close()
+            isClosed = true
+        }
     }
 
     fun refreshTerminal() {
