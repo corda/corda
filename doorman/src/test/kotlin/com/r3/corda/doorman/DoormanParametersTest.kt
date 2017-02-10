@@ -19,5 +19,3 @@ class DoormanParametersTest {
         assertEquals(1000, params2.port)
     }
 }
-
-

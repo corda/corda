@@ -1,6 +1,7 @@
 package com.r3.corda.doorman
 
 import com.google.common.net.HostAndPort
+import com.r3.corda.doorman.DoormanServer.Companion.logger
 import com.r3.corda.doorman.OptionParserHelper.toConfigWithOptions
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
 import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
@@ -47,9 +48,12 @@ import kotlin.system.exitProcess
  *  The server will require keystorePath, keystore password and key password via command line input.
  *  The Intermediate CA certificate,Intermediate CA private key and Root CA Certificate should use alias name specified in [X509Utilities]
  */
-val logger = loggerFor<DoormanServer>()
 
 class DoormanServer(webServerAddr: HostAndPort, val caCertAndKey: CACertAndKey, val rootCACert: Certificate, val storage: CertificationRequestStorage) : Closeable {
+    companion object {
+        val logger = loggerFor<DoormanServer>()
+    }
+
     private val server: Server = Server(InetSocketAddress(webServerAddr.hostText, webServerAddr.port)).apply {
         server.handler = HandlerCollection().apply {
             addHandler(buildServletContextHandler())
@@ -89,7 +93,7 @@ class DoormanServer(webServerAddr: HostAndPort, val caCertAndKey: CACertAndKey, 
     }
 }
 
-private class DoormanParameters(args: Array<String>) {
+class DoormanParameters(args: Array<String>) {
     private val argConfig = args.toConfigWithOptions {
         accepts("basedir", "Overriding configuration filepath, default to current directory.").withRequiredArg().describedAs("filepath")
         accepts("keygen", "Generate CA keypair and certificate using provide Root CA key.").withOptionalArg()
@@ -136,94 +140,100 @@ private fun readPassword(fmt: String): String {
     }
 }
 
+private fun DoormanParameters.generateRootKeyPair() {
+    println("Generating Root CA keypair and certificate.")
+    // Get password from console if not in config.
+    val rootKeystorePassword = rootKeystorePassword ?: readPassword("Root Keystore Password : ")
+    // Ensure folder exists.
+    rootStorePath.parent.createDirectories()
+    val rootStore = loadOrCreateKeyStore(rootStorePath, rootKeystorePassword)
+    val rootPrivateKeyPassword = rootPrivateKeyPassword ?: readPassword("Root Private Key Password : ")
+
+    if (rootStore.containsAlias(CORDA_ROOT_CA_PRIVATE_KEY)) {
+        val oldKey = loadOrCreateKeyStore(rootStorePath, rootKeystorePassword).getCertificate(CORDA_ROOT_CA_PRIVATE_KEY).publicKey
+        println("Key $CORDA_ROOT_CA_PRIVATE_KEY already exists in keystore, process will now terminate.")
+        println(oldKey)
+        exitProcess(1)
+    }
+
+    val selfSignCert = X509Utilities.createSelfSignedCACert(CORDA_ROOT_CA)
+    rootStore.addOrReplaceKey(CORDA_ROOT_CA_PRIVATE_KEY, selfSignCert.keyPair.private, rootPrivateKeyPassword.toCharArray(), arrayOf(selfSignCert.certificate))
+    saveKeyStore(rootStore, rootStorePath, rootKeystorePassword)
+
+    println("Root CA keypair and certificate stored in $rootStorePath.")
+    println(loadKeyStore(rootStorePath, rootKeystorePassword).getCertificate(CORDA_ROOT_CA_PRIVATE_KEY).publicKey)
+}
+
+private fun DoormanParameters.generateKeyPair() {
+    println("Generating Intermediate CA keypair and certificate using root keystore $rootStorePath.")
+    // Get password from console if not in config.
+    val rootKeystorePassword = rootKeystorePassword ?: readPassword("Root Keystore Password : ")
+    val rootPrivateKeyPassword = rootPrivateKeyPassword ?: readPassword("Root Private Key Password : ")
+    val rootKeyStore = loadKeyStore(rootStorePath, rootKeystorePassword)
+
+    val rootKeyAndCert = loadCertificateAndKey(rootKeyStore, rootPrivateKeyPassword, CORDA_ROOT_CA_PRIVATE_KEY)
+
+    val keystorePassword = keystorePassword ?: readPassword("Keystore Password : ")
+    val caPrivateKeyPassword = caPrivateKeyPassword ?: readPassword("CA Private Key Password : ")
+    // Ensure folder exists.
+    keystorePath.parent.createDirectories()
+    val keyStore = loadOrCreateKeyStore(keystorePath, keystorePassword)
+
+    if (keyStore.containsAlias(CORDA_INTERMEDIATE_CA_PRIVATE_KEY)) {
+        val oldKey = loadOrCreateKeyStore(keystorePath, rootKeystorePassword).getCertificate(CORDA_INTERMEDIATE_CA_PRIVATE_KEY).publicKey
+        println("Key $CORDA_INTERMEDIATE_CA_PRIVATE_KEY already exists in keystore, process will now terminate.")
+        println(oldKey)
+        exitProcess(1)
+    }
+
+    val intermediateKeyAndCert = createIntermediateCert(CORDA_INTERMEDIATE_CA, rootKeyAndCert)
+    keyStore.addOrReplaceKey(CORDA_INTERMEDIATE_CA_PRIVATE_KEY, intermediateKeyAndCert.keyPair.private,
+            caPrivateKeyPassword.toCharArray(), arrayOf(intermediateKeyAndCert.certificate, rootKeyAndCert.certificate))
+    saveKeyStore(keyStore, keystorePath, keystorePassword)
+    println("Intermediate CA keypair and certificate stored in $keystorePath.")
+    println(loadKeyStore(keystorePath, keystorePassword).getCertificate(CORDA_INTERMEDIATE_CA_PRIVATE_KEY).publicKey)
+}
+
+private fun DoormanParameters.startDoorman() {
+    logger.info("Starting Doorman server.")
+    // Get password from console if not in config.
+    val keystorePassword = keystorePassword ?: readPassword("Keystore Password : ")
+    val caPrivateKeyPassword = caPrivateKeyPassword ?: readPassword("CA Private Key Password : ")
+    val keystore = X509Utilities.loadKeyStore(keystorePath, keystorePassword)
+    val rootCACert = keystore.getCertificateChain(CORDA_INTERMEDIATE_CA_PRIVATE_KEY).last()
+    val caCertAndKey = X509Utilities.loadCertificateAndKey(keystore, caPrivateKeyPassword, CORDA_INTERMEDIATE_CA_PRIVATE_KEY)
+    // Create DB connection.
+    val (datasource, database) = configureDatabase(dataSourceProperties)
+    val storage = DBCertificateRequestStorage(database)
+    // Daemon thread approving all request periodically.
+    if (approveAll) {
+        thread(name = "Request Approval Daemon", isDaemon = true) {
+            logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing request.")
+            while (true) {
+                sleep(10.seconds.toMillis())
+                for (id in storage.getPendingRequestIds()) {
+                    storage.approveRequest(id, {
+                        JcaPKCS10CertificationRequest(it.request).run {
+                            X509Utilities.createServerCert(subject, publicKey, caCertAndKey,
+                                    if (it.ipAddress == it.hostName) listOf() else listOf(it.hostName), listOf(it.ipAddress))
+                        }
+                    })
+                    logger.info("Approved request $id")
+                }
+            }
+        }
+    }
+    val doorman = DoormanServer(HostAndPort.fromParts(host, port), caCertAndKey, rootCACert, storage)
+    doorman.start()
+    Runtime.getRuntime().addShutdownHook(thread(start = false) { doorman.close() })
+}
+
 fun main(args: Array<String>) {
     DoormanParameters(args).run {
         when (mode) {
-            DoormanParameters.Mode.ROOT_KEYGEN -> {
-                println("Generating Root CA keypair and certificate.")
-                // Get password from console if not in config.
-                val rootKeystorePassword = rootKeystorePassword ?: readPassword("Root Keystore Password : ")
-                // Ensure folder exists.
-                rootStorePath.parent.createDirectories()
-                val rootStore = loadOrCreateKeyStore(rootStorePath, rootKeystorePassword)
-                val rootPrivateKeyPassword = rootPrivateKeyPassword ?: readPassword("Root Private Key Password : ")
-
-                if (rootStore.containsAlias(CORDA_ROOT_CA_PRIVATE_KEY)) {
-                    val oldKey = loadOrCreateKeyStore(rootStorePath, rootKeystorePassword).getCertificate(CORDA_ROOT_CA_PRIVATE_KEY).publicKey
-                    println("Key $CORDA_ROOT_CA_PRIVATE_KEY already exists in keystore, process will now terminate.")
-                    println(oldKey)
-                    exitProcess(1)
-                }
-
-                val selfSignCert = X509Utilities.createSelfSignedCACert(CORDA_ROOT_CA)
-                rootStore.addOrReplaceKey(CORDA_ROOT_CA_PRIVATE_KEY, selfSignCert.keyPair.private, rootPrivateKeyPassword.toCharArray(), arrayOf(selfSignCert.certificate))
-                saveKeyStore(rootStore, rootStorePath, rootKeystorePassword)
-
-                println("Root CA keypair and certificate stored in $rootStorePath.")
-                println(loadKeyStore(rootStorePath, rootKeystorePassword).getCertificate(CORDA_ROOT_CA_PRIVATE_KEY).publicKey)
-            }
-            DoormanParameters.Mode.CA_KEYGEN -> {
-                println("Generating Intermediate CA keypair and certificate using root keystore $rootStorePath.")
-                // Get password from console if not in config.
-                val rootKeystorePassword = rootKeystorePassword ?: readPassword("Root Keystore Password : ")
-                val rootPrivateKeyPassword = rootPrivateKeyPassword ?: readPassword("Root Private Key Password : ")
-                val rootKeyStore = loadKeyStore(rootStorePath, rootKeystorePassword)
-
-                val rootKeyAndCert = loadCertificateAndKey(rootKeyStore, rootPrivateKeyPassword, CORDA_ROOT_CA_PRIVATE_KEY)
-
-                val keystorePassword = keystorePassword ?: readPassword("Keystore Password : ")
-                val caPrivateKeyPassword = caPrivateKeyPassword ?: readPassword("CA Private Key Password : ")
-                // Ensure folder exists.
-                keystorePath.parent.createDirectories()
-                val keyStore = loadOrCreateKeyStore(keystorePath, keystorePassword)
-
-                if (keyStore.containsAlias(CORDA_INTERMEDIATE_CA_PRIVATE_KEY)) {
-                    val oldKey = loadOrCreateKeyStore(keystorePath, rootKeystorePassword).getCertificate(CORDA_INTERMEDIATE_CA_PRIVATE_KEY).publicKey
-                    println("Key $CORDA_INTERMEDIATE_CA_PRIVATE_KEY already exists in keystore, process will now terminate.")
-                    println(oldKey)
-                    exitProcess(1)
-                }
-
-                val intermediateKeyAndCert = createIntermediateCert(CORDA_INTERMEDIATE_CA, rootKeyAndCert)
-                keyStore.addOrReplaceKey(CORDA_INTERMEDIATE_CA_PRIVATE_KEY, intermediateKeyAndCert.keyPair.private,
-                        caPrivateKeyPassword.toCharArray(), arrayOf(intermediateKeyAndCert.certificate, rootKeyAndCert.certificate))
-                saveKeyStore(keyStore, keystorePath, keystorePassword)
-                println("Intermediate CA keypair and certificate stored in $keystorePath.")
-                println(loadKeyStore(keystorePath, keystorePassword).getCertificate(CORDA_INTERMEDIATE_CA_PRIVATE_KEY).publicKey)
-            }
-            DoormanParameters.Mode.DOORMAN -> {
-                logger.info("Starting Doorman server.")
-                // Get password from console if not in config.
-                val keystorePassword = keystorePassword ?: readPassword("Keystore Password : ")
-                val caPrivateKeyPassword = caPrivateKeyPassword ?: readPassword("CA Private Key Password : ")
-                val keystore = X509Utilities.loadKeyStore(keystorePath, keystorePassword)
-                val rootCACert = keystore.getCertificateChain(CORDA_INTERMEDIATE_CA_PRIVATE_KEY).last()
-                val caCertAndKey = X509Utilities.loadCertificateAndKey(keystore, caPrivateKeyPassword, CORDA_INTERMEDIATE_CA_PRIVATE_KEY)
-                // Create DB connection.
-                val (datasource, database) = configureDatabase(dataSourceProperties)
-                val storage = DBCertificateRequestStorage(database)
-                // Daemon thread approving all request periodically.
-                if (approveAll) {
-                    thread(name = "Request Approval Daemon", isDaemon = true) {
-                        logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing request.")
-                        while (true) {
-                            sleep(10.seconds.toMillis())
-                            for (id in storage.getPendingRequestIds()) {
-                                storage.approveRequest(id, {
-                                    JcaPKCS10CertificationRequest(it.request).run {
-                                        X509Utilities.createServerCert(subject, publicKey, caCertAndKey,
-                                                if (it.ipAddress == it.hostName) listOf() else listOf(it.hostName), listOf(it.ipAddress))
-                                    }
-                                })
-                                logger.info("Approved request $id")
-                            }
-                        }
-                    }
-                }
-                val doorman = DoormanServer(HostAndPort.fromParts(host, port), caCertAndKey, rootCACert, storage)
-                doorman.start()
-                Runtime.getRuntime().addShutdownHook(thread(start = false) { doorman.close() })
-            }
+            DoormanParameters.Mode.ROOT_KEYGEN -> generateRootKeyPair()
+            DoormanParameters.Mode.CA_KEYGEN -> generateKeyPair()
+            DoormanParameters.Mode.DOORMAN -> startDoorman()
         }
     }
 }
