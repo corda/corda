@@ -84,7 +84,12 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         }
     }
 
-    private fun needsNotarySignature(stx: SignedTransaction) = stx.tx.notary != null && hasNoNotarySignature(stx)
+    private fun needsNotarySignature(stx: SignedTransaction): Boolean {
+        val wtx = stx.tx
+        val needsNotarisation = wtx.inputs.isNotEmpty() || wtx.timestamp != null
+        return needsNotarisation && hasNoNotarySignature(stx)
+
+    }
     private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {
         val notaryKey = stx.tx.notary?.owningKey
         val signers = stx.sigs.map { it.by }.toSet()
