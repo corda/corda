@@ -23,6 +23,7 @@ class NodeTerminalView : Fragment() {
 
     private val nodeController by inject<NodeController>()
     private val explorerController by inject<ExplorerController>()
+    private val webServerController by inject<WebServerController>()
 
     private val nodeName by fxid<Label>()
     private val p2pPort by fxid<PropertyLabel>()
@@ -31,10 +32,12 @@ class NodeTerminalView : Fragment() {
     private val balance by fxid<PropertyLabel>()
 
     private val viewDatabaseButton by fxid<Button>()
+    private val launchWebButton by fxid<Button>()
     private val launchExplorerButton by fxid<Button>()
 
     private var isClosed: Boolean = false
     private val explorer = explorerController.explorer()
+    private val webServer = webServerController.webServer()
     private val viewer = DBViewer()
     private var rpc: NodeRPC? = null
     private var pty: R3Pty? = null
@@ -62,23 +65,9 @@ class NodeTerminalView : Fragment() {
             swingTerminal.content = r3pty.terminal
             nodeController.runCorda(r3pty, config)
 
-            viewDatabaseButton.setOnAction {
-                viewer.openBrowser(config.h2Port)
-            }
-
-            /*
-             * We only want to run one explorer for each node.
-             * So disable the "launch" button when we have
-             * launched the explorer and only reenable it when
-             * the explorer has exited.
-             */
-            launchExplorerButton.setOnAction {
-                launchExplorerButton.isDisable = true
-
-                explorer.open(config, onExit = {
-                    launchExplorerButton.isDisable = false
-                })
-            }
+            configureDatabaseButton(config)
+            configureExplorerButton(config)
+            configureWebButton(config)
 
             /*
              * Start RPC client that will update node statistics on UI.
@@ -93,6 +82,39 @@ class NodeTerminalView : Fragment() {
 
         launchExplorerButton.isDisable = false
         viewDatabaseButton.isDisable = false
+        launchWebButton.isDisable = false
+    }
+
+    /*
+     * We only want to run one explorer for each node.
+     * So disable the "launch" button when we have
+     * launched the explorer and only reenable it when
+     * the explorer has exited.
+     */
+    fun configureExplorerButton(config: NodeConfig) {
+        launchExplorerButton.setOnAction {
+            launchExplorerButton.isDisable = true
+
+            explorer.open(config, onExit = {
+                launchExplorerButton.isDisable = false
+            })
+        }
+    }
+
+    fun configureDatabaseButton(config: NodeConfig) {
+        viewDatabaseButton.setOnAction {
+            viewer.openBrowser(config.h2Port)
+        }
+    }
+
+    fun configureWebButton(config: NodeConfig) {
+        launchWebButton.setOnAction {
+            launchWebButton.isDisable = true
+
+            webServer.open(config, onExit = {
+                launchWebButton.isDisable = false
+            })
+        }
     }
 
     fun launchRPC(config: NodeConfig) = NodeRPC(config, start = { enable(config) }, invoke = { ops ->
@@ -116,6 +138,7 @@ class NodeTerminalView : Fragment() {
 
     fun close() {
         if (!isClosed) {
+            webServer.close()
             explorer.close()
             viewer.close()
             rpc?.close()
