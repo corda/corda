@@ -12,7 +12,7 @@ class Explorer(val explorerController: ExplorerController) : AutoCloseable {
     fun open(config: NodeConfig, onExit: (NodeConfig) -> Unit) {
         val explorerDir = config.explorerDir.toFile()
 
-        if (!explorerDir.mkdirs()) {
+        if (!explorerDir.isDirectory() && !explorerDir.mkdirs()) {
             log.warn("Failed to create working directory '{}'", explorerDir.getAbsolutePath())
             onExit(config)
             return
