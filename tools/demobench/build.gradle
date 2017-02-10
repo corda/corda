@@ -148,6 +148,7 @@ task javapackage(dependsOn: 'distZip') {
 
         ant.deploy(nativeBundles: "$packageType", outdir: "$buildDir/exedir", outfile: 'DemoBench', verbose: 'true') {
             application(name: 'DemoBench', version: "$pkg_version", mainClass: "$mainClassName")
+            info(title: 'DemoBench', vendor: 'R3', description: 'A sales and educational tool for demonstrating Corda.')
             resources {
                 fileset(dir: "$dist_source/lib", type: 'jar') {
                     include(name: '*.jar')
