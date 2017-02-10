@@ -14,6 +14,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.unwrap
 import net.corda.flows.FinalityFlow
 import net.corda.flows.ResolveTransactionsFlow
 import java.util.*
@@ -174,7 +175,7 @@ class ForeignExchangeFlow(val tradeId: String,
             withNewSignature // return the almost complete transaction
         }
 
-        // Initiate the standard protocol to notarise and distribute to the involved parties
+        // Initiate the standard protocol to notarise and distribute to the involved parties.
         subFlow(FinalityFlow(allPartySignedTx, setOf(baseCurrencyBuyer, baseCurrencySeller)))
 
         return allPartySignedTx.id

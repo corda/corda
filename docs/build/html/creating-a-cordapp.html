@@ -38,7 +38,7 @@
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="The CorDapp template" href="tutorial-cordapp.html"/>
+        <link rel="next" title="The example CorDapp" href="tutorial-cordapp.html"/>
         <link rel="prev" title="Security model" href="key-concepts-security-model.html"/> 
 
   
@@ -137,7 +137,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The example CorDapp</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -251,10 +251,10 @@ contained in separate JARs from the node server JAR that are created and distrib
 <p>To create an app plugin you must you must extend from <a class="reference external" href="api/kotlin/corda/net.corda.core.node/-corda-plugin-registry/index.html">CordaPluginRegistry</a>. The JavaDoc contains
 specific details of the implementation, but you can extend the server in the following ways:</p>
 <ol class="arabic simple">
-<li>Required flows: Specify which flows will be whitelisted for use in your web APIs.</li>
+<li>Required flows: Specify which flows will be whitelisted for use in your RPC calls.</li>
 <li>Service plugins: Register your services (see below).</li>
-<li>Web APIs: You may register your own endpoints under /api/ of the built-in web server.</li>
-<li>Static web endpoints: You may register your own static serving directories for serving web content.</li>
+<li>Web APIs: You may register your own endpoints under /api/ of the bundled web server.</li>
+<li>Static web endpoints: You may register your own static serving directories for serving web content from the web server.</li>
 <li>Registering your additional classes used in RPC.</li>
 </ol>
 </div>
@@ -415,7 +415,7 @@ experimenting, debugging, and testing node configurations and setups but not int
 deployment.</p>
 <p>To use this gradle plugin you must add a new task that is of the type <code class="docutils literal"><span class="pre">net.corda.plugins.Cordform</span></code> to your
 build.gradle and then configure the nodes you wish to deploy with the Node and nodes configuration DSL.
-This DSL is specified in the <a class="reference external" href="api/index.html">JavaDoc</a>. An example of this is in the template-cordapp and below
+This DSL is specified in the <a class="reference external" href="api/index.html">JavaDoc</a>. An example of this is in the CorDapp template and below
 is a three node example;</p>
 <div class="highlight-text"><div class="highlight"><pre><span></span>task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [&#39;build&#39;]) {
     directory &quot;./build/nodes&quot; // The output directory
@@ -466,7 +466,7 @@ one node per window.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="tutorial-cordapp.html" class="btn btn-neutral float-right" title="The CorDapp template" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="tutorial-cordapp.html" class="btn btn-neutral float-right" title="The example CorDapp" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="key-concepts-security-model.html" class="btn btn-neutral" title="Security model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

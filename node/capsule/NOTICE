@@ -1,0 +1,14 @@
+This JAR contains executable versions of the software listed below, each of which has been developed under an open source project not under the control of R3.  All such software is distributed under the terms of its respective license as listed below and R3 makes no representations or warranties of any kind with respect to such software.  See the respective licenses for the specific language governing permissions and limitation of use.
+
+Full text of the license and the source code versions of the software are available online from their source projects via the links indicated below.
+
+--------------------
+
+JAX-RS API - Licensed under CDDL-1.0 (https://opensource.org/licenses/cddl1.php)
+Source code available at: https://java.net/projects/jax-rs-spec/sources/api/show
+
+Jersey - Dual-licensed under CDDL-1.0 and GPL 2.0 with ClassPath exception (https://jersey.java.net/license.html)
+Source code available at: https://maven.java.net/content/repositories/releases/org/glassfish/jersey/
+
+HK2 - Dual-licensed under CDDL-1.0 and GPL 2.0 with ClassPath exception (https://hk2.java.net/2.5.0-b32/license.html)
+Source code available at: https://java.net/projects/hk2/sources/git/show

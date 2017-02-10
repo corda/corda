@@ -3,13 +3,46 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
-Milestone 8
+Milestone 9
 -----------
 
 * API:
 
-    * ``Party`` equality is now based on the owning key, rather than the owning key and name. This is important for
-      party anonymisation to work, as each key must identify exactly one party.
+    * Pseudonymous ``AnonymousParty`` class added as a superclass of ``Party``.
+    * Split ``CashFlow`` into individual ``CashIssueFlow``, ``CashPaymentFlow`` and ``CashExitFlow`` flows, so that fine
+      grained permissions can be applied. Added ``CashFlowCommand`` for use-cases where cash flow triggers need to be
+      captured in an object that can be passed around.
+
+Milestone 8
+-----------
+
+* Node memory usage and performance improvements, demo nodes now only require 200 MB heap space to run.
+
+* The Corda node no longer runs an internal web server, it's now run in a separate process. Driver and Cordformation have
+  been updated to reflect this change.
+  Existing CorDapps should be updated with additional calls to the new ``startWebserver()`` interface in their Driver logic (if they use the driver e.g. in integration tests).
+  See the IRS demo for an example.
+
+* Data model: ``Party`` equality is now based on the owning key, rather than the owning key and name. This is important for
+  party anonymisation to work, as each key must identify exactly one party.
+
+* Contracts: created new composite clauses called ``AllOf``, ``AnyOf`` and ``FirstOf`` to replace ``AllComposition``, ``AnyComposition``
+  and ``FirstComposition``, as this is significantly clearer in intent. ``AnyOf`` also enforces that at least one subclause
+  must match, whereas ``AnyComposition`` would accept no matches.
+
+* Explorer: the user can now configure certificate path and keystore/truststore password on the login screen.
+
+* Documentation:
+
+    * Key Concepts section revamped with new structure and content.
+    * Added more details to :doc:`getting-set-up` page.
+
+* Flow framework: improved exception handling with the introduction of ``FlowException``. If this or a subtype is thrown
+  inside a flow it will propagate to all counterparty flows and subsequently be thrown by them as well. Existing flows such as
+  ``NotaryFlow.Client/Service`` and others have been modified to throw a ``FlowException`` (in this particular case a
+  ``NotaryException``) instead of sending back error responses.
+
+* Notary flow: provide complete details of underlying error when contract validation fails.
 
 Milestone 7
 -----------

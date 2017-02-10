@@ -72,7 +72,12 @@ has at least one flow, but that flow may also invoke sub-flows: they all share t
 <td>
 <a href="-flow-exception/index.html">FlowException</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">FlowException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/RuntimeException.html"><span class="identifier">RuntimeException</span></a></code></td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">FlowException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code>
+<p>Exception which can be thrown by a <a href="-flow-logic/index.html">FlowLogic</a> at any point in its logic to unexpectedly bring it to a permanent end.
+The exception will propagate to all counterparty flows and will be thrown on their end the next time they wait on a
+<a href="-flow-logic/receive.html">FlowLogic.receive</a> or <a href="-flow-logic/send-and-receive.html">FlowLogic.sendAndReceive</a>. Any flow which no longer needs to do a receive, or has already ended,
+will not receive the exception (if this is required then have them wait for a confirmation message).</p>
+</td>
 </tr>
 <tr>
 <td>

@@ -2,6 +2,7 @@ package net.corda.testing.node
 
 import kotlinx.support.jdk8.collections.putIfAbsent
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
@@ -73,6 +74,8 @@ class MockIdentityService(val identities: List<Party>) : IdentityService, Single
 
     override fun registerIdentity(party: Party) { throw UnsupportedOperationException() }
     override fun getAllIdentities(): Iterable<Party> = ArrayList(keyToParties.values)
+    override fun partyFromAnonymous(party: AnonymousParty): Party? = keyToParties[party.owningKey]
+    override fun partyFromAnonymous(partyRef: PartyAndReference): Party? = partyFromAnonymous(partyRef.party)
     override fun partyFromKey(key: CompositeKey): Party? = keyToParties[key]
     override fun partyFromName(name: String): Party? = nameToParties[name]
 }

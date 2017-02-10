@@ -1,0 +1,167 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TGenesisFlow - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">com.cordatest</a>&nbsp;/&nbsp;<a href=".">TGenesisFlow</a><br/>
+<br/>
+<h1>TGenesisFlow</h1>
+<code><span class="keyword">class </span><span class="identifier">TGenesisFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">TGenesisFlow</span><span class="symbol">(</span><span class="identifier" id="com.cordatest.TGenesisFlow$<init>(kotlin.collections.Set((net.corda.core.crypto.Party)))/participants">participants</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span><span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="participants.html">participants</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">participants</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.flows/-flow-logic/logger.html">logger</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">logger</span><span class="symbol">: </span><span class="identifier">Logger</span></code>
+<p>This is where you should log things to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.flows/-flow-logic/progress-tracker.html">progressTracker</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">progressTracker</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a><span class="symbol">?</span></code>
+<p>Override this to provide a <a href="../../net.corda.core.utilities/-progress-tracker/index.html">ProgressTracker</a>. If one is provided and stepped, the framework will do something
+helpful with the progress reports. If this flow is invoked as a subflow of another, then the
+tracker will be made a child of the current step in the parent. If it's null, this flow doesn't track
+progress.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.flows/-flow-logic/run-id.html">runId</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">runId</span><span class="symbol">: </span><a href="../../net.corda.core.flows/-state-machine-run-id/index.html"><span class="identifier">StateMachineRunId</span></a></code>
+<p>Returns a wrapped <a href="#">UUID</a> object that identifies this state machine run (i.e. subflows have the same identifier as their parents).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.flows/-flow-logic/service-hub.html">serviceHub</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">serviceHub</span><span class="symbol">: </span><a href="../../net.corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></code>
+<p>Provides access to big, heavy classes that may be reconstructed from time to time, e.g. across restarts. It is
+only available once the flow has started, which means it cannnot be accessed in the constructor. Either
+access this lazily or from inside <a href="../../net.corda.core.flows/-flow-logic/call.html">call</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.flows/-flow-logic/state-machine.html">stateMachine</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">stateMachine</span><span class="symbol">: </span><a href="../../net.corda.core.flows/-flow-state-machine/index.html"><span class="identifier">FlowStateMachine</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span></code>
+<p>Internal only. Reference to the <a href="#">Fiber</a> instance that is the top level controller for the entire flow. When
+inside a flow this is equivalent to <a href="#">Strand.currentStrand</a>. This is public only because it must be accessed
+across module boundaries.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="call.html">call</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a></code>
+<p>This is where you fill out your business logic. The returned object will usually be ignored, but can be
+helpful if this flow is meant to be used as a subflow.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.flows/-flow-logic/get-counterparty-marker.html">getCounterpartyMarker</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">getCounterpartyMarker</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$getCounterpartyMarker(net.corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span></code>
+<p>Return the marker <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html">Class</a> which <a href="../../net.corda.core.flows/-flow-logic/get-counterparty-marker.html#net.corda.core.flows.FlowLogic$getCounterpartyMarker(net.corda.core.crypto.Party)/party">party</a> has used to register the counterparty flow that is to execute on the
+other side. The default implementation returns the class object of this FlowLogic, but any <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html">Class</a> instance
+will do as long as the other side registers with it.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.flows/-flow-logic/receive.html">receive</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$receive(net.corda.core.crypto.Party)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code>
+<p>Suspends until the specified <a href="../../net.corda.core.flows/-flow-logic/receive.html#net.corda.core.flows.FlowLogic$receive(net.corda.core.crypto.Party)/otherParty">otherParty</a> sends us a message of type <a href="#">R</a>.</p>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.R)), net.corda.core.crypto.Party)/receiveType">receiveType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.R)), net.corda.core.crypto.Party)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code>
+<p>Suspends until the specified <a href="../../net.corda.core.flows/-flow-logic/receive.html#net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.R)), net.corda.core.crypto.Party)/otherParty">otherParty</a> sends us a message of type <a href="../../net.corda.core.flows/-flow-logic/receive.html#net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.R)), net.corda.core.crypto.Party)/receiveType">receiveType</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.flows/-flow-logic/send.html">send</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$send(net.corda.core.crypto.Party, kotlin.Any)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$send(net.corda.core.crypto.Party, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Queues the given <a href="../../net.corda.core.flows/-flow-logic/send.html#net.corda.core.flows.FlowLogic$send(net.corda.core.crypto.Party, kotlin.Any)/payload">payload</a> for sending to the <a href="../../net.corda.core.flows/-flow-logic/send.html#net.corda.core.flows.FlowLogic$send(net.corda.core.crypto.Party, kotlin.Any)/otherParty">otherParty</a> and continues without suspending.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.flows/-flow-logic/send-and-receive.html">sendAndReceive</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$sendAndReceive(java.lang.Class((net.corda.core.flows.FlowLogic.sendAndReceive.R)), net.corda.core.crypto.Party, kotlin.Any)/receiveType">receiveType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$sendAndReceive(java.lang.Class((net.corda.core.flows.FlowLogic.sendAndReceive.R)), net.corda.core.crypto.Party, kotlin.Any)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$sendAndReceive(java.lang.Class((net.corda.core.flows.FlowLogic.sendAndReceive.R)), net.corda.core.crypto.Party, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code>
+<p>Serializes and queues the given <a href="../../net.corda.core.flows/-flow-logic/send-and-receive.html#net.corda.core.flows.FlowLogic$sendAndReceive(java.lang.Class((net.corda.core.flows.FlowLogic.sendAndReceive.R)), net.corda.core.crypto.Party, kotlin.Any)/payload">payload</a> object for sending to the <a href="../../net.corda.core.flows/-flow-logic/send-and-receive.html#net.corda.core.flows.FlowLogic$sendAndReceive(java.lang.Class((net.corda.core.flows.FlowLogic.sendAndReceive.R)), net.corda.core.crypto.Party, kotlin.Any)/otherParty">otherParty</a>. Suspends until a response
+is received, which must be of the given <a href="../../net.corda.core.flows/-flow-logic/send-and-receive.html#net.corda.core.flows.FlowLogic$sendAndReceive(java.lang.Class((net.corda.core.flows.FlowLogic.sendAndReceive.R)), net.corda.core.crypto.Party, kotlin.Any)/receiveType">receiveType</a>. Remember that when receiving data from other parties the data
+should not be trusted until it's been thoroughly verified for consistency and that all expectations are
+satisfied, as a malicious peer may send you subtly corrupted data in order to exploit your code.</p>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$sendAndReceive(net.corda.core.crypto.Party, kotlin.Any)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$sendAndReceive(net.corda.core.crypto.Party, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code>
+<p>Serializes and queues the given <a href="../../net.corda.core.flows/-flow-logic/send-and-receive.html#net.corda.core.flows.FlowLogic$sendAndReceive(net.corda.core.crypto.Party, kotlin.Any)/payload">payload</a> object for sending to the <a href="../../net.corda.core.flows/-flow-logic/send-and-receive.html#net.corda.core.flows.FlowLogic$sendAndReceive(net.corda.core.crypto.Party, kotlin.Any)/otherParty">otherParty</a>. Suspends until a response
+is received, which must be of the given <a href="#">R</a> type.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.flows/-flow-logic/sub-flow.html">subFlow</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span> <span class="identifier">subFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$subFlow(net.corda.core.flows.FlowLogic((net.corda.core.flows.FlowLogic.subFlow.R)), kotlin.Boolean)/subLogic">subLogic</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$subFlow(net.corda.core.flows.FlowLogic((net.corda.core.flows.FlowLogic.subFlow.R)), kotlin.Boolean)/shareParentSessions">shareParentSessions</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">R</span></code>
+<p>Invokes the given subflow. This function returns once the subflow completes successfully with the result
+returned by that subflows <a href="../../net.corda.core.flows/-flow-logic/call.html">call</a> method. If the subflow has a progress tracker, it is attached to the
+current step in this flow's progress tracker.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.flows/-flow-logic/track.html">track</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">track</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">?</span></code>
+<p>Returns a pair of the current progress step, as a string, and an observable of stringified changes to the
+<a href="../../net.corda.core.flows/-flow-logic/progress-tracker.html">progressTracker</a>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

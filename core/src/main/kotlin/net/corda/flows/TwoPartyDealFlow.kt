@@ -16,6 +16,7 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.trace
+import net.corda.core.utilities.unwrap
 import java.security.KeyPair
 
 /**

@@ -12,7 +12,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>The CorDapp template &mdash; R3 Corda latest documentation</title>
+  <title>The example CorDapp &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -120,28 +120,28 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">The CorDapp template</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">The example CorDapp</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#background">Background</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#getting-started">Getting started</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#working-from-milestone-releases">Working from milestone releases</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#using-a-snapshot-release">Using a SNAPSHOT release</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#opening-the-cordapp-template-with-intellij">Opening the CorDapp Template with IntelliJ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#opening-the-example-cordapp-with-intellij">Opening the example CorDapp with IntelliJ</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#building-the-cordapp-template">Building the CorDapp template</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#running-the-cordapp-template">Running the CorDapp template</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#running-the-cordapp-template-from-the-command-line">Running the CorDapp template from the command line</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#building-the-example-cordapp">Building the example CorDapp</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-the-example-cordapp">Running the example CorDapp</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#running-the-example-cordapp-from-the-command-line">Running the example CorDapp from the command line</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#running-the-example-cordapp-via-intellij">Running the example CorDapp via IntelliJ</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#interacting-with-the-cordapp-template">Interacting with the CorDapp template</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#interacting-with-the-example-cordapp">Interacting with the example CorDapp</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#via-http">Via HTTP</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#using-the-h2-web-console">Using the h2 web console</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#using-the-example-rpc-client">Using the Example RPC client</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#extending-the-cordapp-template">Extending the CorDapp template</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#cordapp-template-project-structure">CorDapp-template project structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#extending-the-example-cordapp">Extending the example CorDapp</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cordapp-tutorial-project-structure">cordapp-tutorial project structure</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#the-build-gradle-file">The build.gradle file</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#service-provider-configuration-file">Service Provider Configuration File</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#re-deploying-your-nodes-locally">Re-Deploying Your Nodes Locally</a></li>
@@ -237,7 +237,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>The CorDapp template</li>
+    <li>The example CorDapp</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -252,13 +252,19 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
            <div itemprop="articleBody">
             
   <script type="text/javascript" src="_static/jquery.js"></script>
-<script type="text/javascript" src="_static/codesets.js"></script><div class="section" id="the-cordapp-template">
-<h1>The CorDapp template<a class="headerlink" href="#the-cordapp-template" title="Permalink to this headline">¶</a></h1>
-<p>This guide covers how to get started with the <cite>cordapp-template</cite>. Please note there are two Corda repositories:</p>
+<script type="text/javascript" src="_static/codesets.js"></script><div class="section" id="the-example-cordapp">
+<h1>The example CorDapp<a class="headerlink" href="#the-example-cordapp" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The example CorDapp was previously hosted in the <a class="reference external" href="https://github.com/corda/cordapp-template">cordapp-template</a> repository. It has now been
+moved into a new <a class="reference external" href="https://github.com/corda/cordapp-tutorial">cordapp-tutorial</a> repository. Going forward, the cordapp-template repo will contain an
+actual CorDapp template, which should be used as the basis for your CorDapps going forward.</p>
+</div>
+<p>This guide covers how to get started with the example CorDapp. Please note there are several Corda repositories:</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">corda</span></code> which contains the core platform code and sample CorDapps.</li>
-<li><code class="docutils literal"><span class="pre">cordapp-template</span></code> which contains a template CorDapp you can use to bootstrap your own CorDapps. It is the subject
-of this tutorial and should help you understand the basics of building a CorDapp.</li>
+<li><a class="reference external" href="https://github.com/corda/corda">corda</a> which contains the core platform code and sample CorDapps.</li>
+<li><a class="reference external" href="https://github.com/corda/cordapp-tutorial">cordapp-tutorial</a> which contains an example CorDapp you can use to bootstrap your own CorDapps. It is the subject of this tutorial and should help you understand the basics of building a CorDapp.</li>
+<li><a class="reference external" href="https://github.com/corda/cordapp-template">cordapp-template</a> which contains a bare-bones template on which to build your own CorDapps.</li>
 </ul>
 <p>We recommend you read the non-technical white paper and technical white paper before you get started with Corda:</p>
 <ol class="arabic simple">
@@ -271,27 +277,26 @@ that because the technical white paper describes the intended end state, it does
 </ol>
 <div class="section" id="background">
 <h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
-<p>The Example CorDapp implements a basic scenario where a buyer wishes to submit purchase orders to a seller. The scenario
+<p>The Example CorDapp implements a basic scenario where one party wishes to send an IOU to another party. The scenario
 defines four nodes:</p>
 <ul class="simple">
-<li><strong>Controller</strong> which hosts the network map service and validating notary service.</li>
-<li><strong>NodeA</strong> who is the buyer.</li>
-<li><strong>NodeB</strong> who is the seller.</li>
-<li><strong>NodeC</strong> an unrelated third party.</li>
+<li><strong>Controller</strong>, which hosts the network map service and validating notary service</li>
+<li><strong>NodeA</strong></li>
+<li><strong>NodeB</strong></li>
+<li><strong>NodeC</strong></li>
 </ul>
-<p>NodeA can generate purchase orders for lists and quantities of items and associated metadata such as delivery address
-and delivery date. The flows used to facilitate the agreement process always results in an agreement with the seller as
-long as the purchase order meets the contract constraints which are defined in <code class="docutils literal"><span class="pre">PurchaseOrderContract.kt</span></code>.</p>
-<p>All agreed purchase orders between NodeA and NodeB become &#8220;shared facts&#8221; between NodeA and NodeB. But note that NodeC
-won&#8217;t see any of these transactions or have copies of any of the resulting <code class="docutils literal"><span class="pre">PurchaseOrderState</span></code> objects. This is
+<p>The nodes can generate IOUs and send them to other nodes. The flows used to facilitate the agreement process always results in
+an agreement with the recipient as long as the IOU meets the contract constraints which are defined in <code class="docutils literal"><span class="pre">IOUContract.kt</span></code>.</p>
+<p>All agreed IOUs between NodeA and NodeB become &#8220;shared facts&#8221; between NodeA and NodeB. But note that NodeC
+won&#8217;t see any of these transactions or have copies of any of the resulting <code class="docutils literal"><span class="pre">IOUState</span></code> objects. This is
 because data is only propagated on a need-to-know basis.</p>
 </div>
 <div class="section" id="getting-started">
 <h2>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
-<p>There are two ways to get started with the CorDapp template. You can either work from a milestone release of Corda or a
+<p>There are two ways to get started with the example CorDapp. You can either work from a milestone release of Corda or a
 SNAPSHOT release of Corda.</p>
 <p><strong>Using a monthly Corda milestone release.</strong> If you wish to develop your CorDapp using the most recent milestone release
-then you can get started simply by cloning the <code class="docutils literal"><span class="pre">cordapp-template</span></code> repository. Gradle will grab all the required dependencies
+then you can get started simply by cloning the <code class="docutils literal"><span class="pre">cordapp-tutorial</span></code> repository. Gradle will grab all the required dependencies
 for you from our <a class="reference external" href="https://bintray.com/r3/corda">public Maven repository</a>.</p>
 <p><strong>Using a Corda SNAPSHOT build.</strong> Alternatively, if you wish to work from the master branch of the Corda repo which contains
 the most up-to-date Corda feature set then you will need to clone the <code class="docutils literal"><span class="pre">corda</span></code> repository and publish the latest master
@@ -306,24 +311,24 @@ already have it.</p>
 <p>The process for developing your CorDapp from a milestone release is the most simple way to get started and is the preferred
 approach.</p>
 <p>We publish all our milestone releases to a public Maven repository on a monthly basis. As such, Gradle will automatically
-grab the appropriately versioned (specified in the <code class="docutils literal"><span class="pre">cordapp-template</span></code>&#8216;s <code class="docutils literal"><span class="pre">build.gradle</span></code> file) dependencies for you from Maven.
-All you have to do is check out the release tag of the template version you wish to use.</p>
-<p>By default, the <code class="docutils literal"><span class="pre">master</span></code> branch of the <code class="docutils literal"><span class="pre">cordapp-template</span></code> points to a SNAPSHOT release of Corda, this is because it is
+grab the appropriately versioned (specified in the <code class="docutils literal"><span class="pre">cordapp-tutorial</span></code>&#8216;s <code class="docutils literal"><span class="pre">build.gradle</span></code> file) dependencies for you from Maven.
+All you have to do is check out the release tag of the tutorial version you wish to use.</p>
+<p>By default, the <code class="docutils literal"><span class="pre">master</span></code> branch of the <code class="docutils literal"><span class="pre">cordapp-tutorial</span></code> points to a SNAPSHOT release of Corda, this is because it is
 being constantly updated to reflect the changes in the master branch of the <cite>corda</cite> repository.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">If you wish to use a SNAPSHOT release then follow the instructions below: <a class="reference internal" href="#using-a-snapshot-release">Using a SNAPSHOT release</a>.</p>
 </div>
-<p>To clone the <code class="docutils literal"><span class="pre">cordapp-template</span></code> repository, use the following command:</p>
-<p><code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/corda/cordapp-template</span></code></p>
+<p>To clone the <code class="docutils literal"><span class="pre">cordapp-tutorial</span></code> repository, use the following command:</p>
+<p><code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/corda/cordapp-tutorial</span></code></p>
 <p>Now change directories to the freshly cloned repo:</p>
-<p><code class="docutils literal"><span class="pre">cd</span> <span class="pre">cordapp-template</span></code></p>
+<p><code class="docutils literal"><span class="pre">cd</span> <span class="pre">cordapp-tutorial</span></code></p>
 <p>To enumerate all the tagged releases. Use:</p>
 <p><code class="docutils literal"><span class="pre">git</span> <span class="pre">tag</span></code></p>
 <p>To checkout a specific tag, use:</p>
 <p><code class="docutils literal"><span class="pre">git</span> <span class="pre">checkout</span> <span class="pre">-b</span> <span class="pre">[local_branch_name]</span> <span class="pre">tags/[tag_name]</span></code></p>
 <p>where <code class="docutils literal"><span class="pre">local_branch_name</span></code> is a name of your choice and <code class="docutils literal"><span class="pre">tag_name</span></code> is the name of the tag you wish to checkout.</p>
-<p>Gradle will handle all the dependencies for you. Now you are now ready to get started <a class="reference internal" href="#building-the-cordapp-template">building the CorDapp Template</a>.</p>
+<p>Gradle will handle all the dependencies for you. Now you are now ready to get started <a class="reference internal" href="#building-the-example-cordapp">building the example CorDapp</a>.</p>
 </div>
 <div class="section" id="using-a-snapshot-release">
 <h3>Using a SNAPSHOT release<a class="headerlink" href="#using-a-snapshot-release" title="Permalink to this headline">¶</a></h3>
@@ -364,7 +369,7 @@ to checkout.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">When working with <code class="docutils literal"><span class="pre">master</span></code> you will have access to the most up-to-date feature set. However you will be
-potentially sacrificing stability. We will endeavour to keep the <code class="docutils literal"><span class="pre">master</span></code> branch of the <code class="docutils literal"><span class="pre">cordapp-template</span></code> repo in sync
+potentially sacrificing stability. We will endeavour to keep the <code class="docutils literal"><span class="pre">master</span></code> branch of the <code class="docutils literal"><span class="pre">cordapp-tutorial</span></code> repo in sync
 with the <code class="docutils literal"><span class="pre">master</span></code> branch of <code class="docutils literal"><span class="pre">corda</span></code> repo. A milestone tagged release would be more stable for CorDapp development.</p>
 </div>
 <p>The next step is to publish the Corda JARs to your local Maven repository. By default the Maven local repository can be
@@ -413,15 +418,15 @@ SNAPSHOT build such that Maven reflects the changes you have made.</p>
 <p>Once you have published the Corda JARs to your local Maven repository, you are ready to get started building your
 CorDapp using the latest Corda features.</p>
 </div>
-<div class="section" id="opening-the-cordapp-template-with-intellij">
-<h3>Opening the CorDapp Template with IntelliJ<a class="headerlink" href="#opening-the-cordapp-template-with-intellij" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="opening-the-example-cordapp-with-intellij">
+<h3>Opening the example CorDapp with IntelliJ<a class="headerlink" href="#opening-the-example-cordapp-with-intellij" title="Permalink to this headline">¶</a></h3>
 <p>For those familiar with IntelliJ, you can skip this section.</p>
 <p>As noted in the getting started guide, we recommend using the IntelliJ IDE. Assuming you have already downloaded and
-installed IntelliJ, lets now open the CorDapp Template with IntelliJ.</p>
+installed IntelliJ, lets now open the example CorDapp with IntelliJ.</p>
 <p><strong>For those completely new to IntelliJ</strong></p>
 <p>Firstly, load up IntelliJ. A dialogue will appear:</p>
 <a class="reference internal image-reference" href="_images/intellij-welcome.png"><img alt="_images/intellij-welcome.png" src="_images/intellij-welcome.png" style="width: 400px;" /></a>
-<p>Click open, then navigate to the folder where you cloned the <code class="docutils literal"><span class="pre">cordapp-template</span></code> and click OK.</p>
+<p>Click open, then navigate to the folder where you cloned the <code class="docutils literal"><span class="pre">cordapp-tutorial</span></code> and click OK.</p>
 <p>Next, IntelliJ will show a bunch of pop-up windows. One of which requires our attention:</p>
 <a class="reference internal image-reference" href="_images/unlinked-gradle-project.png"><img alt="_images/unlinked-gradle-project.png" src="_images/unlinked-gradle-project.png" style="width: 400px;" /></a>
 <p>Click the &#8216;import gradle project&#8217; link. A dialogue will pop-up. Press OK. Gradle will now obtain all the
@@ -429,38 +434,38 @@ project dependencies and perform some indexing. It usually takes a minute or so.
 dialogue, simply close and re-open IntelliJ again to see it again.</p>
 <p><strong>Alternative approach</strong></p>
 <p>Alternatively, one can instruct IntelliJ to create a new project through cloning a repository. From the IntelliJ welcome
-dialogue (shown above), opt to &#8216;check out from version control&#8217;, then select git and enter the git URL for the CorDapp template
-(<a class="reference external" href="https://github.com/corda/cordapp-template">https://github.com/corda/cordapp-template</a>). You&#8217;ll then need to import the Gradle project when prompted, as explained above.</p>
+dialogue (shown above), opt to &#8216;check out from version control&#8217;, then select git and enter the git URL for the example CorDapp
+(<a class="reference external" href="https://github.com/corda/cordapp-tutorial">https://github.com/corda/cordapp-tutorial</a>). You&#8217;ll then need to import the Gradle project when prompted, as explained above.</p>
 <p><strong>If you already have IntelliJ open</strong></p>
-<p>From the <code class="docutils literal"><span class="pre">File</span></code> menu, navigate to <code class="docutils literal"><span class="pre">Open</span> <span class="pre">...</span></code> and then navigate to the directory where you cloned the <code class="docutils literal"><span class="pre">cordapp-template</span></code>.
+<p>From the <code class="docutils literal"><span class="pre">File</span></code> menu, navigate to <code class="docutils literal"><span class="pre">Open</span> <span class="pre">...</span></code> and then navigate to the directory where you cloned the <code class="docutils literal"><span class="pre">cordapp-tutorial</span></code>.
 Alternatively, if you wish to clone from github directly then navigate to <code class="docutils literal"><span class="pre">File</span> <span class="pre">&gt;</span> <span class="pre">New</span> <span class="pre">&gt;</span> <span class="pre">Project</span> <span class="pre">from</span> <span class="pre">existing</span> <span class="pre">sources</span> <span class="pre">...</span></code>
-and enter the URL to the CorDapp Template (specified above). When instructed, be sure to import the Gradle project when prompted.</p>
+and enter the URL to the example CorDapp (specified above). When instructed, be sure to import the Gradle project when prompted.</p>
 <p><strong>The Gradle plugin</strong></p>
 <p>IntelliJ can be used to run Gradle tasks through the Gradle plugin which can be found via <code class="docutils literal"><span class="pre">View</span> <span class="pre">&gt;</span> <span class="pre">Tool</span> <span class="pre">windows</span> <span class="pre">&gt;</span> <span class="pre">Gradle</span></code>.
 All the Gradle projects are listed in the window on the right hand side of the IDE. Click on a project, then &#8216;tasks&#8217; to
 see all available Gradle tasks.</p>
 <ul class="simple">
-<li>For the CorDapp Template repo there will only be one Gradle project listed.</li>
+<li>For the example CorDapp repo there will only be one Gradle project listed.</li>
 <li>For the Corda repo there will be many project listed, the root project <code class="docutils literal"><span class="pre">corda</span></code> and associated sub-projects: <code class="docutils literal"><span class="pre">core</span></code>,
 <code class="docutils literal"><span class="pre">finance</span></code>, <code class="docutils literal"><span class="pre">node</span></code>, etc.</li>
 </ul>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">It&#8217;s worth noting that when you change branch in the CorDapp template, the <code class="docutils literal"><span class="pre">corda_version</span></code> will change to
+<p class="last">It&#8217;s worth noting that when you change branch in the example CorDapp, the <code class="docutils literal"><span class="pre">corda_version</span></code> will change to
 reflect the version of the branch you are working from.</p>
 </div>
 <p>To execute a task, double click it. The output will be shown in a console window.</p>
 </div>
 </div>
-<div class="section" id="building-the-cordapp-template">
-<h2>Building the CorDapp template<a class="headerlink" href="#building-the-cordapp-template" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="building-the-example-cordapp">
+<h2>Building the example CorDapp<a class="headerlink" href="#building-the-example-cordapp" title="Permalink to this headline">¶</a></h2>
 <p><strong>From the command line</strong></p>
-<p>Firstly, return to your terminal window used above and make sure you are in the <code class="docutils literal"><span class="pre">cordapp-template</span></code> directory.</p>
-<p>To build the CorDapp template use the following command:</p>
+<p>Firstly, return to your terminal window used above and make sure you are in the <code class="docutils literal"><span class="pre">cordapp-tutorial</span></code> directory.</p>
+<p>To build the example CorDapp use the following command:</p>
 <p>Unix/Mac OSX: <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">deployNodes</span></code></p>
 <p>Windows: <code class="docutils literal"><span class="pre">gradlew.bat</span> <span class="pre">deployNodes</span></code></p>
-<p>This build process will build the example CorDapp defined in the CorDapp template source. CorDapps can be written in
-any language targeting the JVM. In our case, we&#8217;ve provided the template source in both Kotlin (<code class="docutils literal"><span class="pre">/kotlin/src</span></code>) and
+<p>This build process will build the example CorDapp defined in the example CorDapp source. CorDapps can be written in
+any language targeting the JVM. In our case, we&#8217;ve provided the example source in both Kotlin (<code class="docutils literal"><span class="pre">/kotlin/src</span></code>) and
 Java (<code class="docutils literal"><span class="pre">/java/src</span></code>) Since both sets of source files are functionally identical, we will refer to the Kotlin build
 throughout the documentation.</p>
 <p>For more information on the example CorDapp see &#8220;The Example CorDapp&#8221; section below. Gradle will then grab all the
@@ -468,7 +473,7 @@ dependencies for you and build the example CorDapp.</p>
 <p>The <code class="docutils literal"><span class="pre">deployNodes</span></code> Gradle task allows you easily create a formation of Corda nodes. In the case of the example CorDapp
 we are creating <code class="docutils literal"><span class="pre">four</span></code> nodes.</p>
 <p>After the building process has finished to see the newly built nodes, you can navigate to the <code class="docutils literal"><span class="pre">kotlin/build/nodes</span></code> folder
-located in the <code class="docutils literal"><span class="pre">cordapp-template</span></code> root directory. You can ignore the other folders in <code class="docutils literal"><span class="pre">/build</span></code> for now. The <code class="docutils literal"><span class="pre">nodes</span></code>
+located in the <code class="docutils literal"><span class="pre">cordapp-tutorial</span></code> root directory. You can ignore the other folders in <code class="docutils literal"><span class="pre">/build</span></code> for now. The <code class="docutils literal"><span class="pre">nodes</span></code>
 folder has the following structure:</p>
 <div class="highlight-none"><div class="highlight"><pre><span></span>. nodes
 ├── controller
@@ -504,10 +509,10 @@ a node.conf file. See <a class="reference internal" href="corda-configuration-fi
 open on the right hand side of the IDE. Expand <cite>tasks</cite> and then expand <cite>other</cite>. Double click on <cite>deployNodes</cite>. Gradle will
 start the build process and output progress to a console window in the IDE.</p>
 </div>
-<div class="section" id="running-the-cordapp-template">
-<h2>Running the CorDapp template<a class="headerlink" href="#running-the-cordapp-template" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="running-the-cordapp-template-from-the-command-line">
-<h3>Running the CorDapp template from the command line<a class="headerlink" href="#running-the-cordapp-template-from-the-command-line" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="running-the-example-cordapp">
+<h2>Running the example CorDapp<a class="headerlink" href="#running-the-example-cordapp" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="running-the-example-cordapp-from-the-command-line">
+<h3>Running the example CorDapp from the command line<a class="headerlink" href="#running-the-example-cordapp-from-the-command-line" title="Permalink to this headline">¶</a></h3>
 <p>To run the sample CorDapp navigate to the <code class="docutils literal"><span class="pre">kotlin/build/nodes</span></code> folder and execute the <code class="docutils literal"><span class="pre">runnodes</span></code> shell script with:</p>
 <p>Unix: <code class="docutils literal"><span class="pre">./runnodes</span></code> or <code class="docutils literal"><span class="pre">sh</span> <span class="pre">runnodes</span></code></p>
 <p>Windows: <code class="docutils literal"><span class="pre">runnodes.bat</span></code></p>
@@ -521,7 +526,7 @@ message and some pertinent config information, see below:</p>
 
 --- DEVELOPER SNAPSHOT ------------------------------------------------------------
 
-Logs can be found in                    : /Users/rogerwillis/Documents/Corda/cordapp-template/kotlin/build/nodes/nodea/logs
+Logs can be found in                    : /Users/rogerwillis/Documents/Corda/cordapp-tutorial/kotlin/build/nodes/nodea/logs
 Database connection URL is              : jdbc:h2:tcp://10.18.0.196:50661/node
 Node listening on address               : localhost:10004
 Loaded plugins                          : com.example.plugin.ExamplePlugin
@@ -586,12 +591,12 @@ and sets up an RPC user for all but the &#8220;Controller&#8221; node (which hos
 <p>The node driver can also be used to as a basis for <a class="reference internal" href="#debugging-your-cordapp">debugging your CorDapp</a></p>
 </div>
 </div>
-<div class="section" id="interacting-with-the-cordapp-template">
-<h2>Interacting with the CorDapp template<a class="headerlink" href="#interacting-with-the-cordapp-template" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="interacting-with-the-example-cordapp">
+<h2>Interacting with the example CorDapp<a class="headerlink" href="#interacting-with-the-example-cordapp" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="via-http">
 <h3>Via HTTP<a class="headerlink" href="#via-http" title="Permalink to this headline">¶</a></h3>
 <p>The CorDapp defines a few HTTP API end-points and also serves some static web content. The end-points allow you to
-list purchase orders and add purchase orders.</p>
+list IOUs and add IOUs.</p>
 <p>The nodes can be found using the following port numbers, defined in build.gradle and the respective node.conf file for
 each node found in <cite>kotlin/build/nodes/NodeX`</cite> etc:</p>
 <ul class="simple">
@@ -606,11 +611,11 @@ served are as follows:</p>
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">/api/example/me</span></code></li>
 <li><code class="docutils literal"><span class="pre">/api/example/peers</span></code></li>
-<li><code class="docutils literal"><span class="pre">/api/example/purchase-orders</span></code></li>
-<li><code class="docutils literal"><span class="pre">/api/example/{COUNTERPARTY}/create-purchase-order</span></code></li>
+<li><code class="docutils literal"><span class="pre">/api/example/ious</span></code></li>
+<li><code class="docutils literal"><span class="pre">/api/example/{COUNTERPARTY}/create-iou</span></code></li>
 </ul>
 <p>The static web content is served from <code class="docutils literal"><span class="pre">/web/example</span></code>.</p>
-<p>A purchase order can be created via accessing the <code class="docutils literal"><span class="pre">api/example/create-purchase-order</span></code> end-point directly or through the
+<p>An IOU can be created via accessing the <code class="docutils literal"><span class="pre">api/example/create-iou</span></code> end-point directly or through the
 the web form hosted at <code class="docutils literal"><span class="pre">/web/example</span></code>.</p>
 <blockquote>
 <div><div class="admonition warning">
@@ -619,16 +624,16 @@ the web form hosted at <code class="docutils literal"><span class="pre">/web/exa
 anti-XSS, anti-XSRF or any other security techniques. Do not copy such code directly into products meant for production use.</strong></p>
 </div>
 </div></blockquote>
-<p><strong>Submitting a purchase order via HTTP API:</strong></p>
-<p>To create a purchase order from NodeA to NodeB, use:</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">echo</span> <span class="s1">&#39;{&quot;orderNumber&quot;: &quot;1&quot;,&quot;deliveryDate&quot;: &quot;2018-09-15&quot;,&quot;deliveryAddress&quot;: {&quot;city&quot;: &quot;London&quot;,&quot;country&quot;: &quot;UK&quot;},&quot;items&quot; : [{&quot;name&quot;: &quot;widget&quot;,&quot;amount&quot;: &quot;3&quot;},{&quot;name&quot;: &quot;thing&quot;,&quot;amount&quot;: &quot;4&quot;}]}&#39;</span> <span class="p">|</span> cURL -T - -H <span class="s1">&#39;Content-Type: application/json&#39;</span> http://localhost:10005/api/example/NodeB/create-purchase-order
+<p><strong>Submitting an IOU via HTTP API:</strong></p>
+<p>To create an IOU from NodeA to NodeB, use:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">echo</span> <span class="s1">&#39;{&quot;value&quot;: &quot;1&quot;}&#39;</span> <span class="p">|</span> cURL -T - -H <span class="s1">&#39;Content-Type: application/json&#39;</span> http://localhost:10005/api/example/NodeB/create-iou
 </pre></div>
 </div>
 <p>Note the port number <code class="docutils literal"><span class="pre">10005</span></code> (NodeA) and NodeB referenced in the API end-point path. This command instructs NodeA to
-create and send a purchase order to NodeB. Upon verification and completion of the process, both nodes (but not NodeC) will
-have a signed, notarised copy of the purchase order.</p>
-<p><strong>Submitting a purchase order via web/example:</strong></p>
-<p>Navigate to the &#8220;create purchase order&#8221; button at the top left of the page, enter in the purchase order details e.g.</p>
+create and send an IOU to NodeB. Upon verification and completion of the process, both nodes (but not NodeC) will
+have a signed, notarised copy of the IOU.</p>
+<p><strong>Submitting an IOU via web/example:</strong></p>
+<p>Navigate to the &#8220;create IOU&#8221; button at the top left of the page, and enter the IOU details - e.g.</p>
 <div class="highlight-none"><div class="highlight"><pre><span></span>Counter-party: Select from list
 Order Number:  1
 Delivery Date: 2018-09-15
@@ -639,52 +644,56 @@ Item amount:   5
 </pre></div>
 </div>
 <p>and click submit (note you can add additional item types and amounts). Upon pressing submit, the modal dialogue should close.
-To check what validation is performed over the purchase order data, have a look at the <code class="docutils literal"><span class="pre">PurchaseOrderContract.Place</span></code> class in
-<code class="docutils literal"><span class="pre">PurchaseOrderContract.kt</span></code> which defines the following contract constraints (among others not included here):</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="c1">// Purchase order specific constraints.</span>
-<span class="s">&quot;We only deliver to the UK.&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="k">out</span><span class="p">.</span><span class="n">po</span><span class="p">.</span><span class="n">deliveryAddress</span><span class="p">.</span><span class="n">country</span> <span class="p">==</span> <span class="s">&quot;UK&quot;</span><span class="p">)</span>
-<span class="s">&quot;You must order at least one type of item.&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="k">out</span><span class="p">.</span><span class="n">po</span><span class="p">.</span><span class="n">items</span><span class="p">.</span><span class="n">size</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">)</span>
-<span class="s">&quot;You cannot order zero or negative amounts of an item.&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="k">out</span><span class="p">.</span><span class="n">po</span><span class="p">.</span><span class="n">items</span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="n">Item</span><span class="o">::</span><span class="n">amount</span><span class="p">).</span><span class="n">all</span> <span class="p">{</span> <span class="n">it</span> <span class="p">&gt;</span> <span class="m">0</span> <span class="p">})</span>
-<span class="s">&quot;You can only order up to 10 items at a time.&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="k">out</span><span class="p">.</span><span class="n">po</span><span class="p">.</span><span class="n">items</span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="n">Item</span><span class="o">::</span><span class="n">amount</span><span class="p">).</span><span class="n">sum</span><span class="p">()</span> <span class="p">&lt;=</span> <span class="m">10</span><span class="p">)</span>
-<span class="k">val</span> <span class="py">time</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">timestamp</span><span class="o">?.</span><span class="n">midpoint</span>
-<span class="s">&quot;The delivery date must be in the future.&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="k">out</span><span class="p">.</span><span class="n">po</span><span class="p">.</span><span class="n">deliveryDate</span><span class="p">.</span><span class="n">toInstant</span><span class="p">()</span> <span class="p">&gt;</span> <span class="n">time</span><span class="p">)</span>
+To check what validation is performed over the IOU data, have a look at the <code class="docutils literal"><span class="pre">IOUContract.Create</span></code> class in
+<code class="docutils literal"><span class="pre">IOUContract.kt</span></code> which defines the following contract constraints (among others not included here):</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="c1">// Generic constraints around the IOU transaction.</span>
+<span class="s">&quot;No inputs should be consumed when issuing an IOU.&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">tx</span><span class="p">.</span><span class="n">inputs</span><span class="p">.</span><span class="n">isEmpty</span><span class="p">())</span>
+<span class="s">&quot;Only one output state should be created.&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">tx</span><span class="p">.</span><span class="n">outputs</span><span class="p">.</span><span class="n">size</span> <span class="p">==</span> <span class="m">1</span><span class="p">)</span>
+<span class="k">val</span> <span class="py">out</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">outputs</span><span class="p">.</span><span class="n">single</span><span class="p">()</span> <span class="k">as</span> <span class="n">IOUState</span>
+<span class="s">&quot;The sender and the recipient cannot be the same entity.&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="k">out</span><span class="p">.</span><span class="n">sender</span> <span class="p">!=</span> <span class="k">out</span><span class="p">.</span><span class="n">recipient</span><span class="p">)</span>
+<span class="s">&quot;All of the participants must be signers.&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="n">signers</span><span class="p">.</span><span class="n">containsAll</span><span class="p">(</span><span class="k">out</span><span class="p">.</span><span class="n">participants</span><span class="p">))</span>
+
+<span class="c1">// IOU-specific constraints.</span>
+<span class="s">&quot;The IOU&#39;s value must be non-negative.&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="k">out</span><span class="p">.</span><span class="n">iou</span><span class="p">.</span><span class="n">value</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><strong>Once a purchase order has been submitted:</strong></p>
+<p><strong>Once an IOU has been submitted:</strong></p>
 <p>Inspect the terminal windows for the nodes. Assume all of the above contract constraints are met, you should see some
 activity in the terminal windows for NodeA and NodeB (note: the green ticks are only visible on unix/mac):</p>
 <p><em>NodeA:</em></p>
-<div class="highlight-none"><div class="highlight"><pre><span></span>✅  Constructing proposed purchase order.
-✅  Sending purchase order to seller for review.
-✅  Received partially signed transaction from seller.
-✅  Verifying signatures and contract constraints.
+<div class="highlight-none"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+<p>✅  Generating transaction based on new IOU.
+✅  Verifying contract constraints.
 ✅  Signing transaction with our private key.
-✅  Obtaining notary signature.
-    ✅  Requesting signature by Notary service
-    ✅  Validating response from Notary service
-✅  Recording transaction in vault.
-✅  Sending fully signed transaction to seller.
-✅  Done
-</pre></div>
-</div>
+✅  Sending proposed transaction to recipient for review.
+✅  Done</p>
 <p><em>NodeB:</em></p>
-<div class="highlight-none"><div class="highlight"><pre><span></span>✅  Receiving proposed purchase order from buyer.
-✅  Generating transaction based on proposed purchase order.
-✅  Signing proposed transaction with our private key.
-✅  Sending partially signed transaction to buyer and wait for a response.
-✅  Verifying signatures and contract constraints.
-✅  Recording transaction in vault.
-✅  Done
+<div class="highlight-none"><div class="highlight"><pre><span></span>
 </pre></div>
 </div>
+<p>✅  Receiving proposed transaction from sender.
+✅  Verifying signatures and contract constraints.
+✅  Signing proposed transaction with our private key.
+✅  Obtaining notary signature and recording transaction.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>✅  Requesting signature by notary service</dt>
+<dd>✅  Requesting signature by Notary service
+✅  Validating response from Notary service</dd>
+</dl>
+<p>✅  Broadcasting transaction to participants</p>
+</div></blockquote>
+<p>✅  Done</p>
 <p><em>NodeC:</em></p>
 <div class="highlight-none"><div class="highlight"><pre><span></span>You shouldn&#39;t see any activity.
 </pre></div>
 </div>
-<p>Next you can view the newly created purchase order by accessing the vault of NodeA or NodeB:</p>
+<p>Next you can view the newly created IOU by accessing the vault of NodeA or NodeB:</p>
 <p><em>Via the HTTP API:</em></p>
-<p>For NodeA. navigate to <a class="reference external" href="http://localhost:10005/api/example/purchase-orders">http://localhost:10005/api/example/purchase-orders</a>. For NodeB,
-navigate to <a class="reference external" href="http://localhost:10007/api/example/purchase-orders">http://localhost:10007/api/example/purchase-orders</a>.</p>
+<p>For NodeA. navigate to <a class="reference external" href="http://localhost:10005/api/example/ious">http://localhost:10005/api/example/ious</a>. For NodeB,
+navigate to <a class="reference external" href="http://localhost:10007/api/example/ious">http://localhost:10007/api/example/ious</a>.</p>
 <p><em>Via web/example:</em></p>
 <p>Navigate to <a class="reference external" href="http://localhost:10005/web/example">http://localhost:10005/web/example</a> the refresh button in the top left-hand side of the page. You should
 see the newly created agreement on the page.</p>
@@ -711,9 +720,9 @@ query them using SQL.</p>
 <div class="section" id="using-the-example-rpc-client">
 <h3>Using the Example RPC client<a class="headerlink" href="#using-the-example-rpc-client" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal"><span class="pre">/src/main/kotlin/com/example/client/ExampleClientRPC.kt</span></code> file is a simple utility which uses the client RPC library
-to connect to a node and log the &#8216;placed&#8217; purchase orders. It will log any existing purchase orders and listen for any future
-purchase orders. If you haven&#8217;t placed any purchase orders when you connect to one of the Nodes via RPC then the client will log
-and future purchase orders which are agreed.</p>
+to connect to a node and log the created IOUs. It will log any existing IOUs and listen for any future
+IOUs. If you haven&#8217;t created any IOUs when you connect to one of the Nodes via RPC then the client will log
+and future IOUs which are agreed.</p>
 <p>To build the client use the following gradle task:</p>
 <p><code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">runExampleClientRPC</span></code></p>
 <p><em>To run the client, via IntelliJ:</em></p>
@@ -730,12 +739,12 @@ application see:</p>
 </ul>
 </div>
 </div>
-<div class="section" id="extending-the-cordapp-template">
-<h2>Extending the CorDapp template<a class="headerlink" href="#extending-the-cordapp-template" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="cordapp-template-project-structure">
-<h3>CorDapp-template project structure<a class="headerlink" href="#cordapp-template-project-structure" title="Permalink to this headline">¶</a></h3>
-<p>The CorDapp template has the following directory structure:</p>
-<div class="highlight-none"><div class="highlight"><pre><span></span>. cordapp-template
+<div class="section" id="extending-the-example-cordapp">
+<h2>Extending the example CorDapp<a class="headerlink" href="#extending-the-example-cordapp" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="cordapp-tutorial-project-structure">
+<h3>cordapp-tutorial project structure<a class="headerlink" href="#cordapp-tutorial-project-structure" title="Permalink to this headline">¶</a></h3>
+<p>The example CorDapp has the following directory structure:</p>
+<div class="highlight-none"><div class="highlight"><pre><span></span>. cordapp-tutorial
 ├── README.md
 ├── LICENSE
 ├── build.gradle
@@ -749,7 +758,7 @@ application see:</p>
 ├── lib
 │   ├── ...
 ├── settings.gradle
-├── kotlin
+├── kotlin-source
 │   └── src
 │       ├── main
 │       │   ├── kotlin
@@ -761,10 +770,10 @@ application see:</p>
 │       │   │           ├── client
 │       │   │           │   └── ExampleClientRPC.kt
 │       │   │           ├── contract
-│       │   │           │   ├── PurchaseOrderContract.kt
-│       │   │           │   └── PurchaseOrderState.kt
+│       │   │           │   ├── IOUContract.kt
+│       │   │           │   └── IOUState.kt
 │       │   │           ├── model
-│       │   │           │   └── PurchaseOrder.kt
+│       │   │           │   └── IOU.kt
 │       │   │           ├── plugin
 │       │   │           │   └── ExamplePlugin.kt
 │       │   │           └── flow
@@ -791,7 +800,7 @@ application see:</p>
 │           │       └── example
 │           │           └── ExampleTest.kt
 │           └── resources
-└── java
+└── java-source
     └── src
         ├── main
         │   ├── java
@@ -803,10 +812,10 @@ application see:</p>
         │   │           ├── client
         │   │           │   └── ExampleClientRPC.java
         │   │           ├── contract
-        │   │           │   ├── PurchaseOrderContract.java
-        │   │           │   └── PurchaseOrderState.java
+        │   │           │   ├── IOUContract.java
+        │   │           │   └── IOUState.java
         │   │           ├── model
-        │   │           │   └── PurchaseOrder.java
+        │   │           │   └── IOU.java
         │   │           ├── plugin
         │   │           │   └── ExamplePlugin.java
         │   │           └── flow
@@ -868,8 +877,8 @@ are available for use in the rest of the build script. It also specifies version
 things.</p>
 <p>If you are working from a Corda SNAPSHOT release which you have publish to Maven local then ensure that
 <code class="docutils literal"><span class="pre">corda_version</span></code> is the same as the version of the Corda core modules you published to Maven local. If not then change the
-<code class="docutils literal"><span class="pre">kotlin_version</span></code> property. Also, if you are working from a previous milestone release, then be sure to <code class="docutils literal"><span class="pre">git</span> <span class="pre">checkout</span></code>
-the correct version of the CorDapp template from the <code class="docutils literal"><span class="pre">cordapp-template</span></code> repo.</p>
+<code class="docutils literal"><span class="pre">kotlin_version</span></code> property. Also, if you are working from a previous cordapp-tutorial milestone release, then be sure to <code class="docutils literal"><span class="pre">git</span> <span class="pre">checkout</span></code>
+the correct version of the example CorDapp from the <code class="docutils literal"><span class="pre">cordapp-tutorial</span></code> repo.</p>
 <div class="highlight-groovy"><div class="highlight"><pre><span></span><span class="n">buildscript</span> <span class="o">{</span>
     <span class="n">ext</span><span class="o">.</span><span class="na">kotlin_version</span> <span class="o">=</span> <span class="s1">&#39;1.0.4&#39;</span>
     <span class="n">ext</span><span class="o">.</span><span class="na">corda_version</span> <span class="o">=</span> <span class="s1">&#39;0.5-SNAPSHOT&#39;</span> <span class="c1">// Ensure this version is the same as the corda core modules you are using.</span>
@@ -942,7 +951,7 @@ like to deploy for testing. See further details below:</p>
 only requirement is that you must specify a node to run as the network map service and one as the notary service.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">CorDapps in the current cordapp-template project are automatically registered with all nodes defined in
+<p class="last">CorDapps in the current cordapp-tutorial project are automatically registered with all nodes defined in
 <code class="docutils literal"><span class="pre">deployNodes</span></code>, although we expect this to change in the near future.</p>
 </div>
 <div class="admonition warning">
@@ -953,7 +962,7 @@ only requirement is that you must specify a node to run as the network map servi
 </div>
 <div class="section" id="service-provider-configuration-file">
 <h3>Service Provider Configuration File<a class="headerlink" href="#service-provider-configuration-file" title="Permalink to this headline">¶</a></h3>
-<p>If you are building a CorDapp from scratch or adding a new CorDapp to the CorDapp-template project then you must provide
+<p>If you are building a CorDapp from scratch or adding a new CorDapp to the cordapp-tutorial project then you must provide
 a reference to your sub-class of <code class="docutils literal"><span class="pre">CordaPluginRegistry</span></code> in the provider-configuration file in located in the <code class="docutils literal"><span class="pre">resources/META-INF/services</span></code> directory.</p>
 </div>
 <div class="section" id="re-deploying-your-nodes-locally">
@@ -992,8 +1001,8 @@ the following changes:</p>
 controller node is running and to its legal name (e.g. <cite>networkMapService.address=&#8221;10.18.0.166:10002&#8221;</cite> and
 <cite>networkMapService.legalName=controller</cite>) (please note that the controller will not have the <cite>networkMapService</cite> config)</p>
 <p>Each machine should now run its nodes using <cite>runnodes</cite> or <cite>runnodes.bat</cite>
-files. Once they are up and running, the nodes should be able to place
-purchase orders among themselves in the same way as when they were running on
+files. Once they are up and running, the nodes should be able to create
+IOUs among themselves in the same way as when they were running on
 the same machine.</p>
 </div>
 <div class="section" id="debugging-your-cordapp">

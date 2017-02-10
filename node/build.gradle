@@ -52,9 +52,6 @@ sourceSets {
 
 dependencies {
     compile project(':finance')
-    testCompile project(':test-utils')
-    testCompile project(':client')
-
     compile "com.google.code.findbugs:jsr305:3.0.1"
 
     // Log4J: logging framework (with SLF4J bindings)
@@ -126,8 +123,11 @@ dependencies {
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
-
     testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
+    testCompile "com.nhaarman:mockito-kotlin:1.1.0"
+    testCompile project(':test-utils')
+    testCompile project(':client')
+    testCompile project(':core')
 
     // For H2 database support in persistence
     compile "com.h2database:h2:1.4.193"
@@ -156,8 +156,6 @@ dependencies {
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
-
-    testCompile "com.nhaarman:mockito-kotlin:1.1.0"
 }
 
 task integrationTest(type: Test) {

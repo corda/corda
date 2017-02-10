@@ -29,11 +29,12 @@ interface ServiceHub {
     val myInfo: NodeInfo
 
     /**
-     * Given a list of [SignedTransaction]s, writes them to the local storage for validated transactions and then
-     * sends them to the vault for further processing.
+     * Given a [SignedTransaction], writes it to the local storage for validated transactions and then
+     * sends them to the vault for further processing. Expects to be run within a database transaction.
      *
      * @param txs The transactions to record.
      */
+    // TODO: Make this take a single tx.
     fun recordTransactions(txs: Iterable<SignedTransaction>)
 
     /**

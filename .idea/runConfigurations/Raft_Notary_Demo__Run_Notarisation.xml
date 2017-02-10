@@ -3,7 +3,7 @@
     <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
     <option name="MAIN_CLASS_NAME" value="net.corda.notarydemo.NotaryDemoKt" />
     <option name="VM_PARAMETERS" value="-ea -javaagent:lib/quasar.jar " />
-    <option name="PROGRAM_PARAMETERS" value="" />
+    <option name="PROGRAM_PARAMETERS" value="--certificates=&quot;build/notary-demo-nodes/Party/certificates&quot;" />
     <option name="WORKING_DIRECTORY" value="" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
     <option name="ALTERNATIVE_JRE_PATH" />

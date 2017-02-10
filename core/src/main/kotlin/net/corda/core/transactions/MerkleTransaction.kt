@@ -1,149 +1,91 @@
 package net.corda.core.transactions
 
-import net.corda.core.contracts.Command
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
-import net.corda.core.crypto.MerkleTreeException
-import net.corda.core.crypto.PartialMerkleTree
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
+import net.corda.core.contracts.*
+import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.serialization.createKryo
 import net.corda.core.serialization.extendKryoHash
 import net.corda.core.serialization.serialize
 import java.util.*
 
-/**
- * Build filtered transaction using provided filtering functions.
- */
-fun WireTransaction.buildFilteredTransaction(filterFuns: FilterFuns): FilteredTransaction {
-    return FilteredTransaction.buildMerkleTransaction(this, filterFuns)
-}
-
-/**
- * Calculation of all leaves hashes that are needed for calculation of transaction id and partial Merkle branches.
- */
-fun WireTransaction.calculateLeavesHashes(): List<SecureHash> {
-    val resultHashes = ArrayList<SecureHash>()
-    val entries = listOf(inputs, outputs, attachments, commands)
-    entries.forEach { it.mapTo(resultHashes, { x -> serializedHash(x) }) }
-    return resultHashes
-}
-
-fun SecureHash.hashConcat(other: SecureHash) = (this.bytes + other.bytes).sha256()
-
 fun <T : Any> serializedHash(x: T): SecureHash {
-    val kryo = extendKryoHash(createKryo()) //Dealing with HashMaps inside states.
+    val kryo = extendKryoHash(createKryo()) // Dealing with HashMaps inside states.
     return x.serialize(kryo).hash
 }
 
 /**
- * Creation and verification of a Merkle Tree for a Wire Transaction.
- *
- * See: https://en.wikipedia.org/wiki/Merkle_tree
- *
- * Transaction is split into following blocks: inputs, outputs, commands, attachments' refs. Merkle Tree is kept in
- * a recursive data structure. Building is done bottom up, from all leaves' hashes.
- * If a row in a tree has an odd number of elements - the final hash is hashed with itself.
+ * Interface implemented by WireTransaction and FilteredLeaves.
+ * Property traversableList assures that we always calculate hashes in the same order, lets us define which
+ * fields of WireTransaction will be included in id calculation or partial merkle tree building.
  */
-sealed class MerkleTree(val hash: SecureHash) {
-    class Leaf(val value: SecureHash) : MerkleTree(value)
-    class Node(val value: SecureHash, val left: MerkleTree, val right: MerkleTree) : MerkleTree(value)
-    //DuplicatedLeaf is storing a hash of the rightmost node that had to be duplicated to obtain the tree.
-    //That duplication can cause problems while building and verifying partial tree (especially for trees with duplicate
-    //attachments or commands).
-    class DuplicatedLeaf(val value: SecureHash) : MerkleTree(value)
+interface TraversableTransaction {
+    val inputs: List<StateRef>
+    val attachments: List<SecureHash>
+    val outputs: List<TransactionState<ContractState>>
+    val commands: List<Command>
+    val notary: Party?
+    val mustSign: List<CompositeKey>
+    val type: TransactionType?
+    val timestamp: Timestamp?
 
-    fun hashNodes(right: MerkleTree): MerkleTree {
-        val newHash = this.hash.hashConcat(right.hash)
-        return Node(newHash, this, right)
-    }
-
-    companion object {
-        /**
-         * Merkle tree building using hashes.
-         */
-        fun getMerkleTree(allLeavesHashes: List<SecureHash>): MerkleTree {
-            val leaves = allLeavesHashes.map { MerkleTree.Leaf(it) }
-            return buildMerkleTree(leaves)
+    /**
+     * Traversing transaction fields with a list function over transaction contents. Used for leaves hashes calculation
+     * and user provided filtering and checking of filtered transaction.
+     */
+    // We may want to specify our own behaviour on certain tx fields.
+    // Like if we include them at all, what to do with null values, if we treat list as one or not etc. for building
+    // torn-off transaction and id calculation.
+    val traversableList: List<Any>
+        get() {
+            val traverseList = mutableListOf(inputs, attachments, outputs, commands).flatten().toMutableList()
+            if (notary != null) traverseList.add(notary!!)
+            traverseList.addAll(mustSign)
+            if (type != null) traverseList.add(type!!)
+            if (timestamp != null) traverseList.add(timestamp!!)
+            return traverseList
         }
 
-        /**
-         * Tailrecursive function for building a tree bottom up.
-         * @param lastNodesList MerkleTree nodes from previous level.
-         * @return Tree root.
-         */
-        private tailrec fun buildMerkleTree(lastNodesList: List<MerkleTree>): MerkleTree {
-            if (lastNodesList.size < 1)
-                throw MerkleTreeException("Cannot calculate Merkle root on empty hash list.")
-            if (lastNodesList.size == 1) {
-                return lastNodesList[0] //Root reached.
-            } else {
-                val newLevelHashes: MutableList<MerkleTree> = ArrayList()
-                var i = 0
-                while (i < lastNodesList.size) {
-                    val left = lastNodesList[i]
-                    val n = lastNodesList.size
-                    // If there is an odd number of elements at this level,
-                    // the last element is hashed with itself and stored as a Leaf.
-                    val right = when {
-                        i + 1 > n - 1 -> MerkleTree.DuplicatedLeaf(lastNodesList[n - 1].hash)
-                        else -> lastNodesList[i + 1]
-                    }
-                    val combined = left.hashNodes(right)
-                    newLevelHashes.add(combined)
-                    i += 2
-                }
-                return buildMerkleTree(newLevelHashes)
-            }
-        }
-    }
+    // Calculation of all leaves hashes that are needed for calculation of transaction id and partial Merkle branches.
+    fun calculateLeavesHashes(): List<SecureHash> = traversableList.map { serializedHash(it) }
 }
 
 /**
- * Class that holds filtered leaves for a partial Merkle transaction. We assume mixed leaves types.
+ * Class that holds filtered leaves for a partial Merkle transaction. We assume mixed leaf types, notice that every
+ * field from WireTransaction can be used in PartialMerkleTree calculation.
  */
 class FilteredLeaves(
-        val inputs: List<StateRef>,
-        val outputs: List<TransactionState<ContractState>>,
-        val attachments: List<SecureHash>,
-        val commands: List<Command>
-) {
-    fun getFilteredHashes(): List<SecureHash> {
-        val resultHashes = ArrayList<SecureHash>()
-        val entries = listOf(inputs, outputs, attachments, commands)
-        entries.forEach { it.mapTo(resultHashes, { x -> serializedHash(x) }) }
-        return resultHashes
-    }
-}
-
-/**
- * Holds filter functions on transactions fields.
- * Functions are used to build a partial tree only out of some subset of original transaction fields.
- */
-class FilterFuns(
-        val filterInputs: (StateRef) -> Boolean = { false },
-        val filterOutputs: (TransactionState<ContractState>) -> Boolean = { false },
-        val filterAttachments: (SecureHash) -> Boolean = { false },
-        val filterCommands: (Command) -> Boolean = { false }
-) {
-    fun <T : Any> genericFilter(elem: T): Boolean {
-        return when (elem) {
-            is StateRef -> filterInputs(elem)
-            is TransactionState<*> -> filterOutputs(elem)
-            is SecureHash -> filterAttachments(elem)
-            is Command -> filterCommands(elem)
-            else -> throw IllegalArgumentException("Wrong argument type: ${elem.javaClass}")
-        }
+        override val inputs: List<StateRef>,
+        override val attachments: List<SecureHash>,
+        override val outputs: List<TransactionState<ContractState>>,
+        override val commands: List<Command>,
+        override val notary: Party?,
+        override val mustSign: List<CompositeKey>,
+        override val type: TransactionType?,
+        override val timestamp: Timestamp?
+) : TraversableTransaction {
+    /**
+     * Function that checks the whole filtered structure.
+     * Force type checking on a structure that we obtained, so we don't sign more than expected.
+     * Example: Oracle is implemented to check only for commands, if it gets an attachment and doesn't expect it - it can sign
+     * over a transaction with the attachment that wasn't verified. Of course it depends on how you implement it, but else -> false
+     * should solve a problem with possible later extensions to WireTransaction.
+     * @param checkingFun function that performs type checking on the structure fields and provides verification logic accordingly.
+     * @returns false if no elements were matched on a structure or checkingFun returned false.
+     */
+    fun checkWithFun(checkingFun: (Any) -> Boolean): Boolean {
+        val checkList = traversableList.map { checkingFun(it) }
+        return (!checkList.isEmpty()) && checkList.all { true }
     }
 }
 
 /**
  * Class representing merkleized filtered transaction.
+ * @param rootHash Merkle tree root hash.
  * @param filteredLeaves Leaves included in a filtered transaction.
  * @param partialMerkleTree Merkle branch needed to verify filteredLeaves.
  */
-class FilteredTransaction(
+class FilteredTransaction private constructor(
+        val rootHash: SecureHash,
         val filteredLeaves: FilteredLeaves,
         val partialMerkleTree: PartialMerkleTree
 ) {
@@ -151,29 +93,34 @@ class FilteredTransaction(
         /**
          * Construction of filtered transaction with Partial Merkle Tree.
          * @param wtx WireTransaction to be filtered.
-         * @param filterFuns filtering functions for inputs, outputs, attachments, commands.
+         * @param filtering filtering over the whole WireTransaction
          */
         fun buildMerkleTransaction(wtx: WireTransaction,
-                                   filterFuns: FilterFuns
+                                   filtering: (Any) -> Boolean
         ): FilteredTransaction {
-            val filteredInputs = wtx.inputs.filter { filterFuns.genericFilter(it) }
-            val filteredOutputs = wtx.outputs.filter { filterFuns.genericFilter(it) }
-            val filteredAttachments = wtx.attachments.filter { filterFuns.genericFilter(it) }
-            val filteredCommands = wtx.commands.filter { filterFuns.genericFilter(it) }
-            val filteredLeaves = FilteredLeaves(filteredInputs, filteredOutputs, filteredAttachments, filteredCommands)
-
-            val pmt = PartialMerkleTree.build(wtx.merkleTree, filteredLeaves.getFilteredHashes())
-            return FilteredTransaction(filteredLeaves, pmt)
+            val filteredLeaves = wtx.filterWithFun(filtering)
+            val merkleTree = wtx.getMerkleTree()
+            val pmt = PartialMerkleTree.build(merkleTree, filteredLeaves.calculateLeavesHashes())
+            return FilteredTransaction(merkleTree.hash, filteredLeaves, pmt)
         }
     }
 
     /**
-     * Runs verification of Partial Merkle Branch with merkleRootHash.
+     * Runs verification of Partial Merkle Branch against [rootHash].
      */
-    fun verify(merkleRootHash: SecureHash): Boolean {
-        val hashes: List<SecureHash> = filteredLeaves.getFilteredHashes()
-        if (hashes.size == 0)
+    @Throws(MerkleTreeException::class)
+    fun verify(): Boolean {
+        val hashes: List<SecureHash> = filteredLeaves.calculateLeavesHashes()
+        if (hashes.isEmpty())
             throw MerkleTreeException("Transaction without included leaves.")
-        return partialMerkleTree.verify(merkleRootHash, hashes)
+        return partialMerkleTree.verify(rootHash, hashes)
+    }
+
+    /**
+     * Runs verification of Partial Merkle Branch against [rootHash]. Checks filteredLeaves with provided checkingFun.
+     */
+    @Throws(MerkleTreeException::class)
+    fun verifyWithFunction(checkingFun: (Any) -> Boolean): Boolean {
+        return verify() && filteredLeaves.checkWithFun { checkingFun(it) }
     }
 }

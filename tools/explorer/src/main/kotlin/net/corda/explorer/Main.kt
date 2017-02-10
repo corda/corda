@@ -21,7 +21,9 @@ import net.corda.explorer.model.CordaViewModel
 import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.views.*
 import net.corda.explorer.views.cordapps.cash.CashViewer
-import net.corda.flows.CashFlow
+import net.corda.flows.CashExitFlow
+import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.driver.PortAllocation
 import net.corda.node.driver.driver
@@ -107,8 +109,15 @@ class Main : App(MainView::class) {
 fun main(args: Array<String>) {
     val portAllocation = PortAllocation.Incremental(20000)
     driver(portAllocation = portAllocation) {
-        val user = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>()))
-        val manager = User("manager", "test", permissions = setOf(startFlowPermission<CashFlow>(), startFlowPermission<IssuanceRequester>()))
+        val user = User("user1", "test", permissions = setOf(
+                startFlowPermission<CashPaymentFlow>()
+        ))
+        val manager = User("manager", "test", permissions = setOf(
+                startFlowPermission<CashIssueFlow>(),
+                startFlowPermission<CashPaymentFlow>(),
+                startFlowPermission<CashExitFlow>(),
+                startFlowPermission<IssuanceRequester>())
+        )
         // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
         val notary = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)),
                                     customOverrides = mapOf("nearestCity" to "Zurich"))
@@ -178,34 +187,26 @@ fun main(args: Array<String>) {
                 // Party pay requests
                 listOf(aliceRPC, bobRPC).forEach {
                     eventGenerator.clientCommandGenerator.map { command ->
-                        it.startFlow(::CashFlow, command)
+                        command.startFlow(it)
                         Unit
                     }.generate(SplittableRandom())
                 }
                 // Exit requests
                 issuerGBPEventGenerator.bankOfCordaExitGenerator.map { command ->
-                    issuerRPCGBP.startFlow(::CashFlow, command)
+                    command.startFlow(issuerRPCGBP)
                     Unit
                 }.generate(SplittableRandom())
                 issuerUSDEventGenerator.bankOfCordaExitGenerator.map { command ->
-                    issuerRPCUSD.startFlow(::CashFlow, command)
+                    command.startFlow(issuerRPCUSD)
                     Unit
                 }.generate(SplittableRandom())
                 // Issuer requests
                 issuerGBPEventGenerator.bankOfCordaIssueGenerator.map { command ->
-                    issuerRPCGBP.startFlow(::IssuanceRequester,
-                            command.amount,
-                            command.recipient,
-                            command.issueRef,
-                            issuerNodeGBP.nodeInfo.legalIdentity)
+                    command.startFlow(issuerRPCGBP)
                     Unit
                 }.generate(SplittableRandom())
                 issuerUSDEventGenerator.bankOfCordaIssueGenerator.map { command ->
-                    issuerRPCUSD.startFlow(::IssuanceRequester,
-                            command.amount,
-                            command.recipient,
-                            command.issueRef,
-                            issuerNodeUSD.nodeInfo.legalIdentity)
+                    command.startFlow(issuerRPCUSD)
                     Unit
                 }.generate(SplittableRandom())
             }

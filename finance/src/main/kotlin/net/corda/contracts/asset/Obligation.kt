@@ -190,7 +190,7 @@ class Obligation<P> : Contract {
                     "amount in settle command ${command.value.amount} matches settled total $totalAmountSettled" by (command.value.amount == totalAmountSettled)
                     "signatures are present from all obligors" by command.signers.containsAll(requiredSigners)
                     "there are no zero sized inputs" by inputs.none { it.amount.quantity == 0L }
-                    "at obligor ${obligor.name} the obligations after settlement balance" by
+                    "at obligor ${obligor} the obligations after settlement balance" by
                             (inputAmount == outputAmount + Amount(totalPenniesSettled, groupingKey))
                 }
                 return setOf(command.value)

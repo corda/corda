@@ -52,6 +52,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: ['buildCertSigningRequestUtility
     applicationClass 'net.corda.node.Corda'
     archiveName "corda-${corda_version}.jar"
     applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
+    from 'NOTICE' // Copy CDDL notice
 
     capsuleManifest {
         applicationVersion = corda_version

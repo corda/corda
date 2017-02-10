@@ -8,7 +8,7 @@ import net.corda.flows.IssuerFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.CashFlow
+import net.corda.flows.CashPaymentFlow
 import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.startFlowPermission
@@ -21,6 +21,9 @@ import kotlin.system.exitProcess
 fun main(args: Array<String>) {
     BankOfCordaDriver().main(args)
 }
+
+val BANK_USERNAME = "bankUser"
+val BIGCORP_USERNAME = "bigCorpUser"
 
 private class BankOfCordaDriver {
     enum class Role {
@@ -48,10 +51,11 @@ private class BankOfCordaDriver {
         val role = options.valueOf(roleArg)!!
         if (role == Role.ISSUER) {
             driver(dsl = {
-                val user = User("user1", "test", permissions = setOf(startFlowPermission<CashFlow>(), startFlowPermission<IssuerFlow.IssuanceRequester>()))
+                val bankUser = User(BANK_USERNAME, "test", permissions = setOf(startFlowPermission<CashPaymentFlow>(), startFlowPermission<IssuerFlow.IssuanceRequester>()))
+                val bigCorpUser = User(BIGCORP_USERNAME, "test", permissions = setOf(startFlowPermission<CashPaymentFlow>()))
                 startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.type)))
-                val bankOfCorda = startNode("BankOfCorda", rpcUsers = listOf(user), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
-                startNode("BigCorporation", rpcUsers = listOf(user))
+                val bankOfCorda = startNode("BankOfCorda", rpcUsers = listOf(bankUser), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
+                startNode("BigCorporation", rpcUsers = listOf(bigCorpUser))
                 startWebserver(bankOfCorda.get())
                 waitForAllNodesToFinish()
             }, isDebug = true)
