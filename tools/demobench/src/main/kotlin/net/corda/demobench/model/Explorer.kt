@@ -12,8 +12,8 @@ class Explorer(val explorerController: ExplorerController) : AutoCloseable {
     fun open(config: NodeConfig, onExit: (NodeConfig) -> Unit) {
         val explorerDir = config.explorerDir.toFile()
 
-        if (!explorerDir.isDirectory() && !explorerDir.mkdirs()) {
-            log.warn("Failed to create working directory '{}'", explorerDir.getAbsolutePath())
+        if (!explorerDir.isDirectory && !explorerDir.mkdirs()) {
+            log.warn("Failed to create working directory '{}'", explorerDir.absolutePath)
             onExit(config)
             return
         }
@@ -29,6 +29,8 @@ class Explorer(val explorerController: ExplorerController) : AutoCloseable {
               "--trustStorePassword=${config.ssl.trustStorePassword}"
         )
         process = p
+
+        log.info("Launched Node Explorer for '{}'", config.legalName)
 
         executor.submit {
             val exitValue = p.waitFor()
