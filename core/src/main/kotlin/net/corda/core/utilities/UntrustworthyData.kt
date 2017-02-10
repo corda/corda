@@ -18,11 +18,18 @@ class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
         @Deprecated("Accessing the untrustworthy data directly without validating it first is a bad idea")
         get() = fromUntrustedWorld
 
-    @Suppress("DEPRECATION")
     @Throws(FlowException::class)
-    inline fun <R> unwrap(validator: (T) -> R) = validator(data)
+    fun <R> unwrap(validator: Validator<T, R>) = validator.validate(fromUntrustedWorld)
 
     @Suppress("DEPRECATION")
     @Deprecated("This old name was confusing, use unwrap instead", replaceWith = ReplaceWith("unwrap"))
     inline fun <R> validate(validator: (T) -> R) = validator(data)
+
+    interface Validator<in T, out R> {
+        @Throws(FlowException::class)
+        fun validate(data: T): R
+    }
 }
+
+@Suppress("DEPRECATION")
+inline fun <T, R> UntrustworthyData<T>.unwrap(validator: (T) -> R): R = validator(data)

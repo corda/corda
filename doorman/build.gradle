@@ -1,0 +1,71 @@
+apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'kotlin'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
+    jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
+}
+
+task buildDoormanJAR(type: FatCapsule, dependsOn: 'jar') {
+    applicationClass 'com.r3.corda.doorman.MainKt'
+    archiveName 'doorman.jar'
+
+    capsuleManifest {
+        systemProperties['log4j.configuration'] = 'log4j2.xml'
+        minJavaVersion = '1.8.0'
+    }
+}
+
+sourceSets {
+    main {
+        resources {
+            srcDir "../config/dev"
+        }
+    }
+    test {
+        resources {
+            srcDir "../config/test"
+        }
+    }
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+    compile project(":core")
+    compile project(":node")
+    testCompile project(":test-utils")
+
+    // Log4J: logging framework (with SLF4J bindings)
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
+    compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
+    compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
+
+    // Web stuff: for HTTP[S] servlets
+    compile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
+    compile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
+    compile "javax.servlet:javax.servlet-api:3.1.0"
+
+    // Jersey for JAX-RS implementation for use in Jetty
+    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    compile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
+    compile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
+
+    // JOpt: for command line flags.
+    compile "net.sf.jopt-simple:jopt-simple:5.0.2"
+
+    // TypeSafe Config: for simple and human friendly config files.
+    compile "com.typesafe:config:1.3.0"
+
+    // Unit testing helpers.
+    testCompile 'junit:junit:4.12'
+    testCompile "org.assertj:assertj-core:${assertj_version}"
+    testCompile "com.nhaarman:mockito-kotlin:0.6.1"
+}

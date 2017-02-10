@@ -32,7 +32,7 @@ class BankOfCordaClientApi(val hostAndPort: HostAndPort) {
     fun requestRPCIssue(params: IssueRequestParams): SignedTransaction {
         val client = CordaRPCClient(hostAndPort, configureTestSSL())
         // TODO: privileged security controls required
-        client.start("user1","test")
+        client.start("bankUser", "test")
         val proxy = client.proxy()
 
         // Resolve parties via RPC

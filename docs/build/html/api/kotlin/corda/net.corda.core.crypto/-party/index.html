@@ -8,7 +8,7 @@
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.crypto</a>&nbsp;/&nbsp;<a href=".">Party</a><br/>
 <br/>
 <h1>Party</h1>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Party</span></code>
+<code><span class="keyword">class </span><span class="identifier">Party</span></code>
 <p>The Party class represents an entity on the network, which is typically identified by a legal <a href="name.html">name</a> and public key
 that it can sign transactions under. As parties may use multiple keys for signing and, for example, have offline backup
 keys, the "public key" of a party is represented by a composite construct – a <a href="../-composite-key/index.html">CompositeKey</a>, which combines multiple
@@ -19,6 +19,7 @@ Her advertised Party then has a legal <a href="name.html">name</a> "Alice" and a
 which requires a separate signing key (and an identifying name). Services can also be distributed – run by a coordinated
 cluster of Corda nodes. A Party representing a distributed service will use a composite key containing all
 individual cluster nodes' public keys. Each of the nodes in the cluster will advertise the same group Party.</p>
+<p>Note that equality is based solely on the owning key.</p>
 <p><strong>See Also</strong><br/>
 <p><a href="../-composite-key/index.html">CompositeKey</a></p>
 </p>
@@ -60,6 +61,20 @@ cryptographic public key primitives into a tree structure.</p>
 <h3>Functions</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="equals.html">equals</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">equals</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.Party$equals(kotlin.Any)/other">other</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Anonymised parties do not include any detail apart from owning key, so equality is dependent solely on the key</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="hash-code.html">hashCode</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">hashCode</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
 <tr>
 <td>
 <a href="ref.html">ref</a></td>

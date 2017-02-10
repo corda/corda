@@ -6,6 +6,8 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.flows.FlowLogic
@@ -16,14 +18,12 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.CashCommand
-import net.corda.flows.CashFlow
-import net.corda.flows.FinalityFlow
-import net.corda.flows.sendRequest
+import net.corda.flows.*
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -51,7 +51,6 @@ import net.corda.node.utilities.databaseTransaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
-import java.io.File
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.security.KeyPair
@@ -82,11 +81,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
 
         val defaultFlowWhiteList: Map<Class<out FlowLogic<*>>, Set<Class<*>>> = mapOf(
-                CashFlow::class.java to setOf(
-                        CashCommand.IssueCash::class.java,
-                        CashCommand.PayCash::class.java,
-                        CashCommand.ExitCash::class.java
-                ),
+                CashExitFlow::class.java to setOf(Amount::class.java, PartyAndReference::class.java),
+                CashIssueFlow::class.java to setOf(Amount::class.java, OpaqueBytes::class.java, Party::class.java),
+                CashPaymentFlow::class.java to setOf(Amount::class.java, Party::class.java),
                 FinalityFlow::class.java to emptySet()
         )
     }
@@ -260,6 +257,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 false
             }
             startMessagingService(CordaRPCOpsImpl(services, smm, database))
+            services.registerFlowInitiator(ContractUpgradeFlow.Instigator::class) { ContractUpgradeFlow.Acceptor(it) }
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
             smm.start()

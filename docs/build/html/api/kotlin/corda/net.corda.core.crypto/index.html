@@ -68,7 +68,7 @@ Partial Merkle Tree is a minimal tree needed to check that a given set of leaves
 <td>
 <a href="-party/index.html">Party</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Party</span></code>
+<code><span class="keyword">class </span><span class="identifier">Party</span></code>
 <p>The <a href="-party/index.html">Party</a> class represents an entity on the network, which is typically identified by a legal <a href="-party/name.html">name</a> and public key
 that it can sign transactions under. As parties may use multiple keys for signing and, for example, have offline backup
 keys, the "public key" of a party is represented by a composite construct – a <a href="-composite-key/index.html">CompositeKey</a>, which combines multiple
@@ -200,7 +200,7 @@ you want hard-coded private keys.</p>
 <td>
 <a href="parse-public-key-base58.html">parsePublicKeyBase58</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">parsePublicKeyBase58</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto$parsePublicKeyBase58(kotlin.String)/base58String">base58String</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">parsePublicKeyBase58</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto$parsePublicKeyBase58(kotlin.String)/base58String">base58String</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">EdDSAPublicKey</span></code></td>
 </tr>
 <tr>
 <td>

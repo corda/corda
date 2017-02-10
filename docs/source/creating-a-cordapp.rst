@@ -201,7 +201,7 @@ deployment.
 
 To use this gradle plugin you must add a new task that is of the type ``net.corda.plugins.Cordform`` to your
 build.gradle and then configure the nodes you wish to deploy with the Node and nodes configuration DSL.
-This DSL is specified in the `JavaDoc <api/index.html>`_. An example of this is in the template-cordapp and below
+This DSL is specified in the `JavaDoc <api/index.html>`_. An example of this is in the CorDapp template and below
 is a three node example;
 
 .. code-block:: text

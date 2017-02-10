@@ -140,7 +140,7 @@ class NotaryServiceTests {
     }
 
     fun issueState(node: AbstractNode): StateAndRef<*> {
-        val tx = DummyContract.generateInitial(node.info.legalIdentity.ref(0), Random().nextInt(), notaryNode.info.notaryIdentity)
+        val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.info.notaryIdentity, node.info.legalIdentity.ref(0))
         val nodeKey = node.services.legalIdentityKey
         tx.signWith(nodeKey)
         val notaryKeyPair = notaryNode.services.notaryIdentityKey

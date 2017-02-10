@@ -7,10 +7,10 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
-import net.corda.core.transactions.FilterFuns
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 import net.corda.irs.flows.RatesFixFlow.FixOutOfRange
 import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
 import java.math.BigDecimal
@@ -28,12 +28,10 @@ import java.util.*
  * @throws FixOutOfRange if the returned fix was further away from the expected rate by the given amount.
  */
 open class RatesFixFlow(protected val tx: TransactionBuilder,
-                        /** Filtering functions over transaction, used to build partial transaction presented to oracle. */
-                        private val filterFuns: FilterFuns,
-                        private val oracle: Party,
-                        private val fixOf: FixOf,
-                        private val expectedRate: BigDecimal,
-                        private val rateTolerance: BigDecimal,
+                        protected val oracle: Party,
+                        protected val fixOf: FixOf,
+                        protected val expectedRate: BigDecimal,
+                        protected val rateTolerance: BigDecimal,
                         override val progressTracker: ProgressTracker = RatesFixFlow.tracker(fixOf.name)) : FlowLogic<Unit>() {
 
     companion object {
@@ -47,7 +45,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     class FixOutOfRange(@Suppress("unused") val byAmount: BigDecimal) : Exception("Fix out of range by $byAmount")
 
     data class QueryRequest(val queries: List<FixOf>, val deadline: Instant)
-    data class SignRequest(val rootHash: SecureHash, val ftx: FilteredTransaction)
+    data class SignRequest(val ftx: FilteredTransaction)
 
     // DOCSTART 2
     @Suspendable
@@ -59,7 +57,8 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         tx.addCommand(fix, oracle.owningKey)
         beforeSigning(fix)
         progressTracker.currentStep = SIGNING
-        val signature = subFlow(FixSignFlow(tx, oracle, filterFuns))
+        val mtx = tx.toWireTransaction().buildFilteredTransaction({ filtering(it) })
+        val signature = subFlow(FixSignFlow(tx, oracle, mtx))
         tx.addSignatureUnchecked(signature)
     }
     // DOCEND 2
@@ -71,6 +70,15 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     @Suspendable
     protected open fun beforeSigning(fix: Fix) {
     }
+
+    /**
+     * Filtering functions over transaction, used to build partial transaction with partial Merkle tree presented to oracle.
+     * When overriding be careful when making the sub-class an anonymous or inner class (object declarations in Kotlin),
+     * because that kind of classes can access variables from the enclosing scope and cause serialization problems when
+     * checkpointed.
+     */
+    @Suspendable
+    protected open fun filtering(elem: Any): Boolean = false
 
     private fun checkFixIsNearExpected(fix: Fix) {
         val delta = (fix.value - expectedRate).abs()
@@ -97,14 +105,11 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         }
     }
 
-    class FixSignFlow(val tx: TransactionBuilder, val oracle: Party, val filterFuns: FilterFuns) : FlowLogic<DigitalSignature.LegallyIdentifiable>() {
+    class FixSignFlow(val tx: TransactionBuilder, val oracle: Party,
+                      val partialMerkleTx: FilteredTransaction) : FlowLogic<DigitalSignature.LegallyIdentifiable>() {
         @Suspendable
         override fun call(): DigitalSignature.LegallyIdentifiable {
-            val wtx = tx.toWireTransaction()
-            val partialMerkleTx = FilteredTransaction.buildMerkleTransaction(wtx, filterFuns)
-            val rootHash = wtx.id
-
-            val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(oracle, SignRequest(rootHash, partialMerkleTx))
+            val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(oracle, SignRequest(partialMerkleTx))
             return resp.unwrap { sig ->
                 check(sig.signer == oracle)
                 tx.checkSignature(sig)

@@ -5,8 +5,8 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.*
+import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
@@ -195,17 +195,10 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         }
     }
 
-    /**
-     * Generate a transaction that moves an amount of currency to the given pubkey.
-     *
-     * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
-     *                        of given parties. This can be useful if the party you're trying to pay has expectations
-     *                        about which type of asset claims they are willing to accept.
-     */
     override fun generateSpend(tx: TransactionBuilder,
                                amount: Amount<Currency>,
                                to: CompositeKey,
-                               onlyFromParties: Set<Party>?): Pair<TransactionBuilder, List<CompositeKey>> {
+                               onlyFromParties: Set<AnonymousParty>?): Pair<TransactionBuilder, List<CompositeKey>> {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -344,14 +337,27 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         return Vault.Update(consumedStates, ourNewStates.toHashSet())
     }
 
-    private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>): Boolean {
-        return if (state is OwnableState) {
-            state.owner.containsAny(ourKeys)
-        } else if (state is LinearState) {
-            // It's potentially of interest to the vault
-            state.isRelevant(ourKeys)
-        } else {
-            false
+    // TODO : Persists this in DB.
+    private val authorisedUpgrade = mutableMapOf<StateRef, Class<UpgradedContract<*, *>>>()
+
+    override fun getAuthorisedContractUpgrade(ref: StateRef) = authorisedUpgrade[ref]
+
+    override fun authoriseContractUpgrade(stateAndRef: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>) {
+        val upgrade = upgradedContractClass.newInstance()
+        if (upgrade.legacyContract.javaClass != stateAndRef.state.data.contract.javaClass) {
+            throw IllegalArgumentException("The contract state cannot be upgraded using provided UpgradedContract.")
         }
+        authorisedUpgrade.put(stateAndRef.ref, upgradedContractClass)
+    }
+
+    override fun deauthoriseContractUpgrade(stateAndRef: StateAndRef<*>) {
+        authorisedUpgrade.remove(stateAndRef.ref)
+    }
+
+    private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
+        is OwnableState -> state.owner.containsAny(ourKeys)
+    // It's potentially of interest to the vault
+        is LinearState -> state.isRelevant(ourKeys)
+        else -> false
     }
 }

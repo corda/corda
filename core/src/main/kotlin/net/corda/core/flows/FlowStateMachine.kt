@@ -3,7 +3,9 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.SecureHash
 import net.corda.core.node.ServiceHub
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
 import java.util.*
@@ -34,6 +36,9 @@ interface FlowStateMachine<R> {
 
     @Suspendable
     fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>)
+
+    @Suspendable
+    fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction
 
     val serviceHub: ServiceHub
     val logger: Logger
