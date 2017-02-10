@@ -46,7 +46,7 @@ class DemoBench : App(DemoBenchView::class) {
     }
 
     init {
-        addStageIcon(Image("r3logo.png"))
+        addStageIcon(Image("cordalogo.png"))
     }
 }
 
