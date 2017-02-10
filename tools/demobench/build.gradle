@@ -146,7 +146,7 @@ task javapackage(dependsOn: 'distZip') {
             classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
         )
 
-        ant.deploy(nativeBundles: 'rpm', outdir: "$buildDir/exedir", outfile: 'DemoBench', verbose: 'true') {
+        ant.deploy(nativeBundles: "$packageType", outdir: "$buildDir/exedir", outfile: 'DemoBench', verbose: 'true') {
             application(name: 'DemoBench', version: "$pkg_version", mainClass: "$mainClassName")
             resources {
                 fileset(dir: "$dist_source/lib", type: 'jar') {
