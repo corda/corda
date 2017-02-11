@@ -13,6 +13,7 @@ buildscript {
     ext.pkg_version = "$version".indexOf('-') >= 0 ? "$version".substring(0, "$version".indexOf('-')) : "$version"
 
     repositories {
+        mavenLocal()
         mavenCentral()
     }
     dependencies {
@@ -68,6 +69,9 @@ dependencies {
 
     // These libraries don't exist in any Maven repository I can find.
     // See: https://github.com/JetBrains/jediterm
+    //
+    // The terminal JAR here has also been tweaked:
+    // See: https://github.com/JetBrains/jediterm/issues/144
     compile ':jediterm-terminal-2.5'
     compile ':pty4j-0.7.2'
 
