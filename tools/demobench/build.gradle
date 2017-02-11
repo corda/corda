@@ -9,8 +9,7 @@ buildscript {
 
     ext.java_home = System.properties.'java.home'
     ext.pkg_source = "$buildDir/packagesrc"
-    ext.dist_name = "demobench-$version"
-    ext.dist_source = "$pkg_source/$dist_name"
+    ext.dist_source = "$pkg_source/demobench-$version"
     ext.pkg_version = "$version".indexOf('-') >= 0 ? "$version".substring(0, "$version".indexOf('-')) : "$version"
 
     repositories {
@@ -129,7 +128,7 @@ task javapackage(dependsOn: 'distZip') {
         delete(["$pkg_source", "$buildDir/exedir"])
 
         copy {
-            from(zipTree("$buildDir/distributions/${dist_name}.zip"))
+            from(zipTree(distZip.outputs.files.singleFile))
             into "$pkg_source"
         }
 
