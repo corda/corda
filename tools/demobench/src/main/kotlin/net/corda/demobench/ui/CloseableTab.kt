@@ -15,6 +15,6 @@ class CloseableTab(text: String, content: Node) : Tab(text, content) {
     }
 
     private val behaviour: TabPaneBehavior?
-        get() = (tabPane?.skin as TabPaneSkin?)?.behavior
+        get() = (tabPane?.skin as? TabPaneSkin)?.behavior
 
 }
