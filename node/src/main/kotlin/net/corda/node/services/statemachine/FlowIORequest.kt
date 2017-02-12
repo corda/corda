@@ -10,6 +10,8 @@ interface FlowIORequest {
     val stackTraceInCaseOfProblems: StackSnapshot
 }
 
+interface WaitingRequest : FlowIORequest
+
 interface SessionedFlowIORequest : FlowIORequest {
     val session: FlowSession
 }
@@ -18,7 +20,7 @@ interface SendRequest : SessionedFlowIORequest {
     val message: SessionMessage
 }
 
-interface ReceiveRequest<T : SessionMessage> : SessionedFlowIORequest {
+interface ReceiveRequest<T : SessionMessage> : SessionedFlowIORequest, WaitingRequest {
     val receiveType: Class<T>
 }
 
@@ -40,7 +42,7 @@ data class SendOnly(override val session: FlowSession, override val message: Ses
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }
 
-data class WaitForLedgerCommit(val hash: SecureHash, val fiber: FlowStateMachineImpl<*>) : FlowIORequest {
+data class WaitForLedgerCommit(val hash: SecureHash, val fiber: FlowStateMachineImpl<*>) : WaitingRequest {
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }

@@ -2,15 +2,11 @@ package net.corda.core.node.services
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.toStringShort
+import net.corda.core.crypto.*
 import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import rx.Observable
-import java.io.File
 import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -146,7 +142,7 @@ interface VaultService {
 
     fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?> {
         val refsToStates = currentVault.states.associateBy { it.ref }
-        return refs.associateBy({ it }, { refsToStates[it]?.state })
+        return refs.associateBy({ it }) { refsToStates[it]?.state }
     }
 
     /**
@@ -166,6 +162,24 @@ interface VaultService {
     fun whenConsumed(ref: StateRef): ListenableFuture<Vault.Update> {
         return updates.filter { it.consumed.any { it.ref == ref } }.toFuture()
     }
+
+    /** Get contracts we would be willing to upgrade the suggested contract to. */
+    // TODO: We need a better place to put business logic functions
+    fun getAuthorisedContractUpgrade(ref: StateRef): Class<UpgradedContract<*, *>>?
+
+    /**
+     * Authorise a contract state upgrade.
+     * This will store the upgrade authorisation in the vault, and will be queried by [ContractUpgradeFlow.Acceptor] during contract upgrade process.
+     * Invoking this method indicate the node is willing to upgrade the [state] using the [upgradedContractClass].
+     * This method will NOT initiate the upgrade process. To start the upgrade process, see [ContractUpgradeFlow.Instigator].
+     */
+    fun authoriseContractUpgrade(stateAndRef: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>)
+
+    /**
+     * Authorise a contract state upgrade.
+     * This will remove the upgrade authorisation from the vault.
+     */
+    fun deauthoriseContractUpgrade(stateAndRef: StateAndRef<*>)
 
     /**
      *  Add a note to an existing [LedgerTransaction] given by its unique [SecureHash] id
@@ -198,7 +212,7 @@ interface VaultService {
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,
                       to: CompositeKey,
-                      onlyFromParties: Set<Party>? = null): Pair<TransactionBuilder, List<CompositeKey>>
+                      onlyFromParties: Set<AnonymousParty>? = null): Pair<TransactionBuilder, List<CompositeKey>>
 }
 
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)

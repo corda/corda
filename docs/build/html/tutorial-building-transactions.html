@@ -34,6 +34,9 @@
   
 
   
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Writing flows" href="flow-state-machines.html"/>
         <link rel="prev" title="Client RPC API tutorial" href="tutorial-clientrpc-api.html"/> 
@@ -117,7 +120,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The example CorDapp</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -406,6 +409,7 @@ inline fun &lt;reified T : LinearState&gt; ServiceHub.latest(ref: StateRef): Sta
     val original = toStateAndRef&lt;T&gt;(ref)
     return linearHeads.get(original.state.data.linearId)!!
 }
+
 </pre></div>
 </div>
 <div class="codeset container">
@@ -608,9 +612,8 @@ signature. Then the flow should ensure that all nodes end with all
 signatures and that they call <code class="docutils literal"><span class="pre">ServiceHub.recordTransactions</span></code>. The
 code for this is standardised in the <code class="docutils literal"><span class="pre">FinalityFlow</span></code>, or more explicitly
 an example is:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        <span class="c1">// Run the FinalityFlow to notarise and distribute the completed transaction.</span>
-        <span class="n">subFlow</span><span class="p">(</span><span class="n">FinalityFlow</span><span class="p">(</span><span class="n">allPartySignedTx</span><span class="p">,</span>
-                <span class="n">setOf</span><span class="p">(</span><span class="n">latestRecord</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="k">data</span><span class="p">.</span><span class="n">source</span><span class="p">,</span> <span class="n">latestRecord</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="k">data</span><span class="p">.</span><span class="n">counterparty</span><span class="p">)))</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        <span class="c1">// Notarise and distribute the completed transaction.</span>
+        <span class="n">subFlow</span><span class="p">(</span><span class="n">FinalityFlow</span><span class="p">(</span><span class="n">allPartySignedTx</span><span class="p">,</span> <span class="n">setOf</span><span class="p">(</span><span class="n">latestRecord</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="k">data</span><span class="p">.</span><span class="n">source</span><span class="p">,</span> <span class="n">latestRecord</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="k">data</span><span class="p">.</span><span class="n">counterparty</span><span class="p">)))</span>
 </pre></div>
 </div>
 </div>

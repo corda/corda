@@ -9,8 +9,8 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.CashCommand
-import net.corda.flows.CashFlow
+import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
 import net.corda.node.internal.CordaRPCOpsImpl
 import net.corda.node.services.User
 import net.corda.node.services.messaging.CURRENT_RPC_USER
@@ -48,7 +48,10 @@ class CordaRPCOpsImplTest {
         aliceNode = network.createNode(networkMapAddress = networkMap.info.address)
         notaryNode = network.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type), networkMapAddress = networkMap.info.address)
         rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
-        CURRENT_RPC_USER.set(User("user", "pwd", permissions = setOf(startFlowPermission<CashFlow>())))
+        CURRENT_RPC_USER.set(User("user", "pwd", permissions = setOf(
+                startFlowPermission<CashIssueFlow>(),
+                startFlowPermission<CashPaymentFlow>()
+        )))
 
         databaseTransaction(aliceNode.database) {
             stateMachineUpdates = rpc.stateMachinesAndUpdates().second
@@ -69,8 +72,7 @@ class CordaRPCOpsImplTest {
 
         // Tell the monitoring service node to issue some cash
         val recipient = aliceNode.info.legalIdentity
-        val outEvent = CashCommand.IssueCash(Amount(quantity, GBP), ref, recipient, notaryNode.info.notaryIdentity)
-        rpc.startFlow(::CashFlow, outEvent)
+        rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, recipient, notaryNode.info.notaryIdentity)
         network.runNetwork()
 
         val expectedState = Cash.State(Amount(quantity,
@@ -107,19 +109,19 @@ class CordaRPCOpsImplTest {
     @Test
     fun `issue and move`() {
 
-        rpc.startFlow(::CashFlow, CashCommand.IssueCash(
-                amount = Amount(100, USD),
-                issueRef = OpaqueBytes(ByteArray(1, { 1 })),
-                recipient = aliceNode.info.legalIdentity,
-                notary = notaryNode.info.notaryIdentity
-        ))
+        rpc.startFlow(::CashIssueFlow,
+                Amount(100, USD),
+                OpaqueBytes(ByteArray(1, { 1 })),
+                aliceNode.info.legalIdentity,
+                notaryNode.info.notaryIdentity
+        )
 
         network.runNetwork()
 
-        rpc.startFlow(::CashFlow, CashCommand.PayCash(
-                amount = Amount(100, Issued(PartyAndReference(aliceNode.info.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
-                recipient = aliceNode.info.legalIdentity
-        ))
+        rpc.startFlow(::CashPaymentFlow,
+                Amount(100, Issued(PartyAndReference(aliceNode.info.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
+                aliceNode.info.legalIdentity
+        )
 
         network.runNetwork()
 
@@ -188,12 +190,12 @@ class CordaRPCOpsImplTest {
     fun `cash command by user not permissioned for cash`() {
         CURRENT_RPC_USER.set(User("user", "pwd", permissions = emptySet()))
         assertThatExceptionOfType(PermissionException::class.java).isThrownBy {
-            rpc.startFlow(::CashFlow, CashCommand.IssueCash(
-                    amount = Amount(100, USD),
-                    issueRef = OpaqueBytes(ByteArray(1, { 1 })),
-                    recipient = aliceNode.info.legalIdentity,
-                    notary = notaryNode.info.notaryIdentity
-            ))
+            rpc.startFlow(::CashIssueFlow,
+                    Amount(100, USD),
+                    OpaqueBytes(ByteArray(1, { 1 })),
+                    aliceNode.info.legalIdentity,
+                    notaryNode.info.notaryIdentity
+            )
         }
     }
 }

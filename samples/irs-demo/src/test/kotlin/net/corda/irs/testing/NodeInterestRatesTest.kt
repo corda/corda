@@ -137,12 +137,12 @@ class NodeInterestRatesTest {
                 }
             }
             val ftx1 = wtx1.buildFilteredTransaction(::filterAllOutputs)
-            assertFailsWith<IllegalArgumentException> { oracle.sign(ftx1, wtx1.id) }
+            assertFailsWith<IllegalArgumentException> { oracle.sign(ftx1) }
             tx.addCommand(Cash.Commands.Move(), ALICE_PUBKEY)
             val wtx2 = tx.toWireTransaction()
             val ftx2 = wtx2.buildFilteredTransaction { x -> filterCmds(x) }
             assertFalse(wtx1.id == wtx2.id)
-            assertFailsWith<IllegalArgumentException> { oracle.sign(ftx2, wtx2.id) }
+            assertFailsWith<IllegalArgumentException> { oracle.sign(ftx2) }
         }
     }
 
@@ -155,7 +155,7 @@ class NodeInterestRatesTest {
             // Sign successfully.
             val wtx = tx.toWireTransaction()
             val ftx = wtx.buildFilteredTransaction { x -> fixCmdFilter(x) }
-            val signature = oracle.sign(ftx, wtx.id)
+            val signature = oracle.sign(ftx)
             tx.checkAndAddSignature(signature)
         }
     }
@@ -169,7 +169,7 @@ class NodeInterestRatesTest {
             tx.addCommand(badFix, oracle.identity.owningKey)
             val wtx = tx.toWireTransaction()
             val ftx = wtx.buildFilteredTransaction { x -> fixCmdFilter(x) }
-            val e1 = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.sign(ftx, wtx.id) }
+            val e1 = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.sign(ftx) }
             assertEquals(fixOf, e1.fix)
         }
     }
@@ -189,7 +189,7 @@ class NodeInterestRatesTest {
             tx.addCommand(fix, oracle.identity.owningKey)
             val wtx = tx.toWireTransaction()
             val ftx = wtx.buildFilteredTransaction(::filtering)
-            assertFailsWith<IllegalArgumentException> { oracle.sign(ftx, wtx.id) }
+            assertFailsWith<IllegalArgumentException> { oracle.sign(ftx) }
         }
     }
 
@@ -198,20 +198,7 @@ class NodeInterestRatesTest {
         val tx = makeTX()
         val wtx = tx.toWireTransaction()
         val ftx = wtx.buildFilteredTransaction({ false })
-        assertFailsWith<MerkleTreeException> { oracle.sign(ftx, wtx.id) }
-    }
-
-    @Test
-    fun `partial tree verification exception`() {
-        databaseTransaction(database) {
-            val tx = makeTX()
-            val wtx1 = tx.toWireTransaction()
-            tx.addCommand(Cash.Commands.Move(), ALICE_PUBKEY)
-            val wtx2 = tx.toWireTransaction()
-            val ftx2 = wtx2.buildFilteredTransaction { x -> filterCmds(x) }
-            assertFalse(wtx1.id == wtx2.id)
-            assertFailsWith<MerkleTreeException> { oracle.sign(ftx2, wtx1.id) }
-        }
+        assertFailsWith<MerkleTreeException> { oracle.sign(ftx) }
     }
 
     @Test

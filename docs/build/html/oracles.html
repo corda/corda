@@ -34,6 +34,9 @@
   
 
   
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Using attachments" href="tutorial-attachments.html"/>
         <link rel="prev" title="Using a notary service" href="using-a-notary.html"/> 
@@ -117,7 +120,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <p class="caption"><span class="caption-text">CorDapps</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The CorDapp template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The example CorDapp</a></li>
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
@@ -389,30 +392,26 @@ parameter and <code class="docutils literal"><span class="pre">CommandData</span
             <span class="k">if</span> <span class="p">(!</span><span class="n">ftx</span><span class="p">.</span><span class="n">verify</span><span class="p">(</span><span class="n">merkleRoot</span><span class="p">))</span> <span class="p">{</span>
                 <span class="k">throw</span> <span class="n">MerkleTreeException</span><span class="p">(</span><span class="s">&quot;Rate Fix Oracle: Couldn&#39;t verify partial Merkle tree.&quot;</span><span class="p">)</span>
             <span class="p">}</span>
-
-            <span class="c1">// Reject if we have something different than only commands.</span>
-            <span class="k">val</span> <span class="py">leaves</span> <span class="p">=</span> <span class="n">ftx</span><span class="p">.</span><span class="n">filteredLeaves</span>
-            <span class="n">require</span><span class="p">(</span><span class="n">leaves</span><span class="p">.</span><span class="n">inputs</span><span class="p">.</span><span class="n">isEmpty</span><span class="p">()</span> <span class="p">&amp;&amp;</span> <span class="n">leaves</span><span class="p">.</span><span class="n">outputs</span><span class="p">.</span><span class="n">isEmpty</span><span class="p">()</span> <span class="p">&amp;&amp;</span> <span class="n">leaves</span><span class="p">.</span><span class="n">attachments</span><span class="p">.</span><span class="n">isEmpty</span><span class="p">())</span>
-
-            <span class="k">val</span> <span class="py">fixes</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">Fix</span><span class="p">&gt;</span> <span class="p">=</span> <span class="n">ftx</span><span class="p">.</span><span class="n">filteredLeaves</span><span class="p">.</span><span class="n">commands</span><span class="p">.</span>
-                    <span class="n">filter</span> <span class="p">{</span> <span class="n">identity</span><span class="p">.</span><span class="n">owningKey</span> <span class="k">in</span> <span class="n">it</span><span class="p">.</span><span class="n">signers</span> <span class="p">&amp;&amp;</span> <span class="n">it</span><span class="p">.</span><span class="n">value</span> <span class="k">is</span> <span class="n">Fix</span> <span class="p">}.</span>
-                    <span class="n">map</span> <span class="p">{</span> <span class="n">it</span><span class="p">.</span><span class="n">value</span> <span class="k">as</span> <span class="n">Fix</span> <span class="p">}</span>
-
-            <span class="c1">// Reject signing attempt if we received more commands than we should.</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">fixes</span><span class="p">.</span><span class="n">size</span> <span class="p">!=</span> <span class="n">ftx</span><span class="p">.</span><span class="n">filteredLeaves</span><span class="p">.</span><span class="n">commands</span><span class="p">.</span><span class="n">size</span><span class="p">)</span>
-                <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">()</span>
-
-            <span class="c1">// Reject this signing attempt if there are no commands of the right kind.</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">fixes</span><span class="p">.</span><span class="n">isEmpty</span><span class="p">())</span>
-                <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">()</span>
-
-            <span class="c1">// For each fix, verify that the data is correct.</span>
-            <span class="k">val</span> <span class="py">knownFixes</span> <span class="p">=</span> <span class="n">knownFixes</span> <span class="c1">// Snapshot</span>
-            <span class="k">for</span> <span class="p">(</span><span class="n">fix</span> <span class="k">in</span> <span class="n">fixes</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// Performing validation of obtained FilteredLeaves.</span>
+            <span class="k">fun</span> <span class="nf">commandValidator</span><span class="p">(</span><span class="n">elem</span><span class="p">:</span> <span class="n">Command</span><span class="p">):</span> <span class="n">Boolean</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="p">(!(</span><span class="n">identity</span><span class="p">.</span><span class="n">owningKey</span> <span class="k">in</span> <span class="n">elem</span><span class="p">.</span><span class="n">signers</span> <span class="p">&amp;&amp;</span> <span class="n">elem</span><span class="p">.</span><span class="n">value</span> <span class="k">is</span> <span class="n">Fix</span><span class="p">))</span>
+                    <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;Oracle received unknown command (not in signers or not Fix).&quot;</span><span class="p">)</span>
+                <span class="k">val</span> <span class="py">fix</span> <span class="p">=</span> <span class="n">elem</span><span class="p">.</span><span class="n">value</span> <span class="k">as</span> <span class="n">Fix</span>
                 <span class="k">val</span> <span class="py">known</span> <span class="p">=</span> <span class="n">knownFixes</span><span class="p">[</span><span class="n">fix</span><span class="p">.</span><span class="n">of</span><span class="p">]</span>
                 <span class="k">if</span> <span class="p">(</span><span class="n">known</span> <span class="p">==</span> <span class="k">null</span> <span class="p">||</span> <span class="n">known</span> <span class="p">!=</span> <span class="n">fix</span><span class="p">)</span>
                     <span class="k">throw</span> <span class="n">UnknownFix</span><span class="p">(</span><span class="n">fix</span><span class="p">.</span><span class="n">of</span><span class="p">)</span>
+                <span class="k">return</span> <span class="k">true</span>
             <span class="p">}</span>
+
+            <span class="k">fun</span> <span class="nf">check</span><span class="p">(</span><span class="n">elem</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span> <span class="n">Boolean</span> <span class="p">{</span>
+                <span class="k">return</span> <span class="k">when</span> <span class="p">(</span><span class="n">elem</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="k">is</span> <span class="n">Command</span> <span class="p">-&gt;</span> <span class="n">commandValidator</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+                    <span class="k">else</span> <span class="p">-&gt;</span> <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;Oracle received data of different type than expected.&quot;</span><span class="p">)</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="k">val</span> <span class="py">leaves</span> <span class="p">=</span> <span class="n">ftx</span><span class="p">.</span><span class="n">filteredLeaves</span>
+            <span class="k">if</span> <span class="p">(!</span><span class="n">leaves</span><span class="p">.</span><span class="n">checkWithFun</span><span class="p">(</span><span class="o">::</span><span class="n">check</span><span class="p">))</span>
+                <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">()</span>
 
             <span class="c1">// It all checks out, so we can return a signature.</span>
             <span class="c1">//</span>
@@ -528,13 +527,12 @@ those for <code class="docutils literal"><span class="pre">NodeInterestRates.Ora
         <span class="p">}</span>
     <span class="p">}</span>
 
-    <span class="k">class</span> <span class="nc">FixSignFlow</span><span class="p">(</span><span class="k">val</span> <span class="py">tx</span><span class="p">:</span> <span class="n">TransactionBuilder</span><span class="p">,</span> <span class="k">val</span> <span class="py">oracle</span><span class="p">:</span> <span class="n">Party</span><span class="p">,</span> <span class="k">val</span> <span class="py">filterFuns</span><span class="p">:</span> <span class="n">FilterFuns</span><span class="p">)</span> <span class="p">:</span> <span class="n">FlowLogic</span><span class="p">&lt;</span><span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span><span class="p">&gt;()</span> <span class="p">{</span>
+    <span class="k">class</span> <span class="nc">FixSignFlow</span><span class="p">(</span><span class="k">val</span> <span class="py">tx</span><span class="p">:</span> <span class="n">TransactionBuilder</span><span class="p">,</span> <span class="k">val</span> <span class="py">oracle</span><span class="p">:</span> <span class="n">Party</span><span class="p">,</span>
+                      <span class="k">val</span> <span class="py">partialMerkleTx</span><span class="p">:</span> <span class="n">FilteredTransaction</span><span class="p">)</span> <span class="p">:</span> <span class="n">FlowLogic</span><span class="p">&lt;</span><span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span><span class="p">&gt;()</span> <span class="p">{</span>
         <span class="n">@Suspendable</span>
         <span class="k">override</span> <span class="k">fun</span> <span class="nf">call</span><span class="p">():</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span> <span class="p">{</span>
             <span class="k">val</span> <span class="py">wtx</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">toWireTransaction</span><span class="p">()</span>
-            <span class="k">val</span> <span class="py">partialMerkleTx</span> <span class="p">=</span> <span class="n">FilteredTransaction</span><span class="p">.</span><span class="n">buildMerkleTransaction</span><span class="p">(</span><span class="n">wtx</span><span class="p">,</span> <span class="n">filterFuns</span><span class="p">)</span>
             <span class="k">val</span> <span class="py">rootHash</span> <span class="p">=</span> <span class="n">wtx</span><span class="p">.</span><span class="n">id</span>
-
             <span class="k">val</span> <span class="py">resp</span> <span class="p">=</span> <span class="n">sendAndReceive</span><span class="p">&lt;</span><span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span><span class="p">&gt;(</span><span class="n">oracle</span><span class="p">,</span> <span class="n">SignRequest</span><span class="p">(</span><span class="n">rootHash</span><span class="p">,</span> <span class="n">partialMerkleTx</span><span class="p">))</span>
             <span class="k">return</span> <span class="n">resp</span><span class="p">.</span><span class="n">unwrap</span> <span class="p">{</span> <span class="n">sig</span> <span class="p">-&gt;</span>
                 <span class="n">check</span><span class="p">(</span><span class="n">sig</span><span class="p">.</span><span class="n">signer</span> <span class="p">==</span> <span class="n">oracle</span><span class="p">)</span>
@@ -545,12 +543,13 @@ those for <code class="docutils literal"><span class="pre">NodeInterestRates.Ora
     <span class="p">}</span>
 </pre></div>
 </div>
-<p>You&#8217;ll note that the <code class="docutils literal"><span class="pre">FixSignFlow</span></code> requires a <code class="docutils literal"><span class="pre">FilterFuns</span></code> instance with the appropriate filter to include only
-the <code class="docutils literal"><span class="pre">Fix</span></code> commands.  You can find a further explanation of this in <a class="reference internal" href="merkle-trees.html"><span class="doc">Transaction tear-offs</span></a>.</p>
+<p>You&#8217;ll note that the <code class="docutils literal"><span class="pre">FixSignFlow</span></code> requires a <code class="docutils literal"><span class="pre">FilterTransaction</span></code> instance which includes only <code class="docutils literal"><span class="pre">Fix</span></code> commands.
+You can find a further explanation of this in <a class="reference internal" href="merkle-trees.html"><span class="doc">Transaction tear-offs</span></a>. Below you will see how to build such transaction with
+hidden fields.</p>
 </div>
 </div>
 <div class="section" id="using-an-oracle">
-<h2>Using an oracle<a class="headerlink" href="#using-an-oracle" title="Permalink to this headline">¶</a></h2>
+<span id="filtering-ref"></span><h2>Using an oracle<a class="headerlink" href="#using-an-oracle" title="Permalink to this headline">¶</a></h2>
 <p>The oracle is invoked through sub-flows to query for values, add them to the transaction as commands and then get
 the transaction signed by the oracle.  Following on from the above examples, this is all encapsulated in a sub-flow
 called <code class="docutils literal"><span class="pre">RatesFixFlow</span></code>.  Here&#8217;s the <code class="docutils literal"><span class="pre">call</span></code> method of that flow.</p>
@@ -563,7 +562,8 @@ called <code class="docutils literal"><span class="pre">RatesFixFlow</span></cod
         <span class="n">tx</span><span class="p">.</span><span class="n">addCommand</span><span class="p">(</span><span class="n">fix</span><span class="p">,</span> <span class="n">oracle</span><span class="p">.</span><span class="n">owningKey</span><span class="p">)</span>
         <span class="n">beforeSigning</span><span class="p">(</span><span class="n">fix</span><span class="p">)</span>
         <span class="n">progressTracker</span><span class="p">.</span><span class="n">currentStep</span> <span class="p">=</span> <span class="n">SIGNING</span>
-        <span class="k">val</span> <span class="py">signature</span> <span class="p">=</span> <span class="n">subFlow</span><span class="p">(</span><span class="n">FixSignFlow</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">oracle</span><span class="p">,</span> <span class="n">filterFuns</span><span class="p">))</span>
+        <span class="k">val</span> <span class="py">mtx</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">toWireTransaction</span><span class="p">().</span><span class="n">buildFilteredTransaction</span><span class="p">({</span> <span class="n">filtering</span><span class="p">(</span><span class="n">it</span><span class="p">)</span> <span class="p">})</span>
+        <span class="k">val</span> <span class="py">signature</span> <span class="p">=</span> <span class="n">subFlow</span><span class="p">(</span><span class="n">FixSignFlow</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">oracle</span><span class="p">,</span> <span class="n">mtx</span><span class="p">))</span>
         <span class="n">tx</span><span class="p">.</span><span class="n">addSignatureUnchecked</span><span class="p">(</span><span class="n">signature</span><span class="p">)</span>
     <span class="p">}</span>
 </pre></div>
@@ -574,14 +574,12 @@ called <code class="docutils literal"><span class="pre">RatesFixFlow</span></cod
 <li>Does some quick validation.</li>
 <li>Adds the command to the transaction containing the fact to be signed for by the oracle.</li>
 <li>Calls an extension point that allows clients to generate output states based on the fact from the oracle.</li>
+<li>Builds filtered transaction based on filtering function extended from <code class="docutils literal"><span class="pre">RatesFixFlow</span></code>.</li>
 <li>Requests the signature from the oracle using the client sub-flow for signing from above.</li>
 <li>Adds the signature returned from the oracle.</li>
 </ol>
 <p>Here&#8217;s an example of it in action from <code class="docutils literal"><span class="pre">FixingFlow.Fixer</span></code>.</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>            fun filterCommands(c: Command) = oracleParty.owningKey in c.signers &amp;&amp; c.value is Fix
-
-            val filterFuns = FilterFuns(filterCommands = ::filterCommands)
-            val addFixing = object : RatesFixFlow(ptx, filterFuns, oracleParty, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>            val addFixing = object : RatesFixFlow(ptx, oracleParty, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
                 @Suspendable
                 override fun beforeSigning(fix: Fix) {
                     newDeal.generateFix(ptx, StateAndRef(txState, handshake.payload.ref), fix)
@@ -590,9 +588,23 @@ called <code class="docutils literal"><span class="pre">RatesFixFlow</span></cod
                     // to have one.
                     ptx.setTime(serviceHub.clock.instant(), 30.seconds)
                 }
+
+                @Suspendable
+                override fun filtering(elem: Any): Boolean {
+                    return when (elem) {
+                        is Command -&gt; oracleParty.owningKey in elem.signers &amp;&amp; elem.value is Fix
+                        else -&gt; false
+                    }
+                }
             }
             subFlow(addFixing)
 </pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">When overriding be careful when making the sub-class an anonymous or inner class (object declarations in Kotlin),
+because that kind of classes can access variables from the enclosing scope and cause serialization problems when
+checkpointed.</p>
 </div>
 </div>
 </div>

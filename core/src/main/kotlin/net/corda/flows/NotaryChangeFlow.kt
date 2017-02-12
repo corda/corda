@@ -23,7 +23,7 @@ object NotaryChangeFlow : AbstractStateReplacementFlow() {
     class Instigator<out T : ContractState>(
             originalState: StateAndRef<T>,
             newNotary: Party,
-            progressTracker: ProgressTracker = tracker()) : AbstractStateReplacementFlow.Instigator<T, Party>(originalState, newNotary, progressTracker) {
+            progressTracker: ProgressTracker = tracker()) : AbstractStateReplacementFlow.Instigator<T, T, Party>(originalState, newNotary, progressTracker) {
 
         override fun assembleTx(): Pair<SignedTransaction, Iterable<CompositeKey>> {
             val state = originalState.state

@@ -7,20 +7,10 @@ import net.corda.core.utilities.UntrustworthyData
 
 interface SessionMessage
 
-interface ExistingSessionMessage : SessionMessage {
-    val recipientSessionId: Long
-}
-
 data class SessionInit(val initiatorSessionId: Long, val flowName: String, val firstPayload: Any?) : SessionMessage
 
-interface SessionInitResponse : ExistingSessionMessage
-
-data class SessionConfirm(val initiatorSessionId: Long, val initiatedSessionId: Long) : SessionInitResponse {
-    override val recipientSessionId: Long get() = initiatorSessionId
-}
-
-data class SessionReject(val initiatorSessionId: Long, val errorMessage: String) : SessionInitResponse {
-    override val recipientSessionId: Long get() = initiatorSessionId
+interface ExistingSessionMessage : SessionMessage {
+    val recipientSessionId: Long
 }
 
 data class SessionData(override val recipientSessionId: Long, val payload: Any) : ExistingSessionMessage {
@@ -29,7 +19,16 @@ data class SessionData(override val recipientSessionId: Long, val payload: Any) 
     }
 }
 
-data class SessionEnd(override val recipientSessionId: Long, val errorResponse: FlowException?) : ExistingSessionMessage
+interface SessionInitResponse : ExistingSessionMessage {
+    val initiatorSessionId: Long
+    override val recipientSessionId: Long get() = initiatorSessionId
+}
+data class SessionConfirm(override val initiatorSessionId: Long, val initiatedSessionId: Long) : SessionInitResponse
+data class SessionReject(override val initiatorSessionId: Long, val errorMessage: String) : SessionInitResponse
+
+interface SessionEnd : ExistingSessionMessage
+data class NormalSessionEnd(override val recipientSessionId: Long) : SessionEnd
+data class ErrorSessionEnd(override val recipientSessionId: Long, val errorResponse: FlowException?) : SessionEnd
 
 data class ReceivedSessionMessage<out M : ExistingSessionMessage>(val sender: Party, val message: M)
 

@@ -146,7 +146,7 @@ class ResolveTransactionsFlowTest {
     // DOCSTART 2
     private fun makeTransactions(signFirstTX: Boolean = true, withAttachment: SecureHash? = null): Pair<SignedTransaction, SignedTransaction> {
         // Make a chain of custody of dummy states and insert into node A.
-        val dummy1: SignedTransaction = DummyContract.generateInitial(MEGA_CORP.ref(1), 0, notary).let {
+        val dummy1: SignedTransaction = DummyContract.generateInitial(0, notary, MEGA_CORP.ref(1)).let {
             if (withAttachment != null)
                 it.addAttachment(withAttachment)
             if (signFirstTX)

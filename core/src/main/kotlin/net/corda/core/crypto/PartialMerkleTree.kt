@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.core.transactions.MerkleTree
+import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import java.util.*
 

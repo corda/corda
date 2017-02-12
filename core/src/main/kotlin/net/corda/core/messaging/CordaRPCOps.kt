@@ -3,6 +3,7 @@ package net.corda.core.messaging
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.UpgradedContract
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
@@ -106,6 +107,20 @@ interface CordaRPCOps : RPCOps {
     @Suppress("DEPRECATION")
     @Deprecated("This service will be removed in a future milestone")
     fun uploadFile(dataType: String, name: String?, file: InputStream): String
+
+    /**
+     * Authorise a contract state upgrade.
+     * This will store the upgrade authorisation in the vault, and will be queried by [ContractUpgradeFlow.Acceptor] during contract upgrade process.
+     * Invoking this method indicate the node is willing to upgrade the [state] using the [upgradedContractClass].
+     * This method will NOT initiate the upgrade process. To start the upgrade process, see [ContractUpgradeFlow.Instigator].
+     */
+    fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>)
+
+    /**
+     * Authorise a contract state upgrade.
+     * This will remove the upgrade authorisation from the vault.
+     */
+    fun deauthoriseContractUpgrade(state: StateAndRef<*>)
 
     /**
      * Returns the node's current time.
