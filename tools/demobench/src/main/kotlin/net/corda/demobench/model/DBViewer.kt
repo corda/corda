@@ -1,14 +1,14 @@
 package net.corda.demobench.model
 
+import net.corda.demobench.loggerFor
 import org.h2.server.web.LocalWebServer
 import org.h2.tools.Server
 import org.h2.util.JdbcUtils
-import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
 import kotlin.reflect.jvm.jvmName
 
 class DBViewer : AutoCloseable {
-    private val log = LoggerFactory.getLogger(DBViewer::class.java)
+    private val log = loggerFor<DBViewer>()
 
     private val webServer: Server
     private val pool = Executors.newCachedThreadPool()

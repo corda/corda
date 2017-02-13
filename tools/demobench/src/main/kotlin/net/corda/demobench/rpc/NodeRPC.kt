@@ -4,12 +4,12 @@ import com.google.common.net.HostAndPort
 import java.util.*
 import java.util.concurrent.TimeUnit.SECONDS
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.demobench.loggerFor
 import net.corda.demobench.model.NodeConfig
 import net.corda.node.services.messaging.CordaRPCClient
-import org.slf4j.LoggerFactory
 
 class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Unit): AutoCloseable {
-    private val log = LoggerFactory.getLogger(NodeRPC::class.java)
+    private val log = loggerFor<NodeRPC>()
 
     companion object Data {
         private val ONE_SECOND = SECONDS.toMillis(1)

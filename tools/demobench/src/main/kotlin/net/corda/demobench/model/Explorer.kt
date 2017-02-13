@@ -1,10 +1,10 @@
 package net.corda.demobench.model
 
-import org.slf4j.LoggerFactory
+import net.corda.demobench.loggerFor
 import java.util.concurrent.Executors
 
 class Explorer(val explorerController: ExplorerController) : AutoCloseable {
-    private val log = LoggerFactory.getLogger(Explorer::class.java)
+    private val log = loggerFor<Explorer>()
 
     private val executor = Executors.newSingleThreadExecutor()
     private var process: Process? = null
@@ -32,6 +32,11 @@ class Explorer(val explorerController: ExplorerController) : AutoCloseable {
 
         log.info("Launched Node Explorer for '{}'", config.legalName)
 
+        // Close these streams because no-one is using them.
+        safeClose(p.outputStream)
+        safeClose(p.inputStream)
+        safeClose(p.errorStream)
+
         executor.submit {
             val exitValue = p.waitFor()
             process = null
@@ -44,6 +49,14 @@ class Explorer(val explorerController: ExplorerController) : AutoCloseable {
     override fun close() {
         executor.shutdown()
         process?.destroy()
+    }
+
+    private fun safeClose(c: AutoCloseable?) {
+        try {
+            c?.close()
+        } catch (e: Exception) {
+            log.error("Failed to close stream: '{}'", e.message)
+        }
     }
 
 }

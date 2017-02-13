@@ -4,7 +4,7 @@ import com.jediterm.terminal.TtyConnector
 import com.jediterm.terminal.ui.*
 import com.jediterm.terminal.ui.settings.SettingsProvider
 import com.pty4j.PtyProcess
-import org.slf4j.LoggerFactory
+import net.corda.demobench.loggerFor
 
 import java.awt.*
 import java.nio.charset.StandardCharsets.UTF_8
@@ -13,7 +13,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class R3Pty(val name: String, settings: SettingsProvider, dimension: Dimension, val onExit: () -> Unit) : AutoCloseable {
-    private val log = LoggerFactory.getLogger(R3Pty::class.java)
+    private val log = loggerFor<R3Pty>()
 
     private val executor = Executors.newSingleThreadExecutor()
 

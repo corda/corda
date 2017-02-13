@@ -107,6 +107,12 @@ class NodeTerminalView : Fragment() {
         }
     }
 
+    /*
+     * We only want to run one web server for each node.
+     * So disable the "launch" button when we have
+     * launched the web server and only reenable it when
+     * the web server has exited.
+     */
     fun configureWebButton(config: NodeConfig) {
         launchWebButton.setOnAction {
             launchWebButton.isDisable = true
