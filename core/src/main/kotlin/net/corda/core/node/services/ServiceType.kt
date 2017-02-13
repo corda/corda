@@ -43,6 +43,7 @@ sealed class ServiceType(val id: String) {
 
     fun isSubTypeOf(superType: ServiceType) = (id == superType.id) || id.startsWith(superType.id + ".")
     fun isNotary() = isSubTypeOf(notary)
+    fun isValidatingNotary() = isNotary() && id.contains(".validating")
 
     override fun hashCode(): Int = id.hashCode()
     override fun toString(): String = id.toString()

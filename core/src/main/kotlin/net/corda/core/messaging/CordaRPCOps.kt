@@ -114,7 +114,7 @@ interface CordaRPCOps : RPCOps {
      * Invoking this method indicate the node is willing to upgrade the [state] using the [upgradedContractClass].
      * This method will NOT initiate the upgrade process. To start the upgrade process, see [ContractUpgradeFlow.Instigator].
      */
-    fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>)
+    fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>)
 
     /**
      * Authorise a contract state upgrade.

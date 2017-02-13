@@ -165,7 +165,7 @@ interface VaultService {
 
     /** Get contracts we would be willing to upgrade the suggested contract to. */
     // TODO: We need a better place to put business logic functions
-    fun getAuthorisedContractUpgrade(ref: StateRef): Class<UpgradedContract<*, *>>?
+    fun getAuthorisedContractUpgrade(ref: StateRef): Class<out UpgradedContract<*, *>>?
 
     /**
      * Authorise a contract state upgrade.
@@ -173,7 +173,7 @@ interface VaultService {
      * Invoking this method indicate the node is willing to upgrade the [state] using the [upgradedContractClass].
      * This method will NOT initiate the upgrade process. To start the upgrade process, see [ContractUpgradeFlow.Instigator].
      */
-    fun authoriseContractUpgrade(stateAndRef: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>)
+    fun authoriseContractUpgrade(stateAndRef: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>)
 
     /**
      * Authorise a contract state upgrade.

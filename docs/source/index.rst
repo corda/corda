@@ -87,6 +87,7 @@ Documentation Contents:
    tutorial-contract
    tutorial-contract-clauses
    tutorial-test-dsl
+   contract-upgrade
    tutorial-integration-testing
    tutorial-clientrpc-api
    tutorial-building-transactions
@@ -105,7 +106,6 @@ Documentation Contents:
    network-simulator
    clauses
    merkle-trees
-   contract-upgrade
 
 .. toctree::
    :maxdepth: 2

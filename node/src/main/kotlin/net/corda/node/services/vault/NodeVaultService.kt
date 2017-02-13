@@ -338,13 +338,13 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
     }
 
     // TODO : Persists this in DB.
-    private val authorisedUpgrade = mutableMapOf<StateRef, Class<UpgradedContract<*, *>>>()
+    private val authorisedUpgrade = mutableMapOf<StateRef, Class<out UpgradedContract<*, *>>>()
 
     override fun getAuthorisedContractUpgrade(ref: StateRef) = authorisedUpgrade[ref]
 
-    override fun authoriseContractUpgrade(stateAndRef: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>) {
+    override fun authoriseContractUpgrade(stateAndRef: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>) {
         val upgrade = upgradedContractClass.newInstance()
-        if (upgrade.legacyContract.javaClass != stateAndRef.state.data.contract.javaClass) {
+        if (upgrade.legacyContract != stateAndRef.state.data.contract.javaClass) {
             throw IllegalArgumentException("The contract state cannot be upgraded using provided UpgradedContract.")
         }
         authorisedUpgrade.put(stateAndRef.ref, upgradedContractClass)
