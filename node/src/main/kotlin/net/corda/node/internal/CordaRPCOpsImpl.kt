@@ -103,7 +103,7 @@ class CordaRPCOpsImpl(
 
     override fun attachmentExists(id: SecureHash) = services.storageService.attachments.openAttachment(id) != null
     override fun uploadAttachment(jar: InputStream) = services.storageService.attachments.importAttachment(jar)
-    override fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>) = services.vaultService.authoriseContractUpgrade(state, upgradedContractClass)
+    override fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>) = services.vaultService.authoriseContractUpgrade(state, upgradedContractClass)
     override fun deauthoriseContractUpgrade(state: StateAndRef<*>) = services.vaultService.deauthoriseContractUpgrade(state)
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
     @Suppress("OverridingDeprecatedMember", "DEPRECATION")
