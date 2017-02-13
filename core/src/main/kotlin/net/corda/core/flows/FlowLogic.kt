@@ -7,6 +7,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.debug
 import org.slf4j.Logger
 import rx.Observable
 
@@ -135,7 +136,9 @@ abstract class FlowLogic<out T> {
         if (shareParentSessions) {
             subLogic.sessionFlow = this
         }
+        logger.debug { "Calling subflow: $subLogic" }
         val result = subLogic.call()
+        logger.debug { "Subflow finished with result $result" }
         // It's easy to forget this when writing flows so we just step it to the DONE state when it completes.
         subLogic.progressTracker?.currentStep = ProgressTracker.DONE
         return result

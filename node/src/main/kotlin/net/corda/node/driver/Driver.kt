@@ -147,7 +147,7 @@ sealed class PortAllocation {
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
  * @param useTestClock If true the test clock will be used in Node.
- * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode.
+ * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode and have debug level logging.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
@@ -502,19 +502,19 @@ open class DriverDSL(
             else
                 ""
 
-            val additionalKeys = listOf("amq.delivery.delay.ms")
+            val inheritedProperties = listOf("amq.delivery.delay.ms")
 
             val systemArgs = mutableMapOf(
                     "name" to nodeConf.myLegalName,
                     "visualvm.display.name" to "Corda"
             )
 
-            for (key in additionalKeys) {
-                if (System.getProperty(key) != null) {
-                    systemArgs.set(key, System.getProperty(key))
-                }
+            inheritedProperties.forEach {
+                val property = System.getProperty(it)
+                if (property != null) systemArgs[it] = property
             }
 
+            val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
             val javaArgs = listOf(path) +
                     systemArgs.map { "-D${it.key}=${it.value}" } +
                     listOf(
@@ -524,7 +524,8 @@ open class DriverDSL(
                             "-XX:+UseG1GC",
                             "-cp", classpath,
                             className,
-                            "--base-directory=${nodeConf.baseDirectory}"
+                            "--base-directory=${nodeConf.baseDirectory}",
+                            "--logging-level=$loggingLevel"
                     ).filter(String::isNotEmpty)
             val builder = ProcessBuilder(javaArgs)
             builder.redirectError(Paths.get("error.$className.log").toFile())

@@ -1,6 +1,5 @@
 package net.corda.node.services.statemachine
 
-import net.corda.core.abbreviate
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
 import net.corda.core.utilities.UntrustworthyData
@@ -14,9 +13,7 @@ interface ExistingSessionMessage : SessionMessage {
 }
 
 data class SessionData(override val recipientSessionId: Long, val payload: Any) : ExistingSessionMessage {
-    override fun toString(): String {
-        return "${javaClass.simpleName}(recipientSessionId=$recipientSessionId, payload=${payload.toString().abbreviate(100)})"
-    }
+    override fun toString(): String = "${javaClass.simpleName}(recipientSessionId=$recipientSessionId, payload=$payload)"
 }
 
 interface SessionInitResponse : ExistingSessionMessage {

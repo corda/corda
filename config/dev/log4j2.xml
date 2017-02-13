@@ -6,17 +6,14 @@
         <Property name="log-name">node-${hostName}</Property>
         <Property name="archive">${sys:log-path}/archive</Property>
         <Property name="consoleLogLevel">error</Property>
+        <Property name="defaultLogLevel">info</Property>
     </Properties>
 
     <ThresholdFilter level="trace"/>
 
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout>
-                <pattern>
-                    %highlight{%level{length=1} %d{HH:mm:ss} %T %c{1}.%M - %msg%n}{INFO=white,WARN=red,FATAL=bright red blink}
-                </pattern>>
-            </PatternLayout>
+            <PatternLayout pattern="%highlight{%level{length=1} %d{HH:mm:ss} [%t] %c{2}.%M - %msg%n}{INFO=white,WARN=red,FATAL=bright red}" />
         </Console>
 
         <!-- Will generate up to 10 log files for a given day. During every rollover it will delete
@@ -25,7 +22,7 @@
                      fileName="${sys:log-path}/${log-name}.log"
                      filePattern="${archive}/${log-name}.%d{yyyy-MM-dd}-%i.log.gz">
 
-            <PatternLayout pattern="[%-5level] %d{ISO8601}{GMT+0} [%t] %c{1} - %msg%n"/>
+            <PatternLayout pattern="[%-5level] %d{ISO8601}{GMT+0} [%t] %c{2}.%M - %msg%n"/>
 
             <Policies>
                 <TimeBasedTriggeringPolicy/>
@@ -47,13 +44,9 @@
     </Appenders>
 
     <Loggers>
-        <Root level="info">
+        <Root level="${sys:defaultLogLevel}">
             <AppenderRef ref="Console-Appender" level="${sys:consoleLogLevel}"/>
-            <AppenderRef ref="RollingFile-Appender" level="info"/>
+            <AppenderRef ref="RollingFile-Appender" />
         </Root>
-        <Logger name="net.corda" level="info" additivity="false">
-            <AppenderRef ref="Console-Appender" level="${sys:consoleLogLevel}"/>
-            <AppenderRef ref="RollingFile-Appender"/>
-        </Logger>
     </Loggers>
 </Configuration>

@@ -5,6 +5,7 @@ import net.corda.core.div
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
+import org.slf4j.event.Level
 import java.nio.file.Paths
 
 class ArgsParserTest {
@@ -18,65 +19,59 @@ class ArgsParserTest {
                 configFile = workingDirectory / "node.conf",
                 help = false,
                 logToConsole = false,
+                loggingLevel = Level.INFO,
                 isWebserver = false))
     }
 
     @Test
-    fun `just base-directory with relative path`() {
+    fun `base-directory with relative path`() {
         val expectedBaseDir = Paths.get("tmp").normalize().toAbsolutePath()
         val cmdLineOptions = parser.parse("--base-directory", "tmp")
-        assertThat(cmdLineOptions).isEqualTo(CmdLineOptions(
-                baseDirectory = expectedBaseDir,
-                configFile = expectedBaseDir / "node.conf",
-                help = false,
-                logToConsole = false,
-                isWebserver = false))
+        assertThat(cmdLineOptions.baseDirectory).isEqualTo(expectedBaseDir)
+        assertThat(cmdLineOptions.configFile).isEqualTo(expectedBaseDir / "node.conf")
     }
 
     @Test
-    fun `just base-directory with absolute path`() {
+    fun `base-directory with absolute path`() {
         val baseDirectory = Paths.get("tmp").normalize().toAbsolutePath()
         val cmdLineOptions = parser.parse("--base-directory", baseDirectory.toString())
-        assertThat(cmdLineOptions).isEqualTo(CmdLineOptions(
-                baseDirectory = baseDirectory,
-                configFile = baseDirectory / "node.conf",
-                help = false,
-                logToConsole = false,
-                isWebserver = false))
+        assertThat(cmdLineOptions.baseDirectory).isEqualTo(baseDirectory)
+        assertThat(cmdLineOptions.configFile).isEqualTo(baseDirectory / "node.conf")
     }
 
     @Test
-    fun `just config-file with relative path`() {
+    fun `config-file with relative path`() {
         val cmdLineOptions = parser.parse("--config-file", "different.conf")
-        assertThat(cmdLineOptions).isEqualTo(CmdLineOptions(
-                baseDirectory = workingDirectory,
-                configFile = workingDirectory / "different.conf",
-                help = false,
-                logToConsole = false,
-                isWebserver = false))
+        assertThat(cmdLineOptions.baseDirectory).isEqualTo(workingDirectory)
+        assertThat(cmdLineOptions.configFile).isEqualTo(workingDirectory / "different.conf")
     }
 
     @Test
-    fun `just config-file with absolute path`() {
+    fun `config-file with absolute path`() {
         val configFile = Paths.get("tmp", "a.conf").normalize().toAbsolutePath()
         val cmdLineOptions = parser.parse("--config-file", configFile.toString())
-        assertThat(cmdLineOptions).isEqualTo(CmdLineOptions(
-                baseDirectory = workingDirectory,
-                configFile = configFile,
-                help = false,
-                logToConsole = false,
-                isWebserver = false))
+        assertThat(cmdLineOptions.baseDirectory).isEqualTo(workingDirectory)
+        assertThat(cmdLineOptions.configFile).isEqualTo(configFile)
     }
 
     @Test
-    fun `just webserver `() {
+    fun `log-to-console`() {
+        val cmdLineOptions = parser.parse("--log-to-console")
+        assertThat(cmdLineOptions.logToConsole).isTrue()
+    }
+
+    @Test
+    fun `logging-level`() {
+        for (level in Level.values()) {
+            val cmdLineOptions = parser.parse("--logging-level", level.name)
+            assertThat(cmdLineOptions.loggingLevel).isEqualTo(level)
+        }
+    }
+
+    @Test
+    fun `webserver`() {
         val cmdLineOptions = parser.parse("--webserver")
-        assertThat(cmdLineOptions).isEqualTo(CmdLineOptions(
-                baseDirectory = workingDirectory,
-                configFile =  workingDirectory / "node.conf",
-                help = false,
-                logToConsole = false,
-                isWebserver = true))
+        assertThat(cmdLineOptions.isWebserver).isTrue()
     }
 
     @Test
@@ -98,5 +93,19 @@ class ArgsParserTest {
         assertThatExceptionOfType(OptionException::class.java).isThrownBy {
             parser.parse("--config-file")
         }.withMessageContaining("config-file")
+    }
+
+    @Test
+    fun `logging-level without argument`() {
+        assertThatExceptionOfType(OptionException::class.java).isThrownBy {
+            parser.parse("--logging-level")
+        }.withMessageContaining("logging-level")
+    }
+
+    @Test
+    fun `logging-level with invalid argument`() {
+        assertThatExceptionOfType(OptionException::class.java).isThrownBy {
+            parser.parse("--logging-level", "not-a-level")
+        }.withMessageContaining("logging-level")
     }
 }

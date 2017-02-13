@@ -1,7 +1,6 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.SecureHash
-import net.corda.node.services.statemachine.StateMachineManager.FlowSession
 
 // TODO revisit when Kotlin 1.1 is released and data classes can extend other classes
 interface FlowIORequest {
@@ -22,17 +21,20 @@ interface SendRequest : SessionedFlowIORequest {
 
 interface ReceiveRequest<T : SessionMessage> : SessionedFlowIORequest, WaitingRequest {
     val receiveType: Class<T>
+    val userReceiveType: Class<*>?
 }
 
 data class SendAndReceive<T : SessionMessage>(override val session: FlowSession,
                                               override val message: SessionMessage,
-                                              override val receiveType: Class<T>) : SendRequest, ReceiveRequest<T> {
+                                              override val receiveType: Class<T>,
+                                              override val userReceiveType: Class<*>?) : SendRequest, ReceiveRequest<T> {
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }
 
 data class ReceiveOnly<T : SessionMessage>(override val session: FlowSession,
-                                           override val receiveType: Class<T>) : ReceiveRequest<T> {
+                                           override val receiveType: Class<T>,
+                                           override val userReceiveType: Class<*>?) : ReceiveRequest<T> {
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }
