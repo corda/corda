@@ -18,16 +18,16 @@ class Explorer(val explorerController: ExplorerController) : AutoCloseable {
             return
         }
 
-        val p = explorerController.execute(
-              config.explorerDir,
+        val p = explorerController.process(
               "--host=localhost",
               "--port=${config.artemisPort}",
               "--username=${config.user["user"]}",
               "--password=${config.user["password"]}",
               "--certificatesDir=${config.ssl.certificatesDirectory}",
               "--keyStorePassword=${config.ssl.keyStorePassword}",
-              "--trustStorePassword=${config.ssl.trustStorePassword}"
-        )
+              "--trustStorePassword=${config.ssl.trustStorePassword}")
+                .directory(explorerDir)
+                .start()
         process = p
 
         log.info("Launched Node Explorer for '{}'", config.legalName)
