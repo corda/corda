@@ -191,11 +191,10 @@ class Node {
      */
     private void installDependencies() {
         def cordaJar = verifyAndGetCordaJar()
-        def cordappDeps = getCordappList()
         def depsDir = new File(nodeDir, "dependencies")
         def coreDeps = project.zipTree(cordaJar).getFiles().collect { it.getName() }
         def appDeps = project.configurations.runtime.filter {
-            it != cordaJar && !cordappDeps.contains(it) && !coreDeps.contains(it.getName())
+            it != cordaJar && !project.configurations.cordapp.contains(it) && !coreDeps.contains(it.getName())
         }
         project.copy {
             from appDeps
@@ -250,7 +249,7 @@ class Node {
      */
     private Collection<File> getCordappList() {
         return project.configurations.cordapp.files {
-            cordapps.contains("${it.group}:${it.name}:${it.version}")
+            cordapps.contains(it.group + ":" + it.name + ":" + it.version)
         }
     }
 }
