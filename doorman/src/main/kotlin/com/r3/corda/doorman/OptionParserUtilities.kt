@@ -4,7 +4,6 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
-import kotlin.system.exitProcess
 
 /**
  * Convert commandline arguments to [Config] object will allow us to use kotlin delegate with [ConfigHelper].
@@ -17,8 +16,7 @@ object OptionParserHelper {
         val optionSet = parser.parse(*this)
         // Print help and exit on help option.
         if (optionSet.has(helpOption)) {
-            parser.printHelpOn(System.out)
-            exitProcess(0)
+            throw ShowHelpException(parser)
         }
         // Convert all command line options to Config.
         return ConfigFactory.parseMap(parser.recognizedOptions().mapValues {
@@ -27,3 +25,5 @@ object OptionParserHelper {
         }.filterValues { it != null })
     }
 }
+
+class ShowHelpException(val parser: OptionParser) : Exception()
