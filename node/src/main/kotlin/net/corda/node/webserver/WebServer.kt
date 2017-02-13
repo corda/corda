@@ -23,6 +23,7 @@ import org.eclipse.jetty.webapp.WebAppContext
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
+import java.io.FileNotFoundException
 import java.lang.reflect.InvocationTargetException
 import java.net.InetAddress
 import java.util.*
@@ -160,6 +161,12 @@ class WebServer(val config: FullNodeConfiguration) {
                 return connectLocalRpcAsNodeUser()
             } catch (e: ActiveMQNotConnectedException) {
                 log.debug("Could not connect to ${config.artemisAddress} due to exception: ", e)
+                Thread.sleep(retryDelay)
+            // This error will happen if the server has yet to create the keystore
+            // Keep the fully qualified package name due to collisions with the Kotlin stdlib
+            // exception of the same name
+            } catch (e: java.nio.file.NoSuchFileException) {
+                log.debug("Tried to open a file that doesn't yet exist, retrying", e)
                 Thread.sleep(retryDelay)
             }
         }
