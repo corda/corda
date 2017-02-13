@@ -398,7 +398,7 @@ interface NetCommand : CommandData {
 }
 
 /** Indicates that this transaction replaces the inputs contract state to another contract state */
-data class UpgradeCommand(val upgradedContractClass: Class<UpgradedContract<*, *>>) : CommandData
+data class UpgradeCommand(val upgradedContractClass: Class<out UpgradedContract<*, *>>) : CommandData
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
 data class AuthenticatedObject<out T : Any>(
@@ -456,7 +456,7 @@ interface Contract {
  * @param NewState the upgraded contract state.
  */
 interface UpgradedContract<in OldState : ContractState, out NewState : ContractState> : Contract {
-    val legacyContract: Contract
+    val legacyContract: Class<out Contract>
     /**
      * Upgrade contract's state object to a new state object.
      *

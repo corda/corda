@@ -84,7 +84,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 CashExitFlow::class.java to setOf(Amount::class.java, PartyAndReference::class.java),
                 CashIssueFlow::class.java to setOf(Amount::class.java, OpaqueBytes::class.java, Party::class.java),
                 CashPaymentFlow::class.java to setOf(Amount::class.java, Party::class.java),
-                FinalityFlow::class.java to emptySet()
+                FinalityFlow::class.java to emptySet(),
+                ContractUpgradeFlow.Instigator::class.java to emptySet()
         )
     }
 

@@ -1,3 +1,9 @@
+.. highlight:: kotlin
+.. raw:: html
+
+   <script type="text/javascript" src="_static/jquery.js"></script>
+   <script type="text/javascript" src="_static/codesets.js"></script>
+
 Upgrading Contracts
 ===================
 
@@ -48,19 +54,18 @@ Currently the vault service is used to manage the authorisation records. The adm
 
    .. sourcecode:: kotlin
    
-    /**
-     * Authorise a contract state upgrade.
-     * This will store the upgrade authorisation in the vault, and will be queried by [ContractUpgradeFlow.Acceptor] during contract upgrade process.
-     * Invoking this method indicate the node is willing to upgrade the [state] using the [upgradedContractClass].
-     * This method will NOT initiate the upgrade process. To start the upgrade process, see [ContractUpgradeFlow.Instigator].
-     */
-    fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>)
-
-    /**
-     * Authorise a contract state upgrade.
-     * This will remove the upgrade authorisation from the vault.
-     */
-    fun deauthoriseContractUpgrade(state: StateAndRef<*>)
+      /**
+       * Authorise a contract state upgrade.
+       * This will store the upgrade authorisation in the vault, and will be queried by [ContractUpgradeFlow.Acceptor] during contract upgrade process.
+       * Invoking this method indicate the node is willing to upgrade the [state] using the [upgradedContractClass].
+       * This method will NOT initiate the upgrade process. To start the upgrade process, see [ContractUpgradeFlow.Instigator].
+       */
+      fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>)   
+      /**
+       * Authorise a contract state upgrade.
+       * This will remove the upgrade authorisation from the vault.
+       */
+      fun deauthoriseContractUpgrade(state: StateAndRef<*>)
 
 
 
@@ -70,3 +75,72 @@ Proposing an upgrade
 After all parties have registered the intention of upgrading the contract state, one of the contract participant can initiate the upgrade process by running the contract upgrade flow.
 The Instigator will create a new state and sent to each participant for signatures, each of the participants (Acceptor) will verify and sign the proposal and returns to the instigator.
 The transaction will be notarised and persisted once every participant verified and signed the upgrade proposal.
+
+Examples
+--------
+
+Lets assume Bank A has entered into an agreement with Bank B, and the contract is translated into contract code ``DummyContract`` with state object ``DummyContractState``.
+
+Few days after the exchange of contracts, the developer of the contract code discovered a bug/misrepresentation in the contract code. 
+Bank A and Bank B decided to upgrade the contract to ``DummyContractV2``
+
+1. Developer will create a new contract extending the ``UpgradedContract`` class, and a new state object ``DummyContractV2.State`` referencing the new contract.
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+   
+      class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.State> {
+          override val legacyContract = DummyContract::class.java
+      
+          data class State(val magicNumber: Int = 0, val owners: List<CompositeKey>) : ContractState {
+              override val contract = DUMMY_V2_PROGRAM_ID
+              override val participants: List<CompositeKey> = owners
+          }
+      
+          interface Commands : CommandData {
+              class Create : TypeOnlyCommandData(), Commands
+              class Move : TypeOnlyCommandData(), Commands
+          }
+      
+          override fun upgrade(state: DummyContract.State): DummyContractV2.State {
+              return DummyContractV2.State(state.magicNumber, state.participants)
+          }
+      
+          override fun verify(tx: TransactionForContract) {
+              if (tx.commands.any { it.value is UpgradeCommand }) ContractUpgradeFlow.verify(tx)
+              // Other verifications.
+          }
+      
+          // The "empty contract"
+          override val legalContractReference: SecureHash = SecureHash.sha256("")
+      }
+
+2. Bank A will instruct its node to accept the contract upgrade to ``DummyContractV2`` for the contract state.
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+   
+      val rpcClient : CordaRPCClient = << Bank A's Corda RPC Client >>
+      val rpcA = rpcClient.proxy()
+      rpcA.authoriseContractUpgrade(<<StateAndRef of the contract state>>, DummyContractV2::class.java)
+
+3. Bank B now initiate the upgrade Flow, this will send a upgrade proposal to all contract participants.
+Each of the participants of the contract state will sign and return the contract state upgrade proposal once they have validated and agreed with the upgrade.
+The upgraded transaction state will be recorded in every participant's node at the end of the flow.
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+      
+      val rpcClient : CordaRPCClient = << Bank B's Corda RPC Client >>
+      val rpcB = rpcClient.proxy()
+      rpcB.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow.Instigator(stateAndRef, upgrade) },
+          <<StateAndRef of the contract state>>,
+          DummyContractV2::class.java)
+          
+.. note:: See ``ContractUpgradeFlowTest.2 parties contract upgrade using RPC`` for more detailed code example.
+
+
+

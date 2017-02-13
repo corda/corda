@@ -33,7 +33,7 @@ object ContractUpgradeFlow {
         val upgradedContract = command.upgradedContractClass.newInstance() as UpgradedContract<ContractState, *>
         requireThat {
             "The signing keys include all participant keys" by keysThatSigned.containsAll(participants)
-            "Inputs state reference the legacy contract" by (input.contract.javaClass == upgradedContract.legacyContract.javaClass)
+            "Inputs state reference the legacy contract" by (input.contract.javaClass == upgradedContract.legacyContract)
             "Outputs state reference the upgraded contract" by (output.contract.javaClass == command.upgradedContractClass)
             "Output state must be an upgraded version of the input state" by (output == upgradedContract.upgrade(input))
         }
@@ -41,17 +41,17 @@ object ContractUpgradeFlow {
 
     private fun <OldState : ContractState, NewState : ContractState> assembleBareTx(
             stateRef: StateAndRef<OldState>,
-            upgradedContractClass: Class<UpgradedContract<OldState, NewState>>
+            upgradedContractClass: Class<out UpgradedContract<OldState, NewState>>
     ): TransactionBuilder {
         val contractUpgrade = upgradedContractClass.newInstance()
         return TransactionType.General.Builder(stateRef.state.notary)
-                .withItems(stateRef, contractUpgrade.upgrade(stateRef.state.data), Command(UpgradeCommand(contractUpgrade.javaClass), stateRef.state.data.participants))
+                .withItems(stateRef, contractUpgrade.upgrade(stateRef.state.data), Command(UpgradeCommand(upgradedContractClass), stateRef.state.data.participants))
     }
 
-    class Instigator<OldState : ContractState, NewState : ContractState>(
+    class Instigator<OldState : ContractState, out NewState : ContractState>(
             originalState: StateAndRef<OldState>,
-            newContractClass: Class<UpgradedContract<OldState, NewState>>
-    ) : AbstractStateReplacementFlow.Instigator<OldState, NewState, Class<UpgradedContract<OldState, NewState>>>(originalState, newContractClass) {
+            newContractClass: Class<out UpgradedContract<OldState, NewState>>
+    ) : AbstractStateReplacementFlow.Instigator<OldState, NewState, Class<out UpgradedContract<OldState, NewState>>>(originalState, newContractClass) {
 
         override fun assembleTx(): Pair<SignedTransaction, Iterable<CompositeKey>> {
             val stx = assembleBareTx(originalState, modification)
@@ -61,10 +61,10 @@ object ContractUpgradeFlow {
         }
     }
 
-    class Acceptor(otherSide: Party) : AbstractStateReplacementFlow.Acceptor<Class<UpgradedContract<ContractState, *>>>(otherSide) {
+    class Acceptor(otherSide: Party) : AbstractStateReplacementFlow.Acceptor<Class<out UpgradedContract<ContractState, *>>>(otherSide) {
         @Suspendable
         @Throws(StateReplacementException::class)
-        override fun verifyProposal(proposal: Proposal<Class<UpgradedContract<ContractState, *>>>) {
+        override fun verifyProposal(proposal: Proposal<Class<out UpgradedContract<ContractState, *>>>) {
             // Retrieve signed transaction from our side, we will apply the upgrade logic to the transaction on our side, and verify outputs matches the proposed upgrade.
             val stx = subFlow(FetchTransactionsFlow(setOf(proposal.stateRef.txhash), otherSide)).fromDisk.singleOrNull()
             requireNotNull(stx) { "We don't have a copy of the referenced state" }
