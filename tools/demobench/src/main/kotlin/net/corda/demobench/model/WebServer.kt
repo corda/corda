@@ -1,10 +1,10 @@
 package net.corda.demobench.model
 
-import org.slf4j.LoggerFactory
+import net.corda.demobench.loggerFor
 import java.util.concurrent.Executors
 
 class WebServer(val webServerController: WebServerController) : AutoCloseable {
-    private val log = LoggerFactory.getLogger(WebServer::class.java)
+    private val log = loggerFor<WebServer>()
 
     private val executor = Executors.newSingleThreadExecutor()
     private var process: Process? = null
@@ -23,6 +23,11 @@ class WebServer(val webServerController: WebServerController) : AutoCloseable {
 
         log.info("Launched Web Server for '{}'", config.legalName)
 
+        // Close these streams because no-one is using them.
+        safeClose(p.outputStream)
+        safeClose(p.inputStream)
+        safeClose(p.errorStream)
+
         executor.submit {
             val exitValue = p.waitFor()
             process = null
@@ -35,6 +40,14 @@ class WebServer(val webServerController: WebServerController) : AutoCloseable {
     override fun close() {
         executor.shutdown()
         process?.destroy()
+    }
+
+    private fun safeClose(c: AutoCloseable?) {
+        try {
+            c?.close()
+        } catch (e: Exception) {
+            log.error("Failed to close stream: '{}'", e.message)
+        }
     }
 
 }
