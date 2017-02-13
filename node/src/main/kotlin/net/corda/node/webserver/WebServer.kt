@@ -23,9 +23,7 @@ import org.eclipse.jetty.webapp.WebAppContext
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
-import java.io.FileNotFoundException
 import java.lang.reflect.InvocationTargetException
-import java.net.InetAddress
 import java.util.*
 
 // TODO: Split into a separate module under client that packages into WAR formats.
