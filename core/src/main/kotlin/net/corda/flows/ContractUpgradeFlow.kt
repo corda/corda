@@ -33,7 +33,7 @@ object ContractUpgradeFlow {
         val upgradedContract = command.upgradedContractClass.newInstance() as UpgradedContract<ContractState, *>
         requireThat {
             "The signing keys include all participant keys" by keysThatSigned.containsAll(participants)
-            "Inputs state reference the legacy contract" by (input.contract.javaClass == upgradedContract.legacyContract.javaClass)
+            "Inputs state reference the legacy contract" by (input.contract.javaClass == upgradedContract.legacyContract)
             "Outputs state reference the upgraded contract" by (output.contract.javaClass == command.upgradedContractClass)
             "Output state must be an upgraded version of the input state" by (output == upgradedContract.upgrade(input))
         }
