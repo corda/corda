@@ -49,6 +49,7 @@ class NodeTerminalView : Fragment() {
     fun open(config: NodeConfig, onExit: () -> Unit) {
         nodeName.text = config.legalName
         p2pPort.value = config.artemisPort.toString()
+        launchWebButton.text = "Launch\nWeb Server\n(Port ${config.webPort})"
 
         val swingTerminal = SwingNode()
         swingTerminal.setOnMouseClicked {
