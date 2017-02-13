@@ -1,7 +1,6 @@
 package net.corda.demobench.model
 
 import tornadofx.Controller
-import java.nio.file.Path
 
 class WebServerController : Controller() {
 
@@ -12,7 +11,7 @@ class WebServerController : Controller() {
         log.info("Web Server JAR: $cordaPath")
     }
 
-    internal fun execute(cwd: Path) = jvm.execute(cordaPath, cwd, "--webserver")
+    internal fun process() = jvm.processFor(cordaPath, "--webserver")
 
     fun webServer() = WebServer(this)
 

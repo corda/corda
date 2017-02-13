@@ -1,8 +1,6 @@
 package net.corda.demobench.model
 
 import tornadofx.Controller
-import java.nio.file.Path
-import java.nio.file.Paths
 
 class ExplorerController : Controller() {
 
@@ -13,7 +11,7 @@ class ExplorerController : Controller() {
         log.info("Explorer JAR: $explorerPath")
     }
 
-    internal fun execute(cwd: Path, vararg args: String) = jvm.execute(explorerPath, cwd, *args)
+    internal fun process(vararg args: String) = jvm.processFor(explorerPath, *args)
 
     fun explorer() = Explorer(this)
 

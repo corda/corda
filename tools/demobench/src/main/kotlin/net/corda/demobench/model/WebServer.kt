@@ -18,7 +18,9 @@ class WebServer(val webServerController: WebServerController) : AutoCloseable {
             return
         }
 
-        val p = webServerController.execute(config.nodeDir)
+        val p = webServerController.process()
+            .directory(nodeDir)
+            .start()
         process = p
 
         log.info("Launched Web Server for '{}'", config.legalName)
