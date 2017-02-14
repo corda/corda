@@ -1,88 +1,53 @@
 package net.corda.core.crypto
 
+import java.nio.charset.Charset
 import java.util.*
+import javax.xml.bind.DatatypeConverter
 
-/**
- * This file includes useful encoding methods and extension functions for the most common encoding/decoding operations.
- */
 
-/**
- * [ByteArray]
- */
+// This file includes useful encoding methods and extension functions for the most common encoding/decoding operations.
 
-// Base58.
+// [ByteArray] encoders
+
+/** Convert a byte array to a base 58 encoded string.*/
 fun ByteArray.toBase58(): String =
         Base58.encode(this)
 
-// Base64.
+/** Convert a byte array to a base 64 encoded string.*/
 fun ByteArray.toBase64(): String =
         Base64.getEncoder().encodeToString(this)
 
-// Hex (or Base16).
-fun ByteArray.toHex(): String {
-    val result = StringBuffer()
-    forEach {
-        val octet = it.toInt()
-        val firstIndex = (octet and 0xF0).ushr(4)
-        val secondIndex = octet and 0x0F
-        result.append(HEX_ALPHABET[firstIndex])
-        result.append(HEX_ALPHABET[secondIndex])
-    }
-    return result.toString()
-}
+/** Convert a byte array to a hex (base 16) capitalised encoded string.*/
+fun ByteArray.toHex(): String =
+    DatatypeConverter.printHexBinary(this)
 
-/**
- * [String]
- */
 
-// Base58-String to the actual real [String] using the UTF-8 character set.
-fun String.base58ToRealString() = String(base58ToByteArray())
+// [String] encoders and decoders
 
-// Base64-String to the actual real [String] using the UTF-8 character set.
-fun String.base64ToRealString() = String(base64ToByteArray())
+/** Base58-String to the actual real [String] */
+fun String.base58ToRealString() =
+        String(base58ToByteArray(), Charset.defaultCharset())
 
-// Hex-String to the actual real [String] using the UTF-8 character set.
-fun String.hexToRealString() = String(hexToByteArray())
+/** Base64-String to the actual real [String] */
+fun String.base64ToRealString() =
+        String(base64ToByteArray())
 
-// Base58-String to [ByteArray].
-fun String.base58ToByteArray(): ByteArray {
-    try {
-        return Base58.decode(this)
-    } catch (afe: AddressFormatException) {
-        throw afe
-    }
-}
+/** Hex-String to the actual real [String] */
+fun String.hexToRealString() =
+        String(hexToByteArray())
 
-// Base64-String to [ByteArray].
-fun String.base64ToByteArray(): ByteArray {
-    try {
-        return Base64.getDecoder().decode(this)
-    } catch (iae: IllegalArgumentException) {
-        throw iae
-    }
-}
+/** Base58-String to [ByteArray]. */
+fun String.base58ToByteArray(): ByteArray =
+        Base58.decode(this)
 
-// Hex-String to [ByteArray]. Accept capital letters only.
-fun String.hexToByteArray(): ByteArray {
-    if (this.length == 0) {
-        return ByteArray(0)
-    } else if (this.matches(HEX_REGEX)) {
-        val result = ByteArray(length / 2)
-        for (i in 0 until length step 2) {
-            val firstIndex = HEX_ALPHABET.indexOf(this[i]);
-            val secondIndex = HEX_ALPHABET.indexOf(this[i + 1]);
+/** Base64-String to [ByteArray]. */
+fun String.base64ToByteArray(): ByteArray =
+        Base64.getDecoder().decode(this)
 
-            val octet = firstIndex.shl(4).or(secondIndex)
-            result.set(i.shr(1), octet.toByte())
-        }
-        return result
-    } else
-        throw IllegalArgumentException()
-}
+/** Hex-String to [ByteArray]. Accept lowercase or capital or mixed letters. */
+fun String.hexToByteArray(): ByteArray =
+        DatatypeConverter.parseHexBinary(this);
 
-/**
- * Helper vars.
- */
 
-private val HEX_REGEX = Regex("-?[0-9A-F]+") // accept capital letters only
+// Helper vars.
 private val HEX_ALPHABET = "0123456789ABCDEF".toCharArray()
