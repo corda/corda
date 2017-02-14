@@ -22,7 +22,7 @@ class ExampleNodeConfTest {
                     baseDirectory,
                     ConfigHelper.loadConfig(
                             baseDirectory = baseDirectory,
-                            configFileOverride = Paths.get(configResource.toURI())
+                            configFile = Paths.get(configResource.toURI())
                     )
             )
             // Force the config fields as they are resolved lazily

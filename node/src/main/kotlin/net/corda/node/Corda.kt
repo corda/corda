@@ -2,6 +2,7 @@
 package net.corda.node
 
 import com.typesafe.config.ConfigException
+import joptsimple.OptionException
 import net.corda.core.*
 import net.corda.core.utilities.Emoji
 import net.corda.node.internal.Node
@@ -14,7 +15,6 @@ import org.slf4j.LoggerFactory
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Paths
-import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
 private var renderBasicInfoToConsole = true
@@ -38,8 +38,9 @@ fun main(args: Array<String>) {
 
     val cmdlineOptions = try {
         argsParser.parse(*args)
-    } catch (ex: Exception) {
-        println("Unknown command line arguments: ${ex.message}")
+    } catch (ex: OptionException) {
+        println("Invalid command line arguments: ${ex.message}")
+        argsParser.printHelp(System.out)
         exitProcess(1)
     }
 
@@ -49,10 +50,10 @@ fun main(args: Array<String>) {
         exitProcess(0)
     }
 
-    // Set up logging.
+    // Set up logging. These properties are referenced from the XML config file.
+    System.setProperty("defaultLogLevel", cmdlineOptions.loggingLevel.name.toLowerCase())
     if (cmdlineOptions.logToConsole) {
-        // This property is referenced from the XML config file.
-        System.setProperty("consoleLogLevel", "info")
+        System.setProperty("consoleLogLevel", cmdlineOptions.loggingLevel.name.toLowerCase())
         renderBasicInfoToConsole = false
     }
 

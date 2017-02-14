@@ -44,12 +44,16 @@ abstract class BaseTransaction(
         if (timestamp != null) check(notary != null) { "If a timestamp is provided, there must be a notary." }
     }
 
-    override fun equals(other: Any?) =
-            other is BaseTransaction &&
-            notary == other.notary &&
-            mustSign == other.mustSign &&
-            type == other.type &&
-            timestamp == other.timestamp
+    override fun equals(other: Any?): Boolean {
+        if (other === this) return true
+        return other is BaseTransaction &&
+                notary == other.notary &&
+                mustSign == other.mustSign &&
+                type == other.type &&
+                timestamp == other.timestamp
+    }
 
     override fun hashCode() = Objects.hash(notary, mustSign, type, timestamp)
+
+    override fun toString(): String = "${javaClass.simpleName}(id=$id)"
 }

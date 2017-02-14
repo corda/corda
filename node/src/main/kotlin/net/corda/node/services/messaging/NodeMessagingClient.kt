@@ -67,7 +67,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         // confusion.
         const val TOPIC_PROPERTY = "platform-topic"
         const val SESSION_ID_PROPERTY = "session-id"
-        val AMQ_DELAY = Integer.valueOf(System.getProperty("amq.delivery.delay.ms", "0"))
+        private val AMQ_DELAY: Int = Integer.valueOf(System.getProperty("amq.delivery.delay.ms", "0"))
     }
 
     private class InnerState {
@@ -88,12 +88,16 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                        val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
     /** An executor for sending messages */
-    private val messagingExecutor = AffinityExecutor.ServiceAffinityExecutor("${config.myLegalName} Messaging", 1)
+    private val messagingExecutor = AffinityExecutor.ServiceAffinityExecutor("Messaging", 1)
 
     /**
      * Apart from the NetworkMapService this is the only other address accessible to the node outside of lookups against the NetworkMapCache.
      */
-    override val myAddress: SingleMessageRecipient = if (myIdentity != null) NodeAddress.asPeer(myIdentity, serverHostPort) else NetworkMapAddress(serverHostPort)
+    override val myAddress: SingleMessageRecipient = if (myIdentity != null) {
+        NodeAddress.asPeer(myIdentity, serverHostPort)
+    } else {
+        NetworkMapAddress(serverHostPort)
+    }
 
     private val state = ThreadBox(InnerState())
     private val handlers = CopyOnWriteArrayList<Handler>()
@@ -108,7 +112,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                 override fun addElementToInsert(insert: InsertStatement, entry: UUID, finalizables: MutableList<() -> Unit>) {
                     insert[table.uuid] = entry
                 }
-            })
+            }
+    )
 
     fun start(rpcOps: RPCOps, userService: RPCUserService) {
         state.locked {
@@ -257,7 +262,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             // Use the magic deduplication property built into Artemis as our message identity too
             val uuid = UUID.fromString(message.getStringProperty(HDR_DUPLICATE_DETECTION_ID))
             val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
-            log.info("Received message from: ${message.address} user: $user topic: $topic sessionID: $sessionID uuid: $uuid")
+            log.trace { "Received message from: ${message.address} user: $user topic: $topic sessionID: $sessionID uuid: $uuid" }
 
             val body = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
 
@@ -372,11 +377,11 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
                     // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
                     if (AMQ_DELAY > 0 && message.topicSession.topic == StateMachineManager.sessionTopic.topic) {
-                        putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + AMQ_DELAY);
+                        putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + AMQ_DELAY)
                     }
                 }
-                log.info("Send to: $mqAddress topic: ${message.topicSession.topic} sessionID: ${message.topicSession.sessionID} " +
-                        "uuid: ${message.uniqueMessageId}")
+                log.trace { "Send to: $mqAddress topic: ${message.topicSession.topic} " +
+                        "sessionID: ${message.topicSession.sessionID} uuid: ${message.uniqueMessageId}" }
                 producer!!.send(mqAddress, artemisMessage)
             }
         }

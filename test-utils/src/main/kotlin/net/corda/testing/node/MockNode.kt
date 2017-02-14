@@ -98,26 +98,24 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      * Because this executor is shared, we need to be careful about nodes shutting it down.
      */
     private val sharedUserCount = AtomicInteger(0)
-    private val sharedServerThread =
-            object : ServiceAffinityExecutor("Mock network shared node thread", 1) {
-
-                override fun shutdown() {
-                    // We don't actually allow the shutdown of the network-wide shared thread pool until all references to
-                    // it have been shutdown.
-                    if (sharedUserCount.decrementAndGet() == 0) {
-                        super.shutdown()
-                    }
-                }
-
-                override fun awaitTermination(timeout: Long, unit: TimeUnit): Boolean {
-                    if (!isShutdown) {
-                        flush()
-                        return true
-                    } else {
-                        return super.awaitTermination(timeout, unit)
-                    }
-                }
+    private val sharedServerThread = object : ServiceAffinityExecutor("Mock network", 1) {
+        override fun shutdown() {
+            // We don't actually allow the shutdown of the network-wide shared thread pool until all references to
+            // it have been shutdown.
+            if (sharedUserCount.decrementAndGet() == 0) {
+                super.shutdown()
             }
+        }
+
+        override fun awaitTermination(timeout: Long, unit: TimeUnit): Boolean {
+            if (!isShutdown) {
+                flush()
+                return true
+            } else {
+                return super.awaitTermination(timeout, unit)
+            }
+        }
+    }
 
     /**
      * @param overrideServices a set of service entries to use in place of the node's default service entries,

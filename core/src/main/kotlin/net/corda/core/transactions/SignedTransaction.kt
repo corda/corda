@@ -143,4 +143,6 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * @return a digital signature of the transaction.
      */
     fun signWithECDSA(keyPair: KeyPair) = keyPair.signWithECDSA(this.id.bytes)
+
+    override fun toString(): String = "${javaClass.simpleName}(id=$id)"
 }

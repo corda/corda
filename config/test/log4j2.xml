@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="info">
+    <Properties>
+        <Property name="defaultLogLevel">info</Property>
+    </Properties>
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout>
-                <pattern>
-                    [%-5level] %d{HH:mm:ss.SSS} [%t] %c{1}.%M - %msg%n
-                </pattern>>
-            </PatternLayout>
+            <PatternLayout pattern="[%-5level] %d{HH:mm:ss.SSS} [%t] %c{2}.%M - %msg%n" />
         </Console>
     </Appenders>
     <Loggers>
         <Root level="info">
             <AppenderRef ref="Console-Appender"/>
         </Root>
-        <Logger name="net.corda" level="info" additivity="false">
+        <Logger name="net.corda" level="${sys:defaultLogLevel}" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
     </Loggers>
