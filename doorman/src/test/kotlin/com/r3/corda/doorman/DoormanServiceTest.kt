@@ -31,7 +31,8 @@ class DoormanServiceTest {
     private lateinit var doormanServer: DoormanServer
 
     private fun startSigningServer(storage: CertificationRequestStorage) {
-        doormanServer = DoormanServer(HostAndPort.fromParts("localhost", 0), DoormanWebService(intermediateCA, rootCA.certificate, storage))
+        doormanServer = DoormanServer(HostAndPort.fromParts("localhost", 0), intermediateCA, rootCA.certificate, storage)
+        doormanServer.start()
     }
 
     @After
