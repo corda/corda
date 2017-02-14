@@ -4,7 +4,9 @@ import net.corda.demobench.loggerFor
 import java.util.concurrent.Executors
 
 class Explorer(val explorerController: ExplorerController) : AutoCloseable {
-    private val log = loggerFor<Explorer>()
+    private companion object {
+        val log = loggerFor<Explorer>()
+    }
 
     private val executor = Executors.newSingleThreadExecutor()
     private var process: Process? = null
@@ -21,8 +23,8 @@ class Explorer(val explorerController: ExplorerController) : AutoCloseable {
         val p = explorerController.process(
               "--host=localhost",
               "--port=${config.artemisPort}",
-              "--username=${config.user["user"]}",
-              "--password=${config.user["password"]}",
+              "--username=${config.users[0]["user"]}",
+              "--password=${config.users[0]["password"]}",
               "--certificatesDir=${config.ssl.certificatesDirectory}",
               "--keyStorePassword=${config.ssl.keyStorePassword}",
               "--trustStorePassword=${config.ssl.trustStorePassword}")
@@ -51,9 +53,9 @@ class Explorer(val explorerController: ExplorerController) : AutoCloseable {
         process?.destroy()
     }
 
-    private fun safeClose(c: AutoCloseable?) {
+    private fun safeClose(c: AutoCloseable) {
         try {
-            c?.close()
+            c.close()
         } catch (e: Exception) {
             log.error("Failed to close stream: '{}'", e.message)
         }

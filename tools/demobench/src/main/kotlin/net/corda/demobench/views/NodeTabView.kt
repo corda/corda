@@ -15,8 +15,9 @@ class NodeTabView : Fragment() {
     override val root = stackpane {}
 
     private val main by inject<DemoBenchView>()
+    private val showConfig by param<Boolean>()
 
-    private companion object Data {
+    private companion object {
         val INTEGER_FORMAT = DecimalFormat()
         val NOT_NUMBER = "[^\\d]".toRegex()
     }
@@ -27,6 +28,8 @@ class NodeTabView : Fragment() {
 
     private val nodeTerminalView = find<NodeTerminalView>()
     private val nodeConfigView = stackpane {
+        isVisible = showConfig
+
         form {
             fieldset("Configuration") {
                 field("Node Name") {
@@ -179,19 +182,34 @@ class NodeTabView : Fragment() {
         model.h2Port.value = nodeController.nextPort
     }
 
+    /**
+     * Launches a Corda node that was configured via the form.
+     */
     fun launch() {
         model.commit()
         val config = nodeController.validate(model.item)
         if (config != null) {
             nodeConfigView.isVisible = false
-            nodeTab.text = config.legalName
-            nodeTerminalView.open(config, onExit = { onTerminalExit(config) })
+            launchNode(config)
+        }
+    }
 
-            nodeTab.setOnSelectionChanged {
-                if (nodeTab.isSelected) {
-                    // Doesn't work yet
-                    nodeTerminalView.refreshTerminal()
-                }
+    /**
+     * Launches a preconfigured Corda node, e.g. from a saved profile.
+     */
+    fun launch(config: NodeConfig) {
+        nodeController.register(config)
+        launchNode(config)
+    }
+
+    private fun launchNode(config: NodeConfig) {
+        nodeTab.text = config.legalName
+        nodeTerminalView.open(config, onExit = { onTerminalExit(config) })
+
+        nodeTab.setOnSelectionChanged {
+            if (nodeTab.isSelected) {
+                // Doesn't work yet
+                nodeTerminalView.refreshTerminal()
             }
         }
     }

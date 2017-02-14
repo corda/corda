@@ -9,10 +9,10 @@ import net.corda.demobench.model.NodeConfig
 import net.corda.node.services.messaging.CordaRPCClient
 
 class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Unit): AutoCloseable {
-    private val log = loggerFor<NodeRPC>()
 
-    companion object Data {
-        private val ONE_SECOND = SECONDS.toMillis(1)
+    private companion object Data {
+        val log = loggerFor<NodeRPC>()
+        val ONE_SECOND = SECONDS.toMillis(1)
     }
 
     private val rpcClient = CordaRPCClient(HostAndPort.fromParts("localhost", config.artemisPort), config.ssl)
@@ -22,8 +22,8 @@ class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Un
         val setupTask = object : TimerTask() {
             override fun run() {
                 try {
-                    rpcClient.start(config.user.getOrElse("user") { "none" } as String,
-                                    config.user.getOrElse("password") { "none" } as String)
+                    rpcClient.start(config.users[0].getOrElse("user") { "none" } as String,
+                                    config.users[0].getOrElse("password") { "none" } as String)
                     val ops = rpcClient.proxy()
 
                     // Cancel the "setup" task now that we've created the RPC client.
