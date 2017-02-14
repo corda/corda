@@ -4,7 +4,9 @@ import net.corda.demobench.loggerFor
 import java.util.concurrent.Executors
 
 class WebServer(val webServerController: WebServerController) : AutoCloseable {
-    private val log = loggerFor<WebServer>()
+    private companion object {
+        val log = loggerFor<WebServer>()
+    }
 
     private val executor = Executors.newSingleThreadExecutor()
     private var process: Process? = null
@@ -44,9 +46,9 @@ class WebServer(val webServerController: WebServerController) : AutoCloseable {
         process?.destroy()
     }
 
-    private fun safeClose(c: AutoCloseable?) {
+    private fun safeClose(c: AutoCloseable) {
         try {
-            c?.close()
+            c.close()
         } catch (e: Exception) {
             log.error("Failed to close stream: '{}'", e.message)
         }

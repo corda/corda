@@ -8,11 +8,12 @@ import java.util.concurrent.Executors
 import kotlin.reflect.jvm.jvmName
 
 class DBViewer : AutoCloseable {
-    private val log = loggerFor<DBViewer>()
+    private companion object {
+        val log = loggerFor<DBViewer>()
+    }
 
     private val webServer: Server
     private val pool = Executors.newCachedThreadPool()
-    private val t = Thread("DBViewer")
 
     init {
         val ws = LocalWebServer()
@@ -23,15 +24,15 @@ class DBViewer : AutoCloseable {
             webServer.stop()
         }
 
-        t.run {
+        pool.submit {
             webServer.start()
         }
     }
 
     override fun close() {
-        webServer.shutdown()
+        log.info("Shutting down")
         pool.shutdown()
-        t.join()
+        webServer.shutdown()
     }
 
     fun openBrowser(h2Port: Int) {

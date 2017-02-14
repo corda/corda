@@ -13,7 +13,9 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class R3Pty(val name: String, settings: SettingsProvider, dimension: Dimension, val onExit: () -> Unit) : AutoCloseable {
-    private val log = loggerFor<R3Pty>()
+    private companion object {
+        val log = loggerFor<R3Pty>()
+    }
 
     private val executor = Executors.newSingleThreadExecutor()
 

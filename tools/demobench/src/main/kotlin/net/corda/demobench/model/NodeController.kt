@@ -1,18 +1,17 @@
 package net.corda.demobench.model
 
-import com.typesafe.config.ConfigRenderOptions
+import java.io.IOException
 import java.lang.management.ManagementFactory
+import java.net.ServerSocket
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import net.corda.demobench.pty.R3Pty
 import tornadofx.Controller
-import java.io.IOException
-import java.net.ServerSocket
 
 class NodeController : Controller() {
-    private companion object Data {
+    private companion object {
         const val FIRST_PORT = 10000
         const val MIN_PORT = 1024
         const val MAX_PORT = 65535
@@ -20,9 +19,7 @@ class NodeController : Controller() {
 
     private val jvm by inject<JVMConfig>()
 
-    private val localDir = SimpleDateFormat("yyyyMMddHHmmss")
-                   .format(Date(ManagementFactory.getRuntimeMXBean().startTime))
-    private val baseDir = jvm.userHome.resolve("demobench").resolve(localDir)
+    private var baseDir = baseDirFor(ManagementFactory.getRuntimeMXBean().startTime)
     private val pluginDir = jvm.applicationDir.resolve("plugins")
 
     private val bankOfCorda = pluginDir.resolve("bank-of-corda.jar").toFile()
@@ -30,12 +27,14 @@ class NodeController : Controller() {
     private val cordaPath = jvm.applicationDir.resolve("corda").resolve("corda.jar")
     private val command = jvm.commandFor(cordaPath)
 
-    private val renderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
-
     private val nodes = ConcurrentHashMap<String, NodeConfig>()
     private val port = AtomicInteger(FIRST_PORT)
 
     private var networkMapConfig: NetworkMapConfig? = null
+
+    val activeNodes: List<NodeConfig> get() = nodes.values.filter {
+        it.state == NodeState.RUNNING
+    }
 
     init {
         log.info("Base directory: $baseDir")
@@ -75,7 +74,7 @@ class NodeController : Controller() {
     val nextPort: Int get() = port.andIncrement
 
     fun isPortAvailable(port: Int): Boolean {
-        if ((port >= MIN_PORT) && (port <= MAX_PORT)) {
+        if (isPortValid(port)) {
             try {
                 ServerSocket(port).close()
                 return true
@@ -86,6 +85,8 @@ class NodeController : Controller() {
             return false
         }
     }
+
+    fun isPortValid(port: Int): Boolean = (port >= MIN_PORT) && (port <= MAX_PORT)
 
     fun keyExists(key: String) = nodes.keys.contains(key)
 
@@ -105,17 +106,16 @@ class NodeController : Controller() {
     fun runCorda(pty: R3Pty, config: NodeConfig): Boolean {
         val nodeDir = config.nodeDir.toFile()
 
-        if (nodeDir.mkdirs()) {
+        if (nodeDir.isDirectory || nodeDir.mkdirs()) {
             try {
                 // Write this node's configuration file into its working directory.
                 val confFile = nodeDir.resolve("node.conf")
-                val fileData = config.toFileConfig
-                confFile.writeText(fileData.root().render(renderOptions))
+                confFile.writeText(config.toText())
 
                 // Nodes cannot issue cash unless they contain the "Bank of Corda" plugin.
                 if (config.isCashIssuer && bankOfCorda.isFile) {
                     log.info("Installing 'Bank of Corda' plugin")
-                    bankOfCorda.copyTo(nodeDir.resolve("plugins").resolve(bankOfCorda.name))
+                    bankOfCorda.copyTo(nodeDir.resolve("plugins").resolve(bankOfCorda.name), overwrite=true)
                 }
 
                 // Execute the Corda node
@@ -130,5 +130,31 @@ class NodeController : Controller() {
             return false
         }
     }
+
+    fun reset() {
+        baseDir = baseDirFor(System.currentTimeMillis())
+        log.info("Changed base directory: $baseDir")
+
+        // Wipe out any knowledge of previous nodes.
+        networkMapConfig = null
+        nodes.clear()
+    }
+
+    fun register(config: NodeConfig): Boolean {
+        if (nodes.putIfAbsent(config.key, config) != null) {
+            return false
+        }
+
+        if ((networkMapConfig == null) && config.isNetworkMap()) {
+            networkMapConfig = config
+        }
+
+        return true
+    }
+
+    fun relocate(config: NodeConfig) = config.moveTo(baseDir)
+
+    private fun baseDirFor(time: Long) = jvm.userHome.resolve("demobench").resolve(localFor(time))
+    private fun localFor(time: Long) = SimpleDateFormat("yyyyMMddHHmmss").format(Date(time))
 
 }
