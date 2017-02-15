@@ -219,7 +219,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             customServices.clear()
             customServices.addAll(buildPluginServices(tokenizableServices))
 
-            val uploaders: List<FileUploader> = listOf(storageServices.first.attachments as NodeAttachmentService) +
+            val uploaders: List<FileUploader> = listOf(storageServices.first.attachments as FileUploader) +
                     customServices.filterIsInstance(AcceptsFileUpload::class.java)
             (storage as StorageServiceImpl).initUploaders(uploaders)
 
@@ -475,7 +475,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected abstract fun startMessagingService(rpcOps: RPCOps)
 
     protected open fun initialiseStorageService(dir: Path): Pair<TxWritableStorageService, CheckpointStorage> {
-        val attachments = makeAttachmentStorage(dir)
+        val attachments = NodeRqAttachmentService(configuration.dataSourceProperties, services.monitoringService.metrics)
         val checkpointStorage = DBCheckpointStorage()
         val transactionStorage = DBTransactionStorage()
         val stateMachineTransactionMappingStorage = DBTransactionMappingStorage()
@@ -485,7 +485,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         )
     }
 
-    protected open fun constructStorageService(attachments: NodeAttachmentService,
+    protected open fun constructStorageService(attachments: AttachmentStorage,
                                                transactionStorage: TransactionStorage,
                                                stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage) =
             StorageServiceImpl(attachments, transactionStorage, stateMachineRecordedTransactionMappingStorage)
@@ -530,14 +530,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
 
-    protected fun makeAttachmentStorage(dir: Path): NodeAttachmentService {
-        val attachmentsDir = dir / "attachments"
-        try {
-            attachmentsDir.createDirectory()
-        } catch (e: FileAlreadyExistsException) {
-        }
-        return NodeAttachmentService(attachmentsDir, services.monitoringService.metrics)
-    }
 
     protected fun createNodeDir() {
         configuration.baseDirectory.createDirectories()

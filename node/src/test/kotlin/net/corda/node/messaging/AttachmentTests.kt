@@ -1,27 +1,33 @@
 package net.corda.node.messaging
 
+import io.requery.Persistable
+import io.requery.sql.KotlinEntityDataStore
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.write
 import net.corda.flows.FetchAttachmentsFlow
 import net.corda.flows.FetchDataFlow
+import net.corda.node.services.RequeryConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.node.services.persistence.AttachmentTable
+import net.corda.node.services.persistence.NodeRqAttachmentService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.node.MockNetwork
-import net.i2p.crypto.eddsa.KeyPairGenerator
+import net.corda.node.utilities.configureDatabase
+import net.corda.node.utilities.databaseTransaction
+import net.corda.testing.node.makeTestDataSourceProperties
+import org.jetbrains.exposed.sql.Database
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.Closeable
 import java.math.BigInteger
 import java.security.KeyPair
-import java.security.KeyPairGeneratorSpi
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
@@ -29,10 +35,24 @@ import kotlin.test.assertFailsWith
 
 class AttachmentTests {
     lateinit var network: MockNetwork
+    lateinit var dataSource: Closeable
+    lateinit var database: Database
+
+    lateinit var configuration: RequeryConfiguration
 
     @Before
     fun setUp() {
         network = MockNetwork()
+
+        val dataSourceProperties = makeTestDataSourceProperties()
+
+        val dataSourceAndDatabase = configureDatabase(dataSourceProperties)
+        dataSource = dataSourceAndDatabase.first
+        database = dataSourceAndDatabase.second
+
+
+
+        configuration = RequeryConfiguration(dataSourceProperties)
     }
 
     fun fakeAttachment(): ByteArray {
@@ -49,8 +69,11 @@ class AttachmentTests {
     fun `download and store`() {
         val (n0, n1) = network.createTwoNodes()
 
+
         // Insert an attachment into node zero's store directly.
-        val id = n0.storage.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
+        val id = databaseTransaction(n0.database) {
+            n0.storage.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
+        }
 
         // Get node one to run a flow to fetch it and insert it.
         network.runNetwork()
@@ -59,7 +82,9 @@ class AttachmentTests {
         assertEquals(0, f1.resultFuture.getOrThrow().fromDisk.size)
 
         // Verify it was inserted into node one's store.
-        val attachment = n1.storage.attachments.openAttachment(id)!!
+        val attachment = databaseTransaction(n1.database) {
+            n1.storage.attachments.openAttachment(id)!!
+        }
         assertEquals(id, attachment.open().readBytes().sha256())
 
         // Shut down node zero and ensure node one can still resolve the attachment.
@@ -67,6 +92,7 @@ class AttachmentTests {
 
         val response: FetchDataFlow.Result<Attachment> = n1.services.startFlow(FetchAttachmentsFlow(setOf(id), n0.info.legalIdentity)).resultFuture.getOrThrow()
         assertEquals(attachment, response.fromDisk[0])
+
     }
 
     @Test
@@ -93,7 +119,7 @@ class AttachmentTests {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                     override fun start(): MockNetwork.MockNode {
                         super.start()
-                        (storage.attachments as NodeAttachmentService).checkAttachmentsOnLoad = false
+                        (storage.attachments as NodeRqAttachmentService).checkAttachmentsOnLoad = false
                         return this
                     }
                 }
@@ -101,11 +127,24 @@ class AttachmentTests {
         }, true, null, null, ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
         val n1 = network.createNode(n0.info.address)
 
+        val attachment = fakeAttachment()
         // Insert an attachment into node zero's store directly.
-        val id = n0.storage.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
+        val id = databaseTransaction(n0.database)
+        {
+            n0.storage.attachments.importAttachment(ByteArrayInputStream(attachment))
+        }
 
         // Corrupt its store.
-        network.filesystem.getPath("/nodes/0/attachments/$id").write { it.write(byteArrayOf(99, 99, 99, 99)) }
+        val y = "arggghhhh".toByteArray()
+        System.arraycopy(y, 0, attachment, 0, y.size)
+
+        val corrupt = AttachmentTable()
+        corrupt.attId = id
+        corrupt.content = attachment
+        databaseTransaction(n0.database) {
+            (n0.storage.attachments as NodeRqAttachmentService).session.update(corrupt)
+        }
+
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
         network.runNetwork()
