@@ -9,9 +9,7 @@ import io.requery.sql.*
 import io.requery.sql.platform.H2
 import io.requery.util.function.Function
 import io.requery.util.function.Supplier
-import net.corda.core.schemas.requery.converters.InstantConverter
-import net.corda.core.schemas.requery.converters.StateRefConverter
-import net.corda.core.schemas.requery.converters.VaultStateStatusConverter
+import net.corda.core.schemas.requery.converters.*
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import java.sql.Connection
 import java.util.*
@@ -69,6 +67,8 @@ class KotlinConfigurationTransactionWrapper(private val model: EntityModel,
         val vaultStateStatusConverter = VaultStateStatusConverter()
         customMapping.addConverter(vaultStateStatusConverter, vaultStateStatusConverter.mappedType)
         customMapping.addConverter(StateRefConverter(), StateRefConverter::getMappedType.javaClass)
+        customMapping.addConverter(SecureHashConverter(), SecureHashConverter::getMappedType.javaClass)
+
         return customMapping
     }
 

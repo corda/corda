@@ -134,13 +134,20 @@ class ResolveTransactionsFlowTest {
 
     @Test
     fun attachment() {
-        val id = a.services.storageService.attachments.importAttachment("Some test file".toByteArray().opaque().open())
+        // TODO: this operation should not require an explicit transaction
+        val id = databaseTransaction(a.database) {
+            a.services.storageService.attachments.importAttachment("Some test file".toByteArray().opaque().open())
+        }
         val stx2 = makeTransactions(withAttachment = id).second
         val p = ResolveTransactionsFlow(stx2, a.info.legalIdentity)
         val future = b.services.startFlow(p).resultFuture
         net.runNetwork()
         future.getOrThrow()
-        assertNotNull(b.services.storageService.attachments.openAttachment(id))
+
+        // TODO: this operation should not require an explicit transaction
+        databaseTransaction(b.database) {
+            assertNotNull(b.services.storageService.attachments.openAttachment(id))
+        }
     }
 
     // DOCSTART 2

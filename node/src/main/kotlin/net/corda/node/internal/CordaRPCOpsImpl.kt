@@ -109,9 +109,26 @@ class CordaRPCOpsImpl(
         )
     }
 
-    override fun attachmentExists(id: SecureHash) = services.storageService.attachments.openAttachment(id) != null
-    override fun openAttachment(id: SecureHash) = services.storageService.attachments.openAttachment(id)!!.open()
-    override fun uploadAttachment(jar: InputStream) = services.storageService.attachments.importAttachment(jar)
+    override fun attachmentExists(id: SecureHash): Boolean {
+        // TODO: this operation should not require an explicit transaction
+        return databaseTransaction(database){
+            services.storageService.attachments.openAttachment(id) != null
+        }
+    }
+
+    override fun openAttachment(id: SecureHash): InputStream {
+        // TODO: this operation should not require an explicit transaction
+        return databaseTransaction(database) {
+            services.storageService.attachments.openAttachment(id)!!.open()
+        }
+    }
+
+    override fun uploadAttachment(jar: InputStream): SecureHash {
+        // TODO: this operation should not require an explicit transaction
+        return databaseTransaction(database){
+            services.storageService.attachments.importAttachment(jar)
+        }
+    }
     override fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>) = services.vaultService.authoriseContractUpgrade(state, upgradedContractClass)
     override fun deauthoriseContractUpgrade(state: StateAndRef<*>) = services.vaultService.deauthoriseContractUpgrade(state)
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
