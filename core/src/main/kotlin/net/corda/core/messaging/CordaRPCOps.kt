@@ -30,6 +30,7 @@ import java.util.*
 @CordaSerializable
 data class StateMachineInfo(
         val id: StateMachineRunId,
+        val sessionId: Long,
         val flowLogicClassName: String,
         val initiator: FlowInitiator,
         val progressTrackerStepAndUpdates: Pair<String, Observable<String>>?

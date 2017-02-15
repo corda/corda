@@ -131,6 +131,7 @@ class Main : App(MainView::class) {
             // Stock Views.
             registerView<Dashboard>()
             registerView<TransactionViewer>()
+            registerView<FlowViewer>()
             // CordApps Views.
             registerView<CashViewer>()
             // Tools.
@@ -248,7 +249,7 @@ fun main(args: Array<String>) {
             }
 
             for (i in 0..maxIterations) {
-                Thread.sleep(300)
+                Thread.sleep(300) //Thread.sleep(5000) -> todo rebase
                 // Issuer requests.
                 eventGenerator.issuerGenerator.map { command ->
                     when (command) {

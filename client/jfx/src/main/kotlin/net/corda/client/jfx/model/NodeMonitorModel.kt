@@ -16,16 +16,19 @@ import net.corda.core.transactions.SignedTransaction
 import rx.Observable
 import rx.subjects.PublishSubject
 
-data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val message: String) {
+data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val message: String, val sessionId: Long ) { // TODO: RG Not a string, but a proper tracking object.
     companion object {
         fun createStreamFromStateMachineInfo(stateMachine: StateMachineInfo): Observable<ProgressTrackingEvent>? {
             return stateMachine.progressTrackerStepAndUpdates?.let { pair ->
                 val (current, future) = pair
-                future.map { ProgressTrackingEvent(stateMachine.id, it) }.startWith(ProgressTrackingEvent(stateMachine.id, current))
+                future.map { ProgressTrackingEvent(stateMachine.id, it, stateMachine.sessionId ) }.startWith(ProgressTrackingEvent(stateMachine.id, current, stateMachine.sessionId))
+
             }
         }
     }
 }
+
+
 
 /**
  * This model exposes raw event streams to and from the node.
