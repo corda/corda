@@ -45,5 +45,31 @@ fun String.hexToByteArray(): ByteArray =
         DatatypeConverter.parseHexBinary(this);
 
 
+// Encoding changers
+
+/** Encoding changer. Base58-[String] to Base64-[String], i.e. "SGVsbG8gV29ybGQ=" -> JxF12TrwUP45BMd" */
+fun String.base58toBase64(): String =
+        base58ToByteArray().toBase64()
+
+/** Encoding changer. Base58-[String] to Hex-[String], i.e. "SGVsbG8gV29ybGQ=" -> "48656C6C6F20576F726C64" */
+fun String.base58toHex(): String =
+        base58ToByteArray().toHex()
+
+/** Encoding changer. Base64-[String] to Base58-[String], i.e. "SGVsbG8gV29ybGQ=" -> JxF12TrwUP45BMd" */
+fun String.base64toBase58(): String =
+        base64ToByteArray().toBase58()
+
+/** Encoding changer. Base64-[String] to Hex-[String], i.e. "SGVsbG8gV29ybGQ=" -> "48656C6C6F20576F726C64" */
+fun String.base64toHex(): String =
+        base64ToByteArray().toHex()
+
+/** Encoding changer. Hex-[String] to Base58-[String], i.e. "48656C6C6F20576F726C64" -> "JxF12TrwUP45BMd" */
+fun String.hexToBase58(): String =
+        hexToByteArray().toBase58()
+
+/** Encoding changer. Hex-[String] to Base64-[String], i.e. "48656C6C6F20576F726C64" -> "SGVsbG8gV29ybGQ=" */
+fun String.hexToBase64(): String =
+        hexToByteArray().toBase64()
+
 // Helper vars.
 private val HEX_ALPHABET = "0123456789ABCDEF".toCharArray()
