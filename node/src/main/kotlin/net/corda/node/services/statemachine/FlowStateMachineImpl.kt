@@ -15,6 +15,7 @@ import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.random63BitValue
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
@@ -56,8 +57,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Transient private var _logger: Logger? = null
     /**
-     * Return the logger for this state machine. The logger name incorporates [id] and so including this in the log
-     * message is not necessary.
+     * Return the logger for this state machine. The logger name incorporates [id] and so including it in the log message
+     * is not necessary.
      */
     override val logger: Logger get() {
         return _logger ?: run {
@@ -94,14 +95,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         } catch (e: FlowException) {
             // Check if the FlowException was propagated by looking at where the stack trace originates (see suspendAndExpectReceive).
             val propagated = e.stackTrace[0].className == javaClass.name
-            actionOnEnd(e, propagated)
-            _resultFuture?.setException(e)
+            processException(e, propagated)
             logger.debug(if (propagated) "Flow ended due to receiving exception" else "Flow finished with exception", e)
             return
         } catch (t: Throwable) {
             logger.warn("Terminated by unexpected exception", t)
-            actionOnEnd(t, false)
-            _resultFuture?.setException(t)
+            processException(t, false)
             return
         }
 
@@ -112,6 +111,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         // This is to prevent actionOnEnd being called twice if it throws an exception
         actionOnEnd(null, false)
         _resultFuture?.set(result)
+        logic.progressTracker?.currentStep = ProgressTracker.DONE
         logger.debug { "Flow finished with result $result" }
     }
 
@@ -119,6 +119,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         // Make sure we have a database transaction
         createDatabaseTransaction(database)
         logger.trace { "Starting database transaction ${TransactionManager.currentOrNull()} on ${Strand.currentStrand()}" }
+    }
+
+    private fun processException(exception: Throwable, propagated: Boolean) {
+        actionOnEnd(exception, propagated)
+        _resultFuture?.setException(exception)
+        logic.progressTracker?.endWithError(exception)
     }
 
     internal fun commitTransaction() {

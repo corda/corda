@@ -403,3 +403,9 @@ private class ObservableToFuture<T>(observable: Observable<T>) : AbstractFuture<
 
 /** Return the sum of an Iterable of [BigDecimal]s. */
 fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a + b }
+
+fun codePointsString(vararg codePoints: Int): String {
+    val builder = StringBuilder()
+    codePoints.forEach { builder.append(Character.toChars(it)) }
+    return builder.toString()
+}
