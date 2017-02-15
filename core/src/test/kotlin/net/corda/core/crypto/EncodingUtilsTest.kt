@@ -86,4 +86,21 @@ class EncodingUtilsTest {
             // expected.
         }
     }
+
+    //Encoding changers tests
+    @Test
+    fun `change encoding between base58, base64, hex`() {
+        // base58 to base64
+        assertEquals(testBase64String, testBase58String.base58toBase64())
+        // base58 to hex
+        assertEquals(testHexString, testBase58String.base58toHex())
+        // base64 to base58
+        assertEquals(testBase58String, testBase64String.base64toBase58())
+        // base64 to hex
+        assertEquals(testHexString, testBase64String.base64toHex())
+        // hex to base58
+        assertEquals(testBase58String, testHexString.hexToBase58())
+        // hex to base64
+        assertEquals(testBase64String, testHexString.hexToBase64())
+    }
 }
