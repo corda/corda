@@ -1,4 +1,5 @@
 apply plugin: 'kotlin'
+apply plugin: 'kotlin-kapt'
 apply plugin: 'java'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
@@ -41,6 +42,9 @@ sourceSets {
         }
     }
     main {
+        kotlin {
+            srcDir "${buildDir}/generated/source/kapt/main/"
+        }
         resources {
             srcDir "../config/dev"
         }
@@ -156,6 +160,11 @@ dependencies {
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
+
+    // Requery: object mapper for Kotlin
+    compile "io.requery:requery:1.1.2"
+    compile "io.requery:requery-kotlin:1.1.2"
+    kapt "io.requery:requery-processor:1.1.2"
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
