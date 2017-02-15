@@ -204,7 +204,7 @@ inline fun elapsedTime(block: () -> Unit): Duration {
     val start = System.nanoTime()
     block()
     val end = System.nanoTime()
-    return Duration.ofNanos(end-start)
+    return Duration.ofNanos(end - start)
 }
 
 // TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
@@ -280,13 +280,16 @@ class TransientProperty<out T>(private val initializer: () -> T) {
 /**
  * Given a path to a zip file, extracts it to the given directory.
  */
-fun extractZipFile(zipFile: Path, toDirectory: Path) {
-    val normalisedDirectory = toDirectory.normalize().createDirectories()
+fun extractZipFile(zipFile: Path, toDirectory: Path) = extractZipFile(Files.newInputStream(zipFile), toDirectory)
 
-    zipFile.read {
-        val zip = ZipInputStream(BufferedInputStream(it))
+/**
+ * Given a zip file input stream, extracts it to the given directory.
+ */
+fun extractZipFile(inputStream: InputStream, toDirectory: Path) {
+    val normalisedDirectory = toDirectory.normalize().createDirectories()
+    ZipInputStream(BufferedInputStream(inputStream)).use {
         while (true) {
-            val e = zip.nextEntry ?: break
+            val e = it.nextEntry ?: break
             val outPath = (normalisedDirectory / e.name).normalize()
 
             // Security checks: we should reject a zip that contains tricksy paths that try to escape toDirectory.
@@ -297,9 +300,9 @@ fun extractZipFile(zipFile: Path, toDirectory: Path) {
                 continue
             }
             outPath.write { out ->
-                ByteStreams.copy(zip, out)
+                ByteStreams.copy(it, out)
             }
-            zip.closeEntry()
+            it.closeEntry()
         }
     }
 }
@@ -394,13 +397,16 @@ private class ObservableToFuture<T>(observable: Observable<T>) : AbstractFuture<
     override fun onNext(value: T) {
         set(value)
     }
+
     override fun onError(e: Throwable) {
         setException(e)
     }
+
     override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
         subscription.unsubscribe()
         return super.cancel(mayInterruptIfRunning)
     }
+
     override fun onCompleted() {}
 }
 
