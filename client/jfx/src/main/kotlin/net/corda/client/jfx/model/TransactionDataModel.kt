@@ -11,7 +11,6 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.transactions.SignedTransaction
@@ -61,7 +60,7 @@ data class PartiallyResolvedTransaction(
 }
 
 data class FlowStatus(val status: String)
-//todo after rebase
+//todo after rebase - remove it rather
 //class FlowStatus(
 //        val status: String,
 //        pt: ProgressTrackingEvent?,
@@ -125,17 +124,8 @@ class TransactionDataModel {
         }
     }
 
-    val stateMachineDataList = LeftOuterJoinedMap(stateMachineStatus, progressEvents) {
-        id, status, progress ->
-        Bindings.createObjectBinding(
-                { StateMachineData(id,
-//                        FlowStatus(progress.value?.message!!, null),
-                        progress.value?.message?.let{
-                            FlowStatus(progress.value!!.message!!.toString(),progress.value)
-                        },
-                        status.get()) }
-                , arrayOf(progress, status)
-        )
+    val stateMachineDataList = LeftOuterJoinedMap(stateMachineStatus, progressEvents) { id, status, progress ->
+        Bindings.createObjectBinding({ StateMachineData(id, progress.value?.message?.let(::FlowStatus), status.get()) }, arrayOf(progress, status))
     }.getObservableValues().flatten()
 
     /*
@@ -183,14 +173,7 @@ class StateMachineDataModel {
 
 
     val stateMachineDataList = LeftOuterJoinedMap(stateMachineStatus, progressEvents) { id, status, progress ->
-        Bindings.createObjectBinding({
-            StateMachineData(id,
-                    progress.value?.message?.let{
-                        FlowStatus(progress.value!!.message!!.toString(),null)
-                    },
-//                    progress.value?.message?.let(::FlowStatus),
-                    status.get())
-        }, arrayOf(progress, status))
+        Bindings.createObjectBinding({ StateMachineData(id, progress.value?.message?.let(::FlowStatus), status.get()) }, arrayOf(progress, status))
     }.getObservableValues().flatten()
 
     /*
