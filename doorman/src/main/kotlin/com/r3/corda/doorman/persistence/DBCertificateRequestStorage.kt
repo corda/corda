@@ -83,13 +83,13 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
         }
     }
 
-    override fun approveRequest(requestId: String, certificateGenerator: (CertificationRequestData) -> Certificate) {
+    override fun approveRequest(requestId: String, generateCertificate: CertificationRequestData.() -> Certificate) {
         databaseTransaction(database) {
             val request = singleRequestWhere { DataTable.requestId eq requestId and DataTable.processTimestamp.isNull() }
             if (request != null) {
                 withFinalizables { finalizables ->
                     DataTable.update({ DataTable.requestId eq requestId }) {
-                        it[certificate] = serializeToBlob(certificateGenerator(request), finalizables)
+                        it[certificate] = serializeToBlob(request.generateCertificate(), finalizables)
                         it[processTimestamp] = Instant.now()
                     }
                 }

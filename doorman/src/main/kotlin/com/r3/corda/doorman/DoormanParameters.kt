@@ -1,6 +1,7 @@
 package com.r3.corda.doorman
 
 import com.r3.corda.doorman.OptionParserHelper.toConfigWithOptions
+import com.typesafe.config.Config
 import net.corda.core.div
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.getOrElse
@@ -35,7 +36,8 @@ class DoormanParameters(args: Array<String>) {
     val approveAll: Boolean by config.getOrElse { false }
     val host: String by config
     val port: Int by config
-    val dataSourceProperties: Properties by  config
+    val dataSourceProperties: Properties by config
+    val jiraConfig = if (config.hasPath("jiraConfig")) JiraConfig(config.getConfig("jiraConfig")) else null
     private val keygen: Boolean by config.getOrElse { false }
     private val rootKeygen: Boolean by config.getOrElse { false }
 
@@ -44,6 +46,12 @@ class DoormanParameters(args: Array<String>) {
     enum class Mode {
         DOORMAN, CA_KEYGEN, ROOT_KEYGEN
     }
+
+    class JiraConfig(config: Config) {
+        val address: String by config
+        val projectCode: String by config
+        val username: String by config
+        val password: String by config
+        val doneTransitionCode: Int by config
+    }
 }
-
-

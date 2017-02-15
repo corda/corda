@@ -1,9 +1,11 @@
 package com.r3.corda.doorman
 
+import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory
 import com.google.common.net.HostAndPort
 import com.r3.corda.doorman.DoormanServer.Companion.logger
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
 import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
+import com.r3.corda.doorman.persistence.JiraCertificateRequestStorage
 import net.corda.core.createDirectories
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.X509Utilities.CACertAndKey
@@ -13,6 +15,7 @@ import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY
 import net.corda.core.crypto.X509Utilities.addOrReplaceKey
 import net.corda.core.crypto.X509Utilities.createIntermediateCert
+import net.corda.core.crypto.X509Utilities.createServerCert
 import net.corda.core.crypto.X509Utilities.loadCertificateAndKey
 import net.corda.core.crypto.X509Utilities.loadKeyStore
 import net.corda.core.crypto.X509Utilities.loadOrCreateKeyStore
@@ -31,6 +34,7 @@ import org.glassfish.jersey.servlet.ServletContainer
 import java.io.Closeable
 import java.lang.Thread.sleep
 import java.net.InetSocketAddress
+import java.net.URI
 import java.security.cert.Certificate
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
@@ -159,22 +163,28 @@ private fun DoormanParameters.startDoorman() {
     val caCertAndKey = X509Utilities.loadCertificateAndKey(keystore, caPrivateKeyPassword, CORDA_INTERMEDIATE_CA_PRIVATE_KEY)
     // Create DB connection.
     val (datasource, database) = configureDatabase(dataSourceProperties)
-    val storage = DBCertificateRequestStorage(database)
-    // Daemon thread approving all request periodically.
-    if (approveAll) {
-        thread(name = "Request Approval Daemon", isDaemon = true) {
-            logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing request.")
-            while (true) {
-                sleep(10.seconds.toMillis())
-                for (id in storage.getPendingRequestIds()) {
-                    storage.approveRequest(id, {
-                        JcaPKCS10CertificationRequest(it.request).run {
-                            X509Utilities.createServerCert(subject, publicKey, caCertAndKey,
-                                    if (it.ipAddress == it.hostName) listOf() else listOf(it.hostName), listOf(it.ipAddress))
-                        }
-                    })
-                    logger.info("Approved request $id")
+
+    val storage = if (approveAll) {
+        logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing request.")
+        DBCertificateRequestStorage(database)
+    } else {
+        // Require JIRA config to be non-null.
+        val jiraClient = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig!!.address), jiraConfig.username, jiraConfig.password)
+        JiraCertificateRequestStorage(DBCertificateRequestStorage(database), jiraClient, jiraConfig.projectCode, jiraConfig.doneTransitionCode)
+    }
+
+    // Daemon thread approving request periodically.
+    thread(name = "Request Approval Daemon") {
+        while (true) {
+            sleep(10.seconds.toMillis())
+            val approvedRequests = (storage as? JiraCertificateRequestStorage)?.getRequestByStatus(JiraCertificateRequestStorage.APPROVED) ?: storage.getPendingRequestIds()
+            for (id in approvedRequests) {
+                storage.approveRequest(id) {
+                    val request = JcaPKCS10CertificationRequest(request)
+                    createServerCert(request.subject, request.publicKey, caCertAndKey,
+                            if (ipAddress == hostName) listOf() else listOf(hostName), listOf(ipAddress))
                 }
+                logger.info("Approved request $id")
             }
         }
     }

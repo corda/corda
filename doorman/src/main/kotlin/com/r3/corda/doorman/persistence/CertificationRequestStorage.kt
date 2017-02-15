@@ -26,7 +26,7 @@ interface CertificationRequestStorage {
     /**
      * Approve the given request by generating and storing a new certificate using the provided generator.
      */
-    fun approveRequest(requestId: String, certificateGenerator: (CertificationRequestData) -> Certificate)
+    fun approveRequest(requestId: String, generateCertificate: CertificationRequestData.() -> Certificate)
 
     /**
      * Reject the given request using the given reason.
