@@ -3,6 +3,12 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
+Milestone 8.1
+-------------
+
+* Fix: The race condition causing webservers to crash during startup.
+* Fix: Cordformation correctly includes and excludes dependent Cordapps when deploying nodes.
+
 Milestone 8
 -----------
 
