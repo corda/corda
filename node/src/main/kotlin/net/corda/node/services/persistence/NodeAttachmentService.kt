@@ -22,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe
  * Stores attachments in the specified local directory, which must exist. Doesn't allow new attachments to be uploaded.
  */
 @ThreadSafe
-class NodeAttachmentService(val storePath: Path, metrics: MetricRegistry) : AttachmentStorage, AcceptsFileUpload {
+class NodeAttachmentService(override var storePath: Path, metrics: MetricRegistry) : AttachmentStorage, AcceptsFileUpload {
     private val log = loggerFor<NodeAttachmentService>()
 
     @VisibleForTesting
@@ -37,12 +37,7 @@ class NodeAttachmentService(val storePath: Path, metrics: MetricRegistry) : Atta
     // Just count all non-directories in the attachment store, and assume the admin hasn't dumped any junk there.
     private fun countAttachments() = storePath.list { it.filter { it.isRegularFile() }.count() }
 
-    /**
-     * If true, newly inserted attachments will be unzipped to a subdirectory of the [storePath]. This is intended for
-     * human browsing convenience: the attachment itself will still be the file (that is, edits to the extracted directory
-     * will not have any effect).
-     */
-    @Volatile var automaticallyExtractAttachments = false
+    override var automaticallyExtractAttachments = false
 
     init {
         require(storePath.isDirectory()) { "$storePath must be a directory" }

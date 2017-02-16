@@ -21,6 +21,8 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.transactions.TransactionManager
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -45,12 +47,6 @@ class AttachmentTests {
         network = MockNetwork()
 
         val dataSourceProperties = makeTestDataSourceProperties()
-
-        val dataSourceAndDatabase = configureDatabase(dataSourceProperties)
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
-
-
 
         configuration = RequeryConfiguration(dataSourceProperties)
     }
@@ -85,6 +81,7 @@ class AttachmentTests {
         val attachment = databaseTransaction(n1.database) {
             n1.storage.attachments.openAttachment(id)!!
         }
+
         assertEquals(id, attachment.open().readBytes().sha256())
 
         // Shut down node zero and ensure node one can still resolve the attachment.

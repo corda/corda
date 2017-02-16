@@ -6,7 +6,11 @@ import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
 import net.corda.core.contracts.Attachment
+import net.corda.core.createDirectory
 import net.corda.core.crypto.SecureHash
+import net.corda.core.div
+import net.corda.core.extractZipFile
+import net.corda.core.isDirectory
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.RequeryConfiguration
@@ -24,7 +28,7 @@ import javax.annotation.concurrent.ThreadSafe
  * Stores attachments in the specified local directory, which must exist. Doesn't allow new attachments to be uploaded.
  */
 @ThreadSafe
-class NodeRqAttachmentService(dataSourceProperties: Properties, metrics: MetricRegistry) : AttachmentStorage, AcceptsFileUpload {
+class NodeRqAttachmentService(override var storePath: Path, dataSourceProperties: Properties, metrics: MetricRegistry) : AttachmentStorage, AcceptsFileUpload {
     private val log = loggerFor<NodeRqAttachmentService>()
 
     val configuration = RequeryConfiguration(dataSourceProperties)
@@ -34,8 +38,11 @@ class NodeRqAttachmentService(dataSourceProperties: Properties, metrics: MetricR
     var checkAttachmentsOnLoad = true
 
     private val attachmentCount = metrics.counter("Attachments")
+    override var automaticallyExtractAttachments = false
 
     init {
+        require(storePath.isDirectory()) { "$storePath must be a directory" }
+
         session.withTransaction {
             attachmentCount.inc(session.count(AttachmentTable::class).get().value().toLong())
         }
@@ -134,6 +141,19 @@ class NodeRqAttachmentService(dataSourceProperties: Properties, metrics: MetricR
         attachmentCount.inc()
 
         log.info("Stored new attachment $id")
+
+        if (automaticallyExtractAttachments) {
+            val extractTo = storePath / "$id.jar"
+            try {
+                extractTo.createDirectory()
+                extractZipFile(hs, extractTo)
+            } catch(e: FileAlreadyExistsException) {
+                log.trace("Did not extract attachment jar to directory because it already exists")
+            } catch(e: Exception) {
+                log.error("Failed to extract attachment jar $id, ", e)
+                // TODO: Delete the extractTo directory here.
+            }
+        }
 
         return id
     }

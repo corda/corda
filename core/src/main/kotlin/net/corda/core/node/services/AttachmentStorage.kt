@@ -3,11 +3,20 @@ package net.corda.core.node.services
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import java.io.InputStream
+import java.nio.file.Path
 
 /**
  * An attachment store records potentially large binary objects, identified by their hash.
  */
 interface AttachmentStorage {
+    /**
+     * If true, newly inserted attachments will be unzipped to a subdirectory of the [storePath]. This is intended for
+     * human browsing convenience: the attachment itself will still be the file (that is, edits to the extracted directory
+     * will not have any effect).
+     */
+    var automaticallyExtractAttachments : Boolean
+    var storePath : Path
+
     /**
      * Returns a handle to a locally stored attachment, or null if it's not known. The handle can be used to open
      * a stream for the data, which will be a zip/jar file.

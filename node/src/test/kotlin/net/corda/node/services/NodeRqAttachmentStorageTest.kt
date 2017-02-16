@@ -19,6 +19,8 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.transactions.TransactionManager
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.Closeable
@@ -58,13 +60,18 @@ class NodeRqAttachmentStorageTest {
         fs = Jimfs.newFileSystem(Configuration.unix())
     }
 
+    @After
+    fun tearDown(){
+        TransactionManager.current()?.close()
+    }
+
     @Test
     fun `insert and retrieve`() {
         val testJar = makeTestJar()
         val expectedHash = testJar.readAll().sha256()
 
-        databaseTransaction(database) {
-            val storage = NodeRqAttachmentService(dataSourceProperties, MetricRegistry())
+//        databaseTransaction(database) {
+            val storage = NodeRqAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
             val id = testJar.read { storage.importAttachment(it) }
             assertEquals(expectedHash, id)
 
@@ -83,15 +90,15 @@ class NodeRqAttachmentStorageTest {
                 it.nextJarEntry
                 it.readBytes()
             }
-        }
+   //     }
     }
 
     @Test
     fun `duplicates not allowed`() {
 
         val testJar = makeTestJar()
-        databaseTransaction(database) {
-            val storage = NodeRqAttachmentService(dataSourceProperties, MetricRegistry())
+   //     databaseTransaction(database) {
+            val storage = NodeRqAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
             testJar.read {
                 val id = storage.importAttachment(it)
                 println(id)
@@ -102,15 +109,15 @@ class NodeRqAttachmentStorageTest {
                     println(id)
                 }
             }
-        }
+    //    }
     }
 
     @Test
     fun `corrupt entry throws exception`() {
         val testJar = makeTestJar()
-        databaseTransaction(database)
-        {
-            val storage = NodeRqAttachmentService(dataSourceProperties, MetricRegistry())
+      //  databaseTransaction(database)
+      //  {
+            val storage = NodeRqAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
             val id = testJar.read { storage.importAttachment(it) }
 
             // Corrupt the file in the store.
@@ -132,7 +139,7 @@ class NodeRqAttachmentStorageTest {
                 it.nextJarEntry
                 it.readBytes()
             }
-        }
+    //    }
     }
 
     private var counter = 0
