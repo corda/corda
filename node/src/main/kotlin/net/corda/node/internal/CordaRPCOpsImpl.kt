@@ -101,6 +101,7 @@ class CordaRPCOpsImpl(
     }
 
     override fun attachmentExists(id: SecureHash) = services.storageService.attachments.openAttachment(id) != null
+    override fun openAttachment(id: SecureHash) = services.storageService.attachments.openAttachment(id)!!.open()
     override fun uploadAttachment(jar: InputStream) = services.storageService.attachments.importAttachment(jar)
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
     override fun uploadFile(dataType: String, name: String?, file: InputStream): String {
