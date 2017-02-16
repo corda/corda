@@ -129,3 +129,7 @@
 -keepclassmembers class java.lang.ClassLoader {
    public java.lang.Class loadClass(java.lang.String);
  }
+
+ -keepclassmembers class avian.Classes {
+   public java.security.ProtectionDomain getProtectionDomain(avian.VMClass);
+ }
