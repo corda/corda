@@ -164,12 +164,14 @@ private fun DoormanParameters.startDoorman() {
     // Create DB connection.
     val (datasource, database) = configureDatabase(dataSourceProperties)
 
-    val storage = if (approveAll) {
+    val storage = if (jiraConfig == null) {
         logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing request.")
-        DBCertificateRequestStorage(database)
+        // Approve all pending request.
+        object : CertificationRequestStorage by DBCertificateRequestStorage(database) {
+            override fun getApprovedRequestIds() = getPendingRequestIds()
+        }
     } else {
-        // Require JIRA config to be non-null.
-        val jiraClient = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig!!.address), jiraConfig.username, jiraConfig.password)
+        val jiraClient = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig.address), jiraConfig.username, jiraConfig.password)
         JiraCertificateRequestStorage(DBCertificateRequestStorage(database), jiraClient, jiraConfig.projectCode, jiraConfig.doneTransitionCode)
     }
 
@@ -177,8 +179,8 @@ private fun DoormanParameters.startDoorman() {
     thread(name = "Request Approval Daemon") {
         while (true) {
             sleep(10.seconds.toMillis())
-            val approvedRequests = (storage as? JiraCertificateRequestStorage)?.getRequestByStatus(JiraCertificateRequestStorage.APPROVED) ?: storage.getPendingRequestIds()
-            for (id in approvedRequests) {
+            // TODO: Handle rejected request?
+            for (id in storage.getApprovedRequestIds()) {
                 storage.approveRequest(id) {
                     val request = JcaPKCS10CertificationRequest(request)
                     createServerCert(request.subject, request.publicKey, caCertAndKey,

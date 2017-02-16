@@ -15,7 +15,6 @@ class DoormanParameters(args: Array<String>) {
         accepts("basedir", "Overriding configuration filepath, default to current directory.").withRequiredArg().describedAs("filepath")
         accepts("keygen", "Generate CA keypair and certificate using provide Root CA key.").withOptionalArg()
         accepts("rootKeygen", "Generate Root CA keypair and certificate.").withOptionalArg()
-        accepts("approveAll", "Approve all certificate signing request.").withOptionalArg()
         accepts("keystorePath", "CA keystore filepath, default to [basedir]/certificates/caKeystore.jks.").withRequiredArg().describedAs("filepath")
         accepts("rootStorePath", "Root CA keystore filepath, default to [basedir]/certificates/rootCAKeystore.jks.").withRequiredArg().describedAs("filepath")
         accepts("keystorePassword", "CA keystore password.").withRequiredArg().describedAs("password")
@@ -33,7 +32,6 @@ class DoormanParameters(args: Array<String>) {
     val caPrivateKeyPassword: String? by config.getOrElse { null }
     val rootKeystorePassword: String? by config.getOrElse { null }
     val rootPrivateKeyPassword: String? by config.getOrElse { null }
-    val approveAll: Boolean by config.getOrElse { false }
     val host: String by config
     val port: Int by config
     val dataSourceProperties: Properties by config

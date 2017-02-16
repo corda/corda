@@ -121,6 +121,8 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
         }
     }
 
+    override fun getApprovedRequestIds(): List<String> = emptyList()
+
     private fun singleRequestWhere(where: SqlExpressionBuilder.() -> Op<Boolean>): CertificationRequestData? {
         return DataTable
                 .select(where)
