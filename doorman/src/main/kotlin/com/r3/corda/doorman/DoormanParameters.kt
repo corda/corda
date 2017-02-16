@@ -1,6 +1,7 @@
 package com.r3.corda.doorman
 
 import com.r3.corda.doorman.OptionParserHelper.toConfigWithOptions
+import com.typesafe.config.Config
 import net.corda.core.div
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.getOrElse
@@ -14,7 +15,6 @@ class DoormanParameters(args: Array<String>) {
         accepts("basedir", "Overriding configuration filepath, default to current directory.").withRequiredArg().describedAs("filepath")
         accepts("keygen", "Generate CA keypair and certificate using provide Root CA key.").withOptionalArg()
         accepts("rootKeygen", "Generate Root CA keypair and certificate.").withOptionalArg()
-        accepts("approveAll", "Approve all certificate signing request.").withOptionalArg()
         accepts("keystorePath", "CA keystore filepath, default to [basedir]/certificates/caKeystore.jks.").withRequiredArg().describedAs("filepath")
         accepts("rootStorePath", "Root CA keystore filepath, default to [basedir]/certificates/rootCAKeystore.jks.").withRequiredArg().describedAs("filepath")
         accepts("keystorePassword", "CA keystore password.").withRequiredArg().describedAs("password")
@@ -32,10 +32,10 @@ class DoormanParameters(args: Array<String>) {
     val caPrivateKeyPassword: String? by config.getOrElse { null }
     val rootKeystorePassword: String? by config.getOrElse { null }
     val rootPrivateKeyPassword: String? by config.getOrElse { null }
-    val approveAll: Boolean by config.getOrElse { false }
     val host: String by config
     val port: Int by config
-    val dataSourceProperties: Properties by  config
+    val dataSourceProperties: Properties by config
+    val jiraConfig = if (config.hasPath("jiraConfig")) JiraConfig(config.getConfig("jiraConfig")) else null
     private val keygen: Boolean by config.getOrElse { false }
     private val rootKeygen: Boolean by config.getOrElse { false }
 
@@ -44,6 +44,12 @@ class DoormanParameters(args: Array<String>) {
     enum class Mode {
         DOORMAN, CA_KEYGEN, ROOT_KEYGEN
     }
+
+    class JiraConfig(config: Config) {
+        val address: String by config
+        val projectCode: String by config
+        val username: String by config
+        val password: String by config
+        val doneTransitionCode: Int by config
+    }
 }
-
-

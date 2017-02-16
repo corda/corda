@@ -86,9 +86,9 @@ class DoormanServiceTest {
         assertThat(pollForResponse(id)).isEqualTo(PollResponse.NotReady)
 
         storage.approveRequest(id) {
-            JcaPKCS10CertificationRequest(it.request).run {
+            JcaPKCS10CertificationRequest(request).run {
                 X509Utilities.createServerCert(subject, publicKey, intermediateCA,
-                        if (it.ipAddress == it.hostName) listOf() else listOf(it.hostName), listOf(it.ipAddress))
+                        if (ipAddress == hostName) listOf() else listOf(hostName), listOf(ipAddress))
             }
         }
 

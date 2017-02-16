@@ -133,13 +133,13 @@ class DBCertificateRequestStorageTest {
 
     private fun approveRequest(requestId: String) {
         storage.approveRequest(requestId) {
-            JcaPKCS10CertificationRequest(it.request).run {
+            JcaPKCS10CertificationRequest(request).run {
                 X509Utilities.createServerCert(
                         subject,
                         publicKey,
                         intermediateCA,
-                        if (it.ipAddress == it.hostName) listOf() else listOf(it.hostName),
-                        listOf(it.ipAddress))
+                        if (ipAddress == hostName) listOf() else listOf(hostName),
+                        listOf(ipAddress))
             }
         }
     }
