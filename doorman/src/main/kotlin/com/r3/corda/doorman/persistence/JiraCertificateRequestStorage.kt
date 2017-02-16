@@ -22,7 +22,7 @@ class JiraCertificateRequestStorage(val delegate: CertificationRequestStorage,
         Approved, Rejected
     }
 
-    companion object{
+    companion object {
         private val logger = loggerFor<JiraCertificateRequestStorage>()
     }
 
@@ -36,7 +36,7 @@ class JiraCertificateRequestStorage(val delegate: CertificationRequestStorage,
         val response = getResponse(requestId)
         if (response !is CertificateResponse.Unauthorised) {
             val request = StringWriter()
-            JcaPEMWriter(request).use{
+            JcaPEMWriter(request).use {
                 it.writeObject(PemObject("CERTIFICATE REQUEST", certificationData.request.encoded))
             }
             val commonName = certificationData.request.subject.commonName
