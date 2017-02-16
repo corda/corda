@@ -1,10 +1,7 @@
 package net.corda.core.crypto
 
 import org.junit.Test
-import java.math.BigInteger
-import java.util.*
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class EncodingUtilsTest {
