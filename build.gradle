@@ -174,7 +174,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['client', 'core', 'corda', 'finance', 'node', 'test-utils']
+    publications = ['client', 'core', 'corda', 'finance', 'node', 'node-schemas', 'test-utils']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'
