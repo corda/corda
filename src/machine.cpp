@@ -6032,13 +6032,26 @@ GcJclass* getDeclaringClass(Thread* t, GcClass* c)
   return 0;
 }
 
+// Called when interpreting invokedynamic. `invocation` points to
+// static data in the bootstrap method table, which in turn points to
+// a bootstrap method and stores additional data to be passed to
+// it. `resolveDynamic` will then call this bootstrap method after
+// resolving the arguments as required. The called method is assumed
+// to be a lambda `metafactory` or `altMetafactory`.
+//
+// Note that capture/bridging etc happens within the bootstrap method,
+// this is just the code that dispatches to it.
+//
+// Returns the CallSite returned by the bootstrap method.
 GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
 {
   PROTECT(t, invocation);
 
+  // Use the invocation's Class to get the bootstrap method table and get a classloader.
   GcClass* c = invocation->class_();
   PROTECT(t, c);
 
+  // First element points to the bootstrap method. The rest are static data passed to the BSM.
   GcCharArray* bootstrapArray = cast<GcCharArray>(
       t,
       cast<GcArray>(t, c->addendum()->bootstrapMethodTable())
@@ -6046,6 +6059,7 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
 
   PROTECT(t, bootstrapArray);
 
+  // Resolve the bootstrap method itself.
   GcMethod* bootstrap = cast<GcMethod>(t,
                                        resolve(t,
                                                c->loader(),
@@ -6055,22 +6069,29 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
                                                GcNoSuchMethodError::Type));
   PROTECT(t, bootstrap);
 
+  // Caller context info to be passed to the bootstrap method.
   GcLookup* lookup
       = makeLookup(t, c, ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED | ACC_STATIC);
   PROTECT(t, lookup);
 
+  // The name of the linked-to method.
   GcByteArray* nameBytes = invocation->template_()->name();
   GcString* name
       = t->m->classpath->makeString(t, nameBytes, 0, nameBytes->length() - 1);
   PROTECT(t, name);
 
+  // This is the type of the linked-to method (e.g. lambda).
   GcMethodType* type = makeMethodType(
       t, c->loader(), invocation->template_()->spec(), 0, 0, 0);
   PROTECT(t, type);
 
+  // `array` stores either
+  // 1. All the arguments to be passed to the bootstrap method in the case of `metafactory`
+  // 2. The vararg object array to be passed to `altMetafactory`
   GcArray* array = makeArray(t, bootstrap->parameterCount());
   PROTECT(t, array);
 
+  // These are common arguments to metafactory and altMetafactory
   unsigned argument = 0;
   array->setBodyElement(t, argument++, lookup);
   array->setBodyElement(t, argument++, name);
@@ -6079,16 +6100,28 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
   THREAD_RUNTIME_ARRAY(t, char, specBuffer, bootstrap->spec()->length());
 
   const char* spec;
+  // `argArray` stores the final arguments to be passed to the bootstrap method.
+  // Later in this function we iterate through the method signature +
+  // bootstrap array and resolve the arguments as required into `array`.
+  //
+  // In the case of a `metafactory` call:
+  //   `argArray = [caller, invokedName, invokedType, methodType, methodImplementation, instantiatedType]`
+  //   `array = argArray`
+  //
+  // In the case of an `altMetafactory` call:
+  //   `argArray = [caller, invokedName, invokedType, array]`
+  //   `array = [methodType, methodImplementation, instantiatedType, flags, ...]`
   GcArray* argArray = array;
   PROTECT(t, argArray);
 
+  // Check if the bootstrap method's signature matches that of an altMetafactory
   if (::strcmp(reinterpret_cast<char*>(bootstrap->spec()->body().begin()),
                "(Ljava/lang/invoke/MethodHandles$Lookup;"
                "Ljava/lang/String;"
                "Ljava/lang/invoke/MethodType;"
                "[Ljava/lang/Object;)"
                "Ljava/lang/invoke/CallSite;") == 0) {
-    // LambdaMetaFactory.altMetafactory
+    // If so, create a new array to store the varargs in, and hardcode the BSM signature.
     array = makeArray(t, bootstrapArray->length() - 1);
     spec = "(Ljava/lang/invoke/MethodHandles$Lookup;"
       "Ljava/lang/String;"
@@ -6103,6 +6136,9 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
       "[Ljava/lang/invoke/MethodType;"
       ")Ljava/lang/invoke/CallSite;";
   } else if (bootstrap->parameterCount() == 2 + bootstrapArray->length()) {
+    // We're calling the simpler `metafactory`. 2 + bootstrapArray->length() is the
+    // arguments to the bootstrap method (bootstrapArray->length() - 1), plus the 3 static
+    // arguments (lookup, name, type).
     memcpy(RUNTIME_ARRAY_BODY(specBuffer),
            bootstrap->spec()->body().begin(),
            bootstrap->spec()->length());
@@ -6113,16 +6149,24 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
 
   MethodSpecIterator it(t, spec);
 
+  // Skip over the already handled 3 arguments.
   for (unsigned i = 0; i < argument; ++i)
     it.next();
 
+  // If we're calling altMetafactory then we reset the argument
+  // offset, because we are filling the vararg array instead of the
+  // final argument array.
   if (argArray != array) {
     argument = 0;
   }
 
+  // `i` iterates through the bootstrap arguments (the +1 is because we skip
+  // the boostrap method's name), `it` iterates through the corresponding types
+  // in the method signature
   unsigned i = 0;
   while (i + 1 < bootstrapArray->length() && it.hasNext()) {
     const char* p = it.next();
+
     switch (*p) {
     case 'L': {
       const char* const methodType = "Ljava/lang/invoke/MethodType;";
@@ -6198,10 +6242,12 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
             ? 0
             : makeMethodHandle(t, REF_invokeSpecial, c->loader(), bootstrap, 0);
 
+  // If we're calling altMetafactory we set the fourth argument to the vararg array.
   if (argArray != array) {
     argArray->setBodyElement(t, 3, array);
   }
 
+  // Finally we make the bootstrap call.
   return cast<GcCallSite>(
       t, t->m->processor->invokeArray(t, bootstrap, handle, argArray));
 }
