@@ -16,6 +16,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.transactions.SignedTransaction
 import rx.Observable
 import java.io.InputStream
+import java.io.OutputStream
 import java.time.Instant
 
 data class StateMachineInfo(
@@ -98,6 +99,11 @@ interface CordaRPCOps : RPCOps {
      * Checks whether an attachment with the given hash is stored on the node.
      */
     fun attachmentExists(id: SecureHash): Boolean
+
+    /**
+     * Download an attachment JAR by ID
+     */
+    fun openAttachment(id: SecureHash): InputStream
 
     /**
      * Uploads a jar to the node, returns it's hash.
