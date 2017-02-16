@@ -168,6 +168,7 @@ private fun DoormanParameters.startDoorman() {
         logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing request.")
         // Approve all pending request.
         object : CertificationRequestStorage by DBCertificateRequestStorage(database) {
+            // The doorman is in approve all mode, returns all pending request id as approved request id.
             override fun getApprovedRequestIds() = getPendingRequestIds()
         }
     } else {

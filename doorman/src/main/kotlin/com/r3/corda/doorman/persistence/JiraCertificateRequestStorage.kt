@@ -22,7 +22,9 @@ class JiraCertificateRequestStorage(val delegate: CertificationRequestStorage,
         Approved, Rejected
     }
 
-    private val logger = loggerFor<JiraCertificateRequestStorage>()
+    companion object{
+        private val logger = loggerFor<JiraCertificateRequestStorage>()
+    }
 
     // The JIRA project must have a Request ID field and the Task issue type.
     private val requestIdField: Field = jiraClient.metadataClient.fields.claim().find { it.name == "Request ID" }!!
@@ -34,9 +36,7 @@ class JiraCertificateRequestStorage(val delegate: CertificationRequestStorage,
         val response = getResponse(requestId)
         if (response !is CertificateResponse.Unauthorised) {
             val request = StringWriter()
-            JcaPEMWriter(request).use {
-                it.writeObject(PemObject("CERTIFICATE REQUEST", certificationData.request.encoded))
-            }
+            JcaPEMWriter(request).writeObject(PemObject("CERTIFICATE REQUEST", certificationData.request.encoded))
             val commonName = certificationData.request.subject.commonName
             val email = certificationData.request.subject.getRDNs(BCStyle.EmailAddress).firstOrNull()?.first?.value
             val nearestCity = certificationData.request.subject.getRDNs(BCStyle.L).firstOrNull()?.first?.value
@@ -46,7 +46,7 @@ class JiraCertificateRequestStorage(val delegate: CertificationRequestStorage,
                     .setDescription("Legal Name: $commonName\nNearest City: $nearestCity\nEmail: $email\n\n{code}$request{code}")
                     .setSummary(commonName)
                     .setFieldValue(requestIdField.id, requestId)
-            // This will block until the jira is created.
+            // This will block until the issue is created.
             jiraClient.issueClient.createIssue(issue.build()).fail { logger.error("Exception when creating JIRA issue.", it) }.claim()
         }
         return requestId
