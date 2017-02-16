@@ -164,16 +164,18 @@ private fun DoormanParameters.startDoorman() {
     // Create DB connection.
     val (datasource, database) = configureDatabase(dataSourceProperties)
 
+    val requestStorage = DBCertificateRequestStorage(database)
+
     val storage = if (jiraConfig == null) {
         logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing request.")
         // Approve all pending request.
-        object : CertificationRequestStorage by DBCertificateRequestStorage(database) {
+        object : CertificationRequestStorage by requestStorage {
             // The doorman is in approve all mode, returns all pending request id as approved request id.
             override fun getApprovedRequestIds() = getPendingRequestIds()
         }
     } else {
         val jiraClient = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig.address), jiraConfig.username, jiraConfig.password)
-        JiraCertificateRequestStorage(DBCertificateRequestStorage(database), jiraClient, jiraConfig.projectCode, jiraConfig.doneTransitionCode)
+        JiraCertificateRequestStorage(requestStorage, jiraClient, jiraConfig.projectCode, jiraConfig.doneTransitionCode)
     }
 
     // Daemon thread approving request periodically.
