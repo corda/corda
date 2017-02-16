@@ -2940,8 +2940,15 @@ GcClass* makeArrayClass(Thread* t,
 
   GcArray* vtable = cast<GcArray>(t, type(t, GcJobject::Type)->virtualTable());
 
+  // From JDK docs: for array classes the public, private, protected modifiers are the same as
+  // the underlying type, and the final modifier is always set. Testing on OpenJDK shows that
+  // ACC_ABSTRACT is also set on array classes.
+  int flags = elementClass->flags() & (ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED);
+  flags |= ACC_FINAL;
+  flags |= ACC_ABSTRACT;
+
   GcClass* c = t->m->processor->makeClass(t,
-                                          0,
+                                          flags,
                                           0,
                                           2 * BytesPerWord,
                                           BytesPerWord,
@@ -3147,10 +3154,35 @@ void bootClass(Thread* t,
     mask = 0;
   }
 
+  int flags = 0;
+  switch(type) {
+    case Gc::JbyteType:
+    case Gc::JintType:
+    case Gc::JshortType:
+    case Gc::JlongType:
+    case Gc::JbooleanType:
+    case Gc::JcharType:
+    case Gc::JfloatType:
+    case Gc::JdoubleType:
+
+    case Gc::ByteArrayType:
+    case Gc::IntArrayType:
+    case Gc::ShortArrayType:
+    case Gc::LongArrayType:
+    case Gc::BooleanArrayType:
+    case Gc::CharArrayType:
+    case Gc::FloatArrayType:
+    case Gc::DoubleArrayType:
+      // Primitive and array types are final, abstract and public.
+      flags = ACC_FINAL | ACC_ABSTRACT | ACC_PUBLIC;
+    default:
+      break;
+  }
+
   super = (superType >= 0 ? vm::type(t, static_cast<Gc::Type>(superType)) : 0);
 
   GcClass* class_ = t->m->processor->makeClass(t,
-                                               0,
+                                               flags,
                                                BootstrapFlag,
                                                fixedSize,
                                                arrayElementSize,
