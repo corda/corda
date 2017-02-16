@@ -36,7 +36,9 @@ class JiraCertificateRequestStorage(val delegate: CertificationRequestStorage,
         val response = getResponse(requestId)
         if (response !is CertificateResponse.Unauthorised) {
             val request = StringWriter()
-            JcaPEMWriter(request).writeObject(PemObject("CERTIFICATE REQUEST", certificationData.request.encoded))
+            JcaPEMWriter(request).use{
+                it.writeObject(PemObject("CERTIFICATE REQUEST", certificationData.request.encoded))
+            }
             val commonName = certificationData.request.subject.commonName
             val email = certificationData.request.subject.getRDNs(BCStyle.EmailAddress).firstOrNull()?.first?.value
             val nearestCity = certificationData.request.subject.getRDNs(BCStyle.L).firstOrNull()?.first?.value
