@@ -25,14 +25,21 @@ import net.corda.testing.expectEvents
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.sequence
+import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
+import java.io.ByteArrayOutputStream
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 class CordaRPCOpsImplTest {
+
+    private companion object {
+        val testJar = "net/corda/node/testing/test.jar"
+    }
 
     lateinit var network: MockNetwork
     lateinit var aliceNode: MockNode
@@ -198,5 +205,25 @@ class CordaRPCOpsImplTest {
                     notaryNode.info.notaryIdentity
             )
         }
+    }
+
+    @Test
+    fun `can upload an attachment`() {
+        val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+        val secureHash = rpc.uploadAttachment(inputJar)
+        assert(rpc.attachmentExists(secureHash))
+    }
+
+    @Test
+    fun `can download an uploaded attachment`() {
+        val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+        val secureHash = rpc.uploadAttachment(inputJar)
+        val bufferFile = ByteArrayOutputStream()
+        val bufferRpc = ByteArrayOutputStream()
+
+        IOUtils.copy(Thread.currentThread().contextClassLoader.getResourceAsStream(testJar), bufferFile)
+        IOUtils.copy(rpc.openAttachment(secureHash), bufferRpc)
+
+        assert(Arrays.equals(bufferFile.toByteArray(), bufferRpc.toByteArray()))
     }
 }
