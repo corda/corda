@@ -475,7 +475,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected abstract fun startMessagingService(rpcOps: RPCOps)
 
     protected open fun initialiseStorageService(dir: Path): Pair<TxWritableStorageService, CheckpointStorage> {
-        val attachments = NodeRqAttachmentService(configuration.dataSourceProperties, services.monitoringService.metrics)
+        val attachments = makeAttachmentStorage(dir)
         val checkpointStorage = DBCheckpointStorage()
         val transactionStorage = DBTransactionStorage()
         val stateMachineTransactionMappingStorage = DBTransactionMappingStorage()
@@ -530,6 +530,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
 
+    protected fun makeAttachmentStorage(dir: Path): AttachmentStorage {
+        val attachmentsDir = dir / "attachments"
+        try {
+            attachmentsDir.createDirectory()
+        } catch (e: FileAlreadyExistsException) {
+        }
+        return NodeRqAttachmentService(attachmentsDir, configuration.dataSourceProperties, services.monitoringService.metrics)
+    }
 
     protected fun createNodeDir() {
         configuration.baseDirectory.createDirectories()

@@ -203,7 +203,7 @@ inline fun elapsedTime(block: () -> Unit): Duration {
     val start = System.nanoTime()
     block()
     val end = System.nanoTime()
-    return Duration.ofNanos(end-start)
+    return Duration.ofNanos(end - start)
 }
 
 // TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
@@ -278,27 +278,29 @@ class TransientProperty<out T>(private val initializer: () -> T) {
 /**
  * Given a path to a zip file, extracts it to the given directory.
  */
-fun extractZipFile(zipFile: Path, toDirectory: Path) {
+fun extractZipFile(zipFile: Path, toDirectory: Path) = extractZipFile(Files.newInputStream(zipFile), toDirectory)
+
+/**
+ * Given a zip file input stream, extracts it to the given directory.
+ */
+fun extractZipFile(inputStream: InputStream, toDirectory: Path) {
     val normalisedDirectory = toDirectory.normalize().createDirectories()
+    val zip = ZipInputStream(BufferedInputStream(inputStream))
+    while (true) {
+        val e = zip.nextEntry ?: break
+        val outPath = (normalisedDirectory / e.name).normalize()
 
-    zipFile.read {
-        val zip = ZipInputStream(BufferedInputStream(it))
-        while (true) {
-            val e = zip.nextEntry ?: break
-            val outPath = (normalisedDirectory / e.name).normalize()
+        // Security checks: we should reject a zip that contains tricksy paths that try to escape toDirectory.
+        check(outPath.startsWith(normalisedDirectory)) { "ZIP contained a path that resolved incorrectly: ${e.name}" }
 
-            // Security checks: we should reject a zip that contains tricksy paths that try to escape toDirectory.
-            check(outPath.startsWith(normalisedDirectory)) { "ZIP contained a path that resolved incorrectly: ${e.name}" }
-
-            if (e.isDirectory) {
-                outPath.createDirectories()
-                continue
-            }
-            outPath.write { out ->
-                ByteStreams.copy(zip, out)
-            }
-            zip.closeEntry()
+        if (e.isDirectory) {
+            outPath.createDirectories()
+            continue
         }
+        outPath.write { out ->
+            ByteStreams.copy(zip, out)
+        }
+        zip.closeEntry()
     }
 }
 
@@ -391,13 +393,16 @@ private class ObservableToFuture<T>(observable: Observable<T>) : AbstractFuture<
     override fun onNext(value: T) {
         set(value)
     }
+
     override fun onError(e: Throwable) {
         setException(e)
     }
+
     override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
         subscription.unsubscribe()
         return super.cancel(mayInterruptIfRunning)
     }
+
     override fun onCompleted() {}
 }
 

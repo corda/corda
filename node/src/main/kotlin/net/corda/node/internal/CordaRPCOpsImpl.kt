@@ -102,13 +102,13 @@ class CordaRPCOpsImpl(
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
-        return databaseTransaction(database) {
+        return databaseTransaction(database){
             services.storageService.attachments.openAttachment(id) != null
         }
     }
 
     override fun uploadAttachment(jar: InputStream): SecureHash {
-        return databaseTransaction(database) {
+        return databaseTransaction(database){
             services.storageService.attachments.importAttachment(jar)
         }
     }
