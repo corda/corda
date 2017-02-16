@@ -31,6 +31,7 @@ sourceSets {
 }
 
 dependencies {
+
     testCompile "junit:junit:$junit_version"
     testCompile "commons-fileupload:commons-fileupload:1.3.2"
 
@@ -63,7 +64,7 @@ dependencies {
     compile "com.google.guava:guava:$guava_version"
 
     // RxJava: observable streams of events.
-    compile "io.reactivex:rxjava:1.2.4"
+    compile "io.reactivex:rxjava:$rxjava_version"
 
     // Kryo: object graph serialization.
     compile "com.esotericsoftware:kryo:4.0.0"
@@ -88,4 +89,7 @@ dependencies {
 
     // RS API: Response type and codes for ApiUtils.
     compile "javax.ws.rs:javax.ws.rs-api:2.0"
+
+    // Requery: SQL based query & persistence for Kotlin
+    compile "io.requery:requery-kotlin:$requery_version"
 }

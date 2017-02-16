@@ -149,7 +149,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
 
-        override fun makeVaultService(): VaultService = NodeVaultService(services)
+        override fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
 
         override fun makeKeyManagementService(): KeyManagementService {
             return E2ETestKeyManagementService(partyKeys + (overrideServices?.values ?: emptySet()))

@@ -1,6 +1,5 @@
 package net.corda.testing.node
 
-import kotlinx.support.jdk8.collections.putIfAbsent
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.*
@@ -60,7 +59,7 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val networkService: MessagingService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
-    override val clock: Clock get() = throw UnsupportedOperationException()
+    override val clock: Clock get() = Clock.systemUTC()
     override val schedulerService: SchedulerService get() = throw UnsupportedOperationException()
     override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party("MegaCorp", key.public.composite))
 }

@@ -1,4 +1,4 @@
-package net.corda.testing
+package net.corda.contracts.testing
 
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.Clause
@@ -16,7 +16,7 @@ class DummyLinearContract: Contract {
             FilterOn(clause, { states -> states.filterIsInstance<State>() }),
             emptyList())
 
-    class State(
+    data class State(
             override val linearId: UniqueIdentifier = UniqueIdentifier(),
             override val contract: Contract = DummyLinearContract(),
             override val participants: List<CompositeKey> = listOf(),

@@ -488,7 +488,7 @@ class TwoPartyTradeFlowTests {
             withError: Boolean,
             owner: CompositeKey,
             issuer: AnonymousParty,
-            notary: Party): Pair<Vault, List<WireTransaction>> {
+            notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {
         val interimOwnerKey = MEGA_CORP_PUBKEY
         // Bob (Buyer) has some cash he got from the Bank of Elbonia, Alice (Seller) has some commercial paper she
         // wants to sell to Bob.
@@ -526,7 +526,7 @@ class TwoPartyTradeFlowTests {
             this.verifies()
         }
 
-        val vault = Vault(listOf("bob cash 1".outputStateAndRef(), "bob cash 2".outputStateAndRef()))
+        val vault = Vault<ContractState>(listOf("bob cash 1".outputStateAndRef(), "bob cash 2".outputStateAndRef()))
         return Pair(vault, listOf(eb1, bc1, bc2))
     }
 
@@ -535,7 +535,7 @@ class TwoPartyTradeFlowTests {
             owner: CompositeKey,
             amount: Amount<Issued<Currency>>,
             attachmentID: SecureHash?,
-            notary: Party): Pair<Vault, List<WireTransaction>> {
+            notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {
         val ap = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             output("alice's paper", notary = notary) {
                 CommercialPaper.State(MEGA_CORP.ref(1, 2, 3), owner, amount, TEST_TX_TIME + 7.days)
@@ -552,7 +552,7 @@ class TwoPartyTradeFlowTests {
             }
         }
 
-        val vault = Vault(listOf("alice's paper".outputStateAndRef()))
+        val vault = Vault<ContractState>(listOf("alice's paper".outputStateAndRef()))
         return Pair(vault, listOf(ap))
     }
 
