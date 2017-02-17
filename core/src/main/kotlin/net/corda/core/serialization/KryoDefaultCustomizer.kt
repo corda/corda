@@ -1,10 +1,12 @@
 package net.corda.core.serialization
 
 import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.util.MapReferenceResolver
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
@@ -16,6 +18,13 @@ import java.io.BufferedInputStream
 import java.util.*
 
 object DefaultKryoCustomizer {
+    private val pluginRegistries: List<CordaPluginRegistry> by lazy {
+        val unusedKryo = Kryo(makeStandardClassResolver(), MapReferenceResolver())
+        // Sorting required to give a stable ordering, as Kryo allocates integer tokens for each registered class.
+        val customization = KryoSerializationCustomization(unusedKryo)
+        ServiceLoader.load(CordaPluginRegistry::class.java).toList().filter { it.customiseSerialization(customization) }.sortedBy { it.javaClass.name }
+    }
+
     fun customize(kryo: Kryo) {
         kryo.apply {
             isRegistrationRequired = false
@@ -58,6 +67,10 @@ object DefaultKryoCustomizer {
             addDefaultSerializer(DeserializeAsKotlinObjectDef::class.java, KotlinObjectSerializer)
 
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
+
+            val customization = KryoSerializationCustomization(this)
+            pluginRegistries.forEach { it.customiseSerialization(customization) }
         }
+
     }
 }
