@@ -175,6 +175,22 @@ let get_ptr_attr (attr_list: (string * Ast.attr_value) list) =
     then check_invalid_ary_attr pattr
     else check_invalid_ptr_size pattr |> check_ptr_dir
 
+let get_non_ptr_attr (attr_list: (string * Ast.attr_value) list) =
+  let update_attr (key: string) (value: Ast.attr_value) (ores: Ast.non_ptr_attr option) =
+    match ores with
+        None -> None
+      | Some res -> match key with
+            "enclave_id" -> Some { res with Ast.npa_enclave_id = true; }
+          | _ -> Some res
+  in
+  let rec do_get_non_ptr_attr alist res_attr =
+    match alist with
+        [] -> res_attr
+      | (k,v) :: xs -> do_get_non_ptr_attr xs (update_attr k v res_attr)
+  in do_get_non_ptr_attr attr_list (Some Ast.default_non_ptr_attr)
+
+
+
 (* Untrusted functions can have these attributes:
  *
  * a. 3 mutual exclusive calling convention specifier:
@@ -366,23 +382,26 @@ param_type: attr_block all_type {
       Ast.Ptr _ -> fun x -> Ast.PTPtr($2, get_ptr_attr $1)
     | _         ->
       if $1 <> [] then
-        let attr = get_ptr_attr $1 in
         match $2 with
           Ast.Foreign s ->
-            if attr.Ast.pa_isptr || attr.Ast.pa_isary then fun x -> Ast.PTPtr($2, attr)
-            else
-              (* thinking about 'user_defined_type var[4]' *)
-              fun is_ary ->
-                if is_ary then Ast.PTPtr($2, attr)
-                else failwithf "`%s' is considerred plain type but decorated with pointer attributes" s
-        | _ ->
-          fun is_ary ->
+          let attr = get_ptr_attr $1 in
+          if attr.Ast.pa_isptr || attr.Ast.pa_isary then fun x -> Ast.PTPtr($2, attr)
+          else
+            (* thinking about 'user_defined_type var[4]' *)
+            fun is_ary ->
             if is_ary then Ast.PTPtr($2, attr)
-            else failwithf "unexpected pointer attributes for `%s'" (Ast.get_tystr $2)
+            else failwithf "`%s' is considered a plain type but decorated with pointer attributes" s
+        | _ ->
+           fun is_ary ->
+           if is_ary then Ast.PTPtr($2, get_ptr_attr $1)
+           else
+             match get_non_ptr_attr $1 with
+               Some attr -> Ast.PTVal($2, attr)
+             | None -> failwithf "unexpected pointer attributes for `%s'" (Ast.get_tystr $2)
       else
         fun is_ary ->
           if is_ary then Ast.PTPtr($2, get_ptr_attr [])
-          else  Ast.PTVal $2
+          else  Ast.PTVal($2, Ast.default_non_ptr_attr)
     }
   | all_type {
     match $1 with
@@ -390,7 +409,7 @@ param_type: attr_block all_type {
     | _         ->
       fun is_ary ->
         if is_ary then Ast.PTPtr($1, get_ptr_attr [])
-        else  Ast.PTVal $1
+        else  Ast.PTVal($1, Ast.default_non_ptr_attr)
     }
   | attr_block Tconst type_spec pointer {
       let attr = get_ptr_attr $1
@@ -551,7 +570,7 @@ parameter_def: param_type declarator {
     let pt = $1 (Ast.is_array $2) in
     let is_void =
       match pt with
-          Ast.PTVal v -> v = Ast.Void
+          Ast.PTVal(v, _) -> v = Ast.Void
         | _           -> false
     in
       if is_void then
