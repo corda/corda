@@ -13,8 +13,8 @@ import net.corda.core.extractZipFile
 import net.corda.core.isDirectory
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.RequeryConfiguration
 import net.corda.node.services.api.AcceptsFileUpload
+import net.corda.node.services.database.RequeryConfiguration
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
@@ -32,7 +32,7 @@ class NodeRqAttachmentService(override var storePath: Path, dataSourceProperties
     private val log = loggerFor<NodeRqAttachmentService>()
 
     val configuration = RequeryConfiguration(dataSourceProperties)
-    val session = configuration.sessionForModel(Models.DEFAULT)
+    val session = configuration.sessionForModel(Models.PERSISTENCE)
 
     @VisibleForTesting
     var checkAttachmentsOnLoad = true
@@ -44,7 +44,7 @@ class NodeRqAttachmentService(override var storePath: Path, dataSourceProperties
         require(storePath.isDirectory()) { "$storePath must be a directory" }
 
         session.withTransaction {
-            attachmentCount.inc(session.count(AttachmentTable::class).get().value().toLong())
+            attachmentCount.inc(session.count(AttachmentEntity::class).get().value().toLong())
         }
     }
 
@@ -100,8 +100,8 @@ class NodeRqAttachmentService(override var storePath: Path, dataSourceProperties
     override fun openAttachment(id: SecureHash): Attachment? {
         val attachment = session.withTransaction {
             try {
-                session.select(AttachmentTable::class)
-                        .where(AttachmentTable.ATT_ID.eq(id))
+                session.select(AttachmentEntity::class)
+                        .where(AttachmentEntity.ATT_ID.eq(id))
                         .get()
                         .single()
             } catch (e: NoSuchElementException) {
@@ -121,8 +121,8 @@ class NodeRqAttachmentService(override var storePath: Path, dataSourceProperties
         val id = SecureHash.SHA256(hs.hash().asBytes())
 
         val count = session.withTransaction {
-            session.count(AttachmentTable::class)
-                    .where(AttachmentTable.ATT_ID.eq(id))
+            session.count(AttachmentEntity::class)
+                    .where(AttachmentEntity.ATT_ID.eq(id))
                     .get().value()
         }
 
@@ -132,7 +132,7 @@ class NodeRqAttachmentService(override var storePath: Path, dataSourceProperties
         }
 
         session.withTransaction {
-            val attachment = AttachmentTable()
+            val attachment = AttachmentEntity()
             attachment.attId = id
             attachment.content = bytes
             session.insert(attachment)

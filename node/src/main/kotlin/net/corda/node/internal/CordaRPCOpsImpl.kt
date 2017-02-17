@@ -48,7 +48,7 @@ class CordaRPCOpsImpl(
     override fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>> {
         return databaseTransaction(database) {
             val (vault, updates) = services.vaultService.track()
-            Pair(vault.states, updates)
+            Pair(vault.states.toList(), updates)
         }
     }
 
@@ -107,7 +107,7 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun openAttachment(id: SecureHash) {
+    override fun openAttachment(id: SecureHash): InputStream {
         return databaseTransaction(database) {
             services.storageService.attachments.openAttachment(id)!!.open()
         }

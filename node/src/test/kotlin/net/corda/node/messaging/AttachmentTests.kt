@@ -1,7 +1,5 @@
 package net.corda.node.messaging
 
-import io.requery.Persistable
-import io.requery.sql.KotlinEntityDataStore
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -10,19 +8,16 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.flows.FetchAttachmentsFlow
 import net.corda.flows.FetchDataFlow
-import net.corda.node.services.RequeryConfiguration
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.persistence.AttachmentTable
+import net.corda.node.services.persistence.AttachmentEntity
 import net.corda.node.services.persistence.NodeRqAttachmentService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.node.MockNetwork
-import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.transactions.TransactionManager
-import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -132,14 +127,14 @@ class AttachmentTests {
         }
 
         // Corrupt its store.
-        val y = "arggghhhh".toByteArray()
-        System.arraycopy(y, 0, attachment, 0, y.size)
+        val corruptBytes = "arggghhhh".toByteArray()
+        System.arraycopy(corruptBytes, 0, attachment, 0, corruptBytes.size)
 
-        val corrupt = AttachmentTable()
-        corrupt.attId = id
-        corrupt.content = attachment
+        val corruptAttachment = AttachmentEntity()
+        corruptAttachment.attId = id
+        corruptAttachment.content = attachment
         databaseTransaction(n0.database) {
-            (n0.storage.attachments as NodeRqAttachmentService).session.update(corrupt)
+            (n0.storage.attachments as NodeRqAttachmentService).session.update(corruptAttachment)
         }
 
 

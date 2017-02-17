@@ -3,20 +3,17 @@ package net.corda.node.services
 import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
-import io.requery.Persistable
-import io.requery.sql.KotlinEntityDataStore
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.read
 import net.corda.core.readAll
 import net.corda.core.utilities.LogHelper
 import net.corda.core.write
-import net.corda.node.services.persistence.AttachmentTable
-import net.corda.node.services.persistence.Models
+import net.corda.node.services.database.RequeryConfiguration
+import net.corda.node.services.persistence.AttachmentEntity
 import net.corda.node.services.persistence.NodeRqAttachmentService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -115,13 +112,13 @@ class NodeRqAttachmentStorageTest {
         val id = testJar.read { storage.importAttachment(it) }
 
         // Corrupt the file in the store.
-        val x = testJar.readAll();
-        val y = "arggghhhh".toByteArray()
-        System.arraycopy(y, 0, x, 0, y.size)
-        val corrupt = AttachmentTable()
-        corrupt.attId = id
-        corrupt.content = x
-        storage.session.update(corrupt)
+        val bytes = testJar.readAll();
+        val corruptBytes = "arggghhhh".toByteArray()
+        System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
+        val corruptAttachment = AttachmentEntity()
+        corruptAttachment.attId = id
+        corruptAttachment.content = bytes
+        storage.session.update(corruptAttachment)
 
         val e = assertFailsWith<NodeRqAttachmentService.HashMismatchException> {
             storage.openAttachment(id)!!.open().use { it.readBytes() }
