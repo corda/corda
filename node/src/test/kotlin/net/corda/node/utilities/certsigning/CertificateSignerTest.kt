@@ -5,9 +5,7 @@ import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.X509Utilities
-import net.corda.core.div
 import net.corda.core.exists
-import net.corda.core.readLines
 import net.corda.testing.TestNodeConfiguration
 import org.junit.Rule
 import org.junit.Test
@@ -42,13 +40,15 @@ class CertificateSignerTest {
         assertFalse(config.keyStoreFile.exists())
         assertFalse(config.trustStoreFile.exists())
 
-        CertificateSigner(config, certService).buildKeyStore()
+        CertificateSigner(config, certService).buildKeystore()
 
         assertTrue(config.keyStoreFile.exists())
         assertTrue(config.trustStoreFile.exists())
 
         X509Utilities.loadKeyStore(config.keyStoreFile, config.keyStorePassword).run {
-            assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY))
+            assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY))
+            val certificateChain = getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
+            assertEquals(3, certificateChain.size)
             assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_CA))
             assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA))
             assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY))
@@ -64,7 +64,5 @@ class CertificateSignerTest {
             assertTrue(containsAlias(X509Utilities.CORDA_ROOT_CA))
             assertFalse(containsAlias(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY))
         }
-
-        assertEquals(id, (config.certificatesDirectory / "certificate-request-id.txt").readLines { it.findFirst().get() })
     }
 }

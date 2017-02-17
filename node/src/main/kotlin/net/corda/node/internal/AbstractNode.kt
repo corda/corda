@@ -191,7 +191,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             log.warn("Corda node is running in dev mode.")
             configuration.configureWithDevSSLCertificate()
         }
-        require(hasSSLCertificates()) { "SSL certificates not found." }
+        require(hasSSLCertificates()) { "SSL certificates not found, please run the Certificate Signing Utility to setup the keystore." }
 
         log.info("Node starting up ...")
 

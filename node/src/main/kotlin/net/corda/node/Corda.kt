@@ -8,6 +8,8 @@ import net.corda.core.utilities.Emoji
 import net.corda.node.internal.Node
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.utilities.ANSIProgressObserver
+import net.corda.node.utilities.certsigning.CertificateSigner
+import net.corda.node.utilities.certsigning.HTTPCertificateSigningService
 import net.corda.node.webserver.WebServer
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -70,6 +72,17 @@ fun main(args: Array<String>) {
     } catch (e: ConfigException) {
         println("Unable to load the configuration file: ${e.rootCause.message}")
         exitProcess(2)
+    }
+
+    if (cmdlineOptions.isCertUtil) {
+        println()
+        println("************************************************")
+        println("*                                              *")
+        println("*       Corda Certificate Signing Utility      *")
+        println("*                                              *")
+        println("************************************************")
+        CertificateSigner(conf, HTTPCertificateSigningService(conf.certificateSigningService)).buildKeystore()
+        exitProcess(0)
     }
 
     log.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")

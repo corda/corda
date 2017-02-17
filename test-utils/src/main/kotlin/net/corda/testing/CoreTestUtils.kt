@@ -1,5 +1,6 @@
 @file:Suppress("UNUSED_PARAMETER", "UNCHECKED_CAST")
 @file:JvmName("CoreTestUtils")
+
 package net.corda.testing
 
 import com.google.common.net.HostAndPort
@@ -23,6 +24,7 @@ import net.corda.testing.node.MockIdentityService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import java.net.ServerSocket
+import java.net.URL
 import java.nio.file.Path
 import java.security.KeyPair
 import java.util.*
@@ -155,6 +157,7 @@ data class TestNodeConfiguration(
         override val nearestCity: String = "Null Island",
         override val emailAddress: String = "",
         override val exportJMXto: String = "",
-        override val devMode: Boolean = true) : NodeConfiguration
+        override val devMode: Boolean = true,
+        override val certificateSigningService: URL = URL("http://localhost")) : NodeConfiguration
 
 fun Config.getHostAndPort(name: String) = HostAndPort.fromString(getString(name))

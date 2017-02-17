@@ -17,6 +17,7 @@ class HTTPCertificateSigningService(val server: URL) : CertificateSigningService
         val clientVersion = "1.0"
     }
 
+    @Throws(CertificateRequestException::class)
     override fun retrieveCertificates(requestId: String): Array<Certificate>? {
         // Poll server to download the signed certificate once request has been approved.
         val url = URL("$server/api/certificate/$requestId")
@@ -34,7 +35,7 @@ class HTTPCertificateSigningService(val server: URL) : CertificateSigningService
                 certificates.toTypedArray()
             }
             HTTP_NO_CONTENT -> null
-            HTTP_UNAUTHORIZED -> throw IOException("Certificate signing request has been rejected: ${conn.errorMessage}")
+            HTTP_UNAUTHORIZED -> throw CertificateRequestException("Certificate signing request has been rejected: ${conn.errorMessage}")
             else -> throwUnexpectedResponseCode(conn)
         }
     }
@@ -61,3 +62,5 @@ class HTTPCertificateSigningService(val server: URL) : CertificateSigningService
 
     private val HttpURLConnection.errorMessage: String get() = IOUtils.toString(errorStream)
 }
+
+class CertificateRequestException(message: String) : Exception(message)

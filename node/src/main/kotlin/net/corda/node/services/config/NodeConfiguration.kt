@@ -10,6 +10,7 @@ import net.corda.node.serialization.NodeClock
 import net.corda.node.services.User
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.TestClock
+import java.net.URL
 import java.nio.file.Path
 import java.util.*
 
@@ -32,6 +33,7 @@ interface NodeConfiguration : SSLConfiguration {
     val dataSourceProperties: Properties get() = Properties()
     val rpcUsers: List<User> get() = emptyList()
     val devMode: Boolean
+    val certificateSigningService: URL
 }
 
 /**
@@ -46,6 +48,7 @@ class FullNodeConfiguration(override val baseDirectory: Path, val config: Config
     override val trustStorePassword: String by config
     override val dataSourceProperties: Properties by config
     override val devMode: Boolean by config.getOrElse { false }
+    override val certificateSigningService: URL by config
     override val networkMapService: NetworkMapInfo? = config.getOptionalConfig("networkMapService")?.run {
         NetworkMapInfo(
                 HostAndPort.fromString(getString("address")),

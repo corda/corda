@@ -48,7 +48,7 @@ dependencies {
     compile project(':node')
 }
 
-task buildCordaJAR(type: FatCapsule, dependsOn: ['buildCertSigningRequestUtilityJAR']) {
+task buildCordaJAR(type: FatCapsule) {
     applicationClass 'net.corda.node.Corda'
     archiveName "corda-${corda_version}.jar"
     applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
@@ -75,15 +75,6 @@ task buildCordaJAR(type: FatCapsule, dependsOn: ['buildCertSigningRequestUtility
 
     manifest {
         attributes('Corda-Version': corda_version)
-    }
-}
-
-task buildCertSigningRequestUtilityJAR(type: FatCapsule) {
-    applicationClass 'net.corda.node.utilities.certsigning.CertificateSignerKt'
-    archiveName 'certSigningRequestUtility.jar'
-    capsuleManifest {
-        systemProperties['log4j.configuration'] = 'log4j2.xml'
-        minJavaVersion = '1.8.0'
     }
 }
 

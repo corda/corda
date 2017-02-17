@@ -9,7 +9,7 @@ as possible.
 However this is not secure for the real network. This documentation will explain the procedure of obtaining a signed
 certificate for TestNet.
 
-.. warning:: The TestNet has not been setup yet as of Milestone 6 release. You will not be able to connect to the
+.. warning:: The TestNet has not been setup yet as of Milestone 8 release. You will not be able to connect to the
     certificate signing server.
 
 Certificate signing request utility
@@ -41,21 +41,6 @@ Once the request has been approved and the certificates downloaded from the serv
 
 This process only needs to be done once when the node connects to the network for the first time, or when the certificate expires.
 
-Building the utility
---------------------
-The utility will be created as part of the gradle ``:node`` module ``buildCordaJAR`` task.
-You can also build the utility JAR by run the following command from the Corda project root directory.
-
-**Windows**::
-
-    gradlew.bat :node:buildCertSigningRequestUtilityJAR
-
-**Other**::
-
-    ./gradlew :node:buildCertSigningRequestUtilityJAR
-
-The utility JAR will be created in ``<Project Root Dir>/node/build/libs/certSigningRequestUtility.jar``
-
 
 Running the utility
 -------------------
@@ -65,7 +50,7 @@ You can also specify the location of ``node.conf`` with ``--config-file`` flag i
 
 **Running the Utility**::
 
-    java -jar certSigningRequestUtility.jar --base-dir <<optional>> --config-file <<optional>>
+    java -jar corda.jar --certUtil --base-dir <<optional>> --config-file <<optional>>
 
 A ``certificates`` folder containing the keystore and trust store will be created in the base directory when the process is completed.
 
