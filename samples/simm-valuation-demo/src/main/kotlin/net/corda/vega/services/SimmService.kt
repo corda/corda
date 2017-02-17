@@ -1,6 +1,5 @@
 package net.corda.vega.services
 
-import com.esotericsoftware.kryo.Kryo
 import com.google.common.collect.Ordering
 import com.opengamma.strata.basics.currency.Currency
 import com.opengamma.strata.basics.currency.CurrencyAmount
@@ -14,6 +13,7 @@ import com.opengamma.strata.market.param.TenorDateParameterMetadata
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Party
 import net.corda.core.node.CordaPluginRegistry
+import net.corda.core.serialization.SerializationCustomization
 import net.corda.vega.analytics.CordaMarketData
 import net.corda.vega.analytics.InitialMarginTriple
 import net.corda.vega.api.PortfolioApi
@@ -41,32 +41,32 @@ object SimmService {
                 IRSTradeFlow.Requester::class.java.name to setOf(SwapData::class.java.name, Party::class.java.name))
         override val staticServeDirs: Map<String, String> = mapOf("simmvaluationdemo" to javaClass.classLoader.getResource("simmvaluationweb").toExternalForm())
         override val servicePlugins = listOf(Function(SimmFlow::Service), Function(IRSTradeFlow::Service))
-        override fun registerRPCKryoTypes(kryo: Kryo): Boolean {
-            kryo.apply {
-                register(SwapData::class.java)
-                register(LocalDate::class.java)
-                register(BigDecimal::class.java)
-                register(IRSState::class.java)
-                register(OGTrade::class.java)
-                register(PortfolioState::class.java)
-                register(PortfolioSwap::class.java)
-                register(PortfolioValuation::class.java)
-                register(MultiCurrencyAmount::class.java)
-                register(Ordering.natural<Comparable<Any>>().javaClass)
-                register(CurrencyAmount::class.java)
-                register(Currency::class.java)
-                register(InitialMarginTriple::class.java)
-                register(CordaMarketData::class.java)
-                register(CurrencyParameterSensitivities::class.java)
-                register(CurrencyParameterSensitivity::class.java)
-                register(DoubleArray::class.java)
-                register(kotlin.DoubleArray::class.java)
-                register(LinkedHashMap::class.java)
-                register(CurveName::class.java)
-                register(TenorDateParameterMetadata::class.java)
-                register(Tenor::class.java)
-                register(Period::class.java)
-                register(Class.forName("java.util.Collections\$SingletonMap"))
+        override fun customiseSerialization(custom: SerializationCustomization): Boolean {
+            custom.apply {
+                addToWhitelist(SwapData::class.java)
+                addToWhitelist(LocalDate::class.java)
+                addToWhitelist(BigDecimal::class.java)
+                addToWhitelist(IRSState::class.java)
+                addToWhitelist(OGTrade::class.java)
+                addToWhitelist(PortfolioState::class.java)
+                addToWhitelist(PortfolioSwap::class.java)
+                addToWhitelist(PortfolioValuation::class.java)
+                addToWhitelist(MultiCurrencyAmount::class.java)
+                addToWhitelist(Ordering.natural<Comparable<Any>>().javaClass)
+                addToWhitelist(CurrencyAmount::class.java)
+                addToWhitelist(Currency::class.java)
+                addToWhitelist(InitialMarginTriple::class.java)
+                addToWhitelist(CordaMarketData::class.java)
+                addToWhitelist(CurrencyParameterSensitivities::class.java)
+                addToWhitelist(CurrencyParameterSensitivity::class.java)
+                addToWhitelist(DoubleArray::class.java)
+                addToWhitelist(kotlin.DoubleArray::class.java)
+                addToWhitelist(LinkedHashMap::class.java)
+                addToWhitelist(CurveName::class.java)
+                addToWhitelist(TenorDateParameterMetadata::class.java)
+                addToWhitelist(Tenor::class.java)
+                addToWhitelist(Period::class.java)
+                addToWhitelist(Class.forName("java.util.Collections\$SingletonMap"))
             }
             return true
         }

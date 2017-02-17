@@ -8,6 +8,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.ServiceType
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
@@ -121,6 +122,7 @@ interface ContractState {
  * A wrapper for [ContractState] containing additional platform-level state information.
  * This is the definitive state that is stored on the ledger and used in transaction outputs.
  */
+@CordaSerializable
 data class TransactionState<out T : ContractState> @JvmOverloads constructor(
         /** The custom contract state */
         val data: T,

@@ -2,6 +2,7 @@ package net.corda.core.node
 
 import com.esotericsoftware.kryo.Kryo
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.serialization.SerializationCustomization
 import java.util.function.Function
 
 /**
@@ -40,6 +41,7 @@ abstract class CordaPluginRegistry(
         open val servicePlugins: List<Function<PluginServiceHub, out Any>> = emptyList()
 ) {
         /**
+         * TODO: Update these docs!!!
          * Optionally register types with [Kryo] for use over RPC, as we lock down the types that can be serialised in this
          * particular use case.
          * For example, if you add an RPC interface that carries some contract states back and forth, you need to register
@@ -49,5 +51,5 @@ abstract class CordaPluginRegistry(
          *
          * @return true if you register types, otherwise you will be filtered out of the list of plugins considered in future.
          */
-        open fun registerRPCKryoTypes(kryo: Kryo): Boolean = false
+        open fun customiseSerialization(custom: SerializationCustomization): Boolean = false
 }

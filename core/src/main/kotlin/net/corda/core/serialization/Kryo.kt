@@ -1,9 +1,6 @@
 package net.corda.core.serialization
 
-import co.paralleluniverse.fibers.Fiber
-import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.Kryo.DefaultInstantiatorStrategy
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
@@ -11,28 +8,21 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
 import com.esotericsoftware.kryo.serializers.MapSerializer
-import de.javakaffee.kryoserializers.ArraysAsListSerializer
-import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
-import de.javakaffee.kryoserializers.guava.*
+import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.NonEmptySetSerializer
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
-import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.*
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.PublicKey
-import java.time.Instant
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.*
@@ -389,66 +379,9 @@ object KotlinObjectSerializer : Serializer<DeserializeAsKotlinObjectDef>() {
     override fun write(kryo: Kryo, output: Output, obj: DeserializeAsKotlinObjectDef) {}
 }
 
-fun createKryo(k: Kryo = Kryo()): Kryo {
+fun createKryo(k: Kryo = Kryo(CordaClassResolver(LoggingWhitelist(EmptyWhitelist())), MapReferenceResolver())): Kryo {
     return k.apply {
-        // Allow any class to be deserialized (this is insecure but for prototyping we don't care)
-        isRegistrationRequired = false
-        // Allow construction of objects using a JVM backdoor that skips invoking the constructors, if there is no
-        // no-arg constructor available.
-        instantiatorStrategy = DefaultInstantiatorStrategy(StdInstantiatorStrategy())
-
-        register(Arrays.asList("").javaClass, ArraysAsListSerializer())
-
-        // Because we like to stick a Kryo object in a ThreadLocal to speed things up a bit, we can end up trying to
-        // serialise the Kryo object itself when suspending a fiber. That's dumb, useless AND can cause crashes, so
-        // we avoid it here.
-        register(Kryo::class,
-                read = { kryo, input -> createKryo((Fiber.getFiberSerializer() as KryoSerializer).kryo) },
-                write = { kryo, output, obj -> }
-        )
-
-        register(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
-        register(EdDSAPrivateKey::class.java, Ed25519PrivateKeySerializer)
-        register(Instant::class.java, ReferencesAwareJavaSerializer)
-
-        // Using a custom serializer for compactness
-        register(CompositeKey.Node::class.java, CompositeKeyNodeSerializer)
-        register(CompositeKey.Leaf::class.java, CompositeKeyLeafSerializer)
-
-        // Some classes have to be handled with the ImmutableClassSerializer because they need to have their
-        // constructors be invoked (typically for lazy members).
-        register(SignedTransaction::class.java, ImmutableClassSerializer(SignedTransaction::class))
-
-        // This class has special handling.
-        register(WireTransaction::class.java, WireTransactionSerializer)
-
-        // This ensures a SerializedBytes<Foo> wrapper is written out as just a byte array.
-        register(SerializedBytes::class.java, SerializedBytesSerializer)
-
-        addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
-
-        // This is required to make all the unit tests pass
-        register(AnonymousParty::class.java)
-        register(Party::class.java)
-
-        // This ensures a NonEmptySetSerializer is constructed with an initial value.
-        register(NonEmptySet::class.java, NonEmptySetSerializer)
-
-        register(Array<StackTraceElement>::class, read = { kryo, input -> emptyArray() }, write = { kryo, output, o -> })
-
-        /** This ensures any kotlin objects that implement [DeserializeAsKotlinObjectDef] are read back in as singletons. */
-        addDefaultSerializer(DeserializeAsKotlinObjectDef::class.java, KotlinObjectSerializer)
-
-        addDefaultSerializer(BufferedInputStream::class.java, InputStreamSerializer)
-
-        UnmodifiableCollectionsSerializer.registerSerializers(k)
-        ImmutableListSerializer.registerSerializers(k)
-        ImmutableSetSerializer.registerSerializers(k)
-        ImmutableSortedSetSerializer.registerSerializers(k)
-        ImmutableMapSerializer.registerSerializers(k)
-        ImmutableMultimapSerializer.registerSerializers(k)
-
-        noReferencesWithin<WireTransaction>()
+        DefaultKryoCustomizer.customize(this)
     }
 }
 
