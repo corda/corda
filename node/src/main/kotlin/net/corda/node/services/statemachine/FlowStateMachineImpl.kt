@@ -130,7 +130,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     internal fun commitTransaction() {
         val transaction = TransactionManager.current()
         try {
-            logger.trace { "Commiting database transaction $transaction on ${Strand.currentStrand()}." }
+            logger.trace { "Committing database transaction $transaction on ${Strand.currentStrand()}." }
             transaction.commit()
         } catch (e: SQLException) {
             // TODO: we will get here if the database is not available.  Think about how to shutdown and restart cleanly.
