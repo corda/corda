@@ -31,7 +31,8 @@ class DoormanServiceTest {
     private lateinit var doormanServer: DoormanServer
 
     private fun startSigningServer(storage: CertificationRequestStorage) {
-        doormanServer = DoormanServer(HostAndPort.fromParts("localhost", 0), DoormanWebService(intermediateCA, rootCA.certificate, storage))
+        doormanServer = DoormanServer(HostAndPort.fromParts("localhost", 0), intermediateCA, rootCA.certificate, storage)
+        doormanServer.start()
     }
 
     @After
@@ -85,9 +86,9 @@ class DoormanServiceTest {
         assertThat(pollForResponse(id)).isEqualTo(PollResponse.NotReady)
 
         storage.approveRequest(id) {
-            JcaPKCS10CertificationRequest(it.request).run {
+            JcaPKCS10CertificationRequest(request).run {
                 X509Utilities.createServerCert(subject, publicKey, intermediateCA,
-                        if (it.ipAddress == it.hostName) listOf() else listOf(it.hostName), listOf(it.ipAddress))
+                        if (ipAddress == hostName) listOf() else listOf(hostName), listOf(ipAddress))
             }
         }
 

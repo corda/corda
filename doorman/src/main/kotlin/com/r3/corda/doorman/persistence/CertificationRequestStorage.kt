@@ -26,7 +26,7 @@ interface CertificationRequestStorage {
     /**
      * Approve the given request by generating and storing a new certificate using the provided generator.
      */
-    fun approveRequest(requestId: String, certificateGenerator: (CertificationRequestData) -> Certificate)
+    fun approveRequest(requestId: String, generateCertificate: CertificationRequestData.() -> Certificate)
 
     /**
      * Reject the given request using the given reason.
@@ -35,9 +35,13 @@ interface CertificationRequestStorage {
 
     /**
      * Retrieve list of request IDs waiting for approval.
-     * TODO : This is used for the background thread to approve request automatically without KYC checks, should be removed after testnet.
      */
     fun getPendingRequestIds(): List<String>
+
+    /**
+     * Retrieve list of approved request IDs.
+     */
+    fun getApprovedRequestIds(): List<String>
 }
 
 data class CertificationRequestData(val hostName: String, val ipAddress: String, val request: PKCS10CertificationRequest)

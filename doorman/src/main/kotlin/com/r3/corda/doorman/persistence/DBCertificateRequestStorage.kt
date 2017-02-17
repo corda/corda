@@ -83,13 +83,13 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
         }
     }
 
-    override fun approveRequest(requestId: String, certificateGenerator: (CertificationRequestData) -> Certificate) {
+    override fun approveRequest(requestId: String, generateCertificate: CertificationRequestData.() -> Certificate) {
         databaseTransaction(database) {
             val request = singleRequestWhere { DataTable.requestId eq requestId and DataTable.processTimestamp.isNull() }
             if (request != null) {
                 withFinalizables { finalizables ->
                     DataTable.update({ DataTable.requestId eq requestId }) {
-                        it[certificate] = serializeToBlob(certificateGenerator(request), finalizables)
+                        it[certificate] = serializeToBlob(request.generateCertificate(), finalizables)
                         it[processTimestamp] = Instant.now()
                     }
                 }
@@ -120,6 +120,8 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
             DataTable.select { DataTable.processTimestamp.isNull() }.map { it[DataTable.requestId] }
         }
     }
+
+    override fun getApprovedRequestIds(): List<String> = emptyList()
 
     private fun singleRequestWhere(where: SqlExpressionBuilder.() -> Op<Boolean>): CertificationRequestData? {
         return DataTable
