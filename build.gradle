@@ -86,6 +86,10 @@ allprojects {
 
     group 'net.corda'
     version "$corda_version"
+
+    repositories {
+        maven { url 'https://jitpack.io' }
+    }
 }
 
 // Check that we are running on a Java 8 JDK. The source/targetCompatibility values above aren't sufficient to
