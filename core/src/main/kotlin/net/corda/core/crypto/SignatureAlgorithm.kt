@@ -15,10 +15,16 @@ import java.security.spec.AlgorithmParameterSpec
  * @param keySize the private key size (currently used for RSA only).
  * @param desc a human-readable description for this algorithm.
  */
-data class SignatureAlgorithm (val sig: Signature, val keyPairGenerator: KeyPairGeneratorSpi, val algSpec: AlgorithmParameterSpec?, val keySize: Int, val keyAlgorithm: String, val desc: String) {
+data class SignatureAlgorithm (
+        val sig: Signature,
+        val keyPairGenerator: KeyPairGeneratorSpi,
+        val algSpec: AlgorithmParameterSpec?,
+        val keySize: Int,
+        val keyAlgorithm: String,
+        val desc: String) {
 
     /**
-     * KeyPair generators are always be initialized once we create them, as no re-initialization is required.
+     * KeyPair generators are always initialized once we create them, as no re-initialization is required.
      * Note that RSA is the sole algorithm initialized specifically by it's supported keySize.
      */
     init {

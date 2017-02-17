@@ -13,13 +13,12 @@ import java.security.spec.ECGenParameterSpec
  * However, only the algorithms added in the supportedAlgorithm [HashMap] property will be fully supported,
  * while any other, even if implemented below, will be rejected with a [CryptoException] when requested for
  * any of the key generation, signing or verification processes.
+ * Note that we only support those algorithms added in the supportedAlgorithms map below.
  */
 object SignatureAlgorithmManager {
 
-    // Implemented signature algorithms. Note that we only support those added in the supportedAlgorithms map below.
-
-    // RSA signature scheme using SHA256 as hash algorithm, 3072bit key, MGF1 (with SHA256) as mask generation function.
-    private val RSA_SIGNATURE = SignatureAlgorithm (
+    /** RSA signature scheme using SHA256 as hash algorithm, 3072bit key, MGF1 (with SHA256) as mask generation function. */
+    private val RSA_SIGNATURE = SignatureAlgorithm(
             Signature.getInstance("SHA256WITHRSAANDMGF1", "BC"),
             KeyPairGenerator.getInstance("RSA", "BC"),
             null,
@@ -28,8 +27,8 @@ object SignatureAlgorithmManager {
             "RSA signature scheme using SHA256 as hash algorithm, 3072bit key, MGF1 (with SHA256) as mask generation function."
     )
 
-    // ECDSA signature scheme using the secp256k1 Koblitz curve.
-    private val ECDSA_SIGNATURE = SignatureAlgorithm (
+    /** ECDSA signature scheme using the secp256k1 Koblitz curve. */
+    private val ECDSA_SIGNATURE = SignatureAlgorithm(
             Signature.getInstance("SHA256withECDSA", "BC"),
             KeyPairGenerator.getInstance("ECDSA", "BC"),
             ECGenParameterSpec("secp256k1"),
@@ -38,8 +37,8 @@ object SignatureAlgorithmManager {
             "ECDSA signature scheme using the secp256k1 Koblitz curve"
     )
 
-    // EdDSA signature scheme using the ed255519 twisted Edwards curve.
-    private val EDDSA_SIGNATURE = SignatureAlgorithm (
+    /** EdDSA signature scheme using the ed255519 twisted Edwards curve. */
+    private val EDDSA_SIGNATURE = SignatureAlgorithm(
             EdDSAEngine(),
             net.i2p.crypto.eddsa.KeyPairGenerator(), // EdDSA engine uses a custom KeyPairGenerator Vs BouncyCastle.
             EdDSAGenParameterSpec(EdDSANamedCurveTable.CURVE_ED25519_SHA512),
@@ -49,8 +48,8 @@ object SignatureAlgorithmManager {
 
     )
 
-    // SPHINCS-256 hash-based signature scheme. It provides 128bit security against post-quantum attackers.
-    private val SPHINCS_SIGNATURE = SignatureAlgorithm (
+    /** SPHINCS-256 hash-based signature scheme. It provides 128bit security against post-quantum attackers. */
+    private val SPHINCS_SIGNATURE = SignatureAlgorithm(
             Signature.getInstance("SHA512WITHSPHINCS256","BCPQC"),
             KeyPairGenerator.getInstance("SPHINCS256", "BCPQC"),
             SPHINCS256KeyGenParameterSpec(SPHINCS256KeyGenParameterSpec.SHA512_256),
@@ -59,7 +58,7 @@ object SignatureAlgorithmManager {
             "SPHINCS-256 hash-based signature scheme. It provides 128bit security against post-quantum attackers."
     )
 
-    // Supported signature algorithms
+    /** Supported signature algorithms */
     private val supportedAlgorithms = hashMapOf(
             RSA_SIGNATURE.keyAlgorithm to RSA_SIGNATURE,
             ECDSA_SIGNATURE.keyAlgorithm to ECDSA_SIGNATURE,
@@ -104,6 +103,6 @@ object SignatureAlgorithmManager {
      * Get the list of supported signature algorithms.
      * @return a [List] of Strings with the codeNames for all of our supported algorithms.
      */
-    fun listOfSupportedAlgorithms(): List<String> = supportedAlgorithms.keys.toList()
+    fun listSupportedAlgorithms(): List<String> = supportedAlgorithms.keys.toList()
 
 }

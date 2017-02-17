@@ -28,10 +28,10 @@ class CryptoUtilsTest {
     fun `generate key pairs`() {
 
         // testing supported algorithms
-        val rsaKeyPair = Crypto.genKeyPair("RSA")
-        val ecdsaKeyPair = Crypto.genKeyPair("ECDSA")
-        val eddsaKeyPair = Crypto.genKeyPair("EdDSA")
-        val sphincsKeyPair = Crypto.genKeyPair("SPHINCS-256")
+        val rsaKeyPair = Crypto.generateKeyPair("RSA")
+        val ecdsaKeyPair = Crypto.generateKeyPair("ECDSA")
+        val eddsaKeyPair = Crypto.generateKeyPair("EdDSA")
+        val sphincsKeyPair = Crypto.generateKeyPair("SPHINCS-256")
 
         // not null private keys
         assertNotNull(rsaKeyPair.private);
@@ -47,7 +47,7 @@ class CryptoUtilsTest {
 
         // fail on unsupported algorithm
         try {
-            val wrongKeyPair = Crypto.genKeyPair("WRONG_ALG")
+            val wrongKeyPair = Crypto.generateKeyPair("WRONG_ALG")
             fail()
         } catch (e: CryptoException) {
             // expected.
@@ -59,7 +59,7 @@ class CryptoUtilsTest {
     @Test
     fun `RSA full process keygen-sign-verify`() {
 
-        val keyPair = Crypto.genKeyPair("RSA")
+        val keyPair = Crypto.generateKeyPair("RSA")
 
         // test for some data
         val signedData = keyPair.sign(testBytes)
@@ -87,7 +87,7 @@ class CryptoUtilsTest {
     @Test
     fun `ECDSA full process keygen-sign-verify`() {
 
-        val keyPair = Crypto.genKeyPair("ECDSA")
+        val keyPair = Crypto.generateKeyPair("ECDSA")
 
         // test for some data
         val signedData = keyPair.sign(testBytes)
@@ -115,7 +115,7 @@ class CryptoUtilsTest {
     @Test
     fun `EDDSA full process keygen-sign-verify`() {
 
-        val keyPair = Crypto.genKeyPair("EdDSA")
+        val keyPair = Crypto.generateKeyPair("EdDSA")
 
         // test for some data
         val signedData = keyPair.sign(testBytes)
@@ -143,7 +143,7 @@ class CryptoUtilsTest {
     @Test
     fun `SPHINCS full process keygen-sign-verify`() {
 
-        val keyPair = Crypto.genKeyPair("SPHINCS-256")
+        val keyPair = Crypto.generateKeyPair("SPHINCS-256")
 
         // test for some data
         val signedData = keyPair.sign(testBytes)
@@ -171,7 +171,7 @@ class CryptoUtilsTest {
     // test list of supported algorithms
     @Test
     fun `check supported algorithms`() {
-        val algList : List<String> = SignatureAlgorithmManager.listOfSupportedAlgorithms()
+        val algList : List<String> = SignatureAlgorithmManager.listSupportedAlgorithms()
         val expectedAlgSet = setOf<String>("RSA","ECDSA", "EdDSA", "SPHINCS-256")
         assertTrue { Sets.symmetricDifference(expectedAlgSet,algList.toSet()).isEmpty(); }
     }
