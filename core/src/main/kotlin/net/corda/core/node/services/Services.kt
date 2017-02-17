@@ -32,13 +32,11 @@ val DEFAULT_SESSION_ID = 0L
  *
  * This abstract class has no references to Cash contracts.
  *
- * [states] Holds the states that are *active* and *relevant*.
+ * [states] Holds a [VaultService] queried subset of states that are *active* and *relevant*.
  *   Active means they haven't been consumed yet (or we don't know about it).
  *   Relevant means they contain at least one of our pubkeys.
  */
-class Vault(val states: List<StateAndRef<ContractState>>) {
-    @Suppress("UNCHECKED_CAST")
-    inline fun <reified T : ContractState> statesOfType() = states.filter { it.state.data is T } as List<StateAndRef<T>>
+class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
 
     /**
      * Represents an update observed by the vault that will be notified to observers.  Include the [StateRef]s of
@@ -81,6 +79,10 @@ class Vault(val states: List<StateAndRef<ContractState>>) {
     companion object {
         val NoUpdate = Update(emptySet(), emptySet())
     }
+
+    enum class StateStatus {
+        UNCONSUMED, CONSUMED
+    }
 }
 
 /**
@@ -92,11 +94,6 @@ class Vault(val states: List<StateAndRef<ContractState>>) {
  * Note that transactions we've seen are held by the storage service, not the vault.
  */
 interface VaultService {
-    /**
-     * Returns a read-only snapshot of the vault at the time the call is made. Note that if you consume states or
-     * keys in this vault, you must inform the vault service so it can update its internal state.
-     */
-    val currentVault: Vault
 
     /**
      * Prefer the use of [updates] unless you know why you want to use this instead.
@@ -125,25 +122,13 @@ interface VaultService {
      * Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the
      * first subscriber is registered so as to avoid racing with early updates.
      */
-    fun track(): Pair<Vault, Observable<Vault.Update>>
+    fun track(): Pair<Vault<ContractState>, Observable<Vault.Update>>
 
     /**
-     * Returns a snapshot of the heads of LinearStates.
+     * Return unconsumed [ContractState]s for a given set of [StateRef]s
+     * TODO: revisit and generalize this exposed API function.
      */
-    val linearHeads: Map<UniqueIdentifier, StateAndRef<LinearState>>
-
-    // TODO: When KT-10399 is fixed, rename this and remove the inline version below.
-
-    /** Returns the [linearHeads] only when the type of the state would be considered an 'instanceof' the given type. */
-    @Suppress("UNCHECKED_CAST")
-    fun <T : LinearState> linearHeadsOfType_(stateType: Class<T>): Map<UniqueIdentifier, StateAndRef<T>> {
-        return linearHeads.filterValues { stateType.isInstance(it.state.data) }.mapValues { StateAndRef(it.value.state as TransactionState<T>, it.value.ref) }
-    }
-
-    fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?> {
-        val refsToStates = currentVault.states.associateBy { it.ref }
-        return refs.associateBy({ it }) { refsToStates[it]?.state }
-    }
+    fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?>
 
     /**
      * Possibly update the vault by marking as spent states that these transactions consume, and adding any relevant
@@ -212,11 +197,26 @@ interface VaultService {
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,
                       to: CompositeKey,
-                      onlyFromParties: Set<AnonymousParty>? = null): Pair<TransactionBuilder, List<CompositeKey>>
+                      onlyFromParties: Set<AbstractParty>? = null): Pair<TransactionBuilder, List<CompositeKey>>
+
+    /**
+     * Return [ContractState]s of a given [Contract] type and list of [Vault.StateStatus]
+     */
+    fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>): List<StateAndRef<T>>
 }
 
-inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)
-inline fun <reified T : DealState> VaultService.dealsWith(party: Party) = linearHeadsOfType<T>().values.filter {
+inline fun <reified T: ContractState> VaultService.unconsumedStates(): List<StateAndRef<T>> =
+        states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED))
+
+inline fun <reified T: ContractState> VaultService.consumedStates(): List<StateAndRef<T>> =
+        states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.CONSUMED))
+
+/** Returns the [linearState] heads only when the type of the state would be considered an 'instanceof' the given type. */
+inline fun <reified T : LinearState> VaultService.linearHeadsOfType() =
+        states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED))
+                .associateBy { it.state.data.linearId }.mapValues { it.value }
+
+inline fun <reified T : DealState> VaultService.dealsWith(party: AbstractParty) = linearHeadsOfType<T>().values.filter {
     it.state.data.parties.any { it == party }
 }
 

@@ -1,6 +1,9 @@
 package net.corda.node.utilities
 
-import net.corda.core.utilities.Emoji
+import net.corda.core.utilities.Emoji.CODE_GREEN_TICK
+import net.corda.core.utilities.Emoji.CODE_NO_ENTRY
+import net.corda.core.utilities.Emoji.CODE_RIGHT_ARROW
+import net.corda.core.utilities.Emoji.SKULL_AND_CROSSBONES
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.utilities.ANSIProgressRenderer.progressTracker
 import org.apache.logging.log4j.LogManager
@@ -43,7 +46,7 @@ object ANSIProgressRenderer {
             prevMessagePrinted = null
             prevLinesDrawn = 0
             draw(true)
-            subscription = value?.changes?.subscribe { draw(true) }
+            subscription = value?.changes?.subscribe({ draw(true) }, { draw(true, it) })
         }
 
     private fun setup() {
@@ -102,7 +105,7 @@ object ANSIProgressRenderer {
     // prevLinesDraw is just for ANSI mode.
     private var prevLinesDrawn = 0
 
-    @Synchronized private fun draw(moveUp: Boolean) {
+    @Synchronized private fun draw(moveUp: Boolean, error: Throwable? = null) {
         val pt = progressTracker!!
 
         if (!usingANSI) {
@@ -122,7 +125,15 @@ object ANSIProgressRenderer {
         // Put a blank line between any logging and us.
         ansi.eraseLine()
         ansi.newline()
-        val newLinesDrawn = 1 + pt.renderLevel(ansi, 0, pt.allSteps)
+        var newLinesDrawn = 1 + pt.renderLevel(ansi, 0, error != null)
+
+        if (error != null) {
+            ansi.a("$SKULL_AND_CROSSBONES   $error")
+            ansi.eraseLine(Ansi.Erase.FORWARD)
+            ansi.newline()
+            newLinesDrawn++
+        }
+
         if (newLinesDrawn < prevLinesDrawn) {
             // If some steps were removed from the progress tracker, we don't want to leave junk hanging around below.
             val linesToClear = prevLinesDrawn - newLinesDrawn
@@ -140,7 +151,7 @@ object ANSIProgressRenderer {
     }
 
     // Returns number of lines rendered.
-    private fun ProgressTracker.renderLevel(ansi: Ansi, indent: Int, allSteps: List<Pair<Int, ProgressTracker.Step>>): Int {
+    private fun ProgressTracker.renderLevel(ansi: Ansi, indent: Int, error: Boolean): Int {
         with(ansi) {
             var lines = 0
             for ((index, step) in steps.withIndex()) {
@@ -149,10 +160,11 @@ object ANSIProgressRenderer {
                 if (indent > 0 && step == ProgressTracker.DONE) continue
 
                 val marker = when {
-                    index < stepIndex -> Emoji.CODE_GREEN_TICK + "  "
-                    index == stepIndex && step == ProgressTracker.DONE -> Emoji.CODE_GREEN_TICK + "  "
-                    index == stepIndex -> Emoji.CODE_RIGHT_ARROW + "  "
-                    else -> "   "
+                    index < stepIndex -> "$CODE_GREEN_TICK   "
+                    index == stepIndex && step == ProgressTracker.DONE -> "$CODE_GREEN_TICK   "
+                    index == stepIndex -> "$CODE_RIGHT_ARROW   "
+                    error -> "$CODE_NO_ENTRY   "
+                    else -> "    "
                 }
                 a("    ".repeat(indent))
                 a(marker)
@@ -168,7 +180,7 @@ object ANSIProgressRenderer {
 
                 val child = getChildProgressTracker(step)
                 if (child != null)
-                    lines += child.renderLevel(ansi, indent + 1, allSteps)
+                    lines += child.renderLevel(ansi, indent + 1, error)
             }
             return lines
         }

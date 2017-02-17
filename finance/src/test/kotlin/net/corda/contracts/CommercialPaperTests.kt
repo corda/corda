@@ -210,24 +210,25 @@ class CommercialPaperTestsGeneric {
      */
 
     private lateinit var bigCorpServices: MockServices
-    private lateinit var bigCorpVault: Vault
+    private lateinit var bigCorpVault: Vault<ContractState>
     private lateinit var bigCorpVaultService: VaultService
 
     private lateinit var aliceServices: MockServices
     private lateinit var aliceVaultService: VaultService
-    private lateinit var alicesVault: Vault
+    private lateinit var alicesVault: Vault<ContractState>
 
     private lateinit var moveTX: SignedTransaction
 
     @Test
     fun `issue move and then redeem`() {
 
-        val dataSourceAndDatabaseAlice = configureDatabase(makeTestDataSourceProperties())
+        val dataSourcePropsAlice = makeTestDataSourceProperties()
+        val dataSourceAndDatabaseAlice = configureDatabase(dataSourcePropsAlice)
         val databaseAlice = dataSourceAndDatabaseAlice.second
         databaseTransaction(databaseAlice) {
 
             aliceServices = object : MockServices() {
-                override val vaultService: VaultService = NodeVaultService(this)
+                override val vaultService: VaultService = NodeVaultService(this, dataSourcePropsAlice)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -241,12 +242,13 @@ class CommercialPaperTestsGeneric {
             aliceVaultService = aliceServices.vaultService
         }
 
-        val dataSourceAndDatabaseBigCorp = configureDatabase(makeTestDataSourceProperties())
+        val dataSourcePropsBigCorp = makeTestDataSourceProperties()
+        val dataSourceAndDatabaseBigCorp = configureDatabase(dataSourcePropsBigCorp)
         val databaseBigCorp = dataSourceAndDatabaseBigCorp.second
         databaseTransaction(databaseBigCorp) {
 
             bigCorpServices = object : MockServices() {
-                override val vaultService: VaultService = NodeVaultService(this)
+                override val vaultService: VaultService = NodeVaultService(this, dataSourcePropsBigCorp)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {

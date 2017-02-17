@@ -2,9 +2,7 @@ package net.corda.schemas
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Table
+import javax.persistence.*
 
 /**
  * An object used to fully qualify the [CashSchema] family name (i.e. independent of version).

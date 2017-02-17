@@ -15,6 +15,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.withoutIssuer
+import net.corda.core.crypto.AbstractParty
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
@@ -199,7 +200,7 @@ class NewTransaction : Fragment() {
         )
         availableAmount.textProperty()
                 .bind(Bindings.createStringBinding({
-                    val filteredCash = cash.filtered { it.token.issuer.party == issuer.value && it.token.product == currencyChoiceBox.value }
+                    val filteredCash = cash.filtered { it.token.issuer.party as AbstractParty == issuer.value && it.token.product == currencyChoiceBox.value }
                             .map { it.withoutIssuer().quantity }
                     "${filteredCash.sum()} ${currencyChoiceBox.value?.currencyCode} Available"
                 }, arrayOf(currencyChoiceBox.valueProperty(), issuerChoiceBox.valueProperty())))

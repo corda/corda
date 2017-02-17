@@ -5,6 +5,7 @@ import com.opengamma.strata.product.swap.IborRateCalculation
 import com.opengamma.strata.product.swap.RateCalculationSwapLeg
 import com.opengamma.strata.product.swap.SwapLegType
 import net.corda.core.contracts.hash
+import net.corda.core.crypto.AbstractParty
 import net.corda.core.crypto.Party
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState
@@ -122,7 +123,7 @@ class PortfolioApiUtils(private val ownParty: Party) {
             val ref: String)
 
     fun createTradeView(state: IRSState): TradeView {
-        val trade = if (state.buyer.name == ownParty.name) state.swap.toFloatingLeg() else state.swap.toFloatingLeg()
+        val trade = if (state.buyer == ownParty as AbstractParty) state.swap.toFloatingLeg() else state.swap.toFloatingLeg()
         val fixedLeg = trade.product.legs.first { it.type == SwapLegType.FIXED } as RateCalculationSwapLeg
         val floatingLeg = trade.product.legs.first { it.type != SwapLegType.FIXED } as RateCalculationSwapLeg
         val fixedRate = fixedLeg.calculation as FixedRateCalculation
@@ -130,7 +131,7 @@ class PortfolioApiUtils(private val ownParty: Party) {
 
         return TradeView(
                 fixedLeg = mapOf(
-                        "fixedRatePayer" to state.buyer.name,
+                        "fixedRatePayer" to state.buyer.owningKey.toBase58String(),
                         "notional" to mapOf(
                                 "token" to fixedLeg.currency.code,
                                 "quantity" to fixedLeg.notionalSchedule.amount.initialValue
@@ -146,7 +147,7 @@ class PortfolioApiUtils(private val ownParty: Party) {
                         "paymentCalendar" to mapOf<String, Any>() // TODO
                 ),
                 floatingLeg = mapOf(
-                        "floatingRatePayer" to state.seller.name,
+                        "floatingRatePayer" to state.seller.owningKey.toBase58String(),
                         "notional" to mapOf(
                                 "token" to floatingLeg.currency.code,
                                 "quantity" to floatingLeg.notionalSchedule.amount.initialValue

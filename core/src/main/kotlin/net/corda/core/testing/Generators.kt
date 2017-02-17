@@ -45,6 +45,12 @@ class CompositeKeyGenerator : Generator<CompositeKey>(CompositeKey::class.java) 
     }
 }
 
+class AnonymousPartyGenerator : Generator<AnonymousParty>(AnonymousParty::class.java) {
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus): AnonymousParty {
+        return AnonymousParty(CompositeKeyGenerator().generate(random, status))
+    }
+}
+
 class PartyGenerator : Generator<Party>(Party::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Party {
         return Party(StringGenerator().generate(random, status), CompositeKeyGenerator().generate(random, status))
@@ -53,7 +59,7 @@ class PartyGenerator : Generator<Party>(Party::class.java) {
 
 class PartyAndReferenceGenerator : Generator<PartyAndReference>(PartyAndReference::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): PartyAndReference {
-        return PartyAndReference(PartyGenerator().generate(random, status), OpaqueBytes(random.nextBytes(16)))
+        return PartyAndReference(AnonymousPartyGenerator().generate(random, status), OpaqueBytes(random.nextBytes(16)))
     }
 }
 

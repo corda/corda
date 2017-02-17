@@ -7,6 +7,7 @@ import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.CashIssueFlow
@@ -24,14 +25,21 @@ import net.corda.testing.expectEvents
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.sequence
+import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
+import java.io.ByteArrayOutputStream
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 class CordaRPCOpsImplTest {
+
+    private companion object {
+        val testJar = "net/corda/node/testing/test.jar"
+    }
 
     lateinit var network: MockNetwork
     lateinit var aliceNode: MockNode
@@ -67,7 +75,7 @@ class CordaRPCOpsImplTest {
 
         // Check the monitoring service wallet is empty
         databaseTransaction(aliceNode.database) {
-            assertFalse(aliceNode.services.vaultService.currentVault.states.iterator().hasNext())
+            assertFalse(aliceNode.services.vaultService.unconsumedStates<ContractState>().iterator().hasNext())
         }
 
         // Tell the monitoring service node to issue some cash
@@ -197,5 +205,25 @@ class CordaRPCOpsImplTest {
                     notaryNode.info.notaryIdentity
             )
         }
+    }
+
+    @Test
+    fun `can upload an attachment`() {
+        val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+        val secureHash = rpc.uploadAttachment(inputJar)
+        assert(rpc.attachmentExists(secureHash))
+    }
+
+    @Test
+    fun `can download an uploaded attachment`() {
+        val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+        val secureHash = rpc.uploadAttachment(inputJar)
+        val bufferFile = ByteArrayOutputStream()
+        val bufferRpc = ByteArrayOutputStream()
+
+        IOUtils.copy(Thread.currentThread().contextClassLoader.getResourceAsStream(testJar), bufferFile)
+        IOUtils.copy(rpc.openAttachment(secureHash), bufferRpc)
+
+        assert(Arrays.equals(bufferFile.toByteArray(), bufferRpc.toByteArray()))
     }
 }

@@ -24,7 +24,6 @@ import net.corda.core.messaging.send
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.*
 import net.corda.core.then
-import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
@@ -391,7 +390,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
         fiber.actionOnEnd = { exception, propagated ->
             try {
-                fiber.logic.progressTracker?.currentStep = ProgressTracker.DONE
                 mutex.locked {
                     stateMachines.remove(fiber)?.let { checkpointStorage.removeCheckpoint(it) }
                     notifyChangeObservers(fiber, AddOrRemove.REMOVE)

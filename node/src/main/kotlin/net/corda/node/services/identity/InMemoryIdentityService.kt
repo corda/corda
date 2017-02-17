@@ -28,11 +28,6 @@ class InMemoryIdentityService() : SingletonSerializeAsToken(), IdentityService {
 
     override fun partyFromKey(key: CompositeKey): Party? = keyToParties[key]
     override fun partyFromName(name: String): Party? = nameToParties[name]
-    override fun partyFromAnonymous(party: AnonymousParty): Party? {
-        return if (party is Party)
-            party
-        else
-            partyFromKey(party.owningKey)
-    }
+    override fun partyFromAnonymous(party: AnonymousParty): Party? = partyFromKey(party.owningKey)
     override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
 }
