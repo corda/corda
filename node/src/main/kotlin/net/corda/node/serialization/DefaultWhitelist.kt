@@ -15,13 +15,11 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.StateMachineInfo
 import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.node.NodeInfo
-import net.corda.core.node.PhysicalLocation
-import net.corda.core.node.ServiceEntry
-import net.corda.core.node.WorldCoordinate
+import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.SerializationCustomization
+import net.corda.node.internal.AbstractNode
 import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.messaging.PermissionException
 import net.corda.node.services.messaging.RPCException
@@ -30,8 +28,8 @@ import org.apache.activemq.artemis.api.core.SimpleString
 import rx.Notification
 import java.util.*
 
-object DefaultCustomizer {
-    fun customize(custom: SerializationCustomization) {
+class DefaultWhitelist : CordaPluginRegistry() {
+    override fun customiseSerialization(custom: SerializationCustomization): Boolean {
         custom.apply {
 
             addToWhitelist(Party::class.java)
@@ -105,6 +103,13 @@ object DefaultCustomizer {
             addToWhitelist(KryoException::class.java)
             addToWhitelist(StringBuffer::class.java)
             addToWhitelist(Unit::class.java)
+
+            for ((_flow, argumentTypes) in AbstractNode.defaultFlowWhiteList) {
+                for (type in argumentTypes) {
+                    addToWhitelist(type)
+                }
+            }
         }
+        return true
     }
 }

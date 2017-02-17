@@ -379,7 +379,7 @@ object KotlinObjectSerializer : Serializer<DeserializeAsKotlinObjectDef>() {
     override fun write(kryo: Kryo, output: Output, obj: DeserializeAsKotlinObjectDef) {}
 }
 
-fun createKryo(k: Kryo = Kryo(CordaClassResolver(LoggingWhitelist(EmptyWhitelist())), MapReferenceResolver())): Kryo {
+fun createKryo(k: Kryo = Kryo(makeStandardClassResolver(), MapReferenceResolver())): Kryo {
     return k.apply {
         DefaultKryoCustomizer.customize(this)
     }

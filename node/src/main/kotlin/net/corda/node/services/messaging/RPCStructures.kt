@@ -10,12 +10,9 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.flows.FlowException
-import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.serialization.*
 import net.corda.core.toFuture
 import net.corda.core.toObservable
-import net.corda.node.internal.AbstractNode
-import net.corda.node.serialization.DefaultCustomizer
 import net.corda.node.services.User
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
 import org.apache.commons.fileupload.MultipartStream
@@ -23,7 +20,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Notification
 import rx.Observable
-import java.util.*
 
 /** Global RPC logger */
 val rpcLog: Logger by lazy { LoggerFactory.getLogger("net.corda.rpc") }
@@ -94,16 +90,7 @@ class PermissionException(msg: String) : RuntimeException(msg)
 // The Kryo used for the RPC wire protocol. Every type in the wire protocol is listed here explicitly.
 // This is annoying to write out, but will make it easier to formalise the wire protocol when the time comes,
 // because we can see everything we're using in one place.
-private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null) : Kryo(CordaClassResolver(LoggingWhitelist(EmptyWhitelist())), MapReferenceResolver()) {
-    companion object {
-        private val pluginRegistries: List<CordaPluginRegistry> by lazy {
-            val unusedKryo = Kryo(CordaClassResolver(LoggingWhitelist(EmptyWhitelist())), MapReferenceResolver())
-            // Sorting required to give a stable ordering, as Kryo allocates integer tokens for each registered class.
-            val customization = KryoSerializationCustomization(unusedKryo)
-            ServiceLoader.load(CordaPluginRegistry::class.java).toList().filter { it.customiseSerialization(customization) }.sortedBy { it.javaClass.name }
-        }
-    }
-
+private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null) : Kryo(makeStandardClassResolver(), MapReferenceResolver()) {
     init {
         // TODO: move all register() to addDefaultSerializer()
         DefaultKryoCustomizer.customize(this)
@@ -112,15 +99,6 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(Class::class.java, ClassSerializer)
         register(MultipartStream.ItemInputStream::class.java, InputStreamSerializer)
         register(MarshalledObservation::class.java, ImmutableClassSerializer(MarshalledObservation::class))
-
-        val customization = KryoSerializationCustomization(this)
-        DefaultCustomizer.customize(customization)
-        for ((_flow, argumentTypes) in AbstractNode.defaultFlowWhiteList) {
-            for (type in argumentTypes) {
-                addToWhitelist(type)
-            }
-        }
-        pluginRegistries.forEach { it.customiseSerialization(customization) }
     }
 
     // TODO: workaround to prevent Observable registration conflict when using plugin registered kyro classes
