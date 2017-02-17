@@ -1,6 +1,7 @@
 package net.corda.docs
 
 import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.issuedBy
@@ -21,6 +22,7 @@ import net.corda.testing.expectEvents
 import net.corda.testing.parallel
 import net.corda.testing.sequence
 import org.junit.Test
+import java.util.*
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
@@ -58,15 +60,19 @@ class IntegrationTestingTutorial {
 
             // START 4
             val issueRef = OpaqueBytes.of(0)
+            val futures = Stack<ListenableFuture<*>>()
             for (i in 1 .. 10) {
                 thread {
-                    aliceProxy.startFlow(::CashIssueFlow,
+                    futures.push(aliceProxy.startFlow(::CashIssueFlow,
                             i.DOLLARS,
                             issueRef,
                             bob.nodeInfo.legalIdentity,
                             notary.nodeInfo.notaryIdentity
-                    )
+                    ).returnValue)
                 }
+            }
+            while (!futures.empty()) {
+                futures.pop().getOrThrow()
             }
 
             bobVaultUpdates.expectEvents {
@@ -86,11 +92,10 @@ class IntegrationTestingTutorial {
 
             // START 5
             for (i in 1 .. 10) {
-                val flowHandle = bobProxy.startFlow(::CashPaymentFlow,
+                bobProxy.startFlow(::CashPaymentFlow,
                         i.DOLLARS.issuedBy(alice.nodeInfo.legalIdentity.ref(issueRef)),
                         alice.nodeInfo.legalIdentity
-                )
-                flowHandle.returnValue.getOrThrow()
+                ).returnValue.getOrThrow()
             }
 
             aliceVaultUpdates.expectEvents {
