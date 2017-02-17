@@ -733,7 +733,7 @@ typedef int LONG;
 #define NO_MALLINFO 0
 #endif  /* NO_MALLINFO */
 #ifndef MALLINFO_FIELD_TYPE
-#define MALLINFO_FIELD_TYPE size_t
+#define MALLINFO_FIELD_TYPE int
 #endif  /* MALLINFO_FIELD_TYPE */
 #ifndef NO_MALLOC_STATS
 #define NO_MALLOC_STATS 0
