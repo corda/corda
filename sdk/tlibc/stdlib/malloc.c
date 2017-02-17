@@ -880,7 +880,10 @@ extern "C" {
   maximum supported value of n differs across systems, but is in all
   cases less than the maximum representable value of a size_t.
 */
-DLMALLOC_EXPORT void* dlmalloc(size_t);
+DLMALLOC_EXPORT void* __tlibc_malloc(size_t);
+DLMALLOC_EXPORT __attribute__((weak)) void* dlmalloc(size_t n) {
+    return __tlibc_malloc(n);
+}
 
 /*
   free(void* p)
@@ -889,14 +892,20 @@ DLMALLOC_EXPORT void* dlmalloc(size_t);
   It has no effect if p is null. If p was not malloced or already
   freed, free(p) will by default cause the current program to abort.
 */
-DLMALLOC_EXPORT void  dlfree(void*);
+DLMALLOC_EXPORT void __tlibc_free(void *);
+DLMALLOC_EXPORT __attribute__((weak)) void dlfree(void *p) {
+    __tlibc_free(p);
+}
 
 /*
   calloc(size_t n_elements, size_t element_size);
   Returns a pointer to n_elements * element_size bytes, with all locations
   set to zero.
 */
-DLMALLOC_EXPORT void* dlcalloc(size_t, size_t);
+DLMALLOC_EXPORT void* __tlibc_calloc(size_t n_elements, size_t element_size);
+DLMALLOC_EXPORT __attribute__((weak)) void* dlcalloc(size_t n_elements, size_t element_size) {
+    return __tlibc_calloc(n_elements, element_size);
+}
 
 /*
   realloc(void* p, size_t n)
@@ -920,8 +929,10 @@ DLMALLOC_EXPORT void* dlcalloc(size_t, size_t);
   The old unix realloc convention of allowing the last-free'd chunk
   to be used as an argument to realloc is not supported.
 */
-DLMALLOC_EXPORT void* dlrealloc(void*, size_t);
-
+DLMALLOC_EXPORT void* __tlibc_realloc(void* p, size_t n);
+DLMALLOC_EXPORT __attribute__((weak)) void* dlrealloc(void* p, size_t n) {
+    return __tlibc_realloc(p, n);
+}
 #ifdef USE_MALLOC_DEPRECATED
 /*
   realloc_in_place(void* p, size_t n)
@@ -951,7 +962,10 @@ DLMALLOC_EXPORT void* dlrealloc_in_place(void*, size_t);
 
   Overreliance on memalign is a sure way to fragment space.
 */
-DLMALLOC_EXPORT void* dlmemalign(size_t, size_t);
+DLMALLOC_EXPORT void* __tlibc_memalign(size_t alignment, size_t n);
+DLMALLOC_EXPORT __attribute__((weak)) void* dlmemalign(size_t alignment, size_t n) {
+    return __tlibc_memalign(alignment, n);
+}
 
 #ifdef USE_MALLOC_DEPRECATED
 /*
@@ -4599,7 +4613,7 @@ static void* tmalloc_small(mstate m, size_t nb) {
 
 #if !ONLY_MSPACES
 
-void* dlmalloc(size_t bytes) {
+void* __tlibc_malloc(size_t bytes) {
   /*
      Basic algorithm:
      If a small request (< 256 bytes minus per-chunk overhead):
@@ -4738,7 +4752,7 @@ void* dlmalloc(size_t bytes) {
 
 /* ---------------------------- free --------------------------- */
 
-void dlfree(void* mem) {
+void __tlibc_free(void* mem) {
   /*
      Consolidate freed chunks with preceeding or succeeding bordering
      free chunks, if they exist, and then place in a bin.  Intermixed
@@ -4847,7 +4861,7 @@ void dlfree(void* mem) {
 #endif /* FOOTERS */
 }
 
-void* dlcalloc(size_t n_elements, size_t elem_size) {
+void* __tlibc_calloc(size_t n_elements, size_t elem_size) {
   void* mem;
   size_t req = 0;
   if (n_elements != 0) {
@@ -5247,7 +5261,7 @@ static void internal_inspect_all(mstate m,
 
 #if !ONLY_MSPACES
 
-void* dlrealloc(void* oldmem, size_t bytes) {
+void* __tlibc_realloc(void* oldmem, size_t bytes) {
   void* mem = 0;
   if (oldmem == 0) {
     mem = dlmalloc(bytes);
@@ -5329,7 +5343,7 @@ void* dlrealloc_in_place(void* oldmem, size_t bytes) {
 }
 #endif
 
-void* dlmemalign(size_t alignment, size_t bytes) {
+void* __tlibc_memalign(size_t alignment, size_t bytes) {
   if (alignment <= MALLOC_ALIGNMENT) {
     return dlmalloc(bytes);
   }
