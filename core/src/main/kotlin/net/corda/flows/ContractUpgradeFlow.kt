@@ -30,6 +30,7 @@ object ContractUpgradeFlow {
         val command = commandData.value as UpgradeCommand
         val participants: Set<CompositeKey> = input.participants.toSet()
         val keysThatSigned: Set<CompositeKey> = commandData.signers.toSet()
+        @Suppress("UNCHECKED_CAST")
         val upgradedContract = command.upgradedContractClass.newInstance() as UpgradedContract<ContractState, *>
         requireThat {
             "The signing keys include all participant keys" by keysThatSigned.containsAll(participants)
