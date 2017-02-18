@@ -42,7 +42,7 @@ class WireTransaction(
     @Volatile @Transient private var cachedBytes: SerializedBytes<WireTransaction>? = null
     val serialized: SerializedBytes<WireTransaction> get() = cachedBytes ?: serialize().apply { cachedBytes = this }
 
-    override val id: SecureHash by lazy { getMerkleTree().hash }
+    override val id: SecureHash by lazy { merkleTree.hash }
 
     companion object {
         fun deserialize(data: SerializedBytes<WireTransaction>, kryo: Kryo = THREAD_LOCAL_KRYO.get()): WireTransaction {
@@ -94,9 +94,7 @@ class WireTransaction(
     /**
      * Builds whole Merkle tree for a transaction.
      */
-    fun getMerkleTree(): MerkleTree {
-        return MerkleTree.getMerkleTree(calculateLeavesHashes())
-    }
+    val merkleTree: MerkleTree by lazy { MerkleTree.getMerkleTree(availableComponentHashes) }
 
     /**
      * Construction of partial transaction from WireTransaction based on filtering.
