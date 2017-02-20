@@ -23,39 +23,51 @@ class DemoBenchView : View("Corda Demo Bench") {
     private val addNodeButton by fxid<Button>()
     private val nodeTabPane by fxid<TabPane>()
     private val menuOpen by fxid<MenuItem>()
-    private val menuSave by fxid<MenuItem>()
     private val menuSaveAs by fxid<MenuItem>()
 
     init {
         importStylesheet("/net/corda/demobench/style.css")
 
-        primaryStage.setOnCloseRequest {
-            log.info("Exiting")
+        configureShutdown()
 
-            // Prevent any new NodeTabViews from being created.
-            addNodeButton.isDisable = true
+        configureProfileSaveAs()
+        configureProfileOpen()
 
-            closeAllTabs()
-            Platform.exit()
-        }
+        configureAddNode()
+    }
 
-        menuSaveAs.setOnAction {
-            profileController.saveAs()
-        }
-        menuSave.setOnAction {
-            profileController.save()
-        }
-        menuOpen.setOnAction {
-            try {
-                val profile = profileController.openProfile()
-                if (profile != null) {
-                    loadProfile(profile)
-                }
-            } catch (e: Exception) {
-                ExceptionDialog(e).apply { initOwner(root.scene.window) }.showAndWait()
+    private fun configureShutdown() = primaryStage.setOnCloseRequest {
+        log.info("Exiting")
+
+        // Prevent any new NodeTabViews from being created.
+        addNodeButton.isDisable = true
+
+        closeAllTabs()
+        Platform.exit()
+    }
+
+    private fun configureProfileSaveAs() = menuSaveAs.setOnAction {
+        try {
+            if (profileController.saveProfile()) {
+                menuSaveAs.isDisable = true
             }
+        } catch (e: Exception) {
+            ExceptionDialog(e).apply { initOwner(root.scene.window) }.showAndWait()
         }
+    }
 
+    private fun configureProfileOpen() = menuOpen.setOnAction {
+        try {
+            val profile = profileController.openProfile()
+            if (profile != null) {
+                loadProfile(profile)
+            }
+        } catch (e: Exception) {
+            ExceptionDialog(e).apply { initOwner(root.scene.window) }.showAndWait()
+        }
+    }
+
+    private fun configureAddNode() {
         addNodeButton.setOnAction {
             val nodeTabView = createNodeTabView(true)
             nodeTabPane.selectionModel.select(nodeTabView.nodeTab)
@@ -66,19 +78,17 @@ class DemoBenchView : View("Corda Demo Bench") {
         addNodeButton.fire()
     }
 
-    private fun closeAllTabs() {
-        ArrayList<Tab>(nodeTabPane.tabs).forEach {
-            (it as CloseableTab).requestClose()
-        }
+    private fun closeAllTabs() = ArrayList<Tab>(nodeTabPane.tabs).forEach {
+        (it as CloseableTab).requestClose()
     }
 
-    fun createNodeTabView(showConfig: Boolean): NodeTabView {
+    private fun createNodeTabView(showConfig: Boolean): NodeTabView {
         val nodeTabView = find<NodeTabView>(mapOf("showConfig" to showConfig))
         nodeTabPane.tabs.add(nodeTabView.nodeTab)
         return nodeTabView
     }
 
-    fun loadProfile(nodes: List<NodeConfig>) {
+    private fun loadProfile(nodes: List<NodeConfig>) {
         closeAllTabs()
         nodeController.reset()
 
@@ -90,6 +100,16 @@ class DemoBenchView : View("Corda Demo Bench") {
         enableAddNodes()
     }
 
+    /**
+     * Enable the "save profile" menu item.
+     */
+    fun enableSaveProfile() {
+        menuSaveAs.isDisable = false
+    }
+
+    /**
+     * Enables the button that allows us to create a new node.
+     */
     fun enableAddNodes() {
         addNodeButton.isDisable = false
     }

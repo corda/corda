@@ -10,7 +10,7 @@ import net.corda.node.services.messaging.CordaRPCClient
 
 class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Unit): AutoCloseable {
 
-    private companion object Data {
+    private companion object {
         val log = loggerFor<NodeRPC>()
         val ONE_SECOND = SECONDS.toMillis(1)
     }

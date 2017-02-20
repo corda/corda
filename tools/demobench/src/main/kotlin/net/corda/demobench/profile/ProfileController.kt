@@ -3,16 +3,23 @@ package net.corda.demobench.profile
 import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import java.nio.file.FileSystems
-import java.nio.file.Files
-import java.nio.file.Path
+import java.io.File
+import java.net.URI
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.*
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
+import java.util.function.BiPredicate
 import javafx.stage.FileChooser
 import javafx.stage.FileChooser.ExtensionFilter
 import net.corda.demobench.model.*
 import tornadofx.Controller
 
 class ProfileController : Controller() {
+
+    private companion object ConfigAcceptor : BiPredicate<Path, BasicFileAttributes> {
+        override fun test(p: Path?, attr: BasicFileAttributes?) = "node.conf" == p?.fileName.toString()
+    }
 
     private val jvm by inject<JVMConfig>()
     private val baseDir = jvm.userHome.resolve("demobench")
@@ -21,34 +28,50 @@ class ProfileController : Controller() {
     private val chooser = FileChooser()
 
     init {
+        chooser.title = "DemoBench Profiles"
         chooser.initialDirectory = baseDir.toFile()
         chooser.extensionFilters.add(ExtensionFilter("DemoBench profiles (*.zip)", "*.zip", "*.ZIP"))
     }
 
-    fun saveAs() {
-        log.info("Save as")
-    }
+    fun saveProfile(): Boolean {
+        var target = chooser.showSaveDialog(null) ?: return false
+        if (target.extension.isEmpty()) {
+            target = File(target.parent, target.name + ".zip")
+        }
 
-    fun save() {
-        log.info("Save")
+        log.info("Save profile as: $target")
+
+        val configs = nodeController.activeNodes
+
+        FileSystems.newFileSystem(URI.create("jar:" + target.toURI()), mapOf("create" to "true")).use {
+            fs -> configs.forEach { it ->
+                val nodeDir = Files.createDirectories(fs.getPath(it.key))
+                val conf = Files.write(nodeDir.resolve("node.conf"), it.toText().toByteArray(UTF_8))
+                log.info("Wrote: $conf")
+            }
+        }
+
+        return true
     }
 
     fun openProfile(): List<NodeConfig>? {
         val chosen = chooser.showOpenDialog(null) ?: return null
-        log.info("Selected profile: ${chosen}")
+        log.info("Selected profile: $chosen")
 
         val configs = LinkedList<NodeConfig>()
 
         FileSystems.newFileSystem(chosen.toPath(), null).use {
             fs -> fs.rootDirectories.forEach {
-                root -> Files.walk(root).forEach {
-                    if ((it.nameCount == 2) && ("node.conf" == it.fileName.toString())) {
-                        try {
-                            configs.add(toNodeConfig(parse(it)))
-                        } catch (e: Exception) {
-                            log.severe("Failed to parse '$it': ${e.message}")
-                            throw e
-                        }
+                root -> Files.find(root, 2, ConfigAcceptor).forEach {
+                    try {
+                        // Java seems to "walk" through the ZIP file backwards.
+                        // So add new config to the front of the list, so that
+                        // our final list is ordered to match the file.
+                        configs.addFirst(toNodeConfig(parse(it)))
+                        log.info("Loaded: $it")
+                    } catch (e: Exception) {
+                        log.severe("Failed to parse '$it': ${e.message}")
+                        throw e
                     }
                 }
             }
