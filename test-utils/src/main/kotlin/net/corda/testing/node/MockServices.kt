@@ -23,6 +23,8 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -98,6 +100,8 @@ class MockKeyManagementService(vararg initialKeys: KeyPair) : SingletonSerialize
 
 class MockAttachmentStorage : AttachmentStorage {
     val files = HashMap<SecureHash, ByteArray>()
+    override var automaticallyExtractAttachments = false
+    override var storePath = Paths.get("")
 
     override fun openAttachment(id: SecureHash): Attachment? {
         val f = files[id] ?: return null

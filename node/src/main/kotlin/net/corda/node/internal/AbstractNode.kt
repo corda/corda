@@ -219,7 +219,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             customServices.clear()
             customServices.addAll(buildPluginServices(tokenizableServices))
 
-            val uploaders: List<FileUploader> = listOf(storageServices.first.attachments as NodeAttachmentService) +
+            val uploaders: List<FileUploader> = listOf(storageServices.first.attachments as FileUploader) +
                     customServices.filterIsInstance(AcceptsFileUpload::class.java)
             (storage as StorageServiceImpl).initUploaders(uploaders)
 
@@ -485,7 +485,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         )
     }
 
-    protected open fun constructStorageService(attachments: NodeAttachmentService,
+    protected open fun constructStorageService(attachments: AttachmentStorage,
                                                transactionStorage: TransactionStorage,
                                                stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage) =
             StorageServiceImpl(attachments, transactionStorage, stateMachineRecordedTransactionMappingStorage)
@@ -530,13 +530,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
 
-    protected fun makeAttachmentStorage(dir: Path): NodeAttachmentService {
+    protected fun makeAttachmentStorage(dir: Path): AttachmentStorage {
         val attachmentsDir = dir / "attachments"
         try {
             attachmentsDir.createDirectory()
         } catch (e: FileAlreadyExistsException) {
         }
-        return NodeAttachmentService(attachmentsDir, services.monitoringService.metrics)
+        return NodeRqAttachmentService(attachmentsDir, configuration.dataSourceProperties, services.monitoringService.metrics)
     }
 
     protected fun createNodeDir() {

@@ -8,6 +8,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Emoji
@@ -28,7 +29,7 @@ class BuyerFlow(val otherParty: Party,
         init {
             // Buyer will fetch the attachment from the seller automatically when it resolves the transaction.
             // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.
-            val attachmentsPath = (services.storageService.attachments as NodeAttachmentService).let {
+            val attachmentsPath = (services.storageService.attachments as AttachmentStorage).let {
                 it.automaticallyExtractAttachments = true
                 it.storePath
             }
