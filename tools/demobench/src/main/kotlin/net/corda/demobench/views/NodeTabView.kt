@@ -169,9 +169,9 @@ class NodeTabView : Fragment() {
     init {
         INTEGER_FORMAT.isGroupingUsed = false
 
-        // Ensure that we close the terminal along with the tab.
+        // Ensure that we destroy the terminal along with the tab.
         nodeTab.setOnCloseRequest {
-            nodeTerminalView.close()
+            nodeTerminalView.destroy()
         }
 
         root.add(nodeConfigView)

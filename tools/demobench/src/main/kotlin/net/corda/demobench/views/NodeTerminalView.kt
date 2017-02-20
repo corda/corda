@@ -35,7 +35,7 @@ class NodeTerminalView : Fragment() {
     private val launchWebButton by fxid<Button>()
     private val launchExplorerButton by fxid<Button>()
 
-    private var isClosed: Boolean = false
+    private var isDestroyed: Boolean = false
     private val explorer = explorerController.explorer()
     private val webServer = webServerController.webServer()
     private val viewer = DBViewer()
@@ -143,14 +143,14 @@ class NodeTerminalView : Fragment() {
         }
     })
 
-    fun close() {
-        if (!isClosed) {
+    fun destroy() {
+        if (!isDestroyed) {
             webServer.close()
             explorer.close()
             viewer.close()
             rpc?.close()
             pty?.close()
-            isClosed = true
+            isDestroyed = true
         }
     }
 
