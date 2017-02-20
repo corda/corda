@@ -8,6 +8,11 @@ import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
 import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.utilities.loggerFor
+import java.io.PrintWriter
+import java.nio.charset.Charset
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
 import java.util.*
 
 fun Kryo.addToWhitelist(type: Class<*>) {
@@ -95,6 +100,19 @@ class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true)
     companion object {
         val log = loggerFor<LoggingWhitelist>()
         val globallySeen: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+        val journalWriter: PrintWriter? = openOptionalDynamicWhitelistJournal()
+
+        private fun openOptionalDynamicWhitelistJournal(): PrintWriter? {
+            val env = System.getenv("WHITELIST_FILE")
+            if (env != null) {
+                try {
+                    return PrintWriter(Files.newBufferedWriter(Paths.get(env), Charset.forName("UTF-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE), true)
+                } catch(ioEx: Exception) {
+                    log.error("Could not open/create whitelist journal file for append: $env")
+                }
+            }
+            return null
+        }
     }
 
     private val locallySeen: MutableSet<String> = mutableSetOf()
@@ -103,7 +121,9 @@ class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true)
     override fun hasListed(type: Class<*>): Boolean {
         if (type.name !in alreadySeen && !delegate.hasListed(type)) {
             alreadySeen += type.name
-            log.info("Dynamically whitelisted class ${Util.className(type)}")
+            val className = Util.className(type)
+            log.warn("Dynamically whitelisted class $className")
+            if (journalWriter != null) journalWriter.println(className)
         }
         return true
     }
