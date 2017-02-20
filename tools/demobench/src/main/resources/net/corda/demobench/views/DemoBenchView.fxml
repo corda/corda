@@ -13,8 +13,7 @@
    <MenuBar>
       <Menu text="File">
          <MenuItem fx:id="menuOpen" text="Open"/>
-         <MenuItem fx:id="menuSave" text="Save"/>
-         <MenuItem fx:id="menuSaveAs" text="Save As"/>
+         <MenuItem fx:id="menuSaveAs" disable="true" text="Save As"/>
       </Menu>
    </MenuBar>
    <StackPane>

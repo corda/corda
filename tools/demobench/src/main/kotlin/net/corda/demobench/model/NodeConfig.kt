@@ -66,7 +66,7 @@ class NodeConfig(
             .withValue("h2port", valueFor(h2Port))
             .withValue("useTestClock", valueFor(true))
 
-    fun toText() = toFileConfig().root().render(renderOptions)
+    fun toText(): String = toFileConfig().root().render(renderOptions)
 
     fun moveTo(baseDir: Path) = NodeConfig(
         baseDir, legalName, artemisPort, nearestCity, webPort, h2Port, extraServices, users

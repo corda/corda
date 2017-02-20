@@ -5,7 +5,6 @@ import java.lang.management.ManagementFactory
 import java.net.ServerSocket
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import net.corda.demobench.pty.R3Pty
 import tornadofx.Controller
@@ -27,13 +26,13 @@ class NodeController : Controller() {
     private val cordaPath = jvm.applicationDir.resolve("corda").resolve("corda.jar")
     private val command = jvm.commandFor(cordaPath)
 
-    private val nodes = ConcurrentHashMap<String, NodeConfig>()
+    private val nodes = LinkedHashMap<String, NodeConfig>()
     private val port = AtomicInteger(FIRST_PORT)
 
     private var networkMapConfig: NetworkMapConfig? = null
 
     val activeNodes: List<NodeConfig> get() = nodes.values.filter {
-        it.state == NodeState.RUNNING
+        (it.state == NodeState.RUNNING) || (it.state == NodeState.STARTING)
     }
 
     init {

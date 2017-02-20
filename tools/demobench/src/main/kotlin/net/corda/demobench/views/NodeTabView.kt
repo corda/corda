@@ -155,6 +155,7 @@ class NodeTabView : Fragment() {
                     if (model.validate()) {
                         launch()
                         main.enableAddNodes()
+                        main.enableSaveProfile()
                     }
                 }
             }
