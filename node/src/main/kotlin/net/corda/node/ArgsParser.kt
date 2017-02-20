@@ -29,7 +29,7 @@ class ArgsParser {
             .defaultsTo(Level.INFO)
     private val logToConsoleArg = optionParser.accepts("log-to-console", "If set, prints logging to the console as well as to a file.")
     private val isWebserverArg = optionParser.accepts("webserver")
-    private val registrationArg = optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
+    private val isRegistrationArg = optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
     private val helpArg = optionParser.accepts("help").forHelp()
 
     fun parse(vararg args: String): CmdLineOptions {
@@ -43,7 +43,7 @@ class ArgsParser {
         val loggingLevel = optionSet.valueOf(loggerLevel)
         val logToConsole = optionSet.has(logToConsoleArg)
         val isWebserver = optionSet.has(isWebserverArg)
-        val isRegistration = optionSet.has(registrationArg)
+        val isRegistration = optionSet.has(isRegistrationArg)
         return CmdLineOptions(baseDirectory, configFile, help, loggingLevel, logToConsole, isWebserver, isRegistration)
     }
 
