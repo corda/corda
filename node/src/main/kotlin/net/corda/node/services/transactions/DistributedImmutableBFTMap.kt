@@ -57,7 +57,7 @@ class BFTSmartServer<K: Any, V: Any>(val id: Int, val db: Database, tableName: S
         val request = command.deserialize<Request>()
         when (request.type) {
             RequestType.Get -> {
-                val v = table[request.data] ?: return null
+                val v = databaseTransaction(db) { table[request.data] } ?: return null
                 return v.serialize().bytes
             }
             else -> {
