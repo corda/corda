@@ -30,7 +30,7 @@ object SignatureAlgorithmManager {
     /** ECDSA signature scheme using the secp256k1 Koblitz curve. */
     private val ECDSA_SIGNATURE = SignatureAlgorithm(
             Signature.getInstance("SHA256withECDSA", "BC"),
-            KeyPairGenerator.getInstance("ECDSA", "BC"),
+            KeyPairGenerator.getInstance("ECDSA"),
             ECGenParameterSpec("secp256k1"),
             256,
             "ECDSA",
