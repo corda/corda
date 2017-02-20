@@ -20,7 +20,8 @@ class ArgsParserTest {
                 help = false,
                 logToConsole = false,
                 loggingLevel = Level.INFO,
-                isWebserver = false))
+                isWebserver = false,
+                isRegistration = false))
     }
 
     @Test
