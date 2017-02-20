@@ -34,11 +34,7 @@ class ProfileController : Controller() {
     }
 
     fun saveProfile(): Boolean {
-        var target = chooser.showSaveDialog(null) ?: return false
-        if (target.extension.isEmpty()) {
-            target = File(target.parent, target.name + ".zip")
-        }
-
+        val target = forceExtension(chooser.showSaveDialog(null) ?: return false, ".zip")
         log.info("Save profile as: $target")
 
         val configs = nodeController.activeNodes
@@ -52,6 +48,10 @@ class ProfileController : Controller() {
         }
 
         return true
+    }
+
+    private fun forceExtension(target: File, ext: String): File {
+        return if (target.extension.isEmpty()) File(target.parent, target.name + ext) else target
     }
 
     fun openProfile(): List<NodeConfig>? {
