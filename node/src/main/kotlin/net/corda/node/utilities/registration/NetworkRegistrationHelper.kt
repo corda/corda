@@ -15,7 +15,7 @@ import java.security.cert.Certificate
 import kotlin.system.exitProcess
 
 /**
- * This check the [config.certificatesDirectory] for certificates required to connect to the Corda network.
+ * This checks the [config.certificatesDirectory] for certificates required to connect to a Corda network.
  * If the certificates are not found, a [PKCS10CertificationRequest] will be submitted to Corda network permissioning server using [NetworkRegistrationService].
  * This process will enter a polling loop until the request has been approved, and then
  * the certificate chain will be downloaded and stored in [Keystore] reside in [config.certificatesDirectory].
@@ -51,7 +51,7 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
             } catch (e: CertificateRequestException) {
                 System.err.println(e.message)
                 println("Please make sure the details in configuration file are correct and try again.")
-                println("Corda Node will now terminate.")
+                println("Corda node will now terminate.")
                 requestIdStore.deleteIfExists()
                 exitProcess(1)
             }
