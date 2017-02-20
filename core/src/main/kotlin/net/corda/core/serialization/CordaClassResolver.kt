@@ -6,6 +6,7 @@ import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
+import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.utilities.loggerFor
 import java.util.*
 
@@ -54,8 +55,9 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
         }
     }
 
+    // We don't allow the annotation for classes in attachments.  The class will be on the main classpath if we have the CorDapp installed.
     protected fun checkForAnnotation(type: Class<*>): Boolean {
-        return type.isAnnotationPresent(CordaSerializable::class.java)
+        return (type.classLoader !is AttachmentsClassLoader) && type.isAnnotationPresent(CordaSerializable::class.java)
     }
 }
 
