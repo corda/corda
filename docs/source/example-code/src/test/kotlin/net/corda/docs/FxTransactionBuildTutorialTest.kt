@@ -32,12 +32,14 @@ class FxTransactionBuildTutorialTest {
                 legalName = DUMMY_NOTARY.name,
                 overrideServices = mapOf(Pair(notaryService, DUMMY_NOTARY_KEY)),
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
-        nodeA = net.createPartyNode(notaryNode.info.address)
-        nodeB = net.createPartyNode(notaryNode.info.address)
+        nodeA = net.createPartyNode(notaryNode.info.address, start = false)
+        nodeB = net.createPartyNode(notaryNode.info.address, start = false)
         FxTransactionDemoTutorial.registerFxProtocols(nodeA.services)
         FxTransactionDemoTutorial.registerFxProtocols(nodeB.services)
         WorkflowTransactionBuildTutorial.registerWorkflowProtocols(nodeA.services)
         WorkflowTransactionBuildTutorial.registerWorkflowProtocols(nodeB.services)
+        nodeA.start()
+        nodeB.start()
     }
 
     @After

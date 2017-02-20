@@ -11,6 +11,7 @@ class FlowLogicRefTest {
     data class ParamType2(val value: String)
 
     @Suppress("UNUSED_PARAMETER", "unused") // Things are used via reflection.
+    @FlowVersion("1.0")
     class KotlinFlowLogic(A: ParamType1, b: ParamType2) : FlowLogic<Unit>() {
         constructor() : this(ParamType1(1), ParamType2("2"))
 
@@ -25,10 +26,12 @@ class FlowLogicRefTest {
         override fun call() = Unit
     }
 
+    @FlowVersion("1.0")
     class KotlinNoArgFlowLogic : FlowLogic<Unit>() {
         override fun call() = Unit
     }
 
+    @FlowVersion("1.0")
     @Suppress("UNUSED_PARAMETER") // We will never use A or b
     class NotWhiteListedKotlinFlowLogic(A: Int, b: String) : FlowLogic<Unit>() {
         override fun call() = Unit

@@ -10,6 +10,8 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
+import net.corda.core.flows.FlowVersionInfo
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
@@ -36,7 +38,6 @@ import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.sequence
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -97,7 +98,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `flow can lazily use the serviceHub in its constructor`() {
-        val flow = object : FlowLogic<Unit>() {
+        val flow = object : DefaultFlowVersion<Unit>() {
             val lazyTime by lazy { serviceHub.clock.instant() }
             @Suspendable
             override fun call() = Unit
@@ -108,7 +109,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `exception while fiber suspended`() {
-        node2.services.registerFlowInitiator(ReceiveFlow::class.java) { SendFlow("Hello", it) }
+        node2.services.registerFlowInitiator(ReceiveFlow::class.java, { SendFlow("Hello", it) })
         val flow = ReceiveFlow(node2.info.legalIdentity)
         val fiber = node1.services.startFlow(flow) as FlowStateMachineImpl
         // Before the flow runs change the suspend action to throw an exception
@@ -127,7 +128,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `flow restarted just after receiving payload`() {
-        node2.services.registerFlowInitiator(SendFlow::class.java) { ReceiveFlow(it).nonTerminating() }
+        node2.services.registerFlowInitiator(SendFlow::class.java, { ReceiveFlow(it).nonTerminating() })
         node1.services.startFlow(SendFlow("Hello", node2.info.legalIdentity))
 
         // We push through just enough messages to get only the payload sent
@@ -177,7 +178,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `flow loaded from checkpoint will respond to messages from before start`() {
-        node1.services.registerFlowInitiator(ReceiveFlow::class.java) { SendFlow("Hello", it) }
+        node1.services.registerFlowInitiator(ReceiveFlow::class.java, { SendFlow("Hello", it) })
         node2.services.startFlow(ReceiveFlow(node1.info.legalIdentity).nonTerminating()) // Prepare checkpointed receive flow
         // Make sure the add() has finished initial processing.
         node2.smm.executor.flush()
@@ -241,8 +242,8 @@ class StateMachineManagerTests {
     fun `sending to multiple parties`() {
         val node3 = net.createNode(node1.info.address)
         net.runNetwork()
-        node2.services.registerFlowInitiator(SendFlow::class.java) { ReceiveFlow(it).nonTerminating() }
-        node3.services.registerFlowInitiator(SendFlow::class.java) { ReceiveFlow(it).nonTerminating() }
+        node2.services.registerFlowInitiator(SendFlow::class.java, { ReceiveFlow(it).nonTerminating() })
+        node3.services.registerFlowInitiator(SendFlow::class.java, { ReceiveFlow(it).nonTerminating() })
         val payload = "Hello World"
         node1.services.startFlow(SendFlow(payload, node2.info.legalIdentity, node3.info.legalIdentity))
         net.runNetwork()
@@ -253,14 +254,14 @@ class StateMachineManagerTests {
 
         assertSessionTransfers(node2,
                 node1 sent sessionInit(SendFlow::class, payload) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm(SendFlow::class) to node1,
                 node1 sent normalEnd to node2
                 //There's no session end from the other flows as they're manually suspended
         )
 
         assertSessionTransfers(node3,
                 node1 sent sessionInit(SendFlow::class, payload) to node3,
-                node3 sent sessionConfirm to node1,
+                node3 sent sessionConfirm(SendFlow::class) to node1,
                 node1 sent normalEnd to node3
                 //There's no session end from the other flows as they're manually suspended
         )
@@ -275,8 +276,8 @@ class StateMachineManagerTests {
         net.runNetwork()
         val node2Payload = "Test 1"
         val node3Payload = "Test 2"
-        node2.services.registerFlowInitiator(ReceiveFlow::class.java) { SendFlow(node2Payload, it) }
-        node3.services.registerFlowInitiator(ReceiveFlow::class.java) { SendFlow(node3Payload, it) }
+        node2.services.registerFlowInitiator(ReceiveFlow::class.java, { SendFlow(node2Payload, it) })
+        node3.services.registerFlowInitiator(ReceiveFlow::class.java, { SendFlow(node3Payload, it) })
         val multiReceiveFlow = ReceiveFlow(node2.info.legalIdentity, node3.info.legalIdentity).nonTerminating()
         node1.services.startFlow(multiReceiveFlow)
         node1.acceptableLiveFiberCountOnStop = 1
@@ -286,14 +287,14 @@ class StateMachineManagerTests {
 
         assertSessionTransfers(node2,
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm(ReceiveFlow::class) to node1,
                 node2 sent sessionData(node2Payload) to node1,
                 node2 sent normalEnd to node1
         )
 
         assertSessionTransfers(node3,
                 node1 sent sessionInit(ReceiveFlow::class) to node3,
-                node3 sent sessionConfirm to node1,
+                node3 sent sessionConfirm(ReceiveFlow::class) to node1,
                 node3 sent sessionData(node3Payload) to node1,
                 node3 sent normalEnd to node1
         )
@@ -301,13 +302,13 @@ class StateMachineManagerTests {
 
     @Test
     fun `both sides do a send as their first IO request`() {
-        node2.services.registerFlowInitiator(PingPongFlow::class.java) { PingPongFlow(it, 20L) }
+        node2.services.registerFlowInitiator(PingPongFlow::class.java, { PingPongFlow(it, 20L) })
         node1.services.startFlow(PingPongFlow(node2.info.legalIdentity, 10L))
         net.runNetwork()
 
         assertSessionTransfers(
                 node1 sent sessionInit(PingPongFlow::class, 10L) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm(PingPongFlow::class) to node1,
                 node2 sent sessionData(20L) to node1,
                 node1 sent sessionData(11L) to node2,
                 node2 sent sessionData(21L) to node1,
@@ -372,7 +373,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `other side ends before doing expected send`() {
-        node2.services.registerFlowInitiator(ReceiveFlow::class.java) { NoOpFlow() }
+        node2.services.registerFlowInitiator(ReceiveFlow::class.java, { NoOpFlow() })
         val resultFuture = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)).resultFuture
         net.runNetwork()
         assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
@@ -409,7 +410,7 @@ class StateMachineManagerTests {
 
         assertSessionTransfers(
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm(ReceiveFlow::class) to node1,
                 node2 sent erroredEnd() to node1
         )
     }
@@ -442,7 +443,7 @@ class StateMachineManagerTests {
 
         assertSessionTransfers(
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm(ReceiveFlow::class) to node1,
                 node2 sent erroredEnd(erroringFlow.get().exceptionThrown) to node1
         )
         // Make sure the original stack trace isn't sent down the wire
@@ -463,7 +464,8 @@ class StateMachineManagerTests {
                 .withMessage("Chain")
     }
 
-    private class SendAndReceiveFlow(val otherParty: Party, val payload: Any) : FlowLogic<Unit>() {
+    @FlowVersion("1.0")
+    private class SendAndReceiveFlow(val otherParty: Party, val payload: Any) : DefaultFlowVersion<Unit>() {
         @Suspendable
         override fun call() {
             sendAndReceive<Any>(otherParty, payload)
@@ -497,12 +499,13 @@ class StateMachineManagerTests {
 
         assertSessionTransfers(node2,
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm(ReceiveFlow::class) to node1,
                 node2 sent sessionData("Hello") to node1,
                 node1 sent erroredEnd() to node2
         )
     }
 
+    @FlowVersion("1.0")
     private class ConditionalExceptionFlow(val otherParty: Party, val sendPayload: Any) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
@@ -516,12 +519,14 @@ class StateMachineManagerTests {
 
     @Test
     fun `retry subFlow due to receiving FlowException`() {
-        class AskForExceptionFlow(val otherParty: Party, val throwException: Boolean) : FlowLogic<String>() {
+        @FlowVersion("1.0")
+        class AskForExceptionFlow(val otherParty: Party, val throwException: Boolean) :  FlowLogic<String>() {
             @Suspendable
             override fun call(): String = sendAndReceive<String>(otherParty, throwException).unwrap { it }
         }
 
-        class RetryOnExceptionFlow(val otherParty: Party) : FlowLogic<String>() {
+        @FlowVersion("1.0")
+        class RetryOnExceptionFlow(val otherParty: Party) :  FlowLogic<String>() {
             @Suspendable
             override fun call(): String {
                 return try {
@@ -532,7 +537,7 @@ class StateMachineManagerTests {
             }
         }
 
-        node2.services.registerFlowInitiator(AskForExceptionFlow::class.java) { ConditionalExceptionFlow(it, "Hello") }
+        node2.services.registerFlowInitiator(AskForExceptionFlow::class.java, { ConditionalExceptionFlow(it, "Hello") })
         val resultFuture = node1.services.startFlow(RetryOnExceptionFlow(node2.info.legalIdentity)).resultFuture
         net.runNetwork()
         assertThat(resultFuture.getOrThrow()).isEqualTo("Hello")
@@ -560,9 +565,9 @@ class StateMachineManagerTests {
         ptx.signWith(node1.services.legalIdentityKey)
         val stx = ptx.toSignedTransaction()
 
-        node1.services.registerFlowInitiator(WaitingFlows.Waiter::class.java) {
+        node1.services.registerFlowInitiator(WaitingFlows.Waiter::class.java, {
             WaitingFlows.Committer(it) { throw Exception("Error") }
-        }
+        })
         val waiter = node2.services.startFlow(WaitingFlows.Waiter(stx, node1.info.legalIdentity)).resultFuture
         net.runNetwork()
         assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
@@ -588,8 +593,16 @@ class StateMachineManagerTests {
         return smm.findStateMachines(P::class.java).single()
     }
 
-    private fun sessionInit(flowMarker: KClass<*>, payload: Any? = null) = SessionInit(0, flowMarker.java.name, payload)
-    private val sessionConfirm = SessionConfirm(0, 0)
+    private fun sessionInit(flowMarker: KClass<*>, payload: Any? = null): SessionInit {
+        val info = FlowVersionInfo.getVersionAnnotation(flowMarker.java)
+        return SessionInit(0, info.genericName, info.version, payload)
+    }
+
+    private fun sessionConfirm(flowMarker: KClass<*>): SessionConfirm {
+        val info = FlowVersionInfo.getVersionAnnotation(flowMarker.java)
+        return SessionConfirm(0, 0, info.genericName, info.version)
+    }
+
     private fun sessionData(payload: Any) = SessionData(0, payload)
     private val normalEnd = NormalSessionEnd(0)
     private fun erroredEnd(errorResponse: FlowException? = null) = ErrorSessionEnd(0, errorResponse)
@@ -640,6 +653,7 @@ class StateMachineManagerTests {
                 .toFuture()
     }
 
+    @FlowVersion("1.0")
     private class NoOpFlow(val nonTerminating: Boolean = false) : FlowLogic<Unit>() {
         @Transient var flowStarted = false
 
@@ -652,7 +666,7 @@ class StateMachineManagerTests {
         }
     }
 
-
+    @FlowVersion("1.0")
     private class SendFlow(val payload: String, vararg val otherParties: Party) : FlowLogic<Unit>() {
         init {
             require(otherParties.isNotEmpty())
@@ -662,7 +676,7 @@ class StateMachineManagerTests {
         override fun call() = otherParties.forEach { send(it, payload) }
     }
 
-
+    @FlowVersion("1.0")
     private class ReceiveFlow(vararg val otherParties: Party) : FlowLogic<Unit>() {
         object START_STEP : ProgressTracker.Step("Starting")
         object RECEIVED_STEP : ProgressTracker.Step("Received")
@@ -691,6 +705,7 @@ class StateMachineManagerTests {
         }
     }
 
+    @FlowVersion("1.0")
     private class PingPongFlow(val otherParty: Party, val payload: Long) : FlowLogic<Unit>() {
         @Transient var receivedPayload: Long? = null
         @Transient var receivedPayload2: Long? = null
@@ -702,6 +717,7 @@ class StateMachineManagerTests {
         }
     }
 
+    @FlowVersion("1.0")
     private class ExceptionFlow<E : Exception>(val exception: () -> E) : FlowLogic<Nothing>() {
         object START_STEP : ProgressTracker.Step("Starting")
 
@@ -721,6 +737,7 @@ class StateMachineManagerTests {
     }
 
     private object WaitingFlows {
+        @FlowVersion("1.0")
         class Waiter(val stx: SignedTransaction, val otherParty: Party) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
@@ -729,6 +746,7 @@ class StateMachineManagerTests {
             }
         }
 
+        @FlowVersion("1.0")
         class Committer(val otherParty: Party, val throwException: (() -> Exception)? = null) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {

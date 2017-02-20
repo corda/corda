@@ -7,6 +7,7 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.flows.FlowVersion
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
@@ -27,12 +28,14 @@ import java.util.*
  *
  * @throws FixOutOfRange if the returned fix was further away from the expected rate by the given amount.
  */
+@FlowVersion("1.0")
 open class RatesFixFlow(protected val tx: TransactionBuilder,
                         protected val oracle: Party,
                         protected val fixOf: FixOf,
                         protected val expectedRate: BigDecimal,
                         protected val rateTolerance: BigDecimal,
                         override val progressTracker: ProgressTracker = RatesFixFlow.tracker(fixOf.name)) : FlowLogic<Unit>() {
+    // TODO counterparty marker
 
     companion object {
         class QUERYING(val name: String) : ProgressTracker.Step("Querying oracle for $name interest rate")
@@ -93,6 +96,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     }
 
     // DOCSTART 1
+    @FlowVersion("1.0")
     class FixQueryFlow(val fixOf: FixOf, val oracle: Party) : FlowLogic<Fix>() {
         @Suspendable
         override fun call(): Fix {
@@ -109,6 +113,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         }
     }
 
+    @FlowVersion("1.0")
     class FixSignFlow(val tx: TransactionBuilder, val oracle: Party,
                       val partialMerkleTx: FilteredTransaction) : FlowLogic<DigitalSignature.LegallyIdentifiable>() {
         @Suspendable

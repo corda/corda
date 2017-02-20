@@ -6,6 +6,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.getOrThrow
+import net.corda.core.flows.FlowVersion
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -29,6 +30,8 @@ import java.util.*
  *
  * The flow returns a list of verified [LedgerTransaction] objects, in a depth-first order.
  */
+// TODO This flow calls only subFlow, so only subFlow will be negotiated. We could force version negotiation on higher level.
+@FlowVersion("1.0")
 class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
                               private val otherSide: Party) : FlowLogic<List<LedgerTransaction>>() {
 

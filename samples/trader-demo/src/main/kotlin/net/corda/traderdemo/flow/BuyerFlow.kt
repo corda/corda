@@ -6,6 +6,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.TransactionGraphSearch
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -17,6 +18,7 @@ import net.corda.flows.TwoPartyTradeFlow
 import java.nio.file.Path
 import java.util.*
 
+@FlowVersion("1.0")
 class BuyerFlow(val otherParty: Party,
                 private val attachmentsPath: Path,
                 override val progressTracker: ProgressTracker = ProgressTracker(STARTING_BUY)) : FlowLogic<Unit>() {
@@ -31,7 +33,7 @@ class BuyerFlow(val otherParty: Party,
                 it.automaticallyExtractAttachments = true
                 it.storePath
             }
-            services.registerFlowInitiator(SellerFlow::class.java) { BuyerFlow(it, attachmentsPath) }
+            services.registerFlowInitiator(SellerFlow::class.java, { BuyerFlow(it, attachmentsPath) })
         }
     }
 

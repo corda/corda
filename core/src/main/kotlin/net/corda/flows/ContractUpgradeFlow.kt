@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import net.corda.core.flows.FlowVersion
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.flows.AbstractStateReplacementFlow.Proposal
@@ -49,6 +50,7 @@ object ContractUpgradeFlow {
                 .withItems(stateRef, contractUpgrade.upgrade(stateRef.state.data), Command(UpgradeCommand(upgradedContractClass), stateRef.state.data.participants))
     }
 
+    @FlowVersion("1.0")
     class Instigator<OldState : ContractState, out NewState : ContractState>(
             originalState: StateAndRef<OldState>,
             newContractClass: Class<out UpgradedContract<OldState, NewState>>
@@ -62,6 +64,7 @@ object ContractUpgradeFlow {
         }
     }
 
+    @FlowVersion("1.0")
     class Acceptor(otherSide: Party) : AbstractStateReplacementFlow.Acceptor<Class<out UpgradedContract<ContractState, *>>>(otherSide) {
         @Suspendable
         @Throws(StateReplacementException::class)

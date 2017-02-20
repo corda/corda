@@ -6,6 +6,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.linearHeadsOfType
@@ -51,6 +52,7 @@ class ScheduledFlowTests {
         }
     }
 
+    @FlowVersion("1.0")
     class InsertInitialStateFlow(val destination: Party) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
@@ -65,6 +67,7 @@ class ScheduledFlowTests {
         }
     }
 
+    @FlowVersion("1.0")
     class ScheduledFlow(val stateRef: StateRef) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {

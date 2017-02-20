@@ -28,6 +28,7 @@ import rx.Observable
  * If you'd like to use another FlowLogic class as a component of your own, construct it on the fly and then pass
  * it to the [subFlow] method. It will return the result of that flow when it completes.
  */
+// TODO Do we want to have default FlowLogic version?
 abstract class FlowLogic<out T> {
     /** This is where you should log things to. */
     val logger: Logger get() = stateMachine.logger
@@ -46,8 +47,14 @@ abstract class FlowLogic<out T> {
      * Return the marker [Class] which [party] has used to register the counterparty flow that is to execute on the
      * other side. The default implementation returns the class object of this FlowLogic, but any [Class] instance
      * will do as long as the other side registers with it.
+     * There is a problem with that approach when taking into consideration flow versions. In situations when we want to
+     * communicate with different parties and run different flows (without subflowing). How to do version negotiation in
+     * that case? There are two approaches, assume that all flows in that communication are part of one generalFlow and
+     * are versioned together. Second approach is that we start different flowName on other side, but we still have to
+     * version it together with the one that started communication (otherwise it's impossible to reach consensus without
+     * complicated mapping).
      */
-    open fun getCounterpartyMarker(party: Party): Class<*> = javaClass
+    open fun getCounterpartyMarker(party: Party): String = javaClass.simpleName
 
     /**
      * Serializes and queues the given [payload] object for sending to the [otherParty]. Suspends until a response
@@ -137,6 +144,9 @@ abstract class FlowLogic<out T> {
             subLogic.sessionFlow = this
         }
         logger.debug { "Calling subflow: $subLogic" }
+        // TODO Flow versioning -> problems if they share parent session (no version negotiation)
+        //  Think about CashFlow that doesn't do send/receive, but calls subflows.
+        //  Only subflows versions will be negotiated (however with assumption that what we started is what we want to negotiate it's fine).
         val result = subLogic.call()
         logger.debug { "Subflow finished with result $result" }
         // It's easy to forget this when writing flows so we just step it to the DONE state when it completes.

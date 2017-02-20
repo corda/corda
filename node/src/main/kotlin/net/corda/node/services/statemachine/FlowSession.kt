@@ -10,7 +10,9 @@ class FlowSession(
         val flow: FlowLogic<*>,
         val ourSessionId: Long,
         val initiatingParty: Party?,
-        var state: FlowSessionState)
+        var state: FlowSessionState,
+        val chosenFlowName: String,
+        var flowVersion: String)
 {
     val receivedMessages = ConcurrentLinkedQueue<ReceivedSessionMessage<*>>()
     val fiber: FlowStateMachineImpl<*> get() = flow.stateMachine as FlowStateMachineImpl<*>

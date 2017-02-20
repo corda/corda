@@ -7,6 +7,7 @@ import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.keys
 import net.corda.core.crypto.toStringShort
+import net.corda.core.flows.FlowVersion
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
@@ -20,6 +21,7 @@ import java.util.*
  * @param recipient the party to pay the currency to.
  * @param issuerConstraint if specified, the payment will be made using only cash issued by the given parties.
  */
+@FlowVersion("1.0")
 open class CashPaymentFlow(
         val amount: Amount<Currency>,
         val recipient: Party,

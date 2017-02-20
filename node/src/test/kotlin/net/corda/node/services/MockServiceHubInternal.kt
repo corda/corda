@@ -67,7 +67,7 @@ open class MockServiceHubInternal(
     private val txStorageService: TxWritableStorageService
         get() = storage ?: throw UnsupportedOperationException()
 
-    private val flowFactories = ConcurrentHashMap<Class<*>, (Party) -> FlowLogic<*>>()
+    private val flowFactories = ConcurrentHashMap<String, (String, Party) -> FlowLogic<*>?>()
 
     lateinit var smm: StateMachineManager
 
@@ -85,11 +85,28 @@ open class MockServiceHubInternal(
         return smm.executor.fetchFrom { smm.add(logic) }
     }
 
-    override fun registerFlowInitiator(markerClass: Class<*>, flowFactory: (Party) -> FlowLogic<*>) {
-        flowFactories[markerClass] = flowFactory
+    override fun registerFlowInitiator(markerClass: Class<*>, flowFactory: (Party) -> FlowLogic<*>, serviceType: ServiceType, toAdvertise: Boolean) {
+        val info = FlowVersionInfo.getVersionAnnotation(markerClass)
+        fun getVersion(version: String, party: Party): FlowLogic<*> {
+            return when(version) {
+                info.version -> flowFactory(party)
+                else -> throw IllegalArgumentException("Unsupported flow version $version") // TODO FlowException
+            }
+        }
+        flowFactories[info.genericName] = ::getVersion
     }
 
-    override fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)? {
-        return flowFactories[markerClass]
+    override fun registerFlowInitiator(flowFactory: FlowFactory, serviceType: ServiceType, toAdvertise: Boolean) {
+        flowFactories[flowFactory.genericFlowName] = { v: String, p: Party -> flowFactory.getFlow(v, p) }
+    }
+
+    override fun getFlowFactory(markerClass: Class<*>): ((String, Party) -> FlowLogic<*>?)? {
+        if (markerClass.javaClass.isAssignableFrom(FlowLogic::class.java)) throw IllegalArgumentException("Trying to access something different than FlowLogic")
+        val info = FlowVersionInfo.getVersionAnnotation(markerClass)
+        return flowFactories[info.genericName]
+    }
+
+    override fun getFlowFactory(flowName: String): ((String, Party) -> FlowLogic<*>?)? {
+        return flowFactories[flowName]
     }
 }

@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -39,6 +40,7 @@ class BFTNonValidatingNotaryService(services: ServiceHubInternal,
 
     override fun createFlow(otherParty: Party) = ServiceFlow(otherParty, client)
 
+    @FlowVersion("1.0")
     class ServiceFlow(val otherSide: Party, val client: BFTSMaRt.Client) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {

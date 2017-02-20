@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
@@ -32,8 +33,9 @@ object ExitServerFlow {
         }
     }
 
-
+    @FlowVersion("1.0")
     private class ExitServerHandler(val otherParty: Party) : FlowLogic<Unit>() {
+
         override fun call() {
             // Just to validate we got the message
             if (enabled) {
@@ -48,8 +50,8 @@ object ExitServerFlow {
      * This takes a Java Integer rather than Kotlin Int as that is what we end up with in the calling map and currently
      * we do not support coercing numeric types in the reflective search for matching constructors.
      */
+    @FlowVersion("1.0")
     class Broadcast(val exitCode: Int) : FlowLogic<Boolean>() {
-
         @Suspendable
         override fun call(): Boolean {
             if (enabled) {

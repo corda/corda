@@ -3,6 +3,7 @@ package net.corda.irs.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
@@ -34,6 +35,7 @@ object UpdateBusinessDayFlow {
         }
     }
 
+    @FlowVersion("1.0")
     private class UpdateBusinessDayHandler(val otherParty: Party) : FlowLogic<Unit>() {
         override fun call() {
             val message = receive<UpdateBusinessDayMessage>(otherParty).unwrap { it }
@@ -41,7 +43,7 @@ object UpdateBusinessDayFlow {
         }
     }
 
-
+    @FlowVersion("1.0")
     class Broadcast(val date: LocalDate, override val progressTracker: ProgressTracker) : FlowLogic<Unit>() {
         constructor(date: LocalDate) : this(date, tracker())
 

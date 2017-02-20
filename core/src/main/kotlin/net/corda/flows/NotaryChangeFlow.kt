@@ -3,6 +3,7 @@ package net.corda.flows
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import net.corda.core.flows.FlowVersion
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
@@ -20,6 +21,7 @@ import net.corda.flows.NotaryChangeFlow.Instigator
  */
 object NotaryChangeFlow : AbstractStateReplacementFlow() {
 
+    @FlowVersion("1.0")
     class Instigator<out T : ContractState>(
             originalState: StateAndRef<T>,
             newNotary: Party,
@@ -88,9 +90,9 @@ object NotaryChangeFlow : AbstractStateReplacementFlow() {
 
     }
 
+    @FlowVersion("1.0")
     class Acceptor(otherSide: Party,
                    override val progressTracker: ProgressTracker = tracker()) : AbstractStateReplacementFlow.Acceptor<Party>(otherSide) {
-
         /**
          * Check the notary change proposal.
          *

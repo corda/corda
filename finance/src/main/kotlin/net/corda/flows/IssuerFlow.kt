@@ -4,9 +4,12 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowFactory
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -28,8 +31,11 @@ object IssuerFlow {
      * IssuanceRequester should be used by a client to ask a remote node to issue some [FungibleAsset] with the given details.
      * Returns the transaction created by the Issuer to move the cash to the Requester.
      */
+    @FlowVersion("1.0")
     class IssuanceRequester(val amount: Amount<Currency>, val issueToParty: Party, val issueToPartyRef: OpaqueBytes,
                             val issuerBankParty: Party): FlowLogic<SignedTransaction>() {
+        override fun getCounterpartyMarker(party: Party): String = "IssuerFlow" //TODO
+
         @Suspendable
         @Throws(CashException::class)
         override fun call(): SignedTransaction {
@@ -42,6 +48,7 @@ object IssuerFlow {
      * Issuer refers to a Node acting as a Bank Issuer of [FungibleAsset], and processes requests from a [IssuanceRequester] client.
      * Returns the generated transaction representing the transfer of the [Issued] [FungibleAsset] to the issue requester.
      */
+    @FlowVersion("1.0")
     class Issuer(val otherParty: Party): FlowLogic<SignedTransaction>() {
         companion object {
             object AWAITING_REQUEST : ProgressTracker.Step("Awaiting issuance request")
@@ -95,7 +102,7 @@ object IssuerFlow {
 
         class Service(services: PluginServiceHub) {
             init {
-                services.registerFlowInitiator(IssuanceRequester::class.java, ::Issuer)
+                services.registerFlowInitiator(IssuanceRequester::class.java, ::Issuer, ServiceType.corda.getSubType("issuer.USD")) // TODO think of service type
             }
         }
     }

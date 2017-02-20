@@ -5,6 +5,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -39,14 +40,18 @@ object DataVending {
             services.registerFlowInitiator(BroadcastTransactionFlow::class.java, ::NotifyTransactionHandler)
         }
 
+        @FlowVersion("1.0")
         private class FetchTransactionsHandler(otherParty: Party) : FetchDataHandler<SignedTransaction>(otherParty) {
+
             override fun getData(id: SecureHash): SignedTransaction? {
                 return serviceHub.storageService.validatedTransactions.getTransaction(id)
             }
         }
 
         // TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
+        @FlowVersion("1.0")
         private class FetchAttachmentsHandler(otherParty: Party) : FetchDataHandler<ByteArray>(otherParty) {
+
             override fun getData(id: SecureHash): ByteArray? {
                 return serviceHub.storageService.attachments.openAttachment(id)?.open()?.readBytes()
             }
@@ -74,7 +79,9 @@ object DataVending {
         //       includes us in any outside that list. Potentially just if it includes any outside that list at all.
         // TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
         //       cash without from unknown parties?
+        @FlowVersion("1.0")
         class NotifyTransactionHandler(val otherParty: Party) : FlowLogic<Unit>() {
+
             @Suspendable
             override fun call() {
                 val request = receive<BroadcastTransactionFlow.NotifyTxRequest>(otherParty).unwrap { it }

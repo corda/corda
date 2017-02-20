@@ -22,6 +22,7 @@ public class FlowLogicRefFromJavaTest {
         }
     }
 
+    @FlowVersion(version = "1.0")
     private static class JavaFlowLogic extends FlowLogic<Void> {
 
         public JavaFlowLogic(ParamType1 A, ParamType2 b) {
@@ -33,6 +34,7 @@ public class FlowLogicRefFromJavaTest {
         }
     }
 
+    @FlowVersion(version = "1.0")
     private static class JavaNoArgFlowLogic extends FlowLogic<Void> {
 
         public JavaNoArgFlowLogic() {
