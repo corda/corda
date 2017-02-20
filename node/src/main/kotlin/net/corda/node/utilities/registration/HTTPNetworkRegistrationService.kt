@@ -1,4 +1,4 @@
-package net.corda.node.utilities.certsigning
+package net.corda.node.utilities.registration
 
 import net.corda.core.crypto.CertificateStream
 import org.apache.commons.io.IOUtils
@@ -11,7 +11,7 @@ import java.security.cert.Certificate
 import java.util.*
 import java.util.zip.ZipInputStream
 
-class HTTPCertificateSigningService(val server: URL) : CertificateSigningService {
+class HTTPNetworkRegistrationService(val server: URL) : NetworkRegistrationService {
     companion object {
         // TODO: Propagate version information from gradle
         val clientVersion = "1.0"
@@ -62,5 +62,3 @@ class HTTPCertificateSigningService(val server: URL) : CertificateSigningService
 
     private val HttpURLConnection.errorMessage: String get() = IOUtils.toString(errorStream)
 }
-
-class CertificateRequestException(message: String) : Exception(message)

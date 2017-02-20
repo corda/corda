@@ -21,7 +21,7 @@ class ArgsParserTest {
                 logToConsole = false,
                 loggingLevel = Level.INFO,
                 isWebserver = false,
-                isCertUtil = false))
+                isRegistration = false))
     }
 
     @Test

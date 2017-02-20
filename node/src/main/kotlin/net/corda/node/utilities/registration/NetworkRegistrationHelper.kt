@@ -1,4 +1,4 @@
-package net.corda.node.utilities.certsigning
+package net.corda.node.utilities.registration
 
 import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
@@ -15,12 +15,12 @@ import java.security.cert.Certificate
 import kotlin.system.exitProcess
 
 /**
- * This check the [certificatePath] for certificates required to connect to the Corda network.
- * If the certificates are not found, a [PKCS10CertificationRequest] will be submitted to Corda network permissioning server using [CertificateSigningService].
+ * This check the [config.certificatesDirectory] for certificates required to connect to the Corda network.
+ * If the certificates are not found, a [PKCS10CertificationRequest] will be submitted to Corda network permissioning server using [NetworkRegistrationService].
  * This process will enter a polling loop until the request has been approved, and then
- * the certificate chain will be downloaded and stored in [KeyStore] reside in [certificatePath].
+ * the certificate chain will be downloaded and stored in [Keystore] reside in [config.certificatesDirectory].
  */
-class CertificateSigner(val config: NodeConfiguration, val certService: CertificateSigningService) {
+class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: NetworkRegistrationService) {
     companion object {
         val pollInterval = 10.seconds
         val SELF_SIGNED_PRIVATE_KEY = "Self Signed Private Key"
@@ -36,7 +36,7 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
         val caKeyStore = X509Utilities.loadOrCreateKeyStore(config.keyStoreFile, keystorePassword)
         if (!caKeyStore.containsAlias(CORDA_CLIENT_CA)) {
             // Create or load self signed keypair from the key store.
-            // We use the self sign certificate to store the key temporally in the keystore while waiting for the request approval.
+            // We use the self sign certificate to store the key temporarily in the keystore while waiting for the request approval.
             if (!caKeyStore.containsAlias(SELF_SIGNED_PRIVATE_KEY)) {
                 val selfSignCert = X509Utilities.createSelfSignedCACert(config.myLegalName)
                 // Save to the key store.
@@ -50,8 +50,8 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
                 pollServerForCertificates(requestId)
             } catch (e: CertificateRequestException) {
                 System.err.println(e.message)
-                println("Please make sure the details in configuration file is correct and try again.")
-                println("Certificate Signing Utility will now exit.")
+                println("Please make sure the details in configuration file are correct and try again.")
+                println("Corda Node will now terminate.")
                 requestIdStore.deleteIfExists()
                 exitProcess(1)
             }
@@ -70,7 +70,7 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
             // All done, clean up temp files.
             requestIdStore.deleteIfExists()
         } else {
-            println("Certificate already exists, exiting Certificate Signing Utility...")
+            println("Certificate already exists, Corda node will now terminate...")
         }
     }
 
@@ -110,8 +110,10 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
             println("Legal Name: ${config.myLegalName}")
             println("Nearest City: ${config.nearestCity}")
             println("Email: ${config.emailAddress}")
-            println("\nPublic Key: ${keyPair.public}")
-            println("\n$writer")
+            println()
+            println("Public Key: ${keyPair.public}")
+            println()
+            println("$writer")
             // Post request to signing server via http.
             println("Submitting certificate signing request to Corda certificate signing server.")
             val requestId = certService.submitRequest(request)

@@ -8,8 +8,8 @@ import net.corda.core.utilities.Emoji
 import net.corda.node.internal.Node
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.utilities.ANSIProgressObserver
-import net.corda.node.utilities.certsigning.CertificateSigner
-import net.corda.node.utilities.certsigning.HTTPCertificateSigningService
+import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
+import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.node.webserver.WebServer
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -74,14 +74,14 @@ fun main(args: Array<String>) {
         exitProcess(2)
     }
 
-    if (cmdlineOptions.isCertUtil) {
+    if (cmdlineOptions.isRegistration) {
         println()
-        println("************************************************")
-        println("*                                              *")
-        println("*       Corda Certificate Signing Utility      *")
-        println("*                                              *")
-        println("************************************************")
-        CertificateSigner(conf, HTTPCertificateSigningService(conf.certificateSigningService)).buildKeystore()
+        println("******************************************************************")
+        println("*                                                                *")
+        println("*       Registering as a new participant with Corda network      *")
+        println("*                                                                *")
+        println("******************************************************************")
+        NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(conf.certificateSigningService)).buildKeystore()
         exitProcess(0)
     }
 
@@ -94,7 +94,7 @@ fun main(args: Array<String>) {
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
-    if(cmdlineOptions.isWebserver) {
+    if (cmdlineOptions.isWebserver) {
         log.info("Starting as webserver on ${conf.webAddress}")
     } else {
         log.info("Starting as node on ${conf.artemisAddress}")
@@ -104,7 +104,7 @@ fun main(args: Array<String>) {
         cmdlineOptions.baseDirectory.createDirectories()
 
         // TODO: Webserver should be split and start from inside a WAR container
-        if  (!cmdlineOptions.isWebserver) {
+        if (!cmdlineOptions.isWebserver) {
             val node = conf.createNode()
             node.start()
             printPluginsAndServices(node)

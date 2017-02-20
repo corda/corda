@@ -1,4 +1,4 @@
-package net.corda.node.utilities.certsigning
+package net.corda.node.utilities.registration
 
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.eq
@@ -14,7 +14,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CertificateSignerTest {
+class NetworkRegistrationHelperTest {
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
@@ -27,7 +27,7 @@ class CertificateSignerTest {
                 X509Utilities.createSelfSignedCACert("CORDA_INTERMEDIATE_CA").certificate,
                 X509Utilities.createSelfSignedCACert("CORDA_ROOT_CA").certificate)
 
-        val certService: CertificateSigningService = mock {
+        val certService: NetworkRegistrationService = mock {
             on { submitRequest(any()) }.then { id }
             on { retrieveCertificates(eq(id)) }.then { certs }
         }
@@ -40,7 +40,7 @@ class CertificateSignerTest {
         assertFalse(config.keyStoreFile.exists())
         assertFalse(config.trustStoreFile.exists())
 
-        CertificateSigner(config, certService).buildKeystore()
+        NetworkRegistrationHelper(config, certService).buildKeystore()
 
         assertTrue(config.keyStoreFile.exists())
         assertTrue(config.trustStoreFile.exists())
