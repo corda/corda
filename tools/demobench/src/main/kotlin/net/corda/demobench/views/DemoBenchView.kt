@@ -94,6 +94,10 @@ class DemoBenchView : View("Corda Demo Bench") {
         addNodeButton.isDisable = false
     }
 
+    /**
+     * Ensures that DemoBench always has at least one instance NodeTabView.
+     * This method must NOT be called if DemoBench is shutting down.
+     */
     fun forceAtLeastOneTab() {
         if (nodeTabPane.tabs.isEmpty()) {
             addNodeButton.fire()
