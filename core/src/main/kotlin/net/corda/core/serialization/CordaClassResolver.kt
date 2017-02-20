@@ -23,12 +23,27 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
         val logger = loggerFor<CordaClassResolver>()
     }
 
-    override fun registerImplicit(type: Class<*>): Registration {
+    /** Returns the registration for the specified class, or null if the class is not registered.  */
+    override fun getRegistration(type: Class<*>): Registration? {
+        return super.getRegistration(type) ?: checkClass(type)
+    }
+
+    private fun checkClass(type: Class<*>): Registration? {
+        // Let's see if we are registering
+        val stackTrace = Thread.currentThread().stackTrace
+        if (stackTrace[3].methodName == "register") {
+            // Kryo checks if existing registration when registering.
+            return null
+        }
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
         val hasAnnotation = checkForAnnotation(type)
         if (!hasAnnotation && !whitelist.hasListed(type)) {
             throw KryoException("Class ${Util.className(type)} is not annotated or on the whitelist, so cannot be used in serialisation")
         }
+        return null
+    }
+
+    override fun registerImplicit(type: Class<*>): Registration {
         // We have to set reference to true, since the flag influences how String fields are treated and we want it to be consistent.
         val references = kryo.references
         try {
