@@ -16,9 +16,9 @@
          <MenuItem fx:id="menuSaveAs" disable="true" text="Save As"/>
       </Menu>
    </MenuBar>
-   <StackPane>
+   <StackPane VBox.vgrow="ALWAYS">
       <children>
-         <TabPane fx:id="nodeTabPane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="444.0" minWidth="800.0" prefHeight="613.0" prefWidth="1231.0" tabClosingPolicy="UNAVAILABLE" tabMinHeight="30.0"/>
+         <TabPane fx:id="nodeTabPane" minHeight="444.0" minWidth="800.0" prefHeight="613.0" prefWidth="1231.0" tabClosingPolicy="UNAVAILABLE" tabMinHeight="30.0"/>
          <Button fx:id="addNodeButton" mnemonicParsing="false" styleClass="add-node-button" text="Add Node" StackPane.alignment="TOP_RIGHT">
             <StackPane.margin>
                <Insets right="5.0" top="5.0" />
