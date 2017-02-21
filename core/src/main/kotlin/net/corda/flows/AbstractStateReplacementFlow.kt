@@ -63,7 +63,7 @@ abstract class AbstractStateReplacementFlow {
             val me = listOf(myKey)
 
             val signatures = if (participants == me) {
-                getNotarySignature(stx)
+                getNotarySignatures(stx)
             } else {
                 collectSignatures(participants - me, stx)
             }
@@ -76,7 +76,7 @@ abstract class AbstractStateReplacementFlow {
         abstract protected fun assembleTx(): Pair<SignedTransaction, Iterable<CompositeKey>>
 
         @Suspendable
-        private fun collectSignatures(participants: Iterable<CompositeKey>, stx: SignedTransaction): Collection<DigitalSignature.WithKey> {
+        private fun collectSignatures(participants: Iterable<CompositeKey>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
             val parties = participants.map {
                 val participantNode = serviceHub.networkMapCache.getNodeByLegalIdentityKey(it) ?:
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")
@@ -87,7 +87,7 @@ abstract class AbstractStateReplacementFlow {
 
             val allPartySignedTx = stx + participantSignatures
 
-            val allSignatures = participantSignatures + getNotarySignature(allPartySignedTx)
+            val allSignatures = participantSignatures + getNotarySignatures(allPartySignedTx)
             parties.forEach { send(it, allSignatures) }
 
             return allSignatures
@@ -105,7 +105,7 @@ abstract class AbstractStateReplacementFlow {
         }
 
         @Suspendable
-        private fun getNotarySignature(stx: SignedTransaction): Collection<DigitalSignature.WithKey> {
+        private fun getNotarySignatures(stx: SignedTransaction): List<DigitalSignature.WithKey> {
             progressTracker.currentStep = NOTARY
             try {
                 return subFlow(NotaryFlow.Client(stx))

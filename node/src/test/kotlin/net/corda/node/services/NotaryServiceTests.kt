@@ -132,7 +132,7 @@ class NotaryServiceTests {
         notaryError.conflict.verified()
     }
 
-    private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<Collection<DigitalSignature.WithKey>> {
+    private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<List<DigitalSignature.WithKey>> {
         val flow = NotaryFlow.Client(stx)
         val future = clientNode.services.startFlow(flow).resultFuture
         net.runNetwork()
