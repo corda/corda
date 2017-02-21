@@ -3,6 +3,7 @@ package net.corda.vega.contracts
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.CordaSerializable
 
 /**
  * Specifies the contract between two parties that are agreeing to a portfolio of trades and valuating that portfolio.
@@ -13,7 +14,10 @@ data class PortfolioSwap(override val legalContractReference: SecureHash = Secur
     override fun verify(tx: TransactionForContract) = verifyClause(tx, AllOf(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
 
     interface Commands : CommandData {
+        @CordaSerializable
         class Agree : TypeOnlyCommandData(), Commands  // Both sides agree to portfolio
+
+        @CordaSerializable
         class Update : TypeOnlyCommandData(), Commands // Both sides re-agree to portfolio
     }
 

@@ -6,6 +6,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.node.utilities.TestClock
@@ -20,6 +21,7 @@ object UpdateBusinessDayFlow {
 
     // This is not really a HandshakeMessage but needs to be so that the send uses the default session ID. This will
     // resolve itself when the flow session stuff is done.
+    @CordaSerializable
     data class UpdateBusinessDayMessage(val date: LocalDate)
 
     class Plugin : CordaPluginRegistry() {
