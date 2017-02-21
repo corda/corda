@@ -76,7 +76,7 @@ and a basic CorDapp that you can use as the basis for your own CorDapps is avail
 You can clone both of these repos to your local machine by running the command ``git clone [repo URL]``.
 
 By default, both repos will be on the ``master`` branch. However, this is an unstable development branch. You should check 
-out the latest milestone release (currently Milestone 8.1) instead by running ``git checkout release-M8.1``.
+out the latest milestone release (currently Milestone 8.2) instead by running ``git checkout release-M8.2``.
 
 Opening Corda/CorDapps in IDEA
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -3,6 +3,11 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
+Milestone 8.2
+-------------
+
+* Added an openAttachment endpoint to the RPC interface to allow downloading of attachments via RPC.
+
 Milestone 8.1
 -------------
 
