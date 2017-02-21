@@ -4,6 +4,7 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import java.security.PublicKey
 
 /**
  * An identity service maintains an bidirectional map of [Party]s to their associated public keys and thus supports
@@ -23,7 +24,7 @@ interface IdentityService {
     // indefinitely. It may be that in the long term we need to drop or archive very old Party information for space,
     // but for now this is not supported.
 
-    fun partyFromKey(key: CompositeKey): Party?
+    fun partyFromKey(key: PublicKey): Party?
     fun partyFromName(name: String): Party?
 
     fun partyFromAnonymous(party: AnonymousParty): Party?

@@ -362,30 +362,16 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
     }
 }
 
-/** For serialising composite keys */
 @ThreadSafe
-object CompositeKeyLeafSerializer : Serializer<CompositeKey.Leaf>() {
-    override fun write(kryo: Kryo, output: Output, obj: CompositeKey.Leaf) {
-        val key = obj.publicKey
-        kryo.writeClassAndObject(output, key)
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey.Leaf>): CompositeKey.Leaf {
-        val key = kryo.readClassAndObject(input) as PublicKey
-        return CompositeKey.Leaf(key)
-    }
-}
-
-@ThreadSafe
-object CompositeKeyNodeSerializer : Serializer<CompositeKey.Node>() {
-    override fun write(kryo: Kryo, output: Output, obj: CompositeKey.Node) {
+object CompositeKeySerializer : Serializer<CompositeKey>() {
+    override fun write(kryo: Kryo, output: Output, obj: CompositeKey) {
         output.writeInt(obj.threshold)
         output.writeInt(obj.children.size)
         obj.children.forEach { kryo.writeClassAndObject(output, it) }
         output.writeInts(obj.weights.toIntArray())
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey.Node>): CompositeKey.Node {
+    override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey>): CompositeKey {
         val threshold = input.readInt()
         val childCount = input.readInt()
         val children = (1..childCount).map { kryo.readClassAndObject(input) as CompositeKey }

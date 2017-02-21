@@ -19,6 +19,7 @@ import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
 import java.security.KeyPair
+import java.security.PublicKey
 
 /**
  * Classes for manipulating a two party deal or agreement.
@@ -44,7 +45,7 @@ object TwoPartyDealFlow {
 
     // This object is serialised to the network and is the first flow message the seller sends to the buyer.
     @CordaSerializable
-    data class Handshake<out T>(val payload: T, val publicKey: CompositeKey)
+    data class Handshake<out T>(val payload: T, val publicKey: PublicKey)
 
     @CordaSerializable
     class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySigs: List<DigitalSignature.WithKey>)
@@ -107,7 +108,7 @@ object TwoPartyDealFlow {
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
-                val wtx: WireTransaction = stx.verifySignatures(myKeyPair.public.composite, notaryNode.notaryIdentity.owningKey)
+                val wtx: WireTransaction = stx.verifySignatures(myKeyPair.public, notaryNode.notaryIdentity.owningKey)
                 logger.trace { "Received partially signed transaction: ${stx.id}" }
 
                 checkDependencies(stx)
@@ -254,7 +255,7 @@ object TwoPartyDealFlow {
             return sendAndReceive<SignaturesFromPrimary>(otherParty, stx).unwrap { it }
         }
 
-        private fun signWithOurKeys(signingPubKeys: List<CompositeKey>, ptx: TransactionBuilder): SignedTransaction {
+        private fun signWithOurKeys(signingPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
             // Now sign the transaction with whatever keys we need to move the cash.
             for (publicKey in signingPubKeys.keys) {
                 val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
@@ -265,7 +266,7 @@ object TwoPartyDealFlow {
         }
 
         @Suspendable protected abstract fun validateHandshake(handshake: Handshake<U>): Handshake<U>
-        @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Pair<TransactionBuilder, List<CompositeKey>>
+        @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Pair<TransactionBuilder, List<PublicKey>>
     }
 
     @CordaSerializable
@@ -298,7 +299,7 @@ object TwoPartyDealFlow {
             return handshake.copy(payload = autoOffer.copy(dealBeingOffered = deal))
         }
 
-        override fun assembleSharedTX(handshake: Handshake<AutoOffer>): Pair<TransactionBuilder, List<CompositeKey>> {
+        override fun assembleSharedTX(handshake: Handshake<AutoOffer>): Pair<TransactionBuilder, List<PublicKey>> {
             val deal = handshake.payload.dealBeingOffered
             val ptx = deal.generateAgreement(handshake.payload.notary)
 

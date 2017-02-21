@@ -6,6 +6,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
+import java.security.PublicKey
 import java.util.*
 
 // TODO: Consider moving this out of the core module and providing a different way for unit tests to test contracts.
@@ -101,7 +102,7 @@ class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTra
 sealed class TransactionVerificationException(val tx: LedgerTransaction, cause: Throwable?) : FlowException(cause) {
     class ContractRejection(tx: LedgerTransaction, val contract: Contract, cause: Throwable?) : TransactionVerificationException(tx, cause)
     class MoreThanOneNotary(tx: LedgerTransaction) : TransactionVerificationException(tx, null)
-    class SignersMissing(tx: LedgerTransaction, val missing: List<CompositeKey>) : TransactionVerificationException(tx, null) {
+    class SignersMissing(tx: LedgerTransaction, val missing: List<PublicKey>) : TransactionVerificationException(tx, null) {
         override fun toString(): String = "Signers missing: ${missing.joinToString()}"
     }
     class DuplicateInputStates(tx: LedgerTransaction, val duplicates: Set<StateRef>) : TransactionVerificationException(tx, null) {

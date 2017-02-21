@@ -1,7 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.CompositeKey.Leaf
-import net.corda.core.crypto.CompositeKey.Node
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -21,14 +19,10 @@ import java.security.PublicKey
  * create multi-level requirements such as *"either the CEO or 3 of 5 of his assistants need to sign"*.
  */
 @CordaSerializable
-sealed class CompositeKey {
-    /** Checks whether [keys] match a sufficient amount of leaf nodes */
-    abstract fun isFulfilledBy(keys: Iterable<PublicKey>): Boolean
-
+class CompositeKey(val threshold: Int,
+                   val children: List<PublicKey>,
+                   val weights: List<Int>) : PublicKey {
     fun isFulfilledBy(key: PublicKey) = isFulfilledBy(setOf(key))
-
-    /** Returns all [PublicKey]s contained within the tree leaves */
-    abstract val keys: Set<PublicKey>
 
     /** Checks whether any of the given [keys] matches a leaf on the tree */
     fun containsAny(otherKeys: Iterable<PublicKey>) = keys.intersect(otherKeys).isNotEmpty()
@@ -40,28 +34,17 @@ sealed class CompositeKey {
      * TODO: follow the crypto-conditions ASN.1 spec, some changes are needed to be compatible with the condition
      *       structure, e.g. mapping a PublicKey to a condition with the specific feature (ED25519).
      */
-    fun toBase58String(): String = Base58.encode(this.serialize().bytes)
+    fun toBase58String(): String = Base58.encode(encoded)
 
     companion object {
         fun parseFromBase58(encoded: String) = Base58.decode(encoded).deserialize<CompositeKey>()
     }
 
-    /** The leaf node of the tree – a wrapper around a [PublicKey] primitive */
-    class Leaf(val publicKey: PublicKey) : CompositeKey() {
-        override fun isFulfilledBy(keys: Iterable<PublicKey>) = publicKey in keys
-
-        override val keys: Set<PublicKey>
-            get() = setOf(publicKey)
-
-        // TODO: remove once data class inheritance is enabled
-        override fun equals(other: Any?): Boolean {
-            return this === other || other is Leaf && other.publicKey == this.publicKey
-        }
-
-        override fun hashCode() = publicKey.hashCode()
-
-        override fun toString() = publicKey.toStringShort()
-    }
+    // TODO: Get the design standardised and from there define a recognised name
+    override fun getAlgorithm() = "X-Corda-CompositeKey"
+    override fun getEncoded(): ByteArray = this.serialize().bytes
+    // TODO: We should be using a well defined format.
+    override fun getFormat() = "X-Corda-Kryo"
 
     /**
      * Represents a node in the key tree. It maintains a list of child nodes – sub-trees, and associated
@@ -70,44 +53,56 @@ sealed class CompositeKey {
      * The [threshold] specifies the minimum total weight required (in the simple case – the minimum number of child
      * signatures required) to satisfy the sub-tree rooted at this node.
      */
-    class Node(val threshold: Int,
-               val children: List<CompositeKey>,
-               val weights: List<Int>) : CompositeKey() {
 
-        override fun isFulfilledBy(keys: Iterable<PublicKey>): Boolean {
-            val totalWeight = children.mapIndexed { i, childNode ->
-                if (childNode.isFulfilledBy(keys)) weights[i] else 0
-            }.sum()
+    fun isFulfilledBy(keys: Iterable<PublicKey>): Boolean {
+        val totalWeight = children.mapIndexed { i, childNode ->
+            if (childNode is CompositeKey) {
+                if (childNode.isFulfilledBy(keys))
+                    weights[i]
+                else
+                    0
+            } else {
+                if (keys.contains(childNode))
+                    weights[i]
+                else
+                    0
+            }
+        }.sum()
 
-            return totalWeight >= threshold
-        }
-
-        override val keys: Set<PublicKey>
-            get() = children.flatMap { it.keys }.toSet()
-
-        // Auto-generated. TODO: remove once data class inheritance is enabled
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other?.javaClass != javaClass) return false
-
-            other as Node
-
-            if (threshold != other.threshold) return false
-            if (weights != other.weights) return false
-            if (children != other.children) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = threshold
-            result = 31 * result + weights.hashCode()
-            result = 31 * result + children.hashCode()
-            return result
-        }
-
-        override fun toString() = "(${children.joinToString()})"
+        return totalWeight >= threshold
     }
+
+    val keys: Set<PublicKey>
+        get() = children.flatMap {
+            if (it is CompositeKey) {
+                it.keys
+            } else {
+                setOf(it)
+            }
+        }.toSet()
+
+    // Auto-generated. TODO: remove once data class inheritance is enabled
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other?.javaClass != javaClass) return false
+
+        other as CompositeKey
+
+        if (threshold != other.threshold) return false
+        if (weights != other.weights) return false
+        if (children != other.children) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = threshold
+        result = 31 * result + weights.hashCode()
+        result = 31 * result + children.hashCode()
+        return result
+    }
+
+    override fun toString() = "(${children.joinToString()})"
 
     /** A helper class for building a [CompositeKey.Node]. */
     class Builder() {
@@ -132,8 +127,8 @@ sealed class CompositeKey {
          * Builds the [CompositeKey.Node]. If [threshold] is not specified, it will default to
          * the size of the children, effectively generating an "N of N" requirement.
          */
-        fun build(threshold: Int? = null): CompositeKey.Node {
-            return Node(threshold ?: children.size, children.toList(), weights.toList())
+        fun build(threshold: Int? = null): CompositeKey {
+            return CompositeKey(threshold ?: children.size, children.toList(), weights.toList())
         }
     }
 

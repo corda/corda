@@ -24,7 +24,7 @@ open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
     }
 
     // TODO: consider removing this as whoever needs to identify the signer should be able to derive it from the public key
-    class LegallyIdentifiable(val signer: Party, bits: ByteArray) : WithKey(signer.owningKey.singleKey, bits)
+    class LegallyIdentifiable(val signer: Party, bits: ByteArray) : WithKey(signer.owningKey, bits)
 }
 
 @CordaSerializable
@@ -76,8 +76,8 @@ fun KeyPair.signWithECDSA(bytesToSign: ByteArray) = private.signWithECDSA(bytesT
 fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes) = private.signWithECDSA(bytesToSign.bytes, public)
 fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes, party: Party) = signWithECDSA(bytesToSign.bytes, party)
 fun KeyPair.signWithECDSA(bytesToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
-    check(public in party.owningKey.keys)
     val sig = signWithECDSA(bytesToSign)
+    party.owningKey.verifyWithECDSA(bytesToSign, sig)
     return DigitalSignature.LegallyIdentifiable(party, sig.bytes)
 }
 
@@ -98,7 +98,7 @@ fun PublicKey.toStringShort(): String {
 }
 
 /** Creates a [CompositeKey] with a single leaf node containing the public key */
-val PublicKey.composite: CompositeKey get() = CompositeKey.Leaf(this)
+val PublicKey.composite: PublicKey get() = CompositeKey(1, listOf(this), listOf(1))
 
 /** Returns the set of all [PublicKey]s of the signatures */
 fun Iterable<DigitalSignature.WithKey>.byKeys() = map { it.by }.toSet()
