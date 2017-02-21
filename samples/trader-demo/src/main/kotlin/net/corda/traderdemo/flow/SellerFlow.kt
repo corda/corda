@@ -81,7 +81,7 @@ class SellerFlow(val otherParty: Party,
 
             // Get the notary to sign the timestamp
             val notarySig = subFlow(NotaryFlow.Client(tx.toSignedTransaction(false)))
-            tx.addSignatureUnchecked(notarySig)
+            notarySig.forEach { tx.addSignatureUnchecked(it) }
 
             // Commit it to local storage.
             val stx = tx.toSignedTransaction(true)
@@ -96,7 +96,7 @@ class SellerFlow(val otherParty: Party,
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
             builder.signWith(keyPair)
             val notarySignature = subFlow(NotaryFlow.Client(builder.toSignedTransaction(false)))
-            builder.addSignatureUnchecked(notarySignature)
+            notarySignature.forEach { builder.addSignatureUnchecked(it) }
             val tx = builder.toSignedTransaction(true)
             serviceHub.recordTransactions(listOf(tx))
             tx

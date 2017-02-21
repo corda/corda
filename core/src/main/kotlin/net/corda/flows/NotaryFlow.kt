@@ -23,7 +23,7 @@ object NotaryFlow {
      *                         by another transaction or the timestamp is invalid.
      */
     open class Client(private val stx: SignedTransaction,
-                      override val progressTracker: ProgressTracker) : FlowLogic<DigitalSignature.WithKey>() {
+                      override val progressTracker: ProgressTracker) : FlowLogic<Collection<DigitalSignature.WithKey>>() {
         constructor(stx: SignedTransaction) : this(stx, Client.tracker())
 
         companion object {
@@ -37,7 +37,7 @@ object NotaryFlow {
 
         @Suspendable
         @Throws(NotaryException::class)
-        override fun call(): DigitalSignature.WithKey {
+        override fun call(): Collection<DigitalSignature.WithKey> {
             progressTracker.currentStep = REQUESTING
             val wtx = stx.tx
             notaryParty = wtx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
@@ -57,7 +57,7 @@ object NotaryFlow {
             }
 
             val response = try {
-                sendAndReceive<DigitalSignature.WithKey>(notaryParty, payload)
+                sendAndReceive<Collection<DigitalSignature.WithKey>>(notaryParty, payload)
             } catch (e: NotaryException) {
                 if (e.error is NotaryError.Conflict) {
                     e.error.conflict.verified()
@@ -65,9 +65,9 @@ object NotaryFlow {
                 throw e
             }
 
-            return response.unwrap { sig ->
-                validateSignature(sig, stx.id.bytes)
-                sig
+            return response.unwrap { signatures ->
+                signatures.forEach { validateSignature(it, stx.id.bytes) }
+                signatures
             }
         }
 
@@ -114,7 +114,7 @@ object NotaryFlow {
         @Suspendable
         private fun signAndSendResponse(txId: SecureHash) {
             val sig = sign(txId.bytes)
-            send(otherSide, sig)
+            send(otherSide, listOf(sig))
         }
 
         private fun validateTimestamp(t: Timestamp?) {
