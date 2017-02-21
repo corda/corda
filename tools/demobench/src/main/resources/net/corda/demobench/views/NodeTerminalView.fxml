@@ -7,7 +7,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import net.corda.demobench.ui.PropertyLabel?>
 
-<VBox visible="false" prefHeight="953.0" prefWidth="1363.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1">
+<VBox visible="false" prefHeight="953.0" prefWidth="1363.0" xmlns="http://javafx.com/javafx/8.0.102" xmlns:fx="http://javafx.com/fxml/1">
     <children>
         <HBox prefHeight="95.0" prefWidth="800.0" spacing="15.0" styleClass="header">
             <children>
