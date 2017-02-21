@@ -3,6 +3,7 @@ package net.corda.vega.contracts
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.CordaSerializable
 import java.math.BigDecimal
 
 /**
@@ -12,6 +13,7 @@ data class OGTrade(override val legalContractReference: SecureHash = SecureHash.
     override fun verify(tx: TransactionForContract) = verifyClause(tx, AllOf(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
 
     interface Commands : CommandData {
+        @CordaSerializable
         class Agree : TypeOnlyCommandData(), Commands  // Both sides agree to trade
     }
 
