@@ -47,6 +47,10 @@ dependencies {
     compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.3"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
+
+    //simple api lib
+    compile 'com.github.kittinunf.fuel:fuel:1.5.0'
+    
     // Thread safety annotations
     compile "com.google.code.findbugs:jsr305:3.0.1"
 
