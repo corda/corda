@@ -6,6 +6,7 @@ import net.corda.core.crypto.*
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.serialization.serialize
 import java.security.KeyPair
+import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -34,7 +35,7 @@ open class TransactionBuilder(
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command> = arrayListOf(),
-        protected val signers: MutableSet<CompositeKey> = mutableSetOf(),
+        protected val signers: MutableSet<PublicKey> = mutableSetOf(),
         protected var timestamp: Timestamp? = null) {
 
     val time: Timestamp? get() = timestamp

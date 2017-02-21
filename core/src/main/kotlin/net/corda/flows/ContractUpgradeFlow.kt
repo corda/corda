@@ -9,6 +9,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.flows.AbstractStateReplacementFlow.Proposal
 import net.corda.flows.ContractUpgradeFlow.Acceptor
 import net.corda.flows.ContractUpgradeFlow.Instigator
+import java.security.PublicKey
 
 /**
  * A flow to be used for upgrading state objects of an old contract to a new contract.
@@ -28,8 +29,8 @@ object ContractUpgradeFlow {
     @JvmStatic
     fun verify(input: ContractState, output: ContractState, commandData: Command) {
         val command = commandData.value as UpgradeCommand
-        val participants: Set<CompositeKey> = input.participants.toSet()
-        val keysThatSigned: Set<CompositeKey> = commandData.signers.toSet()
+        val participants: Set<PublicKey> = input.participants.toSet()
+        val keysThatSigned: Set<PublicKey> = commandData.signers.toSet()
         @Suppress("UNCHECKED_CAST")
         val upgradedContract = command.upgradedContractClass.newInstance() as UpgradedContract<ContractState, *>
         requireThat {
@@ -54,7 +55,7 @@ object ContractUpgradeFlow {
             newContractClass: Class<out UpgradedContract<OldState, NewState>>
     ) : AbstractStateReplacementFlow.Instigator<OldState, NewState, Class<out UpgradedContract<OldState, NewState>>>(originalState, newContractClass) {
 
-        override fun assembleTx(): Pair<SignedTransaction, Iterable<CompositeKey>> {
+        override fun assembleTx(): Pair<SignedTransaction, Iterable<PublicKey>> {
             val stx = assembleBareTx(originalState, modification)
                     .signWith(serviceHub.legalIdentityKey)
                     .toSignedTransaction(false)
