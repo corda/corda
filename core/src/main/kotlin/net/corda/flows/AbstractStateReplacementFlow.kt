@@ -115,8 +115,10 @@ abstract class AbstractStateReplacementFlow {
         }
     }
 
+    // Type parameter should ideally be Unit but that prevents Java code from subclassing it (https://youtrack.jetbrains.com/issue/KT-15964).
+    // We use Void? instead of Unit? as that's what you'd use in Java.
     abstract class Acceptor<in T>(val otherSide: Party,
-                                  override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+                                  override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Void?>() {
         companion object {
             object VERIFYING : ProgressTracker.Step("Verifying state replacement proposal")
             object APPROVING : ProgressTracker.Step("State replacement approved")
@@ -126,7 +128,7 @@ abstract class AbstractStateReplacementFlow {
 
         @Suspendable
         @Throws(StateReplacementException::class)
-        override fun call() {
+        override fun call(): Void? {
             progressTracker.currentStep = VERIFYING
             val maybeProposal: UntrustworthyData<Proposal<T>> = receive(otherSide)
             val stx: SignedTransaction = maybeProposal.unwrap {
@@ -135,6 +137,7 @@ abstract class AbstractStateReplacementFlow {
                 it.stx
             }
             approve(stx)
+            return null
         }
 
         @Suspendable

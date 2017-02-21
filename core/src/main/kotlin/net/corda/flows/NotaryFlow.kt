@@ -85,15 +85,17 @@ object NotaryFlow {
      *
      * Additional transaction validation logic can be added when implementing [receiveAndVerifyTx].
      */
+    // See AbstractStateReplacementFlow.Acceptor for why it's Void?
     abstract class Service(val otherSide: Party,
                            val timestampChecker: TimestampChecker,
-                           val uniquenessProvider: UniquenessProvider) : FlowLogic<Unit>() {
+                           val uniquenessProvider: UniquenessProvider) : FlowLogic<Void?>() {
         @Suspendable
-        override fun call() {
+        override fun call(): Void? {
             val (id, inputs, timestamp) = receiveAndVerifyTx()
             validateTimestamp(timestamp)
             commitInputStates(inputs, id)
             signAndSendResponse(id)
+            return null
         }
 
         /**
