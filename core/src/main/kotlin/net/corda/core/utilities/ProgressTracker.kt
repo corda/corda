@@ -1,6 +1,7 @@
 package net.corda.core.utilities
 
 import net.corda.core.TransientProperty
+import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
 import rx.subjects.BehaviorSubject
@@ -32,22 +33,27 @@ import java.util.*
  * A progress tracker is *not* thread safe. You may move events from the thread making progress to another thread by
  * using the [Observable] subscribeOn call.
  */
+@CordaSerializable
 class ProgressTracker(vararg steps: Step) {
     sealed class Change {
+        @CordaSerializable
         class Position(val tracker: ProgressTracker, val newStep: Step) : Change() {
             override fun toString() = newStep.label
         }
 
+        @CordaSerializable
         class Rendering(val tracker: ProgressTracker, val ofStep: Step) : Change() {
             override fun toString() = ofStep.label
         }
 
+        @CordaSerializable
         class Structural(val tracker: ProgressTracker, val parent: Step) : Change() {
             override fun toString() = "Structural step change in child of ${parent.label}"
         }
     }
 
     /** The superclass of all step objects. */
+    @CordaSerializable
     open class Step(open val label: String) {
         open val changes: Observable<Change> get() = Observable.empty()
         open fun childProgressTracker(): ProgressTracker? = null
@@ -67,10 +73,12 @@ class ProgressTracker(vararg steps: Step) {
     }
 
     // Sentinel objects. Overrides equals() to survive process restarts and serialization.
+    @CordaSerializable
     object UNSTARTED : Step("Unstarted") {
         override fun equals(other: Any?) = other is UNSTARTED
     }
 
+    @CordaSerializable
     object DONE : Step("Done") {
         override fun equals(other: Any?) = other is DONE
     }
@@ -81,6 +89,7 @@ class ProgressTracker(vararg steps: Step) {
     // This field won't be serialized.
     private val _changes by TransientProperty { PublishSubject.create<Change>() }
 
+    @CordaSerializable
     private data class Child(val tracker: ProgressTracker, @Transient val subscription: Subscription?)
 
     private val childProgressTrackers = HashMap<Step, Child>()

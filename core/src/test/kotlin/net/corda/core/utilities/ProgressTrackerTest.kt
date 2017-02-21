@@ -4,7 +4,8 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import net.corda.core.serialization.createKryo
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.createInternalKryo
 import net.corda.core.serialization.serialize
 import org.junit.Before
 import org.junit.Test
@@ -14,17 +15,29 @@ import kotlin.test.assertFails
 
 class ProgressTrackerTest {
     object SimpleSteps {
+        @CordaSerializable
         object ONE : ProgressTracker.Step("one")
+
+        @CordaSerializable
         object TWO : ProgressTracker.Step("two")
+
+        @CordaSerializable
         object THREE : ProgressTracker.Step("three")
+
+        @CordaSerializable
         object FOUR : ProgressTracker.Step("four")
 
         fun tracker() = ProgressTracker(ONE, TWO, THREE, FOUR)
     }
 
     object ChildSteps {
+        @CordaSerializable
         object AYY : ProgressTracker.Step("ayy")
+
+        @CordaSerializable
         object BEE : ProgressTracker.Step("bee")
+
+        @CordaSerializable
         object SEA : ProgressTracker.Step("sea")
 
         fun tracker() = ProgressTracker(AYY, BEE, SEA)
@@ -106,7 +119,7 @@ class ProgressTrackerTest {
             }
         }
 
-        val kryo = createKryo().apply {
+        val kryo = createInternalKryo().apply {
             // This is required to make sure Kryo walks through the auto-generated members for the lambda below.
             fieldSerializerConfig.isIgnoreSyntheticFields = false
         }

@@ -1,7 +1,7 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
+import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
 
@@ -43,7 +43,7 @@ class MerkleTreeException(val reason: String) : Exception() {
  * (there can be a difference in obtained leaves ordering - that's why it's a set comparison not hashing leaves into a tree).
  * If both equalities hold, we can assume that l3 and l5 belong to the transaction with root h15.
  */
-
+@CordaSerializable
 class PartialMerkleTree(val root: PartialTree) {
     /**
      * The structure is a little different than that of Merkle Tree.
@@ -53,8 +53,13 @@ class PartialMerkleTree(val root: PartialTree) {
      * it's easier to extract hashes used as a base for this tree.
      */
     sealed class PartialTree {
+        @CordaSerializable
         class IncludedLeaf(val hash: SecureHash) : PartialTree()
+
+        @CordaSerializable
         class Leaf(val hash: SecureHash) : PartialTree()
+
+        @CordaSerializable
         class Node(val left: PartialTree, val right: PartialTree) : PartialTree()
     }
 

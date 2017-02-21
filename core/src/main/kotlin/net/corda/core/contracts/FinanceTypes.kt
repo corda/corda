@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.annotations.VisibleForTesting
+import net.corda.core.serialization.CordaSerializable
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.time.DayOfWeek
@@ -34,6 +35,7 @@ import java.util.*
  *
  * @param T the type of the token, for example [Currency].
  */
+@CordaSerializable
 data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
     companion object {
         /**
@@ -108,9 +110,11 @@ fun <T> Iterable<Amount<T>>.sumOrZero(currency: T) = if (iterator().hasNext()) s
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** A [FixOf] identifies the question side of a fix: what day, tenor and type of fix ("LIBOR", "EURIBOR" etc) */
+@CordaSerializable
 data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Tenor)
 
 /** A [Fix] represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx. */
+@CordaSerializable
 data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
 
 /** Represents a textual expression of e.g. a formula */
@@ -131,6 +135,7 @@ object ExpressionDeserializer : JsonDeserializer<Expression>() {
 }
 
 /** Placeholder class for the Tenor datatype - which is a standardised duration of time until maturity */
+@CordaSerializable
 data class Tenor(val name: String) {
     private val amount: Int
     private val unit: TimeUnit
@@ -166,6 +171,7 @@ data class Tenor(val name: String) {
 
     override fun toString(): String = name
 
+    @CordaSerializable
     enum class TimeUnit(val code: String) {
         Day("D"), Week("W"), Month("M"), Year("Y")
     }
@@ -183,6 +189,7 @@ enum class AccrualAdjustment {
  * This is utilised in the [DateRollConvention] class to determine which way we should initially step when
  * finding a business day.
  */
+@CordaSerializable
 enum class DateRollDirection(val value: Long) { FORWARD(1), BACKWARD(-1) }
 
 /**
@@ -190,6 +197,7 @@ enum class DateRollDirection(val value: Long) { FORWARD(1), BACKWARD(-1) }
  * Depending on the accounting requirement, we can move forward until we get to a business day, or backwards.
  * There are some additional rules which are explained in the individual cases below.
  */
+@CordaSerializable
 enum class DateRollConvention {
     // direction() cannot be a val due to the throw in the Actual instance
 
@@ -266,6 +274,7 @@ enum class PaymentRule {
  * that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).
  */
 @Suppress("unused")   // TODO: Revisit post-Vega and see if annualCompoundCount is still needed.
+@CordaSerializable
 enum class Frequency(val annualCompoundCount: Int) {
     Annual(1) {
         override fun offset(d: LocalDate, n: Long) = d.plusYears(1 * n)
@@ -434,6 +443,7 @@ fun calculateDaysBetween(startDate: LocalDate,
  * Enum for the types of netting that can be applied to state objects. Exact behaviour
  * for each type of netting is left to the contract to determine.
  */
+@CordaSerializable
 enum class NetType {
     /**
      * Close-out netting applies where one party is bankrupt or otherwise defaults (exact terms are contract specific),
@@ -461,6 +471,7 @@ enum class NetType {
  * @param defaultFractionDigits the number of digits normally after the decimal point when referring to quantities of
  * this commodity.
  */
+@CordaSerializable
 data class Commodity(val commodityCode: String,
                      val displayName: String,
                      val defaultFractionDigits: Int = 0) {
@@ -487,6 +498,7 @@ data class Commodity(val commodityCode: String,
  * So that the first time a state is issued this should be given a new UUID.
  * Subsequent copies and evolutions of a state should just copy the [externalId] and [id] fields unmodified.
  */
+@CordaSerializable
 data class UniqueIdentifier(val externalId: String? = null, val id: UUID = UUID.randomUUID()) : Comparable<UniqueIdentifier> {
     override fun toString(): String = if (externalId != null) "${externalId}_$id" else id.toString()
 

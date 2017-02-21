@@ -7,6 +7,7 @@ import net.corda.core.crypto.NullCompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.VaultService
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
 import java.time.Instant
@@ -20,10 +21,12 @@ import java.util.*
 val CP_LEGACY_PROGRAM_ID = CommercialPaperLegacy()
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
+@CordaSerializable
 class CommercialPaperLegacy : Contract {
     // TODO: should reference the content of the legal agreement, not its URI
     override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
 
+    @CordaSerializable
     data class State(
             val issuance: PartyAndReference,
             override val owner: CompositeKey,
@@ -46,10 +49,14 @@ class CommercialPaperLegacy : Contract {
     }
 
     interface Commands : CommandData {
+        @CordaSerializable
         class Move : TypeOnlyCommandData(), Commands
+
+        @CordaSerializable
         class Redeem : TypeOnlyCommandData(), Commands
         // We don't need a nonce in the issue command, because the issuance.reference field should already be unique per CP.
         // However, nothing in the platform enforces that uniqueness: it's up to the issuer.
+        @CordaSerializable
         class Issue : TypeOnlyCommandData(), Commands
     }
 

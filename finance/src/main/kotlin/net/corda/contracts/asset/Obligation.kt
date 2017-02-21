@@ -7,6 +7,7 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.*
 import net.corda.core.random63BitValue
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.NonEmptySet
@@ -28,6 +29,7 @@ val OBLIGATION_PROGRAM_ID = Obligation<Currency>()
  *
  * @param P the product the obligation is for payment of.
  */
+@CordaSerializable
 class Obligation<P> : Contract {
 
     /**
@@ -227,6 +229,7 @@ class Obligation<P> : Contract {
      * to the state. Most states will not leave the [NORMAL] lifecycle. Note that settled (as an end lifecycle) is
      * represented by absence of the state on transaction output.
      */
+    @CordaSerializable
     enum class Lifecycle {
         /** Default lifecycle state for a contract, in which it can be settled normally */
         NORMAL,
@@ -242,6 +245,7 @@ class Obligation<P> : Contract {
      *
      * @param P the product the obligation is for payment of.
      */
+    @CordaSerializable
     data class Terms<P>(
             /** The hash of the asset contract we're willing to accept in payment for this debt. */
             val acceptableContracts: NonEmptySet<SecureHash>,
@@ -263,6 +267,7 @@ class Obligation<P> : Contract {
      *
      * @param P the product the obligation is for payment of.
      */
+    @CordaSerializable
     data class State<P>(
             var lifecycle: Lifecycle = Lifecycle.NORMAL,
             /** Where the debt originates from (obligor) */
@@ -328,6 +333,7 @@ class Obligation<P> : Contract {
          * Net two or more obligation states together in a close-out netting style. Limited to bilateral netting
          * as only the beneficiary (not the obligor) needs to sign.
          */
+        @CordaSerializable
         data class Net(override val type: NetType) : NetCommand, Commands
 
         /**
@@ -337,12 +343,14 @@ class Obligation<P> : Contract {
          * should take the moved states into account when considering whether it is valid. Typically this will be
          * null.
          */
+        @CordaSerializable
         data class Move(override val contractHash: SecureHash? = null) : Commands, FungibleAsset.Commands.Move
 
         /**
          * Allows new obligation states to be issued into existence: the nonce ("number used once") ensures the
          * transaction has a unique ID even when there are no inputs.
          */
+        @CordaSerializable
         data class Issue(override val nonce: Long = random63BitValue()) : FungibleAsset.Commands.Issue, Commands
 
         /**
@@ -350,12 +358,14 @@ class Obligation<P> : Contract {
          * state object to the beneficiary. If this reduces the balance to zero, the state object is destroyed.
          * @see [MoveCommand].
          */
+        @CordaSerializable
         data class Settle<P>(val amount: Amount<Issued<Terms<P>>>) : Commands
 
         /**
          * A command stating that the beneficiary is moving the contract into the defaulted state as it has not been settled
          * by the due date, or resetting a defaulted contract back to the issued state.
          */
+        @CordaSerializable
         data class SetLifecycle(val lifecycle: Lifecycle) : Commands {
             val inverse: Lifecycle
                 get() = when (lifecycle) {
@@ -368,6 +378,7 @@ class Obligation<P> : Contract {
          * A command stating that the debt is being released by the beneficiary. Normally would indicate
          * either settlement outside of the ledger, or that the obligor is unable to pay.
          */
+        @CordaSerializable
         data class Exit<P>(override val amount: Amount<Issued<Terms<P>>>) : Commands, FungibleAsset.Commands.Exit<Terms<P>>
     }
 

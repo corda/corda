@@ -8,6 +8,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.ServiceType
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.irs.flows.FixingFlow
 import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
@@ -642,15 +643,23 @@ class InterestRateSwap() : Contract {
     }
 
     interface Commands : CommandData {
+        @CordaSerializable
         data class Refix(val fix: Fix) : Commands      // Receive interest rate from oracle, Both sides agree
+
+        @CordaSerializable
         class Pay : TypeOnlyCommandData(), Commands    // Not implemented just yet
+
+        @CordaSerializable
         class Agree : TypeOnlyCommandData(), Commands  // Both sides agree to trade
+
+        @CordaSerializable
         class Mature : TypeOnlyCommandData(), Commands // Trade has matured; no more actions. Cleanup. // TODO: Do we need this?
     }
 
     /**
      * The state class contains the 4 major data classes.
      */
+    @CordaSerializable
     data class State(
             val fixedLeg: FixedLeg,
             val floatingLeg: FloatingLeg,

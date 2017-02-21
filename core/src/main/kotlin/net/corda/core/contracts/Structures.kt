@@ -171,6 +171,7 @@ interface IssuanceDefinition
  *
  * @param P the type of product underlying the definition, for example [Currency].
  */
+@CordaSerializable
 data class Issued<out P>(val issuer: PartyAndReference, val product: P) {
     override fun toString() = "$product issued by $issuer"
 }
@@ -241,6 +242,7 @@ interface LinearState : ContractState {
     /**
      * Standard clause to verify the LinearState safety properties.
      */
+    @CordaSerializable
     class ClauseVerifier<S : LinearState, C : CommandData>() : Clause<S, C, Unit>() {
         override fun verify(tx: TransactionForContract,
                             inputs: List<S>,
@@ -336,11 +338,13 @@ fun ContractState.hash(): SecureHash = SecureHash.sha256(serialize().bytes)
  * A stateref is a pointer (reference) to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which
  * transaction defined the state and where in that transaction it was.
  */
+@CordaSerializable
 data class StateRef(val txhash: SecureHash, val index: Int) {
     override fun toString() = "$txhash($index)"
 }
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a vault (which holds available assets) contains these. */
+@CordaSerializable
 data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, val ref: StateRef)
 
 /** Filters a list of [StateAndRef] objects according to the type of the states */
@@ -352,6 +356,7 @@ inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filt
  * Reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
  * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the party.
  */
+@CordaSerializable
 data class PartyAndReference(val party: AnonymousParty, val reference: OpaqueBytes) {
     constructor(party: Party, reference: OpaqueBytes) : this(party.toAnonymous(), reference)
     override fun toString() = "${party}$reference"
@@ -367,6 +372,7 @@ abstract class TypeOnlyCommandData : CommandData {
 }
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
+@CordaSerializable
 data class Command(val value: CommandData, val signers: List<CompositeKey>) {
     init {
         require(signers.isNotEmpty())
@@ -401,9 +407,11 @@ interface NetCommand : CommandData {
 }
 
 /** Indicates that this transaction replaces the inputs contract state to another contract state */
+@CordaSerializable
 data class UpgradeCommand(val upgradedContractClass: Class<out UpgradedContract<*, *>>) : CommandData
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
+@CordaSerializable
 data class AuthenticatedObject<out T : Any>(
         val signers: List<CompositeKey>,
         /** If any public keys were recognised, the looked up institutions are available here */
@@ -415,6 +423,7 @@ data class AuthenticatedObject<out T : Any>(
  * If present in a transaction, contains a time that was verified by the uniqueness service. The true time must be
  * between (after, before).
  */
+@CordaSerializable
 data class Timestamp(val after: Instant?, val before: Instant?) {
     init {
         if (after == null && before == null)

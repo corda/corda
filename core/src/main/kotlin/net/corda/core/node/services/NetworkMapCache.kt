@@ -9,6 +9,7 @@ import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.randomOrNull
+import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 
 /**
@@ -20,8 +21,13 @@ import rx.Observable
 interface NetworkMapCache {
 
     sealed class MapChange(val node: NodeInfo) {
+        @CordaSerializable
         class Added(node: NodeInfo) : MapChange(node)
+
+        @CordaSerializable
         class Removed(node: NodeInfo) : MapChange(node)
+
+        @CordaSerializable
         class Modified(node: NodeInfo, val previousNode: NodeInfo) : MapChange(node)
     }
 

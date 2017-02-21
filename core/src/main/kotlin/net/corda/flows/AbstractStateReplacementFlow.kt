@@ -11,6 +11,7 @@ import net.corda.core.crypto.signWithECDSA
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.recordTransactions
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -29,6 +30,7 @@ abstract class AbstractStateReplacementFlow {
      *
      * @param M the type of a class representing proposed modification by the instigator.
      */
+    @CordaSerializable
     data class Proposal<out M>(val stateRef: StateRef, val modification: M, val stx: SignedTransaction)
 
     /**
@@ -193,5 +195,6 @@ abstract class AbstractStateReplacementFlow {
     }
 }
 
+@CordaSerializable
 open class StateReplacementException @JvmOverloads constructor(message: String? = null, cause: Throwable? = null)
     : FlowException(message, cause)

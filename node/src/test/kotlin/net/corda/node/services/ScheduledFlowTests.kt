@@ -9,8 +9,8 @@ import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.linearHeadsOfType
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.flows.FinalityFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
@@ -30,6 +30,7 @@ class ScheduledFlowTests {
     lateinit var nodeA: MockNetwork.MockNode
     lateinit var nodeB: MockNetwork.MockNode
 
+    @CordaSerializable
     data class ScheduledState(val creationTime: Instant,
                               val source: Party,
                               val destination: Party,

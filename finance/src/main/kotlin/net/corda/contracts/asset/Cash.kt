@@ -12,6 +12,7 @@ import net.corda.core.crypto.*
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
 import net.corda.schemas.CashSchemaV1
@@ -39,6 +40,7 @@ val CASH_PROGRAM_ID = Cash()
  * At the same time, other contracts that just want money and don't care much who is currently holding it in their
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
+@CordaSerializable
 class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     /**
      * TODO:
@@ -74,10 +76,12 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
         }
 
+        @CordaSerializable
         class ConserveAmount : AbstractConserveAmount<State, Commands, Currency>()
     }
 
     /** A state representing a cash claim against some party. */
+    @CordaSerializable
     data class State(
             override val amount: Amount<Issued<Currency>>,
 
@@ -125,18 +129,21 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
          * should take the moved states into account when considering whether it is valid. Typically this will be
          * null.
          */
+        @CordaSerializable
         data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
 
         /**
          * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
          * has a unique ID even when there are no inputs.
          */
+        @CordaSerializable
         data class Issue(override val nonce: Long = newSecureRandom().nextLong()) : FungibleAsset.Commands.Issue, Commands
 
         /**
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
          * in some other way.
          */
+        @CordaSerializable
         data class Exit(override val amount: Amount<Issued<Currency>>) : Commands, FungibleAsset.Commands.Exit<Currency>
     }
 

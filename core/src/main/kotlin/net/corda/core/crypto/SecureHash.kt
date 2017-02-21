@@ -1,6 +1,7 @@
 package net.corda.core.crypto
 
 import com.google.common.io.BaseEncoding
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import java.security.MessageDigest
 
@@ -10,6 +11,7 @@ import java.security.MessageDigest
  */
 sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes) */
+    @CordaSerializable
     class SHA256(bytes: ByteArray) : SecureHash(bytes) {
         init {
             require(bytes.size == 32)

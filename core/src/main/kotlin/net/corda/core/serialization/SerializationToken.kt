@@ -100,6 +100,7 @@ class SerializeAsTokenContext(toBeTokenized: Any, kryo: Kryo = createKryo()) {
  * A class representing a [SerializationToken] for some object that is not serializable but can be looked up
  * (when deserialized) via just the class name.
  */
+@CordaSerializable
 data class SingletonSerializationToken private constructor(private val className: String) : SerializationToken {
 
     constructor(toBeTokenized: SerializeAsToken) : this(toBeTokenized.javaClass.name)

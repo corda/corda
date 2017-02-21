@@ -3,6 +3,7 @@ package net.corda.core.node.services
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -36,6 +37,7 @@ val DEFAULT_SESSION_ID = 0L
  *   Active means they haven't been consumed yet (or we don't know about it).
  *   Relevant means they contain at least one of our pubkeys.
  */
+@CordaSerializable
 class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
 
     /**
@@ -46,6 +48,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      * If the vault observes multiple transactions simultaneously, where some transactions consume the outputs of some of the
      * other transactions observed, then the changes are observed "net" of those.
      */
+    @CordaSerializable
     data class Update(val consumed: Set<StateAndRef<ContractState>>, val produced: Set<StateAndRef<ContractState>>) {
         /** Checks whether the update contains a state of the specified type. */
         inline fun <reified T : ContractState> containsType() = consumed.any { it.state.data is T } || produced.any { it.state.data is T }

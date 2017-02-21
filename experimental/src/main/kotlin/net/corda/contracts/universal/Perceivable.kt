@@ -4,6 +4,7 @@ import net.corda.core.contracts.BusinessCalendar
 import net.corda.core.contracts.Tenor
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Type
 import java.math.BigDecimal
 import java.time.Instant
@@ -12,6 +13,7 @@ import java.util.*
 
 interface Perceivable<T>
 
+@CordaSerializable
 enum class Comparison {
     LT, LTE, GT, GTE
 }
@@ -19,6 +21,7 @@ enum class Comparison {
 /**
  * Constant perceivable
  */
+@CordaSerializable
 data class Const<T>(val value: T) : Perceivable<T> {
     override fun equals(other: Any?): Boolean {
         if (other == null) {
@@ -47,14 +50,17 @@ fun <T> const(k: T) : Perceivable<T> = Const(k)
 
 // fun const(b: Boolean) : Perceivable<Boolean> = Const(b)
 
+@CordaSerializable
 data class Max(val args: Set<Perceivable<BigDecimal>>) : Perceivable<BigDecimal>
 
 fun max(vararg args: Perceivable<BigDecimal>) = Max(args.toSet())
 
+@CordaSerializable
 data class Min(val args: Set<Perceivable<BigDecimal>>) : Perceivable<BigDecimal>
 
 fun min(vararg args: Perceivable<BigDecimal>) = Min(args.toSet())
 
+@CordaSerializable
 class StartDate : Perceivable<Instant> {
     override fun hashCode(): Int {
         return 2
@@ -65,6 +71,7 @@ class StartDate : Perceivable<Instant> {
     }
 }
 
+@CordaSerializable
 class EndDate : Perceivable<Instant> {
     override fun hashCode(): Int {
         return 3
@@ -75,6 +82,7 @@ class EndDate : Perceivable<Instant> {
     }
 }
 
+@CordaSerializable
 data class ActorPerceivable(val actor: Party) : Perceivable<Boolean>
 fun signedBy(actor: Party) : Perceivable<Boolean> = ActorPerceivable(actor)
 
@@ -87,6 +95,7 @@ fun signedByOneOf(actors: Collection<Party>): Perceivable<Boolean> =
 /**
  * Perceivable based on time
  */
+@CordaSerializable
 data class TimePerceivable(val cmp: Comparison, val instant: Perceivable<Instant>) : Perceivable<Boolean>
 
 fun parseDate(str: String) = BusinessCalendar.parseDateFromString(str)
@@ -100,18 +109,22 @@ fun after(expiry: LocalDate) = TimePerceivable(Comparison.GTE, const(expiry.toIn
 fun before(expiry: String) = TimePerceivable(Comparison.LTE, const(parseDate(expiry).toInstant()))
 fun after(expiry: String) = TimePerceivable(Comparison.GTE, const(parseDate(expiry).toInstant()))
 
+@CordaSerializable
 data class PerceivableAnd(val left: Perceivable<Boolean>, val right: Perceivable<Boolean>) : Perceivable<Boolean>
 
 infix fun Perceivable<Boolean>.and(obs: Perceivable<Boolean>) = PerceivableAnd(this, obs)
 
+@CordaSerializable
 data class PerceivableOr(val left: Perceivable<Boolean>, val right: Perceivable<Boolean>) : Perceivable<Boolean>
 
 infix fun Perceivable<Boolean>.or(obs: Perceivable<Boolean>) = PerceivableOr(this, obs)
 
+@CordaSerializable
 data class CurrencyCross(val foreign: Currency, val domestic: Currency) : Perceivable<BigDecimal>
 
 operator fun Currency.div(currency: Currency) = CurrencyCross(this, currency)
 
+@CordaSerializable
 data class PerceivableComparison<T>(val left: Perceivable<T>, val cmp: Comparison, val right: Perceivable<T>, val type: Type) : Perceivable<Boolean>
 
 inline fun<reified T : Any> perceivableComparison(left: Perceivable<T>, cmp: Comparison, right: Perceivable<T>) =
@@ -127,12 +140,15 @@ infix fun Perceivable<BigDecimal>.gte(n: BigDecimal) = perceivableComparison(thi
 infix fun Perceivable<BigDecimal>.lte(n: Double) = perceivableComparison(this, Comparison.LTE, const(BigDecimal(n)))
 infix fun Perceivable<BigDecimal>.gte(n: Double) = perceivableComparison(this, Comparison.GTE, const(BigDecimal(n)))
 
+@CordaSerializable
 enum class Operation {
     PLUS, MINUS, TIMES, DIV
 }
 
+@CordaSerializable
 data class UnaryPlus<T>(val arg: Perceivable<T>) : Perceivable<T>
 
+@CordaSerializable
 data class PerceivableOperation<T>(val left: Perceivable<T>, val op: Operation, val right: Perceivable<T>) : Perceivable<T>
 
 operator fun Perceivable<BigDecimal>.plus(n: BigDecimal) = PerceivableOperation(this, Operation.PLUS, const(n))
@@ -149,9 +165,11 @@ operator fun Perceivable<BigDecimal>.div(n: Double) = PerceivableOperation(this,
 operator fun Perceivable<Int>.plus(n: Int) = PerceivableOperation(this, Operation.PLUS, const(n))
 operator fun Perceivable<Int>.minus(n: Int) = PerceivableOperation(this, Operation.MINUS, const(n))
 
+@CordaSerializable
 data class TerminalEvent(val reference: Party, val source: CompositeKey) : Perceivable<Boolean>
 
 // todo: holidays
+@CordaSerializable
 data class Interest(val amount: Perceivable<BigDecimal>, val dayCountConvention: String,
                     val interest: Perceivable<BigDecimal>, val start: Perceivable<Instant>, val end: Perceivable<Instant>) : Perceivable<BigDecimal>
 
@@ -168,6 +186,7 @@ fun interest(@Suppress("UNUSED_PARAMETER") amount: BigDecimal, @Suppress("UNUSED
 fun interest(@Suppress("UNUSED_PARAMETER") amount: BigDecimal, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: Perceivable<BigDecimal> /* todo -  appropriate type */,
              @Suppress("UNUSED_PARAMETER") start: Perceivable<Instant>, @Suppress("UNUSED_PARAMETER") end: Perceivable<Instant>): Perceivable<BigDecimal> = Interest(const(amount), dayCountConvention, interest, start, end)
 
+@CordaSerializable
 data class Fixing(val source: String, val date: Perceivable<Instant>, val tenor: Tenor) : Perceivable<BigDecimal>
 
 // TODO: fix should have implied default date and perhaps tenor when used in a rollOut template

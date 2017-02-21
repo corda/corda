@@ -7,6 +7,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.linearHeadsOfType
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.flows.FinalityFlow
@@ -32,6 +33,7 @@ inline fun <reified T : LinearState> ServiceHub.latest(ref: StateRef): StateAndR
 // DOCEND 1
 
 // Minimal state model of a manual approval process
+@CordaSerializable
 enum class WorkflowState {
     NEW,
     APPROVED,
@@ -42,16 +44,21 @@ enum class WorkflowState {
  * Minimal contract to encode a simple workflow with one initial state and two possible eventual states.
  * It is assumed one party unilaterally submits and the other manually retrieves the deal and completes it.
  */
+@CordaSerializable
 data class TradeApprovalContract(override val legalContractReference: SecureHash = SecureHash.sha256("Example of workflow type transaction")) : Contract {
 
     interface Commands : CommandData {
+        @CordaSerializable
         class Issue : TypeOnlyCommandData(), Commands  // Record receipt of deal details
+
+        @CordaSerializable
         class Completed : TypeOnlyCommandData(), Commands  // Record match
     }
 
     /**
      * Truly minimal state that just records a tradeId string and the parties involved.
      */
+    @CordaSerializable
     data class State(val tradeId: String,
                      val source: Party,
                      val counterparty: Party,

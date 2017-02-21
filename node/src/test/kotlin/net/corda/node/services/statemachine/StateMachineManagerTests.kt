@@ -14,6 +14,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
@@ -718,6 +719,7 @@ class StateMachineManagerTests {
         }
     }
 
+    @CordaSerializable
     private class MyFlowException(override val message: String) : FlowException() {
         override fun equals(other: Any?): Boolean = other is MyFlowException && other.message == this.message
         override fun hashCode(): Int = message.hashCode()

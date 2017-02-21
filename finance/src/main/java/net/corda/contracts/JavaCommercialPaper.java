@@ -1,22 +1,35 @@
 package net.corda.contracts;
 
-import com.google.common.collect.*;
-import kotlin.*;
-import net.corda.contracts.asset.*;
+import com.google.common.collect.ImmutableList;
+import kotlin.Pair;
+import kotlin.Unit;
+import net.corda.contracts.asset.CashKt;
 import net.corda.core.contracts.*;
-import net.corda.core.contracts.TransactionForContract.*;
-import net.corda.core.contracts.clauses.*;
-import net.corda.core.crypto.*;
-import net.corda.core.node.services.*;
-import net.corda.core.transactions.*;
-import org.jetbrains.annotations.*;
+import net.corda.core.contracts.TransactionForContract.InOutGroup;
+import net.corda.core.contracts.clauses.AnyOf;
+import net.corda.core.contracts.clauses.Clause;
+import net.corda.core.contracts.clauses.ClauseVerifier;
+import net.corda.core.contracts.clauses.GroupClauseVerifier;
+import net.corda.core.crypto.CompositeKey;
+import net.corda.core.crypto.CryptoUtilities;
+import net.corda.core.crypto.Party;
+import net.corda.core.crypto.SecureHash;
+import net.corda.core.node.services.VaultService;
+import net.corda.core.serialization.CordaSerializable;
+import net.corda.core.transactions.TransactionBuilder;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.time.*;
-import java.util.*;
-import java.util.stream.*;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.Currency;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-import static kotlin.collections.CollectionsKt.*;
-import static net.corda.core.contracts.ContractsDSL.*;
+import static kotlin.collections.CollectionsKt.single;
+import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
+import static net.corda.core.contracts.ContractsDSL.requireThat;
 
 
 /**
@@ -26,6 +39,7 @@ import static net.corda.core.contracts.ContractsDSL.*;
 public class JavaCommercialPaper implements Contract {
     private static final Contract JCP_PROGRAM_ID = new JavaCommercialPaper();
 
+    @CordaSerializable
     public static class State implements OwnableState, ICommercialPaperState {
         private PartyAndReference issuance;
         private CompositeKey owner;
@@ -254,6 +268,7 @@ public class JavaCommercialPaper implements Contract {
     }
 
     public interface Commands extends CommandData {
+        @CordaSerializable
         class Move implements Commands {
             @Override
             public boolean equals(Object obj) {
@@ -261,6 +276,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
+        @CordaSerializable
         class Redeem implements Commands {
             @Override
             public boolean equals(Object obj) {
@@ -268,6 +284,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
+        @CordaSerializable
         class Issue implements Commands {
             @Override
             public boolean equals(Object obj) {
