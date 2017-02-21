@@ -11,6 +11,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.randomOrNull
 import net.corda.core.serialization.CordaSerializable
 import rx.Observable
+import java.security.PublicKey
 
 /**
  * A network map contains lists of nodes on the network along with information about their identity keys, services
@@ -72,7 +73,7 @@ interface NetworkMapCache {
      */
 
     /** Look up the node info for a specific peer key. */
-    fun getNodeByLegalIdentityKey(compositeKey: CompositeKey): NodeInfo?
+    fun getNodeByLegalIdentityKey(compositeKey: PublicKey): NodeInfo?
 
     /** Look up all nodes advertising the service owned by [compositeKey] */
     fun getNodesByAdvertisedServiceIdentityKey(compositeKey: CompositeKey): List<NodeInfo> {

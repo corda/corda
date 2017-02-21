@@ -11,6 +11,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import java.security.KeyPair
+import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
 
@@ -43,7 +44,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     override val id: SecureHash get() = tx.id
 
     @CordaSerializable
-    class SignaturesMissingException(val missing: Set<CompositeKey>, val descriptions: List<String>, override val id: SecureHash) : NamedByHash, SignatureException() {
+    class SignaturesMissingException(val missing: Set<PublicKey>, val descriptions: List<String>, override val id: SecureHash) : NamedByHash, SignatureException() {
         override fun toString(): String {
             return "Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}"
         }
@@ -62,7 +63,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * @throws SignaturesMissingException if any signatures should have been present but were not.
      */
     @Throws(SignatureException::class)
-    fun verifySignatures(vararg allowedToBeMissing: CompositeKey): WireTransaction {
+    fun verifySignatures(vararg allowedToBeMissing: PublicKey): WireTransaction {
         // Embedded WireTransaction is not deserialised until after we check the signatures.
         checkSignaturesAreValid()
 
@@ -102,7 +103,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * Get a human readable description of where signatures are required from, and are missing, to assist in debugging
      * the underlying cause.
      */
-    private fun getMissingKeyDescriptions(missing: Set<CompositeKey>): ArrayList<String> {
+    private fun getMissingKeyDescriptions(missing: Set<PublicKey>): ArrayList<String> {
         // TODO: We need a much better way of structuring this data
         val missingElements = ArrayList<String>()
         this.tx.commands.forEach { command ->
