@@ -8,7 +8,6 @@ import javafx.application.Platform
 import javafx.embed.swing.SwingNode
 import javafx.scene.control.Button
 import javafx.scene.control.Label
-import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
 import javax.swing.SwingUtilities
 import net.corda.demobench.model.*
@@ -16,7 +15,6 @@ import net.corda.demobench.pty.R3Pty
 import net.corda.demobench.rpc.NodeRPC
 import net.corda.demobench.ui.PropertyLabel
 import tornadofx.Fragment
-import tornadofx.vgrow
 
 class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
@@ -41,10 +39,6 @@ class NodeTerminalView : Fragment() {
     private val viewer = DBViewer()
     private var rpc: NodeRPC? = null
     private var pty: R3Pty? = null
-
-    init {
-        root.vgrow = Priority.ALWAYS
-    }
 
     fun open(config: NodeConfig, onExit: () -> Unit) {
         nodeName.text = config.legalName
