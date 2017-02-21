@@ -34,7 +34,7 @@ class DistributedImmutableBFTMapTests {
 
     @Test
     fun `stores entries correctly and detects conflicts`() {
-        val threads = (0..3).map { i ->
+        (0..3).forEach { i ->
             thread { BFTSmartServer<String, String>(i, database, "bft_notary_committed_states_$i") }.apply { Thread.sleep(500) }
         }
 
@@ -64,7 +64,5 @@ class DistributedImmutableBFTMapTests {
         // Null response encodes 'not found'.
         val r = client.get("x")
         assertEquals(null, r)
-
-        threads.forEach { t -> t.stop() }
     }
 }
