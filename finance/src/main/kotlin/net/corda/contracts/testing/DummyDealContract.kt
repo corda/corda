@@ -8,14 +8,17 @@ import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 
+@CordaSerializable
 class DummyDealContract : Contract {
     override val legalContractReference: SecureHash = SecureHash.sha256("TestDeal")
 
     override fun verify(tx: TransactionForContract) {}
 
+    @CordaSerializable
     data class State(
             override val contract: Contract = DummyDealContract(),
             override val participants: List<CompositeKey> = listOf(),

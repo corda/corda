@@ -15,6 +15,7 @@ import net.corda.core.crypto.composite
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.requery.converters.InstantConverter
 import net.corda.core.schemas.requery.converters.VaultStateStatusConverter
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
@@ -83,15 +84,21 @@ class VaultSchemaTest {
         data.close()
     }
 
+    @CordaSerializable
     private class VaultNoopContract() : Contract {
         override val legalContractReference = SecureHash.sha256("")
+
+        @CordaSerializable
         data class VaultNoopState(override val owner: CompositeKey) : OwnableState {
             override val contract = VaultNoopContract()
             override val participants: List<CompositeKey>
                 get() = listOf(owner)
+
             override fun withNewOwner(newOwner: CompositeKey) = Pair(Commands.Create(), copy(owner = newOwner))
         }
+
         interface Commands : CommandData {
+            @CordaSerializable
             class Create : TypeOnlyCommandData(), Commands
         }
 
