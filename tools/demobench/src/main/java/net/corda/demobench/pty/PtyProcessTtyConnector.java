@@ -8,6 +8,7 @@ import java.nio.charset.Charset;
 
 /**
  * Copied from JediTerm pty.
+ * JediTerm is not available in any Maven repository.
  * @author traff
  */
 public class PtyProcessTtyConnector extends ProcessTtyConnector {
