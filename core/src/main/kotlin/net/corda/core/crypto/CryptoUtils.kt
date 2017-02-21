@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.core.utilities.SgxSupport
 import java.security.*
 
 /**
@@ -90,6 +91,36 @@ fun safeRandomBytes(numOfBytes: Int): ByteArray {
 }
 
 /**
+ * This is a hack added because during deserialisation when no-param constructors are called sometimes default values
+ * generate random numbers, which fail in SGX.
+ * TODO remove this once deserialisation is figured out.
+ */
+private class DummySecureRandomSpi : SecureRandomSpi() {
+    override fun engineSetSeed(bytes: ByteArray?) {
+        Exception("DummySecureRandomSpi.engineSetSeed called").printStackTrace(System.out)
+    }
+
+    override fun engineNextBytes(bytes: ByteArray?) {
+        Exception("DummySecureRandomSpi.engineNextBytes called").printStackTrace(System.out)
+        bytes?.fill(0)
+    }
+
+    override fun engineGenerateSeed(numberOfBytes: Int): ByteArray {
+        Exception("DummySecureRandomSpi.engineGenerateSeed called").printStackTrace(System.out)
+        return ByteArray(numberOfBytes)
+    }
+}
+object DummySecureRandom : SecureRandom(DummySecureRandomSpi(), null)
+
+private val _newSecureRandom: () -> SecureRandom by lazy {
+    when {
+        SgxSupport.isInsideEnclave -> { { DummySecureRandom } }
+        System.getProperty("os.name") == "Linux" -> { { SecureRandom.getInstance("NativePRNGNonBlocking") } }
+        else -> { { SecureRandom.getInstanceStrong() } }
+    }
+}
+
+/**
  * Get an instance of [SecureRandom] to avoid blocking, due to waiting for additional entropy, when possible.
  * In this version, the NativePRNGNonBlocking is exclusively used on Linux OS to utilize dev/urandom because in high traffic
  * /dev/random may wait for a certain amount of "noise" to be generated on the host machine before returning a result.
@@ -108,10 +139,4 @@ fun safeRandomBytes(numOfBytes: Int): ByteArray {
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
 @Throws(NoSuchAlgorithmException::class)
-fun newSecureRandom(): SecureRandom {
-    if (System.getProperty("os.name") == "Linux") {
-        return SecureRandom.getInstance("NativePRNGNonBlocking")
-    } else {
-        return SecureRandom.getInstanceStrong()
-    }
-}
+fun newSecureRandom() = _newSecureRandom()

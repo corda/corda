@@ -491,7 +491,7 @@ ifneq (,$(filter i386 x86_64,$(arch)))
 endif
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
-	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
+	"-I$(JAVA_HOME)/include/linux" $(extra-build-cflags) -I$(src) -pthread
 
 converter-cflags = -D__STDC_CONSTANT_MACROS -std=c++0x -Iinclude/ -Isrc/ \
 	-fno-rtti -fno-exceptions \

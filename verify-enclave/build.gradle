@@ -1,0 +1,69 @@
+apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.quasar-utils'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
+    jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
+}
+
+//noinspection GroovyAssignabilityCheck
+configurations {
+    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
+    runtime.exclude module: 'isolated'
+
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
+}
+
+dependencies {
+    compile project(':core')
+    compile project(':finance')
+    // This is added so that we include node-api/src/main/resources/META-INF/services/net.corda.core.node.CordaPluginRegistry
+    // which is needed for the serialisation whitelist initialisation.
+    // TODO think about this.
+    compile project(':node-api')
+
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+
+    testCompile project(':test-utils')
+}
+
+jar {
+    from '../node/capsule/NOTICE' // Copy CDDL notice
+    // Create a fat jar by packing all deps into the output
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    archiveName "corda-enclavelet.jar"
+}
+
+task integrationTest(type: Test) {
+    testClassesDir = sourceSets.integrationTest.output.classesDir
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    jvmArgs '-Djava.library.path=../sgx-jvm/jvm-enclave/jni/build'
+}
+
+task generateNativeSgxHeaders(type: Exec) {
+    def classpath = sourceSets.main.output.classesDir
+    commandLine "javah", "-o", "build/native/include/jni_sgx_api.h", "-cp", classpath, "com.r3.enclaves.txverify.NativeSgxApi"
+    dependsOn classes
+}

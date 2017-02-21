@@ -5,6 +5,7 @@ import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionForContract
 import net.corda.core.utilities.loggerFor
+import org.slf4j.Logger
 
 /**
  * A clause of a contract, containing a chunk of verification logic. That logic may be delegated to other clauses, or
@@ -18,7 +19,7 @@ import net.corda.core.utilities.loggerFor
  */
 abstract class Clause<in S : ContractState, C : CommandData, in K : Any> {
     companion object {
-        val log = loggerFor<Clause<*, *, *>>()
+        val log: Logger by lazy { loggerFor<Clause<*, *, *>>() }
     }
 
     /** Determine whether this clause runs or not */

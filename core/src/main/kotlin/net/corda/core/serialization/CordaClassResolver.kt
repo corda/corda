@@ -26,10 +26,6 @@ fun makeNoWhitelistClassResolver(): ClassResolver {
 }
 
 class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver() {
-    companion object {
-        private val logger = loggerFor<CordaClassResolver>()
-    }
-
     /** Returns the registration for the specified class, or null if the class is not registered.  */
     override fun getRegistration(type: Class<*>): Registration? {
         return super.getRegistration(type) ?: checkClass(type)
