@@ -15,7 +15,7 @@ class SerializationTokenTest {
 
     @Before
     fun setup() {
-        kryo = THREAD_LOCAL_KRYO.get()
+        kryo = threadLocalStorageKryo()
     }
 
     @After
@@ -24,6 +24,7 @@ class SerializationTokenTest {
     }
 
     // Large tokenizable object so we can tell from the smaller number of serialized bytes it was actually tokenized
+    @CordaSerializable
     private class LargeTokenizable : SingletonSerializeAsToken() {
         val bytes = OpaqueBytes(ByteArray(1024))
 
@@ -46,6 +47,7 @@ class SerializationTokenTest {
         assertThat(tokenizableAfter).isSameAs(tokenizableBefore)
     }
 
+    @CordaSerializable
     private class UnitSerializeAsToken : SingletonSerializeAsToken()
 
     @Test
@@ -95,6 +97,7 @@ class SerializationTokenTest {
         serializedBytes.deserialize(kryo)
     }
 
+    @CordaSerializable
     private class WrongTypeSerializeAsToken : SerializeAsToken {
         override fun toToken(context: SerializeAsTokenContext): SerializationToken {
             return object : SerializationToken {

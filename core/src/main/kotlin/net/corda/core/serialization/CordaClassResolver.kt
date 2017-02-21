@@ -1,14 +1,12 @@
 package net.corda.core.serialization
 
-import com.esotericsoftware.kryo.ClassResolver
-import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.KryoException
-import com.esotericsoftware.kryo.Registration
+import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
 import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.utilities.loggerFor
 import java.io.PrintWriter
+import java.lang.reflect.Modifier
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -20,7 +18,11 @@ fun Kryo.addToWhitelist(type: Class<*>) {
 }
 
 fun makeStandardClassResolver(): ClassResolver {
-    return CordaClassResolver(LoggingWhitelist(GlobalTransientClassWhiteList(EmptyWhitelist())))
+    return CordaClassResolver(LoggingWhitelist(GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist())))
+}
+
+fun makeNoWhitelistClassResolver(): ClassResolver {
+    return CordaClassResolver(AllWhitelist())
 }
 
 class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver() {
@@ -41,6 +43,18 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
             // Kryo checks if existing registration when registering.
             return null
         }
+        // Allow primitives
+        if (type.isPrimitive || type == Object::class.java) return null
+        // Allow abstracts and interfaces
+        if (Modifier.isAbstract(type.modifiers)) return null
+        // If array, recurse on element type
+        if (type.isArray) {
+            return checkClass(type.componentType)
+        }
+        if (!type.isEnum && Enum::class.java.isAssignableFrom(type)) {
+            // Specialised enum entry, so just resolve the parent Enum type since cannot annotate the specialised entry.
+            return checkClass(type.superclass)
+        }
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
         val hasAnnotation = checkForAnnotation(type)
         if (!hasAnnotation && !whitelist.hasListed(type)) {
@@ -60,9 +74,14 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
         }
     }
 
-    // We don't allow the annotation for classes in attachments.  The class will be on the main classpath if we have the CorDapp installed.
+    // We don't allow the annotation for classes in attachments for now.  The class will be on the main classpath if we have the CorDapp installed.
+    // We also do not allow extension of KryoSerializable for annotated classes, or combination with @DefaultSerializer for custom serialisation.
+    // TODO: Later we can support annotations on attachment classes and spin up a proxy via bytecode that we know is harmless.
     protected fun checkForAnnotation(type: Class<*>): Boolean {
-        return (type.classLoader !is AttachmentsClassLoader) && type.isAnnotationPresent(CordaSerializable::class.java)
+        return (type.classLoader !is AttachmentsClassLoader)
+                && !KryoSerializable::class.java.isAssignableFrom(type)
+                && !type.isAnnotationPresent(DefaultSerializer::class.java)
+                && type.isAnnotationPresent(CordaSerializable::class.java)
     }
 }
 
@@ -77,6 +96,22 @@ interface MutableClassWhitelist : ClassWhitelist {
 class EmptyWhitelist : ClassWhitelist {
     override fun hasListed(type: Class<*>): Boolean {
         return false
+    }
+}
+
+class BuiltInExceptionsWhitelist : ClassWhitelist {
+    override fun hasListed(type: Class<*>): Boolean {
+        // Allow any java.* exceptions
+        if (Throwable::class.java.isAssignableFrom(type) && type.`package`.name.startsWith("java.")) {
+            return true
+        }
+        return false
+    }
+}
+
+class AllWhitelist : ClassWhitelist {
+    override fun hasListed(type: Class<*>): Boolean {
+        return true
     }
 }
 
@@ -123,7 +158,10 @@ class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true)
             alreadySeen += type.name
             val className = Util.className(type)
             log.warn("Dynamically whitelisted class $className")
-            if (journalWriter != null) journalWriter.println(className)
+            if (journalWriter != null) {
+                //journalWriter.println(className)
+                journalWriter.println("CLASS " + className + " " + Thread.currentThread().stackTrace.joinToString("\n"))
+            }
         }
         return true
     }
@@ -137,6 +175,6 @@ class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true)
     }
 }
 
-@Target(AnnotationTarget.CLASS)
+@Target(AnnotationTarget.CLASS, AnnotationTarget.TYPE)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class CordaSerializable

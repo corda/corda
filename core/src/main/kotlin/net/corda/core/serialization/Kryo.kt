@@ -54,16 +54,25 @@ import kotlin.reflect.jvm.javaType
  * in invalid states, thus violating system invariants. It isn't designed to handle malicious streams and therefore,
  * isn't usable beyond the prototyping stage. But that's fine: we can revisit serialisation technologies later after
  * a formal evaluation process.
+ *
+ * We now distinguish between internal, storage related Kryo and external, network facing Kryo.  We presently use
+ * some non-whitelisted classes as part of internal storage.
+ * TODO: eliminate internal, storage related whitelist issues, such as private keys in blob storage.
  */
 
 // A convenient instance of Kryo pre-configured with some useful things. Used as a default by various functions.
-val THREAD_LOCAL_KRYO: ThreadLocal<Kryo> = ThreadLocal.withInitial { createKryo() }
+private val THREAD_LOCAL_KRYO: ThreadLocal<Kryo> = ThreadLocal.withInitial { createKryo() }
+// Same again, but this has whitelisting turned off for internal storage use only.
+private val INTERNAL_THREAD_LOCAL_KRYO: ThreadLocal<Kryo> = ThreadLocal.withInitial { createInternalKryo() }
+
+fun threadLocalP2PKryo(): Kryo = THREAD_LOCAL_KRYO.get()
+fun threadLocalStorageKryo(): Kryo = INTERNAL_THREAD_LOCAL_KRYO.get()
 
 /**
  * A type safe wrapper around a byte array that contains a serialised object. You can call [SerializedBytes.deserialize]
  * to get the original object back.
  */
-class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
+class SerializedBytes<T : Any>(bytes: ByteArray, val internalOnly: Boolean = false) : OpaqueBytes(bytes) {
     // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
     val hash: SecureHash by lazy { bytes.sha256() }
 
@@ -71,20 +80,20 @@ class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
 }
 
 // Some extension functions that make deserialisation convenient and provide auto-casting of the result.
-fun <T : Any> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T {
+fun <T : Any> ByteArray.deserialize(kryo: Kryo = threadLocalP2PKryo()): T {
     @Suppress("UNCHECKED_CAST")
     return kryo.readClassAndObject(Input(this)) as T
 }
 
-fun <T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T {
+fun <T : Any> OpaqueBytes.deserialize(kryo: Kryo = threadLocalP2PKryo()): T {
     return this.bytes.deserialize(kryo)
 }
 
 // The more specific deserialize version results in the bytes being cached, which is faster.
 @JvmName("SerializedBytesWireTransaction")
-fun SerializedBytes<WireTransaction>.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): WireTransaction = WireTransaction.deserialize(this, kryo)
+fun SerializedBytes<WireTransaction>.deserialize(kryo: Kryo = threadLocalP2PKryo()): WireTransaction = WireTransaction.deserialize(this, kryo)
 
-fun <T : Any> SerializedBytes<T>.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = bytes.deserialize(kryo)
+fun <T : Any> SerializedBytes<T>.deserialize(kryo: Kryo = if (internalOnly) threadLocalStorageKryo() else threadLocalP2PKryo()): T = bytes.deserialize(kryo)
 
 /**
  * A serialiser that avoids writing the wrapper class to the byte stream, thus ensuring [SerializedBytes] is a pure
@@ -105,12 +114,12 @@ object SerializedBytesSerializer : Serializer<SerializedBytes<Any>>() {
  * Can be called on any object to convert it to a byte array (wrapped by [SerializedBytes]), regardless of whether
  * the type is marked as serializable or was designed for it (so be careful!).
  */
-fun <T : Any> T.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): SerializedBytes<T> {
+fun <T : Any> T.serialize(kryo: Kryo = threadLocalP2PKryo(), internalOnly: Boolean = false): SerializedBytes<T> {
     val stream = ByteArrayOutputStream()
     Output(stream).use {
         kryo.writeClassAndObject(it, this)
     }
-    return SerializedBytes(stream.toByteArray())
+    return SerializedBytes(stream.toByteArray(), internalOnly)
 }
 
 /**
@@ -377,6 +386,12 @@ object KotlinObjectSerializer : Serializer<DeserializeAsKotlinObjectDef>() {
     }
 
     override fun write(kryo: Kryo, output: Output, obj: DeserializeAsKotlinObjectDef) {}
+}
+
+fun createInternalKryo(k: Kryo = Kryo(makeNoWhitelistClassResolver(), MapReferenceResolver())): Kryo {
+    return k.apply {
+        DefaultKryoCustomizer.customize(this)
+    }
 }
 
 fun createKryo(k: Kryo = Kryo(makeStandardClassResolver(), MapReferenceResolver())): Kryo {
