@@ -18,7 +18,7 @@ fun Kryo.addToWhitelist(type: Class<*>) {
 }
 
 fun makeStandardClassResolver(): ClassResolver {
-    return CordaClassResolver(LoggingWhitelist(GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist())))
+    return CordaClassResolver(GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()))
 }
 
 fun makeNoWhitelistClassResolver(): ClassResolver {
@@ -159,8 +159,7 @@ class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true)
             val className = Util.className(type)
             log.warn("Dynamically whitelisted class $className")
             if (journalWriter != null) {
-                //journalWriter.println(className)
-                journalWriter.println("CLASS " + className + " " + Thread.currentThread().stackTrace.joinToString("\n"))
+                journalWriter.println(className)
             }
         }
         return true
