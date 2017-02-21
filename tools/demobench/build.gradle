@@ -141,7 +141,22 @@ task javapackage(dependsOn: 'distZip') {
         }
 
         copy {
-            from("$projectDir/package")
+            from("$projectDir/package") {
+                exclude '**/*.spec'
+                exclude '**/*.sh'
+                exclude '**/*.wsf'
+                exclude '**/*.manifest'
+            }
+            into "$pkg_source/package"
+        }
+
+        copy {
+            from("$projectDir/package") {
+                include '**/*.spec'
+                include '**/*.sh'
+                include '**/*.wsf'
+                include '**/*.manifest'
+            }
             filter {
                 line -> line.replaceAll('@pkg_version@', "$pkg_version")
             }
