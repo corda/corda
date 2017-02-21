@@ -39,6 +39,10 @@ class ProfileController : Controller() {
 
         val configs = nodeController.activeNodes
 
+        // Delete the profile, if it already exists. The save
+        // dialogue has already confirmed that this is OK.
+        target.delete()
+
         FileSystems.newFileSystem(URI.create("jar:" + target.toURI()), mapOf("create" to "true")).use {
             fs -> configs.forEach { it ->
                 val nodeDir = Files.createDirectories(fs.getPath(it.key))
