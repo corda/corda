@@ -207,7 +207,7 @@ class Node {
      */
     private void installConfig() {
         // Adding required default values
-        config = config.withValue('extraAdvertisedServiceIds', ConfigValueFactory.fromAnyRef(advertisedServices.join(',')))
+        config = config.withValue('extraAdvertisedServiceIds', ConfigValueFactory.fromIterable(advertisedServices))
         if (notaryClusterAddresses.size() > 0) {
             config = config.withValue('notaryClusterAddresses', ConfigValueFactory.fromIterable(notaryClusterAddresses))
         }

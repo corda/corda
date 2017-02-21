@@ -147,7 +147,9 @@ Corda will now exit...""")
 }
 
 private fun printPluginsAndServices(node: Node) {
-    node.configuration.extraAdvertisedServiceIds.let { if (it.isNotEmpty()) printBasicNodeInfo("Providing network services", it) }
+    node.configuration.extraAdvertisedServiceIds.let {
+        if (it.isNotEmpty()) printBasicNodeInfo("Providing network services", it.joinToString())
+    }
     val plugins = node.pluginRegistries
             .map { it.javaClass.name }
             .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") }

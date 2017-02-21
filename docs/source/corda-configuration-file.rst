@@ -40,7 +40,7 @@ NetworkMapService plus Simple Notary configuration file.
     trustStorePassword : "trustpass"
     artemisAddress : "localhost:12345"
     webAddress : "localhost:12346"
-    extraAdvertisedServiceIds: ""
+    extraAdvertisedServiceIds : []
     useHTTPS : false
     devMode : true
     // Certificate signing service will be hosted by R3 in the near future.

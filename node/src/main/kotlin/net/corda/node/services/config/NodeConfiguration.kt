@@ -69,7 +69,7 @@ class FullNodeConfiguration(override val baseDirectory: Path, val config: Config
     // TODO This field is slightly redundant as artemisAddress is sufficient to hold the address of the node's MQ broker.
     // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
     val messagingServerAddress: HostAndPort? by config.getOrElse { null }
-    val extraAdvertisedServiceIds: String by config
+    val extraAdvertisedServiceIds: List<String> = config.getListOrElse<String>("extraAdvertisedServiceIds") { emptyList() }
     val useTestClock: Boolean by config.getOrElse { false }
     val notaryNodeAddress: HostAndPort? by config.getOrElse { null }
     val notaryClusterAddresses: List<HostAndPort> = config
@@ -81,7 +81,6 @@ class FullNodeConfiguration(override val baseDirectory: Path, val config: Config
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
 
         val advertisedServices = extraAdvertisedServiceIds
-                .split(",")
                 .filter(String::isNotBlank)
                 .map { ServiceInfo.parse(it) }
                 .toMutableSet()
