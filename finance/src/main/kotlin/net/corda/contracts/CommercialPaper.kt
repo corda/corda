@@ -15,6 +15,7 @@ import net.corda.core.random63BitValue
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
 import net.corda.schemas.CommercialPaperSchemaV1
@@ -46,6 +47,7 @@ import java.util.*
 val CP_PROGRAM_ID = CommercialPaper()
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
+@CordaSerializable
 class CommercialPaper : Contract {
     // TODO: should reference the content of the legal agreement, not its URI
     override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
@@ -57,6 +59,7 @@ class CommercialPaper : Contract {
 
     override fun verify(tx: TransactionForContract) = verifyClause(tx, Clauses.Group(), tx.commands.select<Commands>())
 
+    @CordaSerializable
     data class State(
             val issuance: PartyAndReference,
             override val owner: CompositeKey,
@@ -182,8 +185,13 @@ class CommercialPaper : Contract {
     }
 
     interface Commands : CommandData {
+        @CordaSerializable
         data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
+
+        @CordaSerializable
         class Redeem : TypeOnlyCommandData(), Commands
+
+        @CordaSerializable
         data class Issue(override val nonce: Long = random63BitValue()) : IssueCommand, Commands
     }
 

@@ -3,17 +3,20 @@ package net.corda.core.contracts
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
 
 val DUMMY_PROGRAM_ID = DummyContract()
 
+@CordaSerializable
 data class DummyContract(override val legalContractReference: SecureHash = SecureHash.sha256("")) : Contract {
     interface State : ContractState {
         val magicNumber: Int
     }
 
+    @CordaSerializable
     data class SingleOwnerState(override val magicNumber: Int = 0, override val owner: CompositeKey) : OwnableState, State {
         override val contract = DUMMY_PROGRAM_ID
         override val participants: List<CompositeKey>
@@ -27,6 +30,7 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
      * participants, and could in theory be merged with [SingleOwnerState] by putting the additional participants
      * in a different field, however this is a good example of a contract with multiple states.
      */
+    @CordaSerializable
     data class MultiOwnerState(override val magicNumber: Int = 0,
                                val owners: List<CompositeKey>) : ContractState, State {
         override val contract = DUMMY_PROGRAM_ID
@@ -34,7 +38,10 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
     }
 
     interface Commands : CommandData {
+        @CordaSerializable
         class Create : TypeOnlyCommandData(), Commands
+
+        @CordaSerializable
         class Move : TypeOnlyCommandData(), Commands
     }
 

@@ -2,6 +2,7 @@ package net.corda.core.contracts
 
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.WireTransaction
 import net.corda.flows.ContractUpgradeFlow
 
@@ -11,16 +12,21 @@ val DUMMY_V2_PROGRAM_ID = DummyContractV2()
 /**
  * Dummy contract state for testing of the upgrade process.
  */
+@CordaSerializable
 class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.State> {
     override val legacyContract = DummyContract::class.java
 
+    @CordaSerializable
     data class State(val magicNumber: Int = 0, val owners: List<CompositeKey>) : ContractState {
         override val contract = DUMMY_V2_PROGRAM_ID
         override val participants: List<CompositeKey> = owners
     }
 
     interface Commands : CommandData {
+        @CordaSerializable
         class Create : TypeOnlyCommandData(), Commands
+
+        @CordaSerializable
         class Move : TypeOnlyCommandData(), Commands
     }
 

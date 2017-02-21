@@ -47,6 +47,7 @@ sealed class CompositeKey {
     }
 
     /** The leaf node of the tree – a wrapper around a [PublicKey] primitive */
+    @CordaSerializable
     class Leaf(val publicKey: PublicKey) : CompositeKey() {
         override fun isFulfilledBy(keys: Iterable<PublicKey>) = publicKey in keys
 
@@ -70,6 +71,7 @@ sealed class CompositeKey {
      * The [threshold] specifies the minimum total weight required (in the simple case – the minimum number of child
      * signatures required) to satisfy the sub-tree rooted at this node.
      */
+    @CordaSerializable
     class Node(val threshold: Int,
                val children: List<CompositeKey>,
                val weights: List<Int>) : CompositeKey() {

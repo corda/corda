@@ -54,8 +54,13 @@ class PartialMerkleTree(val root: PartialTree) {
      */
     @CordaSerializable
     sealed class PartialTree {
+        @CordaSerializable
         class IncludedLeaf(val hash: SecureHash) : PartialTree()
+
+        @CordaSerializable
         class Leaf(val hash: SecureHash) : PartialTree()
+
+        @CordaSerializable
         class Node(val left: PartialTree, val right: PartialTree) : PartialTree()
     }
 

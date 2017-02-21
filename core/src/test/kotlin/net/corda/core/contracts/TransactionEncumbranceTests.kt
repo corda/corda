@@ -3,6 +3,7 @@ package net.corda.core.contracts
 import net.corda.contracts.asset.Cash
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.DUMMY_PUBKEY_1
 import net.corda.core.utilities.DUMMY_PUBKEY_2
 import net.corda.testing.MEGA_CORP
@@ -27,6 +28,7 @@ class TransactionEncumbranceTests {
     val FIVE_PM = FOUR_PM.plus(1, ChronoUnit.HOURS)
     val timeLock = DummyTimeLock.State(FIVE_PM)
 
+    @CordaSerializable
     class DummyTimeLock : Contract {
         override val legalContractReference = SecureHash.sha256("DummyTimeLock")
         override fun verify(tx: TransactionForContract) {
@@ -37,6 +39,7 @@ class TransactionEncumbranceTests {
             }
         }
 
+        @CordaSerializable
         data class State(
                 val validFrom: Instant
         ) : ContractState {

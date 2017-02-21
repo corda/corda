@@ -4,34 +4,41 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import java.math.BigDecimal
 import java.time.Instant
 
 val UNIVERSAL_PROGRAM_ID = UniversalContract()
 
+@CordaSerializable
 class UniversalContract : Contract {
+    @CordaSerializable
     data class State(override val participants: List<CompositeKey>,
                      val details: Arrangement) : ContractState {
         override val contract = UNIVERSAL_PROGRAM_ID
     }
 
     interface Commands : CommandData {
-
+        @CordaSerializable
         data class Fix(val fixes: List<net.corda.core.contracts.Fix>) : Commands
 
         // transition according to business rules defined in contract
+        @CordaSerializable
         data class Action(val name: String) : Commands
 
         // replace parties
         // must be signed by all parties present in contract before and after command
+        @CordaSerializable
         class Move(val from: Party, val to: Party) : TypeOnlyCommandData(), Commands
 
         // must be signed by all liable parties present in contract
+        @CordaSerializable
         class Issue : TypeOnlyCommandData(), Commands
 
         // Split contract in two, ratio must be positive and less than one.
         // todo: Who should sign this?
+        @CordaSerializable
         class Split(val ratio: BigDecimal) : Commands
     }
 

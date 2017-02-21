@@ -409,6 +409,7 @@ interface NetCommand : CommandData {
 }
 
 /** Indicates that this transaction replaces the inputs contract state to another contract state */
+@CordaSerializable
 data class UpgradeCommand(val upgradedContractClass: Class<out UpgradedContract<*, *>>) : CommandData
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */

@@ -114,6 +114,7 @@ fun <T> Iterable<Amount<T>>.sumOrZero(currency: T) = if (iterator().hasNext()) s
 data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Tenor)
 
 /** A [Fix] represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx. */
+@CordaSerializable
 data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
 
 /** Represents a textual expression of e.g. a formula */
