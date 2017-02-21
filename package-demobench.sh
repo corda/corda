@@ -7,4 +7,4 @@ if [ -z "$JAVA_HOME" ]; then
     exit 1
 fi
 
-exec $DIRNAME/gradlew -PpackageType=dmg javapackage
+exec $DIRNAME/gradlew -PpackageType=dmg javapackage $*
