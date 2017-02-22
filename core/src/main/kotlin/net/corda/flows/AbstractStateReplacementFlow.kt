@@ -63,7 +63,7 @@ abstract class AbstractStateReplacementFlow {
             val me = listOf(myKey)
 
             val signatures = if (participants == me) {
-                listOf(getNotarySignature(stx))
+                getNotarySignatures(stx)
             } else {
                 collectSignatures(participants - me, stx)
             }
@@ -87,7 +87,7 @@ abstract class AbstractStateReplacementFlow {
 
             val allPartySignedTx = stx + participantSignatures
 
-            val allSignatures = participantSignatures + getNotarySignature(allPartySignedTx)
+            val allSignatures = participantSignatures + getNotarySignatures(allPartySignedTx)
             parties.forEach { send(it, allSignatures) }
 
             return allSignatures
@@ -105,7 +105,7 @@ abstract class AbstractStateReplacementFlow {
         }
 
         @Suspendable
-        private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.WithKey {
+        private fun getNotarySignatures(stx: SignedTransaction): List<DigitalSignature.WithKey> {
             progressTracker.currentStep = NOTARY
             try {
                 return subFlow(NotaryFlow.Client(stx))

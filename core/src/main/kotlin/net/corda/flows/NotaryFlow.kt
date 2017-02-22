@@ -16,14 +16,17 @@ import net.corda.core.utilities.unwrap
 
 object NotaryFlow {
     /**
-     * A flow to be used by a party for obtaining a signature from a [NotaryService] ascertaining the transaction
+     * A flow to be used by a party for obtaining signature(s) from a [NotaryService] ascertaining the transaction
      * timestamp is correct and none of its inputs have been used in another completed transaction.
+     *
+     * In case of a single-node or Raft notary, the flow will return a single signature. For the BFT notary multiple
+     * signatures will be returned – one from each replica that accepted the input state commit.
      *
      * @throws NotaryException in case the any of the inputs to the transaction have been consumed
      *                         by another transaction or the timestamp is invalid.
      */
     open class Client(private val stx: SignedTransaction,
-                      override val progressTracker: ProgressTracker) : FlowLogic<DigitalSignature.WithKey>() {
+                      override val progressTracker: ProgressTracker) : FlowLogic<List<DigitalSignature.WithKey>>() {
         constructor(stx: SignedTransaction) : this(stx, Client.tracker())
 
         companion object {
@@ -37,7 +40,7 @@ object NotaryFlow {
 
         @Suspendable
         @Throws(NotaryException::class)
-        override fun call(): DigitalSignature.WithKey {
+        override fun call(): List<DigitalSignature.WithKey> {
             progressTracker.currentStep = REQUESTING
             val wtx = stx.tx
             notaryParty = wtx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
@@ -57,7 +60,7 @@ object NotaryFlow {
             }
 
             val response = try {
-                sendAndReceive<DigitalSignature.WithKey>(notaryParty, payload)
+                sendAndReceive<List<DigitalSignature.WithKey>>(notaryParty, payload)
             } catch (e: NotaryException) {
                 if (e.error is NotaryError.Conflict) {
                     e.error.conflict.verified()
@@ -65,9 +68,9 @@ object NotaryFlow {
                 throw e
             }
 
-            return response.unwrap { sig ->
-                validateSignature(sig, stx.id.bytes)
-                sig
+            return response.unwrap { signatures ->
+                signatures.forEach { validateSignature(it, stx.id.bytes) }
+                signatures
             }
         }
 
@@ -113,8 +116,8 @@ object NotaryFlow {
 
         @Suspendable
         private fun signAndSendResponse(txId: SecureHash) {
-            val sig = sign(txId.bytes)
-            send(otherSide, sig)
+            val signature = sign(txId.bytes)
+            send(otherSide, listOf(signature))
         }
 
         private fun validateTimestamp(t: Timestamp?) {

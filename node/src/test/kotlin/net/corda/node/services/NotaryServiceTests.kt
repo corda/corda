@@ -55,8 +55,8 @@ class NotaryServiceTests {
         }
 
         val future = runNotaryClient(stx)
-        val signature = future.getOrThrow()
-        signature.verifyWithECDSA(stx.id)
+        val signatures = future.getOrThrow()
+        signatures.forEach { it.verifyWithECDSA(stx.id) }
     }
 
     @Test fun `should sign a unique transaction without a timestamp`() {
@@ -68,8 +68,8 @@ class NotaryServiceTests {
         }
 
         val future = runNotaryClient(stx)
-        val signature = future.getOrThrow()
-        signature.verifyWithECDSA(stx.id)
+        val signatures = future.getOrThrow()
+        signatures.forEach { it.verifyWithECDSA(stx.id) }
     }
 
     @Test fun `should report error for transaction with an invalid timestamp`() {
@@ -132,7 +132,7 @@ class NotaryServiceTests {
         notaryError.conflict.verified()
     }
 
-    private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.WithKey> {
+    private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<List<DigitalSignature.WithKey>> {
         val flow = NotaryFlow.Client(stx)
         val future = clientNode.services.startFlow(flow).resultFuture
         net.runNetwork()
