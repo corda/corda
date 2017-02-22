@@ -11,7 +11,7 @@ buildscript {
     ext.java_home = System.properties.'java.home'
     ext.pkg_source = "$buildDir/packagesrc"
     ext.dist_source = "$pkg_source/demobench-$version"
-    ext.pkg_version = "$version".indexOf('-') >= 0 ? "$version".substring(0, "$version".indexOf('-')) : "$version"
+    ext.pkg_version = "$version".indexOf('-') >= 0 ? "$version".substring(0, "$version".indexOf('-')) : version
 
     repositories {
         mavenLocal()
@@ -79,7 +79,7 @@ dependencies {
     compile ':jediterm-terminal-2.5'
     compile ':pty4j-0.7.2'
 
-    testCompile group: 'junit', name: 'junit', version: "$junit_version"
+    testCompile group: 'junit', name: 'junit', version: junit_version
 }
 
 // We don't want the Node to drag these transitive dependencies in either!
@@ -92,6 +92,7 @@ configurations.all {
 jar {
     manifest {
         attributes(
+            'Corda-Version': corda_version,
             'Main-Class': mainClassName,
             'Class-Path': configurations.compile.collect { it.getName() }.join(' ')
         )
@@ -133,11 +134,11 @@ distributions {
 task javapackage(dependsOn: 'distZip') {
 
     doLast {
-        delete(["$pkg_source", "$buildDir/exedir"])
+        delete([pkg_source, "$buildDir/exedir"])
 
         copy {
             from(zipTree(distZip.outputs.files.singleFile))
-            into "$pkg_source"
+            into pkg_source
         }
 
         copy {
@@ -164,7 +165,7 @@ task javapackage(dependsOn: 'distZip') {
                 include '**/*.manifest'
             }
             filter {
-                line -> line.replaceAll('@pkg_version@', "$pkg_version")
+                line -> line.replaceAll('@pkg_version@', pkg_version)
             }
             into "$pkg_source/package"
         }
@@ -174,8 +175,8 @@ task javapackage(dependsOn: 'distZip') {
             classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
         )
 
-        ant.deploy(nativeBundles: "$packageType", outdir: "$buildDir/exedir", outfile: 'DemoBench', verbose: 'true') {
-            application(name: 'DemoBench', version: "$pkg_version", mainClass: "$mainClassName")
+        ant.deploy(nativeBundles: packageType, outdir: "$buildDir/exedir", outfile: 'DemoBench', verbose: 'true') {
+            application(name: 'DemoBench', version: pkg_version, mainClass: mainClassName)
             info(title: 'DemoBench', vendor: 'R3', description: 'A sales and educational tool for demonstrating Corda.')
             resources {
                 fileset(dir: "$dist_source/lib", type: 'jar') {
@@ -189,7 +190,7 @@ task javapackage(dependsOn: 'distZip') {
                     include(name: "linux/**/*.so")
                 }
 
-                fileset(dir: "$dist_source", type: 'data') {
+                fileset(dir: dist_source, type: 'data') {
                     include(name: 'corda/*.jar')
                     include(name: 'plugins/*.jar')
                     include(name: 'explorer/*.jar')

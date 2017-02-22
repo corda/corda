@@ -11,9 +11,9 @@ import tornadofx.Controller
 
 class NodeController : Controller() {
     private companion object {
-        const val FIRST_PORT = 10000
-        const val MIN_PORT = 1024
-        const val MAX_PORT = 65535
+        const val firstPort = 10000
+        const val minPort = 1024
+        const val maxPort = 65535
     }
 
     private val jvm by inject<JVMConfig>()
@@ -27,7 +27,7 @@ class NodeController : Controller() {
     private val command = jvm.commandFor(cordaPath)
 
     private val nodes = LinkedHashMap<String, NodeConfig>()
-    private val port = AtomicInteger(FIRST_PORT)
+    private val port = AtomicInteger(firstPort)
 
     private var networkMapConfig: NetworkMapConfig? = null
 
@@ -85,7 +85,7 @@ class NodeController : Controller() {
         }
     }
 
-    fun isPortValid(port: Int): Boolean = (port >= MIN_PORT) && (port <= MAX_PORT)
+    fun isPortValid(port: Int): Boolean = (port >= minPort) && (port <= maxPort)
 
     fun keyExists(key: String) = nodes.keys.contains(key)
 
