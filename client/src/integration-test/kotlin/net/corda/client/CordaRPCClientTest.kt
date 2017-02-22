@@ -24,8 +24,8 @@ import org.junit.Test
 
 class CordaRPCClientTest : NodeBasedTest() {
     private val rpcUser = User("user1", "test", permissions = setOf(
-            startFlowPermission<CashIssueFlow>(),
-            startFlowPermission<CashPaymentFlow>()
+        startFlowPermission<CashIssueFlow>(),
+        startFlowPermission<CashPaymentFlow>()
     ))
     private lateinit var node: Node
     private lateinit var client: CordaRPCClient

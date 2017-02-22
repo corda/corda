@@ -168,15 +168,15 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         // by having its password be an unknown securely random 128-bit value.
         clusterPassword = BigInteger(128, newSecureRandom()).toString(16)
         queueConfigurations = listOf(
-                queueConfig(NETWORK_MAP_QUEUE, durable = true),
-                queueConfig(P2P_QUEUE, durable = true),
-                // Create an RPC queue: this will service locally connected clients only (not via a bridge) and those
-                // clients must have authenticated. We could use a single consumer for everything and perhaps we should,
-                // but these queues are not worth persisting.
-                queueConfig(RPC_REQUESTS_QUEUE, durable = false),
-                // The custom name for the queue is intentional - we may wish other things to subscribe to the
-                // NOTIFICATIONS_ADDRESS with different filters in future
-                queueConfig(RPC_QUEUE_REMOVALS_QUEUE, address = NOTIFICATIONS_ADDRESS, filter = "_AMQ_NotifType = 1", durable = false)
+            queueConfig(NETWORK_MAP_QUEUE, durable = true),
+            queueConfig(P2P_QUEUE, durable = true),
+            // Create an RPC queue: this will service locally connected clients only (not via a bridge) and those
+            // clients must have authenticated. We could use a single consumer for everything and perhaps we should,
+            // but these queues are not worth persisting.
+            queueConfig(RPC_REQUESTS_QUEUE, durable = false),
+            // The custom name for the queue is intentional - we may wish other things to subscribe to the
+            // NOTIFICATIONS_ADDRESS with different filters in future
+            queueConfig(RPC_QUEUE_REMOVALS_QUEUE, address = NOTIFICATIONS_ADDRESS, filter = "_AMQ_NotifType = 1", durable = false)
         )
         configureAddressSecurity()
     }
@@ -298,8 +298,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
         fun deployBridges(node: NodeInfo) {
             gatherAddresses(node)
-                    .filter { queueExists(it.queueName) && !bridgeExists(it.bridgeName) }
-                    .forEach { deployBridge(it, node.legalIdentity.name) }
+                .filter { queueExists(it.queueName) && !bridgeExists(it.bridgeName) }
+                .forEach { deployBridge(it, node.legalIdentity.name) }
         }
 
         fun destroyBridges(node: NodeInfo) {

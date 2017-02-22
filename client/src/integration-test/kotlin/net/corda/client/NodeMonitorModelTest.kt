@@ -55,10 +55,8 @@ class NodeMonitorModelTest : DriverBasedTest() {
         )
         val aliceNodeFuture = startNode("Alice", rpcUsers = listOf(cashUser))
         val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-
         val aliceNodeHandle = aliceNodeFuture.getOrThrow()
         val notaryNodeHandle = notaryNodeFuture.getOrThrow()
-
         aliceNode = aliceNodeHandle.nodeInfo
         notaryNode = notaryNodeHandle.nodeInfo
         newNode = { nodeName -> startNode(nodeName).getOrThrow().nodeInfo }
