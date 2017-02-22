@@ -141,6 +141,9 @@ task javapackage(dependsOn: 'distZip') {
         }
 
         copy {
+            /*
+             * Copy non-text formats "as-is".
+             */
             from("$projectDir/package") {
                 exclude '**/*.spec'
                 exclude '**/*.sh'
@@ -151,6 +154,9 @@ task javapackage(dependsOn: 'distZip') {
         }
 
         copy {
+            /*
+             * Expand tokens for text formats.
+             */
             from("$projectDir/package") {
                 include '**/*.spec'
                 include '**/*.sh'
