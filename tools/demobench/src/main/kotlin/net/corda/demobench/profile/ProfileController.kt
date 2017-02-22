@@ -104,6 +104,8 @@ class ProfileController : Controller() {
         if (config.hasPath("networkMapService")) {
             val nmap = config.getConfig("networkMapService")
             nodeConfig.networkMap = NetworkMapConfig(nmap.getString("legalName"), nmap.parsePort("address"))
+        } else {
+            log.info("Node '${nodeConfig.legalName}' is the network map")
         }
 
         return nodeConfig
