@@ -10,9 +10,6 @@ import net.corda.core.random63BitValue
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.node.driver.DriverBasedTest
-import net.corda.node.driver.NodeHandle
-import net.corda.node.driver.driver
 import net.corda.node.internal.Node
 import net.corda.node.services.User
 import net.corda.node.services.config.configureTestSSL
@@ -22,8 +19,12 @@ import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.node.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.util.*
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CordaRPCClientTest : NodeBasedTest() {
     private val rpcUser = User("user1", "test", permissions = setOf(
@@ -37,6 +38,11 @@ class CordaRPCClientTest : NodeBasedTest() {
     fun setUp() {
         node = startNode("Alice", rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
         client = CordaRPCClient(node.configuration.artemisAddress, configureTestSSL())
+    }
+
+    @After
+    fun done() {
+        client.close()
     }
 
     @Test
@@ -88,4 +94,30 @@ class CordaRPCClientTest : NodeBasedTest() {
             handle.returnValue.getOrThrow()
         }
     }
+
+    @Test
+    fun `get cash balances`() {
+        println("Starting client")
+        client.start(rpcUser.username, rpcUser.password)
+        println("Creating proxy")
+        val proxy = client.proxy()
+
+        val startCash = proxy.getCashBalances()
+        assertTrue(startCash.isEmpty(), "Should not start with any cash")
+
+        val flowHandle = proxy.startFlow(::CashIssueFlow,
+            123.DOLLARS, OpaqueBytes.of(0),
+            node.info.legalIdentity, node.info.legalIdentity
+        )
+        println("Started issuing cash, waiting on result")
+        flowHandle.progress.subscribe {
+            println("CashIssue PROGRESS $it")
+        }
+
+        val finishCash = proxy.getCashBalances()
+        println("Cash Balances: $finishCash")
+        assertEquals(1, finishCash.size)
+        assertEquals(123.DOLLARS, finishCash.get(Currency.getInstance("USD")))
+    }
+
 }

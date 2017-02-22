@@ -1,5 +1,6 @@
 package net.corda.node.internal
 
+import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
@@ -27,6 +28,7 @@ import org.jetbrains.exposed.sql.Database
 import rx.Observable
 import java.io.InputStream
 import java.time.Instant
+import java.util.*
 
 /**
  * Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
@@ -87,6 +89,12 @@ class CordaRPCOpsImpl(
     override fun getVaultTransactionNotes(txnId: SecureHash): Iterable<String> {
         return databaseTransaction(database) {
             services.vaultService.getTransactionNotes(txnId)
+        }
+    }
+
+    override fun getCashBalances(): Map<Currency, Amount<Currency>> {
+        return databaseTransaction(database) {
+            services.vaultService.cashBalances
         }
     }
 
