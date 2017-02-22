@@ -41,7 +41,7 @@ object SimmService {
                 IRSTradeFlow.Requester::class.java.name to setOf(SwapData::class.java.name, Party::class.java.name))
         override val staticServeDirs: Map<String, String> = mapOf("simmvaluationdemo" to javaClass.classLoader.getResource("simmvaluationweb").toExternalForm())
         override val servicePlugins = listOf(Function(SimmFlow::Service), Function(IRSTradeFlow::Service))
-        override fun customiseSerialization(custom: SerializationCustomization): Boolean {
+        override fun customizeSerialization(custom: SerializationCustomization): Boolean {
             custom.apply {
                 addToWhitelist(SwapData::class.java)
                 addToWhitelist(LocalDate::class.java)

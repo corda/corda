@@ -388,16 +388,14 @@ object KotlinObjectSerializer : Serializer<DeserializeAsKotlinObjectDef>() {
     override fun write(kryo: Kryo, output: Output, obj: DeserializeAsKotlinObjectDef) {}
 }
 
+// No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
 fun createInternalKryo(k: Kryo = Kryo(makeNoWhitelistClassResolver(), MapReferenceResolver())): Kryo {
-    return k.apply {
-        DefaultKryoCustomizer.customize(this)
-    }
+    return DefaultKryoCustomizer.customize(k)
 }
 
+// No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
 fun createKryo(k: Kryo = Kryo(makeStandardClassResolver(), MapReferenceResolver())): Kryo {
-    return k.apply {
-        DefaultKryoCustomizer.customize(this)
-    }
+    return DefaultKryoCustomizer.customize(k)
 }
 
 inline fun <T : Any> Kryo.register(

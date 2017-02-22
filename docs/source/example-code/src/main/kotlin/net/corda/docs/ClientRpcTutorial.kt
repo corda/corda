@@ -135,7 +135,7 @@ fun generateTransactions(proxy: CordaRPCOps) {
 data class ExampleRPCValue(val foo: String)
 
 class ExampleRPCCordaPluginRegistry : CordaPluginRegistry() {
-    override fun customiseSerialization(custom: SerializationCustomization): Boolean {
+    override fun customizeSerialization(custom: SerializationCustomization): Boolean {
         // Add classes like this.
         custom.addToWhitelist(ExampleRPCValue::class.java)
         // You should return true, otherwise your plugin will be ignored for registering classes with Kryo.

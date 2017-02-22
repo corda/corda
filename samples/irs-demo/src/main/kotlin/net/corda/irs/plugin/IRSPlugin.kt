@@ -29,7 +29,7 @@ class IRSPlugin : CordaPluginRegistry() {
             FixingFlow.FixingRoleDecider::class.java.name to setOf(StateRef::class.java.name, Duration::class.java.name),
             FixingFlow.Floater::class.java.name to setOf(Party::class.java.name, FixingFlow.FixingSession::class.java.name))
 
-    override fun customiseSerialization(custom: SerializationCustomization): Boolean {
+    override fun customizeSerialization(custom: SerializationCustomization): Boolean {
         custom.apply {
             addToWhitelist(InterestRateSwap::class.java)
             addToWhitelist(InterestRateSwap.State::class.java)

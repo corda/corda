@@ -118,7 +118,10 @@ class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClass
     }
 }
 
-// TODO: Need some concept of from which class loader
+/**
+ * This class is not currently used, but can be installed to log a large number of missing entries from the whitelist
+ * and was used to track down the initial set.
+ */
 class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true) : MutableClassWhitelist {
     companion object {
         val log = loggerFor<LoggingWhitelist>()

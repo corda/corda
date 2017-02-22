@@ -9,7 +9,7 @@ import rx.Notification
 import java.util.*
 
 class DefaultWhitelist : CordaPluginRegistry() {
-    override fun customiseSerialization(custom: SerializationCustomization): Boolean {
+    override fun customizeSerialization(custom: SerializationCustomization): Boolean {
         custom.apply {
             addToWhitelist(Array<Any>(0, {}).javaClass)
             addToWhitelist(Notification::class.java)

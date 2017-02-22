@@ -19,21 +19,19 @@ import java.util.*
 
 object DefaultKryoCustomizer {
     private val pluginRegistries: List<CordaPluginRegistry> by lazy {
+        // No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
         val unusedKryo = Kryo(makeStandardClassResolver(), MapReferenceResolver())
-        // Sorting required to give a stable ordering, as Kryo allocates integer tokens for each registered class.
         val customization = KryoSerializationCustomization(unusedKryo)
-        ServiceLoader.load(CordaPluginRegistry::class.java).toList().filter { it.customiseSerialization(customization) }.sortedBy { it.javaClass.name }
+        ServiceLoader.load(CordaPluginRegistry::class.java).toList().filter { it.customizeSerialization(customization) }
     }
 
-    fun customize(kryo: Kryo) {
-        kryo.apply {
-            isRegistrationRequired = false
+    fun customize(kryo: Kryo): Kryo {
+        return kryo.apply {
             // Allow construction of objects using a JVM backdoor that skips invoking the constructors, if there is no
             // no-arg constructor available.
             instantiatorStrategy = Kryo.DefaultInstantiatorStrategy(StdInstantiatorStrategy())
 
             register(Arrays.asList("").javaClass, ArraysAsListSerializer())
-            //register(Instant::class.java, ReferencesAwareJavaSerializer)
             register(SignedTransaction::class.java, ImmutableClassSerializer(SignedTransaction::class))
             register(WireTransaction::class.java, WireTransactionSerializer)
             register(SerializedBytes::class.java, SerializedBytesSerializer)
@@ -69,8 +67,7 @@ object DefaultKryoCustomizer {
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
 
             val customization = KryoSerializationCustomization(this)
-            pluginRegistries.forEach { it.customiseSerialization(customization) }
+            pluginRegistries.forEach { it.customizeSerialization(customization) }
         }
-
     }
 }
