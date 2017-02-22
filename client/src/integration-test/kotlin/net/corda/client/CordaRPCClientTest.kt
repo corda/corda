@@ -24,6 +24,7 @@ import org.junit.Before
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CordaRPCClientTest : NodeBasedTest() {
     private val rpcUser = User("user1", "test", permissions = setOf(
@@ -102,7 +103,7 @@ class CordaRPCClientTest : NodeBasedTest() {
         val proxy = client.proxy()
 
         val startCash = proxy.getCashBalances()
-        assert(startCash.isEmpty(), {"Should not start with any cash"})
+        assertTrue(startCash.isEmpty(), "Should not start with any cash")
 
         val flowHandle = proxy.startFlow(::CashIssueFlow,
             123.DOLLARS, OpaqueBytes.of(0),
