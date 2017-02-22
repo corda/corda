@@ -17,13 +17,13 @@ For ``SimpleNotaryService``, simply add the following service id to the list of 
 
 .. parsed-literal::
 
-  extraAdvertisedServiceIds: "net.corda.notary.simple"
+  extraAdvertisedServiceIds : [ "net.corda.notary.simple" ]
 
 For ``ValidatingNotaryService``, it is:
 
 .. parsed-literal::
 
-  extraAdvertisedServiceIds: "net.corda.notary.validating"
+  extraAdvertisedServiceIds : [ "net.corda.notary.validating" ]
 
 Setting up a ``RaftValidatingNotaryService`` is currently slightly more involved and is not recommended for prototyping
 purposes. There is work in progress to simplify it. To see it in action, however, you can try out the :ref:`notary-demo`.
