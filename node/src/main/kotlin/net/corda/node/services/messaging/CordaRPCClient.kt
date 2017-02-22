@@ -24,10 +24,10 @@ import javax.annotation.concurrent.ThreadSafe
  * useful tasks. See the documentation for [proxy] or review the docsite to learn more about how this API works.
  *
  * @param host The hostname and messaging port of the node.
- * @param config If specified, the SSL configuration to use. If not specified, SSL will be disabled and the node will not be authenticated, nor will RPC traffic be encrypted.
+ * @param config If specified, the SSL configuration to use. If not specified, SSL will be disabled and the node will only be authenticated on non-SSL RPC port, the RPC traffic with not be encrypted when SSL is disabled.
  */
 @ThreadSafe
-class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguration?, val serviceConfigurationOverride: (ServerLocator.() -> Unit)? = null) : Closeable, ArtemisMessagingComponent() {
+class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguration? = null, val serviceConfigurationOverride: (ServerLocator.() -> Unit)? = null) : Closeable, ArtemisMessagingComponent() {
     private companion object {
         val log = loggerFor<CordaRPCClient>()
     }

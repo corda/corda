@@ -10,15 +10,12 @@ import net.corda.core.random63BitValue
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.node.driver.DriverBasedTest
-import net.corda.node.driver.NodeHandle
-import net.corda.node.driver.driver
 import net.corda.node.internal.Node
 import net.corda.node.services.User
-import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.testing.configureTestSSL
 import net.corda.testing.node.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -27,8 +24,8 @@ import org.junit.Test
 
 class CordaRPCClientTest : NodeBasedTest() {
     private val rpcUser = User("user1", "test", permissions = setOf(
-        startFlowPermission<CashIssueFlow>(),
-        startFlowPermission<CashPaymentFlow>()
+            startFlowPermission<CashIssueFlow>(),
+            startFlowPermission<CashPaymentFlow>()
     ))
     private lateinit var node: Node
     private lateinit var client: CordaRPCClient

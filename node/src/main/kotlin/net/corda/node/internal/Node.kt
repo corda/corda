@@ -22,11 +22,7 @@ import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent.NetworkMapAddress
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
-import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.node.services.transactions.RaftUniquenessProvider
-import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.services.transactions.BFTSmartUniquenessProvider
-import net.corda.node.services.transactions.BFTValidatingNotaryService
+import net.corda.node.services.transactions.*
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.databaseTransaction
 import org.jetbrains.exposed.sql.Database
@@ -130,7 +126,7 @@ class Node(override val configuration: FullNodeConfiguration,
 
         val serverAddress = with(configuration) {
             messagingServerAddress ?: {
-                messageBroker = ArtemisMessagingServer(this, artemisAddress, services.networkMapCache, userService)
+                messageBroker = ArtemisMessagingServer(this, artemisAddress, rpcAddress, services.networkMapCache, userService)
                 artemisAddress
             }()
         }

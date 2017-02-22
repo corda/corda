@@ -102,6 +102,7 @@ interface DriverDSLInternalInterface : DriverDSLExposedInterface {
 data class NodeHandle(
         val nodeInfo: NodeInfo,
         val rpc: CordaRPCOps,
+        val rpcAddress: HostAndPort,
         val configuration: FullNodeConfiguration,
         val process: Process
 ) {
@@ -343,6 +344,7 @@ open class DriverDSL(
     override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>,
                            rpcUsers: List<User>, customOverrides: Map<String, Any?>): ListenableFuture<NodeHandle> {
         val messagingAddress = portAllocation.nextHostAndPort()
+        val rpcAddress = portAllocation.nextHostAndPort()
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val name = providedName ?: "${pickA(name)}-${messagingAddress.port}"
@@ -351,6 +353,7 @@ open class DriverDSL(
         val configOverrides = mapOf(
                 "myLegalName" to name,
                 "artemisAddress" to messagingAddress.toString(),
+                "rpcAddress" to rpcAddress.toString(),
                 "webAddress" to apiAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                 "networkMapService" to mapOf(
@@ -381,7 +384,7 @@ open class DriverDSL(
         return processFuture.flatMap { process ->
             establishRpc(messagingAddress, configuration).flatMap { rpc ->
                 rpc.waitUntilRegisteredWithNetworkMap().map {
-                    NodeHandle(rpc.nodeIdentity(), rpc, configuration, process)
+                    NodeHandle(rpc.nodeIdentity(), rpc, rpcAddress, configuration, process)
                 }
             }
         }
