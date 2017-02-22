@@ -7,7 +7,7 @@ import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.utilities.loggerFor
 import java.io.PrintWriter
 import java.lang.reflect.Modifier
-import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
@@ -22,13 +22,12 @@ fun makeStandardClassResolver(): ClassResolver {
 }
 
 fun makeNoWhitelistClassResolver(): ClassResolver {
-    return CordaClassResolver(AllWhitelist())
+    return CordaClassResolver(AllWhitelist)
 }
 
 class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver() {
-
     companion object {
-        val logger = loggerFor<CordaClassResolver>()
+        private val logger = loggerFor<CordaClassResolver>()
     }
 
     /** Returns the registration for the specified class, or null if the class is not registered.  */
@@ -37,10 +36,9 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
     }
 
     private fun checkClass(type: Class<*>): Registration? {
-        // Let's see if we are registering
+        // This code path also get called during Kryo.register(), so we need to exclude that call path from whitelist logic.
         val stackTrace = Thread.currentThread().stackTrace
-        if (stackTrace[3].methodName == "register") {
-            // Kryo checks if existing registration when registering.
+        if (stackTrace[3].methodName == "register" && stackTrace[3].className == Kryo::class.qualifiedName) {
             return null
         }
         // Allow primitives
@@ -58,7 +56,7 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
         val hasAnnotation = checkForAnnotation(type)
         if (!hasAnnotation && !whitelist.hasListed(type)) {
-            throw KryoException("Class ${Util.className(type)} is not annotated or on the whitelist, so cannot be used in serialisation")
+            throw KryoException("Class ${Util.className(type)} is not annotated or on the whitelist, so cannot be used in serialization")
         }
         return null
     }
@@ -93,26 +91,16 @@ interface MutableClassWhitelist : ClassWhitelist {
     fun add(entry: Class<*>)
 }
 
-class EmptyWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean {
-        return false
-    }
+object EmptyWhitelist : ClassWhitelist {
+    override fun hasListed(type: Class<*>): Boolean = false
 }
 
 class BuiltInExceptionsWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean {
-        // Allow any java.* exceptions
-        if (Throwable::class.java.isAssignableFrom(type) && type.`package`.name.startsWith("java.")) {
-            return true
-        }
-        return false
-    }
+    override fun hasListed(type: Class<*>): Boolean = Throwable::class.java.isAssignableFrom(type) && type.`package`.name.startsWith("java.")
 }
 
-class AllWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean {
-        return true
-    }
+object AllWhitelist : ClassWhitelist {
+    override fun hasListed(type: Class<*>): Boolean = true
 }
 
 // TODO: Need some concept of from which class loader
@@ -138,12 +126,12 @@ class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true)
         val journalWriter: PrintWriter? = openOptionalDynamicWhitelistJournal()
 
         private fun openOptionalDynamicWhitelistJournal(): PrintWriter? {
-            val env = System.getenv("WHITELIST_FILE")
-            if (env != null) {
+            val fileName = System.getenv("WHITELIST_FILE")
+            if (fileName != null && fileName.isNotEmpty()) {
                 try {
-                    return PrintWriter(Files.newBufferedWriter(Paths.get(env), Charset.forName("UTF-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE), true)
+                    return PrintWriter(Files.newBufferedWriter(Paths.get(fileName), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE), true)
                 } catch(ioEx: Exception) {
-                    log.error("Could not open/create whitelist journal file for append: $env")
+                    log.error("Could not open/create whitelist journal file for append: $fileName", ioEx)
                 }
             }
             return null
@@ -174,6 +162,3 @@ class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true)
     }
 }
 
-@Target(AnnotationTarget.CLASS, AnnotationTarget.TYPE)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class CordaSerializable
