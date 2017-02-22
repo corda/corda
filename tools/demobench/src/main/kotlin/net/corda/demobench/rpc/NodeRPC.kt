@@ -12,7 +12,7 @@ class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Un
 
     private companion object {
         val log = loggerFor<NodeRPC>()
-        val ONE_SECOND = SECONDS.toMillis(1)
+        val oneSecond = SECONDS.toMillis(1)
     }
 
     private val rpcClient = CordaRPCClient(HostAndPort.fromParts("localhost", config.artemisPort), config.ssl)
@@ -37,7 +37,7 @@ class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Un
                         override fun run() {
                             invoke(ops)
                         }
-                    }, 0, ONE_SECOND)
+                    }, 0, oneSecond)
                 } catch (e: Exception) {
                     log.warn("Node '{}' not ready yet (Error: {})", config.legalName, e.message)
                 }
@@ -45,7 +45,7 @@ class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Un
         }
 
         // Wait 5 seconds for the node to start, and then poll once per second.
-        timer.schedule(setupTask, 5 * ONE_SECOND, ONE_SECOND)
+        timer.schedule(setupTask, 5 * oneSecond, oneSecond)
     }
 
     override fun close() {

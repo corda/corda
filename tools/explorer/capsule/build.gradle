@@ -36,6 +36,7 @@ task buildExplorerJAR(type: FatCapsule) {
     classifier 'fat'
 
     capsuleManifest {
+        applicationVersion = corda_version
         systemProperties['visualvm.display.name'] = 'Node Explorer'
         minJavaVersion = '1.8.0'
         // This version is known to work and avoids earlier 8u versions that have bugs.
@@ -48,6 +49,10 @@ task buildExplorerJAR(type: FatCapsule) {
         //
         // If you change these flags, please also update Driver.kt
         jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
+    }
+
+    manifest {
+        attributes('Corda-Version': corda_version)
     }
 }
 

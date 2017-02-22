@@ -18,8 +18,8 @@ class NodeTabView : Fragment() {
     private val showConfig by param<Boolean>()
 
     private companion object {
-        val INTEGER_FORMAT = DecimalFormat()
-        val NOT_NUMBER = "[^\\d]".toRegex()
+        val integerFormat = DecimalFormat()
+        val notNumber = "[^\\d]".toRegex()
     }
 
     private val model = NodeDataModel()
@@ -70,13 +70,13 @@ class NodeTabView : Fragment() {
                     }
                 }
                 field("P2P Port") {
-                    textfield(model.artemisPort, NumberStringConverter(INTEGER_FORMAT)) {
+                    textfield(model.artemisPort, NumberStringConverter(integerFormat)) {
                         minWidth = 100.0
                         maxWidth = 100.0
                         validator {
                             if ((it == null) || it.isEmpty()) {
                                 error("Port number required")
-                            } else if (it.contains(NOT_NUMBER)) {
+                            } else if (it.contains(notNumber)) {
                                 error("Invalid port number")
                             } else {
                                 val port = it.toInt()
@@ -94,13 +94,13 @@ class NodeTabView : Fragment() {
                     }
                 }
                 field("Web Port") {
-                    textfield(model.webPort, NumberStringConverter(INTEGER_FORMAT)) {
+                    textfield(model.webPort, NumberStringConverter(integerFormat)) {
                         minWidth = 100.0
                         maxWidth = 100.0
                         validator {
                             if ((it == null) || it.isEmpty()) {
                                 error("Port number required")
-                            } else if (it.contains(NOT_NUMBER)) {
+                            } else if (it.contains(notNumber)) {
                                 error("Invalid port number")
                             } else {
                                 val port = it.toInt()
@@ -118,13 +118,13 @@ class NodeTabView : Fragment() {
                     }
                 }
                 field("Database Port") {
-                    textfield(model.h2Port, NumberStringConverter(INTEGER_FORMAT)) {
+                    textfield(model.h2Port, NumberStringConverter(integerFormat)) {
                         minWidth = 100.0
                         maxWidth = 100.0
                         validator {
                             if ((it == null) || it.isEmpty()) {
                                 error("Port number required")
-                            } else if (it.contains(NOT_NUMBER)) {
+                            } else if (it.contains(notNumber)) {
                                 error("Invalid port number")
                             } else {
                                 val port = it.toInt()
@@ -168,7 +168,7 @@ class NodeTabView : Fragment() {
         get() = if (nodeController.hasNetworkMap()) serviceController.services else serviceController.notaries
 
     init {
-        INTEGER_FORMAT.isGroupingUsed = false
+        integerFormat.isGroupingUsed = false
 
         // Ensure that we destroy the terminal along with the tab.
         nodeTab.setOnCloseRequest {
