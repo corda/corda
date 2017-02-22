@@ -1,6 +1,7 @@
 package net.corda.core.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
@@ -17,6 +18,7 @@ import net.corda.core.transactions.SignedTransaction
 import rx.Observable
 import java.io.InputStream
 import java.time.Instant
+import java.util.*
 
 data class StateMachineInfo(
         val id: StateMachineRunId,
@@ -93,6 +95,12 @@ interface CordaRPCOps : RPCOps {
      * Retrieve existing note(s) for a given Vault transaction
      */
     fun getVaultTransactionNotes(txnId: SecureHash): Iterable<String>
+
+    /*
+     * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+     * which we have no cash evaluate to null (not present in map), not 0.
+     */
+    fun getCashBalances(): Map<Currency, Amount<Currency>>
 
     /**
      * Checks whether an attachment with the given hash is stored on the node.

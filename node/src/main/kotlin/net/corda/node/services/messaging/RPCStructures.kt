@@ -183,6 +183,7 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(UUID::class.java)
         register(UniqueIdentifier::class.java)
         register(LinkedHashSet::class.java)
+        register(HashMap::class.java)
         register(StateAndRef::class.java)
         register(setOf<Unit>().javaClass) // EmptySet
         register(StateRef::class.java)
