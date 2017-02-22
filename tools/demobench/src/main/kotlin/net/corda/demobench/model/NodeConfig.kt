@@ -13,7 +13,8 @@ class NodeConfig(
         val webPort: Int,
         val h2Port: Int,
         val extraServices: List<String>,
-        val users: List<Map<String, Any>> = listOf(defaultUser)
+        val users: List<Map<String, Any>> = listOf(defaultUser),
+        var networkMap: NetworkMapConfig? = null
 ) : NetworkMapConfig(legalName, artemisPort) {
 
     companion object {
@@ -37,8 +38,6 @@ class NodeConfig(
         override val trustStorePassword: String = "trustpass"
         override val keyStorePassword: String = "cordacadevpass"
     }
-
-    var networkMap: NetworkMapConfig? = null
 
     var state: NodeState = NodeState.STARTING
 
@@ -69,7 +68,7 @@ class NodeConfig(
     fun toText(): String = toFileConfig().root().render(renderOptions)
 
     fun moveTo(baseDir: Path) = NodeConfig(
-        baseDir, legalName, artemisPort, nearestCity, webPort, h2Port, extraServices, users
+        baseDir, legalName, artemisPort, nearestCity, webPort, h2Port, extraServices, users, networkMap
     )
 }
 
