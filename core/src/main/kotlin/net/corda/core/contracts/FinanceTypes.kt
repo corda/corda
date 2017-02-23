@@ -117,6 +117,7 @@ data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Tenor)
 data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
 
 /** Represents a textual expression of e.g. a formula */
+@CordaSerializable
 @JsonDeserialize(using = ExpressionDeserializer::class)
 @JsonSerialize(using = ExpressionSerializer::class)
 data class Expression(val expr: String)

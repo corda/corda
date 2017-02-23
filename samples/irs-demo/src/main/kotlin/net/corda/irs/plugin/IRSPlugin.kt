@@ -1,12 +1,10 @@
 package net.corda.irs.plugin
 
-import net.corda.core.contracts.Expression
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Party
 import net.corda.core.node.CordaPluginRegistry
-import net.corda.core.serialization.SerializationCustomization
 import net.corda.irs.api.InterestRateSwapAPI
-import net.corda.irs.contract.*
+import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.flows.AutoOfferFlow
 import net.corda.irs.flows.ExitServerFlow
 import net.corda.irs.flows.FixingFlow
@@ -27,23 +25,4 @@ class IRSPlugin : CordaPluginRegistry() {
             ExitServerFlow.Broadcast::class.java.name to setOf(kotlin.Int::class.java.name),
             FixingFlow.FixingRoleDecider::class.java.name to setOf(StateRef::class.java.name, Duration::class.java.name),
             FixingFlow.Floater::class.java.name to setOf(Party::class.java.name, FixingFlow.FixingSession::class.java.name))
-
-    override fun customizeSerialization(custom: SerializationCustomization): Boolean {
-        custom.apply {
-            addToWhitelist(InterestRateSwap.FixedLeg::class.java)
-            addToWhitelist(InterestRateSwap.FloatingLeg::class.java)
-            addToWhitelist(InterestRateSwap.Calculation::class.java)
-            addToWhitelist(InterestRateSwap.Common::class.java)
-            addToWhitelist(Expression::class.java)
-            addToWhitelist(RatioUnit::class.java)
-            addToWhitelist(ReferenceRate::class.java)
-            addToWhitelist(UnknownType::class.java)
-            addToWhitelist(FixedRate::class.java)
-            addToWhitelist(PercentageRatioUnit::class.java)
-            addToWhitelist(FixingFlow.FixingSession::class.java)
-            addToWhitelist(FixedRatePaymentEvent::class.java)
-            addToWhitelist(FloatingRatePaymentEvent::class.java)
-        }
-        return true
-    }
 }
