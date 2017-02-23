@@ -8,6 +8,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.ServiceType
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.irs.flows.FixingFlow
 import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
