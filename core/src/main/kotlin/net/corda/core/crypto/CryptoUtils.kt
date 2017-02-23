@@ -54,7 +54,11 @@ fun KeyPair.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Cr
  * Generate a securely random [ByteArray] of requested number of bytes. Usually used for seeds, nonces and keys.
  * @param numOfBytes how many random bytes to output.
  * @return a random [ByteArray].
+ * @throws NoSuchAlgorithmException thrown if "NativePRNGNonBlocking" is not supported on the JVM
+ * or if no strong SecureRandom implementations are available or if Security.getProperty("securerandom.strongAlgorithms") is null or empty,
+ * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
+@Throws(NoSuchAlgorithmException::class)
 fun safeRandomBytes(numOfBytes: Int): ByteArray {
     return safeRandom().generateSeed(numOfBytes)
 }
@@ -73,7 +77,9 @@ fun safeRandomBytes(numOfBytes: Int): ByteArray {
  * @see <a href="http://www.2uo.de/myths-about-urandom/">Myths about urandom</a> for a more descriptive explanation on /dev/random Vs /dev/urandom.
  * TODO: check default settings per OS and random/urandom availability.
  * @return a [SecureRandom] object.
- * @throws NoSuchAlgorithmException
+ * @throws NoSuchAlgorithmException thrown if "NativePRNGNonBlocking" is not supported on the JVM
+ * or if no strong SecureRandom implementations are available or if Security.getProperty("securerandom.strongAlgorithms") is null or empty,
+ * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
 @Throws(NoSuchAlgorithmException::class)
 fun safeRandom(): SecureRandom {

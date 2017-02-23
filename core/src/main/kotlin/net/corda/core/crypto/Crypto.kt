@@ -174,19 +174,19 @@ object Crypto {
     /**
      * Decode a PKCS8 encoded key to its [PrivateKey] object.
      * @param encodedKey a PKCS8 encoded private key.
-     * @throws Exception on not supported scheme or if the given key specification
+     * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for this key factory to produce a private key.
      */
-    @Throws(Exception::class, InvalidKeySpecException::class)
+    @Throws(IllegalArgumentException::class)
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
         for (sig in supportedSignatureSchemes.values) {
             try {
                 return sig.keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
             } catch (ikse: InvalidKeySpecException) {
-                // do nothing - only used to bypass the scheme that causes an Exception
+                // ignore it - only used to bypass the scheme that causes an exception.
             }
         }
-        throw Exception("This private key cannot be decoded, please ensure it is PKCS8 encoded and the signature scheme is supported.")
+        throw IllegalArgumentException("This private key cannot be decoded, please ensure it is PKCS8 encoded and the signature scheme is supported.")
     }
 
     /**
@@ -194,20 +194,20 @@ object Crypto {
      * This will be used by Kryo deserialisation.
      * @param encodedKey a PKCS8 encoded private key.
      * @param schemeCodeName a [String] that should match a key in supportedSignatureSchemes map (e.g. ECDSA_SECP256K1_SHA256).
-     * @throws Exception on not supported scheme or if the given key specification
+     * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for this key factory to produce a private key.
      */
-    @Throws(Exception::class, InvalidKeySpecException::class)
+    @Throws(IllegalArgumentException::class, InvalidKeySpecException::class)
     fun decodePrivateKey(encodedKey: ByteArray, schemeCodeName: String): PrivateKey {
         val sig = findSignatureScheme(schemeCodeName)
         if (sig != null) {
             try {
                 return sig.keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
             } catch (ikse: InvalidKeySpecException) {
-                throw Exception("This private key cannot be decoded, please ensure it is PKCS8 encoded and that it corresponds to the input scheme's code name.")
+                throw InvalidKeySpecException("This private key cannot be decoded, please ensure it is PKCS8 encoded and that it corresponds to the input scheme's code name.", ikse)
             }
         } else {
-            throw Exception("Unsupported key/algorithm for input: $schemeCodeName")
+            throw IllegalArgumentException("Unsupported key/algorithm for input: $schemeCodeName")
         }
     }
 
@@ -215,19 +215,19 @@ object Crypto {
      * Decode an X509 encoded key to its [PublicKey] object.
      * @param encodedKey an X509 encoded public key.
      * @throws(UnsupportedSchemeException::class) not supported scheme.
-     * @throws InvalidKeySpecException if the given key specification
-     * is inappropriate for this key factory to produce a public key.
+     * @throws IllegalArgumentException on not supported scheme or if the given key specification
+     * is inappropriate for this key factory to produce a private key.
      */
-    @Throws(Exception::class, InvalidKeySpecException::class)
+    @Throws(IllegalArgumentException::class)
     fun decodePublicKey(encodedKey: ByteArray): PublicKey {
         for (sig in supportedSignatureSchemes.values) {
             try {
                 return sig.keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
             } catch (ikse: InvalidKeySpecException) {
-                // do nothing
+                // ignore it - only used to bypass the scheme that causes an exception.
             }
         }
-        throw Exception("This public key cannot be decoded, please ensure it is X509 encoded and the signature scheme is supported.")
+        throw IllegalArgumentException("This public key cannot be decoded, please ensure it is X509 encoded and the signature scheme is supported.")
     }
 
     /**
@@ -235,20 +235,21 @@ object Crypto {
      * This will be used by Kryo deserialisation.
      * @param encodedKey an X509 encoded public key.
      * @param schemeCodeName a [String] that should match a key in supportedSignatureSchemes map (e.g. ECDSA_SECP256K1_SHA256).
-     * @throws Exception on not supported scheme or if the given key specification
+     * @throws IllegalArgumentException if the requested scheme is not supported
+     * @throws InvalidKeySpecException if the given key specification
      * is inappropriate for this key factory to produce a private key.
      */
-    @Throws(Exception::class, InvalidKeySpecException::class)
+    @Throws(IllegalArgumentException::class, InvalidKeySpecException::class)
     fun decodePublicKey(encodedKey: ByteArray, schemeCodeName: String): PublicKey {
         val sig = findSignatureScheme(schemeCodeName)
         if (sig != null) {
             try {
                 return sig.keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
             } catch (ikse: InvalidKeySpecException) {
-                throw Exception("This public key cannot be decoded, please ensure it is X509 encoded and that it corresponds to the input scheme's code name.")
+                throw throw InvalidKeySpecException("This public key cannot be decoded, please ensure it is X509 encoded and that it corresponds to the input scheme's code name.", ikse)
             }
         } else {
-            throw Exception("Unsupported key/algorithm for input: $schemeCodeName")
+            throw IllegalArgumentException("Unsupported key/algorithm for input: $schemeCodeName")
         }
     }
 
@@ -257,10 +258,10 @@ object Crypto {
      * Normally, we don't expect other errors here, assuming that key generation parameters for every supported signature scheme have been unit-tested.
      * @param schemeCodeName a signature scheme's code name (e.g. ECDSA_SECP256K1_SHA256).
      * @return a KeyPair for the requested scheme.
-     * @throws Exception if the requested signature scheme is not supported.
+     * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
-    @Throws(Exception::class)
-    fun generateKeyPair(schemeCodeName: String): KeyPair = findSignatureScheme(schemeCodeName)?.keyPairGenerator?.generateKeyPair() ?: throw Exception("Unsupported key/algorithm for input: $schemeCodeName")
+    @Throws(IllegalArgumentException::class)
+    fun generateKeyPair(schemeCodeName: String): KeyPair = findSignatureScheme(schemeCodeName)?.keyPairGenerator?.generateKeyPair() ?: throw IllegalArgumentException("Unsupported key/algorithm for input: $schemeCodeName")
 
     /**
      * Generate a KeyPair using the DEFAULT_SIGNATURE_SCHEME.
@@ -276,14 +277,14 @@ object Crypto {
      * @param privateKey the signer's [PrivateKey].
      * @param bytesToSign the data/message to be signed in [ByteArray] form.
      * @return the digital signature (in [ByteArray]) on the input message.
-     * @throws Exception if the signature scheme is not supported for this private key.
+     * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
-    @Throws(Exception::class, InvalidKeyException::class, SignatureException::class)
+    @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
     fun doSign(privateKey: PrivateKey, bytesToSign: ByteArray): ByteArray {
         if (bytesToSign.isEmpty()) throw Exception("Signing of an empty array is not permitted!")
-        val sig: Signature = findSignatureScheme(privateKey)?.sig ?: throw Exception("Unsupported key/algorithm for the private key: ${privateKey}")
+        val sig: Signature = findSignatureScheme(privateKey)?.sig ?: throw IllegalArgumentException("Unsupported key/algorithm for the private key: ${privateKey}")
         sig.initSign(privateKey)
         sig.update(bytesToSign)
         return sig.sign()
@@ -298,21 +299,21 @@ object Crypto {
      * @throws InvalidKeyException if the key is invalid.
      * @throws SignatureException if this signatureData object is not initialized properly,
      * the passed-in signatureData is improperly encoded or of the wrong type,
-     * if this signatureData scheme is unable to process the input data provided, etc.
-     * @throws Exception if verification is not possible.
+     * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
+     * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
      */
-    @Throws(Exception::class, InvalidKeyException::class, SignatureException::class)
+    @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
     fun doVerify(publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
-        if (signatureData.isEmpty()) throw Exception("Signature data is empty!")
-        if (clearData.isEmpty()) throw Exception("Clear data is empty, nothing to verify!")
-        val sig: Signature = findSignatureScheme(publicKey)?.sig ?: throw Exception("Unsupported key/algorithm for the public key: ${publicKey})")
+        if (signatureData.isEmpty()) throw IllegalArgumentException("Signature data is empty!")
+        if (clearData.isEmpty()) throw IllegalArgumentException("Clear data is empty, nothing to verify!")
+        val sig: Signature = findSignatureScheme(publicKey)?.sig ?: throw IllegalArgumentException("Unsupported key/algorithm for the public key: ${publicKey})")
         sig.initVerify(publicKey)
         sig.update(clearData)
         val verificationResult = sig.verify(signatureData)
         if (verificationResult) {
             return true
         } else {
-            throw Exception("Signature Verification failed!")
+            throw SignatureException("Signature Verification failed!")
         }
     }
 
