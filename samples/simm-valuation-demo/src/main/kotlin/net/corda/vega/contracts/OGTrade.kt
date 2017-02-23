@@ -3,11 +3,13 @@ package net.corda.vega.contracts
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.CordaSerializable
 import java.math.BigDecimal
 
 /**
  * Specifies the contract between two parties that trade an OpenGamma IRS. Currently can only agree to trade.
  */
+@CordaSerializable
 data class OGTrade(override val legalContractReference: SecureHash = SecureHash.sha256("OGTRADE.KT")) : Contract {
     override fun verify(tx: TransactionForContract) = verifyClause(tx, AllOf(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
 

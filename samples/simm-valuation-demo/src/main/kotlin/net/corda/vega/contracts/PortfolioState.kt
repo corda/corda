@@ -17,6 +17,7 @@ import java.time.temporal.ChronoUnit
  * Represents an aggregate set of trades agreed between two parties and a possible valuation of that portfolio at a
  * given point in time. This state can be consumed to create a new state with a mutated valuation or portfolio.
  */
+@CordaSerializable
 data class PortfolioState(val portfolio: List<StateRef>,
                           override val contract: PortfolioSwap,
                           private val _parties: Pair<AnonymousParty, AnonymousParty>,
