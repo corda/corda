@@ -6,10 +6,8 @@ import net.corda.core.contracts.clauses.FilterOn
 import net.corda.core.contracts.clauses.verifyClause
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
-import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 
-@CordaSerializable
 class DummyLinearContract: Contract {
     override val legalContractReference: SecureHash = SecureHash.sha256("Test")
 

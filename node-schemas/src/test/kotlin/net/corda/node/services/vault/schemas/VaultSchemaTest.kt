@@ -15,7 +15,6 @@ import net.corda.core.crypto.composite
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.requery.converters.InstantConverter
 import net.corda.core.schemas.requery.converters.VaultStateStatusConverter
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
@@ -84,7 +83,6 @@ class VaultSchemaTest {
         data.close()
     }
 
-    @CordaSerializable
     private class VaultNoopContract() : Contract {
         override val legalContractReference = SecureHash.sha256("")
 

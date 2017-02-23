@@ -19,7 +19,6 @@ import kotlin.test.assertFailsWith
 val TEST_PROGRAM_ID = TransactionSerializationTests.TestCash()
 
 class TransactionSerializationTests {
-    @CordaSerializable
     class TestCash : Contract {
         override val legalContractReference = SecureHash.sha256("TestCash")
 

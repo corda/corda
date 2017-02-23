@@ -4,14 +4,12 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
 
 val ANOTHER_DUMMY_PROGRAM_ID = AnotherDummyContract()
 
-@CordaSerializable
 class AnotherDummyContract : Contract, net.corda.core.node.DummyContractBackdoor {
     data class State(val magicNumber: Int = 0) : ContractState {
         override val contract = ANOTHER_DUMMY_PROGRAM_ID

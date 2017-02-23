@@ -44,7 +44,6 @@ enum class WorkflowState {
  * Minimal contract to encode a simple workflow with one initial state and two possible eventual states.
  * It is assumed one party unilaterally submits and the other manually retrieves the deal and completes it.
  */
-@CordaSerializable
 data class TradeApprovalContract(override val legalContractReference: SecureHash = SecureHash.sha256("Example of workflow type transaction")) : Contract {
 
     interface Commands : CommandData {

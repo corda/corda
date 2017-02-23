@@ -34,7 +34,6 @@ val COMMODITY_PROGRAM_ID = CommodityContract()
  * in future.
  */
 // TODO: Need to think about expiry of commodities, how to require payment of storage costs, etc.
-@CordaSerializable
 class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, CommodityContract.State>() {
     /**
      * TODO:
