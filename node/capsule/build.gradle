@@ -51,7 +51,7 @@ dependencies {
 task buildCordaJAR(type: FatCapsule) {
     applicationClass 'net.corda.node.Corda'
     archiveName "corda-${corda_version}.jar"
-    applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
+    applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/CordaCaplet.class', '../build/classes/main/CordaCaplet$1.class', 'config/dev/log4j2.xml')
     from 'NOTICE' // Copy CDDL notice
 
     capsuleManifest {

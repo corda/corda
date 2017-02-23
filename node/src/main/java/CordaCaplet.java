@@ -2,6 +2,8 @@
 // must also be in the default package. When using Kotlin there are a whole host of exceptions
 // trying to construct this from Capsule, so it is written in Java.
 
+import sun.misc.*;
+
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
@@ -43,6 +45,17 @@ public class CordaCaplet extends Capsule {
             }
         }
         return classpath;
+    }
+
+    @Override
+    protected void liftoff() {
+        super.liftoff();
+        Signal.handle(new Signal("INT"), new SignalHandler() {
+            @Override
+            public void handle(Signal signal) {
+                // Disable Ctrl-C for this process, so the child process can handle it in the shell instead.
+            }
+        });
     }
 
     private Boolean isJAR(File file) {
