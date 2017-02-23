@@ -69,15 +69,19 @@ import kotlin.reflect.jvm.kotlinFunction
  *     "addNote id: b6d7e826e8739ab2eb6e077fc4fba9b04fb880bb4cbd09bc618d30234a8827a4, note: Some note"
  */
 @ThreadSafe
-open class StringToMethodCallParser<in T : Any>(targetType: Class<out T>,
-                                                private val om: ObjectMapper = JacksonSupport.createNonRpcMapper(YAMLFactory())) {
+open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
+        targetType: Class<out T>,
+        private val om: ObjectMapper = JacksonSupport.createNonRpcMapper(YAMLFactory()))
+{
     /** Same as the regular constructor but takes a Kotlin reflection [KClass] instead of a Java [Class]. */
     constructor(targetType: KClass<out T>) : this(targetType.java)
 
     companion object {
         @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
         private val ignoredNames = Object::class.java.methods.map { it.name }
-        private fun methodsFromType(clazz: Class<*>) = clazz.methods.map { it.name to it }.toMap().filterKeys { it !in ignoredNames }
+        private fun methodsFromType(clazz: Class<*>): Map<String, Method> {
+            return clazz.methods.filterNot { it.isSynthetic && it.name !in ignoredNames }.map { it.name to it }.toMap()
+        }
         private val log = LoggerFactory.getLogger(StringToMethodCallParser::class.java)!!
     }
 
@@ -180,5 +184,19 @@ open class StringToMethodCallParser<in T : Any>(targetType: Class<out T>,
             }
         }
         return inOrderParams.toTypedArray()
+    }
+
+    /** Returns a string-to-string map of commands to a string describing available parameter types. */
+    val availableCommands: Map<String, String> get() {
+        return methodMap.map { entry ->
+            val (name, args) = entry
+            val argStr = if (args.parameterCount == 0) "" else {
+                val paramNames = methodParamNames[name]!!
+                val typeNames = args.parameters.map { it.type.simpleName }
+                val paramTypes = paramNames.zip(typeNames)
+                paramTypes.map { "${it.first}: ${it.second}" }.joinToString(", ")
+            }
+            Pair(name, argStr)
+        }.toMap()
     }
 }

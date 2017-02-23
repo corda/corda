@@ -132,6 +132,16 @@ class Node {
         config = config.withValue("networkMapService", ConfigValueFactory.fromMap(networkMapService))
     }
 
+    /**
+     * Set the SSHD port for this node.
+     *
+     * @param sshdPort The SSHD port.
+     */
+    void sshdPort(Integer sshdPort) {
+        config = config.withValue("sshdAddress",
+                ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$sshdPort".toString()))
+    }
+
     Node(Project project) {
         this.project = project
     }

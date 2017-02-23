@@ -33,6 +33,7 @@ import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
 import java.time.Clock
+import java.util.concurrent.CompletableFuture
 import javax.management.ObjectName
 import kotlin.concurrent.thread
 
@@ -228,6 +229,8 @@ class Node(override val configuration: FullNodeConfiguration,
         super.initialiseDatabasePersistence(insideTransaction)
     }
 
+    val startupComplete = CompletableFuture<Unit>()
+
     override fun start(): Node {
         alreadyRunningNodeCheck()
         super.start()
@@ -250,6 +253,8 @@ class Node(override val configuration: FullNodeConfiguration,
                     }.
                     build().
                     start()
+
+            startupComplete.complete(Unit)
         }
 
         shutdownThread = thread(start = false) {

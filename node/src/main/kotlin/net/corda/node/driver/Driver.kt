@@ -164,6 +164,7 @@ fun <A> driver(
         isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
+        sshdPortAllocation: PortAllocation = PortAllocation.Incremental(20000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
@@ -172,6 +173,7 @@ fun <A> driver(
 ) = genericDriver(
         driverDsl = DriverDSL(
                 portAllocation = portAllocation,
+                sshdPortAllocation = sshdPortAllocation,
                 debugPortAllocation = debugPortAllocation,
                 systemProperties = systemProperties,
                 driverDirectory = driverDirectory.toAbsolutePath(),
@@ -328,6 +330,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
 
 class DriverDSL(
         val portAllocation: PortAllocation,
+        val sshdPortAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
         val systemProperties: Map<String, String>,
         val driverDirectory: Path,
@@ -514,6 +517,7 @@ class DriverDSL(
     override fun startNetworkMapService() {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val apiAddress = portAllocation.nextHostAndPort().toString()
+        val sshdAddress = portAllocation.nextHostAndPort().toString()
         val baseDirectory = driverDirectory / networkMapLegalName
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
@@ -577,7 +581,8 @@ class DriverDSL(
                             "-XX:+UseG1GC",
                             "-cp", classpath, className,
                             "--base-directory=${nodeConf.baseDirectory}",
-                            "--logging-level=$loggingLevel"
+                            "--logging-level=$loggingLevel",
+                            "--no-local-shell"
                     ).filter(String::isNotEmpty)
             val process = ProcessBuilder(javaArgs)
                     .redirectError((nodeConf.baseDirectory / LOGS_DIRECTORY_NAME / "error.log").toFile())
