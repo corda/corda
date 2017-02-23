@@ -69,7 +69,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
         vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
         networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
 
-        monitor.register(aliceNodeHandle.rpcAddress, cashUser.username, cashUser.password)
+        monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
         rpc = monitor.proxyObservable.value!!
         runTest()
     }

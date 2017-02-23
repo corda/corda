@@ -139,7 +139,7 @@ fun main(args: Array<String>) {
         val issuerNodeUSD = issuerUSD.get()
 
         arrayOf(notaryNode, aliceNode, bobNode, issuerNodeGBP, issuerNodeUSD).forEach {
-            println("${it.nodeInfo.legalIdentity} started on ${it.rpcAddress}")
+            println("${it.nodeInfo.legalIdentity} started on ${it.configuration.rpcAddress}")
         }
 
         val parser = OptionParser("S")
