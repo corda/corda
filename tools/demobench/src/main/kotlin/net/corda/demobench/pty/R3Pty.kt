@@ -50,7 +50,7 @@ class R3Pty(val name: String, settings: SettingsProvider, dimension: Dimension, 
 
         val environment = HashMap<String, String>(envs)
         if (!UIUtil.isWindows) {
-            environment.put("TERM", "xterm")
+            environment["TERM"] = "xterm"
         }
 
         val connector = createTtyConnector(args, environment, workingDir)
