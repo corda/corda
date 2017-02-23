@@ -15,10 +15,7 @@ import javafx.scene.control.TableView
 import javafx.scene.control.TitledPane
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.VBox
-import net.corda.client.fxutils.filterNotNull
-import net.corda.client.fxutils.lift
-import net.corda.client.fxutils.map
-import net.corda.client.fxutils.sequence
+import net.corda.client.fxutils.*
 import net.corda.client.model.*
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
@@ -219,7 +216,8 @@ class TransactionViewer : CordaView("Transactions") {
                             }
                             row {
                                 label("Issuer :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
-                                label("${data.amount.token.issuer}") {
+                                val issuer = data.amount.token.issuer.party.resolveIssuer()
+                                label(issuer.map { it?.name }) {
                                     tooltip(data.amount.token.issuer.party.owningKey.toBase58String())
                                 }
                             }
