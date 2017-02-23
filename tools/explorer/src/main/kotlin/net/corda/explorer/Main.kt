@@ -79,12 +79,8 @@ class Main : App(MainView::class) {
     }
 
     private fun asInteger(s: String?): Int? {
-        if (s == null) {
-            return null;
-        }
-
         try {
-            return s.toInt();
+            return s?.toInt()
         } catch (e: NumberFormatException) {
             return null
         }
