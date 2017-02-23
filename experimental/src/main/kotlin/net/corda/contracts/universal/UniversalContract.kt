@@ -20,25 +20,20 @@ class UniversalContract : Contract {
     }
 
     interface Commands : CommandData {
-        @CordaSerializable
         data class Fix(val fixes: List<net.corda.core.contracts.Fix>) : Commands
 
         // transition according to business rules defined in contract
-        @CordaSerializable
         data class Action(val name: String) : Commands
 
         // replace parties
         // must be signed by all parties present in contract before and after command
-        @CordaSerializable
         class Move(val from: Party, val to: Party) : TypeOnlyCommandData(), Commands
 
         // must be signed by all liable parties present in contract
-        @CordaSerializable
         class Issue : TypeOnlyCommandData(), Commands
 
         // Split contract in two, ratio must be positive and less than one.
         // todo: Who should sign this?
-        @CordaSerializable
         class Split(val ratio: BigDecimal) : Commands
     }
 

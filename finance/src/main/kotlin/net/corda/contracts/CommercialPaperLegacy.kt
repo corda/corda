@@ -49,14 +49,11 @@ class CommercialPaperLegacy : Contract {
     }
 
     interface Commands : CommandData {
-        @CordaSerializable
         class Move : TypeOnlyCommandData(), Commands
 
-        @CordaSerializable
         class Redeem : TypeOnlyCommandData(), Commands
         // We don't need a nonce in the issue command, because the issuance.reference field should already be unique per CP.
         // However, nothing in the platform enforces that uniqueness: it's up to the issuer.
-        @CordaSerializable
         class Issue : TypeOnlyCommandData(), Commands
     }
 

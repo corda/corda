@@ -48,10 +48,8 @@ enum class WorkflowState {
 data class TradeApprovalContract(override val legalContractReference: SecureHash = SecureHash.sha256("Example of workflow type transaction")) : Contract {
 
     interface Commands : CommandData {
-        @CordaSerializable
         class Issue : TypeOnlyCommandData(), Commands  // Record receipt of deal details
 
-        @CordaSerializable
         class Completed : TypeOnlyCommandData(), Commands  // Record match
     }
 

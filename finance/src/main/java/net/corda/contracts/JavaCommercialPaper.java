@@ -268,7 +268,6 @@ public class JavaCommercialPaper implements Contract {
     }
 
     public interface Commands extends CommandData {
-        @CordaSerializable
         class Move implements Commands {
             @Override
             public boolean equals(Object obj) {
@@ -276,7 +275,6 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
-        @CordaSerializable
         class Redeem implements Commands {
             @Override
             public boolean equals(Object obj) {
@@ -284,7 +282,6 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
-        @CordaSerializable
         class Issue implements Commands {
             @Override
             public boolean equals(Object obj) {

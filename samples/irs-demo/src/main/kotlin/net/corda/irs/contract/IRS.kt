@@ -643,16 +643,12 @@ class InterestRateSwap() : Contract {
     }
 
     interface Commands : CommandData {
-        @CordaSerializable
         data class Refix(val fix: Fix) : Commands      // Receive interest rate from oracle, Both sides agree
 
-        @CordaSerializable
         class Pay : TypeOnlyCommandData(), Commands    // Not implemented just yet
 
-        @CordaSerializable
         class Agree : TypeOnlyCommandData(), Commands  // Both sides agree to trade
 
-        @CordaSerializable
         class Mature : TypeOnlyCommandData(), Commands // Trade has matured; no more actions. Cleanup. // TODO: Do we need this?
     }
 

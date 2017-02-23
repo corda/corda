@@ -44,7 +44,6 @@ class AttachmentClassLoaderTests {
         }
 
         interface Commands : CommandData {
-            @CordaSerializable
             class Create : TypeOnlyCommandData(), Commands
         }
 

@@ -21,7 +21,6 @@ class AnotherDummyContract : Contract, net.corda.core.node.DummyContractBackdoor
     }
 
     interface Commands : CommandData {
-        @CordaSerializable
         class Create : TypeOnlyCommandData(), Commands
     }
 
