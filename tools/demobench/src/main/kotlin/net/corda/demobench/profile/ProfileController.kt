@@ -43,11 +43,11 @@ class ProfileController : Controller() {
         // dialogue has already confirmed that this is OK.
         target.delete()
 
-        FileSystems.newFileSystem(URI.create("jar:" + target.toURI()), mapOf("create" to "true")).use {
-            fs -> configs.forEach { it ->
-                val nodeDir = Files.createDirectories(fs.getPath(it.key))
-                val conf = Files.write(nodeDir.resolve("node.conf"), it.toText().toByteArray(UTF_8))
-                log.info("Wrote: $conf")
+        FileSystems.newFileSystem(URI.create("jar:" + target.toURI()), mapOf("create" to "true")).use { fs ->
+            configs.forEach { config ->
+                val nodeDir = Files.createDirectories(fs.getPath(config.key))
+                val file = Files.write(nodeDir.resolve("node.conf"), config.toText().toByteArray(UTF_8))
+                log.info("Wrote: $file")
             }
         }
 
@@ -64,17 +64,17 @@ class ProfileController : Controller() {
 
         val configs = LinkedList<NodeConfig>()
 
-        FileSystems.newFileSystem(chosen.toPath(), null).use {
-            fs -> fs.rootDirectories.forEach {
-                root -> Files.find(root, 2, ConfigAcceptor).forEach {
+        FileSystems.newFileSystem(chosen.toPath(), null).use { fs ->
+            fs.rootDirectories.forEach { root ->
+                Files.find(root, 2, ConfigAcceptor).forEach { file ->
                     try {
                         // Java seems to "walk" through the ZIP file backwards.
                         // So add new config to the front of the list, so that
                         // our final list is ordered to match the file.
-                        configs.addFirst(toNodeConfig(parse(it)))
-                        log.info("Loaded: $it")
+                        configs.addFirst(toNodeConfig(parse(file)))
+                        log.info("Loaded: $file")
                     } catch (e: Exception) {
-                        log.severe("Failed to parse '$it': ${e.message}")
+                        log.severe("Failed to parse '$file': ${e.message}")
                         throw e
                     }
                 }
@@ -118,22 +118,17 @@ class ProfileController : Controller() {
     private fun Config.parsePort(path: String): Int {
         val address = this.getString(path)
         val port = HostAndPort.fromString(address).port
-        if (!nodeController.isPortValid(port)) {
-            throw IllegalArgumentException("Invalid port $port from '$path'.")
-        }
+        require(nodeController.isPortValid(port), { "Invalid port $port from '$path'." })
         return port
     }
 
     private fun Config.parseExtraServices(path: String): List<String> {
         val services = serviceController.services.toSortedSet()
-        return this.getString(path).split(",").filter {
-            !it.isNullOrEmpty()
-        }.map {
-            if (!services.contains(it)) {
-                throw IllegalArgumentException("Unknown service '$it'.")
-            } else {
-                it
-            }
-        }.toList()
+        return this.getString(path).split(",")
+            .filter { svc -> !svc.isNullOrEmpty() }
+            .map { svc ->
+                require(svc in services, { "Unknown service '$svc'." } )
+                svc
+            }.toList()
     }
 }
