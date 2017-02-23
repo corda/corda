@@ -1,6 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.Crypto.safeRandom
 import java.security.*
 import java.security.spec.AlgorithmParameterSpec
 

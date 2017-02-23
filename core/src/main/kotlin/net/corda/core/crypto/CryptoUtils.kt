@@ -49,3 +49,37 @@ fun PublicKey.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = 
  */
 @Throws(Exception::class, InvalidKeyException::class, SignatureException::class)
 fun KeyPair.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Crypto.doVerify(this.public, signatureData, clearData)
+
+/**
+ * Generate a securely random [ByteArray] of requested number of bytes. Usually used for seeds, nonces and keys.
+ * @param numOfBytes how many random bytes to output.
+ * @return a random [ByteArray].
+ */
+fun safeRandomBytes(numOfBytes: Int): ByteArray {
+    return safeRandom().generateSeed(numOfBytes)
+}
+
+/**
+ * Get an instance of [SecureRandom] to avoid blocking, due to waiting for additional entropy, when possible.
+ * In this version, the NativePRNGNonBlocking is exclusively used on Linux OS to utilize dev/urandom because in high traffic
+ * /dev/random may wait for a certain amount of "noise" to be generated on the host machine before returning a result.
+ *
+ * On Solaris, Linux, and OS X, if the entropy gathering device in java.security is set to file:/dev/urandom
+ * or file:/dev/random, then NativePRNG is preferred to SHA1PRNG. Otherwise, SHA1PRNG is preferred.
+ * @see <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/SunProviders.html#SecureRandomImp">SecureRandom Implementation</a>.
+ *
+ * If both dev/random and dev/urandom are available, then dev/random is only preferred over dev/urandom during VM boot
+ * where it may be possible that OS didn't yet collect enough entropy to fill the randomness pool for the 1st time.
+ * @see <a href="http://www.2uo.de/myths-about-urandom/">Myths about urandom</a> for a more descriptive explanation on /dev/random Vs /dev/urandom.
+ * TODO: check default settings per OS and random/urandom availability.
+ * @return a [SecureRandom] object.
+ * @throws NoSuchAlgorithmException
+ */
+@Throws(NoSuchAlgorithmException::class)
+fun safeRandom(): SecureRandom {
+    if (System.getProperty("os.name") == "Linux") {
+        return SecureRandom.getInstance("NativePRNGNonBlocking")
+    } else {
+        return SecureRandom.getInstanceStrong()
+    }
+}
