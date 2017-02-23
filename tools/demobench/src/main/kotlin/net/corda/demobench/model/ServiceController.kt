@@ -19,9 +19,9 @@ class ServiceController : Controller() {
             return emptyList()
         } else {
             val set = TreeSet<String>()
-            InputStreamReader(url.openStream()).useLines {
-                sq -> sq.forEach {
-                    val service = it.trim()
+            InputStreamReader(url.openStream()).useLines { sq ->
+                sq.forEach { line ->
+                    val service = line.trim()
                     set.add(service)
 
                     log.info("Supports: $service")
