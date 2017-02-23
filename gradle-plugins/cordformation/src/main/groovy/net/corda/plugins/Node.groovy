@@ -9,7 +9,7 @@ import java.nio.file.Files
  * Represents a node that will be installed.
  */
 class Node {
-    static final String JAR_NAME = 'corda.jar'
+    static final String NODEJAR_NAME = 'corda.jar'
     static final String WEBJAR_NAME = 'corda-webserver.jar'
     static final String DEFAULT_HOST = 'localhost'
 
@@ -110,7 +110,7 @@ class Node {
     /**
      * Set the network map address for this node.
      *
-     * @jarning This should not be directly set unless you know what you are doing. Use the networkMapName in the
+     * @warning This should not be directly set unless you know what you are doing. Use the networkMapName in the
      *          Cordform task instead.
      * @param networkMapAddress Network map node address.
      * @param networkMapLegalName Network map node legal name.
@@ -161,7 +161,7 @@ class Node {
         project.copy {
             from cordaJar
             into nodeDir
-            rename cordaJar.name, JAR_NAME
+            rename cordaJar.name, NODEJAR_NAME
         }
     }
 

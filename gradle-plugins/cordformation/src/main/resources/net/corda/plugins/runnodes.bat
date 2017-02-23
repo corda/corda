@@ -5,8 +5,8 @@ Pushd %~dp0
 
 FOR /D %%G in (.\*) DO (
  Pushd %%G
- start java -jar corda.jar
- start java -jar corda.jar --webserver
+ start java -jar NODEJAR_NAME
+ start java -jar WEBJAR_NAME
  Popd
 )
 

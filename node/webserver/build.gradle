@@ -3,6 +3,7 @@ apply plugin: 'java'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
 
+// TODO: Break dependency on node and move to another location  such as a submodule of client.
 description 'Corda webserver module'
 
 repositories {

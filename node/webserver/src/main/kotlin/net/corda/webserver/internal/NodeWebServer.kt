@@ -92,17 +92,14 @@ class NodeWebServer(val config: FullNodeConfiguration) {
             val httpConfiguration = HttpConfiguration()
             httpConfiguration.outputBufferSize = 32768
             val httpConnector = ServerConnector(server, HttpConnectionFactory(httpConfiguration))
-            log.info("Starting webserver on address $address")
             httpConnector.port = address.port
             httpConnector
         }
         server.connectors = arrayOf<Connector>(connector)
 
         server.handler = handlerCollection
-        //runOnStop += Runnable { server.stop() }
         server.start()
-        log.info("Server started")
-        log.info("Embedded web server is listening on", "http://${InetAddress.getLocalHost().hostAddress}:${connector.port}/")
+        log.info("Starting webserver on address $address")
         return server
     }
 
@@ -157,6 +154,12 @@ class NodeWebServer(val config: FullNodeConfiguration) {
                 return connectLocalRpcAsNodeUser()
             } catch (e: ActiveMQNotConnectedException) {
                 log.debug("Could not connect to ${config.artemisAddress} due to exception: ", e)
+                Thread.sleep(retryDelay)
+                // This error will happen if the server has yet to create the keystore
+                // Keep the fully qualified package name due to collisions with the Kotlin stdlib
+                // exception of the same name
+            } catch (e: java.nio.file.NoSuchFileException) {
+                log.debug("Tried to open a file that doesn't yet exist, retrying", e)
                 Thread.sleep(retryDelay)
             }
         }
