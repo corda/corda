@@ -18,6 +18,22 @@ import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Paths
 import kotlin.system.exitProcess
+import org.crsh.console.jline.JLineProcessor
+import org.crsh.console.jline.TerminalFactory
+import org.crsh.console.jline.console.ConsoleReader
+import org.crsh.standalone.Bootstrap
+import org.crsh.util.InterruptHandler
+import org.crsh.util.Utils
+import org.crsh.vfs.FS
+import org.crsh.vfs.spi.file.FileMountFactory
+import org.crsh.vfs.spi.url.ClassPathMountFactory
+import java.io.FileDescriptor
+import java.io.FileInputStream
+import java.nio.file.Path
+import java.util.*
+import org.crsh.shell.ShellFactory
+import java.util.logging.Level
+import kotlin.concurrent.thread
 
 private var renderBasicInfoToConsole = true
 
@@ -61,6 +77,7 @@ fun main(args: Array<String>) {
 
     drawBanner()
 
+    val dir: Path = cmdlineOptions.baseDirectory.normalize()
     val logDir = if (cmdlineOptions.isWebserver) "logs/web" else "logs"
     System.setProperty("log-path", (cmdlineOptions.baseDirectory / logDir).toString())
 
@@ -115,6 +132,10 @@ fun main(args: Array<String>) {
 
                 if (renderBasicInfoToConsole)
                     ANSIProgressObserver(node.smm)
+
+                node.startupComplete.thenAccept {
+                    startShell(dir, cmdlineOptions, node) { node.stop() }
+                }
             } failure {
                 log.error("Error during network map registration", it)
                 exitProcess(1)
@@ -190,3 +211,66 @@ private fun drawBanner() {
 """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
 a("--- DEVELOPER SNAPSHOT ------------------------------------------------------------").newline().reset())
 }
+
+fun startShell(dir: Path, cmdLineOptions : CmdLineOptions, node: Node, whenDone: () -> Unit) {
+
+    if (cmdLineOptions.localShell or cmdLineOptions.sshdServer) {
+        try {
+            // Disable JDK logging, which CRaSH uses.
+            java.util.logging.Logger.getLogger("").level = Level.OFF
+
+            val classpathDriver = ClassPathMountFactory(Thread.currentThread().contextClassLoader)
+            val fileDriver = FileMountFactory(Utils.getCurrentDirectory());
+            val commandsFS = FS.Builder()
+                    .register("file", fileDriver)
+                    .mount("file:./")
+                    .register("classpath", classpathDriver)
+                    .mount("classpath:/net/corda/cmdshell/")
+                    .mount("classpath:/crash/commands/")
+                    .build()
+            // TODO: Re-point to our own conf path.
+            val confFS = FS.Builder()
+                    .register("classpath", classpathDriver)
+                    .mount("classpath:/crash")
+                    .build()
+
+            val bootstrap = Bootstrap(Thread.currentThread().contextClassLoader, confFS, commandsFS)
+
+            // Enable SSH access. Note: these have to be strings, even though raw object assignments also work.
+            val config = Properties()
+            config["crash.ssh.keypath"] = (dir / "sshkey").toString()
+            config["crash.ssh.keygen"] = "true"
+            config["crash.ssh.port"] = node.configuration.sshdAddress.port.toString()
+            config["crash.auth"] = "simple"
+            config["crash.auth.simple.username"] = "admin"
+            config["crash.auth.simple.password"] = "admin"
+
+            bootstrap.config = config
+            bootstrap.setAttributes(mapOf(Pair("node", node)))
+            bootstrap.bootstrap()
+
+            printBasicNodeInfo("SSHD listening on address", node.configuration.sshdAddress.toString())
+
+            if (cmdLineOptions.localShell) {
+                val shell = bootstrap.context.getPlugin(ShellFactory::class.java).create(null)
+                val terminal = TerminalFactory.create()
+                val consoleReader = ConsoleReader("Corda", FileInputStream(FileDescriptor.`in`), System.out, terminal)
+                val jlineProcessor = JLineProcessor(terminal.isAnsiSupported, shell, consoleReader, System.out)
+                InterruptHandler { jlineProcessor.interrupt() }.install()
+                thread(name = "Command line shell processor", isDaemon = true) {
+                    jlineProcessor.run()
+                }
+                thread(name = "Command line shell terminator", isDaemon = true) {
+                    // Wait for the shell to finish.
+                    jlineProcessor.closed()
+                    terminal.restore()
+                    whenDone()
+                }
+            }
+        } catch (e: Throwable) {
+            e.printStackTrace()
+        }
+    }
+
+}
+

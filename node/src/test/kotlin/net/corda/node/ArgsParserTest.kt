@@ -21,6 +21,8 @@ class ArgsParserTest {
                 logToConsole = false,
                 loggingLevel = Level.INFO,
                 isWebserver = false,
+                localShell = false,
+                sshdServer = false,
                 isRegistration = false))
     }
 
