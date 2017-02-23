@@ -22,7 +22,6 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.withoutIssuer
-import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.Party
 import net.corda.explorer.formatters.AmountFormatter
 import net.corda.explorer.identicon.identicon
@@ -32,10 +31,7 @@ import net.corda.explorer.model.CordaWidget
 import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.ui.*
-import net.corda.explorer.views.SearchField
-import net.corda.explorer.views.runInFxApplicationThread
-import net.corda.explorer.views.stringConverter
-import net.corda.explorer.views.toStringWithSuffix
+import net.corda.explorer.views.*
 import org.fxmisc.easybind.EasyBind
 import tornadofx.*
 import java.time.Instant
@@ -85,7 +81,7 @@ class CashViewer : CordaView("Cash") {
      */
     sealed class ViewerNode(val equivAmount: ObservableValue<out Amount<Currency>>,
                             val states: ObservableList<StateAndRef<Cash.State>>) {
-        class IssuerNode(val issuer: AnonymousParty,
+        class IssuerNode(val issuer: ObservableValue<Party?>,
                          sumEquivAmount: ObservableValue<out Amount<Currency>>,
                          states: ObservableList<StateAndRef<Cash.State>>) : ViewerNode(sumEquivAmount, states)
 
@@ -127,7 +123,7 @@ class CashViewer : CordaView("Cash") {
                 tooltip = identiconToolTip(stateRow.stateAndRef.ref.txhash)
             }
             equivLabel.textProperty().bind(equivAmount.map { it.token.currencyCode.toString() })
-            issuerValueLabel.text = stateRow.stateAndRef.state.data.amount.token.issuer.toString()
+            issuerValueLabel.textProperty().bind(stateRow.stateAndRef.resolveIssuer().map { it?.name })
             originatedValueLabel.text = stateRow.originated.toString()
             amountValueLabel.text = amountFormatter.format(amountNoIssuer)
             equivValueLabel.textProperty().bind(equivAmount.map { equivFormatter.format(it) })
@@ -144,7 +140,7 @@ class CashViewer : CordaView("Cash") {
          */
         val searchField = SearchField(cashStates,
                 "Currency" to { state, text -> state.state.data.amount.token.product.toString().contains(text, true) },
-                "Issuer" to { state, text -> state.state.data.amount.token.issuer.party.toString().contains(text, true) }
+                "Issuer" to { state, text -> state.resolveIssuer().value?.name?.contains(text, true) ?: false }
         )
         root.top = hbox(5.0) {
             button("New Transaction", FontAwesomeIconView(FontAwesomeIcon.PLUS)) {
@@ -201,7 +197,7 @@ class CashViewer : CordaView("Cash") {
                     /**
                      * Assemble the Issuer node.
                      */
-                    val treeItem = TreeItem(ViewerNode.IssuerNode(issuer, equivSumAmount, memberStates))
+                    val treeItem = TreeItem(ViewerNode.IssuerNode(issuer.resolveIssuer(), equivSumAmount, memberStates))
 
                     /**
                      * Bind the children in the TreeTable structure.
@@ -230,7 +226,7 @@ class CashViewer : CordaView("Cash") {
         cashViewerTableIssuerCurrency.setCellValueFactory {
             val node = it.value.value
             when (node) {
-                is ViewerNode.IssuerNode -> node.issuer.toString().lift()
+                is ViewerNode.IssuerNode -> node.issuer.map { it?.name }
                 is ViewerNode.CurrencyNode -> node.amount.map { it.token.toString() }
             }
         }
