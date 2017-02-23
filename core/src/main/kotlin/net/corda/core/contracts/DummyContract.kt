@@ -38,10 +38,8 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
     }
 
     interface Commands : CommandData {
-        @CordaSerializable
         class Create : TypeOnlyCommandData(), Commands
 
-        @CordaSerializable
         class Move : TypeOnlyCommandData(), Commands
     }
 

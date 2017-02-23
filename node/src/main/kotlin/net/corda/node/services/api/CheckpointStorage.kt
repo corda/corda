@@ -1,7 +1,6 @@
 package net.corda.node.services.api
 
 import net.corda.core.crypto.SecureHash
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 
@@ -31,7 +30,6 @@ interface CheckpointStorage {
 }
 
 // This class will be serialised, so everything it points to transitively must also be serialisable (with Kryo).
-@CordaSerializable
 class Checkpoint(val serializedFiber: SerializedBytes<FlowStateMachineImpl<*>>) {
 
     val id: SecureHash get() = serializedFiber.hash
