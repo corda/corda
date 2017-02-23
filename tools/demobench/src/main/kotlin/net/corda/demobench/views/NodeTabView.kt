@@ -3,6 +3,7 @@ package net.corda.demobench.views
 import java.text.DecimalFormat
 import javafx.application.Platform
 import javafx.scene.control.SelectionMode.MULTIPLE
+import javafx.scene.layout.Pane
 import javafx.util.converter.NumberStringConverter
 import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.NodeController
@@ -32,115 +33,11 @@ class NodeTabView : Fragment() {
 
         form {
             fieldset("Configuration") {
-                field("Node Name") {
-                    textfield(model.legalName) {
-                        minWidth = 200.0
-                        maxWidth = 200.0
-                        validator {
-                            if (it == null) {
-                                error("Node name is required")
-                            } else {
-                                val name = it.trim()
-                                if (name.isEmpty()) {
-                                    error("Node name is required")
-                                } else if (nodeController.nameExists(name)) {
-                                    error("Node with this name already exists")
-                                } else if (name.length > 10) {
-                                    error("Name is too long")
-                                } else {
-                                    null
-                                }
-                            }
-                        }
-                    }
-                }
-                field("Nearest City") {
-                    textfield(model.nearestCity) {
-                        minWidth = 200.0
-                        maxWidth = 200.0
-                        validator {
-                            if (it == null) {
-                                error("Nearest city is required")
-                            } else if (it.trim().isEmpty()) {
-                                error("Nearest city is required")
-                            } else {
-                                null
-                            }
-                        }
-                    }
-                }
-                field("P2P Port") {
-                    textfield(model.artemisPort, NumberStringConverter(integerFormat)) {
-                        minWidth = 100.0
-                        maxWidth = 100.0
-                        validator {
-                            if ((it == null) || it.isEmpty()) {
-                                error("Port number required")
-                            } else if (it.contains(notNumber)) {
-                                error("Invalid port number")
-                            } else {
-                                val port = it.toInt()
-                                if (!nodeController.isPortAvailable(port)) {
-                                    error("Port $it is unavailable")
-                                } else if (port == model.webPort.value) {
-                                    error("Clashes with web port")
-                                } else if (port == model.h2Port.value) {
-                                    error("Clashes with database port")
-                                } else {
-                                    null
-                                }
-                            }
-                        }
-                    }
-                }
-                field("Web Port") {
-                    textfield(model.webPort, NumberStringConverter(integerFormat)) {
-                        minWidth = 100.0
-                        maxWidth = 100.0
-                        validator {
-                            if ((it == null) || it.isEmpty()) {
-                                error("Port number required")
-                            } else if (it.contains(notNumber)) {
-                                error("Invalid port number")
-                            } else {
-                                val port = it.toInt()
-                                if (!nodeController.isPortAvailable(port)) {
-                                    error("Port $it is unavailable")
-                                } else if (port == model.artemisPort.value) {
-                                    error("Clashes with P2P port")
-                                } else if (port == model.h2Port.value) {
-                                    error("Clashes with database port")
-                                } else {
-                                    null
-                                }
-                            }
-                        }
-                    }
-                }
-                field("Database Port") {
-                    textfield(model.h2Port, NumberStringConverter(integerFormat)) {
-                        minWidth = 100.0
-                        maxWidth = 100.0
-                        validator {
-                            if ((it == null) || it.isEmpty()) {
-                                error("Port number required")
-                            } else if (it.contains(notNumber)) {
-                                error("Invalid port number")
-                            } else {
-                                val port = it.toInt()
-                                if (!nodeController.isPortAvailable(port)) {
-                                    error("Port $it is unavailable")
-                                } else if (port == model.artemisPort.value) {
-                                    error("Clashes with P2P port")
-                                } else if (port == model.webPort.value) {
-                                    error("Clashes with web port")
-                                } else {
-                                    null
-                                }
-                            }
-                        }
-                    }
-                }
+                field("Node Name", op = { nodeNameField() })
+                field("Nearest City", op = { nearestCityField() })
+                field("P2P Port", op = { p2pPortField() })
+                field("Web Port", op = { webPortField() })
+                field("Database Port", op = { databasePortField() })
             }
 
             fieldset("Services") {
@@ -181,6 +78,110 @@ class NodeTabView : Fragment() {
         model.artemisPort.value = nodeController.nextPort
         model.webPort.value = nodeController.nextPort
         model.h2Port.value = nodeController.nextPort
+    }
+
+    private fun Pane.nodeNameField() = textfield(model.legalName) {
+        minWidth = 200.0
+        maxWidth = 200.0
+        validator {
+            if (it == null) {
+                error("Node name is required")
+            } else {
+                val name = it.trim()
+                if (name.isEmpty()) {
+                    error("Node name is required")
+                } else if (nodeController.nameExists(name)) {
+                    error("Node with this name already exists")
+                } else if (name.length > 10) {
+                    error("Name is too long")
+                } else {
+                    null
+                }
+            }
+        }
+    }
+
+    private fun Pane.nearestCityField() = textfield(model.nearestCity) {
+        minWidth = 200.0
+        maxWidth = 200.0
+        validator {
+            if (it == null) {
+                error("Nearest city is required")
+            } else if (it.trim().isEmpty()) {
+                error("Nearest city is required")
+            } else {
+                null
+            }
+        }
+    }
+
+    private fun Pane.p2pPortField() = textfield(model.artemisPort, NumberStringConverter(integerFormat)) {
+        minWidth = 100.0
+        maxWidth = 100.0
+        validator {
+            if ((it == null) || it.isEmpty()) {
+                error("Port number required")
+            } else if (it.contains(notNumber)) {
+                error("Invalid port number")
+            } else {
+                val port = it.toInt()
+                if (!nodeController.isPortAvailable(port)) {
+                    error("Port $it is unavailable")
+                } else if (port == model.webPort.value) {
+                    error("Clashes with web port")
+                } else if (port == model.h2Port.value) {
+                    error("Clashes with database port")
+                } else {
+                    null
+                }
+            }
+        }
+    }
+
+    private fun Pane.webPortField() = textfield(model.webPort, NumberStringConverter(integerFormat)) {
+        minWidth = 100.0
+        maxWidth = 100.0
+        validator {
+            if ((it == null) || it.isEmpty()) {
+                error("Port number required")
+            } else if (it.contains(notNumber)) {
+                error("Invalid port number")
+            } else {
+                val port = it.toInt()
+                if (!nodeController.isPortAvailable(port)) {
+                    error("Port $it is unavailable")
+                } else if (port == model.artemisPort.value) {
+                    error("Clashes with P2P port")
+                } else if (port == model.h2Port.value) {
+                    error("Clashes with database port")
+                } else {
+                    null
+                }
+            }
+        }
+    }
+
+    private fun Pane.databasePortField() = textfield(model.h2Port, NumberStringConverter(integerFormat)) {
+        minWidth = 100.0
+        maxWidth = 100.0
+        validator {
+            if ((it == null) || it.isEmpty()) {
+                error("Port number required")
+            } else if (it.contains(notNumber)) {
+                error("Invalid port number")
+            } else {
+                val port = it.toInt()
+                if (!nodeController.isPortAvailable(port)) {
+                    error("Port $it is unavailable")
+                } else if (port == model.artemisPort.value) {
+                    error("Clashes with P2P port")
+                } else if (port == model.webPort.value) {
+                    error("Clashes with web port")
+                } else {
+                    null
+                }
+            }
+        }
     }
 
     /**
