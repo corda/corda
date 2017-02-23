@@ -363,6 +363,7 @@ data class PartyAndReference(val party: AnonymousParty, val reference: OpaqueByt
 }
 
 /** Marker interface for classes that represent commands */
+@CordaSerializable
 interface CommandData
 
 /** Commands that inherit from this are intended to have no data items: it's only their presence that matters. */

@@ -75,11 +75,17 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
     // We don't allow the annotation for classes in attachments for now.  The class will be on the main classpath if we have the CorDapp installed.
     // We also do not allow extension of KryoSerializable for annotated classes, or combination with @DefaultSerializer for custom serialisation.
     // TODO: Later we can support annotations on attachment classes and spin up a proxy via bytecode that we know is harmless.
-    protected fun checkForAnnotation(type: Class<*>): Boolean {
+    private fun checkForAnnotation(type: Class<*>): Boolean {
         return (type.classLoader !is AttachmentsClassLoader)
                 && !KryoSerializable::class.java.isAssignableFrom(type)
                 && !type.isAnnotationPresent(DefaultSerializer::class.java)
-                && type.isAnnotationPresent(CordaSerializable::class.java)
+                && (type.isAnnotationPresent(CordaSerializable::class.java) || hasAnnotationOnInterface(type))
+    }
+
+    // Recursively check interfaces for our annotation.
+    private fun hasAnnotationOnInterface(type: Class<*>): Boolean {
+        return type.interfaces.any { it.isAnnotationPresent(CordaSerializable::class.java) || hasAnnotationOnInterface(it) }
+                || (type.superclass != null && hasAnnotationOnInterface(type.superclass))
     }
 }
 
