@@ -16,7 +16,6 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
         val magicNumber: Int
     }
 
-    @CordaSerializable
     data class SingleOwnerState(override val magicNumber: Int = 0, override val owner: CompositeKey) : OwnableState, State {
         override val contract = DUMMY_PROGRAM_ID
         override val participants: List<CompositeKey>
@@ -30,7 +29,6 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
      * participants, and could in theory be merged with [SingleOwnerState] by putting the additional participants
      * in a different field, however this is a good example of a contract with multiple states.
      */
-    @CordaSerializable
     data class MultiOwnerState(override val magicNumber: Int = 0,
                                val owners: List<CompositeKey>) : ContractState, State {
         override val contract = DUMMY_PROGRAM_ID

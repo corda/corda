@@ -88,7 +88,6 @@ class VaultSchemaTest {
     private class VaultNoopContract() : Contract {
         override val legalContractReference = SecureHash.sha256("")
 
-        @CordaSerializable
         data class VaultNoopState(override val owner: CompositeKey) : OwnableState {
             override val contract = VaultNoopContract()
             override val participants: List<CompositeKey>

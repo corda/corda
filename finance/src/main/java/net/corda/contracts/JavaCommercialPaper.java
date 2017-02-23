@@ -15,7 +15,6 @@ import net.corda.core.crypto.CryptoUtilities;
 import net.corda.core.crypto.Party;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.node.services.VaultService;
-import net.corda.core.serialization.CordaSerializable;
 import net.corda.core.transactions.TransactionBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -39,7 +38,6 @@ import static net.corda.core.contracts.ContractsDSL.requireThat;
 public class JavaCommercialPaper implements Contract {
     private static final Contract JCP_PROGRAM_ID = new JavaCommercialPaper();
 
-    @CordaSerializable
     public static class State implements OwnableState, ICommercialPaperState {
         private PartyAndReference issuance;
         private CompositeKey owner;

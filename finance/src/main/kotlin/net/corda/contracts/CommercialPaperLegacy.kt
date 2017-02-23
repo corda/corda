@@ -26,7 +26,6 @@ class CommercialPaperLegacy : Contract {
     // TODO: should reference the content of the legal agreement, not its URI
     override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
 
-    @CordaSerializable
     data class State(
             val issuance: PartyAndReference,
             override val owner: CompositeKey,

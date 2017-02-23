@@ -13,10 +13,10 @@ import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
@@ -114,7 +114,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         dataSource.close()
     }
 
-    @CordaSerializable
     class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant) : LinearState, SchedulableState {
         override val participants: List<CompositeKey>
             get() = throw UnsupportedOperationException()

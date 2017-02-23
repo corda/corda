@@ -63,6 +63,7 @@ interface NettableState<N : BilateralNettableState<N>, T : Any> : BilateralNetta
  * notary is responsible for ensuring there is no "double spending" by only signing a transaction if the input states
  * are all free.
  */
+@CordaSerializable
 interface ContractState {
     /**
      * An instance of the contract class that will verify this state.

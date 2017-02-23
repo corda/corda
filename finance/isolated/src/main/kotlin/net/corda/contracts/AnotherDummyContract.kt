@@ -13,7 +13,6 @@ val ANOTHER_DUMMY_PROGRAM_ID = AnotherDummyContract()
 
 @CordaSerializable
 class AnotherDummyContract : Contract, net.corda.core.node.DummyContractBackdoor {
-    @CordaSerializable
     data class State(val magicNumber: Int = 0) : ContractState {
         override val contract = ANOTHER_DUMMY_PROGRAM_ID
         override val participants: List<CompositeKey>

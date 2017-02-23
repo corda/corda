@@ -18,7 +18,6 @@ class DummyLinearContract: Contract {
             FilterOn(clause, { states -> states.filterIsInstance<State>() }),
             emptyList())
 
-    @CordaSerializable
     data class State(
             override val linearId: UniqueIdentifier = UniqueIdentifier(),
             override val contract: Contract = DummyLinearContract(),

@@ -18,7 +18,6 @@ class DummyDealContract : Contract {
 
     override fun verify(tx: TransactionForContract) {}
 
-    @CordaSerializable
     data class State(
             override val contract: Contract = DummyDealContract(),
             override val participants: List<CompositeKey> = listOf(),

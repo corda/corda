@@ -59,7 +59,6 @@ class CommercialPaper : Contract {
 
     override fun verify(tx: TransactionForContract) = verifyClause(tx, Clauses.Group(), tx.commands.select<Commands>())
 
-    @CordaSerializable
     data class State(
             val issuance: PartyAndReference,
             override val owner: CompositeKey,
