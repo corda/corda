@@ -11,19 +11,15 @@ tags
 
 .gradle
 local.properties
-/docs/build/doctrees
 
 # General build files
 **/build/*
-!docs/build/*
-
 lib/dokka.jar
 
 **/logs/*
 
 ### JetBrains template
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio
-
 *.iml
 
 ## Directory-based project format:
@@ -34,8 +30,6 @@ lib/dokka.jar
 .idea/libraries
 .idea/shelf
 .idea/dataSources
-.idea/modules.xml
-
 # if you remove the above rule, at least ignore the following:
 
 # User-specific stuff:
