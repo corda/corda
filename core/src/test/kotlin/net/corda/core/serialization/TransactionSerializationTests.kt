@@ -39,7 +39,6 @@ class TransactionSerializationTests {
         }
 
         interface Commands : CommandData {
-            @CordaSerializable
             class Move() : TypeOnlyCommandData(), Commands
         }
     }

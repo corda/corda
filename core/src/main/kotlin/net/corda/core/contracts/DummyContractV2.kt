@@ -23,10 +23,8 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
     }
 
     interface Commands : CommandData {
-        @CordaSerializable
         class Create : TypeOnlyCommandData(), Commands
 
-        @CordaSerializable
         class Move : TypeOnlyCommandData(), Commands
     }
 

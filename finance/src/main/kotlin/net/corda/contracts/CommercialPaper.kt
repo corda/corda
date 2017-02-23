@@ -185,13 +185,10 @@ class CommercialPaper : Contract {
     }
 
     interface Commands : CommandData {
-        @CordaSerializable
         data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
 
-        @CordaSerializable
         class Redeem : TypeOnlyCommandData(), Commands
 
-        @CordaSerializable
         data class Issue(override val nonce: Long = random63BitValue()) : IssueCommand, Commands
     }
 
