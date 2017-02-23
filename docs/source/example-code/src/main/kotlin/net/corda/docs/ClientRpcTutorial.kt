@@ -9,6 +9,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.SerializationCustomization
 import net.corda.core.transactions.SignedTransaction
@@ -132,7 +133,12 @@ fun generateTransactions(proxy: CordaRPCOps) {
 // END 6
 
 // START 7
+// Not annotated, so need to whitelist manually.
 data class ExampleRPCValue(val foo: String)
+
+// Annotated, so no need to whitelist manually.
+@CordaSerializable
+data class ExampleRPCValue2(val bar: Int)
 
 class ExampleRPCCordaPluginRegistry : CordaPluginRegistry() {
     override fun customizeSerialization(custom: SerializationCustomization): Boolean {

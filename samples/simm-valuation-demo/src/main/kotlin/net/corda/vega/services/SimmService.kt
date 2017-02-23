@@ -21,10 +21,8 @@ import net.corda.vega.contracts.*
 import net.corda.vega.flows.IRSTradeFlow
 import net.corda.vega.flows.SimmFlow
 import net.corda.vega.flows.SimmRevaluation
-import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.Period
-import java.util.*
 import java.util.function.Function
 
 /**
@@ -44,8 +42,6 @@ object SimmService {
         override fun customizeSerialization(custom: SerializationCustomization): Boolean {
             custom.apply {
                 addToWhitelist(SwapData::class.java)
-                addToWhitelist(LocalDate::class.java)
-                addToWhitelist(BigDecimal::class.java)
                 addToWhitelist(IRSState::class.java)
                 addToWhitelist(OGTrade::class.java)
                 addToWhitelist(PortfolioState::class.java)
@@ -61,12 +57,10 @@ object SimmService {
                 addToWhitelist(CurrencyParameterSensitivity::class.java)
                 addToWhitelist(DoubleArray::class.java)
                 addToWhitelist(kotlin.DoubleArray::class.java)
-                addToWhitelist(LinkedHashMap::class.java)
                 addToWhitelist(CurveName::class.java)
                 addToWhitelist(TenorDateParameterMetadata::class.java)
                 addToWhitelist(Tenor::class.java)
                 addToWhitelist(Period::class.java)
-                addToWhitelist(Class.forName("java.util.Collections\$SingletonMap"))
             }
             return true
         }
