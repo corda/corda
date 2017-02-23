@@ -28,25 +28,19 @@ class R3Pty(val name: String, settings: SettingsProvider, dimension: Dimension, 
     }
 
     private fun createTtyConnector(command: Array<String>, environment: Map<String, String>, workingDir: String?): TtyConnector {
-        try {
-            val process = PtyProcess.exec(command, environment, workingDir)
+        val process = PtyProcess.exec(command, environment, workingDir)
 
-            try {
-                return PtyProcessTtyConnector(name, process, UTF_8)
-            } catch (e: Exception) {
-                process.destroyForcibly()
-                process.waitFor(30, TimeUnit.SECONDS)
-                throw e
-            }
+        try {
+            return PtyProcessTtyConnector(name, process, UTF_8)
         } catch (e: Exception) {
-            throw IllegalStateException(e.message, e)
+            process.destroyForcibly()
+            process.waitFor(30, TimeUnit.SECONDS)
+            throw e
         }
     }
 
     fun run(args: Array<String>, envs: Map<String, String>, workingDir: String?) {
-        if (terminal.isSessionRunning) {
-            throw IllegalStateException(terminal.sessionName + " is already running")
-        }
+        check(!terminal.isSessionRunning, { "${terminal.sessionName} is already running" })
 
         val environment = HashMap<String, String>(envs)
         if (!UIUtil.isWindows) {
