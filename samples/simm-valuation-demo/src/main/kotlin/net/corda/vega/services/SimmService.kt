@@ -17,12 +17,11 @@ import net.corda.core.serialization.SerializationCustomization
 import net.corda.vega.analytics.CordaMarketData
 import net.corda.vega.analytics.InitialMarginTriple
 import net.corda.vega.api.PortfolioApi
-import net.corda.vega.contracts.*
+import net.corda.vega.contracts.SwapData
 import net.corda.vega.flows.IRSTradeFlow
 import net.corda.vega.flows.SimmFlow
 import net.corda.vega.flows.SimmRevaluation
 import java.time.LocalDate
-import java.time.Period
 import java.util.function.Function
 
 /**
@@ -41,12 +40,7 @@ object SimmService {
         override val servicePlugins = listOf(Function(SimmFlow::Service), Function(IRSTradeFlow::Service))
         override fun customizeSerialization(custom: SerializationCustomization): Boolean {
             custom.apply {
-                addToWhitelist(SwapData::class.java)
-                addToWhitelist(IRSState::class.java)
-                addToWhitelist(OGTrade::class.java)
-                addToWhitelist(PortfolioState::class.java)
-                addToWhitelist(PortfolioSwap::class.java)
-                addToWhitelist(PortfolioValuation::class.java)
+                // OpenGamma classes.
                 addToWhitelist(MultiCurrencyAmount::class.java)
                 addToWhitelist(Ordering.natural<Comparable<Any>>().javaClass)
                 addToWhitelist(CurrencyAmount::class.java)
@@ -56,11 +50,9 @@ object SimmService {
                 addToWhitelist(CurrencyParameterSensitivities::class.java)
                 addToWhitelist(CurrencyParameterSensitivity::class.java)
                 addToWhitelist(DoubleArray::class.java)
-                addToWhitelist(kotlin.DoubleArray::class.java)
                 addToWhitelist(CurveName::class.java)
                 addToWhitelist(TenorDateParameterMetadata::class.java)
                 addToWhitelist(Tenor::class.java)
-                addToWhitelist(Period::class.java)
             }
             return true
         }

@@ -9,6 +9,7 @@ import org.apache.activemq.artemis.api.core.SimpleString
 import rx.Notification
 import java.math.BigDecimal
 import java.time.LocalDate
+import java.time.Period
 import java.util.*
 
 class DefaultWhitelist : CordaPluginRegistry() {
@@ -56,6 +57,7 @@ class DefaultWhitelist : CordaPluginRegistry() {
             addToWhitelist(DateRollConvention::class.java)
             addToWhitelist(LocalDate::class.java)
             //addToWhitelist(Class.forName("java.util.Collections\$SingletonMap"))
+            addToWhitelist(Period::class.java)
         }
         return true
     }
