@@ -7,7 +7,7 @@ import net.corda.core.node.services.UniquenessProvider
 import net.corda.flows.ValidatingNotaryFlow
 import net.corda.node.services.api.ServiceHubInternal
 
-/** A Notary service that validates the transaction chain of he submitted transaction before committing it */
+/** A Notary service that validates the transaction chain of the submitted transaction before committing it */
 class ValidatingNotaryService(services: ServiceHubInternal,
                               val timestampChecker: TimestampChecker,
                               val uniquenessProvider: UniquenessProvider) : NotaryService(services) {
