@@ -443,7 +443,10 @@ data class Timestamp(val after: Instant?, val before: Instant?) {
  * every [LedgerTransaction] they see on the network, for every input and output state. All contracts must accept the
  * transaction for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted
  * timestamp attached to the transaction itself i.e. it is NOT necessarily the current time.
+ *
+ * TODO: Contract serialization is likely to change, so the annotation is likely temporary.
  */
+@CordaSerializable
 interface Contract {
     /**
      * Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.

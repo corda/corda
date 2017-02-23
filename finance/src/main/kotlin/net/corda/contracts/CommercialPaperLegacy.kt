@@ -7,7 +7,6 @@ import net.corda.core.crypto.NullCompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.VaultService
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
 import java.time.Instant
@@ -21,7 +20,6 @@ import java.util.*
 val CP_LEGACY_PROGRAM_ID = CommercialPaperLegacy()
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
-@CordaSerializable
 class CommercialPaperLegacy : Contract {
     // TODO: should reference the content of the legal agreement, not its URI
     override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")

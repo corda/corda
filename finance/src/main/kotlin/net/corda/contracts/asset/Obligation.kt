@@ -29,7 +29,6 @@ val OBLIGATION_PROGRAM_ID = Obligation<Currency>()
  *
  * @param P the product the obligation is for payment of.
  */
-@CordaSerializable
 class Obligation<P> : Contract {
 
     /**

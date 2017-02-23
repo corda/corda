@@ -40,7 +40,6 @@ val CASH_PROGRAM_ID = Cash()
  * At the same time, other contracts that just want money and don't care much who is currently holding it in their
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
-@CordaSerializable
 class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     /**
      * TODO:

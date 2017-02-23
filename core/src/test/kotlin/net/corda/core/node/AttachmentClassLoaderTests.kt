@@ -34,7 +34,6 @@ class AttachmentClassLoaderTests {
         val ISOLATED_CONTRACTS_JAR_PATH = AttachmentClassLoaderTests::class.java.getResource("isolated.jar")
     }
 
-    @CordaSerializable
     class AttachmentDummyContract : Contract {
         data class State(val magicNumber: Int = 0) : ContractState {
             override val contract = ATTACHMENT_TEST_PROGRAM_ID

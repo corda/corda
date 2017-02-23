@@ -3,14 +3,12 @@ package net.corda.core.contracts
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
 
 val DUMMY_PROGRAM_ID = DummyContract()
 
-@CordaSerializable
 data class DummyContract(override val legalContractReference: SecureHash = SecureHash.sha256("")) : Contract {
     interface State : ContractState {
         val magicNumber: Int

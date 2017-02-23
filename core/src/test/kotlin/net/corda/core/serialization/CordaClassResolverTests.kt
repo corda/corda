@@ -5,8 +5,10 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.node.AttachmentClassLoaderTests
+import net.corda.core.node.AttachmentsClassLoader
+import net.corda.core.node.services.AttachmentStorage
+import net.corda.testing.node.MockAttachmentStorage
 import org.junit.Test
-import java.net.URLClassLoader
 
 @CordaSerializable
 enum class Foo {
@@ -111,11 +113,14 @@ class CordaClassResolverTests {
         CordaClassResolver(EmptyWhitelist).getRegistration(DefaultSerializable::class.java)
     }
 
+    private fun importJar(storage: AttachmentStorage) = AttachmentClassLoaderTests.ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it) }
+
     @Test(expected = KryoException::class)
     fun `Annotation does not work in conjunction with AttachmentClassLoader annotation`() {
-        class ClassLoaderForTests : URLClassLoader(arrayOf(AttachmentClassLoaderTests.ISOLATED_CONTRACTS_JAR_PATH), AttachmentClassLoaderTests.FilteringClassLoader)
-
-        val attachedClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, ClassLoaderForTests())
+        val storage = MockAttachmentStorage()
+        val attachmentHash = importJar(storage)
+        val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! })
+        val attachedClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, classLoader)
         CordaClassResolver(EmptyWhitelist).getRegistration(attachedClass)
     }
 }

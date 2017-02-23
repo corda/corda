@@ -4,14 +4,12 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import java.math.BigDecimal
 import java.time.Instant
 
 val UNIVERSAL_PROGRAM_ID = UniversalContract()
 
-@CordaSerializable
 class UniversalContract : Contract {
     data class State(override val participants: List<CompositeKey>,
                      val details: Arrangement) : ContractState {

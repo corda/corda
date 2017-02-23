@@ -8,7 +8,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.unconsumedStates
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.utilities.Emoji
 import net.corda.flows.CashIssueFlow
@@ -173,7 +172,6 @@ class ContractUpgradeFlowTest {
         assertEquals(listOf(a.info.legalIdentity.owningKey), (state.first().state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
     }
 
-    @CordaSerializable
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
         override val legacyContract = Cash::class.java
 
