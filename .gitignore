@@ -14,6 +14,9 @@ local.properties
 
 # General build files
 **/build/*
+# Exception - Allow built documentation to remain under version control
+!docs/build/*
+
 lib/dokka.jar
 
 **/logs/*
