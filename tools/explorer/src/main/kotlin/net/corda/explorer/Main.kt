@@ -14,7 +14,6 @@ import net.corda.client.model.Models
 import net.corda.client.model.observableValue
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
-import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.explorer.model.CordaViewModel
@@ -89,12 +88,8 @@ class Main : App(MainView::class) {
     }
 
     private fun asInteger(s: String?): Int? {
-        if (s == null) {
-            return null
-        }
-
         try {
-            return s.toInt()
+            return s?.toInt()
         } catch (e: NumberFormatException) {
             return null
         }
