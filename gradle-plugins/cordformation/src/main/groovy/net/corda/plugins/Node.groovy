@@ -10,7 +10,7 @@ import java.nio.file.Files
  */
 class Node {
     static final String JAR_NAME = 'corda.jar'
-    static final String WAR_NAME = 'corda-webserver.war'
+    static final String WEBJAR_NAME = 'corda-webserver.jar'
     static final String DEFAULT_HOST = 'localhost'
 
     /**
@@ -110,7 +110,7 @@ class Node {
     /**
      * Set the network map address for this node.
      *
-     * @warning This should not be directly set unless you know what you are doing. Use the networkMapName in the
+     * @jarning This should not be directly set unless you know what you are doing. Use the networkMapName in the
      *          Cordform task instead.
      * @param networkMapAddress Network map node address.
      * @param networkMapLegalName Network map node legal name.
@@ -130,7 +130,7 @@ class Node {
         nodeDir = new File(rootDir, name.replaceAll("\\s",""))
         configureRpcUsers()
         installCordaJar()
-        installWebserverWar()
+        installWebserverJar()
         installBuiltPlugin()
         installCordapps()
         installDependencies()
@@ -166,14 +166,14 @@ class Node {
     }
 
     /**
-     * Installs the corda webserver WAR to the node directory
+     * Installs the corda webserver JAR to the node directory
      */
-    private void installWebserverWar() {
-        def webWar = verifyAndGetWebserverWar()
+    private void installWebserverJar() {
+        def webJar = verifyAndGetWebserverJar()
         project.copy {
-            from webWar
+            from webJar
             into nodeDir
-            rename webWar.name, WAR_NAME
+            rename webJar.name, WEBJAR_NAME
         }
     }
 
@@ -205,10 +205,11 @@ class Node {
      */
     private void installDependencies() {
         def cordaJar = verifyAndGetCordaJar()
+        def webJar = verifyAndGetWebserverJar()
         def depsDir = new File(nodeDir, "dependencies")
         def coreDeps = project.zipTree(cordaJar).getFiles().collect { it.getName() }
         def appDeps = project.configurations.runtime.filter {
-            it != cordaJar && !project.configurations.cordapp.contains(it) && !coreDeps.contains(it.getName())
+            (it != cordaJar) && (it != webJar) && !project.configurations.cordapp.contains(it) && !coreDeps.contains(it.getName())
         }
         project.copy {
             from appDeps
@@ -257,20 +258,20 @@ class Node {
     }
 
     /**
-     * Find the corda WAR amongst the dependencies
+     * Find the corda JAR amongst the dependencies
      *
-     * @return A file representing the Corda webserver WAR
+     * @return A file representing the Corda webserver JAR
      */
-    private File verifyAndGetWebserverWar() {
-        def maybeWar = project.configurations.runtime.filter {
-            it.toString().contains("corda-webserver-${project.corda_version}.war")
+    private File verifyAndGetWebserverJar() {
+        def maybeJar = project.configurations.runtime.filter {
+            it.toString().contains("corda-webserver-${project.corda_version}.jar")
         }
-        if (maybeWar.size() == 0) {
-            throw new RuntimeException("No Corda Webserver WAR found. Have you deployed the Corda project to Maven? Looked for \"corda-webserver-${project.corda_version}.war\"")
+        if (maybeJar.size() == 0) {
+            throw new RuntimeException("No Corda Webserver JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-webserver-${project.corda_version}.jar\"")
         } else {
-            def war = maybeWar.getSingleFile()
-            assert(war.isFile())
-            return war
+            def jar = maybeJar.getSingleFile()
+            assert(jar.isFile())
+            return jar
         }
     }
 
