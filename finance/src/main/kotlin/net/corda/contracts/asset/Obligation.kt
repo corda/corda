@@ -267,7 +267,6 @@ class Obligation<P> : Contract {
      *
      * @param P the product the obligation is for payment of.
      */
-    @CordaSerializable
     data class State<P>(
             var lifecycle: Lifecycle = Lifecycle.NORMAL,
             /** Where the debt originates from (obligor) */

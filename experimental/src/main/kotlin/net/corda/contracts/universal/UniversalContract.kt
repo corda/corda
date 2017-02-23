@@ -13,7 +13,6 @@ val UNIVERSAL_PROGRAM_ID = UniversalContract()
 
 @CordaSerializable
 class UniversalContract : Contract {
-    @CordaSerializable
     data class State(override val participants: List<CompositeKey>,
                      val details: Arrangement) : ContractState {
         override val contract = UNIVERSAL_PROGRAM_ID

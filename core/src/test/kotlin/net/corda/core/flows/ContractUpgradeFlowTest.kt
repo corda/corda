@@ -177,7 +177,6 @@ class ContractUpgradeFlowTest {
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
         override val legacyContract = Cash::class.java
 
-        @CordaSerializable
         data class State(override val amount: Amount<Issued<Currency>>, val owners: List<CompositeKey>) : FungibleAsset<Currency> {
             override val owner: CompositeKey = owners.first()
             override val exitKeys = (owners + amount.token.issuer.party.owningKey).toSet()

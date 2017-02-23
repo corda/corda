@@ -36,7 +36,6 @@ class AttachmentClassLoaderTests {
 
     @CordaSerializable
     class AttachmentDummyContract : Contract {
-        @CordaSerializable
         data class State(val magicNumber: Int = 0) : ContractState {
             override val contract = ATTACHMENT_TEST_PROGRAM_ID
             override val participants: List<CompositeKey>

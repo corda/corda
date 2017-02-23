@@ -93,7 +93,6 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
     }
 
     /** A state representing a commodity claim against some party */
-    @CordaSerializable
     data class State(
             override val amount: Amount<Issued<Commodity>>,
 

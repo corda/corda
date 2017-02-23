@@ -81,7 +81,6 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     }
 
     /** A state representing a cash claim against some party. */
-    @CordaSerializable
     data class State(
             override val amount: Amount<Issued<Currency>>,
 

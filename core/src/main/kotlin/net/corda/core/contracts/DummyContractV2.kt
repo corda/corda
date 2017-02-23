@@ -16,7 +16,6 @@ val DUMMY_V2_PROGRAM_ID = DummyContractV2()
 class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.State> {
     override val legacyContract = DummyContract::class.java
 
-    @CordaSerializable
     data class State(val magicNumber: Int = 0, val owners: List<CompositeKey>) : ContractState {
         override val contract = DUMMY_V2_PROGRAM_ID
         override val participants: List<CompositeKey> = owners

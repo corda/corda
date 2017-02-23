@@ -26,7 +26,6 @@ class TransactionSerializationTests {
         override fun verify(tx: TransactionForContract) {
         }
 
-        @CordaSerializable
         data class State(
                 val deposit: PartyAndReference,
                 val amount: Amount<Currency>,

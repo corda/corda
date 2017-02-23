@@ -114,7 +114,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         dataSource.close()
     }
 
-    @CordaSerializable
     class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant) : LinearState, SchedulableState {
         override val participants: List<CompositeKey>
             get() = throw UnsupportedOperationException()

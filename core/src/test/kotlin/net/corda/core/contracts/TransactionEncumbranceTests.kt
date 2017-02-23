@@ -39,7 +39,6 @@ class TransactionEncumbranceTests {
             }
         }
 
-        @CordaSerializable
         data class State(
                 val validFrom: Instant
         ) : ContractState {

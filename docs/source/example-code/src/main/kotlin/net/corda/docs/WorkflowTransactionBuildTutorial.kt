@@ -56,7 +56,6 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
     /**
      * Truly minimal state that just records a tradeId string and the parties involved.
      */
-    @CordaSerializable
     data class State(val tradeId: String,
                      val source: Party,
                      val counterparty: Party,
