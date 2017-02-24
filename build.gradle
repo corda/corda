@@ -225,5 +225,6 @@ task buildDependenciesZip(type: Zip) {
     baseName 'corda-deps'
     from configurations.runtime
     from configurations.compile
+    from 'node/capsule/NOTICE' // CDDL notice
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
