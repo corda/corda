@@ -458,7 +458,7 @@ class Obligation<P : Any> : Contract {
     @Suppress("unused")
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Terms<P>>>,
                      assetStates: List<StateAndRef<Obligation.State<P>>>): PublicKey
-            = Clauses.ConserveAmount<P>().generateExit(tx, amountIssued, assetStates,
+            = OnLedgerAsset.generateExit(tx, amountIssued, assetStates,
             deriveState = { state, amount, owner -> state.copy(data = state.data.move(amount, owner)) },
             generateMoveCommand = { -> Commands.Move() },
             generateExitCommand = { amount -> Commands.Exit(amount) }
@@ -472,12 +472,8 @@ class Obligation<P : Any> : Contract {
                       issuanceDef: Terms<P>,
                       pennies: Long,
                       beneficiary: PublicKey,
-                      notary: Party) {
-        check(tx.inputStates().isEmpty())
-        check(tx.outputStates().map { it.data }.sumObligationsOrNull<P>() == null)
-        tx.addOutputState(State(Lifecycle.NORMAL, obligor.toAnonymous(), issuanceDef, pennies, beneficiary), notary)
-        tx.addCommand(Commands.Issue(), obligor.owningKey)
-    }
+                      notary: Party)
+    = OnLedgerAsset.generateIssue(tx, TransactionState(State(Lifecycle.NORMAL, obligor.toAnonymous(), issuanceDef, pennies, beneficiary), notary), Commands.Issue())
 
     fun generatePaymentNetting(tx: TransactionBuilder,
                                issued: Issued<Obligation.Terms<P>>,
