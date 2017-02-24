@@ -7,19 +7,16 @@ import java.io.File
 import java.net.URI
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
-import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
 import java.util.function.BiPredicate
+import java.util.stream.StreamSupport
 import javafx.stage.FileChooser
 import javafx.stage.FileChooser.ExtensionFilter
+import kotlinx.support.jdk8.collections.spliterator
 import net.corda.demobench.model.*
 import tornadofx.Controller
 
 class ProfileController : Controller() {
-
-    private companion object ConfigAcceptor : BiPredicate<Path, BasicFileAttributes> {
-        override fun test(p: Path?, attr: BasicFileAttributes?) = "node.conf" == p?.fileName.toString()
-    }
 
     private val jvm by inject<JVMConfig>()
     private val baseDir = jvm.userHome.resolve("demobench")
@@ -65,8 +62,9 @@ class ProfileController : Controller() {
         val configs = LinkedList<NodeConfig>()
 
         FileSystems.newFileSystem(chosen.toPath(), null).use { fs ->
-            fs.rootDirectories.forEach { root ->
-                Files.find(root, 2, ConfigAcceptor).forEach { file ->
+            StreamSupport.stream(fs.rootDirectories.spliterator(), false)
+                .flatMap { Files.find(it, 2, BiPredicate { p, attr -> "node.conf" == p?.fileName.toString() }) }
+                .forEach { file ->
                     try {
                         // Java seems to "walk" through the ZIP file backwards.
                         // So add new config to the front of the list, so that
@@ -78,7 +76,6 @@ class ProfileController : Controller() {
                         throw e
                     }
                 }
-            }
         }
 
         return configs
@@ -125,7 +122,7 @@ class ProfileController : Controller() {
     private fun Config.parseExtraServices(path: String): List<String> {
         val services = serviceController.services.toSortedSet()
         return this.getString(path).split(",")
-            .filter { svc -> !svc.isNullOrEmpty() }
+            .filter { it -> !it.isNullOrEmpty() }
             .map { svc ->
                 require(svc in services, { "Unknown service '$svc'." } )
                 svc
