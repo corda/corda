@@ -7,6 +7,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 
 /** Defines transaction build & validation logic for a specific transaction type */
+@CordaSerializable
 sealed class TransactionType {
     override fun equals(other: Any?) = other?.javaClass == javaClass
     override fun hashCode() = javaClass.name.hashCode()
@@ -62,7 +63,6 @@ sealed class TransactionType {
     abstract fun verifyTransaction(tx: LedgerTransaction)
 
     /** A general transaction type where transaction validity is determined by custom contract code */
-    @CordaSerializable
     class General : TransactionType() {
         /** Just uses the default [TransactionBuilder] with no special logic */
         class Builder(notary: Party?) : TransactionBuilder(General(), notary) {}
@@ -141,7 +141,6 @@ sealed class TransactionType {
      * A special transaction type for reassigning a notary for a state. Validation does not involve running
      * any contract code, it just checks that the states are unmodified apart from the notary field.
      */
-    @CordaSerializable
     class NotaryChange : TransactionType() {
         /**
          * A transaction builder that automatically sets the transaction type to [NotaryChange]

@@ -48,7 +48,6 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
 
     interface Commands : CommandData {
         class Issue : TypeOnlyCommandData(), Commands  // Record receipt of deal details
-
         class Completed : TypeOnlyCommandData(), Commands  // Record match
     }
 

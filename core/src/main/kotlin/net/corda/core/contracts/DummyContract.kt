@@ -35,7 +35,6 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
 
     interface Commands : CommandData {
         class Create : TypeOnlyCommandData(), Commands
-
         class Move : TypeOnlyCommandData(), Commands
     }
 

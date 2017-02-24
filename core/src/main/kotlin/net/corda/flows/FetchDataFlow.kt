@@ -39,7 +39,6 @@ abstract class FetchDataFlow<T : NamedByHash, in W : Any>(
     @CordaSerializable
     class DownloadedVsRequestedSizeMismatch(val requested: Int, val got: Int) : IllegalArgumentException()
 
-    @CordaSerializable
     class HashNotFound(val requested: SecureHash) : FlowException()
 
     @CordaSerializable

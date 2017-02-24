@@ -651,11 +651,8 @@ class InterestRateSwap() : Contract {
 
     interface Commands : CommandData {
         data class Refix(val fix: Fix) : Commands      // Receive interest rate from oracle, Both sides agree
-
         class Pay : TypeOnlyCommandData(), Commands    // Not implemented just yet
-
         class Agree : TypeOnlyCommandData(), Commands  // Both sides agree to trade
-
         class Mature : TypeOnlyCommandData(), Commands // Trade has matured; no more actions. Cleanup. // TODO: Do we need this?
     }
 

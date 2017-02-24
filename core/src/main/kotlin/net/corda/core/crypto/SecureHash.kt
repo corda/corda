@@ -9,9 +9,9 @@ import java.security.MessageDigest
  * Container for a cryptographically secure hash value.
  * Provides utilities for generating a cryptographic hash using different algorithms (currently only SHA-256 supported).
  */
+@CordaSerializable
 sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes) */
-    @CordaSerializable
     class SHA256(bytes: ByteArray) : SecureHash(bytes) {
         init {
             require(bytes.size == 32)

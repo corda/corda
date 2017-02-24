@@ -22,6 +22,7 @@ import java.util.*
  *
  * This models a similar pattern to the readReplace/writeReplace methods in Java serialization.
  */
+@CordaSerializable
 interface SerializeAsToken {
     fun toToken(context: SerializeAsTokenContext): SerializationToken
 }

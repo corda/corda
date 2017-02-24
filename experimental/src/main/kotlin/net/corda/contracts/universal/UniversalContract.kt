@@ -17,6 +17,7 @@ class UniversalContract : Contract {
     }
 
     interface Commands : CommandData {
+
         data class Fix(val fixes: List<net.corda.core.contracts.Fix>) : Commands
 
         // transition according to business rules defined in contract

@@ -39,10 +39,8 @@ object TwoPartyTradeFlow {
     // TODO: Common elements in multi-party transaction consensus and signing should be refactored into a superclass of this
     // and [AbstractStateReplacementFlow].
 
-    @CordaSerializable
     class UnacceptablePriceException(givenPrice: Amount<Currency>) : FlowException("Unacceptable price: $givenPrice")
 
-    @CordaSerializable
     class AssetMismatchException(val expectedTypeName: String, val typeName: String) : FlowException() {
         override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
     }

@@ -20,14 +20,10 @@ import rx.Observable
  */
 interface NetworkMapCache {
 
+    @CordaSerializable
     sealed class MapChange(val node: NodeInfo) {
-        @CordaSerializable
         class Added(node: NodeInfo) : MapChange(node)
-
-        @CordaSerializable
         class Removed(node: NodeInfo) : MapChange(node)
-
-        @CordaSerializable
         class Modified(node: NodeInfo, val previousNode: NodeInfo) : MapChange(node)
     }
 

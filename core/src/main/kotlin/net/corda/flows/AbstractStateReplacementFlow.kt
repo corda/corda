@@ -195,6 +195,5 @@ abstract class AbstractStateReplacementFlow {
     }
 }
 
-@CordaSerializable
 open class StateReplacementException @JvmOverloads constructor(message: String? = null, cause: Throwable? = null)
     : FlowException(message, cause)

@@ -85,15 +85,12 @@ class VaultSchemaTest {
 
     private class VaultNoopContract() : Contract {
         override val legalContractReference = SecureHash.sha256("")
-
         data class VaultNoopState(override val owner: CompositeKey) : OwnableState {
             override val contract = VaultNoopContract()
             override val participants: List<CompositeKey>
                 get() = listOf(owner)
-
             override fun withNewOwner(newOwner: CompositeKey) = Pair(Commands.Create(), copy(owner = newOwner))
         }
-
         interface Commands : CommandData {
             class Create : TypeOnlyCommandData(), Commands
         }

@@ -7,6 +7,7 @@ import net.corda.core.serialization.CordaSerializable
  * map advertisements. Services that are purely local and are not providing functionality to other parts of the network
  * don't need a declared service type.
  */
+@CordaSerializable
 sealed class ServiceType(val id: String) {
     init {
         // Enforce:
@@ -16,10 +17,7 @@ sealed class ServiceType(val id: String) {
         require(id.matches(Regex("[a-z][a-zA-Z0-9._]+"))) { id }
     }
 
-    @CordaSerializable
     private class ServiceTypeImpl(baseId: String, subTypeId: String) : ServiceType("$baseId.$subTypeId")
-
-    @CordaSerializable
     private class ServiceTypeDirect(id: String) : ServiceType(id)
 
     companion object {

@@ -52,14 +52,10 @@ class PartialMerkleTree(val root: PartialTree) {
      * transaction and leaves that just keep hashes needed for calculation. Reason for this approach: during verification
      * it's easier to extract hashes used as a base for this tree.
      */
+    @CordaSerializable
     sealed class PartialTree {
-        @CordaSerializable
         class IncludedLeaf(val hash: SecureHash) : PartialTree()
-
-        @CordaSerializable
         class Leaf(val hash: SecureHash) : PartialTree()
-
-        @CordaSerializable
         class Node(val left: PartialTree, val right: PartialTree) : PartialTree()
     }
 
