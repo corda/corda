@@ -119,8 +119,11 @@ repositories {
 dependencies {
     compile project(':node')
     compile "com.google.guava:guava:$guava_version"
+
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
+    runtime project(':client')
+    runtime project(':core')
 }
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
@@ -217,3 +220,10 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
 }
 
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
+
+task buildDependenciesJar(type: Jar) {
+    baseName 'corda-deps'
+    from configurations.runtime
+    from configurations.compile
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
