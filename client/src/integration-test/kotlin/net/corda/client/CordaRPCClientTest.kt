@@ -33,7 +33,7 @@ class CordaRPCClientTest : NodeBasedTest() {
     @Before
     fun setUp() {
         node = startNode("Alice", rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
-        client = CordaRPCClient(node.configuration.artemisAddress, configureTestSSL())
+        client = CordaRPCClient(node.configuration.rpcAddress!!)
     }
 
     @Test

@@ -168,15 +168,15 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         // by having its password be an unknown securely random 128-bit value.
         clusterPassword = BigInteger(128, newSecureRandom()).toString(16)
         queueConfigurations = listOf(
-            queueConfig(NETWORK_MAP_QUEUE, durable = true),
-            queueConfig(P2P_QUEUE, durable = true),
-            // Create an RPC queue: this will service locally connected clients only (not via a bridge) and those
-            // clients must have authenticated. We could use a single consumer for everything and perhaps we should,
-            // but these queues are not worth persisting.
-            queueConfig(RPC_REQUESTS_QUEUE, durable = false),
-            // The custom name for the queue is intentional - we may wish other things to subscribe to the
-            // NOTIFICATIONS_ADDRESS with different filters in future
-            queueConfig(RPC_QUEUE_REMOVALS_QUEUE, address = NOTIFICATIONS_ADDRESS, filter = "_AMQ_NotifType = 1", durable = false)
+                queueConfig(NETWORK_MAP_QUEUE, durable = true),
+                queueConfig(P2P_QUEUE, durable = true),
+                // Create an RPC queue: this will service locally connected clients only (not via a bridge) and those
+                // clients must have authenticated. We could use a single consumer for everything and perhaps we should,
+                // but these queues are not worth persisting.
+                queueConfig(RPC_REQUESTS_QUEUE, durable = false),
+                // The custom name for the queue is intentional - we may wish other things to subscribe to the
+                // NOTIFICATIONS_ADDRESS with different filters in future
+                queueConfig(RPC_QUEUE_REMOVALS_QUEUE, address = NOTIFICATIONS_ADDRESS, filter = "_AMQ_NotifType = 1", durable = false)
         )
         configureAddressSecurity()
     }
@@ -298,8 +298,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
         fun deployBridges(node: NodeInfo) {
             gatherAddresses(node)
-                .filter { queueExists(it.queueName) && !bridgeExists(it.bridgeName) }
-                .forEach { deployBridge(it, node.legalIdentity.name) }
+                    .filter { queueExists(it.queueName) && !bridgeExists(it.bridgeName) }
+                    .forEach { deployBridge(it, node.legalIdentity.name) }
         }
 
         fun destroyBridges(node: NodeInfo) {
@@ -487,15 +487,17 @@ class NodeLoginModule : LoginModule {
 
         val username = nameCallback.name ?: throw FailedLoginException("Username not provided")
         val password = String(passwordCallback.password ?: throw FailedLoginException("Password not provided"))
+        val certificates = certificateCallback.certificates
 
         log.info("Processing login for $username")
 
-        val validatedUser = if (username == PEER_USER || username == NODE_USER) {
-            val certificates = certificateCallback.certificates ?: throw FailedLoginException("No TLS?")
-            authenticateNode(certificates, username)
-        } else {
-            // Otherwise assume they're an RPC user
-            authenticateRpcUser(password, username)
+        val  validatedUser = when (determineUserRole(certificates, username)) {
+            PEER_ROLE -> authenticatePeer(certificates)
+            NODE_ROLE -> authenticateNode(certificates)
+            RPC_ROLE -> authenticateRpcUser(password, username)
+            else -> {
+                throw FailedLoginException("Peer does not belong on our network")
+            }
         }
         principals += UserPrincipal(validatedUser)
 
@@ -503,22 +505,22 @@ class NodeLoginModule : LoginModule {
         return loginSucceeded
     }
 
-    private fun authenticateNode(certificates: Array<X509Certificate>, username: String): String {
+    private fun authenticateNode(certificates: Array<X509Certificate>): String {
         val peerCertificate = certificates.first()
-        val role = if (username == NODE_USER) {
-            if (peerCertificate.publicKey != ourPublicKey) {
-                throw FailedLoginException("Only the node can login as $NODE_USER")
-            }
-            NODE_ROLE
-        } else {
-            val theirRootCAPublicKey = certificates.last().publicKey
-            if (theirRootCAPublicKey != ourRootCAPublicKey) {
-                throw FailedLoginException("Peer does not belong on our network. Their root CA: $theirRootCAPublicKey")
-            }
-            PEER_ROLE  // This enables the peer to send to our P2P address
+        if (peerCertificate.publicKey != ourPublicKey) {
+            throw FailedLoginException("Only the node can login as $NODE_USER")
         }
-        principals += RolePrincipal(role)
+        principals += RolePrincipal(NODE_ROLE)
         return peerCertificate.subjectDN.name
+    }
+
+    private fun authenticatePeer(certificates: Array<X509Certificate>): String {
+        val theirRootCAPublicKey = certificates.last().publicKey
+        if (theirRootCAPublicKey != ourRootCAPublicKey) {
+            throw FailedLoginException("Peer does not belong on our network. Their root CA: $theirRootCAPublicKey")
+        }
+        principals += RolePrincipal(PEER_ROLE)
+        return certificates.first().subjectDN.name
     }
 
     private fun authenticateRpcUser(password: String, username: String): String {
@@ -531,6 +533,18 @@ class NodeLoginModule : LoginModule {
         principals += RolePrincipal(RPC_ROLE)  // This enables the RPC client to send requests
         principals += RolePrincipal("$CLIENTS_PREFIX$username")  // This enables the RPC client to receive responses
         return username
+    }
+
+    private fun determineUserRole(certificates: Array<X509Certificate>?, username: String): String? {
+        return if (username == PEER_USER || username == NODE_USER) {
+            certificates ?: throw FailedLoginException("No TLS?")
+            if (username == PEER_USER) PEER_ROLE else NODE_ROLE
+        } else if (certificates == null) {
+            // Assume they're an RPC user if its from a non-ssl connection
+            RPC_ROLE
+        } else {
+            null
+        }
     }
 
     override fun commit(): Boolean {

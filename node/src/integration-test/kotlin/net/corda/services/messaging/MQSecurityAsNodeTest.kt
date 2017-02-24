@@ -6,6 +6,7 @@ import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.RPC
 import net.corda.testing.messaging.SimpleMQClient
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException
+import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
@@ -14,6 +15,9 @@ import org.junit.Test
  * Runs the security tests with the attacker pretending to be a node on the network.
  */
 class MQSecurityAsNodeTest : MQSecurityTest() {
+    override fun createAttacker(): SimpleMQClient {
+        return clientTo(alice.configuration.artemisAddress)
+    }
 
     override fun startAttacker(attacker: SimpleMQClient) {
         attacker.start(PEER_USER, PEER_USER)  // Login as a peer
@@ -43,6 +47,14 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
     @Test
     fun `login without a username and password`() {
         val attacker = clientTo(alice.configuration.artemisAddress)
+        assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
+            attacker.start()
+        }
+    }
+
+    @Test
+    fun `login to a non ssl port`() {
+        val attacker = clientTo(alice.configuration.rpcAddress!!, null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start()
         }

@@ -105,7 +105,7 @@ data class NodeHandle(
         val configuration: FullNodeConfiguration,
         val process: Process
 ) {
-    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.artemisAddress, configuration)
+    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!)
 }
 
 sealed class PortAllocation {

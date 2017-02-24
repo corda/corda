@@ -27,7 +27,7 @@ class TraderDemoTest : NodeBasedTest() {
         ).getOrThrow()
 
         val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
-            val client = CordaRPCClient(it.configuration.artemisAddress, it.configuration)
+            val client = CordaRPCClient(it.configuration.rpcAddress!!)
             client.start(demoUser[0].username, demoUser[0].password).proxy()
         }
 

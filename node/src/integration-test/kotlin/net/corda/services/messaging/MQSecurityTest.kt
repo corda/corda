@@ -49,11 +49,13 @@ abstract class MQSecurityTest : NodeBasedTest() {
     @Before
     fun start() {
         alice = startNode("Alice", rpcUsers = extraRPCUsers + rpcUser).getOrThrow()
-        attacker = clientTo(alice.configuration.artemisAddress)
+        attacker = createAttacker()
         startAttacker(attacker)
     }
 
     open val extraRPCUsers: List<User> get() = emptyList()
+
+    abstract fun createAttacker(): SimpleMQClient
 
     abstract fun startAttacker(attacker: SimpleMQClient)
 
@@ -113,12 +115,6 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     @Test
-    fun `send message on logged in user's RPC address`() {
-        val user1Queue = loginToRPCAndGetClientQueue()
-        assertSendAttackFails(user1Queue)
-    }
-
-    @Test
     fun `create queue for valid RPC user`() {
         val user1Queue = "$CLIENTS_PREFIX${rpcUser.username}.rpc.${random63BitValue()}"
         assertTempQueueCreationAttackFails(user1Queue)
@@ -152,26 +148,26 @@ abstract class MQSecurityTest : NodeBasedTest() {
         assertAllQueueCreationAttacksFail(randomQueue)
     }
 
-    fun clientTo(target: HostAndPort, config: SSLConfiguration = configureTestSSL()): SimpleMQClient {
+    fun clientTo(target: HostAndPort, config: SSLConfiguration? = configureTestSSL()): SimpleMQClient {
         val client = SimpleMQClient(target, config)
         clients += client
         return client
     }
 
     fun loginToRPC(target: HostAndPort, rpcUser: User): SimpleMQClient {
-        val client = clientTo(target)
+        val client = clientTo(target, null)
         client.loginToRPC(rpcUser)
         return client
     }
 
-    fun SimpleMQClient.loginToRPC(rpcUser: User): CordaRPCOps {
-        start(rpcUser.username, rpcUser.password)
+    fun SimpleMQClient.loginToRPC(rpcUser: User, enableSSL: Boolean = false): CordaRPCOps {
+        start(rpcUser.username, rpcUser.password, enableSSL)
         val clientImpl = CordaRPCClientImpl(session, ReentrantLock(), rpcUser.username)
         return clientImpl.proxyFor(CordaRPCOps::class.java, timeout = 1.seconds)
     }
 
     fun loginToRPCAndGetClientQueue(): String {
-        val rpcClient = loginToRPC(alice.configuration.artemisAddress, rpcUser)
+        val rpcClient = loginToRPC(alice.configuration.rpcAddress!!, rpcUser)
         val clientQueueQuery = SimpleString("$CLIENTS_PREFIX${rpcUser.username}.rpc.*")
         return rpcClient.session.addressQuery(clientQueueQuery).queueNames.single().toString()
     }
