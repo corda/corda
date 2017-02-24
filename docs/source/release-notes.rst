@@ -12,6 +12,13 @@ Milestone 9
     * Split ``CashFlow`` into individual ``CashIssueFlow``, ``CashPaymentFlow`` and ``CashExitFlow`` flows, so that fine
       grained permissions can be applied. Added ``CashFlowCommand`` for use-cases where cash flow triggers need to be
       captured in an object that can be passed around.
+    * ``CordaPluginRegistry`` method ``registerRPCKryoTypes`` is renamed ``customizeSerialization`` and the argument
+      types now hide the presence of Kryo.
+
+* Object Serialization:
+
+    * Consolidated Kryo implementations across RPC and P2P messaging with whitelisting of classes via plugins or with
+      ``@CordaSerializable`` for added node security.
 
 Milestone 8
 -----------
