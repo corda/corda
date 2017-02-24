@@ -232,7 +232,7 @@ class ArtemisMessagingTests {
     }
 
     private fun createMessagingServer(local: HostAndPort = hostAndPort, rpc: HostAndPort = rpcHostAndPort): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local,rpc, networkMapCache, userService).apply {
+        return ArtemisMessagingServer(config, local, rpc, networkMapCache, userService).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }
