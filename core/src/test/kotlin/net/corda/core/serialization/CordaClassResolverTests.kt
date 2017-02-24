@@ -23,13 +23,29 @@ enum class Foo {
 }
 
 @CordaSerializable
-class Element
+open class Element
+
+open class SubElement : Element()
+
+class SubSubElement : SubElement()
 
 abstract class AbstractClass
 
 interface Interface
 
+@CordaSerializable
+interface SerializableInterface
+
+interface SerializableSubInterface : SerializableInterface
+
 class NotSerializable
+
+class SerializableViaInterface : SerializableInterface
+
+open class SerializableViaSubInterface : SerializableSubInterface
+
+class SerializableViaSuperSubInterface : SerializableViaSubInterface()
+
 
 @CordaSerializable
 class CustomSerializable : KryoSerializable {
@@ -122,5 +138,18 @@ class CordaClassResolverTests {
         val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! })
         val attachedClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, classLoader)
         CordaClassResolver(EmptyWhitelist).getRegistration(attachedClass)
+    }
+
+    @Test
+    fun `Annotation is inherited from interfaces`() {
+        CordaClassResolver(EmptyWhitelist).getRegistration(SerializableViaInterface::class.java)
+        CordaClassResolver(EmptyWhitelist).getRegistration(SerializableViaSubInterface::class.java)
+    }
+
+    @Test
+    fun `Annotation is inherited from superclass`() {
+        CordaClassResolver(EmptyWhitelist).getRegistration(SubElement::class.java)
+        CordaClassResolver(EmptyWhitelist).getRegistration(SubSubElement::class.java)
+        CordaClassResolver(EmptyWhitelist).getRegistration(SerializableViaSuperSubInterface::class.java)
     }
 }
