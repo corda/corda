@@ -3,16 +3,15 @@ package net.corda.loadtest.tests
 import net.corda.client.mock.Generator
 import net.corda.client.mock.pickN
 import net.corda.contracts.asset.Cash
+import net.corda.core.*
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.AbstractParty
 import net.corda.core.crypto.AnonymousParty
 import net.corda.core.flows.FlowException
-import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.toFuture
 import net.corda.flows.CashException
 import net.corda.flows.CashFlowCommand
 import net.corda.loadtest.LoadTest
@@ -208,11 +207,12 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
         },
 
         execute = { command ->
-            try {
-                val result = command.command.startFlow(command.node.connection.proxy).returnValue.getOrThrow()
-                log.info("Success: $result")
-            } catch (e: FlowException) {
-                log.error("Failure", e)
+            val result = command.command.startFlow(command.node.connection.proxy).returnValue
+            result.failure {
+                log.error("Failure[$command]", it)
+            }
+            result.success {
+                log.info("Success[$command]: $result")
             }
         },
 

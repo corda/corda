@@ -20,6 +20,8 @@ data class LoadTestConfiguration(
         val localCertificatesBaseDirectory: Path,
         val localTunnelStartingPort: Int,
         val nodeHosts: List<String>,
+        val rpcUsername: String,
+        val rpcPassword: String,
         val remoteNodeDirectory: Path,
         val remoteMessagingPort: Int,
         val remoteSystemdServiceName: String,

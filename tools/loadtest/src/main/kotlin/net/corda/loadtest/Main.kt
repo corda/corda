@@ -57,9 +57,11 @@ fun main(args: Array<String>) {
             localCertificatesBaseDirectory = Paths.get(resolvedConfig.getString("localCertificatesBaseDirectory")),
             localTunnelStartingPort = resolvedConfig.getInt("localTunnelStartingPort"),
             nodeHosts = resolvedConfig.getStringList("nodeHosts"),
-            remoteNodeDirectory = Paths.get("/opt/r3cev"),
-            remoteMessagingPort = 31337,
-            remoteSystemdServiceName = "r3cev-node",
+            rpcUsername = "corda",
+            rpcPassword = "rgb",
+            remoteNodeDirectory = Paths.get("/opt/corda"),
+            remoteMessagingPort = 10002,
+            remoteSystemdServiceName = "corda",
             seed = if (resolvedConfig.hasPath("seed")) resolvedConfig.getLong("seed") else null
     )
 
@@ -99,7 +101,7 @@ fun main(args: Array<String>) {
             crossCashTest to LoadTest.RunParameters(
                     parallelism = 4,
                     generateCount = 2000,
-                    clearDatabaseBeforeRun = true,
+                    clearDatabaseBeforeRun = false,
                     gatherFrequency = 10,
                     disruptionPatterns = listOf(
                             listOf(),
