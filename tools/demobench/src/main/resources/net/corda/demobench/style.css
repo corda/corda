@@ -7,7 +7,7 @@
     -fx-padding: 15px;
 }
 
-.header Label {
+.property-label .label {
     -fx-font-size: 14pt;
     -fx-text-fill: white;
 }

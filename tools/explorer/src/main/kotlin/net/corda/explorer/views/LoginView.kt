@@ -38,6 +38,19 @@ class LoginView : View() {
     private val keyStorePasswordProperty by objectProperty(SettingsModel::keyStorePasswordProperty)
     private val trustStorePasswordProperty by objectProperty(SettingsModel::trustStorePasswordProperty)
 
+    private var sslConfigValue: SSLConfiguration = object : SSLConfiguration {
+        override val certificatesDirectory: Path get() = certificatesDir.get()
+        override val keyStorePassword: String get() = keyStorePasswordProperty.get()
+        override val trustStorePassword: String get() = trustStorePasswordProperty.get()
+    }
+    var sslConfig : SSLConfiguration
+        get() = sslConfigValue
+        set(value) { sslConfigValue = value }
+
+    fun login(host: String?, port: Int, username: String, password: String) {
+        getModel<NodeMonitorModel>().register(HostAndPort.fromParts(host, port), configureSSL(), username, password)
+    }
+
     fun login() {
         val status = Dialog<LoginStatus>().apply {
             dialogPane = root
@@ -46,7 +59,7 @@ class LoginView : View() {
                     ButtonBar.ButtonData.OK_DONE -> try {
                         root.isDisable = true
                         // TODO : Run this async to avoid UI lockup.
-                        getModel<NodeMonitorModel>().register(HostAndPort.fromParts(hostTextField.text, portProperty.value), configureSSL(), usernameTextField.text, passwordTextField.text)
+                        login(hostTextField.text, portProperty.value, usernameTextField.text, passwordTextField.text)
                         if (!rememberMe.value) {
                             username.value = ""
                             host.value = ""
@@ -80,11 +93,6 @@ class LoginView : View() {
     }
 
     private fun configureSSL(): SSLConfiguration {
-        val sslConfig = object : SSLConfiguration {
-            override val certificatesDirectory: Path get() = certificatesDir.get()
-            override val keyStorePassword: String get() = keyStorePasswordProperty.get()
-            override val trustStorePassword: String get() = trustStorePasswordProperty.get()
-        }
         // TODO : Don't use dev certificates.
         return if (sslConfig.keyStoreFile.exists()) sslConfig else configureTestSSL().apply {
             alert(Alert.AlertType.WARNING, "", "KeyStore not found in certificates directory.\nDEV certificates will be used by default.")

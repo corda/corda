@@ -1,6 +1,11 @@
 package net.corda.demobench
 
+import javafx.scene.image.Image
+import net.corda.demobench.views.DemoBenchView
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import tornadofx.App
+import tornadofx.addStageIcon
 
 /**
  * README!
@@ -32,6 +37,22 @@ import tornadofx.App
  */
 
 class DemoBench : App(DemoBenchView::class) {
+
+    /*
+     * This entry point is needed by JavaPackager, as
+     * otherwise the packaged application cannot run.
+     */
+    companion object {
+        @JvmStatic
+        fun main(args: Array<String>) = launch(DemoBench::class.java, *args)
+    }
+
     init {
+        addStageIcon(Image("cordalogo.png"))
     }
 }
+
+/*
+ * Trivial utility function to create SLF4J Logger.
+ */
+inline fun <reified T: Any> loggerFor(): Logger = LoggerFactory.getLogger(T::class.java)

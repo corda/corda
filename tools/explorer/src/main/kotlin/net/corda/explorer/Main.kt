@@ -14,7 +14,6 @@ import net.corda.client.model.Models
 import net.corda.client.model.observableValue
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
-import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.explorer.model.CordaViewModel
@@ -28,6 +27,7 @@ import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.driver.PortAllocation
 import net.corda.node.driver.driver
 import net.corda.node.services.User
+import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -36,6 +36,7 @@ import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.App
 import tornadofx.addStageIcon
 import tornadofx.find
+import java.nio.file.Paths
 import java.util.*
 
 /**
@@ -57,9 +58,57 @@ class Main : App(MainView::class) {
             }.showAndWait().get()
             if (button != ButtonType.OK) it.consume()
         }
-        stage.hide()
-        loginView.login()
-        stage.show()
+
+        val hostname = parameters.named["host"]
+        val port = asInteger(parameters.named["port"])
+        val username = parameters.named["username"]
+        val password = parameters.named["password"]
+        var isLoggedIn = false
+
+        if ((hostname != null) && (port != null) && (username != null) && (password != null)) {
+            try {
+                // Allow us optionally to override the SSL configuration too.
+                val sslConfig = getSSLConfig()
+                if (sslConfig != null) {
+                    loginView.sslConfig = sslConfig
+                }
+
+                loginView.login(hostname, port, username, password)
+                isLoggedIn = true
+            } catch (e: Exception) {
+                ExceptionDialog(e).apply { initOwner(stage.scene.window) }.showAndWait()
+            }
+        }
+
+        if (!isLoggedIn) {
+            stage.hide()
+            loginView.login()
+            stage.show()
+        }
+    }
+
+    private fun asInteger(s: String?): Int? {
+        try {
+            return s?.toInt()
+        } catch (e: NumberFormatException) {
+            return null
+        }
+    }
+
+    private fun getSSLConfig(): SSLConfiguration? {
+        val certificatesDir = parameters.named["certificatesDir"]
+        val keyStorePassword = parameters.named["keyStorePassword"]
+        val trustStorePassword = parameters.named["trustStorePassword"]
+
+        return if ((certificatesDir != null) && (keyStorePassword != null) && (trustStorePassword != null)) {
+            object: SSLConfiguration {
+                override val certificatesDirectory = Paths.get(certificatesDir)
+                override val keyStorePassword: String = keyStorePassword
+                override val trustStorePassword: String = trustStorePassword
+            }
+        } else {
+            null
+        }
     }
 
     init {
