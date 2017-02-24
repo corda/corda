@@ -78,7 +78,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      */
     private fun notariseTransactions(transactions: List<SignedTransaction>): List<String> {
         val signatureFutures = transactions.map { rpc.startFlow(NotaryFlow::Client, it).returnValue }
-        return Futures.allAsList(signatureFutures).getOrThrow().map { it.by.toStringShort() }
+        return Futures.allAsList(signatureFutures).getOrThrow().map { it.map { it.by.toStringShort() }.joinToString() }
     }
 }
 

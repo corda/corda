@@ -1,4 +1,4 @@
-package net.corda.node.utilities.certsigning
+package net.corda.node.utilities.registration
 
 import net.corda.core.crypto.CertificateStream
 import org.apache.commons.io.IOUtils
@@ -11,12 +11,13 @@ import java.security.cert.Certificate
 import java.util.*
 import java.util.zip.ZipInputStream
 
-class HTTPCertificateSigningService(val server: URL) : CertificateSigningService {
+class HTTPNetworkRegistrationService(val server: URL) : NetworkRegistrationService {
     companion object {
         // TODO: Propagate version information from gradle
         val clientVersion = "1.0"
     }
 
+    @Throws(CertificateRequestException::class)
     override fun retrieveCertificates(requestId: String): Array<Certificate>? {
         // Poll server to download the signed certificate once request has been approved.
         val url = URL("$server/api/certificate/$requestId")
@@ -34,7 +35,7 @@ class HTTPCertificateSigningService(val server: URL) : CertificateSigningService
                 certificates.toTypedArray()
             }
             HTTP_NO_CONTENT -> null
-            HTTP_UNAUTHORIZED -> throw IOException("Certificate signing request has been rejected: ${conn.errorMessage}")
+            HTTP_UNAUTHORIZED -> throw CertificateRequestException("Certificate signing request has been rejected: ${conn.errorMessage}")
             else -> throwUnexpectedResponseCode(conn)
         }
     }

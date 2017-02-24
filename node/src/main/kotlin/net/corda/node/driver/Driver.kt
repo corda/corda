@@ -352,7 +352,7 @@ open class DriverDSL(
                 "myLegalName" to name,
                 "artemisAddress" to messagingAddress.toString(),
                 "webAddress" to apiAddress.toString(),
-                "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
+                "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                 "networkMapService" to mapOf(
                         "address" to networkMapAddress.toString(),
                         "legalName" to networkMapLegalName
@@ -463,7 +463,6 @@ open class DriverDSL(
                         //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
                         "webAddress" to apiAddress,
                         "artemisAddress" to networkMapAddress.toString(),
-                        "extraAdvertisedServiceIds" to "",
                         "useTestClock" to useTestClock
                 )
         )
