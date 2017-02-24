@@ -221,7 +221,7 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
 
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
 
-task buildDependenciesJar(type: Jar) {
+task buildDependenciesZip(type: Zip) {
     baseName 'corda-deps'
     from configurations.runtime
     from configurations.compile
