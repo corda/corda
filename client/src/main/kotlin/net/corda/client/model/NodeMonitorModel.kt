@@ -52,8 +52,8 @@ class NodeMonitorModel {
      * Register for updates to/from a given vault.
      * TODO provide an unsubscribe mechanism
      */
-    fun register(nodeHostAndPort: HostAndPort, sslConfig: SSLConfiguration, username: String, password: String) {
-        val client = CordaRPCClient(nodeHostAndPort, sslConfig){
+    fun register(nodeHostAndPort: HostAndPort, username: String, password: String) {
+        val client = CordaRPCClient(nodeHostAndPort){
             maxRetryInterval = 10.seconds.toMillis()
         }
         client.start(username, password)

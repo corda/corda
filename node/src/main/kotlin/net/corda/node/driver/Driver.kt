@@ -105,7 +105,7 @@ data class NodeHandle(
         val configuration: FullNodeConfiguration,
         val process: Process
 ) {
-    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.artemisAddress, configuration)
+    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!)
 }
 
 sealed class PortAllocation {
@@ -343,7 +343,8 @@ open class DriverDSL(
     override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>,
                            rpcUsers: List<User>, customOverrides: Map<String, Any?>): ListenableFuture<NodeHandle> {
         val messagingAddress = portAllocation.nextHostAndPort()
-        val apiAddress = portAllocation.nextHostAndPort()
+        val rpcAddress = portAllocation.nextHostAndPort()
+        val webAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val name = providedName ?: "${pickA(name)}-${messagingAddress.port}"
 
@@ -351,7 +352,8 @@ open class DriverDSL(
         val configOverrides = mapOf(
                 "myLegalName" to name,
                 "artemisAddress" to messagingAddress.toString(),
-                "webAddress" to apiAddress.toString(),
+                "rpcAddress" to rpcAddress.toString(),
+                "webAddress" to webAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                 "networkMapService" to mapOf(
                         "address" to networkMapAddress.toString(),
