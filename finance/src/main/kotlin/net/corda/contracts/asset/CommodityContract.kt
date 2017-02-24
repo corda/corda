@@ -47,8 +47,6 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/commodity-claims.html")
 
-    override val conserveClause: AbstractConserveAmount<State, Commands, Commodity> = Clauses.ConserveAmount()
-
     /**
      * The clauses for this contract are essentially:
      *
@@ -153,13 +151,8 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Commodity>>, owner: PublicKey, notary: Party) {
-        check(tx.inputStates().isEmpty())
-        check(tx.outputStates().map { it.data }.sumCashOrNull() == null)
-        val at = amount.token.issuer
-        tx.addOutputState(TransactionState(State(amount, owner), notary))
-        tx.addCommand(generateIssueCommand(), at.party.owningKey)
-    }
+    fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Commodity>>, owner: PublicKey, notary: Party)
+            = generateIssue(tx, TransactionState(State(amount, owner), notary), generateIssueCommand())
 
 
     override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Commodity>>, owner: PublicKey)
