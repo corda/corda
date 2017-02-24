@@ -5,13 +5,13 @@ import net.corda.node.services.transactions.BFTSmartServer
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.Transaction
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.io.Closeable
-import kotlin.test.assertEquals
 import kotlin.concurrent.thread
+import kotlin.test.assertEquals
 
 class DistributedImmutableBFTMapTests {
 
@@ -32,7 +32,7 @@ class DistributedImmutableBFTMapTests {
         dataSource.close()
     }
 
-    @Test
+    @Test @Ignore
     fun `stores entries correctly and detects conflicts`() {
         (0..3).forEach { i ->
             thread { BFTSmartServer<String, String>(i, database, "bft_notary_committed_states_$i") }.apply { Thread.sleep(500) }
