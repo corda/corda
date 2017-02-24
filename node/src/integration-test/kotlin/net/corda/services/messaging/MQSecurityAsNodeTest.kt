@@ -53,10 +53,18 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
     }
 
     @Test
-    fun `login to a non ssl port`() {
+    fun `login to a non ssl port as a node user`() {
         val attacker = clientTo(alice.configuration.rpcAddress!!, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
-            attacker.start()
+            attacker.start(NODE_USER, NODE_USER)
+        }
+    }
+
+    @Test
+    fun `login to a non ssl port as a peer user`() {
+        val attacker = clientTo(alice.configuration.rpcAddress!!, sslConfiguration = null)
+        assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
+            attacker.start(PEER_USER, PEER_USER)  // Login as a peer
         }
     }
 }
