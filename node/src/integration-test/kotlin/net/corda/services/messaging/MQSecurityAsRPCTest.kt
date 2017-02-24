@@ -4,6 +4,7 @@ import net.corda.node.services.User
 import net.corda.testing.messaging.SimpleMQClient
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 
 /**
@@ -27,9 +28,9 @@ class MQSecurityAsRPCTest : MQSecurityTest() {
     }
 
     @Test
-    fun `login to a ssl port`() {
+    fun `login rpc to a ssl port`() {
         val attacker = clientTo(alice.configuration.artemisAddress)
-        Assertions.assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
+        assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start()
         }
     }

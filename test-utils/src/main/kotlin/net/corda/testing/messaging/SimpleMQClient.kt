@@ -16,8 +16,8 @@ class SimpleMQClient(val target: HostAndPort,
     lateinit var session: ClientSession
     lateinit var producer: ClientProducer
 
-    fun start(username: String? = null, password: String? = null, enableSSH: Boolean = true) {
-        val tcpTransport = tcpTransport(Outbound(), target.hostText, target.port, enableSSH)
+    fun start(username: String? = null, password: String? = null, enableSSL: Boolean = true) {
+        val tcpTransport = tcpTransport(Outbound(), target.hostText, target.port, enableSSL)
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
             isBlockOnNonDurableSend = true
             threadPoolMaxSize = 1

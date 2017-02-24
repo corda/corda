@@ -148,8 +148,8 @@ abstract class MQSecurityTest : NodeBasedTest() {
         assertAllQueueCreationAttacksFail(randomQueue)
     }
 
-    fun clientTo(target: HostAndPort, config: SSLConfiguration? = configureTestSSL()): SimpleMQClient {
-        val client = SimpleMQClient(target, config)
+    fun clientTo(target: HostAndPort, sslConfiguration: SSLConfiguration? = configureTestSSL()): SimpleMQClient {
+        val client = SimpleMQClient(target, sslConfiguration)
         clients += client
         return client
     }

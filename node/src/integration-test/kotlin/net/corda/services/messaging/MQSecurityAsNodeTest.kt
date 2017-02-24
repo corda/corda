@@ -54,7 +54,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `login to a non ssl port`() {
-        val attacker = clientTo(alice.configuration.rpcAddress!!, null)
+        val attacker = clientTo(alice.configuration.rpcAddress!!, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start()
         }

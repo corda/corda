@@ -491,13 +491,11 @@ class NodeLoginModule : LoginModule {
 
         log.info("Processing login for $username")
 
-        val  validatedUser = when (determineUserRole(certificates, username)) {
+        val validatedUser = when (determineUserRole(certificates, username)) {
             PEER_ROLE -> authenticatePeer(certificates)
             NODE_ROLE -> authenticateNode(certificates)
             RPC_ROLE -> authenticateRpcUser(password, username)
-            else -> {
-                throw FailedLoginException("Peer does not belong on our network")
-            }
+            else -> throw FailedLoginException("Peer does not belong on our network")
         }
         principals += UserPrincipal(validatedUser)
 
