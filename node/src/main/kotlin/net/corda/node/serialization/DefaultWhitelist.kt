@@ -47,7 +47,6 @@ class DefaultWhitelist : CordaPluginRegistry() {
             addToWhitelist(Tenor::class.java)
             addToWhitelist(Tenor.TimeUnit::class.java)
             addToWhitelist(BusinessCalendar::class.java)
-            //addToWhitelist(Comparable::class.java)
             addToWhitelist(DayCountBasisDay::class.java)
             addToWhitelist(DayCountBasisYear::class.java)
             addToWhitelist(BigDecimal::class.java)
@@ -56,7 +55,6 @@ class DefaultWhitelist : CordaPluginRegistry() {
             addToWhitelist(PaymentRule::class.java)
             addToWhitelist(DateRollConvention::class.java)
             addToWhitelist(LocalDate::class.java)
-            //addToWhitelist(Class.forName("java.util.Collections\$SingletonMap"))
             addToWhitelist(Period::class.java)
         }
         return true

@@ -18,7 +18,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import rx.Observable
 import java.io.InputStream
-import java.io.OutputStream
 import java.time.Instant
 import java.util.*
 
@@ -29,13 +28,12 @@ data class StateMachineInfo(
         val progressTrackerStepAndUpdates: Pair<String, Observable<String>>?
 )
 
+@CordaSerializable
 sealed class StateMachineUpdate(val id: StateMachineRunId) {
-    @CordaSerializable
     class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate(stateMachineInfo.id) {
         override fun toString() = "Added($id, ${stateMachineInfo.flowLogicClassName})"
     }
 
-    @CordaSerializable
     class Removed(id: StateMachineRunId) : StateMachineUpdate(id) {
         override fun toString() = "Removed($id)"
     }

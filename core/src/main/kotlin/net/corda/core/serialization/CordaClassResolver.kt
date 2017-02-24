@@ -41,10 +41,8 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
         if (stackTrace[3].methodName == "register" && stackTrace[3].className == Kryo::class.qualifiedName) {
             return null
         }
-        // Allow primitives
-        if (type.isPrimitive || type == Object::class.java) return null
-        // Allow abstracts and interfaces
-        if (Modifier.isAbstract(type.modifiers)) return null
+        // Allow primitives, abstracts and interfaces
+        if (type.isPrimitive || type == Object::class.java || Modifier.isAbstract(type.modifiers)) return null
         // If array, recurse on element type
         if (type.isArray) {
             return checkClass(type.componentType)
