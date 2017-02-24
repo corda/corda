@@ -158,29 +158,22 @@ object NotaryFlow {
     }
 }
 
-@CordaSerializable
 class NotaryException(val error: NotaryError) : FlowException() {
     override fun toString() = "${super.toString()}: Error response from Notary - $error"
 }
 
 @CordaSerializable
 sealed class NotaryError {
-    @CordaSerializable
     class Conflict(val txId: SecureHash, val conflict: SignedData<UniquenessProvider.Conflict>) : NotaryError() {
         override fun toString() = "One or more input states for transaction $txId have been used in another transaction"
     }
 
     /** Thrown if the time specified in the timestamp command is outside the allowed tolerance */
-    @CordaSerializable
     class TimestampInvalid : NotaryError()
 
-    @CordaSerializable
     class TransactionInvalid(val msg: String) : NotaryError()
-
-    @CordaSerializable
     class SignaturesInvalid(val msg: String) : NotaryError()
 
-    @CordaSerializable
     class SignaturesMissing(val cause: SignedTransaction.SignaturesMissingException) : NotaryError() {
         override fun toString() = cause.toString()
     }

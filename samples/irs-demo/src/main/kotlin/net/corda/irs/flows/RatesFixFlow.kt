@@ -35,13 +35,8 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
                         override val progressTracker: ProgressTracker = RatesFixFlow.tracker(fixOf.name)) : FlowLogic<Unit>() {
 
     companion object {
-        @CordaSerializable
         class QUERYING(val name: String) : ProgressTracker.Step("Querying oracle for $name interest rate")
-
-        @CordaSerializable
         object WORKING : ProgressTracker.Step("Working with data returned by oracle")
-
-        @CordaSerializable
         object SIGNING : ProgressTracker.Step("Requesting confirmation signature from interest rate oracle")
 
         fun tracker(fixName: String) = ProgressTracker(QUERYING(fixName), WORKING, SIGNING)

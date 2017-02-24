@@ -21,7 +21,6 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
 
     interface Commands : CommandData {
         class Create : TypeOnlyCommandData(), Commands
-
         class Move : TypeOnlyCommandData(), Commands
     }
 

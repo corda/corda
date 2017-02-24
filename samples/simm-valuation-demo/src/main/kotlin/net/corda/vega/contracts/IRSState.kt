@@ -7,7 +7,6 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 
@@ -16,7 +15,6 @@ import java.security.PublicKey
  *
  * TODO: Merge with the existing demo IRS code.
  */
-@CordaSerializable
 data class IRSState(val swap: SwapData,
                     val buyer: AnonymousParty,
                     val seller: AnonymousParty,

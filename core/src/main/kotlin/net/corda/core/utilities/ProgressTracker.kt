@@ -37,17 +37,12 @@ import java.util.*
 class ProgressTracker(vararg steps: Step) {
     @CordaSerializable
     sealed class Change {
-        @CordaSerializable
         class Position(val tracker: ProgressTracker, val newStep: Step) : Change() {
             override fun toString() = newStep.label
         }
-
-        @CordaSerializable
         class Rendering(val tracker: ProgressTracker, val ofStep: Step) : Change() {
             override fun toString() = ofStep.label
         }
-
-        @CordaSerializable
         class Structural(val tracker: ProgressTracker, val parent: Step) : Change() {
             override fun toString() = "Structural step change in child of ${parent.label}"
         }
@@ -74,12 +69,10 @@ class ProgressTracker(vararg steps: Step) {
     }
 
     // Sentinel objects. Overrides equals() to survive process restarts and serialization.
-    @CordaSerializable
     object UNSTARTED : Step("Unstarted") {
         override fun equals(other: Any?) = other is UNSTARTED
     }
 
-    @CordaSerializable
     object DONE : Step("Done") {
         override fun equals(other: Any?) = other is DONE
     }

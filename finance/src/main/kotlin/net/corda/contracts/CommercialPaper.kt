@@ -183,9 +183,7 @@ class CommercialPaper : Contract {
 
     interface Commands : CommandData {
         data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
-
         class Redeem : TypeOnlyCommandData(), Commands
-
         data class Issue(override val nonce: Long = random63BitValue()) : IssueCommand, Commands
     }
 

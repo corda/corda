@@ -30,14 +30,12 @@ fun newSecureRandom(): SecureRandom {
 @CordaSerializable
 open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
     /** A digital signature that identifies who the public key is owned by. */
-    @CordaSerializable
     open class WithKey(val by: PublicKey, bits: ByteArray) : DigitalSignature(bits) {
         fun verifyWithECDSA(content: ByteArray) = by.verifyWithECDSA(content, this)
         fun verifyWithECDSA(content: OpaqueBytes) = by.verifyWithECDSA(content.bytes, this)
     }
 
     // TODO: consider removing this as whoever needs to identify the signer should be able to derive it from the public key
-    @CordaSerializable
     class LegallyIdentifiable(val signer: Party, bits: ByteArray) : WithKey(signer.owningKey.singleKey, bits)
 }
 

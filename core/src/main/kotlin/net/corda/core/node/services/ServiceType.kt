@@ -17,10 +17,7 @@ sealed class ServiceType(val id: String) {
         require(id.matches(Regex("[a-z][a-zA-Z0-9._]+"))) { id }
     }
 
-    @CordaSerializable
     private class ServiceTypeImpl(baseId: String, subTypeId: String) : ServiceType("$baseId.$subTypeId")
-
-    @CordaSerializable
     private class ServiceTypeDirect(id: String) : ServiceType(id)
 
     companion object {
