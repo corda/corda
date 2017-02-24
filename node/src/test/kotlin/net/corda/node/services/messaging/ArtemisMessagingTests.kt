@@ -47,6 +47,7 @@ class ArtemisMessagingTests {
     @Rule @JvmField val temporaryFolder = TemporaryFolder()
 
     val hostAndPort = freeLocalHostAndPort()
+    val rpcHostAndPort = freeLocalHostAndPort()
     val topic = "platform.self"
     val identity = generateKeyPair()
 
@@ -230,8 +231,8 @@ class ArtemisMessagingTests {
         }
     }
 
-    private fun createMessagingServer(local: HostAndPort = hostAndPort): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local, networkMapCache, userService).apply {
+    private fun createMessagingServer(local: HostAndPort = hostAndPort, rpc: HostAndPort = rpcHostAndPort): ArtemisMessagingServer {
+        return ArtemisMessagingServer(config, local, rpc, networkMapCache, userService).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }
