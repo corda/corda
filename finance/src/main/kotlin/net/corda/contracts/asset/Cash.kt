@@ -127,21 +127,18 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
          * should take the moved states into account when considering whether it is valid. Typically this will be
          * null.
          */
-        @CordaSerializable
         data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
 
         /**
          * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
          * has a unique ID even when there are no inputs.
          */
-        @CordaSerializable
         data class Issue(override val nonce: Long = newSecureRandom().nextLong()) : FungibleAsset.Commands.Issue, Commands
 
         /**
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
          * in some other way.
          */
-        @CordaSerializable
         data class Exit(override val amount: Amount<Issued<Currency>>) : Commands, FungibleAsset.Commands.Exit<Currency>
     }
 
