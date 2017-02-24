@@ -5,7 +5,7 @@ import java.lang.String.join
 import java.nio.file.Path
 import net.corda.node.services.config.SSLConfiguration
 
-class NodeConfig(
+open class NodeConfig(
         baseDir: Path,
         legalName: String,
         artemisPort: Int,
@@ -13,24 +13,16 @@ class NodeConfig(
         val webPort: Int,
         val h2Port: Int,
         val extraServices: List<String>,
-        val users: List<Map<String, Any>> = listOf(defaultUser),
+        val users: List<User> = listOf(user("guest")),
         var networkMap: NetworkMapConfig? = null
 ) : NetworkMapConfig(legalName, artemisPort) {
 
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
-
-        val defaultUser: Map<String, Any> = mapOf(
-            "user" to "guest",
-            "password" to "letmein",
-            "permissions" to listOf(
-                "StartFlow.net.corda.flows.CashFlow",
-                "StartFlow.net.corda.flows.IssuerFlow\$IssuanceRequester"
-            )
-        )
     }
 
     val nodeDir: Path = baseDir.resolve(key)
+    val pluginDir: Path = nodeDir.resolve("plugins")
     val explorerDir: Path = baseDir.resolve("$key-explorer")
 
     val ssl: SSLConfiguration = object : SSLConfiguration {
@@ -61,7 +53,7 @@ class NodeConfig(
                     .withValue("legalName", valueFor(n.legalName))
             } ))
             .withValue("webAddress", addressValueFor(webPort))
-            .withValue("rpcUsers", valueFor(users))
+            .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
             .withValue("h2port", valueFor(h2Port))
             .withValue("useTestClock", valueFor(true))
 
@@ -70,6 +62,8 @@ class NodeConfig(
     fun moveTo(baseDir: Path) = NodeConfig(
         baseDir, legalName, artemisPort, nearestCity, webPort, h2Port, extraServices, users, networkMap
     )
+
+    fun extendUserPermissions(permissions: List<String>) = users.forEach { it.extendPermissions(permissions) }
 }
 
 private fun <T> valueFor(any: T): ConfigValue? = ConfigValueFactory.fromAnyRef(any)

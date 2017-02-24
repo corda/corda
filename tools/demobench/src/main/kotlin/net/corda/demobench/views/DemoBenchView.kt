@@ -7,8 +7,8 @@ import javafx.scene.control.Button
 import javafx.scene.control.MenuItem
 import javafx.scene.control.Tab
 import javafx.scene.control.TabPane
-import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.NodeController
+import net.corda.demobench.model.TempConfig
 import net.corda.demobench.profile.ProfileController
 import net.corda.demobench.ui.CloseableTab
 import org.controlsfx.dialog.ExceptionDialog
@@ -58,10 +58,8 @@ class DemoBenchView : View("Corda Demo Bench") {
 
     private fun configureProfileOpen() = menuOpen.setOnAction {
         try {
-            val profile = profileController.openProfile()
-            if (profile != null) {
-                loadProfile(profile)
-            }
+            val profile = profileController.openProfile() ?: return@setOnAction
+            loadProfile(profile)
         } catch (e: Exception) {
             ExceptionDialog(e).apply { initOwner(root.scene.window) }.showAndWait()
         }
@@ -88,13 +86,13 @@ class DemoBenchView : View("Corda Demo Bench") {
         return nodeTabView
     }
 
-    private fun loadProfile(nodes: List<NodeConfig>) {
+    private fun loadProfile(nodes: List<TempConfig>) {
         closeAllTabs()
         nodeController.reset()
 
         nodes.forEach {
             val nodeTabView = createNodeTabView(false)
-            nodeTabView.launch(nodeController.relocate(it))
+            nodeTabView.launch(nodeController.install(it))
         }
 
         enableAddNodes()
