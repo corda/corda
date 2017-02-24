@@ -107,12 +107,14 @@ sealed class TransactionVerificationException(val tx: LedgerTransaction, cause: 
     class DuplicateInputStates(tx: LedgerTransaction, val duplicates: Set<StateRef>) : TransactionVerificationException(tx, null) {
         override fun toString(): String = "Duplicate inputs: ${duplicates.joinToString()}"
     }
+
     class InvalidNotaryChange(tx: LedgerTransaction) : TransactionVerificationException(tx, null)
     class NotaryChangeInWrongTransactionType(tx: LedgerTransaction, val outputNotary: Party) : TransactionVerificationException(tx, null) {
         override fun toString(): String {
             return "Found unexpected notary change in transaction. Tx notary: ${tx.notary}, found: $outputNotary"
         }
     }
+
     class TransactionMissingEncumbranceException(tx: LedgerTransaction, val missing: Int, val inOut: Direction) : TransactionVerificationException(tx, null) {
         override val message: String get() = "Missing required encumbrance $missing in $inOut"
     }
