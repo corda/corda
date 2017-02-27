@@ -24,6 +24,7 @@ import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockIdentityService
 import net.i2p.crypto.eddsa.KeyPairGenerator
 import java.security.SecureRandom
+import net.corda.webserver.utilities.JsonSupport
 import java.time.LocalDate
 import java.util.*
 
@@ -32,7 +33,7 @@ import java.util.*
  * A simulation in which banks execute interest rate swaps with each other, including the fixing events.
  */
 class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(networkSendManuallyPumped, runAsync, latencyInjector) {
-    val om = net.corda.node.utilities.JsonSupport.createInMemoryMapper(MockIdentityService(network.identities))
+    val om = JsonSupport.createInMemoryMapper(MockIdentityService(network.identities))
 
     init {
         currentDateAndTime = LocalDate.of(2016, 3, 8).atStartOfDay()

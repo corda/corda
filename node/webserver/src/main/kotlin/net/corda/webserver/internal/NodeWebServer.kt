@@ -1,4 +1,4 @@
-package net.corda.node.webserver
+package net.corda.webserver.internal
 
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.CordaPluginRegistry
@@ -7,11 +7,10 @@ import net.corda.node.printBasicNodeInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.messaging.CordaRPCClient
-import net.corda.node.webserver.internal.APIServerImpl
-import net.corda.node.webserver.servlets.AttachmentDownloadServlet
-import net.corda.node.webserver.servlets.DataUploadServlet
-import net.corda.node.webserver.servlets.ObjectMapperConfig
-import net.corda.node.webserver.servlets.ResponseFilter
+import net.corda.webserver.servlets.AttachmentDownloadServlet
+import net.corda.webserver.servlets.DataUploadServlet
+import net.corda.webserver.servlets.ObjectMapperConfig
+import net.corda.webserver.servlets.ResponseFilter
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -24,12 +23,12 @@ import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
 import java.lang.reflect.InvocationTargetException
+import java.net.InetAddress
 import java.util.*
 
-// TODO: Split into a separate module under client that packages into WAR formats.
-class WebServer(val config: FullNodeConfiguration) {
+class NodeWebServer(val config: FullNodeConfiguration) {
     private companion object {
-        val log = loggerFor<WebServer>()
+        val log = loggerFor<NodeWebServer>()
         val retryDelay = 1000L // Milliseconds
     }
 
@@ -51,7 +50,6 @@ class WebServer(val config: FullNodeConfiguration) {
         // Note that the web server handlers will all run concurrently, and not on the node thread.
         val handlerCollection = HandlerCollection()
 
-        // TODO: Move back into the node itself.
         // Export JMX monitoring statistics and data over REST/JSON.
         if (config.exportJMXto.split(',').contains("http")) {
             val classpath = System.getProperty("java.class.path").split(System.getProperty("path.separator"))
@@ -101,7 +99,7 @@ class WebServer(val config: FullNodeConfiguration) {
 
         server.handler = handlerCollection
         server.start()
-        log.info("Started webserver on address $address")
+        log.info("Starting webserver on address $address")
         return server
     }
 
@@ -157,9 +155,9 @@ class WebServer(val config: FullNodeConfiguration) {
             } catch (e: ActiveMQNotConnectedException) {
                 log.debug("Could not connect to ${config.artemisAddress} due to exception: ", e)
                 Thread.sleep(retryDelay)
-            // This error will happen if the server has yet to create the keystore
-            // Keep the fully qualified package name due to collisions with the Kotlin stdlib
-            // exception of the same name
+                // This error will happen if the server has yet to create the keystore
+                // Keep the fully qualified package name due to collisions with the Kotlin stdlib
+                // exception of the same name
             } catch (e: java.nio.file.NoSuchFileException) {
                 log.debug("Tried to open a file that doesn't yet exist, retrying", e)
                 Thread.sleep(retryDelay)

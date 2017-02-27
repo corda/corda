@@ -1,4 +1,4 @@
-package net.corda.node.utilities
+package net.corda.webserver.utilities
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParseException
