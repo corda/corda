@@ -2,9 +2,9 @@ package net.corda.demobench.model
 
 import java.util.*
 
-class User(val user: String, val password: String, var permissions: List<String>) {
+data class User(val user: String, val password: String, var permissions: List<String>) {
 
-    fun extendPermissions(extra: List<String>) {
+    fun extendPermissions(extra: Collection<String>) {
         val extended = LinkedHashSet<String>(permissions)
         extended.addAll(extra)
         permissions = extended.toList()

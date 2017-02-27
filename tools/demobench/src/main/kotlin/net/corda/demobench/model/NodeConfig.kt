@@ -63,7 +63,7 @@ class NodeConfig(
         baseDir, legalName, artemisPort, nearestCity, webPort, h2Port, extraServices, users, networkMap
     )
 
-    fun extendUserPermissions(permissions: List<String>) = users.forEach { it.extendPermissions(permissions) }
+    fun extendUserPermissions(permissions: Collection<String>) = users.forEach { it.extendPermissions(permissions) }
 }
 
 private fun <T> valueFor(any: T): ConfigValue? = ConfigValueFactory.fromAnyRef(any)

@@ -14,12 +14,12 @@ class JVMConfig : Controller() {
         log.info("Java executable: $javaPath")
     }
 
-    fun commandFor(jarPath: Path, vararg args: String): Array<String> {
-        return arrayOf(javaPath.toString(), "-jar", jarPath.toString(), *args)
+    fun commandFor(jarPath: Path, vararg args: String): List<String> {
+        return listOf(javaPath.toString(), "-jar", jarPath.toString(), *args)
     }
 
     fun processFor(jarPath: Path, vararg args: String): ProcessBuilder {
-        return ProcessBuilder(commandFor(jarPath, *args).toList())
+        return ProcessBuilder(commandFor(jarPath, *args))
     }
 
 }

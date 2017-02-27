@@ -25,7 +25,7 @@ class NodeController : Controller() {
 
     private var baseDir: Path = baseDirFor(ManagementFactory.getRuntimeMXBean().startTime)
     private val cordaPath: Path = jvm.applicationDir.resolve("corda").resolve("corda.jar")
-    private val command = jvm.commandFor(cordaPath)
+    private val command = jvm.commandFor(cordaPath).toTypedArray()
 
     private val nodes = LinkedHashMap<String, NodeConfig>()
     private val port = AtomicInteger(firstPort)

@@ -8,4 +8,5 @@ open class NetworkMapConfig(val legalName: String, val artemisPort: Int) {
 
 private val WHITESPACE = "\\s++".toRegex()
 
-fun String.toKey() = this.replace(WHITESPACE, "").toLowerCase()
+fun String.stripWhitespace() = this.replace(WHITESPACE, "")
+fun String.toKey() = this.stripWhitespace().toLowerCase()

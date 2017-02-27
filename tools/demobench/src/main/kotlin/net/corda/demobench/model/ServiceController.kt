@@ -5,9 +5,9 @@ import java.io.InputStreamReader
 import java.net.URL
 import java.util.*
 
-class ServiceController : Controller() {
+class ServiceController(resourceName: String = "/services.conf") : Controller() {
 
-    val services: List<String> = loadConf(javaClass.classLoader.getResource("services.conf"))
+    val services: List<String> = loadConf(resources.url(resourceName))
 
     val notaries: List<String> = services.filter { it.startsWith("corda.notary.") }.toList()
 

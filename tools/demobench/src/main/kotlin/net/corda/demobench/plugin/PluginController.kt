@@ -35,7 +35,7 @@ class PluginController : Controller() {
     /**
      * Generate the set of user permissions that this node's plugins require.
      */
-    fun permissionsFor(config: HasPlugins) = walkPlugins(config.pluginDir)
+    fun permissionsFor(config: HasPlugins): List<String> = walkPlugins(config.pluginDir)
         .map { plugin -> classLoaderFor(plugin) }
         .flatMap { cl -> cl.use(URLClassLoader::flowsFor).stream() }
         .map { flow -> "StartFlow.$flow" }
