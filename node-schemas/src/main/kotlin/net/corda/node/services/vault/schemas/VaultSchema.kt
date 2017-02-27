@@ -3,7 +3,6 @@ package net.corda.node.services.vault.schemas
 import io.requery.*
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.requery.Requery
-import net.corda.core.schemas.requery.converters.InstantConverter
 import java.time.Instant
 
 object VaultSchema {
@@ -50,7 +49,7 @@ object VaultSchema {
 
         /** refers to serialized transaction Contract State */
         // TODO: define contract state size maximum size and adjust length accordingly
-        @get:Column(name = "contract_state", length = 10000)
+        @get:Column(name = "contract_state", length = 100000)
         var contractState: ByteArray
 
         /** state lifecycle: unconsumed, consumed */
