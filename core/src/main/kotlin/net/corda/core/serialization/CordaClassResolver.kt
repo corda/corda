@@ -42,7 +42,7 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
             return null
         }
         // Allow primitives, abstracts and interfaces
-        if (type.isPrimitive || type == Object::class.java || Modifier.isAbstract(type.modifiers)) return null
+        if (type.isPrimitive || type == Any::class.java || Modifier.isAbstract(type.modifiers)) return null
         // If array, recurse on element type
         if (type.isArray) {
             return checkClass(type.componentType)
