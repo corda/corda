@@ -18,6 +18,7 @@ abstract class AbstractParty(val owningKey: CompositeKey) {
     override fun equals(other: Any?): Boolean = other is AbstractParty && this.owningKey == other.owningKey
     override fun hashCode(): Int = owningKey.hashCode()
     abstract fun toAnonymous() : AnonymousParty
+    abstract fun nameOrNull() : String?
 
     abstract fun ref(bytes: OpaqueBytes): PartyAndReference
     fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
