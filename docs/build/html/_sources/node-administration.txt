@@ -8,14 +8,11 @@ Jetty web server exposes the same interface over HTTP.
 Logging
 -------
 
-In the default configuration logs are stored to the logs subdirectory of the node directory and are rotated from time to time. You can
-have logging printed to the console as well by passing the ``--log-to-console`` command line flag. Corda
-uses the SL4J logging façade which is configured with the log4j2 binding framework to manage its logging,
-so you can also configure it in more detail by writing a custom log4j2 logging configuration file and passing ``-Dlog4j.configurationFile=my-config-file.xml``
-on the command line as well. The default configuration is copied during the build from ``config/dev/log4j2.xml``, or for the test sourceSet from ``config/test/log4j2.xml``.
-
-In corda code a logger is typically instantiated via the ``net.corda.core.utilities.loggerFor`` utility method which will create an SL4J ``Logger`` with a name based on the type parameter.
-Also, available in ``net.corda.core.utilities``, are extension methods to take a lazily evaluated logging lambda for trace and debug level, which will not evaluate the lambda if the LogLevel threshold is higher.
+By default the node log files are stored to the ``logs`` subdirectory of the working directory and are rotated from time
+to time. You can have logging printed to the console as well by passing the ``--log-to-console`` command line flag.
+The default logging level is ``INFO`` which can be adjusted by the ``--logging-level`` command line argument. For more
+custom logging, the logger settings can be completely overridden with a `Log4j 2 <https://logging.apache.org/log4j/2.x>`_
+configuration file assigned to the ``log4j.configurationFile`` system property.
 
 Database access
 ---------------

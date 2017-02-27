@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>Contract - corda</title>
-<link rel="stylesheet" href="../../../style.css">
+<link rel="stylesheet" href="..\..\..\style.css">
 </HEAD>
 <BODY>
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href=".">Contract</a><br/>
@@ -66,6 +66,18 @@ existing contract code.</p>
 </tr>
 <tr>
 <td>
+<a href="../../net.corda.contracts.testing/-dummy-deal-contract/index.html">DummyDealContract</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DummyDealContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.contracts.testing/-dummy-linear-contract/index.html">DummyLinearContract</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DummyLinearContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="../../net.corda.contracts.asset/-obligation/index.html">Obligation</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">Obligation</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code>
@@ -88,9 +100,11 @@ transaction.</p>
 </tr>
 <tr>
 <td>
-<a href="../../com.cordatest/-t-contract/index.html">TContract</a></td>
+<a href="../-upgraded-contract/index.html">UpgradedContract</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">TContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code></td>
+<code><span class="keyword">interface </span><span class="identifier">UpgradedContract</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">OldState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="keyword">out</span>&nbsp;<span class="identifier">NewState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code>
+<p>Interface which can upgrade state objects issued by a contract to a new state object issued by a different contract.</p>
+</td>
 </tr>
 </tbody>
 </table>

@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>InMemoryIdentityService - corda</title>
-<link rel="stylesheet" href="../../../style.css">
+<link rel="stylesheet" href="..\..\..\style.css">
 </HEAD>
 <BODY>
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.identity</a>&nbsp;/&nbsp;<a href=".">InMemoryIdentityService</a><br/>
@@ -34,6 +34,13 @@
 <p>Get all identities known to the service. This is expensive, and <a href="party-from-key.html">partyFromKey</a> or <a href="party-from-name.html">partyFromName</a> should be
 used in preference where possible.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="party-from-anonymous.html">partyFromAnonymous</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">partyFromAnonymous</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.identity.InMemoryIdentityService$partyFromAnonymous(net.corda.core.crypto.AnonymousParty)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-anonymous-party/index.html"><span class="identifier">AnonymousParty</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span></code><br/>
+<code><span class="keyword">fun </span><span class="identifier">partyFromAnonymous</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.identity.InMemoryIdentityService$partyFromAnonymous(net.corda.core.contracts.PartyAndReference)/partyRef">partyRef</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span></code></td>
 </tr>
 <tr>
 <td>
