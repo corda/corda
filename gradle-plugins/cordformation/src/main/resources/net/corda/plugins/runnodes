@@ -49,7 +49,7 @@ else
         if [ -d $dir ]; then
             pushd $dir >/dev/null
             xterm -T "`basename $dir`" -e 'java -jar JAR_NAME' &
-            xterm -T "`basename $dir`" -e 'java -jar JAR_NAME --webserver' &
+            xterm -T "`basename $dir` Web Server" -e 'java -jar JAR_NAME --webserver' &
             popd >/dev/null
         fi
     done
