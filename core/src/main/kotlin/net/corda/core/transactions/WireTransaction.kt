@@ -7,7 +7,7 @@ import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.indexOfOrThrow
-import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.THREAD_LOCAL_KRYO
 import net.corda.core.serialization.deserialize
@@ -70,7 +70,7 @@ class WireTransaction(
      * @throws TransactionResolutionException if an input points to a transaction not found in storage.
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
-    fun toLedgerTransaction(services: ServiceHub): LedgerTransaction {
+    fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
         // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
         val authenticatedArgs = commands.map {
             val parties = it.signers.mapNotNull { pk -> services.identityService.partyFromKey(pk) }
@@ -117,9 +117,9 @@ class WireTransaction(
 
     override fun toString(): String {
         val buf = StringBuilder()
-        buf.appendln("Transaction $id:")
+        buf.appendln("Transaction:")
         for (input in inputs) buf.appendln("${Emoji.rightArrow}INPUT:      $input")
-        for (output in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:     $output")
+        for (output in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:     ${output.data}")
         for (command in commands) buf.appendln("${Emoji.diamond}COMMAND:    $command")
         for (attachment in attachments) buf.appendln("${Emoji.paperclip}ATTACHMENT: $attachment")
         return buf.toString()
