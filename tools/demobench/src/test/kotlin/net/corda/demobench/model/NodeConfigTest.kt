@@ -1,9 +1,9 @@
 package net.corda.demobench.model
 
-import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.*
+import org.junit.Test
 
 class NodeConfigTest {
 

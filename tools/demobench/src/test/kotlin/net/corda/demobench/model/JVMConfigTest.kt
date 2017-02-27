@@ -1,11 +1,12 @@
 package net.corda.demobench.model
 
-import org.junit.Test
+import net.corda.demobench.AbstractLogging
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.test.*
+import org.junit.Test
 
-class JVMConfigTest {
+class JVMConfigTest : AbstractLogging() {
 
     private val jvm = JVMConfig()
 
@@ -29,6 +30,13 @@ class JVMConfigTest {
         val command = jvm.commandFor(Paths.get("testapp.jar"), "arg1", "arg2")
         val java = jvm.javaPath
         assertEquals(listOf(java.toString(), "-jar", "testapp.jar", "arg1", "arg2"), command)
+    }
+
+    @Test
+    fun `test process for Jar`() {
+        val process = jvm.processFor(Paths.get("testapp.jar"), "arg1", "arg2", "arg3")
+        val java = jvm.javaPath
+        assertEquals(listOf(java.toString(), "-jar", "testapp.jar", "arg1", "arg2", "arg3"), process.command())
     }
 
 }

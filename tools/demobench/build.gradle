@@ -99,6 +99,10 @@ jar {
     }
 }
 
+test {
+    systemProperty 'java.util.logging.config.class', 'net.corda.demobench.config.LoggingConfig'
+}
+
 distributions {
     main() {
         contents {

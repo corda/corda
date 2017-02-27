@@ -1,11 +1,12 @@
 package net.corda.demobench.model
 
-import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.*
+import net.corda.demobench.AbstractLogging
+import org.junit.Test
 
-class NodeControllerTest {
+class NodeControllerTest : AbstractLogging() {
 
     private val baseDir: Path = Paths.get(".").toAbsolutePath()
     private val controller = NodeController()

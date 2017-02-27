@@ -1,7 +1,7 @@
 package net.corda.demobench.model
 
 import org.junit.Test
-import kotlin.test.assertEquals
+import kotlin.test.*
 
 class UserTest {
 
