@@ -14,7 +14,6 @@ import net.corda.client.model.Models
 import net.corda.client.model.observableValue
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
-import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.explorer.model.CordaViewModel
@@ -28,7 +27,6 @@ import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.driver.PortAllocation
 import net.corda.node.driver.driver
 import net.corda.node.services.User
-import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import org.apache.commons.lang.SystemUtils
@@ -141,7 +139,7 @@ fun main(args: Array<String>) {
         val issuerNodeUSD = issuerUSD.get()
 
         arrayOf(notaryNode, aliceNode, bobNode, issuerNodeGBP, issuerNodeUSD).forEach {
-            println("${it.nodeInfo.legalIdentity} started on ${ArtemisMessagingComponent.toHostAndPort(it.nodeInfo.address)}")
+            println("${it.nodeInfo.legalIdentity} started on ${it.configuration.rpcAddress}")
         }
 
         val parser = OptionParser("S")

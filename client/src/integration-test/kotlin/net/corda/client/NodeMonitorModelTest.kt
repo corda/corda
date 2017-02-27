@@ -25,8 +25,6 @@ import net.corda.flows.CashPaymentFlow
 import net.corda.node.driver.DriverBasedTest
 import net.corda.node.driver.driver
 import net.corda.node.services.User
-import net.corda.node.services.config.configureTestSSL
-import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -57,9 +55,10 @@ class NodeMonitorModelTest : DriverBasedTest() {
         )
         val aliceNodeFuture = startNode("Alice", rpcUsers = listOf(cashUser))
         val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-
-        aliceNode = aliceNodeFuture.getOrThrow().nodeInfo
-        notaryNode = notaryNodeFuture.getOrThrow().nodeInfo
+        val aliceNodeHandle = aliceNodeFuture.getOrThrow()
+        val notaryNodeHandle = notaryNodeFuture.getOrThrow()
+        aliceNode = aliceNodeHandle.nodeInfo
+        notaryNode = notaryNodeHandle.nodeInfo
         newNode = { nodeName -> startNode(nodeName).getOrThrow().nodeInfo }
         val monitor = NodeMonitorModel()
 
@@ -70,7 +69,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
         vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
         networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
 
-        monitor.register(ArtemisMessagingComponent.toHostAndPort(aliceNode.address), configureTestSSL(), cashUser.username, cashUser.password)
+        monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
         rpc = monitor.proxyObservable.value!!
         runTest()
     }

@@ -26,23 +26,15 @@
                     <Label text="Corda Node :" GridPane.halignment="RIGHT"/>
                     <TextField fx:id="hostTextField" promptText="Host" GridPane.columnIndex="1"/>
                     <TextField fx:id="portTextField" prefWidth="100" promptText="Port" GridPane.columnIndex="2"/>
-                    <Button id="certificateButton" fx:id="certificateButton" GridPane.columnIndex="3" styleClass="certificateButton">
-                        <padding>
-                            <Insets right="6"/>
-                        </padding>
-                        <graphic>
-                            <FontAwesomeIconView styleClass="certificateIcon" glyphName="LOCK" glyphSize="20"/>
-                        </graphic>
-                    </Button>
                     <Label text="Username :" GridPane.rowIndex="1" GridPane.halignment="RIGHT"/>
                     <TextField fx:id="usernameTextField" promptText="Username" GridPane.columnIndex="1"
-                               GridPane.columnSpan="3" GridPane.rowIndex="1"/>
+                               GridPane.columnSpan="2" GridPane.rowIndex="1"/>
 
                     <Label text="Password :" GridPane.rowIndex="2" GridPane.halignment="RIGHT"/>
                     <PasswordField fx:id="passwordTextField" promptText="Password" GridPane.columnIndex="1"
-                                   GridPane.columnSpan="3" GridPane.rowIndex="2"/>
+                                   GridPane.columnSpan="2" GridPane.rowIndex="2"/>
 
-                    <HBox spacing="20" GridPane.columnIndex="1" GridPane.rowIndex="3" GridPane.columnSpan="3">
+                    <HBox spacing="20" GridPane.columnIndex="1" GridPane.rowIndex="3" GridPane.columnSpan="2">
                         <CheckBox fx:id="rememberMeCheckBox" text="Remember me"/>
                         <CheckBox fx:id="fullscreenCheckBox" text="Fullscreen mode"/>
                     </HBox>

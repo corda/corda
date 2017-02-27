@@ -754,3 +754,4 @@ Nuremberg	11.05	49.45
 Santa Fe	-60.69	-31.6
 Joinville	-48.84	-26.32
 Zurich	8.55	47.36
+Hong Kong	114.16	22.28
