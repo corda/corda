@@ -15,10 +15,15 @@ import javafx.scene.control.TableView
 import javafx.scene.control.TitledPane
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.VBox
-import net.corda.client.fxutils.*
+import net.corda.client.fxutils.filterNotNull
+import net.corda.client.fxutils.lift
+import net.corda.client.fxutils.map
+import net.corda.client.fxutils.sequence
 import net.corda.client.model.*
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
+import net.corda.core.crypto.AbstractParty
+import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.node.NodeInfo
@@ -216,9 +221,11 @@ class TransactionViewer : CordaView("Transactions") {
                             }
                             row {
                                 label("Issuer :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
-                                val issuer = data.amount.token.issuer.party.resolveIssuer()
-                                label(issuer.map { it?.name }) {
-                                    tooltip(data.amount.token.issuer.party.owningKey.toBase58String())
+                                val anonymousIssuer: AnonymousParty = data.amount.token.issuer.party
+                                val issuer: AbstractParty = anonymousIssuer.resolveIssuer().value ?: anonymousIssuer
+                                // TODO: Anonymous should probably be italicised or similar
+                                label(issuer.nameOrNull() ?: "Anonymous") {
+                                    tooltip(anonymousIssuer.owningKey.toBase58String())
                                 }
                             }
                             row {

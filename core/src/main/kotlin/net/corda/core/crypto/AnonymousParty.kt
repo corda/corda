@@ -16,6 +16,8 @@ class AnonymousParty(owningKey: CompositeKey) : AbstractParty(owningKey) {
     // can put in the key and actual name
     override fun toString() = "${owningKey.toBase58String()} <Anonymous>"
 
+    override fun nameOrNull(): String? = null
+
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
     override fun toAnonymous() = this
 }
