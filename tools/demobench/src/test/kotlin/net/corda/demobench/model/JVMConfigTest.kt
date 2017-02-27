@@ -1,12 +1,11 @@
 package net.corda.demobench.model
 
-import net.corda.demobench.AbstractLogging
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.test.*
 import org.junit.Test
 
-class JVMConfigTest : AbstractLogging() {
+class JVMConfigTest {
 
     private val jvm = JVMConfig()
 

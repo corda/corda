@@ -1,10 +1,9 @@
 package net.corda.demobench.model
 
 import kotlin.test.*
-import net.corda.demobench.AbstractLogging
 import org.junit.Test
 
-class ServiceControllerTest : AbstractLogging() {
+class ServiceControllerTest {
 
     @Test
     fun `test empty`() {
