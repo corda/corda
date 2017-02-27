@@ -35,14 +35,21 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
         return super.getRegistration(type) ?: checkClass(type)
     }
 
+    private var whitelistEnabled = true
+
+    fun disableWhitelist() {
+        whitelistEnabled = false
+    }
+
+    fun enableWhitelist() {
+        whitelistEnabled = true
+    }
+
     private fun checkClass(type: Class<*>): Registration? {
-        // This code path also get called during Kryo.register(), so we need to exclude that call path from whitelist logic.
-        val stackTrace = Thread.currentThread().stackTrace
-        if (stackTrace[3].methodName == "register" && stackTrace[3].className == Kryo::class.qualifiedName) {
-            return null
-        }
-        // Allow primitives, abstracts and interfaces
-        if (type.isPrimitive || type == Any::class.java || Modifier.isAbstract(type.modifiers)) return null
+        /** If call path has disabled whitelisting (see [CordaKryo.register]), just return without checking. */
+        if(!whitelistEnabled) return null
+         // Allow primitives, abstracts and interfaces
+        if (type.isPrimitive || type == Any::class.java || Modifier.isAbstract(type.modifiers) || type==String::class.java) return null
         // If array, recurse on element type
         if (type.isArray) {
             return checkClass(type.componentType)

@@ -181,6 +181,7 @@ data class Tenor(val name: String) {
  * Simple enum for returning accurals adjusted or unadjusted.
  * We don't actually do anything with this yet though, so it's ignored for now.
  */
+@CordaSerializable
 enum class AccrualAdjustment {
     Adjusted, Unadjusted
 }
@@ -243,6 +244,7 @@ enum class DateRollConvention {
  * Note that the first character cannot be a number (enum naming constraints), so we drop that
  * in the toString lest some people get confused.
  */
+@CordaSerializable
 enum class DayCountBasisDay {
     // We have to prefix 30 etc with a letter due to enum naming constraints.
     D30,
@@ -254,6 +256,7 @@ enum class DayCountBasisDay {
 }
 
 /** This forms the year part of the "Day Count Basis" used for interest calculation. */
+@CordaSerializable
 enum class DayCountBasisYear {
     // Ditto above comment for years.
     Y360,
@@ -265,6 +268,7 @@ enum class DayCountBasisYear {
 }
 
 /** Whether the payment should be made before the due date, or after it. */
+@CordaSerializable
 enum class PaymentRule {
     InAdvance, InArrears,
 }
@@ -313,6 +317,7 @@ fun LocalDate.isWorkingDay(accordingToCalendar: BusinessCalendar): Boolean = acc
  * typical feature of financial contracts, in which a business may not want a payment event to fall on a day when
  * no staff are around to handle problems.
  */
+@CordaSerializable
 open class BusinessCalendar private constructor(val holidayDates: List<LocalDate>) {
     @CordaSerializable
     class UnknownCalendar(name: String) : Exception("$name not found")

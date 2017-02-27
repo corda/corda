@@ -1,9 +1,6 @@
 package net.corda.core.serialization
 
-import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.KryoException
-import com.esotericsoftware.kryo.Registration
-import com.esotericsoftware.kryo.Serializer
+import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
@@ -390,13 +387,55 @@ object KotlinObjectSerializer : Serializer<DeserializeAsKotlinObjectDef>() {
 }
 
 // No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
-fun createInternalKryo(k: Kryo = Kryo(makeNoWhitelistClassResolver(), MapReferenceResolver())): Kryo {
+fun createInternalKryo(k: Kryo = CordaKryo(makeNoWhitelistClassResolver())): Kryo {
     return DefaultKryoCustomizer.customize(k)
 }
 
 // No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
-fun createKryo(k: Kryo = Kryo(makeStandardClassResolver(), MapReferenceResolver())): Kryo {
+fun createKryo(k: Kryo = CordaKryo(makeStandardClassResolver())): Kryo {
     return DefaultKryoCustomizer.customize(k)
+}
+
+/**
+ * We need to disable whitelist checking during calls from our Kryo code to register a serializer, since it checks
+ * for existing registrations and then will enter our [CordaClassResolver.getRegistration] method.
+ */
+open class CordaKryo(classResolver: ClassResolver) : Kryo(classResolver, MapReferenceResolver()) {
+    override fun register(type: Class<*>?): Registration {
+        (classResolver as? CordaClassResolver)?.disableWhitelist()
+        try {
+            return super.register(type)
+        } finally {
+            (classResolver as? CordaClassResolver)?.enableWhitelist()
+        }
+    }
+
+    override fun register(type: Class<*>?, id: Int): Registration {
+        (classResolver as? CordaClassResolver)?.disableWhitelist()
+        try {
+            return super.register(type, id)
+        } finally {
+            (classResolver as? CordaClassResolver)?.enableWhitelist()
+        }
+    }
+
+    override fun register(type: Class<*>?, serializer: Serializer<*>?): Registration {
+        (classResolver as? CordaClassResolver)?.disableWhitelist()
+        try {
+            return super.register(type, serializer)
+        } finally {
+            (classResolver as? CordaClassResolver)?.enableWhitelist()
+        }
+    }
+
+    override fun register(registration: Registration?): Registration {
+        (classResolver as? CordaClassResolver)?.disableWhitelist()
+        try {
+            return super.register(registration)
+        } finally {
+            (classResolver as? CordaClassResolver)?.enableWhitelist()
+        }
+    }
 }
 
 inline fun <T : Any> Kryo.register(

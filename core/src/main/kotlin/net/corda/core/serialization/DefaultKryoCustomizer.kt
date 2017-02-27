@@ -25,6 +25,7 @@ object DefaultKryoCustomizer {
         ServiceLoader.load(CordaPluginRegistry::class.java).toList().filter { it.customizeSerialization(customization) }
     }
 
+    // TODO: move all register() to addDefaultSerializer()
     fun customize(kryo: Kryo): Kryo {
         return kryo.apply {
             // Allow construction of objects using a JVM backdoor that skips invoking the constructors, if there is no

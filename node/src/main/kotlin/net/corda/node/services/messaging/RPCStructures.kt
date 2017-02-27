@@ -7,7 +7,6 @@ import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.*
@@ -92,9 +91,8 @@ class PermissionException(msg: String) : RuntimeException(msg)
 // The Kryo used for the RPC wire protocol. Every type in the wire protocol is listed here explicitly.
 // This is annoying to write out, but will make it easier to formalise the wire protocol when the time comes,
 // because we can see everything we're using in one place.
-private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null) : Kryo(makeStandardClassResolver(), MapReferenceResolver()) {
+private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null) : CordaKryo(makeStandardClassResolver()) {
     init {
-        // TODO: move all register() to addDefaultSerializer()
         DefaultKryoCustomizer.customize(this)
 
         // RPC specific classes

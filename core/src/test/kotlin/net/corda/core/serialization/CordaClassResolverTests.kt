@@ -92,7 +92,13 @@ class CordaClassResolverTests {
     }
 
     @Test
-    fun `Calling register method does not consult the whitelist`() {
+    fun `Calling register method on modified Kryo does not consult the whitelist`() {
+        val kryo = CordaKryo(CordaClassResolver(EmptyWhitelist))
+        kryo.register(NotSerializable::class.java)
+    }
+
+    @Test(expected = KryoException::class)
+    fun `Calling register method on unmodified Kryo does consult the whitelist`() {
         val kryo = Kryo(CordaClassResolver(EmptyWhitelist), MapReferenceResolver())
         kryo.register(NotSerializable::class.java)
     }
