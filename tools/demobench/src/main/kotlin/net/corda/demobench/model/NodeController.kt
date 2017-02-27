@@ -4,6 +4,7 @@ import java.io.IOException
 import java.lang.management.ManagementFactory
 import java.net.ServerSocket
 import java.nio.file.Files
+import java.nio.file.Path
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -22,8 +23,8 @@ class NodeController : Controller() {
     private val jvm by inject<JVMConfig>()
     private val pluginController by inject<PluginController>()
 
-    private var baseDir = baseDirFor(ManagementFactory.getRuntimeMXBean().startTime)
-    private val cordaPath = jvm.applicationDir.resolve("corda").resolve("corda.jar")
+    private var baseDir: Path = baseDirFor(ManagementFactory.getRuntimeMXBean().startTime)
+    private val cordaPath: Path = jvm.applicationDir.resolve("corda").resolve("corda.jar")
     private val command = jvm.commandFor(cordaPath)
 
     private val nodes = LinkedHashMap<String, NodeConfig>()
@@ -85,11 +86,11 @@ class NodeController : Controller() {
         }
     }
 
-    fun isPortValid(port: Int): Boolean = (port >= minPort) && (port <= maxPort)
+    fun isPortValid(port: Int) = (port >= minPort) && (port <= maxPort)
 
     fun keyExists(key: String) = nodes.keys.contains(key)
 
-    fun nameExists(name: String) = keyExists(toKey(name))
+    fun nameExists(name: String) = keyExists(name.toKey())
 
     fun hasNetworkMap(): Boolean = networkMapConfig != null
 
@@ -154,13 +155,13 @@ class NodeController : Controller() {
     }
 
     /**
-     *
+     * Creates a node directory that can host a running instance of Corda.
      */
-    fun install(config: TempConfig): NodeConfig {
-        val moved = config.moveTo(baseDir)
+    fun install(config: InstallConfig): NodeConfig {
+        val installed = config.installTo(baseDir)
 
         pluginController.userPluginsFor(config).forEach {
-            val pluginDir = Files.createDirectories(moved.pluginDir)
+            val pluginDir = Files.createDirectories(installed.pluginDir)
             val plugin = Files.copy(it, pluginDir.resolve(it.fileName.toString()))
             log.info("Installed: $plugin")
         }
@@ -169,7 +170,7 @@ class NodeController : Controller() {
             log.warning("Failed to remove '${config.baseDir}'")
         }
 
-        return moved
+        return installed
     }
 
     private fun updatePort(config: NodeConfig) {
@@ -177,7 +178,7 @@ class NodeController : Controller() {
         port.getAndUpdate { Math.max(nextPort, it) }
     }
 
-    private fun baseDirFor(time: Long) = jvm.userHome.resolve("demobench").resolve(localFor(time))
+    private fun baseDirFor(time: Long): Path = jvm.userHome.resolve("demobench").resolve(localFor(time))
     private fun localFor(time: Long) = SimpleDateFormat("yyyyMMddHHmmss").format(Date(time))
 
 }

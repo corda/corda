@@ -7,8 +7,8 @@ import javafx.scene.control.Button
 import javafx.scene.control.MenuItem
 import javafx.scene.control.Tab
 import javafx.scene.control.TabPane
+import net.corda.demobench.model.InstallConfig
 import net.corda.demobench.model.NodeController
-import net.corda.demobench.model.TempConfig
 import net.corda.demobench.profile.ProfileController
 import net.corda.demobench.ui.CloseableTab
 import org.controlsfx.dialog.ExceptionDialog
@@ -86,7 +86,7 @@ class DemoBenchView : View("Corda Demo Bench") {
         return nodeTabView
     }
 
-    private fun loadProfile(nodes: List<TempConfig>) {
+    private fun loadProfile(nodes: List<InstallConfig>) {
         closeAllTabs()
         nodeController.reset()
 

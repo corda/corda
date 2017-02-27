@@ -5,7 +5,7 @@ import java.lang.String.join
 import java.nio.file.Path
 import net.corda.node.services.config.SSLConfiguration
 
-open class NodeConfig(
+class NodeConfig(
         baseDir: Path,
         legalName: String,
         artemisPort: Int,
@@ -15,14 +15,14 @@ open class NodeConfig(
         val extraServices: List<String>,
         val users: List<User> = listOf(user("guest")),
         var networkMap: NetworkMapConfig? = null
-) : NetworkMapConfig(legalName, artemisPort) {
+) : NetworkMapConfig(legalName, artemisPort), HasPlugins {
 
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
     }
 
     val nodeDir: Path = baseDir.resolve(key)
-    val pluginDir: Path = nodeDir.resolve("plugins")
+    override val pluginDir: Path = nodeDir.resolve("plugins")
     val explorerDir: Path = baseDir.resolve("$key-explorer")
 
     val ssl: SSLConfiguration = object : SSLConfiguration {
@@ -70,7 +70,7 @@ private fun <T> valueFor(any: T): ConfigValue? = ConfigValueFactory.fromAnyRef(a
 
 private fun addressValueFor(port: Int) = valueFor("localhost:$port")
 
-private fun <T> optional(path: String, obj: T?, body: (Config, T) -> Config): Config {
+private inline fun <T> optional(path: String, obj: T?, body: (Config, T) -> Config): Config {
     val config = ConfigFactory.empty()
     return if (obj == null) config else body(config, obj).atPath(path)
 }

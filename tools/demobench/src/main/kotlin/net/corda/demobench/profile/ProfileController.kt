@@ -1,6 +1,5 @@
 package net.corda.demobench.profile
 
-import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import java.io.File
@@ -24,10 +23,10 @@ import tornadofx.Controller
 class ProfileController : Controller() {
 
     private val jvm by inject<JVMConfig>()
-    private val baseDir = jvm.userHome.resolve("demobench")
+    private val baseDir: Path = jvm.userHome.resolve("demobench")
     private val nodeController by inject<NodeController>()
     private val pluginController by inject<PluginController>()
-    private val serviceController by inject<ServiceController>()
+    private val installFactory by inject<InstallFactory>()
     private val chooser = FileChooser()
 
     init {
@@ -36,6 +35,9 @@ class ProfileController : Controller() {
         chooser.extensionFilters.add(ExtensionFilter("DemoBench profiles (*.zip)", "*.zip", "*.ZIP"))
     }
 
+    /**
+     * Saves the active node configurations into a ZIP file, along with their Cordapps.
+     */
     fun saveProfile(): Boolean {
         val target = forceExtension(chooser.showSaveDialog(null) ?: return false, ".zip")
         log.info("Saving profile as: $target")
@@ -79,13 +81,13 @@ class ProfileController : Controller() {
     }
 
     /**
-     * Parses a profile (ZIP) file
+     * Parses a profile (ZIP) file.
      */
-    fun openProfile(): List<TempConfig>? {
+    fun openProfile(): List<InstallConfig>? {
         val chosen = chooser.showOpenDialog(null) ?: return null
         log.info("Selected profile: $chosen")
 
-        val configs = LinkedList<TempConfig>()
+        val configs = LinkedList<InstallConfig>()
 
         FileSystems.newFileSystem(chosen.toPath(), null).use { fs ->
             // Identify the nodes first...
@@ -93,7 +95,7 @@ class ProfileController : Controller() {
                 .flatMap { Files.find(it, 2, BiPredicate { p, attr -> "node.conf" == p?.fileName.toString() && attr.isRegularFile }) }
                 .map { file ->
                     try {
-                        val config = toTempConfig(parse(file))
+                        val config = installFactory.toInstallConfig(parse(file), baseDir)
                         log.info("Loaded: $file")
                         config
                     } catch (e: Exception) {
@@ -103,11 +105,12 @@ class ProfileController : Controller() {
                 // Java seems to "walk" through the ZIP file backwards.
                 // So add new config to the front of the list, so that
                 // our final list is ordered to match the file.
-                }.forEach({ configs.addFirst(it) })
+                }.forEach { configs.addFirst(it) }
 
             val nodeIndex = configs.map { it.key to it }.toMap()
 
-            // Now extract all of the plugins...
+            // Now extract all of the plugins from the ZIP file,
+            // and copy them to a temporary location.
             StreamSupport.stream(fs.rootDirectories.spliterator(), false)
                 .flatMap { Files.find(it, 3, BiPredicate { p, attr -> p.inPluginsDir() && p.isPlugin() && attr.isRegularFile }) }
                 .forEach { plugin ->
@@ -119,7 +122,7 @@ class ProfileController : Controller() {
                         log.info("Loaded: $plugin")
                     } catch (e: Exception) {
                         log.log(Level.SEVERE, "Failed to extract '$plugin': ${e.message}", e)
-                        config.deleteBaseDir()
+                        configs.forEach { c -> c.deleteBaseDir() }
                         throw e
                     }
                 }
@@ -128,52 +131,8 @@ class ProfileController : Controller() {
         return configs
     }
 
-    private fun toTempConfig(config: Config): TempConfig {
-        val artemisPort = config.parsePort("artemisAddress")
-        val webPort = config.parsePort("webAddress")
-        val h2Port = config.getInt("h2port")
-        val extraServices = config.parseExtraServices("extraAdvertisedServiceIds")
-
-        val tempConfig = TempConfig(
-            Files.createTempDirectory(baseDir, ".node"),
-            config.getString("myLegalName"),
-            artemisPort,
-            config.getString("nearestCity"),
-            webPort,
-            h2Port,
-            extraServices,
-            config.getObjectList("rpcUsers").map { toUser(it.unwrapped()) }.toList()
-        )
-
-        if (config.hasPath("networkMapService")) {
-            val nmap = config.getConfig("networkMapService")
-            tempConfig.networkMap = NetworkMapConfig(nmap.getString("legalName"), nmap.parsePort("address"))
-        } else {
-            log.info("Node '${tempConfig.legalName}' is the network map")
-        }
-
-        return tempConfig
-    }
-
     private fun parse(path: Path): Config = Files.newBufferedReader(path).use {
         return ConfigFactory.parseReader(it)
-    }
-
-    private fun Config.parsePort(path: String): Int {
-        val address = this.getString(path)
-        val port = HostAndPort.fromString(address).port
-        require(nodeController.isPortValid(port), { "Invalid port $port from '$path'." })
-        return port
-    }
-
-    private fun Config.parseExtraServices(path: String): List<String> {
-        val services = serviceController.services.toSortedSet()
-        return this.getString(path).split(",")
-            .filter { !it.isNullOrEmpty() }
-            .map { svc ->
-                require(svc in services, { "Unknown service '$svc'." } )
-                svc
-            }.toList()
     }
 
 }

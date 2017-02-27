@@ -9,6 +9,7 @@ import java.util.stream.Stream
 import kotlinx.support.jdk8.collections.stream
 import kotlinx.support.jdk8.streams.toList
 import net.corda.core.node.CordaPluginRegistry
+import net.corda.demobench.model.HasPlugins
 import net.corda.demobench.model.JVMConfig
 import net.corda.demobench.model.NodeConfig
 import tornadofx.*
@@ -16,11 +17,11 @@ import tornadofx.*
 class PluginController : Controller() {
 
     private val jvm by inject<JVMConfig>()
-    private val pluginDir = jvm.applicationDir.resolve("plugins")
+    private val pluginDir: Path = jvm.applicationDir.resolve("plugins")
     private val bankOfCorda = pluginDir.resolve("bank-of-corda.jar").toFile()
 
     /**
-     * Install any built-in plugins that the node requires.
+     * Install any built-in plugins that this node requires.
      */
     @Throws(IOException::class)
     fun populate(config: NodeConfig) {
@@ -32,9 +33,9 @@ class PluginController : Controller() {
     }
 
     /**
-     * Extract the set of user permissions that this plugin's flows require.
+     * Generate the set of user permissions that this node's plugins require.
      */
-    fun permissionsFor(config: NodeConfig) = walkPlugins(config.pluginDir)
+    fun permissionsFor(config: HasPlugins) = walkPlugins(config.pluginDir)
         .map { plugin -> classLoaderFor(plugin) }
         .flatMap { cl -> cl.use(URLClassLoader::flowsFor).stream() }
         .map { flow -> "StartFlow.$flow" }
@@ -43,17 +44,12 @@ class PluginController : Controller() {
     /**
      * Generates a stream of a node's non-built-it plugins.
      */
-    fun userPluginsFor(config: NodeConfig): Stream<Path> = walkPlugins(config.pluginDir)
+    fun userPluginsFor(config: HasPlugins): Stream<Path> = walkPlugins(config.pluginDir)
             .filter { bankOfCorda.name != it.fileName.toString() }
-
-    /**
-     * Removes the "plugins" directory associated with this node.
-     */
-    fun deletePluginsFor(config: NodeConfig): Boolean = config.pluginDir.toFile().deleteRecursively()
 
     private fun walkPlugins(pluginDir: Path): Stream<Path> {
         return if (Files.isDirectory(pluginDir))
-            Files.walk(pluginDir, 1).filter { it.isPlugin() }
+            Files.walk(pluginDir, 1).filter(Path::isPlugin)
         else
             Stream.empty()
     }

@@ -23,4 +23,3 @@ class JVMConfig : Controller() {
     }
 
 }
-
