@@ -176,14 +176,15 @@ fun <A : Any> Generator.Companion.replicatePoisson(meanSize: Double, generator: 
 fun <A : Any> Generator.Companion.pickOne(list: List<A>) = Generator.intRange(0, list.size - 1).map { list[it] }
 fun <A : Any> Generator.Companion.pickN(number: Int, list: List<A>) = Generator<List<A>> {
     val mask = BitSet(list.size)
-    for (i in 0..Math.min(list.size, number) - 1) {
-        mask[i] = 1
+    val size = Math.min(list.size, number)
+    for (i in 0..size - 1) {
+        mask[i] = true
     }
-    for (i in 0..mask.size() - 1) {
-        val byte = mask[i]
-        val swapIndex = i + it.nextInt(mask.size() - i)
+    for (i in 0..size - 1) {
+        val bit = mask[i]
+        val swapIndex = i + it.nextInt(size - i)
         mask[i] = mask[swapIndex]
-        mask[swapIndex] = byte
+        mask[swapIndex] = bit
     }
     val resultList = ArrayList<A>()
     list.forEachIndexed { index, a ->
