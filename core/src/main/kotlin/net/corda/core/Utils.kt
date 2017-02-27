@@ -258,6 +258,7 @@ class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()
  *
  * We avoid the use of the word transient here to hopefully reduce confusion with the term in relation to (Java) serialization.
  */
+@CordaSerializable
 abstract class RetryableException(message: String) : Exception(message)
 
 /**

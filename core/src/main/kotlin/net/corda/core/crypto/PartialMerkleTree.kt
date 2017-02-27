@@ -4,7 +4,7 @@ import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
-
+@CordaSerializable
 class MerkleTreeException(val reason: String) : Exception() {
     override fun toString() = "Partial Merkle Tree exception. Reason: $reason"
 }

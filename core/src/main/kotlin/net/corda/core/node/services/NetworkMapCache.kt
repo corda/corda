@@ -144,6 +144,7 @@ interface NetworkMapCache {
     fun runWithoutMapService()
 }
 
+@CordaSerializable
 sealed class NetworkCacheError : Exception() {
     /** Indicates a failure to deregister, because of a rejected request from the remote node */
     class DeregistrationFailed : NetworkCacheError()

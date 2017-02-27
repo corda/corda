@@ -260,6 +260,7 @@ fun Input.readBytesWithLength(): ByteArray {
 }
 
 /** Thrown during deserialisation to indicate that an attachment needed to construct the [WireTransaction] is not found */
+@CordaSerializable
 class MissingAttachmentsException(val ids: List<SecureHash>) : Exception()
 
 /** A serialisation engine that knows how to deserialise code inside a sandbox */

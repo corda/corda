@@ -32,4 +32,5 @@ interface UniquenessProvider {
     data class ConsumingTx(val id: SecureHash, val inputIndex: Int, val requestingParty: Party)
 }
 
+@CordaSerializable
 class UniquenessException(val error: UniquenessProvider.Conflict) : Exception()

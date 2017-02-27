@@ -32,10 +32,12 @@ import java.security.KeyPair
  */
 object TwoPartyDealFlow {
 
+    @CordaSerializable
     class DealMismatchException(val expectedDeal: ContractState, val actualDeal: ContractState) : Exception() {
         override fun toString() = "The submitted deal didn't match the expected: $expectedDeal vs $actualDeal"
     }
 
+    @CordaSerializable
     class DealRefMismatchException(val expectedDeal: StateRef, val actualDeal: StateRef) : Exception() {
         override fun toString() = "The submitted deal didn't match the expected: $expectedDeal vs $actualDeal"
     }
