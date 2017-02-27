@@ -106,7 +106,7 @@ object Crypto {
      * Note: Only the schemes added in this map will be supported (see [Crypto]).
      * Do not forget to add the DEFAULT_SIGNATURE_SCHEME as well.
      */
-    private val supportedSignatureSchemes = hashMapOf(
+    private val supportedSignatureSchemes = mapOf(
             RSA_SHA256.schemeCodeName                to RSA_SHA256,
             ECDSA_SECP256K1_SHA256.schemeCodeName    to ECDSA_SECP256K1_SHA256,
             ECDSA_SECP256R1_SHA256.schemeCodeName    to ECDSA_SECP256R1_SHA256,
@@ -121,7 +121,7 @@ object Crypto {
      * @param schemeCodeName a [String] that should match a key in supportedSignatureSchemes map (e.g. ECDSA_SECP256K1_SHA256).
      * @return a currently supported SignatureScheme or null.
      */
-    private fun findSignatureScheme(schemeCodeName: String): SignatureScheme? = supportedSignatureSchemes.get(schemeCodeName)
+    private fun findSignatureScheme(schemeCodeName: String): SignatureScheme? = supportedSignatureSchemes[schemeCodeName]
 
     /**
      * Retrieve the corresponding [SignatureScheme] based on the type of the input [KeyPair].
@@ -322,7 +322,7 @@ object Crypto {
      * @param schemeCodeName a signature scheme's code name (e.g. ECDSA_SECP256K1_SHA256).
      * @return true if the signature scheme is supported.
      */
-    fun isSupportedSignatureScheme(schemeCodeName: String): Boolean = supportedSignatureSchemes.containsKey(schemeCodeName)
+    fun isSupportedSignatureScheme(schemeCodeName: String): Boolean = schemeCodeName in supportedSignatureSchemes
 
     /** @return the default signature scheme's codeName. */
     fun getDefaultSignatureSchemeCodeName(): String = DEFAULT_SIGNATURE_SCHEME.schemeCodeName
