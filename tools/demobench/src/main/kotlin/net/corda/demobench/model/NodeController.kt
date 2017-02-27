@@ -14,7 +14,7 @@ import net.corda.demobench.pty.R3Pty
 import tornadofx.Controller
 
 class NodeController : Controller() {
-    private companion object {
+    companion object {
         const val firstPort = 10000
         const val minPort = 1024
         const val maxPort = 65535
@@ -41,6 +41,9 @@ class NodeController : Controller() {
         log.info("Corda JAR: $cordaPath")
     }
 
+    /**
+     * Validate a Node configuration provided by [net.corda.demobench.views.NodeTabView].
+     */
     fun validate(nodeData: NodeData): NodeConfig? {
         val config = NodeConfig(
             baseDir,
@@ -94,7 +97,7 @@ class NodeController : Controller() {
 
     fun hasNetworkMap(): Boolean = networkMapConfig != null
 
-    fun chooseNetworkMap(config: NodeConfig) {
+    private fun chooseNetworkMap(config: NodeConfig) {
         if (hasNetworkMap()) {
             config.networkMap = networkMapConfig
         } else {
@@ -140,6 +143,9 @@ class NodeController : Controller() {
         nodes.clear()
     }
 
+    /**
+     * Add a [NodeConfig] object that has been loaded from a profile.
+     */
     fun register(config: NodeConfig): Boolean {
         if (nodes.putIfAbsent(config.key, config) != null) {
             return false
