@@ -1,6 +1,8 @@
 package net.corda.core.serialization
 
 import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
+import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
@@ -25,9 +27,14 @@ object DefaultKryoCustomizer {
         ServiceLoader.load(CordaPluginRegistry::class.java).toList().filter { it.customizeSerialization(customization) }
     }
 
-    // TODO: move all register() to addDefaultSerializer()
     fun customize(kryo: Kryo): Kryo {
         return kryo.apply {
+            // Store a little schema of field names in the stream the first time a class is used which increases tolerance
+            // for change to a class.
+            setDefaultSerializer(CompatibleFieldSerializer::class.java)
+            // Take the safest route here and allow subclasses to have fields named the same as super classes.
+            fieldSerializerConfig.setCachedFieldNameStrategy(FieldSerializer.CachedFieldNameStrategy.EXTENDED)
+
             // Allow construction of objects using a JVM backdoor that skips invoking the constructors, if there is no
             // no-arg constructor available.
             instantiatorStrategy = Kryo.DefaultInstantiatorStrategy(StdInstantiatorStrategy())

@@ -76,10 +76,19 @@ class SerializedBytes<T : Any>(bytes: ByteArray, val internalOnly: Boolean = fal
     fun writeToFile(path: Path): Path = Files.write(path, bytes)
 }
 
+// "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
+private val KryoHeaderV0_1: OpaqueBytes = OpaqueBytes("corda\u0000\u0000\u0001".toByteArray())
+
 // Some extension functions that make deserialisation convenient and provide auto-casting of the result.
 fun <T : Any> ByteArray.deserialize(kryo: Kryo = threadLocalP2PKryo()): T {
-    @Suppress("UNCHECKED_CAST")
-    return kryo.readClassAndObject(Input(this)) as T
+    Input(this).use {
+        val header = OpaqueBytes(it.readBytes(8))
+        if (header != KryoHeaderV0_1) {
+            throw KryoException("Serialized bytes header does not match any known format.")
+        }
+        @Suppress("UNCHECKED_CAST")
+        return kryo.readClassAndObject(it) as T
+    }
 }
 
 fun <T : Any> OpaqueBytes.deserialize(kryo: Kryo = threadLocalP2PKryo()): T {
@@ -114,6 +123,7 @@ object SerializedBytesSerializer : Serializer<SerializedBytes<Any>>() {
 fun <T : Any> T.serialize(kryo: Kryo = threadLocalP2PKryo(), internalOnly: Boolean = false): SerializedBytes<T> {
     val stream = ByteArrayOutputStream()
     Output(stream).use {
+        it.writeBytes(KryoHeaderV0_1.bytes)
         kryo.writeClassAndObject(it, this)
     }
     return SerializedBytes(stream.toByteArray(), internalOnly)
