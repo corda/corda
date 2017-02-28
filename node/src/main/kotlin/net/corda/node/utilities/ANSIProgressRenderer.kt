@@ -3,7 +3,7 @@ package net.corda.node.utilities
 import net.corda.core.utilities.Emoji.CODE_GREEN_TICK
 import net.corda.core.utilities.Emoji.CODE_NO_ENTRY
 import net.corda.core.utilities.Emoji.CODE_RIGHT_ARROW
-import net.corda.core.utilities.Emoji.SKULL_AND_CROSSBONES
+import net.corda.core.utilities.Emoji.CODE_SKULL_AND_CROSSBONES
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.utilities.ANSIProgressRenderer.progressTracker
 import org.apache.logging.log4j.LogManager
@@ -128,7 +128,8 @@ object ANSIProgressRenderer {
         var newLinesDrawn = 1 + pt.renderLevel(ansi, 0, error != null)
 
         if (error != null) {
-            ansi.a("$SKULL_AND_CROSSBONES   $error")
+            // TODO: This should be using emoji only on supported platforms.
+            ansi.a("$CODE_SKULL_AND_CROSSBONES   $error")
             ansi.eraseLine(Ansi.Erase.FORWARD)
             ansi.newline()
             newLinesDrawn++
