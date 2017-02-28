@@ -25,6 +25,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.*
 import net.corda.node.services.api.*
+import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.events.NodeSchedulerService
@@ -440,6 +441,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             SimpleNotaryService.type -> SimpleNotaryService(services, timestampChecker, uniquenessProvider)
             ValidatingNotaryService.type -> ValidatingNotaryService(services, timestampChecker, uniquenessProvider)
             RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services, timestampChecker, uniquenessProvider as RaftUniquenessProvider)
+            BFTNonValidatingNotaryService.type -> with(configuration as FullNodeConfiguration) {
+                val clientId = notaryClusterAddresses.indexOf(notaryNodeAddress)
+                val client = BFTSMaRt.Client(clientId)
+                tokenizableServices.add(client)
+                BFTNonValidatingNotaryService(services, timestampChecker, notaryNodeAddress!!, notaryClusterAddresses, database, client)
+            }
             else -> {
                 throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")
             }

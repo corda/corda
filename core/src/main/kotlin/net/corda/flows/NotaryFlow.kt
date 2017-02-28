@@ -109,12 +109,6 @@ object NotaryFlow {
         @Suspendable
         abstract fun receiveAndVerifyTx(): TransactionParts
 
-        /**
-         * The minimum amount of information needed to notarise a transaction. Note that this does not include
-         * any sensitive transaction details.
-         */
-        data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: Timestamp?)
-
         @Suspendable
         private fun signAndSendResponse(txId: SecureHash) {
             val signature = sign(txId.bytes)
@@ -157,6 +151,12 @@ object NotaryFlow {
         }
     }
 }
+
+/**
+ * The minimum amount of information needed to notarise a transaction. Note that this does not include
+ * any sensitive transaction details.
+ */
+data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: Timestamp?)
 
 class NotaryException(val error: NotaryError) : FlowException() {
     override fun toString() = "${super.toString()}: Error response from Notary - $error"

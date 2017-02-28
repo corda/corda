@@ -164,9 +164,6 @@ class Node(override val configuration: FullNodeConfiguration,
             RaftValidatingNotaryService.type -> with(configuration) {
                 RaftUniquenessProvider(baseDirectory, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
             }
-            BFTValidatingNotaryService.type -> with(configuration) {
-                BFTSmartUniquenessProvider(notaryNodeAddress!!, notaryClusterAddresses, database)
-            }
             else -> PersistentUniquenessProvider()
         }
     }
