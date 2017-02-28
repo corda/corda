@@ -4,38 +4,63 @@ import java.security.*
 
 /**
  * Helper function for signing.
- * @param bytesToSign the data/message to be signed in [ByteArray] form.
+ * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
  * @return the digital signature (in [ByteArray]) on the input message.
- * @throws Exception if the signature scheme is not supported for this private key.
+ * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
-@Throws(Exception::class, InvalidKeyException::class, SignatureException::class)
-fun PrivateKey.sign(bytesToSign: ByteArray): ByteArray = Crypto.doSign(this, bytesToSign)
+@Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
+fun PrivateKey.sign(clearData: ByteArray): ByteArray = Crypto.doSign(this, clearData)
+
+/**
+ * Helper function for signing.
+ * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
+ * @param metaData tha attached MetaData object.
+ * @return a [DigitalSignatureWithMetaData] object.
+ * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
+ * @throws InvalidKeyException if the private key is invalid.
+ * @throws SignatureException if signing is not possible due to malformed data or private key.
+ */
+@Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
+fun PrivateKey.sign(clearData: ByteArray, metaData: MetaData): DigitalSignatureWithMetaData = Crypto.doSign(this, clearData, metaData)
 
 /**
  * Helper function to sign with a key pair.
- * @param bytesToSign the data/message to be signed in [ByteArray] form.
+ * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
  * @return the digital signature (in [ByteArray]) on the input message.
- * @throws Exception if the signature scheme is not supported for this private key.
+ * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
-@Throws(Exception::class, InvalidKeyException::class, SignatureException::class)
-fun KeyPair.sign(bytesToSign: ByteArray): ByteArray = Crypto.doSign(this.private, bytesToSign)
+@Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
+fun KeyPair.sign(clearData: ByteArray): ByteArray = Crypto.doSign(this.private, clearData)
 
 /**
  * Helper function to verify a signature.
  * @param signatureData the signature on a message.
- * @param clearData the clear data/message that was signed.
+ * @param clearData the clear data/message that was signed (Merkle root or actual data).
  * @throws InvalidKeyException if the key is invalid.
  * @throws SignatureException if this signatureData object is not initialized properly,
  * the passed-in signatureData is improperly encoded or of the wrong type,
  * if this signatureData algorithm is unable to process the input data provided, etc.
- * @throws Exception if verification is not possible.
+ * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
  */
-@Throws(Exception::class, InvalidKeyException::class, SignatureException::class)
+@Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
 fun PublicKey.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Crypto.doVerify(this, signatureData, clearData)
+
+/**
+ * Helper function to verify a metadata attached signature.
+ * @param digitalSignatureWithMetaData a metadata attached digital signature.
+ * @param clearData the data/message that was signed (actual data or Merkle root).
+ * @throws InvalidKeyException if the key is invalid.
+ * @throws SignatureException if this signatureData object is not initialized properly,
+ * the passed-in signatureData is improperly encoded or of the wrong type,
+ * if this signatureData algorithm is unable to process the input data provided, etc.
+ * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
+ */
+@Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
+fun PublicKey.verify(digitalSignatureWithMetaData: DigitalSignatureWithMetaData, clearData: ByteArray): Boolean = Crypto.doVerify(this, digitalSignatureWithMetaData.bytes, clearData.plus(digitalSignatureWithMetaData.metaData.hashBytes()))
 
 /**
  * Helper function for the signers to verify their own signature.
@@ -45,9 +70,9 @@ fun PublicKey.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = 
  * @throws SignatureException if this signatureData object is not initialized properly,
  * the passed-in signatureData is improperly encoded or of the wrong type,
  * if this signatureData algorithm is unable to process the input data provided, etc.
- * @throws Exception if verification is not possible.
+ * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
  */
-@Throws(Exception::class, InvalidKeyException::class, SignatureException::class)
+@Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
 fun KeyPair.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Crypto.doVerify(this.public, signatureData, clearData)
 
 /**

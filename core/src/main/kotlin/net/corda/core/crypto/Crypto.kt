@@ -3,6 +3,7 @@ package net.corda.core.crypto
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
+import org.bouncycastle.asn1.x509.ObjectDigestInfo.publicKey
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.interfaces.ECKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
@@ -78,7 +79,7 @@ object Crypto {
             net.i2p.crypto.eddsa.KeyPairGenerator(), // EdDSA engine uses a custom KeyPairGenerator Vs BouncyCastle.
             EdDSANamedCurveTable.getByName("ed25519-sha-512"),
             256,
-            "EdDSA signature scheme using the ed255519 twisted Edwards curve."
+            "EdDSA signature scheme using the ed25519 twisted Edwards curve."
     )
 
     /**
@@ -272,26 +273,78 @@ object Crypto {
     fun generateKeyPair(): KeyPair = DEFAULT_SIGNATURE_SCHEME.keyPairGenerator.generateKeyPair() ?: throw Exception("Unsupported key/algorithm for the default scheme: ${DEFAULT_SIGNATURE_SCHEME.schemeCodeName}")
 
     /**
-     * Generic way to sign [ByteArray] messages with a [PrivateKey]. Strategy on the actual signing scheme is based
-     * on the [PrivateKey] type. This class has similarities to the [sign] but it does not attach the public key information.
+     * Generic way to sign [ByteArray] data with a [PrivateKey]. Strategy on on identifying the actual signing scheme is based
+     * on the [PrivateKey] type, but if the schemeCodeName is known, then better use doSign(signatureScheme: String, privateKey: PrivateKey, clearData: ByteArray).
      * @param privateKey the signer's [PrivateKey].
-     * @param bytesToSign the data/message to be signed in [ByteArray] form.
+     * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
      * @return the digital signature (in [ByteArray]) on the input message.
      * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
-    fun doSign(privateKey: PrivateKey, bytesToSign: ByteArray): ByteArray {
-        if (bytesToSign.isEmpty()) throw Exception("Signing of an empty array is not permitted!")
+    fun doSign(privateKey: PrivateKey, clearData: ByteArray): ByteArray {
         val sig: Signature = findSignatureScheme(privateKey)?.sig ?: throw IllegalArgumentException("Unsupported key/algorithm for the private key: ${privateKey}")
-        sig.initSign(privateKey)
-        sig.update(bytesToSign)
-        return sig.sign()
+        return doSign(sig, privateKey, clearData)
     }
 
     /**
-     * Utility to simplify the act of verifying a signatureData. It will always throw an exception if verification is not possible.
+     * Generic way to sign [ByteArray] data with a [PrivateKey] and a known schemeCodeName [String].
+     * @param schemeCodeName a signature scheme's code name (e.g. ECDSA_SECP256K1_SHA256).
+     * @param privateKey the signer's [PrivateKey].
+     * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
+     * @return the digital signature (in [ByteArray]) on the input message.
+     * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
+     * @throws InvalidKeyException if the private key is invalid.
+     * @throws SignatureException if signing is not possible due to malformed data or private key.
+     */
+    @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
+    fun doSign(signatureScheme: String, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
+        val sig: Signature = findSignatureScheme(signatureScheme)?.sig ?: throw IllegalArgumentException("Unsupported key/algorithm for the private key: ${privateKey}")
+        return doSign(sig, privateKey, clearData)
+    }
+
+    /**
+     * Generic way to sign [ByteArray] data with a [PrivateKey] and a known [Signature].
+     * @param signature a [Signature] object, retrieved from supported signature schemes, see [Crypto].
+     * @param privateKey the signer's [PrivateKey].
+     * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
+     * @return the digital signature (in [ByteArray]) on the input message.
+     * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
+     * @throws InvalidKeyException if the private key is invalid.
+     * @throws SignatureException if signing is not possible due to malformed data or private key.
+     */
+    @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
+    private fun doSign(signature: Signature, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
+        if (clearData.isEmpty()) throw Exception("Signing of an empty array is not permitted!")
+        signature.initSign(privateKey)
+        signature.update(clearData)
+        return signature.sign()
+    }
+
+    /**
+     * Generic way to sign [ByteArray] data with a [PrivateKey] and additional [MetaData].
+     * @param privateKey the signer's [PrivateKey].
+     * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
+     * @param metaData additional [MetaData] that should be attached to the signature.
+     * @return a [DigitalSignatureWithMetaData] object.
+     * @throws IllegalArgumentException if the signature scheme is not supported for this private key or
+     * if metaData.schemeCodeName is not aligned with key type.
+     * @throws InvalidKeyException if the private key is invalid.
+     * @throws SignatureException if signing is not possible due to malformed data or private key.
+     */
+    @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
+    fun doSign(privateKey: PrivateKey, clearData: ByteArray, metaData: MetaData): DigitalSignatureWithMetaData {
+        val sigKey: SignatureScheme = findSignatureScheme(privateKey) ?: throw IllegalArgumentException("Unsupported key/algorithm for the private key: ${privateKey}")
+        val sigMetaData: SignatureScheme = findSignatureScheme(metaData.schemeCodeName) ?: throw IllegalArgumentException("Unsupported key/algorithm for metadata schemeCodeName: ${metaData.schemeCodeName}")
+        if (sigKey != sigMetaData) throw IllegalArgumentException("Metadata schemeCodeName: ${metaData.schemeCodeName} is not aligned with the key type.")
+        val signatureData = doSign(sigKey.schemeCodeName, privateKey, clearData.plus(metaData.hashBytes()))
+        return DigitalSignatureWithMetaData(signatureData, metaData)
+    }
+
+    /**
+     * Utility to simplify the act of verifying a digital signature.
+     * It returns true if it succeeds, but it always throws an exception if verification fails.
      * @param publicKey the signer's [PublicKey].
      * @param signatureData the signatureData on a message.
      * @param clearData the clear data/message that was signed.
@@ -300,16 +353,55 @@ object Crypto {
      * @throws SignatureException if this signatureData object is not initialized properly,
      * the passed-in signatureData is improperly encoded or of the wrong type,
      * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
-     * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
+     * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
+     */
+    @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
+    fun doVerify(schemeCodeName: String, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
+        val sig: Signature = findSignatureScheme(schemeCodeName)?.sig ?: throw IllegalArgumentException("Unsupported key/algorithm for input: $schemeCodeName")
+        return doVerify(sig, publicKey, signatureData, clearData)
+    }
+
+    /**
+     * Utility to simplify the act of verifying a digital signature by identifying the signature scheme used from the input public key's type.
+     * It returns true if it succeeds, but it always throws an exception if verification fails.
+     * Strategy on identifying the actual signing scheme is based on the [PublicKey] type, but if the schemeCodeName is known,
+     * then better use doVerify(schemeCodeName: String, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray).
+     * @param publicKey the signer's [PublicKey].
+     * @param signatureData the signatureData on a message.
+     * @param clearData the clear data/message that was signed.
+     * @return true if verification passes or throws [Exception] if verification fails.
+     * @throws InvalidKeyException if the key is invalid.
+     * @throws SignatureException if this signatureData object is not initialized properly,
+     * the passed-in signatureData is improperly encoded or of the wrong type,
+     * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
+     * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
      */
     @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
     fun doVerify(publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
+        val sig: Signature = findSignatureScheme(publicKey)?.sig ?: throw IllegalArgumentException("Unsupported key/algorithm for the public key: ${publicKey}")
+        return doVerify(sig, publicKey, signatureData, clearData)
+    }
+
+    /**
+     * Method to verify a digital signature.
+     * It returns true if it succeeds, but it always throws an exception if verification fails.
+     * @param signature a [Signature] object, retrieved from supported signature schemes, see [Crypto].
+     * @param publicKey the signer's [PublicKey].
+     * @param signatureData the signatureData on a message.
+     * @param clearData the clear data/message that was signed.
+     * @return true if verification passes or throws [Exception] if verification fails.
+     * @throws InvalidKeyException if the key is invalid.
+     * @throws SignatureException if this signatureData object is not initialized properly,
+     * the passed-in signatureData is improperly encoded or of the wrong type,
+     * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
+     * @throws IllegalArgumentException if any of the clear or signature data is empty.
+     */
+    private fun doVerify(signature: Signature, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
         if (signatureData.isEmpty()) throw IllegalArgumentException("Signature data is empty!")
         if (clearData.isEmpty()) throw IllegalArgumentException("Clear data is empty, nothing to verify!")
-        val sig: Signature = findSignatureScheme(publicKey)?.sig ?: throw IllegalArgumentException("Unsupported key/algorithm for the public key: ${publicKey})")
-        sig.initVerify(publicKey)
-        sig.update(clearData)
-        val verificationResult = sig.verify(signatureData)
+        signature.initVerify(publicKey)
+        signature.update(clearData)
+        val verificationResult = signature.verify(signatureData)
         if (verificationResult) {
             return true
         } else {
