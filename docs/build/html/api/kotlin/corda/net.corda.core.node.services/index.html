@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>net.corda.core.node.services - corda</title>
-<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="..\..\style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.core.node.services</a><br/>
@@ -162,7 +162,7 @@ if any of the inputs have already been used in another transaction.</p>
 <td>
 <a href="-vault/index.html">Vault</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Vault</span></code>
+<code><span class="keyword">class </span><span class="identifier">Vault</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span></code>
 <p>A vault (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
 because we own them. This class represents an immutable, stable state of a vault: it is guaranteed not to
 change out from underneath you, even though the canonical currently-best-known vault may change as we learn
@@ -229,15 +229,29 @@ specific session ID has been established).</p>
 <tbody>
 <tr>
 <td>
+<a href="consumed-states.html">consumedStates</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span> <a href="-vault-service/index.html"><span class="identifier">VaultService</span></a><span class="symbol">.</span><span class="identifier">consumedStates</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="deals-with.html">dealsWith</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.contracts/-deal-state/index.html"><span class="identifier">DealState</span></a><span class="symbol">&gt;</span> <a href="-vault-service/index.html"><span class="identifier">VaultService</span></a><span class="symbol">.</span><span class="identifier">dealsWith</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services$dealsWith(net.corda.core.node.services.VaultService, net.corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.contracts/-deal-state/index.html"><span class="identifier">DealState</span></a><span class="symbol">&gt;</span> <a href="-vault-service/index.html"><span class="identifier">VaultService</span></a><span class="symbol">.</span><span class="identifier">dealsWith</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services$dealsWith(net.corda.core.node.services.VaultService, net.corda.core.crypto.AbstractParty)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../net.corda.core.crypto/-abstract-party/index.html"><span class="identifier">AbstractParty</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="linear-heads-of-type.html">linearHeadsOfType</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.contracts/-linear-state/index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span> <a href="-vault-service/index.html"><span class="identifier">VaultService</span></a><span class="symbol">.</span><span class="identifier">linearHeadsOfType</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../net.corda.core.contracts/-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a><span class="symbol">,</span>&nbsp;<a href="../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.contracts/-linear-state/index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span> <a href="-vault-service/index.html"><span class="identifier">VaultService</span></a><span class="symbol">.</span><span class="identifier">linearHeadsOfType</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../net.corda.core.contracts/-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a><span class="symbol">,</span>&nbsp;<a href="../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Returns the <a href="#">linearState</a> heads only when the type of the state would be considered an 'instanceof' the given type.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="unconsumed-states.html">unconsumedStates</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span> <a href="-vault-service/index.html"><span class="identifier">VaultService</span></a><span class="symbol">.</span><span class="identifier">unconsumedStates</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

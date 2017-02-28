@@ -3,7 +3,7 @@ package net.corda.testing.http
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.core.utilities.loggerFor
-import net.corda.node.utilities.JsonSupport
+import net.corda.webserver.utilities.JsonSupport
 import okhttp3.*
 import java.net.URL
 import java.util.concurrent.TimeUnit
