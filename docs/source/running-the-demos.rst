@@ -259,8 +259,8 @@ Launch the Explorer application to visualize the issuance and transfer of cash f
 
 Using the following login details:
 
-- For the Bank of Corda node: localhost / port 10004 / username bankUser / password test
-- For the Big Corporation node: localhost / port 10006 / username bigCorpUser / password test
+- For the Bank of Corda node: localhost / port 10005 / username bankUser / password test
+- For the Big Corporation node: localhost / port 10008 / username bigCorpUser / password test
 
 See https://docs.corda.net/node-explorer.html for further details on usage.
 

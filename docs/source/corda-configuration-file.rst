@@ -39,7 +39,8 @@ NetworkMapService plus Simple Notary configuration file.
     keyStorePassword : "cordacadevpass"
     trustStorePassword : "trustpass"
     messagingAddress : "localhost:12345"
-    webAddress : "localhost:12346"
+    rpcAddress : "localhost:12346"
+    webAddress : "localhost:12347"
     extraAdvertisedServiceIds : []
     useHTTPS : false
     devMode : true
@@ -81,6 +82,9 @@ path to the node's base directory.
         here must be externally accessible when running nodes across a cluster of machines.
 
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
+
+:rpcAddress: The address of the Artemis RPC broker instance. If not provided the node will run one locally, one port higher than
+     the messaging server address.
 
 :webAddress: The host and port on which the bundled webserver will listen if it is started.
 

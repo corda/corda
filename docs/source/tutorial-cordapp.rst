@@ -808,15 +808,17 @@ like to deploy for testing. See further details below:
           nearestCity "London"                             // For use with the network visualiser.
           advertisedServices = ["corda.notary.validating"] // A list of services you wish the node to offer.
           messagingPort 10002
-          webPort 10003                                    // Usually 1 higher than the Artemis port.
+          rpcPort 10003                                    // Usually 1 higher than the messaging port.
+          webPort 10004                                    // Usually 1 higher than the RPC port.
           cordapps = []                                    // Add package names of CordaApps.
       }
       node {                                               // Create an additional node.
           name "NodeA"
           nearestCity "London"
           advertisedServices = []
-          messagingPort 10004
-          webPort 10005
+          messagingPort 10005
+          rpcPort 10006
+          webPort 10007
           cordapps = []
       }
       ...
