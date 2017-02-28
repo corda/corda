@@ -2,7 +2,6 @@ package net.corda.node.serialization
 
 import com.esotericsoftware.kryo.KryoException
 import com.google.common.net.HostAndPort
-import net.corda.core.contracts.*
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.serialization.SerializationCustomization
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -44,16 +43,7 @@ class DefaultWhitelist : CordaPluginRegistry() {
             addToWhitelist(java.util.Collections.singletonMap("A", "B").javaClass)
             addToWhitelist(java.util.HashMap::class.java)
             addToWhitelist(java.util.LinkedHashMap::class.java)
-            addToWhitelist(Tenor::class.java)
-            addToWhitelist(Tenor.TimeUnit::class.java)
-            addToWhitelist(BusinessCalendar::class.java)
-            addToWhitelist(DayCountBasisDay::class.java)
-            addToWhitelist(DayCountBasisYear::class.java)
             addToWhitelist(BigDecimal::class.java)
-            addToWhitelist(AccrualAdjustment::class.java)
-            addToWhitelist(Frequency::class.java)
-            addToWhitelist(PaymentRule::class.java)
-            addToWhitelist(DateRollConvention::class.java)
             addToWhitelist(LocalDate::class.java)
             addToWhitelist(Period::class.java)
         }
