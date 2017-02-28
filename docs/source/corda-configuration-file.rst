@@ -38,7 +38,7 @@ NetworkMapService plus Simple Notary configuration file.
     nearestCity : "London"
     keyStorePassword : "cordacadevpass"
     trustStorePassword : "trustpass"
-    artemisAddress : "localhost:12345"
+    messagingAddress : "localhost:12345"
     webAddress : "localhost:12346"
     extraAdvertisedServiceIds : []
     useHTTPS : false
@@ -74,7 +74,7 @@ path to the node's base directory.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
     the only configuration that has been tested, although in the future full support for other storage layers will be validated.
 
-:artemisAddress: The host and port on which the node is available for protocol operations over ArtemisMQ.
+:messagingAddress: The host and port on which the node is available for protocol operations over ArtemisMQ.
 
     .. note:: In practice the ArtemisMQ messaging services bind to all local addresses on the specified port. However,
         note that the host is the included as the advertised entry in the NetworkMapService. As a result the value listed

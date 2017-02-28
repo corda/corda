@@ -351,7 +351,7 @@ open class DriverDSL(
         val baseDirectory = driverDirectory / name
         val configOverrides = mapOf(
                 "myLegalName" to name,
-                "artemisAddress" to messagingAddress.toString(),
+                "messagingAddress" to messagingAddress.toString(),
                 "rpcAddress" to rpcAddress.toString(),
                 "webAddress" to webAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
@@ -467,7 +467,7 @@ open class DriverDSL(
                         // TODO: remove the webAddress as NMS doesn't need to run a web server. This will cause all
                         //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
                         "webAddress" to apiAddress,
-                        "artemisAddress" to networkMapAddress.toString(),
+                        "messagingAddress" to networkMapAddress.toString(),
                         "useTestClock" to useTestClock
                 )
         )
@@ -538,7 +538,7 @@ open class DriverDSL(
             val process = builder.start()
             // TODO There is a race condition here. Even though the messaging address is bound it may be the case that
             // the handlers for the advertised services are not yet registered. Needs rethinking.
-            return addressMustBeBound(executorService, nodeConf.artemisAddress).map { process }
+            return addressMustBeBound(executorService, nodeConf.messagingAddress).map { process }
         }
 
         private fun startWebserver(
@@ -556,7 +556,7 @@ open class DriverDSL(
                 emptyList()
 
             val javaArgs = listOf(path) +
-                    listOf("-Dname=node-${nodeConf.artemisAddress}-webserver") + debugPortArg +
+                    listOf("-Dname=node-${nodeConf.messagingAddress}-webserver") + debugPortArg +
                     listOf(
                             "-cp", classpath, className,
                             "--base-directory", nodeConf.baseDirectory.toString())

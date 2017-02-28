@@ -14,6 +14,18 @@ API changes:
   using strings like "1000.00 USD" when writing. You can use any format supported by ``Amount.parseCurrency``
   as input.
 
+
+Milestone 10
+------------
+
+* Important: There are confguration changes in M9 due to the split of the Artemis port into separate messaging and RPC ports.
+  To upgrade, you *must* replace any references to ``artemisPort`` in Gradle build configurations, with ``messagingPort``. In
+  node configurations you need to replace ``artemisAddress`` with ``messagingAddress``.
+
+* Configuration:
+    * Replace ``artemisPort`` with ``messagingPort`` in Gradle configuration
+    * Replace ``artemisAddress`` with ``messagingAddress`` in node configuration
+
 Milestone 9.1
 -------------
 

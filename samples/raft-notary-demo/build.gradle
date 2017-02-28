@@ -89,7 +89,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
         name "Party"
         nearestCity "London"
         advertisedServices = []
-        artemisPort 10002
+        messagingPort 10002
         webPort 10003
         cordapps = []
         rpcUsers = [['user': "demo", 'password': "demo", 'permissions': [
@@ -101,7 +101,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
         name "Counterparty"
         nearestCity "New York"
         advertisedServices = []
-        artemisPort 10004
+        messagingPort 10004
         webPort 10005
         cordapps = []
     }
@@ -109,7 +109,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
         name "Notary 1"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        artemisPort 10007
+        messagingPort 10007
         webPort 10008
         cordapps = []
         notaryNodePort 11002
@@ -118,7 +118,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
         name "Notary 2"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        artemisPort 10010
+        messagingPort 10010
         webPort 10011
         cordapps = []
         notaryNodePort 11004
@@ -128,7 +128,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
         name "Notary 3"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        artemisPort 10013
+        messagingPort 10013
         webPort 10014
         cordapps = []
         notaryNodePort 11006

@@ -65,10 +65,10 @@ class FullNodeConfiguration(override val baseDirectory: Path, val config: Config
                 User(username, password, permissions)
             }
     val useHTTPS: Boolean by config
-    val artemisAddress: HostAndPort by config
+    val messagingAddress: HostAndPort by config
     val rpcAddress: HostAndPort? by config
     val webAddress: HostAndPort by config
-    // TODO This field is slightly redundant as artemisAddress is sufficient to hold the address of the node's MQ broker.
+    // TODO This field is slightly redundant as messagingAddress is sufficient to hold the address of the node's MQ broker.
     // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
     val messagingServerAddress: HostAndPort? by config
     val extraAdvertisedServiceIds: List<String> = config.getListOrElse<String>("extraAdvertisedServiceIds") { emptyList() }

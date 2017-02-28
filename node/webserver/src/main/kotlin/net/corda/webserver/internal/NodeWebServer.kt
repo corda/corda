@@ -153,7 +153,7 @@ class NodeWebServer(val config: FullNodeConfiguration) {
             try {
                 return connectLocalRpcAsNodeUser()
             } catch (e: ActiveMQNotConnectedException) {
-                log.debug("Could not connect to ${config.artemisAddress} due to exception: ", e)
+                log.debug("Could not connect to ${config.messagingAddress} due to exception: ", e)
                 Thread.sleep(retryDelay)
                 // This error will happen if the server has yet to create the keystore
                 // Keep the fully qualified package name due to collisions with the Kotlin stdlib
@@ -166,8 +166,8 @@ class NodeWebServer(val config: FullNodeConfiguration) {
     }
 
     private fun connectLocalRpcAsNodeUser(): CordaRPCOps {
-        log.info("Connecting to node at ${config.artemisAddress} as node user")
-        val client = CordaRPCClient(config.artemisAddress, config)
+        log.info("Connecting to node at ${config.messagingAddress} as node user")
+        val client = CordaRPCClient(config.messagingAddress, config)
         client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
         return client.proxy()
     }

@@ -81,7 +81,7 @@ import javax.security.cert.X509Certificate
  */
 @ThreadSafe
 class ArtemisMessagingServer(override val config: NodeConfiguration,
-                             val artemisHostPort: HostAndPort,
+                             val messagingHostPort: HostAndPort,
                              val rpcHostPort: HostAndPort?,
                              val networkMapCache: NetworkMapCache,
                              val userService: RPCUserService) : ArtemisMessagingComponent() {
@@ -140,7 +140,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
         activeMQServer.start()
-        printBasicNodeInfo("Node ${this.config.myLegalName} listening on address", artemisHostPort.toString())
+        printBasicNodeInfo("Node ${this.config.myLegalName} listening on address", messagingHostPort.toString())
         if (rpcHostPort != null) {
             printBasicNodeInfo("Node ${this.config.myLegalName} RPC service listening on address", rpcHostPort.toString())
         }
@@ -151,7 +151,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         bindingsDirectory = (artemisDir / "bindings").toString()
         journalDirectory = (artemisDir / "journal").toString()
         largeMessagesDirectory = (artemisDir / "large-messages").toString()
-        val acceptors = mutableSetOf(tcpTransport(Inbound, "0.0.0.0", artemisHostPort.port))
+        val acceptors = mutableSetOf(tcpTransport(Inbound, "0.0.0.0", messagingHostPort.port))
         if (rpcHostPort != null) {
             acceptors.add(tcpTransport(Inbound, "0.0.0.0", rpcHostPort.port, enableSSL = false))
         }

@@ -80,7 +80,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         name "Notary"
         nearestCity "London"
         advertisedServices = ["corda.notary.validating"]
-        artemisPort 10002
+        messagingPort 10002
         webPort 10003
         cordapps = []
     }
@@ -88,7 +88,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         name "Alice"
         nearestCity "London"
         advertisedServices = []
-        artemisPort 10004
+        messagingPort 10004
         webPort 10005
         cordapps = []
         rpcUsers = [

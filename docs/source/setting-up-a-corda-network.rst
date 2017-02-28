@@ -42,11 +42,13 @@ An example configuration:
 
 The most important fields regarding network configuration are:
 
-* ``artemisAddress``: This specifies a host and port. Note that the address bound will **NOT** be ``my-corda-node``,
-  but rather ``::`` (all addresses on all interfaces). The hostname specified is the hostname *that must be externally
-  resolvable by other nodes in the network*. In the above configuration this is the resolvable name of a machine in a vpn.
-* ``webAddress``: The address the webserver should bind. Note that the port should be distinct from that of ``artemisAddress``
-                  if they are on the same machine.
+* ``messagingAddress``: This specifies a host and port to which Artemis will bind for messaging with other nodes. Note that the
+  address bound will **NOT** be ``my-corda-node``, but rather ``::`` (all addresses on all interfaces). The hostname specified
+  is the hostname *that must be externally resolvable by other nodes in the network*. In the above configuration this is the
+  resolvable name of a machine in a VPN.
+* ``rpcAddress``: The address to which Artemis will bind for RPC calls.
+* ``webAddress``: The address the webserver should bind. Note that the port must be distinct from that of ``messagingAddress``
+                  and ``rpcAddress`` if they are on the same machine.
 * ``networkMapService``: Details of the node running the network map service. If it's this node that's running the service
   then this field must not be specified.
 
