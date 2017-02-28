@@ -442,10 +442,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             ValidatingNotaryService.type -> ValidatingNotaryService(services, timestampChecker, uniquenessProvider)
             RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services, timestampChecker, uniquenessProvider as RaftUniquenessProvider)
             BFTNonValidatingNotaryService.type -> with(configuration as FullNodeConfiguration) {
-                val clientId = notaryClusterAddresses.indexOf(notaryNodeAddress)
-                val client = BFTSMaRt.Client(clientId)
+                val nodeId = notaryNodeId!!
+                val client = BFTSMaRt.Client(nodeId)
                 tokenizableServices.add(client)
-                BFTNonValidatingNotaryService(services, timestampChecker, notaryNodeAddress!!, notaryClusterAddresses, database, client)
+                BFTNonValidatingNotaryService(services, timestampChecker, nodeId, database, client)
             }
             else -> {
                 throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")

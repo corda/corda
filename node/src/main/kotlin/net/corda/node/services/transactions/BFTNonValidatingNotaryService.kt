@@ -22,17 +22,15 @@ import kotlin.concurrent.thread
  *
  * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and timestamp validity.
  */
-class BFTNonValidatingNotaryService(val services: ServiceHubInternal,
-                                    val timestampChecker: TimestampChecker,
-                                    myAddress: HostAndPort,
-                                    clusterAddresses: List<HostAndPort>,
-                                    val db: Database,
+class BFTNonValidatingNotaryService(services: ServiceHubInternal,
+                                    timestampChecker: TimestampChecker,
+                                    serverId: Int,
+                                    db: Database,
                                     val client: BFTSMaRt.Client) : NotaryService(services) {
     init {
-        require(myAddress in clusterAddresses) {
-            "expected myAddress '$myAddress' to be listed in clusterAddresses '$clusterAddresses'"
+        thread(name = "BFTSmartServer-$serverId", isDaemon = true) {
+            Server(serverId, db, "bft_smart_notary_committed_states", services, timestampChecker)
         }
-        startServerThread()
     }
 
     companion object {
@@ -40,15 +38,7 @@ class BFTNonValidatingNotaryService(val services: ServiceHubInternal,
         private val log = loggerFor<BFTNonValidatingNotaryService>()
     }
 
-    private val serverId: Int = clusterAddresses.indexOf(myAddress)
-
     override fun createFlow(otherParty: Party) = ServiceFlow(otherParty, client)
-
-    private fun startServerThread() {
-        thread(name = "BFTSmartServer-$serverId", isDaemon = true) {
-            Server(serverId, db, "bft_smart_notary_committed_states", services, timestampChecker)
-        }
-    }
 
     class ServiceFlow(val otherSide: Party, val client: BFTSMaRt.Client) : FlowLogic<Void?>() {
 

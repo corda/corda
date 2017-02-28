@@ -1,6 +1,5 @@
 package net.corda.node.services
 
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.DummyContract
@@ -80,31 +79,27 @@ class BFTNotaryServiceTests : NodeBasedTest() {
     private fun startBFTNotaryCluster(notaryName: String,
                                       clusterSize: Int,
                                       serviceType: ServiceType): ListenableFuture<List<Node>> {
+        val quorum = (2 * clusterSize + 1) / 3
         ServiceIdentityGenerator.generateToDisk(
                 (0 until clusterSize).map { tempFolder.root.toPath() / "$notaryName-$it" },
                 serviceType.id,
-                notaryName)
+                notaryName,
+                quorum)
 
         val serviceInfo = ServiceInfo(serviceType, notaryName)
-
-        // These ports are hardcoded in the bft smart config
-        val nodePorts = listOf(11000, 11010, 11020, 11030, 11040, 11050)
-        val nodeAddresses = nodePorts.take(clusterSize).map { HostAndPort.fromParts("localhost", it).toString() }
-
         val masterNodeFuture = startNode(
                 "$notaryName-0",
                 advertisedServices = setOf(serviceInfo),
-                configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0],
-                        "notaryClusterAddresses" to nodeAddresses))
+                configOverrides = mapOf("notaryNodeId" to 0)
+        )
 
         val remainingNodesFutures = (1 until clusterSize).map {
             Thread.sleep(1000) // BFT smart replicas have to be started in order
             startNode(
                     "$notaryName-$it",
                     advertisedServices = setOf(serviceInfo),
-                    configOverrides = mapOf(
-                            "notaryNodeAddress" to nodeAddresses[it],
-                            "notaryClusterAddresses" to nodeAddresses))
+                    configOverrides = mapOf("notaryNodeId" to it)
+            )
         }
 
         return Futures.allAsList(remainingNodesFutures).flatMap { remainingNodes ->
