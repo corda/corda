@@ -66,13 +66,13 @@ private class BankOfCordaDriver {
                 when (role) {
                     Role.ISSUE_CASH_RPC -> {
                         println("Requesting Cash via RPC ...")
-                        val result = BankOfCordaClientApi(HostAndPort.fromString("localhost:10004")).requestRPCIssue(requestParams)
+                        val result = BankOfCordaClientApi(HostAndPort.fromString("localhost:10005")).requestRPCIssue(requestParams)
                         if (result is SignedTransaction)
                             println("Success!! You transaction receipt is ${result.tx.id}")
                     }
                     Role.ISSUE_CASH_WEB -> {
                         println("Requesting Cash via Web ...")
-                        val result = BankOfCordaClientApi(HostAndPort.fromString("localhost:10005")).requestWebIssue(requestParams)
+                        val result = BankOfCordaClientApi(HostAndPort.fromString("localhost:10006")).requestWebIssue(requestParams)
                         if (result)
                             println("Successfully processed Cash Issue request")
                     }

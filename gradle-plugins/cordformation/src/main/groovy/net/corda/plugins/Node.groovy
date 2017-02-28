@@ -80,13 +80,23 @@ class Node {
     }
 
     /**
-     * Set the artemis port for this node.
+     * Set the Artemis messaging port for this node.
      *
-     * @param messagingPort The artemis messaging queue port.
+     * @param messagingPort The Artemis messaging queue port.
      */
     void messagingPort(Integer messagingPort) {
         config = config.withValue("messagingAddress",
                 ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$messagingPort".toString()))
+    }
+
+    /**
+     * Set the Artemis RPC port for this node.
+     *
+     * @param rpcPort The Artemis RPC queue port.
+     */
+    void rpcPort(Integer rpcPort) {
+        config = config.withValue("rpcAddress",
+                ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$rpcPort".toString()))
     }
 
     /**
