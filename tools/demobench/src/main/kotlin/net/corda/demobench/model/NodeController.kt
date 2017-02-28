@@ -109,7 +109,7 @@ class NodeController : Controller() {
     fun runCorda(pty: R3Pty, config: NodeConfig): Boolean {
         val nodeDir = config.nodeDir.toFile()
 
-        if (nodeDir.isDirectory || nodeDir.mkdirs()) {
+        if (nodeDir.forceDirectory()) {
             try {
                 // Install any built-in plugins into the working directory.
                 pluginController.populate(config)
@@ -184,7 +184,7 @@ class NodeController : Controller() {
         port.getAndUpdate { Math.max(nextPort, it) }
     }
 
-    private fun baseDirFor(time: Long): Path = jvm.userHome.resolve("demobench").resolve(localFor(time))
+    private fun baseDirFor(time: Long): Path = jvm.dataHome.resolve(localFor(time))
     private fun localFor(time: Long) = SimpleDateFormat("yyyyMMddHHmmss").format(Date(time))
 
 }

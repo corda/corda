@@ -2,7 +2,10 @@ package net.corda.demobench.model
 
 import com.typesafe.config.*
 import java.lang.String.join
+import java.io.File
 import java.nio.file.Path
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import net.corda.node.services.config.SSLConfiguration
 
 class NodeConfig(
@@ -63,6 +66,14 @@ class NodeConfig(
         baseDir, legalName, artemisPort, nearestCity, webPort, h2Port, extraServices, users, networkMap
     )
 
+    fun install(plugins: Collection<Path>) {
+        if (plugins.isNotEmpty() && pluginDir.toFile().forceDirectory()) {
+            plugins.forEach {
+                Files.copy(it, pluginDir.resolve(it.fileName.toString()), StandardCopyOption.REPLACE_EXISTING)
+            }
+        }
+    }
+
     fun extendUserPermissions(permissions: Collection<String>) = users.forEach { it.extendPermissions(permissions) }
 }
 
@@ -74,3 +85,5 @@ private inline fun <T> optional(path: String, obj: T?, body: (Config, T) -> Conf
     val config = ConfigFactory.empty()
     return if (obj == null) config else body(config, obj).atPath(path)
 }
+
+fun File.forceDirectory(): Boolean = this.isDirectory || this.mkdirs()

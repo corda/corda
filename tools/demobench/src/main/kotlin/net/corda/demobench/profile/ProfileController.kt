@@ -23,7 +23,7 @@ import tornadofx.Controller
 class ProfileController : Controller() {
 
     private val jvm by inject<JVMConfig>()
-    private val baseDir: Path = jvm.userHome.resolve("demobench")
+    private val baseDir: Path = jvm.dataHome
     private val nodeController by inject<NodeController>()
     private val pluginController by inject<PluginController>()
     private val installFactory by inject<InstallFactory>()

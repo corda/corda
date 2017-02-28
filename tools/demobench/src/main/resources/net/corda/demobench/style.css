@@ -1,4 +1,5 @@
 /*
+ * https://docs.oracle.com/javafx/2/api/javafx/scene/doc-files/cssref.html
  * https://r3-cev.atlassian.net/wiki/display/RH/Color+Palettes
  */
 
@@ -20,4 +21,23 @@
     -fx-base: #009759;
     -fx-background-radius: 5px;
     -fx-opacity: 80%;
+}
+
+.node-panel {
+    -fx-spacing: 20px;
+}
+
+.services-panel {
+    -fx-pref-width: 600px;
+    -fx-spacing: 5px;
+}
+
+.cordapps-panel {
+    -fx-pref-width: 600px;
+    -fx-spacing: 5px;
+}
+
+.list-cell {
+    -fx-control-inner-background: white;
+    -fx-control-inner-background-alt: gainsboro;
 }

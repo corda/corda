@@ -7,6 +7,7 @@ import tornadofx.Controller
 class JVMConfig : Controller() {
 
     val userHome: Path = Paths.get(System.getProperty("user.home")).toAbsolutePath()
+    val dataHome: Path = userHome.resolve("demobench")
     val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
     val applicationDir: Path = Paths.get(System.getProperty("user.dir")).toAbsolutePath()
 
