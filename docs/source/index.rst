@@ -70,6 +70,7 @@ Documentation Contents:
    :maxdepth: 2
    :caption: The Corda node
 
+   serialization
    clientrpc
    messaging
    persistence

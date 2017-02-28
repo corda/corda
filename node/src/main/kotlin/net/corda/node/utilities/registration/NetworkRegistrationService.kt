@@ -1,5 +1,6 @@
 package net.corda.node.utilities.registration
 
+import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.security.cert.Certificate
 
@@ -12,4 +13,5 @@ interface NetworkRegistrationService {
     fun retrieveCertificates(requestId: String): Array<Certificate>?
 }
 
+@CordaSerializable
 class CertificateRequestException(message: String) : Exception(message)

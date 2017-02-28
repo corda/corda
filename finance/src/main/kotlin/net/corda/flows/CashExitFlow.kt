@@ -2,7 +2,10 @@ package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.InsufficientBalanceException
+import net.corda.core.contracts.TransactionType
+import net.corda.core.contracts.issuedBy
 import net.corda.core.crypto.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.unconsumedStates

@@ -2,10 +2,12 @@ package net.corda.core.contracts
 
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 
 /** Defines transaction build & validation logic for a specific transaction type */
+@CordaSerializable
 sealed class TransactionType {
     override fun equals(other: Any?) = other?.javaClass == javaClass
     override fun hashCode() = javaClass.name.hashCode()

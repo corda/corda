@@ -4,14 +4,17 @@ import net.corda.core.contracts.BusinessCalendar
 import net.corda.core.contracts.Tenor
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Type
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
 
+@CordaSerializable
 interface Perceivable<T>
 
+@CordaSerializable
 enum class Comparison {
     LT, LTE, GT, GTE
 }
@@ -127,6 +130,7 @@ infix fun Perceivable<BigDecimal>.gte(n: BigDecimal) = perceivableComparison(thi
 infix fun Perceivable<BigDecimal>.lte(n: Double) = perceivableComparison(this, Comparison.LTE, const(BigDecimal(n)))
 infix fun Perceivable<BigDecimal>.gte(n: Double) = perceivableComparison(this, Comparison.GTE, const(BigDecimal(n)))
 
+@CordaSerializable
 enum class Operation {
     PLUS, MINUS, TIMES, DIV
 }

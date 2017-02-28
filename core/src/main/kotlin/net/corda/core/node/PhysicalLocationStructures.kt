@@ -1,8 +1,10 @@
 package net.corda.core.node
 
+import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
 /** A latitude/longitude pair. */
+@CordaSerializable
 data class WorldCoordinate(val latitude: Double, val longitude: Double) {
     init {
         require(latitude in -90..90)
@@ -39,6 +41,7 @@ data class WorldCoordinate(val latitude: Double, val longitude: Double) {
  * A labelled [WorldCoordinate], where the label is human meaningful. For example, the name of the nearest city.
  * Labels should not refer to non-landmarks, for example, they should not contain the names of organisations.
  */
+@CordaSerializable
 data class PhysicalLocation(val coordinate: WorldCoordinate, val description: String)
 
 /**

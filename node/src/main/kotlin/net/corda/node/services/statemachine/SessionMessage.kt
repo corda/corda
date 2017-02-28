@@ -2,8 +2,10 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.UntrustworthyData
 
+@CordaSerializable
 interface SessionMessage
 
 data class SessionInit(val initiatorSessionId: Long, val flowName: String, val firstPayload: Any?) : SessionMessage

@@ -9,6 +9,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -161,6 +162,7 @@ class NotaryException(val error: NotaryError) : FlowException() {
     override fun toString() = "${super.toString()}: Error response from Notary - $error"
 }
 
+@CordaSerializable
 sealed class NotaryError {
     class Conflict(val txId: SecureHash, val conflict: SignedData<UniquenessProvider.Conflict>) : NotaryError() {
         override fun toString() = "One or more input states for transaction $txId have been used in another transaction"

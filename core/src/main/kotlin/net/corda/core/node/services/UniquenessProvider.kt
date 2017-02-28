@@ -3,6 +3,7 @@ package net.corda.core.node.services
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.CordaSerializable
 
 /**
  * A service that records input states of the given transaction and provides conflict information
@@ -15,6 +16,7 @@ interface UniquenessProvider {
     fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party)
 
     /** Specifies the consuming transaction for every conflicting state */
+    @CordaSerializable
     data class Conflict(val stateHistory: Map<StateRef, ConsumingTx>)
 
     /**
@@ -26,7 +28,9 @@ interface UniquenessProvider {
      *       This allows a party to just submit invalid transactions with outputs it was aware of and
      *       find out where exactly they were spent.
      */
+    @CordaSerializable
     data class ConsumingTx(val id: SecureHash, val inputIndex: Int, val requestingParty: Party)
 }
 
+@CordaSerializable
 class UniquenessException(val error: UniquenessProvider.Conflict) : Exception()

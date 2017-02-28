@@ -1,6 +1,7 @@
 package net.corda.core.utilities
 
 import net.corda.core.TransientProperty
+import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
 import rx.subjects.BehaviorSubject
@@ -32,7 +33,9 @@ import java.util.*
  * A progress tracker is *not* thread safe. You may move events from the thread making progress to another thread by
  * using the [Observable] subscribeOn call.
  */
+@CordaSerializable
 class ProgressTracker(vararg steps: Step) {
+    @CordaSerializable
     sealed class Change {
         class Position(val tracker: ProgressTracker, val newStep: Step) : Change() {
             override fun toString() = newStep.label
@@ -48,6 +51,7 @@ class ProgressTracker(vararg steps: Step) {
     }
 
     /** The superclass of all step objects. */
+    @CordaSerializable
     open class Step(open val label: String) {
         open val changes: Observable<Change> get() = Observable.empty()
         open fun childProgressTracker(): ProgressTracker? = null
@@ -81,6 +85,7 @@ class ProgressTracker(vararg steps: Step) {
     // This field won't be serialized.
     private val _changes by TransientProperty { PublishSubject.create<Change>() }
 
+    @CordaSerializable
     private data class Child(val tracker: ProgressTracker, @Transient val subscription: Subscription?)
 
     private val childProgressTrackers = HashMap<Step, Child>()

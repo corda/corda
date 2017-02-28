@@ -1,5 +1,7 @@
 package net.corda.core.node.services
 
+import net.corda.core.serialization.CordaSerializable
+
 /**
  * A container for additional information for an advertised service.
  *
@@ -7,6 +9,7 @@ package net.corda.core.node.services
  * @param name the service name, used for differentiating multiple services of the same type. Can also be used as a
  *             grouping identifier for nodes collectively running a distributed service.
  */
+@CordaSerializable
 data class ServiceInfo(val type: ServiceType, val name: String? = null) {
     companion object {
         fun parse(encoded: String): ServiceInfo {
