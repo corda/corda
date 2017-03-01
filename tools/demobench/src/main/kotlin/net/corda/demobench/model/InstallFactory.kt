@@ -2,6 +2,7 @@ package net.corda.demobench.model
 
 import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
+import java.io.IOException
 import java.nio.file.*
 import tornadofx.Controller
 
@@ -10,6 +11,7 @@ class InstallFactory : Controller() {
     private val nodeController by inject<NodeController>()
     private val serviceController by inject<ServiceController>()
 
+    @Throws(IOException::class)
     fun toInstallConfig(config: Config, baseDir: Path): InstallConfig {
         val artemisPort = config.parsePort("artemisAddress")
         val webPort = config.parsePort("webAddress")
