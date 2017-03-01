@@ -299,8 +299,8 @@ object Crypto {
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
-    fun doSign(signatureScheme: String, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
-        val sig: Signature = findSignatureScheme(signatureScheme)?.sig ?: throw IllegalArgumentException("Unsupported key/algorithm for the private key: ${privateKey}")
+    fun doSign(schemeCodeName: String, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
+        val sig: Signature = findSignatureScheme(schemeCodeName)?.sig ?: throw IllegalArgumentException("Unsupported key/algorithm for the private key: ${privateKey}")
         return doSign(sig, privateKey, clearData)
     }
 
