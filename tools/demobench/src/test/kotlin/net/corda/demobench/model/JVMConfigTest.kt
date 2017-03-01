@@ -1,6 +1,8 @@
 package net.corda.demobench.model
 
+import com.jediterm.terminal.ui.UIUtil
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.*
 import org.junit.Test
@@ -11,7 +13,7 @@ class JVMConfigTest {
 
     @Test
     fun `test Java path`() {
-        assertTrue(Files.isExecutable(jvm.javaPath))
+         assertTrue(Files.isExecutable(onFileSystem(jvm.javaPath)))
     }
 
     @Test
@@ -37,5 +39,9 @@ class JVMConfigTest {
         val java = jvm.javaPath
         assertEquals(listOf(java.toString(), "-jar", "testapp.jar", "arg1", "arg2", "arg3"), process.command())
     }
+
+    private fun onFileSystem(p: Path): Path
+        = if (UIUtil.isWindows) p.parent.resolve(Paths.get(p.fileName.toString() + ".exe"))
+          else p
 
 }
