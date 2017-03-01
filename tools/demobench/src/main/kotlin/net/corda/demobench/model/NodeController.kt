@@ -163,6 +163,7 @@ class NodeController : Controller() {
     /**
      * Creates a node directory that can host a running instance of Corda.
      */
+    @Throws(IOException::class)
     fun install(config: InstallConfig): NodeConfig {
         val installed = config.installTo(baseDir)
 

@@ -35,6 +35,7 @@ class PluginController : Controller() {
     /**
      * Generate the set of user permissions that this node's plugins require.
      */
+    @Throws(IOException::class)
     fun permissionsFor(config: HasPlugins): List<String> = walkPlugins(config.pluginDir)
         .map { plugin -> classLoaderFor(plugin) }
         .flatMap { cl -> cl.use(URLClassLoader::flowsFor).stream() }
@@ -44,6 +45,7 @@ class PluginController : Controller() {
     /**
      * Generates a stream of a node's non-built-it plugins.
      */
+    @Throws(IOException::class)
     fun userPluginsFor(config: HasPlugins): Stream<Path> = walkPlugins(config.pluginDir)
             .filter { bankOfCorda.name != it.fileName.toString() }
 

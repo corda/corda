@@ -38,6 +38,7 @@ class ProfileController : Controller() {
     /**
      * Saves the active node configurations into a ZIP file, along with their Cordapps.
      */
+    @Throws(IOException::class)
     fun saveProfile(): Boolean {
         val target = forceExtension(chooser.showSaveDialog(null) ?: return false, ".zip")
         log.info("Saving profile as: $target")
@@ -83,6 +84,7 @@ class ProfileController : Controller() {
     /**
      * Parses a profile (ZIP) file.
      */
+    @Throws(IOException::class)
     fun openProfile(): List<InstallConfig>? {
         val chosen = chooser.showOpenDialog(null) ?: return null
         log.info("Selected profile: $chosen")

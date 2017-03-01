@@ -4,6 +4,7 @@ import net.corda.demobench.loggerFor
 import org.h2.server.web.LocalWebServer
 import org.h2.tools.Server
 import org.h2.util.JdbcUtils
+import java.sql.SQLException
 import java.util.concurrent.Executors
 import kotlin.reflect.jvm.jvmName
 
@@ -35,6 +36,7 @@ class DBViewer : AutoCloseable {
         webServer.shutdown()
     }
 
+    @Throws(SQLException::class)
     fun openBrowser(h2Port: Int) {
         val conn = JdbcUtils.getConnection(
             org.h2.Driver::class.jvmName,
