@@ -27,7 +27,7 @@ Steps to cut a release
 
 1. Pick a commit that is stable and do basic QA: run all the tests, run the demos.
 2. Review the commits between this release and the last looking for new features, API changes, etc. Make sure the
-   summary in the current section of the :doc:`release-notes` is correct and update if not. Then move it into the right
+   summary in the current section of the :doc:`changelog` is correct and update if not. Then move it into the right
    section for this release. This is the right place to put any advice on how to port app code from the last release.
 3. Additionally, if there are any new features or APIs that deserve a new section in the docsite and the author didn't
    create one, bug them to do so a day or two before the release.

@@ -1,10 +1,16 @@
-Release notes
-=============
+Changelog
+=========
 
 Here are brief summaries of what's changed between each snapshot release.
 
 Milestone 9
 -----------
+
+* With thanks to `Thomas Schroeter <https://github.com/thschroeter>`_ for the Byzantine fault tolerant (BFT)
+  notary prototype.
+* Web server is a separate JAR.  This is a breaking change. The new webserver JAR (``corda-webserver.jar``)
+  must be invoked separately to node startup, using the command``java -jar corda-webserver.jar`` in the same
+  directory as the ``node.conf``. Further changes are anticipated in upcoming milestone releases.
 
 * API:
 
@@ -14,11 +20,34 @@ Milestone 9
       captured in an object that can be passed around.
     * ``CordaPluginRegistry`` method ``registerRPCKryoTypes`` is renamed ``customizeSerialization`` and the argument
       types now hide the presence of Kryo.
+    * New extension functions for encoding/decoding to base58, base64, etc. See
+      ``core/src/main/kotlin/net/corda/core/crypto/EncodingUtils.kt``
+    * Add ``openAttachment`` function to Corda RPC operations, for downloading an attachment from a node's data storage.
+    * Add ``getCashBalances`` function to Corda RPC operations, for getting cash balances from a node's vault.
+
+* Configuration:
+    * ``extraAdvertisedServiceIds`` config is now a list of strings, rather than a comma separated string. For example
+      ``[ "corda.interest_rates" ]`` instead of ``"corda.interest_rates"``.
+
+* Flows:
+    * Split ``CashFlow`` into separate ``CashIssueFlow``, ``CashPaymentFlow`` and ``CashExitFlow`` so that permissions can
+      be assigned individually.
+    * Split single example user into separate "bankUser" and "bigCorpUser" so that permissions for the users make sense
+      rather than being a combination of both roles.
+    * ``ProgressTracker`` emits exception thrown by the flow, allowing the ANSI renderer to correctly stop and print the error
 
 * Object Serialization:
 
     * Consolidated Kryo implementations across RPC and P2P messaging with whitelisting of classes via plugins or with
       ``@CordaSerializable`` for added node security.
+
+* Privacy:
+    * Non-validating notary service now takes in a ``FilteredTransaction`` so that no potentially sensitive transaction
+      details are unnecessarily revealed to the notary
+
+* General:
+    * Add vault service persistence using Requery
+    * Certificate signing utility output is now more verbose
 
 Milestone 8
 -----------

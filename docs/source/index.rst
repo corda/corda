@@ -125,7 +125,7 @@ Documentation Contents:
    setting-up-a-corda-network
    secure-coding-guidelines
    release-process
-   release-notes
+   changelog
    codestyle
    building-the-docs
    further-notes-on-kotlin
