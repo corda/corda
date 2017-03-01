@@ -6,7 +6,7 @@ import net.corda.demobench.loggerFor
 import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.forceDirectory
 
-class Explorer(private val explorerController: ExplorerController) : AutoCloseable {
+class Explorer internal constructor(private val explorerController: ExplorerController) : AutoCloseable {
     private companion object {
         val log = loggerFor<Explorer>()
     }

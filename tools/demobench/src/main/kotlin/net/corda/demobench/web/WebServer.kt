@@ -5,7 +5,7 @@ import java.util.concurrent.Executors
 import net.corda.demobench.loggerFor
 import net.corda.demobench.model.NodeConfig
 
-class WebServer(private val webServerController: WebServerController) : AutoCloseable {
+class WebServer internal constructor(private val webServerController: WebServerController) : AutoCloseable {
     private companion object {
         val log = loggerFor<WebServer>()
     }
