@@ -13,7 +13,7 @@ class JVMConfigTest {
 
     @Test
     fun `test Java path`() {
-         assertTrue(Files.isExecutable(onFileSystem(jvm.javaPath)))
+         assertTrue(Files.isExecutable(jvm.javaPath.onFileSystem()))
     }
 
     @Test
@@ -40,8 +40,8 @@ class JVMConfigTest {
         assertEquals(listOf(java.toString(), "-jar", "testapp.jar", "arg1", "arg2", "arg3"), process.command())
     }
 
-    private fun onFileSystem(p: Path): Path
-        = if (UIUtil.isWindows) p.parent.resolve(Paths.get(p.fileName.toString() + ".exe"))
-          else p
+    private fun Path.onFileSystem(): Path
+        = if (UIUtil.isWindows) this.parent.resolve(Paths.get(this.fileName.toString() + ".exe"))
+          else this
 
 }
