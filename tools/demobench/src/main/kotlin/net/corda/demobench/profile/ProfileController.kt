@@ -32,7 +32,7 @@ class ProfileController : Controller() {
     init {
         chooser.title = "DemoBench Profiles"
         chooser.initialDirectory = baseDir.toFile()
-        chooser.extensionFilters.add(ExtensionFilter("DemoBench profiles (*.zip)", "*.zip", "*.ZIP"))
+        chooser.extensionFilters.add(ExtensionFilter("DemoBench profiles (*.profile)", "*.profile", "*.PROFILE"))
     }
 
     /**
@@ -40,7 +40,7 @@ class ProfileController : Controller() {
      */
     @Throws(IOException::class)
     fun saveProfile(): Boolean {
-        val target = forceExtension(chooser.showSaveDialog(null) ?: return false, ".zip")
+        val target = forceExtension(chooser.showSaveDialog(null) ?: return false, ".profile")
         log.info("Saving profile as: $target")
 
         val configs = nodeController.activeNodes
