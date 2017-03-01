@@ -4,7 +4,7 @@ import java.security.*
 
 /**
  * Helper function for signing.
- * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
+ * @param clearData the data/message to be signed in [ByteArray] form (usually the Merkle root).
  * @return the digital signature (in [ByteArray]) on the input message.
  * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
  * @throws InvalidKeyException if the private key is invalid.
@@ -15,19 +15,19 @@ fun PrivateKey.sign(clearData: ByteArray): ByteArray = Crypto.doSign(this, clear
 
 /**
  * Helper function for signing.
- * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
- * @param metaData tha attached MetaData object.
- * @return a [DigitalSignatureWithMetaData] object.
+ * @param clearData the data/message to be signed in [ByteArray] form (usually the Merkle root).
+ * @param metaDataFull tha attached MetaData object.
+ * @return a [DSWithMetaDataFull] object.
  * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
 @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-fun PrivateKey.sign(clearData: ByteArray, metaData: MetaData): DigitalSignatureWithMetaData = Crypto.doSign(this, clearData, metaData)
+fun PrivateKey.sign(clearData: ByteArray, metaDataFull: MetaData.Full): DSWithMetaDataFull = Crypto.doSign(this, metaDataFull)
 
 /**
  * Helper function to sign with a key pair.
- * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
+ * @param clearData the data/message to be signed in [ByteArray] form (usually the Merkle root).
  * @return the digital signature (in [ByteArray]) on the input message.
  * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
  * @throws InvalidKeyException if the private key is invalid.
@@ -39,7 +39,7 @@ fun KeyPair.sign(clearData: ByteArray): ByteArray = Crypto.doSign(this.private, 
 /**
  * Helper function to verify a signature.
  * @param signatureData the signature on a message.
- * @param clearData the clear data/message that was signed (Merkle root or actual data).
+ * @param clearData the clear data/message that was signed (usually the Merkle root).
  * @throws InvalidKeyException if the key is invalid.
  * @throws SignatureException if this signatureData object is not initialized properly,
  * the passed-in signatureData is improperly encoded or of the wrong type,
@@ -51,8 +51,8 @@ fun PublicKey.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = 
 
 /**
  * Helper function to verify a metadata attached signature.
- * @param digitalSignatureWithMetaData a metadata attached digital signature.
- * @param clearData the data/message that was signed (actual data or Merkle root).
+ * @param dsWithMetaDataClearData a [MetaData.WithClearData] attached digital signature.
+ * @param clearData the data/message that was signed (usually the Merkle root).
  * @throws InvalidKeyException if the key is invalid.
  * @throws SignatureException if this signatureData object is not initialized properly,
  * the passed-in signatureData is improperly encoded or of the wrong type,
@@ -60,12 +60,29 @@ fun PublicKey.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = 
  * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
  */
 @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-fun PublicKey.verify(digitalSignatureWithMetaData: DigitalSignatureWithMetaData, clearData: ByteArray): Boolean = Crypto.doVerify(this, digitalSignatureWithMetaData.bytes, clearData.plus(digitalSignatureWithMetaData.metaData.hashBytes()))
+fun PublicKey.verify(dsWithMetaDataClearData: DSWithMetaDataWithClearData, clearData: ByteArray): Boolean = Crypto.doVerify(this, dsWithMetaDataClearData.signatureData, dsWithMetaDataClearData.metaDataWithClearData.hashBytes())
+
+/**
+ * Helper function to verify a metadata attached signature. It is noted that the dsWithMetaDataFull object already contains the public key
+ * and thus this public key should match the MetaData's public key.
+ * @param dsWithMetaDataFull a [MetaData.Full] attached digital signature.
+ * @param clearData the data/message that was signed (usually the Merkle root).
+ * @throws InvalidKeyException if the key is invalid.
+ * @throws SignatureException if this signatureData object is not initialized properly,
+ * the passed-in signatureData is improperly encoded or of the wrong type,
+ * if this signatureData algorithm is unable to process the input data provided, etc.
+ * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
+ */
+@Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
+fun PublicKey.verify(dsWithMetaDataFull: DSWithMetaDataFull, clearData: ByteArray): Boolean {
+    if (this != dsWithMetaDataFull.metaDataFull.publicKey) IllegalArgumentException ("MetaData's publicKey: ${dsWithMetaDataFull.metaDataFull.publicKey.toBase58String()} does not match the input clearData: ${this.toBase58String()}")
+    return Crypto.doVerify(this, dsWithMetaDataFull.signatureData, dsWithMetaDataFull.metaDataFull.hashBytes())
+}
 
 /**
  * Helper function for the signers to verify their own signature.
  * @param signature the signature on a message.
- * @param clearData the clear data/message that was signed.
+ * @param clearData the clear data/message that was signed (usually the Merkle root).
  * @throws InvalidKeyException if the key is invalid.
  * @throws SignatureException if this signatureData object is not initialized properly,
  * the passed-in signatureData is improperly encoded or of the wrong type,

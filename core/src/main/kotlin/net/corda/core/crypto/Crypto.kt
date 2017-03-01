@@ -276,7 +276,7 @@ object Crypto {
      * Generic way to sign [ByteArray] data with a [PrivateKey]. Strategy on on identifying the actual signing scheme is based
      * on the [PrivateKey] type, but if the schemeCodeName is known, then better use doSign(signatureScheme: String, privateKey: PrivateKey, clearData: ByteArray).
      * @param privateKey the signer's [PrivateKey].
-     * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
+     * @param clearData the data/message to be signed in [ByteArray] form (usually the Merkle root).
      * @return the digital signature (in [ByteArray]) on the input message.
      * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
      * @throws InvalidKeyException if the private key is invalid.
@@ -292,7 +292,7 @@ object Crypto {
      * Generic way to sign [ByteArray] data with a [PrivateKey] and a known schemeCodeName [String].
      * @param schemeCodeName a signature scheme's code name (e.g. ECDSA_SECP256K1_SHA256).
      * @param privateKey the signer's [PrivateKey].
-     * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
+     * @param clearData the data/message to be signed in [ByteArray] form (usually the Merkle root).
      * @return the digital signature (in [ByteArray]) on the input message.
      * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
      * @throws InvalidKeyException if the private key is invalid.
@@ -308,7 +308,7 @@ object Crypto {
      * Generic way to sign [ByteArray] data with a [PrivateKey] and a known [Signature].
      * @param signature a [Signature] object, retrieved from supported signature schemes, see [Crypto].
      * @param privateKey the signer's [PrivateKey].
-     * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
+     * @param clearData the data/message to be signed in [ByteArray] form (usually the Merkle root).
      * @return the digital signature (in [ByteArray]) on the input message.
      * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
      * @throws InvalidKeyException if the private key is invalid.
@@ -325,21 +325,21 @@ object Crypto {
     /**
      * Generic way to sign [ByteArray] data with a [PrivateKey] and additional [MetaData].
      * @param privateKey the signer's [PrivateKey].
-     * @param clearData the data/message to be signed in [ByteArray] form (Merkle root or actual data).
+     * @param clearData the data/message to be signed in [ByteArray] form (usually the Merkle root).
      * @param metaData additional [MetaData] that should be attached to the signature.
-     * @return a [DigitalSignatureWithMetaData] object.
+     * @return a [DSWithMetaData] object.
      * @throws IllegalArgumentException if the signature scheme is not supported for this private key or
      * if metaData.schemeCodeName is not aligned with key type.
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
-    fun doSign(privateKey: PrivateKey, clearData: ByteArray, metaData: MetaData): DigitalSignatureWithMetaData {
+    fun doSign(privateKey: PrivateKey, metaDataFull: MetaData.Full): DSWithMetaDataFull {
         val sigKey: SignatureScheme = findSignatureScheme(privateKey) ?: throw IllegalArgumentException("Unsupported key/algorithm for the private key: ${privateKey}")
-        val sigMetaData: SignatureScheme = findSignatureScheme(metaData.schemeCodeName) ?: throw IllegalArgumentException("Unsupported key/algorithm for metadata schemeCodeName: ${metaData.schemeCodeName}")
-        if (sigKey != sigMetaData) throw IllegalArgumentException("Metadata schemeCodeName: ${metaData.schemeCodeName} is not aligned with the key type.")
-        val signatureData = doSign(sigKey.schemeCodeName, privateKey, clearData.plus(metaData.hashBytes()))
-        return DigitalSignatureWithMetaData(signatureData, metaData)
+        val sigMetaData: SignatureScheme = findSignatureScheme(metaDataFull.schemeCodeName) ?: throw IllegalArgumentException("Unsupported key/algorithm for metadata schemeCodeName: ${metaDataFull.schemeCodeName}")
+        if (sigKey != sigMetaData) throw IllegalArgumentException("Metadata schemeCodeName: ${metaDataFull.schemeCodeName} is not aligned with the key type.")
+        val signatureData = doSign(sigKey.schemeCodeName, privateKey, metaDataFull.hashBytes())
+        return DSWithMetaDataFull(signatureData, metaDataFull)
     }
 
     /**
@@ -347,7 +347,7 @@ object Crypto {
      * It returns true if it succeeds, but it always throws an exception if verification fails.
      * @param publicKey the signer's [PublicKey].
      * @param signatureData the signatureData on a message.
-     * @param clearData the clear data/message that was signed.
+     * @param clearData the clear data/message that was signed (usually the Merkle root).
      * @return true if verification passes or throws [Exception] if verification fails.
      * @throws InvalidKeyException if the key is invalid.
      * @throws SignatureException if this signatureData object is not initialized properly,
@@ -368,7 +368,7 @@ object Crypto {
      * then better use doVerify(schemeCodeName: String, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray).
      * @param publicKey the signer's [PublicKey].
      * @param signatureData the signatureData on a message.
-     * @param clearData the clear data/message that was signed.
+     * @param clearData the clear data/message that was signed (usually the Merkle root).
      * @return true if verification passes or throws [Exception] if verification fails.
      * @throws InvalidKeyException if the key is invalid.
      * @throws SignatureException if this signatureData object is not initialized properly,
@@ -388,7 +388,7 @@ object Crypto {
      * @param signature a [Signature] object, retrieved from supported signature schemes, see [Crypto].
      * @param publicKey the signer's [PublicKey].
      * @param signatureData the signatureData on a message.
-     * @param clearData the clear data/message that was signed.
+     * @param clearData the clear data/message that was signed (usually the Merkle root).
      * @return true if verification passes or throws [Exception] if verification fails.
      * @throws InvalidKeyException if the key is invalid.
      * @throws SignatureException if this signatureData object is not initialized properly,
