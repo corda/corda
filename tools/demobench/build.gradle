@@ -10,6 +10,7 @@ buildscript {
 
     ext.java_home = System.properties.'java.home'
     ext.pkg_source = "$buildDir/packagesrc"
+    ext.pkg_outdir = "$buildDir/javapackage"
     ext.dist_source = "$pkg_source/demobench-$version"
     ext.pkg_version = "$version".indexOf('-') >= 0 ? "$version".substring(0, "$version".indexOf('-')) : version
 
@@ -138,7 +139,7 @@ distributions {
 task javapackage(dependsOn: 'distZip') {
 
     doLast {
-        delete([pkg_source, "$buildDir/exedir"])
+        delete([pkg_source, pkg_outdir])
 
         copy {
             from(zipTree(distZip.outputs.files.singleFile))
@@ -179,7 +180,7 @@ task javapackage(dependsOn: 'distZip') {
             classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
         )
 
-        ant.deploy(nativeBundles: packageType, outdir: "$buildDir/exedir", outfile: 'DemoBench', verbose: 'true') {
+        ant.deploy(nativeBundles: packageType, outdir: pkg_outdir, outfile: 'DemoBench', verbose: 'true') {
             application(name: 'DemoBench', version: pkg_version, mainClass: mainClassName)
             info(title: 'DemoBench', vendor: 'R3', description: 'A sales and educational tool for demonstrating Corda.')
             resources {
