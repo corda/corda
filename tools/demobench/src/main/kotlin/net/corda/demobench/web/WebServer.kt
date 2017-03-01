@@ -1,12 +1,13 @@
-package net.corda.demobench.model
+package net.corda.demobench.web
 
 import java.io.IOException
 import java.util.concurrent.Executors
 import net.corda.demobench.loggerFor
+import net.corda.demobench.model.NodeConfig
 
-class Explorer(private val explorerController: ExplorerController) : AutoCloseable {
+class WebServer(private val webServerController: WebServerController) : AutoCloseable {
     private companion object {
-        val log = loggerFor<Explorer>()
+        val log = loggerFor<WebServer>()
     }
 
     private val executor = Executors.newSingleThreadExecutor()
@@ -14,28 +15,21 @@ class Explorer(private val explorerController: ExplorerController) : AutoCloseab
 
     @Throws(IOException::class)
     fun open(config: NodeConfig, onExit: (NodeConfig) -> Unit) {
-        val explorerDir = config.explorerDir.toFile()
+        val nodeDir = config.nodeDir.toFile()
 
-        if (!explorerDir.forceDirectory()) {
-            log.warn("Failed to create working directory '{}'", explorerDir.absolutePath)
+        if (!nodeDir.isDirectory) {
+            log.warn("Working directory '{}' does not exist.", nodeDir.absolutePath)
             onExit(config)
             return
         }
 
         try {
-            val p = explorerController.process(
-                    "--host=localhost",
-                    "--port=${config.artemisPort}",
-                    "--username=${config.users[0].user}",
-                    "--password=${config.users[0].password}",
-                    "--certificatesDir=${config.ssl.certificatesDirectory}",
-                    "--keyStorePassword=${config.ssl.keyStorePassword}",
-                    "--trustStorePassword=${config.ssl.trustStorePassword}")
-                    .directory(explorerDir)
+            val p = webServerController.process()
+                    .directory(nodeDir)
                     .start()
             process = p
 
-            log.info("Launched Node Explorer for '{}'", config.legalName)
+            log.info("Launched Web Server for '{}'", config.legalName)
 
             // Close these streams because no-one is using them.
             safeClose(p.outputStream)
@@ -46,11 +40,11 @@ class Explorer(private val explorerController: ExplorerController) : AutoCloseab
                 val exitValue = p.waitFor()
                 process = null
 
-                log.info("Node Explorer for '{}' has exited (value={})", config.legalName, exitValue)
+                log.info("Web Server for '{}' has exited (value={})", config.legalName, exitValue)
                 onExit(config)
             }
         } catch (e: IOException) {
-            log.error("Failed to launch Node Explorer for '{}': {}", config.legalName, e.message)
+            log.error("Failed to launch Web Server for '{}': {}", config.legalName, e.message)
             onExit(config)
             throw e
         }

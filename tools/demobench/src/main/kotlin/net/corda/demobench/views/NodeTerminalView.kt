@@ -10,10 +10,13 @@ import javafx.scene.control.Button
 import javafx.scene.control.Label
 import javafx.scene.layout.VBox
 import javax.swing.SwingUtilities
+import net.corda.demobench.explorer.ExplorerController
 import net.corda.demobench.model.*
 import net.corda.demobench.pty.R3Pty
 import net.corda.demobench.rpc.NodeRPC
 import net.corda.demobench.ui.PropertyLabel
+import net.corda.demobench.web.DBViewer
+import net.corda.demobench.web.WebServerController
 import tornadofx.Fragment
 
 class NodeTerminalView : Fragment() {

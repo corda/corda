@@ -1,5 +1,6 @@
-package net.corda.demobench.model
+package net.corda.demobench.web
 
+import net.corda.demobench.model.JVMConfig
 import tornadofx.Controller
 
 class WebServerController : Controller() {
