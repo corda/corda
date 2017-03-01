@@ -8,7 +8,10 @@ if not defined JAVA_HOME goto NoJavaHome
 set DIRNAME=%~dp0
 if "%DIRNAME%" == "" set DIRNAME=.
 
-call %DIRNAME%\gradlew -PpackageType=exe javapackage
+call %DIRNAME%\..\..\gradlew -PpackageType=exe javapackage
+echo
+echo "Wrote installer to %DIRNAME%\build\javapackage\bundles\"
+echo
 goto end
 
 :NoJavaHome
