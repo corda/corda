@@ -3,7 +3,12 @@ apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.publish-utils'
 
 repositories {
+    mavenLocal()
     mavenCentral()
+    jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
 }
 
 dependencies {

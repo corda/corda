@@ -198,7 +198,7 @@ dokka {
     moduleName = 'corda'
     outputDirectory = 'docs/build/html/api/kotlin'
     processConfigurations = ['compile']
-    sourceDirs = files('core/src/main/kotlin', 'client/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin')
+    sourceDirs = files('core/src/main/kotlin', 'client/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin', 'client/jackson/src/main/kotlin')
 }
 
 task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
@@ -206,7 +206,7 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
     outputFormat = "javadoc"
     outputDirectory = 'docs/build/html/api/javadoc'
     processConfigurations = ['compile']
-    sourceDirs = files('core/src/main/kotlin', 'client/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin')
+    sourceDirs = files('core/src/main/kotlin', 'client/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin', 'client/jackson/src/main/kotlin')
 }
 
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])

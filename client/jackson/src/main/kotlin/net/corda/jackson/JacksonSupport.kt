@@ -28,6 +28,8 @@ import java.time.LocalDateTime
  * Note that Jackson can also be used to serialise/deserialise other formats such as Yaml and XML.
  */
 object JacksonSupport {
+    // If you change this API please update the docs in the docsite (json.rst)
+
     interface PartyObjectMapper {
         fun partyFromName(partyName: String): Party?
         fun partyFromKey(owningKey: CompositeKey): Party?
@@ -84,13 +86,16 @@ object JacksonSupport {
         }
     }
 
-    /* Mapper requiring RPC support to deserialise parties from names */
+    /** Mapper requiring RPC support to deserialise parties from names */
+    @JvmStatic
     fun createDefaultMapper(rpc: CordaRPCOps): ObjectMapper = configureMapper(RpcObjectMapper(rpc))
 
-    /* For testing or situations where deserialising parties is not required */
+    /** For testing or situations where deserialising parties is not required */
+    @JvmStatic
     fun createNonRpcMapper(): ObjectMapper = configureMapper(NoPartyObjectMapper())
 
-    /* For testing with an in memory identity service */
+    /** For testing with an in memory identity service */
+    @JvmStatic
     fun createInMemoryMapper(identityService: IdentityService) = configureMapper(IdentityObjectMapper(identityService))
 
     private fun configureMapper(mapper: ObjectMapper): ObjectMapper = mapper.apply {
