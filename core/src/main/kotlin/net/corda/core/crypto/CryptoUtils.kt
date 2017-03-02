@@ -72,7 +72,7 @@ fun PublicKey.verify(dsWithMetaDataClearData: DSWithMetaDataWithClearData): Bool
  */
 @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
 fun PublicKey.verify(dsWithMetaDataFull: DSWithMetaDataFull): Boolean {
-    if (this != dsWithMetaDataFull.metaDataFull.publicKey) IllegalArgumentException ("MetaData's publicKey: ${dsWithMetaDataFull.metaDataFull.publicKey.toBase58String()} does not match the input clearData: ${this.toBase58String()}")
+    if (this != dsWithMetaDataFull.metaDataFull.publicKey) IllegalArgumentException ("MetaData's publicKey: ${dsWithMetaDataFull.metaDataFull.publicKey.encoded.toBase58()} does not match the input clearData: ${this.encoded.toBase58()}")
     return Crypto.doVerify(this, dsWithMetaDataFull.signatureData, dsWithMetaDataFull.metaDataFull.hashBytes())
 }
 
