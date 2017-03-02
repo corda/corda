@@ -23,9 +23,7 @@ open class DSWithMetaDataWithKey(val signatureData: ByteArray, val metaDataWithK
      * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
      */
     @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-    fun verify(clearData: ByteArray) {
-        Crypto.doVerify(metaDataWithKey.publicKey, signatureData, clearData.plus(metaDataWithKey.hashBytes()))
-    }
+    fun verify(clearData: ByteArray): Boolean = Crypto.doVerify(metaDataWithKey.publicKey, signatureData, clearData.plus(metaDataWithKey.hashBytes()))
 
     /**
      * Function to verify a signature. This is usually called when [PublicKey] is not already included in Metadata.
@@ -38,8 +36,8 @@ open class DSWithMetaDataWithKey(val signatureData: ByteArray, val metaDataWithK
      * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
      */
     @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-    fun verify(clearData: ByteArray, publicKey: PublicKey) {
+    fun verify(clearData: ByteArray, publicKey: PublicKey): Boolean {
         if (publicKey != metaDataWithKey.publicKey) throw IllegalArgumentException ("MetaData's publicKey: ${metaDataWithKey.publicKey.toBase58String()} does not match the input clearData: ${publicKey.toBase58String()}")
-        Crypto.doVerify(publicKey, signatureData, clearData.plus(metaDataWithKey.hashBytes()))
+        return Crypto.doVerify(publicKey, signatureData, clearData.plus(metaDataWithKey.hashBytes()))
     }
 }

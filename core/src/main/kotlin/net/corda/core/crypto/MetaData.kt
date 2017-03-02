@@ -34,10 +34,11 @@ abstract class MetaData(
      * This subclass of [MetaData] contains the clearData, but not the public key of the signer.
      * This is currently not utilized in DLT.
      * @param clearData data to be signed (usually the Merkle root).
+     * TODO: change [BooleanArray] to [BitSet] for memory efficiency.
      */
     open class WithClearData(
-            versionID: String,
             schemeCodeName: String,
+            versionID: String,
             signatureType: SignatureType,
             timestamp: Instant?,
             visibleInputs: BooleanArray?,
@@ -52,8 +53,8 @@ abstract class MetaData(
      */
     @Deprecated("This class is currently not utilized in DLT and should be avoided.", ReplaceWith("MetaData.Full"), DeprecationLevel.WARNING)
     open class WithKey(
-            versionID: String,
             schemeCodeName: String,
+            versionID: String,
             signatureType: SignatureType,
             timestamp: Instant?,
             visibleInputs: BooleanArray?,
@@ -68,8 +69,8 @@ abstract class MetaData(
      * @param publicKey the signer's public key.
      */
     open class Full(
-            versionID: String,
             schemeCodeName: String,
+            versionID: String,
             signatureType: SignatureType,
             timestamp: Instant?,
             visibleInputs: BooleanArray?,

@@ -20,23 +20,5 @@ open class DSWithMetaDataWithClearData(val signatureData: ByteArray, val metaDat
      * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
      */
     @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-    fun verify(publicKey: PublicKey) {
-        Crypto.doVerify(publicKey, signatureData, metaDataWithClearData.hashBytes())
-    }
-
-    /**
-     * Function to verify a signature. This is usually called when [PublicKey] is not already included in Metadata.
-     * @param clearData the data/message that was signed (usually the Merkle root).
-     * @param publicKey the signer's public key.
-     * @throws InvalidKeyException if the key is invalid.
-     * @throws SignatureException if this signatureData object is not initialized properly,
-     * the passed-in signatureData is improperly encoded or of the wrong type,
-     * if this signatureData algorithm is unable to process the input data provided, etc.
-     * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
-     */
-    @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-    fun verify(clearData: ByteArray, publicKey: PublicKey) {
-        if (clearData.opaque() != metaDataWithClearData.clearData.opaque()) throw IllegalArgumentException ("MetaData's clearData (Merkle root): ${metaDataWithClearData.clearData.opaque()} does not match the input clearData: ${clearData.opaque()}")
-        Crypto.doVerify(publicKey, signatureData, metaDataWithClearData.hashBytes())
-    }
+    fun verify(publicKey: PublicKey): Boolean = Crypto.doVerify(publicKey, signatureData, metaDataWithClearData.hashBytes())
 }
