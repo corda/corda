@@ -6,7 +6,7 @@ import java.security.spec.AlgorithmParameterSpec
 /**
  * This class is used to define a digital signature scheme.
  * @param schemeNumberID we assign a number ID for more efficient on-wire serialisation. Please ensure uniqueness between schemes.
- * @param schemeCodeName codeName for this signature scheme (e.g. RSA_SHA256, ECDSA_SECP256K1_SHA256, ECDSA_SECP256R1_SHA256, EDDSA_ED25519_SHA512, SPHINCS-256_SHA512).
+ * @param schemeCodeName code name for this signature scheme (e.g. RSA_SHA256, ECDSA_SECP256K1_SHA256, ECDSA_SECP256R1_SHA256, EDDSA_ED25519_SHA512, SPHINCS-256_SHA512).
  * @param algorithmName which signature algorithm is used (e.g. RSA, ECDSA. EdDSA, SPHINCS-256).
  * @param sig the [Signature] class that provides the functionality of a digital signature scheme.
  * eg. Signature.getInstance("SHA256withECDSA", "BC").

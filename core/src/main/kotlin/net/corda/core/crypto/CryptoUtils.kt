@@ -22,7 +22,7 @@ fun PrivateKey.sign(clearData: ByteArray): ByteArray = Crypto.doSign(this, clear
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
 @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-fun PrivateKey.sign(metaDataFull: MetaData.Full): DSWithMetaDataFull = Crypto.doSign(this, metaDataFull)
+fun PrivateKey.sign(metaData: MetaData): TransactionSignature = Crypto.doSign(this, metaData)
 
 /**
  * Helper function to sign with a key pair.
@@ -49,8 +49,9 @@ fun KeyPair.sign(clearData: ByteArray): ByteArray = Crypto.doSign(this.private, 
 fun PublicKey.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Crypto.doVerify(this, signatureData, clearData)
 
 /**
- * Helper function to verify a metadata attached signature.
- * @param dsWithMetaDataClearData a [MetaData.WithClearData] attached digital signature.
+ * Helper function to verify a metadata attached signature. It is noted that the transactionSignature contains
+ * signatureData and a [MetaData] object that contains the signer's public key and the transaction's Merkle root.
+ * @param transactionSignature a [TransactionSignature] object that .
  * @throws InvalidKeyException if the key is invalid.
  * @throws SignatureException if this signatureData object is not initialized properly,
  * the passed-in signatureData is improperly encoded or of the wrong type,
@@ -58,22 +59,8 @@ fun PublicKey.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = 
  * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
  */
 @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-fun PublicKey.verify(dsWithMetaDataClearData: DSWithMetaDataWithClearData): Boolean = Crypto.doVerify(this, dsWithMetaDataClearData.signatureData, dsWithMetaDataClearData.metaDataWithClearData.hashBytes())
-
-/**
- * Helper function to verify a metadata attached signature. It is noted that the dsWithMetaDataFull object already contains the public key
- * and thus this public key should match the MetaData's public key.
- * @param dsWithMetaDataFull a [MetaData.Full] attached digital signature.
- * @throws InvalidKeyException if the key is invalid.
- * @throws SignatureException if this signatureData object is not initialized properly,
- * the passed-in signatureData is improperly encoded or of the wrong type,
- * if this signatureData algorithm is unable to process the input data provided, etc.
- * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
- */
-@Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-fun PublicKey.verify(dsWithMetaDataFull: DSWithMetaDataFull): Boolean {
-    if (this != dsWithMetaDataFull.metaDataFull.publicKey) IllegalArgumentException ("MetaData's publicKey: ${dsWithMetaDataFull.metaDataFull.publicKey.encoded.toBase58()} does not match the input clearData: ${this.encoded.toBase58()}")
-    return Crypto.doVerify(this, dsWithMetaDataFull.signatureData, dsWithMetaDataFull.metaDataFull.hashBytes())
+fun PublicKey.verify(transactionSignature: TransactionSignature): Boolean {
+    return Crypto.doVerify(this, transactionSignature)
 }
 
 /**
