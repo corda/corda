@@ -1,20 +1,18 @@
-package net.corda.webserver
+package net.corda.jackson
 
 import com.pholser.junit.quickcheck.From
 import com.pholser.junit.quickcheck.Property
 import com.pholser.junit.quickcheck.runner.JUnitQuickcheck
 import net.corda.core.testing.PublicKeyGenerator
-import net.corda.webserver.utilities.JsonSupport
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.junit.runner.RunWith
 import java.security.PublicKey
 import kotlin.test.assertEquals
 
 @RunWith(JUnitQuickcheck::class)
-class JsonSupportTest {
-
+class JacksonSupportTest {
     companion object {
-        val mapper = JsonSupport.createNonRpcMapper()
+        val mapper = JacksonSupport.createNonRpcMapper()
     }
 
     @Property

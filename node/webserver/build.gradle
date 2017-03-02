@@ -44,6 +44,7 @@ sourceSets {
 dependencies {
     compile project(':core')
     compile project(':node') // TODO: Break this dependency
+    compile project(':client:jackson')
 
     // Web stuff: for HTTP[S] servlets
     compile "org.eclipse.jetty:jetty-servlet:${jetty_version}"

@@ -3,8 +3,11 @@ package net.corda.testing.http
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.core.utilities.loggerFor
-import net.corda.webserver.utilities.JsonSupport
-import okhttp3.*
+import net.corda.jackson.JacksonSupport
+import okhttp3.MediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
 import java.net.URL
 import java.util.concurrent.TimeUnit
 
@@ -19,7 +22,7 @@ object HttpUtils {
                 .readTimeout(60, TimeUnit.SECONDS).build()
     }
     val defaultMapper: ObjectMapper by lazy {
-        ObjectMapper().registerModule(JsonSupport.javaTimeModule).registerModule(KotlinModule())
+        ObjectMapper().registerModule(JacksonSupport.javaTimeModule).registerModule(KotlinModule())
     }
 
     fun putJson(url: URL, data: String) : Boolean {
