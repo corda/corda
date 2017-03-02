@@ -121,6 +121,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -145,6 +146,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l2"><a class="reference internal" href="#theory">Theory</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#a-two-party-trading-flow">A two party trading flow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#suspendable-functions">Suspendable functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#whitelisted-classes-with-the-corda-node">Whitelisted classes with the Corda node</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#starting-your-flow">Starting your flow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#implementing-the-seller">Implementing the seller</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#exception-handling">Exception handling</a></li>
@@ -180,6 +182,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -331,6 +334,7 @@ write them and the approach is the same.</p>
     <span class="p">}</span>
 
     <span class="c1">// This object is serialised to the network and is the first flow message the seller sends to the buyer.</span>
+    <span class="n">@CordaSerializable</span>
     <span class="k">data</span> <span class="k">class</span> <span class="nc">SellerTradeInfo</span><span class="p">(</span>
             <span class="k">val</span> <span class="py">assetForSale</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">OwnableState</span><span class="p">&gt;,</span>
             <span class="k">val</span> <span class="py">price</span><span class="p">:</span> <span class="n">Amount</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;,</span>
@@ -402,6 +406,14 @@ and try again.</p>
 <p class="first admonition-title">Note</p>
 <p class="last">Java 9 is likely to remove this pre-marking requirement completely.</p>
 </div>
+</div>
+<div class="section" id="whitelisted-classes-with-the-corda-node">
+<h2>Whitelisted classes with the Corda node<a class="headerlink" href="#whitelisted-classes-with-the-corda-node" title="Permalink to this headline">¶</a></h2>
+<p>For security reasons, we do not want Corda nodes to be able to receive instances of any class on the classpath
+via messaging, since this has been exploited in other Java application containers in the past.  Instead, we require
+that every class contained in messages is whitelisted.  Some classes are whitelisted by default (see <code class="docutils literal"><span class="pre">DefaultWhitelist</span></code>),
+but others outside of that set need to be whitelisted either by using the annotation <code class="docutils literal"><span class="pre">&#64;CordaSerializable</span></code> or via the
+plugin framework.  See <a class="reference internal" href="serialization.html"><span class="doc">Object Serialization</span></a>.  You can see above that the <code class="docutils literal"><span class="pre">SellerTradeInfo</span></code> has been annotated.</p>
 </div>
 <div class="section" id="starting-your-flow">
 <h2>Starting your flow<a class="headerlink" href="#starting-your-flow" title="Permalink to this headline">¶</a></h2>

@@ -1,0 +1,86 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>LoggingWhitelist - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.serialization</a>&nbsp;/&nbsp;<a href=".">LoggingWhitelist</a><br/>
+<br/>
+<h1>LoggingWhitelist</h1>
+<code><span class="keyword">class </span><span class="identifier">LoggingWhitelist</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-mutable-class-whitelist/index.html"><span class="identifier">MutableClassWhitelist</span></a></code>
+<p>This class is not currently used, but can be installed to log a large number of missing entries from the whitelist
+and was used to track down the initial set.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">LoggingWhitelist</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.LoggingWhitelist$<init>(net.corda.core.serialization.ClassWhitelist, kotlin.Boolean)/delegate">delegate</span><span class="symbol">:</span>&nbsp;<a href="../-class-whitelist/index.html"><span class="identifier">ClassWhitelist</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.serialization.LoggingWhitelist$<init>(net.corda.core.serialization.ClassWhitelist, kotlin.Boolean)/global">global</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;true<span class="symbol">)</span></code>
+<p>This class is not currently used, but can be installed to log a large number of missing entries from the whitelist
+and was used to track down the initial set.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="delegate.html">delegate</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">delegate</span><span class="symbol">: </span><a href="../-class-whitelist/index.html"><span class="identifier">ClassWhitelist</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="global.html">global</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">global</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="add.html">add</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">add</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.LoggingWhitelist$add(java.lang.Class((kotlin.Any)))/entry">entry</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="has-listed.html">hasListed</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">hasListed</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.LoggingWhitelist$hasListed(java.lang.Class((kotlin.Any)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="globally-seen.html">globallySeen</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">globallySeen</span><span class="symbol">: </span><span class="identifier">MutableSet</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="journal-writer.html">journalWriter</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">journalWriter</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/io/PrintWriter.html"><span class="identifier">PrintWriter</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="log.html">log</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">log</span><span class="symbol">: </span><span class="identifier">Logger</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

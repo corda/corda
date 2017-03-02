@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>NotaryFlow.Client.<init> - corda</title>
-<link rel="stylesheet" href="..\..\..\..\style.css">
+<link rel="stylesheet" href="../../../../style.css">
 </HEAD>
 <BODY>
 <a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href="../index.html">NotaryFlow</a>&nbsp;/&nbsp;<a href="index.html">Client</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
@@ -11,8 +11,10 @@
 
 <p><code><span class="identifier">Client</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.NotaryFlow.Client$<init>(net.corda.core.transactions.SignedTransaction)/stx">stx</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span></code>
 <p><code><span class="identifier">Client</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.NotaryFlow.Client$<init>(net.corda.core.transactions.SignedTransaction, net.corda.core.utilities.ProgressTracker)/stx">stx</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.flows.NotaryFlow.Client$<init>(net.corda.core.transactions.SignedTransaction, net.corda.core.utilities.ProgressTracker)/progressTracker">progressTracker</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a><span class="symbol">)</span></code>
-<p>A flow to be used by a party for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
+<p>A flow to be used by a party for obtaining signature(s) from a <a href="#">NotaryService</a> ascertaining the transaction
 timestamp is correct and none of its inputs have been used in another completed transaction.</p>
+<p>In case of a single-node or Raft notary, the flow will return a single signature. For the BFT notary multiple
+signatures will be returned – one from each replica that accepted the input state commit.</p>
 <h3>Exceptions</h3>
 
 <p><a name="NotaryException"></a>

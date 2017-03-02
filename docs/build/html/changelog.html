@@ -1,0 +1,951 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Changelog &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
+        <link rel="next" title="Code style guide" href="codestyle.html"/>
+        <link rel="prev" title="Release notes" href="release-notes.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-ecosystem.html">Corda ecosystem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-core-types.html">Core types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-financial-model.html">Financial model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-flow-framework.html">Flow framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-consensus-notaries.html">Consensus and notaries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-vault.html">Vault</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-security-model.html">Security model</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The example CorDapp</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Changelog</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-9">Milestone 9</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-8">Milestone 8</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-7">Milestone 7</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-6">Milestone 6</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-5">Milestone 5</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-4">Milestone 4</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-3">Milestone 3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-2">Milestone 2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-1">Milestone 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-0">Milestone 0</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Changelog</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/changelog.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="changelog">
+<h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
+<p>Here are brief summaries of what&#8217;s changed between each snapshot release.</p>
+<div class="section" id="milestone-9">
+<h2>Milestone 9<a class="headerlink" href="#milestone-9" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">With thanks to <a class="reference external" href="https://github.com/thschroeter">Thomas Schroeter</a> for the Byzantine fault tolerant (BFT)
+notary prototype.</p>
+</li>
+<li><p class="first">Web server is a separate JAR.  This is a breaking change. The new webserver JAR (<code class="docutils literal"><span class="pre">corda-webserver.jar</span></code>)
+must be invoked separately to node startup, using the command``java -jar corda-webserver.jar`` in the same
+directory as the <code class="docutils literal"><span class="pre">node.conf</span></code>. Further changes are anticipated in upcoming milestone releases.</p>
+</li>
+<li><p class="first">API:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Pseudonymous <code class="docutils literal"><span class="pre">AnonymousParty</span></code> class added as a superclass of <code class="docutils literal"><span class="pre">Party</span></code>.</li>
+<li>Split <code class="docutils literal"><span class="pre">CashFlow</span></code> into individual <code class="docutils literal"><span class="pre">CashIssueFlow</span></code>, <code class="docutils literal"><span class="pre">CashPaymentFlow</span></code> and <code class="docutils literal"><span class="pre">CashExitFlow</span></code> flows, so that fine
+grained permissions can be applied. Added <code class="docutils literal"><span class="pre">CashFlowCommand</span></code> for use-cases where cash flow triggers need to be
+captured in an object that can be passed around.</li>
+<li><code class="docutils literal"><span class="pre">CordaPluginRegistry</span></code> method <code class="docutils literal"><span class="pre">registerRPCKryoTypes</span></code> is renamed <code class="docutils literal"><span class="pre">customizeSerialization</span></code> and the argument
+types now hide the presence of Kryo.</li>
+<li>New extension functions for encoding/decoding to base58, base64, etc. See
+<code class="docutils literal"><span class="pre">core/src/main/kotlin/net/corda/core/crypto/EncodingUtils.kt</span></code></li>
+<li>Add <code class="docutils literal"><span class="pre">openAttachment</span></code> function to Corda RPC operations, for downloading an attachment from a node&#8217;s data storage.</li>
+<li>Add <code class="docutils literal"><span class="pre">getCashBalances</span></code> function to Corda RPC operations, for getting cash balances from a node&#8217;s vault.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><dl class="first docutils">
+<dt>Configuration:</dt>
+<dd><ul class="first last simple">
+<li><code class="docutils literal"><span class="pre">extraAdvertisedServiceIds</span></code> config is now a list of strings, rather than a comma separated string. For example
+<code class="docutils literal"><span class="pre">[</span> <span class="pre">&quot;corda.interest_rates&quot;</span> <span class="pre">]</span></code> instead of <code class="docutils literal"><span class="pre">&quot;corda.interest_rates&quot;</span></code>.</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Flows:</dt>
+<dd><ul class="first last simple">
+<li>Split <code class="docutils literal"><span class="pre">CashFlow</span></code> into separate <code class="docutils literal"><span class="pre">CashIssueFlow</span></code>, <code class="docutils literal"><span class="pre">CashPaymentFlow</span></code> and <code class="docutils literal"><span class="pre">CashExitFlow</span></code> so that permissions can
+be assigned individually.</li>
+<li>Split single example user into separate &#8220;bankUser&#8221; and &#8220;bigCorpUser&#8221; so that permissions for the users make sense
+rather than being a combination of both roles.</li>
+<li><code class="docutils literal"><span class="pre">ProgressTracker</span></code> emits exception thrown by the flow, allowing the ANSI renderer to correctly stop and print the error</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">Object Serialization:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Consolidated Kryo implementations across RPC and P2P messaging with whitelisting of classes via plugins or with
+<code class="docutils literal"><span class="pre">&#64;CordaSerializable</span></code> for added node security.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><dl class="first docutils">
+<dt>Privacy:</dt>
+<dd><ul class="first last simple">
+<li>Non-validating notary service now takes in a <code class="docutils literal"><span class="pre">FilteredTransaction</span></code> so that no potentially sensitive transaction
+details are unnecessarily revealed to the notary</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>General:</dt>
+<dd><ul class="first last simple">
+<li>Add vault service persistence using Requery</li>
+<li>Certificate signing utility output is now more verbose</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="milestone-8">
+<h2>Milestone 8<a class="headerlink" href="#milestone-8" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">Node memory usage and performance improvements, demo nodes now only require 200 MB heap space to run.</p>
+</li>
+<li><p class="first">The Corda node no longer runs an internal web server, it&#8217;s now run in a separate process. Driver and Cordformation have
+been updated to reflect this change.
+Existing CorDapps should be updated with additional calls to the new <code class="docutils literal"><span class="pre">startWebserver()</span></code> interface in their Driver logic (if they use the driver e.g. in integration tests).
+See the IRS demo for an example.</p>
+</li>
+<li><p class="first">Data model: <code class="docutils literal"><span class="pre">Party</span></code> equality is now based on the owning key, rather than the owning key and name. This is important for
+party anonymisation to work, as each key must identify exactly one party.</p>
+</li>
+<li><p class="first">Contracts: created new composite clauses called <code class="docutils literal"><span class="pre">AllOf</span></code>, <code class="docutils literal"><span class="pre">AnyOf</span></code> and <code class="docutils literal"><span class="pre">FirstOf</span></code> to replace <code class="docutils literal"><span class="pre">AllComposition</span></code>, <code class="docutils literal"><span class="pre">AnyComposition</span></code>
+and <code class="docutils literal"><span class="pre">FirstComposition</span></code>, as this is significantly clearer in intent. <code class="docutils literal"><span class="pre">AnyOf</span></code> also enforces that at least one subclause
+must match, whereas <code class="docutils literal"><span class="pre">AnyComposition</span></code> would accept no matches.</p>
+</li>
+<li><p class="first">Explorer: the user can now configure certificate path and keystore/truststore password on the login screen.</p>
+</li>
+<li><p class="first">Documentation:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Key Concepts section revamped with new structure and content.</li>
+<li>Added more details to <a class="reference internal" href="getting-set-up.html"><span class="doc">Getting set up</span></a> page.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Flow framework: improved exception handling with the introduction of <code class="docutils literal"><span class="pre">FlowException</span></code>. If this or a subtype is thrown
+inside a flow it will propagate to all counterparty flows and subsequently be thrown by them as well. Existing flows such as
+<code class="docutils literal"><span class="pre">NotaryFlow.Client/Service</span></code> and others have been modified to throw a <code class="docutils literal"><span class="pre">FlowException</span></code> (in this particular case a
+<code class="docutils literal"><span class="pre">NotaryException</span></code>) instead of sending back error responses.</p>
+</li>
+<li><p class="first">Notary flow: provide complete details of underlying error when contract validation fails.</p>
+</li>
+</ul>
+</div>
+<div class="section" id="milestone-7">
+<h2>Milestone 7<a class="headerlink" href="#milestone-7" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">With thanks to <a class="reference external" href="https://github.com/thschroeter">Thomas Schroeter</a> <code class="docutils literal"><span class="pre">NotaryFlow</span></code> is now idempotent.</p>
+</li>
+<li><p class="first">Explorer:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The GUI for the explorer now shows other nodes on the network map and the transactions between them.</li>
+<li>Map resolution increased and allows zooming and panning.</li>
+<li><a class="reference external" href="https://www.corda.net/2017/01/03/the-node-explorer/">Video demonstration</a> of the Node Explorer.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">The CorDapp template now has a Java example that parallels the Kotlin one for developers more comfortable with Java.
+ORM support added to the Kotlin example.</p>
+</li>
+<li><p class="first">Demos:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Added the Bank of Corda demo - a demo showing a node (Bank of Corda) acting as an issuer of Cash, and a client
+driver providing both Web and RPC access to request issuance of cash.</li>
+<li>Demos now use RPC to communicate with the node from the webserver. This brings the demos more in line with how
+interaction with nodes is expected to be. The demos now treat their webservers like clients. This will also allow
+for the splitting of the webserver from the node for milestone 8.</li>
+<li>Added a SIMM valuation demo integration test to catch regressions.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Security:</p>
+<blockquote>
+<div><ul class="simple">
+<li>MQ broker of the node now requires authentication which means that third parties cannot connect to and
+listen to queues on the Node. RPC and P2P between nodes is now authenticated as a result of this change.
+This also means that nodes or RPC users cannot pretend to be other nodes or RPC users.</li>
+<li>The node now does host verification of any node that connects to it and prevents man in the middle attacks.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Improvements:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Vault updates now contain full <code class="docutils literal"><span class="pre">StateAndRef</span></code> which allows subscribers to check whether the update contains
+relevant states.</li>
+<li>Cash balances are calculated using aggregate values to prevent iterating through all states in the vault, which
+improves performance.</li>
+<li>Multi-party services, such as notaries, are now load balanced and represented as a single <code class="docutils literal"><span class="pre">Party</span></code> object.</li>
+<li>The Notary Change flow now supports encumbrances.</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div>
+<div class="section" id="milestone-6">
+<h2>Milestone 6<a class="headerlink" href="#milestone-6" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">Added the <a class="reference external" href="_static/corda-technical-whitepaper.pdf">Corda technical white paper</a>. Note that its current version
+is 0.5 to reflect the fact that the Corda design is still evolving. Although we expect only relatively small tweaks
+at this point, when Corda reaches 1.0 so will the white paper.</p>
+</li>
+<li><p class="first">Major documentation restructuring and new content:</p>
+<blockquote>
+<div><ul class="simple">
+<li>More details on Corda node internals.</li>
+<li>New CorDapp tutorial.</li>
+<li>New tutorial on building transactions.</li>
+<li>New tutorials on how to run and use a notary service.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">An experimental version of the deterministic JVM sandbox has been added. It is not integrated with the node and will
+undergo some significant changes in the coming releases before it is integrated, as the code is finished, as bugs are
+found and fixed, and as the platform subset we choose to expose is finalised. Treat this as an outline of the basic
+approach rather than something usable for production.</p>
+</li>
+<li><p class="first">Developer experience:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Samples have been merged back into the main repository. All samples can now be run via command line or IntelliJ.</li>
+<li>Added a Client RPC python example.</li>
+<li>Node console output now displays concise startup information, such as startup time or web address. All logging to
+the console is suppressed apart from errors and flow progress tracker steps. It can be re-enabled by passing
+<code class="docutils literal"><span class="pre">--log-to-console</span></code> command line parameter. Note that the log file remains unchanged and will still contain all
+log entries.</li>
+<li>The <code class="docutils literal"><span class="pre">runnodes</span></code> scripts generated by the Gradle plugins now open each node in separate terminal windows or (on macOS) tabs.</li>
+<li>A much more complete template app.</li>
+<li>JARs now available on Maven Central.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Data model: A party is now identified by a composite key (formerly known as a &#8220;public key tree&#8221;) instead of a single public key.
+Read more in <a class="reference internal" href="key-concepts-core-types.html#composite-keys"><span class="std std-ref">Composite Keys</span></a>. This allows expressing distributed service identities, e.g. a distributed notary.
+In the future this will also allow parties to use multiple signing keys for their legal identity.</p>
+</li>
+<li><p class="first">Decentralised consensus: A prototype RAFT based notary composed of multiple nodes has been added. This implementation
+is optimised for high performance over robustness against malicious cluster members, which may be appropriate for
+some financial situations. See <span class="xref std std-ref">notary-demo</span> to try it out. A BFT notary will be added later.</p>
+</li>
+<li><p class="first">Node explorer app:</p>
+<blockquote>
+<div><ul class="simple">
+<li>New theme aligned with the Corda branding.</li>
+<li>The New Transaction screen moved to the Cash View (as it is used solely for cash transactions)</li>
+<li>Removed state machine/flow information from Transaction table. A new view for this will be created in a future release.</li>
+<li>Added a new Network View that displays details of all nodes on the network.</li>
+<li>Users can now configure the reporting currency in settings.</li>
+<li>Various layout and performance enhancements.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Client RPC:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Added a generic <code class="docutils literal"><span class="pre">startFlow</span></code> method that enables starting of any flow, given sufficient permissions.</li>
+<li>Added the ability for plugins to register additional classes or custom serialisers with Kryo for use in RPC.</li>
+<li><code class="docutils literal"><span class="pre">rpc-users.properties</span></code> file has been removed with RPC user settings moved to the config file.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Configuration changes: It is now possible to specify a custom legal name for any of the node&#8217;s advertised services.</p>
+</li>
+<li><p class="first">Added a load testing framework which allows stress testing of a node cluster, as well as specifying different ways of
+disrupting the normal operation of nodes. See <a class="reference internal" href="loadtesting.html"><span class="doc">Load testing</span></a>.</p>
+</li>
+<li><p class="first">Improvements to the experimental contract DSL, by Sofus Mortensen of Nordea Bank (please give Nordea a shoutout too).</p>
+</li>
+</ul>
+<p>API changes:</p>
+<ul class="simple">
+<li>The top level package has been renamed from <code class="docutils literal"><span class="pre">com.r3corda</span></code> to <code class="docutils literal"><span class="pre">net.corda</span></code>.</li>
+<li>Protocols have been renamed to &#8220;flows&#8221;.</li>
+<li><code class="docutils literal"><span class="pre">OpaqueBytes</span></code> now uses <code class="docutils literal"><span class="pre">bytes</span></code> as the field name rather than <code class="docutils literal"><span class="pre">bits</span></code>.</li>
+</ul>
+</div>
+<div class="section" id="milestone-5">
+<h2>Milestone 5<a class="headerlink" href="#milestone-5" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">A simple RPC access control mechanism. Users, passwords and permissions can be defined in a configuration file.
+This mechanism will be extended in future to support standard authentication systems like LDAP.</p>
+</li>
+<li><p class="first">New features in the explorer app and RPC API for working with cash:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Cash can now be sent, issued and exited via RPC.</li>
+<li>Notes can now be associated with transactions.</li>
+<li>Hashes are visually represented using identicons.</li>
+<li>Lots of functional work on the explorer UI. You can try it out by running <code class="docutils literal"><span class="pre">gradle</span> <span class="pre">tools:explorer:runDemoNodes</span></code> to run
+a local network of nodes that swap cash with each other, and then run <code class="docutils literal"><span class="pre">gradle</span> <span class="pre">tools:explorer:run</span></code> to start
+the app.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">A new demo showing shared valuation of derivatives portfolios using the ISDA SIMM has been added. Note that this app
+relies on a proprietary implementation of the ISDA SIMM business logic from OpenGamma. A stub library is provided
+to ensure it compiles but if you want to use the app for real please contact us.</p>
+</li>
+<li><p class="first">Developer experience (we plan to do lots more here in milestone 6):</p>
+<blockquote>
+<div><ul class="simple">
+<li>Demos and samples have been split out of the main repository, and the initial developer experience continues to be
+refined. All necessary JARs can now be installed to Maven Local by simply running <code class="docutils literal"><span class="pre">gradle</span> <span class="pre">install</span></code>.</li>
+<li>It&#8217;s now easier to define a set of nodes to run locally using the new &#8220;CordFormation&#8221; gradle plugin, which
+defines a simple DSL for creating networks of nodes.</li>
+<li>The template CorDapp has been upgraded with more documentation and showing more features.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Privacy: transactions are now structured as Merkle trees, and can have sections &#8220;torn off&#8221; - presented for
+verification and signing without revealing the rest of the transaction.</p>
+</li>
+<li><p class="first">Lots of bug fixes, tweaks and polish starting the run up to the open source release.</p>
+</li>
+</ul>
+<p>API changes:</p>
+<ul class="simple">
+<li>Plugin service classes now take a <code class="docutils literal"><span class="pre">PluginServiceHub</span></code> rather than a <code class="docutils literal"><span class="pre">ServiceHubInternal</span></code>.</li>
+<li><code class="docutils literal"><span class="pre">UniqueIdentifier</span></code> equality has changed to only take into account the underlying UUID.</li>
+<li>The contracts module has been renamed to finance, to better reflect what it is for.</li>
+</ul>
+</div>
+<div class="section" id="milestone-4">
+<h2>Milestone 4<a class="headerlink" href="#milestone-4" title="Permalink to this headline">¶</a></h2>
+<p>New features in this release:</p>
+<ul>
+<li><p class="first">Persistence:</p>
+<blockquote>
+<div><ul class="simple">
+<li>States can now be written into a relational database and queried using JDBC. The schemas are defined by the
+smart contracts and schema versioning is supported. It is reasonable to write an app that stores data in a mix
+of global ledger transactions and local database tables which are joined on demand, using join key slots that
+are present in many state definitions. Read more about <a class="reference internal" href="persistence.html"><span class="doc">Persistence</span></a>.</li>
+<li>The embedded H2 SQL database is now exposed by default to any tool that can speak JDBC. The database URL is
+printed during node startup and can be used to explore the database, which contains both node internal data
+and tables generated from ledger states.</li>
+<li>Protocol checkpoints are now stored in the database as well. Message processing is now atomic with protocol
+checkpointing and run under the same RDBMS transaction.</li>
+<li>MQ message deduplication is now handled at the app layer and performed under the RDMS transaction, so
+ensuring messages are only replayed if the RDMS transaction rolled back.</li>
+<li>&#8220;The wallet&#8221; has been renamed to &#8220;the vault&#8221;.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Client RPC:</p>
+<blockquote>
+<div><ul class="simple">
+<li>New RPCs added to subscribe to snapshots and update streams state of the vault, currently executing protocols
+and other important node information.</li>
+<li>New tutorial added that shows how to use the RPC API to draw live transaction graphs on screen.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Protocol framework:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Large simplifications to the API. Session management is now handled automatically. Messages are now routed
+based on identities rather than node IP addresses.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Decentralised consensus:</p>
+<blockquote>
+<div><ul class="simple">
+<li>A standalone one-node notary backed by a JDBC store has been added.</li>
+<li>A prototype RAFT based notary composed of multiple nodes is available on a branch.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Data model:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Compound keys have been added as preparation for merging a distributed RAFT based notary. Compound keys
+are trees of public keys in which interior nodes can have validity thresholds attached, thus allowing
+boolean formulas of keys to be created. This is similar to Bitcoin&#8217;s multi-sig support and the data model
+is the same as the InterLedger Crypto-Conditions spec, which should aid interop in future. Read more about
+key trees in the &#8220;<span class="xref doc">transaction-data-types</span>&#8221; article.</li>
+<li>A new tutorial has been added showing how to use transaction attachments in more detail.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Testnet</p>
+<blockquote>
+<div><ul class="simple">
+<li>Permissioning infrastructure phase one is built out. The node now has a notion of developer mode vs normal
+mode. In developer mode it works like M3 and the SSL certificates used by nodes running on your local
+machine all self-sign using a developer key included in the source tree. When developer mode is not active,
+the node won&#8217;t start until it has a signed certificate. Such a certificate can be obtained by simply running
+an included command line utility which generates a CSR and submits it to a permissioning service, then waits
+for the signed certificate to be returned. Note that currently there is no public Corda testnet, so we are
+not currently running a permissioning service.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Standalone app development:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The Corda libraries that app developers need to link against can now be installed into your local Maven
+repository, where they can then be used like any other JAR. See <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">CorDapp basics</span></a>.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">User interfaces:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Infrastructure work on the node explorer is now complete: it is fully switched to using the MQ based RPC system.</li>
+<li>A library of additional reactive collections has been added. This API builds on top of Rx and the observable
+collections API in Java 8 to give &#8220;live&#8221; data structures in which the state of the node and ledger can be
+viewed as an ordinary Java <code class="docutils literal"><span class="pre">List</span></code>, <code class="docutils literal"><span class="pre">Map</span></code> and <code class="docutils literal"><span class="pre">Set</span></code>, but which also emit callbacks when these views
+change, and which can have additional views derived in a functional manner (filtered, mapped, sorted, etc).
+Finally, these views can then be bound directly into JavaFX UIs. This makes for a concise and functional
+way of building application UIs that render data from the node, and the API is available for third party
+app developers to use as well. We believe this will be highly productive and enjoyable for developers who
+have the option of building JavaFX apps (vs web apps).</li>
+<li>The visual network simulator tool that was demoed back in April as part of the first Corda live demo has
+been merged into the main repository.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Documentation</p>
+<blockquote>
+<div><ul class="simple">
+<li>New secure coding guidelines. Corda tries to eliminate as many security mistakes as practical via the type
+system and other mechanically checkable processes, but there are still things that one must be aware of.</li>
+<li>New attachments tutorial.</li>
+<li>New Client RPC tutorial.</li>
+<li>More tutorials on how to build a standalone CorDapp.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Testing</p>
+<blockquote>
+<div><ul class="simple">
+<li>More integration testing support</li>
+<li>New micro-DSLs for expressing expected sequences of operations with more or less relaxed ordering constraints.</li>
+<li>QuickCheck generators to create streams of randomised transactions and other basic types. QuickCheck is a way
+of writing unit tests that perform randomised fuzz testing of code, originally developed by the Haskell
+community and now also available in Java.</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+<p>API changes:</p>
+<ul class="simple">
+<li>The transaction types (Signed, Wire, LedgerTransaction) have moved to <code class="docutils literal"><span class="pre">net.corda.core.transactions</span></code>. You can
+update your code by just deleting the broken import lines and letting your IDE re-import them from the right
+location.</li>
+<li><code class="docutils literal"><span class="pre">AbstractStateReplacementProtocol.verifyProposal</span></code> has changed its prototype in a minor way.</li>
+<li>The <code class="docutils literal"><span class="pre">UntrustworthyData&lt;T&gt;.validate</span></code> method has been renamed to <code class="docutils literal"><span class="pre">unwrap</span></code> - the old name is now deprecated.</li>
+<li>The wallet, wallet service, etc. are now vault, vault service, etc. These better reflect the intent that they
+are a generic secure data store, rather than something which holds cash.</li>
+<li>The protocol send/receive APIs have changed to no longer require a session id. Please check the current version
+of the protocol framework tutorial for more details.</li>
+</ul>
+</div>
+<div class="section" id="milestone-3">
+<h2>Milestone 3<a class="headerlink" href="#milestone-3" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">More work on preparing for the testnet:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Corda is now a standalone app server that loads &#8220;CorDapps&#8221; into itself as plugins. Whilst the existing IRS
+and trader demos still exist for now, these will soon be removed and there will only be a single Corda node
+program. Note that the node is a single, standalone jar file that is easier to execute than the demos.</li>
+<li>Project Vega (shared SIMM modelling for derivative portfolios) has already been converted to be a CorDapp.</li>
+<li>Significant work done on making the node persist its wallet data to a SQL backend, with more on the way.</li>
+<li>Upgrades and refactorings of the core transaction types in preparation for the incoming sandboxing work.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">The Clauses API that seeks to make writing smart contracts easier has gone through another design iteration,
+with the result that clauses are now cleaner and more composable.</p>
+</li>
+<li><p class="first">Improvements to the protocol API for finalising transactions (notarising, transmitting and storing).</p>
+</li>
+<li><p class="first">Lots of work done on an MQ based client API.</p>
+</li>
+<li><p class="first">Improvements to the developer site:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The developer site has been re-read from start to finish and refreshed for M3 so there should be no obsolete
+texts or references anywhere.</li>
+<li>The Corda non-technical white paper is now a part of the developer site and git repository. The LaTeX source is
+also provided so if you spot any issues with it, you can send us patches.</li>
+<li>There is a new section on how to write CorDapps.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Further R&amp;D work by Sofus Mortensen in the experimental module on a new &#8216;universal&#8217; contract language.</p>
+</li>
+<li><p class="first">SSL for the REST API and webapp server can now be configured.</p>
+</li>
+</ul>
+</div>
+<div class="section" id="milestone-2">
+<h2>Milestone 2<a class="headerlink" href="#milestone-2" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">Big improvements to the interest rate swap app:</p>
+<blockquote>
+<div><ul class="simple">
+<li>A new web app demonstrating the IRS contract has been added. This can be used as an example for how to interact with
+the Corda API from the web.</li>
+<li>Simplifications to the way the demo is used from the command line.</li>
+<li><a class="reference internal" href="contract-irs.html"><span class="doc">Detailed documentation on how the contract works and can be used</span></a> has been written.</li>
+<li>Better integration testing of the app.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Smart contracts have been redesigned around reusable components, referred to as &#8220;clauses&#8221;. The cash, commercial paper
+and obligation contracts now share a common issue clause.</p>
+</li>
+<li><p class="first">New code in the experimental module (note that this module is a place for work-in-progress code which has not yet gone
+through code review and which may, in general, not even function correctly):</p>
+<blockquote>
+<div><ul>
+<li><p class="first">Thanks to the prolific Sofus Mortensen &#64; Nordea Bank, an experimental generic contract DSL that is based on the famous
+2001 &#8220;Composing contracts&#8221; paper has been added. We thank Sofus for this great and promising research, which is so
+relevant in the wake of the DAO hack.</p>
+</li>
+<li><p class="first">The contract code from the recent trade finance demos is now in experimental. This code comes thanks to a
+collaboration of the members; all credit to:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Mustafa Ozturk &#64; Natixis</li>
+<li>David Nee &#64; US Bank</li>
+<li>Johannes Albertsen &#64; Dankse Bank</li>
+<li>Rui Hu &#64; Nordea</li>
+<li>Daniele Barreca &#64; Unicredit</li>
+<li>Sukrit Handa &#64; Scotiabank</li>
+<li>Giuseppe Cardone &#64; Banco Intesa</li>
+<li>Robert Santiago &#64; BBVA</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">The usability of the command line demo programs has been improved.</p>
+</li>
+<li><p class="first">All example code and existing contracts have been ported to use the new Java/Kotlin unit testing domain-specific
+languages (DSLs) which make it easy to construct chains of transactions and verify them together. This cleans up
+and unifies the previous ad-hoc set of similar DSLs. A tutorial on how to use it has been added to the documentation.
+We believe this largely completes our testing story for now around smart contracts. Feedback from bank developers
+during the Trade Finance project has indicated that the next thing to tackle is docs and usability improvements in
+the protocols API.</p>
+</li>
+<li><p class="first">Significant work done towards defining the &#8220;CorDapp&#8221; concept in code, with dynamic loading of API services and more to
+come.</p>
+</li>
+<li><p class="first">Inter-node communication now uses SSL/TLS and AMQP/1.0, albeit without all nodes self-signing at the moment. A real
+PKI for the p2p network will come later.</p>
+</li>
+<li><p class="first">Logging is now saved to files with log rotation provided by Log4J.</p>
+</li>
+</ul>
+<p>API changes:</p>
+<ul class="simple">
+<li>Some utility methods and extension functions that are specific to certain contract types have moved packages: just
+delete the import lines that no longer work and let IntelliJ replace them with the correct package paths.</li>
+<li>The <code class="docutils literal"><span class="pre">arg</span></code> method in the test DSL is now called <code class="docutils literal"><span class="pre">command</span></code> to be consistent with the rest of the data model.</li>
+<li>The messaging APIs have changed somewhat to now use a new <code class="docutils literal"><span class="pre">TopicSession</span></code> object. These APIs will continue to change
+in the upcoming releases.</li>
+<li>Clauses now have default values provided for <code class="docutils literal"><span class="pre">ifMatched</span></code>, <code class="docutils literal"><span class="pre">ifNotMatched</span></code> and <code class="docutils literal"><span class="pre">requiredCommands</span></code>.</li>
+</ul>
+<p>New documentation:</p>
+<ul class="simple">
+<li><a class="reference internal" href="contract-catalogue.html"><span class="doc">Contract catalogue</span></a></li>
+<li><a class="reference internal" href="contract-irs.html"><span class="doc">Interest rate swaps</span></a></li>
+<li><a class="reference internal" href="tutorial-test-dsl.html"><span class="doc">Writing a contract test</span></a></li>
+</ul>
+</div>
+<div class="section" id="milestone-1">
+<h2>Milestone 1<a class="headerlink" href="#milestone-1" title="Permalink to this headline">¶</a></h2>
+<p>Highlights of this release:</p>
+<ul>
+<li><p class="first">Event scheduling. States in the ledger can now request protocols to be invoked at particular times, for states
+considered relevant by the wallet.</p>
+</li>
+<li><p class="first">Upgrades to the notary/consensus service support:</p>
+<blockquote>
+<div><ul class="simple">
+<li>There is now a way to change the notary controlling a state.</li>
+<li>You can pick between validating and non-validating notaries, these let you select your privacy/robustness tradeoff.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">A new obligation contract that supports bilateral and multilateral netting of obligations, default tracking and
+more.</p>
+</li>
+<li><p class="first">Improvements to the financial type system, with core classes and contracts made more generic.</p>
+</li>
+<li><p class="first">Switch to a better digital signature algorithm: ed25519 instead of the previous JDK default of secp256r1.</p>
+</li>
+<li><p class="first">A new integration test suite.</p>
+</li>
+<li><p class="first">A new Java unit testing DSL for contracts, similar in spirit to the one already developed for Kotlin users (which
+depended on Kotlin specific features).</p>
+</li>
+<li><p class="first">An experimental module, where developers who want to work with the latest Corda code can check in contracts/cordapp
+code before it&#8217;s been fully reviewed. Code in this module has compiler warnings suppressed but we will still make
+sure it compiles across refactorings.</p>
+</li>
+<li><p class="first">Persistence improvements: transaction data is now stored to disk and automatic protocol resume is now implemented.</p>
+</li>
+<li><p class="first">Many smaller bug fixes, cleanups and improvements.</p>
+</li>
+</ul>
+<p>We have new documentation on:</p>
+<ul class="simple">
+<li><a class="reference internal" href="event-scheduling.html"><span class="doc">Event scheduling</span></a></li>
+<li><span class="xref doc">transaction-data-types</span></li>
+<li><span class="xref doc">consensus</span></li>
+</ul>
+<p>Summary of API changes (not exhaustive):</p>
+<ul>
+<li><p class="first">Notary/consensus service:</p>
+<blockquote>
+<div><ul class="simple">
+<li><code class="docutils literal"><span class="pre">NotaryService</span></code> is now extensible.</li>
+<li>Every <code class="docutils literal"><span class="pre">ContractState</span></code> now has to specify a <em>participants</em> field, which is a list of parties that are able to
+consume this state in a valid transaction. This is used for e.g. making sure all relevant parties obtain the updated
+state when changing a notary.</li>
+<li>Introduced <code class="docutils literal"><span class="pre">TransactionState</span></code>, which wraps <code class="docutils literal"><span class="pre">ContractState</span></code>, and is used when defining a transaction output.
+The notary field is moved from <code class="docutils literal"><span class="pre">ContractState</span></code> into <code class="docutils literal"><span class="pre">TransactionState</span></code>.</li>
+<li>Every transaction now has a <em>type</em> field, which specifies custom build &amp; validation rules for that transaction type.
+Currently two types are supported: General (runs the default build and validation logic) and NotaryChange (
+contract code is not run during validation, checks that the notary field is the only difference between the
+inputs and outputs).
+<code class="docutils literal"><span class="pre">TransactionBuilder()</span></code> is now abstract, you should use <code class="docutils literal"><span class="pre">TransactionType.General.Builder()</span></code> for building transactions.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">The cash contract has moved from <code class="docutils literal"><span class="pre">net.corda.contracts</span></code> to <code class="docutils literal"><span class="pre">net.corda.contracts.cash</span></code></p>
+</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">Amount</span></code> class is now generic, to support non-currency types such as physical assets. Where you previously had just
+<code class="docutils literal"><span class="pre">Amount</span></code>, you should now use <code class="docutils literal"><span class="pre">Amount&lt;Currency&gt;</span></code>.</p>
+</li>
+<li><p class="first">Refactored the Cash contract to have a new FungibleAsset superclass, to model all countable assets that can be merged
+and split (currency, barrels of oil, etc.)</p>
+</li>
+<li><p class="first">Messaging:</p>
+<blockquote>
+<div><ul class="simple">
+<li><code class="docutils literal"><span class="pre">addMessageHandler</span></code> now has a different signature as part of error handling changes.</li>
+<li>If you want to return nothing to a protocol, use <code class="docutils literal"><span class="pre">Ack</span></code> instead of <code class="docutils literal"><span class="pre">Unit</span></code> from now on.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">In the IRS contract, dateOffset is now an integer instead of an enum.</p>
+</li>
+<li><p class="first">In contracts, you now use <code class="docutils literal"><span class="pre">tx.getInputs</span></code> and <code class="docutils literal"><span class="pre">tx.getOutputs</span></code> instead of <code class="docutils literal"><span class="pre">getInStates</span></code> and <code class="docutils literal"><span class="pre">getOutStates</span></code>. This is
+just a renaming.</p>
+</li>
+<li><p class="first">A new <code class="docutils literal"><span class="pre">NonEmptySet</span></code> type has been added for cases where you wish to express that you have a collection of unique
+objects which cannot be empty.</p>
+</li>
+<li><p class="first">Please use the global <code class="docutils literal"><span class="pre">newSecureRandom()</span></code> function rather than instantiating your own SecureRandom&#8217;s from now on, as
+the custom function forces the use of non-blocking random drivers on Linux.</p>
+</li>
+</ul>
+</div>
+<div class="section" id="milestone-0">
+<h2>Milestone 0<a class="headerlink" href="#milestone-0" title="Permalink to this headline">¶</a></h2>
+<p>This is the first release, which includes:</p>
+<ul class="simple">
+<li>Some initial smart contracts: cash, commercial paper, interest rate swaps</li>
+<li>An interest rate oracle</li>
+<li>The first version of the protocol/orchestration framework</li>
+<li>Some initial support for pluggable consensus mechanisms</li>
+<li>Tutorials and documentation explaining how it works</li>
+<li>Much more ...</li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="codestyle.html" class="btn btn-neutral float-right" title="Code style guide" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="release-notes.html" class="btn btn-neutral" title="Release notes" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, R3 Limited.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
