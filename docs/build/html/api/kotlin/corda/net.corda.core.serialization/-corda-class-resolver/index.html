@@ -1,0 +1,66 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CordaClassResolver - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.serialization</a>&nbsp;/&nbsp;<a href=".">CordaClassResolver</a><br/>
+<br/>
+<h1>CordaClassResolver</h1>
+<code><span class="keyword">class </span><span class="identifier">CordaClassResolver</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">DefaultClassResolver</span></code>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">CordaClassResolver</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.CordaClassResolver$<init>(net.corda.core.serialization.ClassWhitelist)/whitelist">whitelist</span><span class="symbol">:</span>&nbsp;<a href="../-class-whitelist/index.html"><span class="identifier">ClassWhitelist</span></a><span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="whitelist.html">whitelist</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">whitelist</span><span class="symbol">: </span><a href="../-class-whitelist/index.html"><span class="identifier">ClassWhitelist</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="disable-whitelist.html">disableWhitelist</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">disableWhitelist</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="enable-whitelist.html">enableWhitelist</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">enableWhitelist</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="get-registration.html">getRegistration</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getRegistration</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.CordaClassResolver$getRegistration(java.lang.Class((kotlin.Any)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Registration</span><span class="symbol">?</span></code>
+<p>Returns the registration for the specified class, or null if the class is not registered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="register-implicit.html">registerImplicit</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">registerImplicit</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.CordaClassResolver$registerImplicit(java.lang.Class((kotlin.Any)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Registration</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

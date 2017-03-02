@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>net.corda.core.node.services - corda</title>
-<link rel="stylesheet" href="..\..\style.css">
+<link rel="stylesheet" href="../../style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.core.node.services</a><br/>
@@ -18,6 +18,12 @@
 <code><span class="keyword">interface </span><span class="identifier">AttachmentStorage</span></code>
 <p>An attachment store records potentially large binary objects, identified by their hash.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="-attachments-storage-service/index.html">AttachmentsStorageService</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">AttachmentsStorageService</span></code></td>
 </tr>
 <tr>
 <td>
@@ -119,7 +125,7 @@ during a flow run <a href="-state-machine-recorded-transaction-mapping-storage/a
 <td>
 <a href="-storage-service/index.html">StorageService</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">StorageService</span></code>
+<code><span class="keyword">interface </span><span class="identifier">StorageService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-attachments-storage-service/index.html"><span class="identifier">AttachmentsStorageService</span></a></code>
 <p>A sketch of an interface to a simple key/value storage system. Intended for persistence of simple blobs like
 transactions, serialised flow state machines and so on. Again, this isn't intended to imply lack of SQL or
 anything like that, this interface is only big enough to support the prototyping work.</p>

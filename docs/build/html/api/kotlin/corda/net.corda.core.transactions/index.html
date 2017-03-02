@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>net.corda.core.transactions - corda</title>
-<link rel="stylesheet" href="..\..\style.css">
+<link rel="stylesheet" href="../../style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.core.transactions</a><br/>
@@ -25,7 +25,7 @@
 <td>
 <code><span class="keyword">class </span><span class="identifier">FilteredLeaves</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-traversable-transaction/index.html"><span class="identifier">TraversableTransaction</span></a></code>
 <p>Class that holds filtered leaves for a partial Merkle transaction. We assume mixed leaf types, notice that every
-field from WireTransaction can be used in PartialMerkleTree calculation.</p>
+field from <a href="-wire-transaction/index.html">WireTransaction</a> can be used in <a href="../net.corda.core.crypto/-partial-merkle-tree/index.html">PartialMerkleTree</a> calculation.</p>
 </td>
 </tr>
 <tr>
@@ -73,9 +73,10 @@ and commands are right, this class can be used as a holding bucket to gather sig
 <a href="-traversable-transaction/index.html">TraversableTransaction</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">TraversableTransaction</span></code>
-<p>Interface implemented by WireTransaction and FilteredLeaves.
-Property traversableList assures that we always calculate hashes in the same order, lets us define which
-fields of WireTransaction will be included in id calculation or partial merkle tree building.</p>
+<p>Implemented by <a href="-wire-transaction/index.html">WireTransaction</a> and <a href="-filtered-leaves/index.html">FilteredLeaves</a>. A TraversableTransaction allows you to iterate
+over the flattened components of the underlying transaction structure, taking into account that some
+may be missing in the case of this representing a "torn" transaction. Please see the user guide section
+"Transaction tear-offs" to learn more about this feature.</p>
 </td>
 </tr>
 <tr>

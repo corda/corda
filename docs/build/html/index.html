@@ -120,6 +120,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -165,6 +166,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -223,15 +225,19 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">This build of the docs is from the &#8220;latest&#8221; branch, not a milestone release. It may not reflect the
-current state of the code. <a class="reference external" href="https://docs.corda.net/releases/release-M8.2/">Read the docs for milestone release M8.2</a>.</p>
+current state of the code. <a class="reference external" href="https://docs.corda.net/releases/release-M9.0/">Read the docs for milestone release M9.0</a>.</p>
 </div>
 <p><a class="reference external" href="https://www.corda.net/">Corda</a> is an open-source distributed ledger platform. The latest <em>milestone</em> (i.e. stable)
-release is M8.2. The codebase is on <a class="reference external" href="https://github.com/corda">GitHub</a>, and our community can be found on
+release is M9.0. The codebase is on <a class="reference external" href="https://github.com/corda">GitHub</a>, and our community can be found on
 <a class="reference external" href="https://slack.corda.net/">Slack</a> and in our <a class="reference external" href="https://discourse.corda.net/">forum</a>.</p>
 <p>If you&#8217;re new to Corda, you should start by learning about its motivating vision and architecture. A good introduction
 is the <a class="reference external" href="https://vimeo.com/192757743/c2ec39c1e1">Introduction to Corda webinar</a> and the <a class="reference external" href="_static/corda-introductory-whitepaper.pdf">Introductory white paper</a>. As
 they become more familiar with Corda, readers with a technical background will also want to dive into the <a class="reference external" href="_static/corda-technical-whitepaper.pdf">Technical white paper</a>,
 which describes the platform&#8217;s envisioned end-state.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Corda training is now available in London, New York and Singapore! <a class="reference external" href="https://www.corda.net/corda-training/">Learn more.</a></p>
+</div>
 <p>Corda is designed so that developers can easily extend its functionality by writing CorDapps
 (<strong>Cor</strong>da <strong>D</strong>istributed <strong>App</strong>lication<strong>s</strong>). Some example CorDapps are available in the Corda repo&#8217;s
 <a class="reference external" href="https://github.com/corda/corda/tree/master/samples">samples</a> directory. To run these yourself, make
@@ -352,6 +358,11 @@ platform itself. Find out more about <a class="reference external" href="https:/
 <div class="toctree-wrapper compound" id="the-corda-node">
 <p class="caption"><span class="caption-text">The Corda node</span><a class="headerlink" href="#the-corda-node" title="Permalink to this toctree">¶</a></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="serialization.html#what-is-serialization-and-deserialization">What is serialization (and deserialization)?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization.html#whitelisting">Whitelisting</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="clientrpc.html#security">Security</a></li>
 <li class="toctree-l2"><a class="reference internal" href="clientrpc.html#observables">Observables</a></li>
@@ -360,7 +371,7 @@ platform itself. Find out more about <a class="reference external" href="https:/
 <li class="toctree-l2"><a class="reference internal" href="clientrpc.html#thread-safety">Thread safety</a></li>
 <li class="toctree-l2"><a class="reference internal" href="clientrpc.html#error-handling">Error handling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="clientrpc.html#wire-protocol">Wire protocol</a></li>
-<li class="toctree-l2"><a class="reference internal" href="clientrpc.html#registering-classes-with-rpc-kryo">Registering classes with RPC Kryo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clientrpc.html#whitelisting-classes-with-the-corda-node">Whitelisting classes with the Corda node</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a><ul>
@@ -460,7 +471,7 @@ platform itself. Find out more about <a class="reference external" href="https:/
 </li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="tutorial-clientrpc-api.html#registering-classes-from-your-cordapp-with-rpc-kryo">Registering classes from your CorDapp with RPC Kryo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-clientrpc-api.html#whitelisting-classes-from-your-cordapp-with-the-corda-node">Whitelisting classes from your CorDapp with the Corda node</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-clientrpc-api.html#security">Security</a></li>
 </ul>
 </li>
@@ -481,6 +492,7 @@ platform itself. Find out more about <a class="reference external" href="https:/
 <li class="toctree-l2"><a class="reference internal" href="flow-state-machines.html#theory">Theory</a></li>
 <li class="toctree-l2"><a class="reference internal" href="flow-state-machines.html#a-two-party-trading-flow">A two party trading flow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="flow-state-machines.html#suspendable-functions">Suspendable functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flow-state-machines.html#whitelisted-classes-with-the-corda-node">Whitelisted classes with the Corda node</a></li>
 <li class="toctree-l2"><a class="reference internal" href="flow-state-machines.html#starting-your-flow">Starting your flow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="flow-state-machines.html#implementing-the-seller">Implementing the seller</a></li>
 <li class="toctree-l2"><a class="reference internal" href="flow-state-machines.html#exception-handling">Exception handling</a></li>
@@ -581,15 +593,19 @@ platform itself. Find out more about <a class="reference external" href="https:/
 </li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-9">Milestone 9</a></li>
-<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-8">Milestone 8</a></li>
-<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-7">Milestone 7</a></li>
-<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-6">Milestone 6</a></li>
-<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-5">Milestone 5</a></li>
-<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-4">Milestone 4</a></li>
-<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-3">Milestone 3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-2">Milestone 2</a></li>
-<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-1">Milestone 1</a></li>
-<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-0">Milestone 0</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#milestone-9">Milestone 9</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#milestone-8">Milestone 8</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#milestone-7">Milestone 7</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#milestone-6">Milestone 6</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#milestone-5">Milestone 5</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#milestone-4">Milestone 4</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#milestone-3">Milestone 3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#milestone-2">Milestone 2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#milestone-1">Milestone 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#milestone-0">Milestone 0</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a><ul>

@@ -1,0 +1,24 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>TraversableTransaction.availableComponents - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.transactions</a>&nbsp;/&nbsp;<a href="index.html">TraversableTransaction</a>&nbsp;/&nbsp;<a href=".">availableComponents</a><br/>
+<br/>
+<h1>availableComponents</h1>
+<a name="net.corda.core.transactions.TraversableTransaction$availableComponents"></a>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">availableComponents</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">Any</span><span class="symbol">&gt;</span></code>
+<p>Returns a flattened list of all the components that are present in the transaction, in the following order:</p>
+<ul><li>Each input that is present</li>
+<li>Each attachment that is present</li>
+<li>Each output that is present</li>
+<li>Each command that is present</li>
+<li>The notary <a href="../../net.corda.core.crypto/-party/index.html">Party</a>, if present</li>
+<li>Each required signer (<a href="must-sign.html">mustSign</a>) that is present</li>
+<li>The type of the transaction, if present</li>
+<li>The timestamp of the transaction, if present</li>
+</ul>
+</BODY>
+</HTML>

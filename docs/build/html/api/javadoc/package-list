@@ -42,8 +42,4 @@ net.corda.node.services.transactions
 net.corda.node.services.vault
 net.corda.node.utilities
 net.corda.node.utilities.registration
-net.corda.node.webserver
-net.corda.node.webserver.api
-net.corda.node.webserver.internal
-net.corda.node.webserver.servlets
 net.corda.schemas
