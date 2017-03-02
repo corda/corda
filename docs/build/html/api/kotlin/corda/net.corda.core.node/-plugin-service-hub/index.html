@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>PluginServiceHub - corda</title>
-<link rel="stylesheet" href="..\..\..\style.css">
+<link rel="stylesheet" href="../../../style.css">
 </HEAD>
 <BODY>
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.node</a>&nbsp;/&nbsp;<a href=".">PluginServiceHub</a><br/>
@@ -18,12 +18,6 @@
 <a href="../-service-hub/clock.html">clock</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">clock</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="../-service-hub/identity-service.html">identityService</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">identityService</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -142,6 +136,9 @@ Note that you must be on the server thread to call this method.</p>
 <code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.ServiceHub$recordTransactions(kotlin.collections.Iterable((net.corda.core.transactions.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
 <p>Given a <a href="../../net.corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>, writes it to the local storage for validated transactions and then
 sends them to the vault for further processing. Expects to be run within a database transaction.</p>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="net.corda.core.node.ServiceHub$recordTransactions(kotlin.Array((net.corda.core.transactions.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Given some <a href="../../net.corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>s, writes them to the local storage for validated transactions and then
+sends them to the vault for further processing.</p>
 </td>
 </tr>
 <tr>
@@ -149,7 +146,7 @@ sends them to the vault for further processing. Expects to be run within a datab
 <a href="../-service-hub/to-state-and-ref.html">toStateAndRef</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span> <span class="identifier">toStateAndRef</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.ServiceHub$toStateAndRef(net.corda.core.contracts.StateRef)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
-<p>Given a <a href="../../net.corda.core.contracts/-state-ref/index.html">StateRef</a> loads the referenced transaction and returns a <a href="../../net.corda.core.contracts/-state-and-ref/index.html">StateAndRef</a></p>
+<p>Will check <a href="#">logicType</a> and <a href="#">args</a> against a whitelist and if acceptable then construct and initiate the protocol.</p>
 </td>
 </tr>
 </tbody>

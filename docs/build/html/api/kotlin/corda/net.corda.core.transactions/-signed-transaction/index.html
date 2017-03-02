@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>SignedTransaction - corda</title>
-<link rel="stylesheet" href="..\..\..\style.css">
+<link rel="stylesheet" href="../../../style.css">
 </HEAD>
 <BODY>
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.transactions</a>&nbsp;/&nbsp;<a href=".">SignedTransaction</a><br/>
@@ -34,7 +34,7 @@ A transaction ID should be the hash of the <a href="../-wire-transaction/index.h
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">SignedTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions.SignedTransaction$<init>(net.corda.core.serialization.SerializedBytes((net.corda.core.transactions.WireTransaction)), kotlin.collections.List((net.corda.core.crypto.DigitalSignature.WithKey)), net.corda.core.crypto.SecureHash)/txBits">txBits</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><a href="../-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.transactions.SignedTransaction$<init>(net.corda.core.serialization.SerializedBytes((net.corda.core.transactions.WireTransaction)), kotlin.collections.List((net.corda.core.crypto.DigitalSignature.WithKey)), net.corda.core.crypto.SecureHash)/sigs">sigs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.transactions.SignedTransaction$<init>(net.corda.core.serialization.SerializedBytes((net.corda.core.transactions.WireTransaction)), kotlin.collections.List((net.corda.core.crypto.DigitalSignature.WithKey)), net.corda.core.crypto.SecureHash)/id">id</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span></code>
+<code><span class="identifier">SignedTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions.SignedTransaction$<init>(net.corda.core.serialization.SerializedBytes((net.corda.core.transactions.WireTransaction)), kotlin.collections.List((net.corda.core.crypto.DigitalSignature.WithKey)))/txBits">txBits</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><a href="../-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.transactions.SignedTransaction$<init>(net.corda.core.serialization.SerializedBytes((net.corda.core.transactions.WireTransaction)), kotlin.collections.List((net.corda.core.crypto.DigitalSignature.WithKey)))/sigs">sigs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span></code>
 <p>SignedTransaction wraps a serialized WireTransaction. It contains one or more signatures, each one for
 a public key that is mentioned inside a transaction command. SignedTransaction is the top level transaction type
 and the type most frequently passed around the network and stored. The identity of a transaction is the hash
@@ -53,7 +53,11 @@ A transaction ID should be the hash of the <a href="../-wire-transaction/index.h
 <td>
 <a href="id.html">id</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">id</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code></td>
+<code><span class="keyword">val </span><span class="identifier">id</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code>
+<p>The Merkle root of the inner <a href="../-wire-transaction/index.html">WireTransaction</a>. Note that this is <emph>not</emph> the same as the simple hash of
+<a href="tx-bits.html">txBits</a>, which would not use the Merkle tree structure. If the difference isn't clear, please consult
+the user guide section "Transaction tear-offs" to learn more about Merkle trees.</p>
+</td>
 </tr>
 <tr>
 <td>

@@ -1,0 +1,32 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CordaSerializable - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.serialization</a>&nbsp;/&nbsp;<a href=".">CordaSerializable</a><br/>
+<br/>
+<h1>CordaSerializable</h1>
+<code><span class="identifier">@Target</span><span class="symbol">(</span>[AnnotationTarget.CLASS]<span class="symbol">)</span> <span class="identifier">@Inherited</span> <span class="keyword">annotation</span> <span class="keyword">class </span><span class="identifier">CordaSerializable</span></code>
+<p>This annotation is a marker to indicate that a class is permitted and intended to be serialized as part of Node messaging.</p>
+<p>Strictly speaking, it is critical to identifying that a class is intended to be deserialized by the node, to avoid
+a security compromise later when a vulnerability is discovered in the deserialisation of a class that just happens to
+be on the classpath, perhaps from a 3rd party library, as has been witnessed elsewhere.</p>
+<p>It also makes it possible for a code reviewer to clearly identify the classes that can be passed on the wire.</p>
+<p>TODO: As we approach a long term wire format, this annotation will only be permitted on classes that meet certain criteria.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">CordaSerializable</span><span class="symbol">(</span><span class="symbol">)</span></code>
+<p>This annotation is a marker to indicate that a class is permitted and intended to be serialized as part of Node messaging.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>SerializedBytes - corda</title>
-<link rel="stylesheet" href="..\..\..\style.css">
+<link rel="stylesheet" href="../../../style.css">
 </HEAD>
 <BODY>
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.serialization</a>&nbsp;/&nbsp;<a href=".">SerializedBytes</a><br/>
@@ -18,7 +18,7 @@ to get the original object back.</p>
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">SerializedBytes</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.SerializedBytes$<init>(kotlin.ByteArray)/bytes">bytes</span><span class="symbol">:</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">)</span></code>
+<code><span class="identifier">SerializedBytes</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.SerializedBytes$<init>(kotlin.ByteArray, kotlin.Boolean)/bytes">bytes</span><span class="symbol">:</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.serialization.SerializedBytes$<init>(kotlin.ByteArray, kotlin.Boolean)/internalOnly">internalOnly</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span></code>
 <p>A type safe wrapper around a byte array that contains a serialised object. You can call <a href="../kotlin.-byte-array/deserialize.html">SerializedBytes.deserialize</a>
 to get the original object back.</p>
 </td>
@@ -33,6 +33,12 @@ to get the original object back.</p>
 <a href="hash.html">hash</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">hash</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="internal-only.html">internalOnly</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">internalOnly</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -102,8 +108,8 @@ to get the original object back.</p>
 <td>
 <a href="../deserialize.html">deserialize</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">SerializedBytes</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.SerializedBytes((net.corda.core.transactions.WireTransaction)), com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a></code><br/>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">SerializedBytes</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.SerializedBytes((net.corda.core.serialization.deserialize.T)), com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">SerializedBytes</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.SerializedBytes((net.corda.core.transactions.WireTransaction)), com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;threadLocalP2PKryo()<span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a></code><br/>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">SerializedBytes</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.SerializedBytes((net.corda.core.serialization.deserialize.T)), com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;if (internalOnly) threadLocalStorageKryo() else threadLocalP2PKryo()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
 </tr>
 <tr>
 <td>

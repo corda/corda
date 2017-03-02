@@ -121,6 +121,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -166,6 +167,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -300,11 +302,12 @@ to monitor vault updates. This allows them to provide long lived active
 functions inside the node, for instance to initiate workflows when
 certain conditions are met.</p>
 </div></blockquote>
-<p>e. The <code class="docutils literal"><span class="pre">registerRPCKryoTypes</span></code> function allows custom Kryo serialisers
-to be registered and whitelisted for the RPC client interface. For
-instance new state types passed to flows started via RPC will need
-to be explicitly registered. This will be called at various points on
-various threads and needs to be stable and thread safe.</p>
+<p>e. The <code class="docutils literal"><span class="pre">customizeSerialization</span></code> function allows classes to be whitelisted
+for object serialisation, over and above those tagged with the <code class="docutils literal"><span class="pre">&#64;CordaSerializable</span></code>
+annotation. In general the annotation should be preferred.  For
+instance new state types will need to be explicitly registered. This will be called at
+various points on various threads and needs to be stable and thread safe. See
+<a class="reference internal" href="serialization.html"><span class="doc">Object Serialization</span></a>.</p>
 </div></blockquote>
 </div>
 

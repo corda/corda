@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>net.corda.core.node - corda</title>
-<link rel="stylesheet" href="..\..\style.css">
+<link rel="stylesheet" href="../../style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.core.node</a><br/>
@@ -77,10 +77,19 @@ The identity can be used in flows and is distinct from the Node's legalIdentity<
 <td>
 <a href="-service-hub/index.html">ServiceHub</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">ServiceHub</span></code>
+<code><span class="keyword">interface </span><span class="identifier">ServiceHub</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-services-for-resolution/index.html"><span class="identifier">ServicesForResolution</span></a></code>
 <p>A service hub simply vends references to the other services a node has. Some of those services may be missing or
 mocked out. This class is useful to pass to chunks of pluggable code that might have need of many different kinds of
 functionality and you don't want to hard-code which types in the interface.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-services-for-resolution/index.html">ServicesForResolution</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">ServicesForResolution</span></code>
+<p>Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
+forms ready for verification.</p>
 </td>
 </tr>
 <tr>

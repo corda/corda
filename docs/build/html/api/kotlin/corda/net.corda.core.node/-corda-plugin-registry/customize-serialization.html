@@ -1,0 +1,19 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CordaPluginRegistry.customizeSerialization - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.node</a>&nbsp;/&nbsp;<a href="index.html">CordaPluginRegistry</a>&nbsp;/&nbsp;<a href=".">customizeSerialization</a><br/>
+<br/>
+<h1>customizeSerialization</h1>
+<a name="net.corda.core.node.CordaPluginRegistry$customizeSerialization(net.corda.core.serialization.SerializationCustomization)"></a>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">customizeSerialization</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.CordaPluginRegistry$customizeSerialization(net.corda.core.serialization.SerializationCustomization)/custom">custom</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-serialization-customization/index.html"><span class="identifier">SerializationCustomization</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Optionally whitelist types for use in object serialization, as we lock down the types that can be serialized.</p>
+<p>For example, if you add a new <a href="#">ContractState</a> it needs to be whitelisted.  You can do that either by
+adding the @CordaSerializable annotation or via this method.</p>
+<p><strong>Return</strong><br/>
+true if you register types, otherwise you will be filtered out of the list of plugins considered in future.</p>
+</BODY>
+</HTML>

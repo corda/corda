@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>ArtemisMessagingServer - corda</title>
-<link rel="stylesheet" href="..\..\..\style.css">
+<link rel="stylesheet" href="../../../style.css">
 </HEAD>
 <BODY>
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href=".">ArtemisMessagingServer</a><br/>
@@ -22,7 +22,7 @@ a fully connected network, trusted network or on localhost.</p>
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">ArtemisMessagingServer</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingServer$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.node.services.NetworkMapCache, net.corda.node.services.RPCUserService)/config">config</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingServer$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.node.services.NetworkMapCache, net.corda.node.services.RPCUserService)/myHostPort">myHostPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">HostAndPort</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingServer$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.node.services.NetworkMapCache, net.corda.node.services.RPCUserService)/networkMapCache">networkMapCache</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingServer$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, net.corda.core.node.services.NetworkMapCache, net.corda.node.services.RPCUserService)/userService">userService</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services/-r-p-c-user-service/index.html"><span class="identifier">RPCUserService</span></a><span class="symbol">)</span></code>
+<code><span class="identifier">ArtemisMessagingServer</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingServer$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, com.google.common.net.HostAndPort, net.corda.core.node.services.NetworkMapCache, net.corda.node.services.RPCUserService)/config">config</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingServer$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, com.google.common.net.HostAndPort, net.corda.core.node.services.NetworkMapCache, net.corda.node.services.RPCUserService)/artemisHostPort">artemisHostPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">HostAndPort</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingServer$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, com.google.common.net.HostAndPort, net.corda.core.node.services.NetworkMapCache, net.corda.node.services.RPCUserService)/rpcHostPort">rpcHostPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">HostAndPort</span><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingServer$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, com.google.common.net.HostAndPort, net.corda.core.node.services.NetworkMapCache, net.corda.node.services.RPCUserService)/networkMapCache">networkMapCache</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingServer$<init>(net.corda.node.services.config.NodeConfiguration, com.google.common.net.HostAndPort, com.google.common.net.HostAndPort, net.corda.core.node.services.NetworkMapCache, net.corda.node.services.RPCUserService)/userService">userService</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services/-r-p-c-user-service/index.html"><span class="identifier">RPCUserService</span></a><span class="symbol">)</span></code>
 <p>This class configures and manages an Apache Artemis message queue broker.</p>
 </td>
 </tr>
@@ -33,17 +33,17 @@ a fully connected network, trusted network or on localhost.</p>
 <tbody>
 <tr>
 <td>
+<a href="artemis-host-port.html">artemisHostPort</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">artemisHostPort</span><span class="symbol">: </span><span class="identifier">HostAndPort</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="config.html">config</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">config</span><span class="symbol">: </span><a href="../../net.corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></code>
 <p>The config object is used to pass in the passwords for the certificate KeyStore and TrustStore</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="my-host-port.html">myHostPort</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">myHostPort</span><span class="symbol">: </span><span class="identifier">HostAndPort</span></code></td>
 </tr>
 <tr>
 <td>
@@ -59,6 +59,12 @@ a fully connected network, trusted network or on localhost.</p>
 <p>A <a href="#">ListenableFuture</a> which completes when the server successfully connects to the network map node. If a
 non-recoverable error is encountered then the Future will complete with an exception.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="rpc-host-port.html">rpcHostPort</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">rpcHostPort</span><span class="symbol">: </span><span class="identifier">HostAndPort</span><span class="symbol">?</span></code></td>
 </tr>
 <tr>
 <td>
@@ -110,7 +116,7 @@ unfortunately Artemis tends to bury the exception when the password is wrong.</p
 <td>
 <a href="../-artemis-messaging-component/tcp-transport.html">tcpTransport</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">tcpTransport</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/direction">direction</span><span class="symbol">:</span>&nbsp;<a href="../-artemis-messaging-component/-connection-direction/index.html"><span class="identifier">ConnectionDirection</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/port">port</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">TransportConfiguration</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">tcpTransport</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int, kotlin.Boolean)/direction">direction</span><span class="symbol">:</span>&nbsp;<a href="../-artemis-messaging-component/-connection-direction/index.html"><span class="identifier">ConnectionDirection</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int, kotlin.Boolean)/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int, kotlin.Boolean)/port">port</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int, kotlin.Boolean)/enableSSL">enableSSL</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;true<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">TransportConfiguration</span></code></td>
 </tr>
 </tbody>
 </table>

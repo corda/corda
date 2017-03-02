@@ -138,6 +138,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -183,6 +184,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -246,14 +248,15 @@ contained in separate JARs from the node server JAR that are created and distrib
 <p class="first admonition-title">Note</p>
 <p class="last">Currently apps are only supported for JVM languages.</p>
 </div>
-<p>To create an app plugin you must you must extend from <a class="reference external" href="api/kotlin/corda/net.corda.core.node/-corda-plugin-registry/index.html">CordaPluginRegistry</a>. The JavaDoc contains
+<p>To create an app plugin you must extend from <a class="reference external" href="api/kotlin/corda/net.corda.core.node/-corda-plugin-registry/index.html">CordaPluginRegistry</a>. The JavaDoc contains
 specific details of the implementation, but you can extend the server in the following ways:</p>
 <ol class="arabic simple">
 <li>Required flows: Specify which flows will be whitelisted for use in your RPC calls.</li>
 <li>Service plugins: Register your services (see below).</li>
 <li>Web APIs: You may register your own endpoints under /api/ of the bundled web server.</li>
 <li>Static web endpoints: You may register your own static serving directories for serving web content from the web server.</li>
-<li>Registering your additional classes used in RPC.</li>
+<li>Whitelisting your additional contract, state and other classes for object serialization.  Any class that forms part
+of a persisted state, that is used in messaging between flows or in RPC needs to be whitelisted.</li>
 </ol>
 </div>
 <div class="section" id="services">

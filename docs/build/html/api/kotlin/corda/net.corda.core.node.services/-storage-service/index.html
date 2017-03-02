@@ -2,27 +2,19 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>StorageService - corda</title>
-<link rel="stylesheet" href="..\..\..\style.css">
+<link rel="stylesheet" href="../../../style.css">
 </HEAD>
 <BODY>
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.node.services</a>&nbsp;/&nbsp;<a href=".">StorageService</a><br/>
 <br/>
 <h1>StorageService</h1>
-<code><span class="keyword">interface </span><span class="identifier">StorageService</span></code>
+<code><span class="keyword">interface </span><span class="identifier">StorageService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-attachments-storage-service/index.html"><span class="identifier">AttachmentsStorageService</span></a></code>
 <p>A sketch of an interface to a simple key/value storage system. Intended for persistence of simple blobs like
 transactions, serialised flow state machines and so on. Again, this isn't intended to imply lack of SQL or
 anything like that, this interface is only big enough to support the prototyping work.</p>
 <h3>Properties</h3>
 <table>
 <tbody>
-<tr>
-<td>
-<a href="attachments.html">attachments</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">attachments</span><span class="symbol">: </span><a href="../-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a></code>
-<p>Provides access to storage of arbitrary JAR files (which may contain only data, no code).</p>
-</td>
-</tr>
 <tr>
 <td>
 <a href="state-machine-recorded-transaction-mapping.html">stateMachineRecordedTransactionMapping</a></td>
@@ -43,6 +35,19 @@ anything like that, this interface is only big enough to support the prototyping
 <p>A map of hash-&gt;tx where tx has been signature/contract validated and the states are known to be correct.
 The signatures aren't technically needed after that point, but we keep them around so that we can relay
 the transaction data to other nodes that need it.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-attachments-storage-service/attachments.html">attachments</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">attachments</span><span class="symbol">: </span><a href="../-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a></code>
+<p>Provides access to storage of arbitrary JAR files (which may contain only data, no code).</p>
 </td>
 </tr>
 </tbody>

@@ -121,6 +121,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -169,6 +170,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -246,8 +248,11 @@ a few days to ensure the code is sufficiently usable. Usually the release will h
 <ol class="arabic simple">
 <li>Pick a commit that is stable and do basic QA: run all the tests, run the demos.</li>
 <li>Review the commits between this release and the last looking for new features, API changes, etc. Make sure the
-summary in the current section of the <a class="reference internal" href="release-notes.html"><span class="doc">Release notes</span></a> is correct and update if not. Then move it into the right
-section for this release. This is the right place to put any advice on how to port app code from the last release.</li>
+summary in the current section of the <a class="reference internal" href="changelog.html"><span class="doc">Changelog</span></a> is correct and update if not. Then move it into the right
+section for this release.</li>
+<li>Write up a summary of the changes for the <a class="reference internal" href="release-notes.html"><span class="doc">Release notes</span></a>. This should primarily be suited to a semi-technical
+audience, but any advice on how to port app code from the previous release, configuration changes required, etc.
+should also go here.</li>
 <li>Additionally, if there are any new features or APIs that deserve a new section in the docsite and the author didn&#8217;t
 create one, bug them to do so a day or two before the release.</li>
 <li>Regenerate the docsite if necessary and commit.</li>
@@ -256,7 +261,8 @@ create one, bug them to do so a day or two before the release.</li>
 <li>Remove the &#8220;is master&#8221; warning from the docsite index page on this branch only.</li>
 <li>Tag the branch with a tag like <cite>release-M0.0</cite></li>
 <li>Push the branch and the tag to git.</li>
-<li>Write up a short announcement containing the summary of new features, changes, and API breaks. Send it to the r3dlg-awg mailing list.</li>
+<li>Write up a short announcement containing the summary of new features, changes, and API breaks.
+This can often be derived from the release notes. Send it to the r3dlg-awg mailing list.</li>
 <li>On master, adjust the version number in the root build.gradle file upwards.</li>
 </ol>
 <p>If there are serious bugs found in the release, backport the fix to the branch and then tag it with e.g. <cite>release-M0.1</cite>
