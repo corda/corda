@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
 import com.fasterxml.jackson.databind.deser.std.StringArrayDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.core.contracts.BusinessCalendar
 import net.corda.core.crypto.*
@@ -18,8 +19,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.math.BigDecimal
-import java.time.LocalDate
-import java.time.LocalDateTime
 
 /**
  * Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
@@ -48,15 +47,6 @@ object JacksonSupport {
         override fun partyFromKey(owningKey: CompositeKey): Party? = throw UnsupportedOperationException()
     }
 
-    val javaTimeModule: Module by lazy {
-        SimpleModule("java.time").apply {
-            addSerializer(LocalDate::class.java, ToStringSerializer)
-            addDeserializer(LocalDate::class.java, LocalDateDeserializer)
-            addKeyDeserializer(LocalDate::class.java, LocalDateKeyDeserializer)
-            addSerializer(LocalDateTime::class.java, ToStringSerializer)
-        }
-    }
-
     val cordaModule: Module by lazy {
         SimpleModule("core").apply {
             addSerializer(AnonymousParty::class.java, AnonymousPartySerializer)
@@ -66,9 +56,7 @@ object JacksonSupport {
             addSerializer(BigDecimal::class.java, ToStringSerializer)
             addDeserializer(BigDecimal::class.java, NumberDeserializers.BigDecimalDeserializer())
             addSerializer(SecureHash::class.java, SecureHashSerializer)
-            // It's slightly remarkable, but apparently Jackson works out that this is the only possibility
-            // for a SecureHash at the moment and tries to use SHA256 directly even though we only give it SecureHash
-            addDeserializer(SecureHash.SHA256::class.java, SecureHashDeserializer())
+            addDeserializer(SecureHash::class.java, SecureHashDeserializer())
             addDeserializer(BusinessCalendar::class.java, CalendarDeserializer)
 
             // For ed25519 pubkeys
@@ -103,7 +91,7 @@ object JacksonSupport {
         enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
         enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
 
-        registerModule(javaTimeModule)
+        registerModule(JavaTimeModule())
         registerModule(cordaModule)
         registerModule(KotlinModule())
     }
@@ -112,23 +100,6 @@ object JacksonSupport {
         override fun serialize(obj: Any, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeString(obj.toString())
         }
-    }
-
-    object LocalDateDeserializer : JsonDeserializer<LocalDate>() {
-        override fun deserialize(parser: JsonParser, context: DeserializationContext): LocalDate {
-            return try {
-                LocalDate.parse(parser.text)
-            } catch (e: Exception) {
-                throw JsonParseException(parser, "Invalid LocalDate ${parser.text}: ${e.message}")
-            }
-        }
-    }
-
-    object LocalDateKeyDeserializer : KeyDeserializer() {
-        override fun deserializeKey(text: String, p1: DeserializationContext): Any? {
-            return LocalDate.parse(text)
-        }
-
     }
 
     object AnonymousPartySerializer : JsonSerializer<AnonymousParty>() {
