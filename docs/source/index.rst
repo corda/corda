@@ -2,10 +2,10 @@ Welcome to the Corda documentation!
 ===================================
 
 .. warning:: This build of the docs is from the "|version|" branch, not a milestone release. It may not reflect the
-   current state of the code. `Read the docs for milestone release M8.2 <https://docs.corda.net/releases/release-M8.2/>`_.
+   current state of the code. `Read the docs for milestone release M9.0 <https://docs.corda.net/releases/release-M9.0/>`_.
 
 `Corda <https://www.corda.net/>`_ is an open-source distributed ledger platform. The latest *milestone* (i.e. stable)
-release is M8.2. The codebase is on `GitHub <https://github.com/corda>`_, and our community can be found on
+release is M9.0. The codebase is on `GitHub <https://github.com/corda>`_, and our community can be found on
 `Slack <https://slack.corda.net/>`_ and in our `forum <https://discourse.corda.net/>`_.
 
 If you're new to Corda, you should start by learning about its motivating vision and architecture. A good introduction
