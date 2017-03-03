@@ -1,16 +1,12 @@
 package net.corda.node.services
 
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.DummyContract
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
 import net.corda.core.div
-import net.corda.core.flatMap
 import net.corda.core.getOrThrow
-import net.corda.core.map
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.flows.NotaryError
@@ -33,10 +29,8 @@ class BFTNotaryServiceTests : NodeBasedTest() {
 
     @Test
     fun `detect double spend`() {
-        val (masterNode, alice) = Futures.allAsList(
-                startBFTNotaryCluster(notaryName, 4, BFTNonValidatingNotaryService.type).map { it.first() },
-                startNode("Alice")
-        ).getOrThrow()
+        val masterNode = startBFTNotaryCluster(notaryName, 4, BFTNonValidatingNotaryService.type).first()
+        val alice = startNode("Alice").getOrThrow()
 
         val notaryParty = alice.netMapCache.getNotary(notaryName)!!
         val notaryNodeKeyPair = databaseTransaction(masterNode.database) { masterNode.services.notaryIdentityKey }
@@ -78,7 +72,7 @@ class BFTNotaryServiceTests : NodeBasedTest() {
 
     private fun startBFTNotaryCluster(notaryName: String,
                                       clusterSize: Int,
-                                      serviceType: ServiceType): ListenableFuture<List<Node>> {
+                                      serviceType: ServiceType): List<Node> {
         val quorum = (2 * clusterSize + 1) / 3
         ServiceIdentityGenerator.generateToDisk(
                 (0 until clusterSize).map { tempFolder.root.toPath() / "$notaryName-$it" },
@@ -87,23 +81,20 @@ class BFTNotaryServiceTests : NodeBasedTest() {
                 quorum)
 
         val serviceInfo = ServiceInfo(serviceType, notaryName)
-        val masterNodeFuture = startNode(
+        val masterNode = startNode(
                 "$notaryName-0",
                 advertisedServices = setOf(serviceInfo),
                 configOverrides = mapOf("notaryNodeId" to 0)
-        )
+        ).getOrThrow()
 
-        val remainingNodesFutures = (1 until clusterSize).map {
-            Thread.sleep(1000) // BFT smart replicas have to be started in order
+        val remainingNodes = (1 until clusterSize).map {
             startNode(
                     "$notaryName-$it",
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf("notaryNodeId" to it)
-            )
+            ).getOrThrow()
         }
 
-        return Futures.allAsList(remainingNodesFutures).flatMap { remainingNodes ->
-            masterNodeFuture.map { masterNode -> listOf(masterNode) + remainingNodes }
-        }
+        return remainingNodes + masterNode
     }
 }

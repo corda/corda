@@ -1,7 +1,6 @@
 package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.net.HostAndPort
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
@@ -41,7 +40,6 @@ class BFTNonValidatingNotaryService(services: ServiceHubInternal,
     override fun createFlow(otherParty: Party) = ServiceFlow(otherParty, client)
 
     class ServiceFlow(val otherSide: Party, val client: BFTSMaRt.Client) : FlowLogic<Void?>() {
-
         @Suspendable
         override fun call(): Void? {
             val stx = receive<FilteredTransaction>(otherSide).unwrap { it }
@@ -52,11 +50,13 @@ class BFTNonValidatingNotaryService(services: ServiceHubInternal,
 
         private fun commit(stx: FilteredTransaction): List<DigitalSignature> {
             val response = client.commitTransaction(stx, otherSide)
-            if (response is BFTSMaRt.ClusterResponse.Error) throw NotaryException(response.error)
-            val signatures = (response as BFTSMaRt.ClusterResponse.Signatures).txSignatures
-
-            log.debug("All input states of transaction ${stx.rootHash} have been committed")
-            return signatures
+            when (response) {
+                is BFTSMaRt.ClusterResponse.Error -> throw NotaryException(response.error)
+                is BFTSMaRt.ClusterResponse.Signatures -> {
+                    log.debug("All input states of transaction ${stx.rootHash} have been committed")
+                    return response.txSignatures
+                }
+            }
         }
     }
 
@@ -66,7 +66,7 @@ class BFTNonValidatingNotaryService(services: ServiceHubInternal,
                  services: ServiceHubInternal,
                  timestampChecker: TimestampChecker) : BFTSMaRt.Server(id, db, tableName, services, timestampChecker) {
 
-        override fun executeCommand(command: ByteArray): ByteArray? {
+        override fun executeCommand(command: ByteArray): ByteArray {
             val request = command.deserialize<BFTSMaRt.CommitRequest>()
             val ftx = request.tx as FilteredTransaction
             val response = verifyAndCommitTx(ftx, request.callerIdentity)
@@ -74,7 +74,7 @@ class BFTNonValidatingNotaryService(services: ServiceHubInternal,
         }
 
         fun verifyAndCommitTx(ftx: FilteredTransaction, callerIdentity: Party): BFTSMaRt.ReplicaResponse {
-            val response = try {
+            return try {
                 val id = ftx.rootHash
                 val inputs = ftx.filteredLeaves.inputs
 
@@ -88,7 +88,6 @@ class BFTNonValidatingNotaryService(services: ServiceHubInternal,
                 log.debug { "Error processing transaction: ${e.error}" }
                 BFTSMaRt.ReplicaResponse.Error(e.error)
             }
-            return response
         }
     }
 }
