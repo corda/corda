@@ -22,9 +22,8 @@ import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent.NetworkMapAddress
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
-import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.node.services.transactions.RaftUniquenessProvider
-import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.node.services.transactions.*
+import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
@@ -122,16 +121,47 @@ class Node(override val configuration: FullNodeConfiguration,
 
     override fun makeMessagingService(): MessagingServiceInternal {
         userService = RPCUserServiceImpl(configuration)
-
-        val serverAddress = with(configuration) {
-            messagingServerAddress ?: {
-                messageBroker = ArtemisMessagingServer(this, artemisAddress, services.networkMapCache, userService)
-                artemisAddress
-            }()
-        }
+        val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val myIdentityOrNullIfNetworkMapService = if (networkMapAddress != null) obtainLegalIdentity().owningKey else null
-        return NodeMessagingClient(configuration, serverAddress, myIdentityOrNullIfNetworkMapService, serverThread, database,
-                networkMapRegistrationFuture)
+
+        return NodeMessagingClient(
+                configuration,
+                serverAddress,
+                myIdentityOrNullIfNetworkMapService,
+                serverThread,
+                database,
+                networkMapRegistrationFuture
+        )
+    }
+
+    private fun makeLocalMessageBroker(): HostAndPort {
+        with(configuration) {
+            val useHost = tryDetectIfNotPublicHost(artemisAddress.hostText)
+            val useAddress = useHost?.let { HostAndPort.fromParts(it, artemisAddress.port) } ?: artemisAddress
+            messageBroker = ArtemisMessagingServer(this, useAddress, services.networkMapCache, userService)
+            return useAddress
+        }
+    }
+
+    /**
+     * Checks whether the specified [host] is a public IP address or hostname. If not, tries to discover the current
+     * machine's public IP address to be used instead. Note that it will only work if the machine is internet-facing.
+     * If none found, outputs a warning message.
+     */
+    private fun tryDetectIfNotPublicHost(host: String): String? {
+        if (!AddressUtils.isPublic(host)) {
+            val foundPublicIP = AddressUtils.tryDetectPublicIP()
+            if (foundPublicIP == null) {
+                val message = "The specified messaging host \"$host\" is private, " +
+                        "this node will not be reachable by any other nodes outside the private network."
+                println("WARNING: $message")
+                log.warn(message)
+            } else {
+                log.info("Detected public IP: $foundPublicIP. This will be used instead the provided \"$host\" as the advertised address.")
+            }
+            return foundPublicIP?.hostAddress
+        }
+        return null
     }
 
     override fun startMessagingService(rpcOps: RPCOps) {
