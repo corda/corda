@@ -143,10 +143,13 @@ object BFTSMaRt {
             private val log = loggerFor<Server>()
         }
 
+        init {
+            // TODO: Looks like this statement is blocking. Investigate the bft-smart node startup.
+            ServiceReplica(id, "bft-smart-config", this, this, null, DefaultReplier())
+        }
+
         // TODO: Use Requery with proper DB schema instead of JDBCHashMap.
         val commitLog = databaseTransaction(db) { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
-        // TODO: Looks like this statement is blocking. Investigate the bft-smart node startup.
-        val replica = ServiceReplica(id, "bft-smart-config", this, this, null, DefaultReplier())
 
         override fun appExecuteUnordered(command: ByteArray, msgCtx: MessageContext): ByteArray? {
             throw NotImplementedError("No unordered operations supported")
