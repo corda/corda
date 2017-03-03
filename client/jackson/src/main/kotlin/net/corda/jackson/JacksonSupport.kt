@@ -1,9 +1,6 @@
 package net.corda.jackson
 
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.JsonParseException
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.core.JsonToken
+import com.fasterxml.jackson.core.*
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
 import com.fasterxml.jackson.databind.deser.std.StringArrayDeserializer
@@ -30,6 +27,7 @@ import java.util.*
  * Note that Jackson can also be used to serialise/deserialise other formats such as Yaml and XML.
  */
 object JacksonSupport {
+    // TODO: This API could use some tidying up - there should really only need to be one kind of mapper.
     // If you change this API please update the docs in the docsite (json.rst)
 
     interface PartyObjectMapper {
@@ -37,15 +35,15 @@ object JacksonSupport {
         fun partyFromKey(owningKey: CompositeKey): Party?
     }
 
-    class RpcObjectMapper(val rpc: CordaRPCOps) : PartyObjectMapper, ObjectMapper() {
+    class RpcObjectMapper(val rpc: CordaRPCOps, factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
         override fun partyFromName(partyName: String): Party? = rpc.partyFromName(partyName)
         override fun partyFromKey(owningKey: CompositeKey): Party? = rpc.partyFromKey(owningKey)
     }
-    class IdentityObjectMapper(val identityService: IdentityService) : PartyObjectMapper, ObjectMapper(){
+    class IdentityObjectMapper(val identityService: IdentityService, factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
         override fun partyFromName(partyName: String): Party? = identityService.partyFromName(partyName)
         override fun partyFromKey(owningKey: CompositeKey): Party? = identityService.partyFromKey(owningKey)
     }
-    class NoPartyObjectMapper: PartyObjectMapper, ObjectMapper() {
+    class NoPartyObjectMapper(factory: JsonFactory): PartyObjectMapper, ObjectMapper(factory) {
         override fun partyFromName(partyName: String): Party? = throw UnsupportedOperationException()
         override fun partyFromKey(owningKey: CompositeKey): Party? = throw UnsupportedOperationException()
     }
@@ -59,7 +57,9 @@ object JacksonSupport {
             addSerializer(BigDecimal::class.java, ToStringSerializer)
             addDeserializer(BigDecimal::class.java, NumberDeserializers.BigDecimalDeserializer())
             addSerializer(SecureHash::class.java, SecureHashSerializer)
+            addSerializer(SecureHash.SHA256::class.java, SecureHashSerializer)
             addDeserializer(SecureHash::class.java, SecureHashDeserializer())
+            addDeserializer(SecureHash.SHA256::class.java, SecureHashDeserializer())
             addDeserializer(BusinessCalendar::class.java, CalendarDeserializer)
 
             // For ed25519 pubkeys
@@ -86,16 +86,16 @@ object JacksonSupport {
     }
 
     /** Mapper requiring RPC support to deserialise parties from names */
-    @JvmStatic
-    fun createDefaultMapper(rpc: CordaRPCOps): ObjectMapper = configureMapper(RpcObjectMapper(rpc))
+    @JvmStatic @JvmOverloads
+    fun createDefaultMapper(rpc: CordaRPCOps, factory: JsonFactory = JsonFactory()): ObjectMapper = configureMapper(RpcObjectMapper(rpc, factory))
 
     /** For testing or situations where deserialising parties is not required */
-    @JvmStatic
-    fun createNonRpcMapper(): ObjectMapper = configureMapper(NoPartyObjectMapper())
+    @JvmStatic @JvmOverloads
+    fun createNonRpcMapper(factory: JsonFactory = JsonFactory()): ObjectMapper = configureMapper(NoPartyObjectMapper(factory))
 
     /** For testing with an in memory identity service */
-    @JvmStatic
-    fun createInMemoryMapper(identityService: IdentityService) = configureMapper(IdentityObjectMapper(identityService))
+    @JvmStatic @JvmOverloads
+    fun createInMemoryMapper(identityService: IdentityService, factory: JsonFactory = JsonFactory()) = configureMapper(IdentityObjectMapper(identityService, factory))
 
     private fun configureMapper(mapper: ObjectMapper): ObjectMapper = mapper.apply {
         enable(SerializationFeature.INDENT_OUTPUT)
