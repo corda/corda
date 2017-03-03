@@ -141,8 +141,7 @@ object JsonSupport {
             val mapper = parser.codec as PartyObjectMapper
             // TODO this needs to use some industry identifier(s) instead of these keys
             val key = CompositeKey.parseFromBase58(parser.text)
-            val party = mapper.partyFromKey(key) ?: throw JsonParseException(parser, "Could not find a Party with key ${parser.text}")
-            return party.toAnonymous()
+            return AnonymousParty(key)
         }
     }
 
