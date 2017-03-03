@@ -9,6 +9,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.IssuerFlow.IssuanceRequester
+import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.testing.http.HttpApi
 
@@ -25,12 +26,11 @@ class BankOfCordaClientApi(val hostAndPort: HostAndPort) {
         val api = HttpApi.fromHostAndPort(hostAndPort, apiRoot)
         return api.postJson("issue-asset-request", params)
     }
-
     /**
      * RPC API
      */
     fun requestRPCIssue(params: IssueRequestParams): SignedTransaction {
-        val client = CordaRPCClient(hostAndPort)
+        val client = CordaRPCClient(hostAndPort, configureTestSSL())
         // TODO: privileged security controls required
         client.start("bankUser", "test")
         val proxy = client.proxy()
