@@ -37,6 +37,7 @@ class RPCPermissionsTest {
     lateinit var clientSession: ClientSession
     lateinit var producer: ClientProducer
     lateinit var serverThread: AffinityExecutor.ServiceAffinityExecutor
+    lateinit var proxy: TestOps
 
     @Before
     fun setup() {
@@ -67,7 +68,8 @@ class RPCPermissionsTest {
 
     @After
     fun shutdown() {
-        producer.close()
+        safeClose(proxy)
+        safeClose(producer)
         clientSession.stop()
         serverSession.stop()
         artemis.stop()
@@ -117,7 +119,7 @@ class RPCPermissionsTest {
     @Test
     fun `empty user cannot use any flows`() {
         val emptyUser = userOf("empty", emptySet())
-        val proxy = proxyFor(emptyUser)
+        proxy = proxyFor(emptyUser)
         assertFailsWith(PermissionException::class,
                 "User ${emptyUser.username} should not be allowed to use $DUMMY_FLOW.",
                 { proxy.validatePermission(DUMMY_FLOW) })
@@ -126,21 +128,21 @@ class RPCPermissionsTest {
     @Test
     fun `admin user can use any flow`() {
         val adminUser = userOf("admin", setOf(ALL_ALLOWED))
-        val proxy = proxyFor(adminUser)
+        proxy = proxyFor(adminUser)
         proxy.validatePermission(DUMMY_FLOW)
     }
 
     @Test
     fun `joe user is allowed to use DummyFlow`() {
         val joeUser = userOf("joe", setOf(DUMMY_FLOW))
-        val proxy = proxyFor(joeUser)
+        proxy = proxyFor(joeUser)
         proxy.validatePermission(DUMMY_FLOW)
     }
 
     @Test
     fun `joe user is not allowed to use OtherFlow`() {
         val joeUser = userOf("joe", setOf(DUMMY_FLOW))
-        val proxy = proxyFor(joeUser)
+        proxy = proxyFor(joeUser)
         assertFailsWith(PermissionException::class,
                 "User ${joeUser.username} should not be allowed to use $OTHER_FLOW",
                 { proxy.validatePermission(OTHER_FLOW) })
@@ -149,11 +151,12 @@ class RPCPermissionsTest {
     @Test
     fun `check ALL is implemented the correct way round` () {
         val joeUser = userOf("joe", setOf(DUMMY_FLOW))
-        val proxy = proxyFor(joeUser)
+        proxy = proxyFor(joeUser)
         assertFailsWith(PermissionException::class,
                 "Permission $ALL_ALLOWED should not do anything for User ${joeUser.username}",
                 { proxy.validatePermission(ALL_ALLOWED) })
     }
 
     private fun userOf(name: String, permissions: Set<String>) = User(name, "password", permissions)
+    private fun safeClose(obj: Any) = try { (obj as AutoCloseable).close() } catch (e: Exception) {}
 }
