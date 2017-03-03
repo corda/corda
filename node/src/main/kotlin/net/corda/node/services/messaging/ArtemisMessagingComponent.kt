@@ -22,7 +22,7 @@ import java.security.KeyStore
 /**
  * The base class for Artemis services that defines shared data structures and SSL transport configuration.
  */
-abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
+abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
     companion object {
         init {
             System.setProperty("org.jboss.logging.provider", "slf4j")
@@ -88,7 +88,6 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
             fun asPeer(peerIdentity: CompositeKey, hostAndPort: HostAndPort): NodeAddress {
                 return NodeAddress("$PEERS_PREFIX${peerIdentity.toBase58String()}", hostAndPort)
             }
-
             fun asService(serviceIdentity: CompositeKey, hostAndPort: HostAndPort): NodeAddress {
                 return NodeAddress("$SERVICES_PREFIX${serviceIdentity.toBase58String()}", hostAndPort)
             }
@@ -138,7 +137,7 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
         }
     }
 
-    protected fun tcpTransport(direction: ConnectionDirection, host: String, port: Int, enableSSL: Boolean = true): TransportConfiguration {
+    protected fun tcpTransport(direction: ConnectionDirection, host: String, port: Int): TransportConfiguration {
         val config = config
         val options = mutableMapOf<String, Any?>(
                 // Basic TCP target details
@@ -152,7 +151,7 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
                 TransportConstants.PROTOCOLS_PROP_NAME to "CORE,AMQP"
         )
 
-        if (config != null && enableSSL) {
+        if (config != null) {
             config.keyStoreFile.expectedOnDefaultFileSystem()
             config.trustStoreFile.expectedOnDefaultFileSystem()
             val tlsOptions = mapOf<String, Any?>(
