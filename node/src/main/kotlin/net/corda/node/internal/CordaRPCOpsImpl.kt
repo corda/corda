@@ -13,11 +13,11 @@ import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.StateMachineInfo
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.transactions.SignedTransaction
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.requirePermission
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.statemachine.FlowStateMachineImpl
@@ -35,9 +35,9 @@ import java.util.*
  * thread (i.e. serially). Arguments are serialised and deserialised automatically.
  */
 class CordaRPCOpsImpl(
-        val services: ServiceHub,
-        val smm: StateMachineManager,
-        val database: Database
+        private val services: ServiceHubInternal,
+        private val smm: StateMachineManager,
+        private val database: Database
 ) : CordaRPCOps {
     override val protocolVersion: Int get() = 0
 
@@ -126,6 +126,8 @@ class CordaRPCOpsImpl(
     override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered
     override fun partyFromKey(key: CompositeKey) = services.identityService.partyFromKey(key)
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)
+
+    override fun registeredFlows(): List<String> = services.flowLogicRefFactory.flowWhitelist.keys.sorted()
 
     companion object {
         private fun stateMachineInfoFromFlowLogic(id: StateMachineRunId, flowLogic: FlowLogic<*>): StateMachineInfo {
