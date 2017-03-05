@@ -3,6 +3,17 @@ Changelog
 
 Here are brief summaries of what's changed between each snapshot release.
 
+UNRELEASED
+----------
+
+API changes:
+
+* The new Jackson module provides JSON/YAML serialisers for common Corda datatypes. If you have previously been
+  using the JSON support in the standalone web server, please be aware that amounts are now serialised as strings
+  instead of { quantity, token } pairs as before. The old format is still accepted, but new JSON will be produced
+  using strings like "1000.00 USD" when writing. You can use any format supported by ``Amount.parseCurrency``
+  as input.
+
 Milestone 9.1
 -------------
 

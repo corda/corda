@@ -10,15 +10,18 @@ import com.fasterxml.jackson.databind.deser.std.StringArrayDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import net.corda.core.contracts.Amount
 import net.corda.core.contracts.BusinessCalendar
 import net.corda.core.crypto.*
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
+import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.math.BigDecimal
+import java.util.*
 
 /**
  * Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
@@ -71,6 +74,14 @@ object JacksonSupport {
             // TODO this tunnels the Kryo representation as a Base58 encoded string. Replace when RPC supports this.
             addSerializer(NodeInfo::class.java, NodeInfoSerializer)
             addDeserializer(NodeInfo::class.java, NodeInfoDeserializer)
+
+            // For Amount
+            addSerializer(Amount::class.java, AmountSerializer)
+            addDeserializer(Amount::class.java, AmountDeserializer)
+
+            // For OpaqueBytes
+            addDeserializer(OpaqueBytes::class.java, OpaqueBytesDeserializer)
+            addSerializer(OpaqueBytes::class.java, OpaqueBytesSerializer)
         }
     }
 
@@ -222,6 +233,44 @@ object JacksonSupport {
             } catch (e: Exception) {
                 throw JsonParseException(parser, "Invalid composite key ${parser.text}: ${e.message}")
             }
+        }
+    }
+
+    object AmountSerializer : JsonSerializer<Amount<*>>() {
+        override fun serialize(value: Amount<*>, gen: JsonGenerator, serializers: SerializerProvider) {
+            gen.writeString(value.toString())
+        }
+    }
+
+    object AmountDeserializer : JsonDeserializer<Amount<*>>() {
+        override fun deserialize(parser: JsonParser, context: DeserializationContext): Amount<*> {
+            try {
+                return Amount.parseCurrency(parser.text)
+            } catch (e: Exception) {
+                try {
+                    val tree = parser.readValueAsTree<JsonNode>()
+                    require(tree["quantity"].canConvertToLong() && tree["token"].asText().isNotBlank())
+                    val quantity = tree["quantity"].asLong()
+                    val token = tree["token"].asText()
+                    // Attempt parsing as a currency token. TODO: This needs thought about how to extend to other token types.
+                    val currency = Currency.getInstance(token)
+                    return Amount(quantity, currency)
+                } catch(e2: Exception) {
+                    throw JsonParseException(parser, "Invalid amount ${parser.text}", e2)
+                }
+            }
+        }
+    }
+
+    object OpaqueBytesDeserializer : JsonDeserializer<OpaqueBytes>() {
+        override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): OpaqueBytes {
+            return OpaqueBytes(parser.text.toByteArray())
+        }
+    }
+
+    object OpaqueBytesSerializer : JsonSerializer<OpaqueBytes>() {
+        override fun serialize(value: OpaqueBytes, gen: JsonGenerator, serializers: SerializerProvider) {
+            gen.writeBinary(value.bytes)
         }
     }
 }
