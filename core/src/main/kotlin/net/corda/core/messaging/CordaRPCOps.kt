@@ -162,6 +162,9 @@ interface CordaRPCOps : RPCOps {
      * Returns the [Party] with the given name as it's [Party.name]
      */
     fun partyFromName(name: String): Party?
+
+    /** Enumerates the class names of the flows that this node knows about. */
+    fun registeredFlows(): List<String>
 }
 
 /**

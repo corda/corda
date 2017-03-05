@@ -24,8 +24,7 @@ import kotlin.reflect.primaryConstructor
  * TODO: Align with API related logic for passing in FlowLogic references (FlowRef)
  * TODO: Actual support for AppContext / AttachmentsClassLoader
  */
-class FlowLogicRefFactory(private val flowWhitelist: Map<String, Set<String>>) : SingletonSerializeAsToken() {
-
+class FlowLogicRefFactory(val flowWhitelist: Map<String, Set<String>>) : SingletonSerializeAsToken() {
     constructor() : this(mapOf())
 
     // Pending real dependence on AppContext for class loading etc
