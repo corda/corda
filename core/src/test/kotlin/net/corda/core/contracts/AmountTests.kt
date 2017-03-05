@@ -23,4 +23,12 @@ class AmountTests {
         assertEquals(expected, amount.toDecimal())
         assertEquals(amount, Amount.fromDecimal(amount.toDecimal(), amount.token))
     }
+
+    @Test
+    fun parsing() {
+        assertEquals(Amount(1234L, GBP), Amount.parseCurrency("£12.34"))
+        assertEquals(Amount(1200L, GBP), Amount.parseCurrency("£12"))
+        assertEquals(Amount(1000L, USD), Amount.parseCurrency("$10"))
+        assertEquals(Amount(1500000000L, CHF), Amount.parseCurrency("15,000,000 CHF"))
+    }
 }
