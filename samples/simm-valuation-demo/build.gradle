@@ -93,7 +93,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         nearestCity "London"
         advertisedServices = []
         artemisPort 10004
-        webPort 10005
+        webPort 10007
         cordapps = []
     }
     node {
@@ -101,7 +101,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         nearestCity "New York"
         advertisedServices = []
         artemisPort 10006
-        webPort 10007
+        webPort 10010
         cordapps = []
     }
     node {
@@ -109,7 +109,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         nearestCity "tokyo"
         advertisedServices = []
         artemisPort 10008
-        webPort 10009
+        webPort 10013
         cordapps = []
     }
 }
