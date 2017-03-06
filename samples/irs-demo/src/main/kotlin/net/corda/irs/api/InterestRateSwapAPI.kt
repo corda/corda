@@ -63,6 +63,16 @@ class InterestRateSwapAPI(val rpc: CordaRPCOps) {
     @Produces(MediaType.APPLICATION_JSON)
     fun fetchDeals(): Array<InterestRateSwap.State> = getAllDeals()
 
+    // Function needed to substitute party keys in JSON file example-irs-trade.json
+    @GET
+    @Path("partykeys")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun partyFromName(): Response {
+        val keyA = rpc.partyFromName("Bank A")?.owningKey
+        val keyB = rpc.partyFromName("Bank B")?.owningKey
+        return Response.ok().entity(Pair(keyA, keyB)).build()
+    }
+
     @POST
     @Path("deals")
     @Consumes(MediaType.APPLICATION_JSON)
