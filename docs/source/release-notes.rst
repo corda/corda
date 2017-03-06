@@ -10,12 +10,8 @@ Milestone 10
 Important: There are configuration changes in M10 due to the split of the Artemis port into separate messaging and RPC
 ports. To upgrade, you *must*:
 
- 1. Rebuild the Gradle plugin:
-    * cd gradle-plugins
-    * ../gradlew build install
-    * cd ..
- 2. In Gradle build configurations replace any references to ``artemisPort`` with ``messagingPort``.
- 3. In node configurations replace ``artemisAddress`` with ``messagingAddress``.
+ 1. In Gradle build configurations replace any references to ``artemisPort`` with ``messagingPort``.
+ 2. In node configurations replace ``artemisAddress`` with ``messagingAddress``.
 
 Milestone 9
 -----------
