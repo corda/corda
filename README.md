@@ -80,7 +80,7 @@ Please read [here](./CONTRIBUTING.md).
 
 ## License
 
-[Apache 2.0](./LICENCE)
+[Apache 2.0](./LICENSE)
 
 ## Acknowledgements
 
