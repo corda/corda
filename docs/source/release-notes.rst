@@ -4,6 +4,19 @@ Release notes
 Here are release notes for each snapshot release from M9 onwards. This includes guidance on how to upgrade code from
 the previous milestone release.
 
+Milestone 10
+------------
+
+Important: There are configuration changes in M10 due to the split of the Artemis port into separate messaging and RPC
+ports. To upgrade, you *must*:
+
+ 1. Rebuild the Gradle plugin:
+    * cd gradle-plugins
+    * ../gradlew build install
+    * cd ..
+ 2. In Gradle build configurations replace any references to ``artemisPort`` with ``messagingPort``.
+ 3. In node configurations replace ``artemisAddress`` with ``messagingAddress``.
+
 Milestone 9
 -----------
 
