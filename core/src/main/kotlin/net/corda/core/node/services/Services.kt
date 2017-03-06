@@ -203,15 +203,15 @@ interface VaultService {
                       onlyFromParties: Set<AbstractParty>? = null): Pair<TransactionBuilder, List<CompositeKey>>
 
     /**
-     * Return [ContractState]s of a given [Contract] type and list of [Vault.StateStatus]
+     * Return [ContractState]s of a given [Contract] type an [Iterable] of [Vault.StateStatus]
      */
-    fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>): List<StateAndRef<T>>
+    fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>): Iterable<StateAndRef<T>>
 }
 
-inline fun <reified T: ContractState> VaultService.unconsumedStates(): List<StateAndRef<T>> =
+inline fun <reified T: ContractState> VaultService.unconsumedStates(): Iterable<StateAndRef<T>> =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED))
 
-inline fun <reified T: ContractState> VaultService.consumedStates(): List<StateAndRef<T>> =
+inline fun <reified T: ContractState> VaultService.consumedStates(): Iterable<StateAndRef<T>> =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.CONSUMED))
 
 /** Returns the [linearState] heads only when the type of the state would be considered an 'instanceof' the given type. */

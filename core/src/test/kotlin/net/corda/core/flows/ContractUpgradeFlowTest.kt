@@ -165,11 +165,11 @@ class ContractUpgradeFlowTest {
         // Starts contract upgrade flow.
         a.services.startFlow(ContractUpgradeFlow.Instigator(stateAndRef, CashV2::class.java))
         mockNet.runNetwork()
-        // Get contract state form the vault.
-        val state = databaseTransaction(a.database) { a.vault.unconsumedStates<ContractState>() }
-        assertTrue(state.single().state.data is CashV2.State, "Contract state is upgraded to the new version.")
-        assertEquals(Amount(1000000, USD).`issued by`(a.info.legalIdentity.ref(1)), (state.first().state.data as CashV2.State).amount, "Upgraded cash contain the correct amount.")
-        assertEquals(listOf(a.info.legalIdentity.owningKey), (state.first().state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
+        // Get contract state from the vault.
+        val states = databaseTransaction(a.database) { a.vault.unconsumedStates<ContractState>().toList() }
+            assertTrue(states.single().state.data is CashV2.State, "Contract state is upgraded to the new version.")
+            assertEquals(Amount(1000000, USD).`issued by`(a.info.legalIdentity.ref(1)), (states.first().state.data as CashV2.State).amount, "Upgraded cash contain the correct amount.")
+            assertEquals(listOf(a.info.legalIdentity.owningKey), (states.first().state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
     }
 
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {

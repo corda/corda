@@ -153,7 +153,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         }
     }
 
-    override fun <T: ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>): List<StateAndRef<T>> {
+    override fun <T: ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>): Iterable<StateAndRef<T>> {
         val stateAndRefs =
             session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
                 var result = select(VaultSchema.VaultStates::class)
@@ -161,15 +161,16 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                 // TODO: temporary fix to continue supporting track() function (until becomes Typed)
                 if (!clazzes.map {it.name}.contains(ContractState::class.java.name))
                     result.and (VaultSchema.VaultStates::contractStateClassName `in` (clazzes.map { it.name }))
-                result.get()
+                val iterator = result.get().iterator()
+                Sequence{iterator}
                         .map { it ->
                             val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
                             // TODO: revisit Kryo bug when using THREAD_LOCAL_KYRO
                             val state = it.contractState.deserialize<TransactionState<T>>(createKryo())
                             StateAndRef(state, stateRef)
-                        }.toList()
+                        }
             }
-        return stateAndRefs
+        return stateAndRefs.asIterable()
     }
 
     override fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?> {

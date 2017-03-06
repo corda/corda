@@ -17,6 +17,7 @@ import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -48,7 +49,7 @@ class DataVendingServiceTests {
         ptx.signWith(registerKey)
         val tx = ptx.toSignedTransaction()
         databaseTransaction(vaultServiceNode.database) {
-            assertEquals(0, vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>().size)
+            assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
 
             registerNode.sendNotifyTx(tx, vaultServiceNode)
 
@@ -79,12 +80,12 @@ class DataVendingServiceTests {
         ptx.signWith(registerKey)
         val tx = ptx.toSignedTransaction(false)
         databaseTransaction(vaultServiceNode.database) {
-            assertEquals(0, vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>().size)
+            assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
 
             registerNode.sendNotifyTx(tx, vaultServiceNode)
 
             // Check the transaction is not in the receiving node
-            assertEquals(0, vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>().size)
+            assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
         }
     }
 
