@@ -33,7 +33,8 @@ Richard Brown, R3 Chief Technology Officer, explains Corda's unique architecture
  
 ### Webinar 2 – [Corda Developers’ Tutorial](https://vimeo.com/192797322/aab499b152)
  
-Roger Willis, R3 Developer Relations Lead, provides an overview of Corda from a developer’s perspective and guidance on how to start building CorDapps. You may want to view [Webinar 1 - Introduction to Corda](https://vimeo.com/192757743/c2ec39c1e1) as preparation for this session. **NB. This was recorded for the M5 release.**
+Roger Willis, R3 Developer Relations Lead, provides an overview of Corda from a developer’s perspective and guidance on how to start building CorDapps. You may want to view [Webinar 1 - Introduction to Corda](https://vimeo.com/192757743/c2ec39c1e1) as preparation for this session. 
+**NB. This was recorded for the M5 release.**
 
 ## Building on Corda
 
@@ -56,7 +57,7 @@ To look at the Corda source and run some sample applications:
 * [Slack channel] (https://slack.corda.net/)
 * [Forum](https://discourse.corda.net)
 * [Meetups](https://www.meetup.com/pro/corda/)
-* [Training Course](https://www.corda.net/corda-training/)
+* [Training Courses](https://www.corda.net/corda-training/)
 
 
 ## Development State
