@@ -176,16 +176,12 @@ class CryptoUtilsTest {
         assertTrue(verificationBig)
 
         // test on malformed signatures (even if they change for 1 bit)
-        for (i in 0..signedData.size - 1) {
-            val b = signedData.get(i)
-            signedData.set(i,b.inc())
-            try {
-                keyPair.verify(signedData, testBytes)
-                fail()
-            } catch (e: Exception) {
-                // expected
-            }
-            signedData.set(i,b.dec())
+        signedData.set(0,signedData[0].inc())
+        try {
+            keyPair.verify(signedData, testBytes)
+            fail()
+        } catch (e: Exception) {
+            // expected
         }
     }
 
@@ -236,16 +232,12 @@ class CryptoUtilsTest {
         assertTrue(verificationBig)
 
         // test on malformed signatures (even if they change for 1 bit)
-        for (i in 0..signedData.size - 1) {
-            val b = signedData.get(i)
-            signedData.set(i,b.inc())
-            try {
-                keyPair.verify(signedData, testBytes)
-                fail()
-            } catch (e: Exception) {
-                // expected
-            }
-            signedData.set(i,b.dec())
+        signedData.set(0, signedData[0].inc())
+        try {
+            keyPair.verify(signedData, testBytes)
+            fail()
+        } catch (e: Exception) {
+            // expected
         }
     }
 
@@ -296,16 +288,12 @@ class CryptoUtilsTest {
         assertTrue(verificationBig)
 
         // test on malformed signatures (even if they change for 1 bit)
-        for (i in 0..signedData.size - 1) {
-            val b = signedData.get(i)
-            signedData.set(i,b.inc())
-            try {
-                keyPair.verify(signedData, testBytes)
-                fail()
-            } catch (e: Exception) {
-                // expected
-            }
-            signedData.set(i,b.dec())
+        signedData.set(0, signedData[0].inc())
+        try {
+            keyPair.verify(signedData, testBytes)
+            fail()
+        } catch (e: Exception) {
+            // expected
         }
     }
 
@@ -356,45 +344,12 @@ class CryptoUtilsTest {
         assertTrue(verificationBig)
 
         // test on malformed signatures (even if they change for 1 bit)
-        // As SPHINCS is too slow, I am testing for 24 bits only (first 8 bits, 8 in the middle and last 8 bits)
-
-        // first 8
-        for (i in 0..7) {
-            val b = signedData.get(i)
-            signedData.set(i,b.inc())
-            try {
-                keyPair.verify(signedData, testBytes)
-                fail()
-            } catch (e: Exception) {
-                // expected
-            }
-            signedData.set(i,b.dec())
-        }
-
-        // 8 in the middle
-        for (i in (signedData.size/2 - 4) until (signedData.size/2 + 4)) {
-            val b = signedData.get(i)
-            signedData.set(i,b.inc())
-            try {
-                keyPair.verify(signedData, testBytes)
-                fail()
-            } catch (e: Exception) {
-                // expected
-            }
-            signedData.set(i,b.dec())
-        }
-
-        // last 8
-        for (i in (signedData.size - 8) until signedData.size) {
-            val b = signedData.get(i)
-            signedData.set(i,b.inc())
-            try {
-                keyPair.verify(signedData, testBytes)
-                fail()
-            } catch (e: Exception) {
-                // expected
-            }
-            signedData.set(i,b.dec())
+        signedData.set(0, signedData[0].inc())
+        try {
+            keyPair.verify(signedData, testBytes)
+            fail()
+        } catch (e: Exception) {
+            // expected
         }
     }
 
