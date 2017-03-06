@@ -3,6 +3,7 @@ package net.corda.node.services.config
 import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
 import net.corda.core.div
+import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.internal.Node
@@ -77,7 +78,7 @@ class FullNodeConfiguration(override val baseDirectory: Path, val config: Config
             .getListOrElse<String>("notaryClusterAddresses") { emptyList() }
             .map { HostAndPort.fromString(it) }
 
-    fun createNode(): Node {
+    fun createNode(nodeVersionInfo: NodeVersionInfo): Node {
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
 
@@ -87,7 +88,7 @@ class FullNodeConfiguration(override val baseDirectory: Path, val config: Config
                 .toMutableSet()
         if (networkMapService == null) advertisedServices.add(ServiceInfo(NetworkMapService.type))
 
-        return Node(this, advertisedServices, if (useTestClock) TestClock() else NodeClock())
+        return Node(this, advertisedServices, nodeVersionInfo, if (useTestClock) TestClock() else NodeClock())
     }
 }
 

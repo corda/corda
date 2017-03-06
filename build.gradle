@@ -47,6 +47,7 @@ buildscript {
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.13.0'
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
+        classpath "org.ajoberstar:grgit:1.1.0"
     }
 }
 
@@ -54,6 +55,10 @@ plugins {
     // TODO The capsule plugin requires the newer DSL plugin block.It would be nice if we could unify all the plugins into one style,
     // but the DSL has some restrictions e.g can't be used on the allprojects section. So we should revisit this if there are improvements in Gradle.
     id "us.kirchmeier.capsule" version "1.0.2"
+}
+
+ext {
+    corda_revision = org.ajoberstar.grgit.Grgit.open(file('.')).head().id
 }
 
 apply plugin: 'kotlin'

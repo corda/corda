@@ -146,6 +146,7 @@ inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = 
 }
 
 inline fun <R> Path.readLines(charset: Charset = UTF_8, block: (Stream<String>) -> R): R = Files.lines(this, charset).use(block)
+fun Path.readAllLines(charset: Charset = UTF_8): List<String> = Files.readAllLines(this, charset)
 fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, vararg options: OpenOption): Path = Files.write(this, lines, charset, *options)
 
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)

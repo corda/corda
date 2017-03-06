@@ -1,9 +1,12 @@
 @file:JvmName("Corda")
 package net.corda.node
 
+import com.jcabi.manifests.Manifests
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.*
+import net.corda.core.node.NodeVersionInfo
+import net.corda.core.node.Version
 import net.corda.core.utilities.Emoji
 import net.corda.node.internal.Node
 import net.corda.node.services.config.FullNodeConfiguration
@@ -35,6 +38,16 @@ fun main(args: Array<String>) {
     val startTime = System.currentTimeMillis()
     checkJavaVersion()
 
+    val nodeVersionInfo = if (Manifests.exists("Corda-Version")) {
+        NodeVersionInfo(
+                Version.parse(Manifests.read("Corda-Version")),
+                Manifests.read("Corda-Revision"),
+                Manifests.read("Corda-Vendor"))
+    } else {
+        // If the manifest properties aren't available then we're running from within an IDE
+        NodeVersionInfo(Version(0, 0, false), "~Git revision unavailable~", "Unknown vendor")
+    }
+
     val argsParser = ArgsParser()
 
     val cmdlineOptions = try {
@@ -43,6 +56,12 @@ fun main(args: Array<String>) {
         println("Invalid command line arguments: ${ex.message}")
         argsParser.printHelp(System.out)
         exitProcess(1)
+    }
+
+    if (cmdlineOptions.isVersion) {
+        println("${nodeVersionInfo.vendor} ${nodeVersionInfo.version}")
+        println("Revision ${nodeVersionInfo.revision}")
+        exitProcess(0)
     }
 
     // Maybe render command line help.
@@ -58,7 +77,7 @@ fun main(args: Array<String>) {
         renderBasicInfoToConsole = false
     }
 
-    drawBanner()
+    drawBanner(nodeVersionInfo)
 
     System.setProperty("log-path", (cmdlineOptions.baseDirectory / "logs").toString())
 
@@ -97,7 +116,7 @@ fun main(args: Array<String>) {
     try {
         cmdlineOptions.baseDirectory.createDirectories()
 
-        val node = conf.createNode()
+        val node = conf.createNode(nodeVersionInfo)
         node.start()
         printPluginsAndServices(node)
 
@@ -116,6 +135,7 @@ fun main(args: Array<String>) {
         log.error("Exception during node startup", e)
         exitProcess(1)
     }
+
     exitProcess(0)
 }
 
@@ -154,13 +174,12 @@ private fun messageOfTheDay(): Pair<String, String> {
             "Computer science and finance together.\nYou should see our crazy Christmas parties!"
     )
     if (Emoji.hasEmojiTerminal)
-        messages +=
-            "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"
+        messages += "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"
     val (a, b) = messages.randomOrNull()!!.split('\n')
     return Pair(a, b)
 }
 
-private fun drawBanner() {
+private fun drawBanner(nodeVersionInfo: NodeVersionInfo) {
     // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
     AnsiConsole.systemInstall()
 
@@ -174,7 +193,7 @@ private fun drawBanner() {
  / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
 "/ /___  /_/ / /  / /_/ / /_/ /          ").fgBrightBlue().a(msg2).newline().fgBrightRed().a(
 """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
-        a("--- MILESTONE 9 -------------------------------------------------------------------").
+        a("--- ${nodeVersionInfo.vendor} ${nodeVersionInfo.version} (${nodeVersionInfo.revision.take(6)}) -----------------------------------------------").
         newline().
         newline().
         a("${Emoji.books}New! ").reset().a("Training now available worldwide, see https://corda.net/corda-training/").

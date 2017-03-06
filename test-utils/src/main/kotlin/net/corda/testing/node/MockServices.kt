@@ -17,6 +17,7 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransactionMappingStorage
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
+import net.corda.testing.MOCK_VERSION
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.ByteArrayInputStream
@@ -63,7 +64,7 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
     override val schedulerService: SchedulerService get() = throw UnsupportedOperationException()
-    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party("MegaCorp", key.public.composite))
+    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party("MegaCorp", key.public.composite), MOCK_VERSION)
 }
 
 @ThreadSafe
@@ -83,11 +84,7 @@ class MockIdentityService(val identities: List<Party>) : IdentityService, Single
 
 
 class MockKeyManagementService(vararg initialKeys: KeyPair) : SingletonSerializeAsToken(), KeyManagementService {
-    override val keys: MutableMap<PublicKey, PrivateKey>
-
-    init {
-        keys = initialKeys.map { it.public to it.private }.toMap(HashMap())
-    }
+    override val keys: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
 
     val nextKeys = LinkedList<KeyPair>()
 

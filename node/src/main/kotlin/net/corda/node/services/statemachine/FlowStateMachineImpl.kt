@@ -215,7 +215,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             state = FlowSessionState.Initiated(peerParty, sessionInitResponse.initiatedSessionId)
         } else {
             sessionInitResponse as SessionReject
-            throw FlowException("Party ${state.sendToParty} rejected session request: ${sessionInitResponse.errorMessage}")
+            throw FlowSessionException("Party ${state.sendToParty} rejected session request: ${sessionInitResponse.errorMessage}")
         }
     }
 
