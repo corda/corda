@@ -138,18 +138,18 @@ object BFTSMaRt {
                           tableName: String,
                           val services: ServiceHubInternal,
                           val timestampChecker: TimestampChecker) : DefaultRecoverable() {
-
         companion object {
             private val log = loggerFor<Server>()
         }
+
+        // TODO: Use Requery with proper DB schema instead of JDBCHashMap.
+        // Must be initialised before ServiceReplica is started
+        val commitLog = databaseTransaction(db) { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
 
         init {
             // TODO: Looks like this statement is blocking. Investigate the bft-smart node startup.
             ServiceReplica(id, "bft-smart-config", this, this, null, DefaultReplier())
         }
-
-        // TODO: Use Requery with proper DB schema instead of JDBCHashMap.
-        val commitLog = databaseTransaction(db) { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
 
         override fun appExecuteUnordered(command: ByteArray, msgCtx: MessageContext): ByteArray? {
             throw NotImplementedError("No unordered operations supported")
