@@ -79,6 +79,7 @@ task integrationTest(type: Test) {
 publish {
     name = 'corda-webserver'
     publishWar = false // TODO: Use WAR instead of JAR
+    disableDefaultJar = true
 }
 
 task buildWebserverJar(type: FatCapsule) {
@@ -112,4 +113,7 @@ task buildWebserverJar(type: FatCapsule) {
 
 artifacts {
     runtimeArtifacts buildWebserverJar
+    publish buildWebserverJar {
+        classifier ""
+    }
 }
