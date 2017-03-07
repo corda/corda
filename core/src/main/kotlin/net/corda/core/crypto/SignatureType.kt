@@ -1,5 +1,7 @@
 package net.corda.core.crypto
 
+import net.corda.core.serialization.CordaSerializable
+
 /**
  * Supported Signature types:
  * <p><ul>
@@ -9,6 +11,7 @@ package net.corda.core.crypto
  * <li>PARTIAL_AND_BLIND = combined PARTIAL and BLIND in the same time.
  * </ul>
  */
+@CordaSerializable
 enum class SignatureType {
     FULL, PARTIAL, BLIND, PARTIAL_AND_BLIND
 }

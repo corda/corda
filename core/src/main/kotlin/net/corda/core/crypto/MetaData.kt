@@ -1,6 +1,7 @@
 package net.corda.core.crypto
 
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.opaque
 import net.corda.core.serialization.serialize
 import java.security.PublicKey
 import java.time.Instant
@@ -35,6 +36,36 @@ open class MetaData(
         val signedInputs: BitSet?,
         val merkleRoot: ByteArray,
         val publicKey: PublicKey) {
-    // TODO: check if KRYO serialization works as expected
+
     fun bytes() = this.serialize().bytes
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other?.javaClass != javaClass) return false
+
+        other as MetaData
+
+        if (schemeCodeName != other.schemeCodeName) return false
+        if (versionID != other.versionID) return false
+        if (signatureType != other.signatureType) return false
+        if (timestamp != other.timestamp) return false
+        if (visibleInputs != other.visibleInputs) return false
+        if (signedInputs != other.signedInputs) return false
+        if (merkleRoot.opaque() != other.merkleRoot.opaque()) return false
+        if (publicKey != other.publicKey) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = schemeCodeName.hashCode()
+        result = 31 * result + versionID.hashCode()
+        result = 31 * result + signatureType.hashCode()
+        result = 31 * result + (timestamp?.hashCode() ?: 0)
+        result = 31 * result + (visibleInputs?.hashCode() ?: 0)
+        result = 31 * result + (signedInputs?.hashCode() ?: 0)
+        result = 31 * result + Arrays.hashCode(merkleRoot)
+        result = 31 * result + publicKey.hashCode()
+        return result
+    }
 }
+

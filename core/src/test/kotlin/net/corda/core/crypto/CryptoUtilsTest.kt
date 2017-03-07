@@ -110,7 +110,7 @@ class CryptoUtilsTest {
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
         val MBbyte = ByteArray(1000000) // 1.000.000
-        val bytes = Random().nextBytes(MBbyte)
+        Random().nextBytes(MBbyte)
         val signedDataBig = keyPair.sign(MBbyte)
         val verificationBig = keyPair.verify(signedDataBig, MBbyte)
         assertTrue(verificationBig)
@@ -170,7 +170,7 @@ class CryptoUtilsTest {
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
         val MBbyte = ByteArray(1000000) // 1.000.000
-        val bytes = Random().nextBytes(MBbyte)
+        Random().nextBytes(MBbyte)
         val signedDataBig = keyPair.sign(MBbyte)
         val verificationBig = keyPair.verify(signedDataBig, MBbyte)
         assertTrue(verificationBig)
@@ -226,7 +226,7 @@ class CryptoUtilsTest {
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
         val MBbyte = ByteArray(1000000) // 1.000.000
-        val bytes = Random().nextBytes(MBbyte)
+        Random().nextBytes(MBbyte)
         val signedDataBig = keyPair.sign(MBbyte)
         val verificationBig = keyPair.verify(signedDataBig, MBbyte)
         assertTrue(verificationBig)
@@ -282,7 +282,7 @@ class CryptoUtilsTest {
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
         val MBbyte = ByteArray(1000000) // 1.000.000
-        val bytes = Random().nextBytes(MBbyte)
+        Random().nextBytes(MBbyte)
         val signedDataBig = keyPair.sign(MBbyte)
         val verificationBig = keyPair.verify(signedDataBig, MBbyte)
         assertTrue(verificationBig)
@@ -338,7 +338,7 @@ class CryptoUtilsTest {
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
         val MBbyte = ByteArray(1000000) // 1.000.000
-        val bytes = Random().nextBytes(MBbyte)
+        Random().nextBytes(MBbyte)
         val signedDataBig = keyPair.sign(MBbyte)
         val verificationBig = keyPair.verify(signedDataBig, MBbyte)
         assertTrue(verificationBig)
