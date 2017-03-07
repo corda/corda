@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import java.security.PublicKey
 import java.time.Instant
