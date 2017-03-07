@@ -25,11 +25,7 @@ import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.services.transactions.BFTSmartUniquenessProvider
-import net.corda.node.services.transactions.BFTValidatingNotaryService
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.databaseTransaction
-import org.jetbrains.exposed.sql.Database
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
