@@ -52,8 +52,16 @@ sourceSets {
 
 dependencies {
 
-    compile project(':finance')
-    compile project(':node-schemas')
+    // Excluding javassist:javassist (which is a transitive dependency of core)
+    // because it clashes with Hibernate's transitive org.javassist:javassist
+    // dependency.
+    // TODO: Remove both of these exclusions once junit-quickcheck 0.8 is released.
+    compile (project(':finance')) {
+        exclude group: 'javassist', module: 'javassist'
+    }
+    compile (project(':node-schemas')) {
+        exclude group: 'javassist', module: 'javassist'
+    }
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
 
