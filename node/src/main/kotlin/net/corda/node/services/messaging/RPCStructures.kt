@@ -58,7 +58,7 @@ fun requirePermission(permission: String) {
     // TODO remove the NODE_USER condition once webserver doesn't need it
     val currentUser = CURRENT_RPC_USER.get()
     val currentUserPermissions = currentUser.permissions
-    if (currentUser.username != NODE_USER && permission !in currentUserPermissions) {
+    if (currentUser.username != NODE_USER && currentUserPermissions.intersect(listOf(permission, "ALL")).isEmpty()) {
         throw PermissionException("User not permissioned for $permission, permissions are $currentUserPermissions")
     }
 }

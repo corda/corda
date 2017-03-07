@@ -6,109 +6,38 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.RPCReturnsObservables
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.success
-import net.corda.core.utilities.LogHelper
-import net.corda.node.services.RPCUserService
 import net.corda.node.services.User
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.RPC_REQUESTS_QUEUE
 import net.corda.node.services.messaging.CURRENT_RPC_USER
-import net.corda.node.services.messaging.CordaRPCClientImpl
-import net.corda.node.services.messaging.RPCDispatcher
 import net.corda.node.services.messaging.RPCSinceVersion
-import net.corda.node.utilities.AffinityExecutor
-import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.TransportConfiguration
-import org.apache.activemq.artemis.api.core.client.ActiveMQClient
-import org.apache.activemq.artemis.api.core.client.ClientMessage
-import org.apache.activemq.artemis.api.core.client.ClientProducer
-import org.apache.activemq.artemis.api.core.client.ClientSession
-import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
-import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory
-import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnectorFactory
-import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import rx.subjects.PublishSubject
-import java.io.Closeable
-import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.locks.ReentrantLock
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class ClientRPCInfrastructureTests {
+class ClientRPCInfrastructureTests : AbstractClientRPC() {
     // TODO: Test that timeouts work
 
-    lateinit var artemis: EmbeddedActiveMQ
-    lateinit var serverSession: ClientSession
-    lateinit var clientSession: ClientSession
-    lateinit var producer: ClientProducer
-    lateinit var serverThread: AffinityExecutor.ServiceAffinityExecutor
     lateinit var proxy: TestOps
 
     private val authenticatedUser = User("test", "password", permissions = setOf())
 
     @Before
     fun setup() {
-        // Set up an in-memory Artemis with an RPC requests queue.
-        artemis = EmbeddedActiveMQ()
-        artemis.setConfiguration(ConfigurationImpl().apply {
-            acceptorConfigurations = setOf(TransportConfiguration(InVMAcceptorFactory::class.java.name))
-            isSecurityEnabled = false
-            isPersistenceEnabled = false
-        })
-        artemis.start()
-        val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(TransportConfiguration(InVMConnectorFactory::class.java.name))
-        val sessionFactory = serverLocator.createSessionFactory()
-
-        serverSession = sessionFactory.createSession()
-        serverSession.start()
-        serverSession.createTemporaryQueue(RPC_REQUESTS_QUEUE, RPC_REQUESTS_QUEUE)
-        producer = serverSession.createProducer()
-        val userService = object : RPCUserService {
-            override fun getUser(username: String): User? = throw UnsupportedOperationException()
-            override val users: List<User> get() = throw UnsupportedOperationException()
-        }
-        val dispatcher = object : RPCDispatcher(TestOpsImpl(), userService, "SomeName") {
-            override fun send(data: SerializedBytes<*>, toAddress: String) {
-                val msg = serverSession.createMessage(false).apply {
-                    writeBodyBufferBytes(data.bytes)
-                    // Use the magic deduplication property built into Artemis as our message identity too
-                    putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
-                }
-                producer.send(toAddress, msg)
-            }
-
-            override fun getUser(message: ClientMessage): User = authenticatedUser
-        }
-        serverThread = AffinityExecutor.ServiceAffinityExecutor("unit-tests-rpc-dispatch-thread", 1)
-        val serverConsumer = serverSession.createConsumer(RPC_REQUESTS_QUEUE)
-        serverSession.createTemporaryQueue("activemq.notifications", "rpc.qremovals", "_AMQ_NotifType = 'BINDING_REMOVED'")
-        val serverNotifConsumer = serverSession.createConsumer("rpc.qremovals")
-        dispatcher.start(serverConsumer, serverNotifConsumer, serverThread)
-
-        clientSession = sessionFactory.createSession()
-        clientSession.start()
-
-        LogHelper.setLevel("+net.corda.rpc")
-
-        proxy = CordaRPCClientImpl(clientSession, ReentrantLock(), authenticatedUser.username).proxyFor(TestOps::class.java)
+        proxy = rpcProxyFor(authenticatedUser, TestOpsImpl(), TestOps::class.java)
     }
 
     @After
     fun shutdown() {
-        (proxy as Closeable?)?.close()
-        clientSession.stop()
-        serverSession.stop()
-        artemis.stop()
-        serverThread.shutdownNow()
+        safeClose(proxy)
     }
 
     interface TestOps : RPCOps {
