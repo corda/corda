@@ -1,79 +1,24 @@
 package net.corda.node.messaging
 
 import net.corda.core.messaging.RPCOps
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.utilities.LogHelper
-import net.corda.node.services.RPCUserService
 import net.corda.node.services.User
 import net.corda.node.services.messaging.*
-import net.corda.node.utilities.AffinityExecutor
-import org.apache.activemq.artemis.api.core.Message
-import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.TransportConfiguration
-import org.apache.activemq.artemis.api.core.client.ActiveMQClient
-import org.apache.activemq.artemis.api.core.client.ClientMessage
-import org.apache.activemq.artemis.api.core.client.ClientProducer
-import org.apache.activemq.artemis.api.core.client.ClientSession
-import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
-import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory
-import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnectorFactory
-import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import org.junit.After
-import org.junit.Before
 import org.junit.Test
-import java.util.*
-import java.util.concurrent.locks.ReentrantLock
 import kotlin.test.*
 
-class RPCPermissionsTest {
+class RPCPermissionsTest : AbstractClientRPC() {
     companion object {
         const val DUMMY_FLOW = "StartFlow.net.corda.flows.DummyFlow"
         const val OTHER_FLOW = "StartFlow.net.corda.flows.OtherFlow"
         const val ALL_ALLOWED = "ALL"
     }
 
-    lateinit var artemis: EmbeddedActiveMQ
-    lateinit var serverSession: ClientSession
-    lateinit var clientSession: ClientSession
-    lateinit var producer: ClientProducer
-    lateinit var serverThread: AffinityExecutor.ServiceAffinityExecutor
     lateinit var proxy: TestOps
-
-    @Before
-    fun setup() {
-        // Set up an in-memory Artemis with an RPC requests queue.
-        artemis = EmbeddedActiveMQ()
-        artemis.setConfiguration(ConfigurationImpl().apply {
-            acceptorConfigurations = setOf(TransportConfiguration(InVMAcceptorFactory::class.java.name))
-            isSecurityEnabled = false
-            isPersistenceEnabled = false
-        })
-        artemis.start()
-
-        val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(TransportConfiguration(InVMConnectorFactory::class.java.name))
-        val sessionFactory = serverLocator.createSessionFactory()
-        serverSession = sessionFactory.createSession()
-        serverSession.start()
-
-        serverSession.createTemporaryQueue(ArtemisMessagingComponent.RPC_REQUESTS_QUEUE, ArtemisMessagingComponent.RPC_REQUESTS_QUEUE)
-        producer = serverSession.createProducer()
-        serverThread = AffinityExecutor.ServiceAffinityExecutor("unit-tests-rpc-dispatch-thread", 1)
-        serverSession.createTemporaryQueue("activemq.notifications", "rpc.qremovals", "_AMQ_NotifType = 'BINDING_REMOVED'")
-
-        clientSession = sessionFactory.createSession()
-        clientSession.start()
-
-        LogHelper.setLevel("+net.corda.rpc")
-    }
 
     @After
     fun shutdown() {
         safeClose(proxy)
-        safeClose(producer)
-        clientSession.stop()
-        serverSession.stop()
-        artemis.stop()
-        serverThread.shutdownNow()
     }
 
     /*
@@ -91,30 +36,9 @@ class RPCPermissionsTest {
     /**
      * Create an RPC proxy for the given user.
      */
-    private fun proxyFor(rpcUser: User): TestOps {
-        val userService = object : RPCUserService {
-            override fun getUser(username: String): User? = if (username == rpcUser.username) rpcUser else null
-            override val users: List<User> get() = listOf(rpcUser)
-        }
+    private fun proxyFor(rpcUser: User): TestOps = rpcProxyFor(rpcUser, TestOpsImpl(), TestOps::class.java)
 
-        val dispatcher = object : RPCDispatcher(TestOpsImpl(), userService, "SomeName") {
-            override fun send(data: SerializedBytes<*>, toAddress: String) {
-                val msg = serverSession.createMessage(false).apply {
-                    writeBodyBufferBytes(data.bytes)
-                    // Use the magic deduplication property built into Artemis as our message identity too
-                    putStringProperty(Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
-                }
-                producer.send(toAddress, msg)
-            }
-
-            override fun getUser(message: ClientMessage): User = rpcUser
-        }
-
-        val serverNotifConsumer = serverSession.createConsumer("rpc.qremovals")
-        val serverConsumer = serverSession.createConsumer(ArtemisMessagingComponent.RPC_REQUESTS_QUEUE)
-        dispatcher.start(serverConsumer, serverNotifConsumer, serverThread)
-        return CordaRPCClientImpl(clientSession, ReentrantLock(), rpcUser.username).proxyFor(TestOps::class.java)
-    }
+    private fun userOf(name: String, permissions: Set<String>) = User(name, "password", permissions)
 
     @Test
     fun `empty user cannot use any flows`() {
@@ -157,6 +81,4 @@ class RPCPermissionsTest {
                 { proxy.validatePermission(ALL_ALLOWED) })
     }
 
-    private fun userOf(name: String, permissions: Set<String>) = User(name, "password", permissions)
-    private fun safeClose(obj: Any) = try { (obj as AutoCloseable).close() } catch (e: Exception) {}
 }
