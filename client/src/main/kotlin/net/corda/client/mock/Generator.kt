@@ -178,9 +178,10 @@ fun <A : Any> Generator.Companion.pickN(number: Int, list: List<A>) = Generator<
     val mask = BitSet(list.size)
     val size = Math.min(list.size, number)
     for (i in 0..size - 1) {
+        // mask[i] = 1 desugars into mask.set(i, 1), which sets a range instead of a bit
         mask[i] = true
     }
-    for (i in 0..size - 1) {
+    for (i in 0..list.size - 1) {
         val bit = mask[i]
         val swapIndex = i + it.nextInt(size - i)
         mask[i] = mask[swapIndex]
