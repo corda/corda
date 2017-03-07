@@ -2,17 +2,18 @@ package com.r3.corda.doorman
 
 import com.r3.corda.doorman.OptionParserHelper.toConfigWithOptions
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigParseOptions
 import net.corda.core.div
-import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.getOrElse
 import net.corda.node.services.config.getValue
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.*
 
 class DoormanParameters(args: Array<String>) {
     private val argConfig = args.toConfigWithOptions {
-        accepts("basedir", "Overriding configuration filepath, default to current directory.").withRequiredArg().describedAs("filepath")
+        accepts("basedir", "Overriding configuration filepath, default to current directory.").withRequiredArg().defaultsTo(".").describedAs("filepath")
+        accepts("configFile", "Overriding configuration file, default to <<current directory>>/node.conf.").withRequiredArg().describedAs("filepath")
         accepts("keygen", "Generate CA keypair and certificate using provide Root CA key.").withOptionalArg()
         accepts("rootKeygen", "Generate Root CA keypair and certificate.").withOptionalArg()
         accepts("keystorePath", "CA keystore filepath, default to [basedir]/certificates/caKeystore.jks.").withRequiredArg().describedAs("filepath")
@@ -24,8 +25,9 @@ class DoormanParameters(args: Array<String>) {
         accepts("host", "Doorman web service host override").withRequiredArg().describedAs("hostname")
         accepts("port", "Doorman web service port override").withRequiredArg().ofType(Int::class.java).describedAs("port number")
     }
-    private val basedir by argConfig.getOrElse { Paths.get(".") }
-    private val config = argConfig.withFallback(ConfigHelper.loadConfig(basedir, allowMissingConfig = true))
+    private val basedir: Path by argConfig
+    private val configFile by argConfig.getOrElse { basedir / "node.conf" }
+    private val config = argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true))).resolve()
     val keystorePath: Path by config.getOrElse { basedir / "certificates" / "caKeystore.jks" }
     val rootStorePath: Path by config.getOrElse { basedir / "certificates" / "rootCAKeystore.jks" }
     val keystorePassword: String? by config.getOrElse { null }
