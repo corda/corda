@@ -4,15 +4,13 @@ import net.corda.contracts.asset.Cash
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.composite
-import net.corda.core.flows.FlowException
+import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.TxWritableStorageService
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
-import net.corda.node.services.schema.HibernateObserver
-import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.MEGA_CORP
@@ -132,12 +130,12 @@ class NodeVaultServiceTest {
             assertThat(services.vaultService.softLockedStates<Cash.State>(softLockId)).hasSize(2)
 
             // excluding softlocked states
-            val unlockedStates1 = services.vaultService.unconsumedStates<Cash.State>(includeSoftLockedStates = false)
+            val unlockedStates1 = services.vaultService.unconsumedStates<Cash.State>(includeSoftLockedStates = false).toList()
             assertThat(unlockedStates1).hasSize(1)
 
             // soft lock release one of the states explicitly
             services.vaultService.softLockRelease(softLockId, setOf(unconsumedStates[1].ref))
-            val unlockedStates2 = services.vaultService.unconsumedStates<Cash.State>(includeSoftLockedStates = false)
+            val unlockedStates2 = services.vaultService.unconsumedStates<Cash.State>(includeSoftLockedStates = false).toList()
             assertThat(unlockedStates2).hasSize(2)
 
             // soft lock release the rest by id
@@ -231,7 +229,7 @@ class NodeVaultServiceTest {
 
         // attempt to lock all 3 states with LockId2
         databaseTransaction(database) {
-            assertThatExceptionOfType(FlowException::class.java).isThrownBy(
+            assertThatExceptionOfType(StatesNotAvailableException::class.java).isThrownBy(
                     { vault.softLockReserve(softLockId2, stateRefsToSoftLock) }
             ).withMessageContaining("only 2 rows available").withNoCause()
         }

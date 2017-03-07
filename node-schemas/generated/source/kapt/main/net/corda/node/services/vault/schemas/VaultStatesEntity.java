@@ -387,6 +387,7 @@ public class VaultStatesEntity implements VaultSchema.VaultStates, Persistable {
     .setImmutable(false)
     .setReadOnly(false)
     .setStateless(false)
+    .setView(false)
     .setFactory(new Supplier<VaultStatesEntity>() {
         @Override
         public VaultStatesEntity get() {
