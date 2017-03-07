@@ -24,6 +24,7 @@ import java.util.*
  * @param merkleRoot the Merkle root of the transaction.
  * @param publicKey the signer's public key.
  */
+@CordaSerializable
 open class MetaData(
         val schemeCodeName: String,
         val versionID: String,
@@ -33,6 +34,6 @@ open class MetaData(
         val signedInputs: BitSet?,
         val merkleRoot: ByteArray,
         val publicKey: PublicKey) {
-
+    // TODO: check if KRYO serialization works as expected
     fun bytes() = this.serialize().bytes
 }
