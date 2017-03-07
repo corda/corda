@@ -9,7 +9,8 @@ import java.nio.file.Files
  * Represents a node that will be installed.
  */
 class Node {
-    static final String JAR_NAME = 'corda.jar'
+    static final String NODEJAR_NAME = 'corda.jar'
+    static final String WEBJAR_NAME = 'corda-webserver.jar'
     static final String DEFAULT_HOST = 'localhost'
 
     /**
@@ -128,7 +129,8 @@ class Node {
     void build(File rootDir) {
         nodeDir = new File(rootDir, name.replaceAll("\\s",""))
         configureRpcUsers()
-        installCordaJAR()
+        installCordaJar()
+        installWebserverJar()
         installBuiltPlugin()
         installCordapps()
         installDependencies()
@@ -154,12 +156,24 @@ class Node {
     /**
      * Installs the corda fat JAR to the node directory.
      */
-    private void installCordaJAR() {
+    private void installCordaJar() {
         def cordaJar = verifyAndGetCordaJar()
         project.copy {
             from cordaJar
             into nodeDir
-            rename cordaJar.name, JAR_NAME
+            rename cordaJar.name, NODEJAR_NAME
+        }
+    }
+
+    /**
+     * Installs the corda webserver JAR to the node directory
+     */
+    private void installWebserverJar() {
+        def webJar = verifyAndGetWebserverJar()
+        project.copy {
+            from webJar
+            into nodeDir
+            rename webJar.name, WEBJAR_NAME
         }
     }
 
@@ -191,10 +205,11 @@ class Node {
      */
     private void installDependencies() {
         def cordaJar = verifyAndGetCordaJar()
+        def webJar = verifyAndGetWebserverJar()
         def depsDir = new File(nodeDir, "dependencies")
         def coreDeps = project.zipTree(cordaJar).getFiles().collect { it.getName() }
         def appDeps = project.configurations.runtime.filter {
-            it != cordaJar && !project.configurations.cordapp.contains(it) && !coreDeps.contains(it.getName())
+            (it != cordaJar) && (it != webJar) && !project.configurations.cordapp.contains(it) && !coreDeps.contains(it.getName())
         }
         project.copy {
             from appDeps
@@ -207,9 +222,9 @@ class Node {
      */
     private void installConfig() {
         // Adding required default values
-        config = config.withValue('extraAdvertisedServiceIds', ConfigValueFactory.fromAnyRef(advertisedServices.join(',')))
+        config = config.withValue('extraAdvertisedServiceIds', ConfigValueFactory.fromIterable(advertisedServices*.toString()))
         if (notaryClusterAddresses.size() > 0) {
-            config = config.withValue('notaryClusterAddresses', ConfigValueFactory.fromIterable(notaryClusterAddresses))
+            config = config.withValue('notaryClusterAddresses', ConfigValueFactory.fromIterable(notaryClusterAddresses*.toString()))
         }
         def configFileText = config.root().render(new ConfigRenderOptions(false, false, true, false)).split("\n").toList()
 
@@ -239,6 +254,24 @@ class Node {
             def cordaJar = maybeCordaJAR.getSingleFile()
             assert(cordaJar.isFile())
             return cordaJar
+        }
+    }
+
+    /**
+     * Find the corda JAR amongst the dependencies
+     *
+     * @return A file representing the Corda webserver JAR
+     */
+    private File verifyAndGetWebserverJar() {
+        def maybeJar = project.configurations.runtime.filter {
+            it.toString().contains("corda-webserver-${project.corda_version}.jar")
+        }
+        if (maybeJar.size() == 0) {
+            throw new RuntimeException("No Corda Webserver JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-webserver-${project.corda_version}.jar\"")
+        } else {
+            def jar = maybeJar.getSingleFile()
+            assert(jar.isFile())
+            return jar
         }
     }
 

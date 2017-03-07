@@ -137,7 +137,7 @@ open class TransactionBuilder(
                 throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.joinToString()}")
         }
         val wtx = toWireTransaction()
-        return SignedTransaction(wtx.serialize(), ArrayList(currentSigs), wtx.id)
+        return SignedTransaction(wtx.serialize(), ArrayList(currentSigs))
     }
 
     open fun addInputState(stateAndRef: StateAndRef<*>) {

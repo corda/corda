@@ -148,7 +148,7 @@ class ArtemisMessagingTests {
         val message = messagingClient.createMessage(topic, DEFAULT_SESSION_ID, "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
-        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_FLOW_TOPIC, DEFAULT_SESSION_ID, "second msg".toByteArray())
+        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_TOPIC, DEFAULT_SESSION_ID, "second msg".toByteArray())
         messagingClient.send(networkMapMessage, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
@@ -174,7 +174,7 @@ class ArtemisMessagingTests {
             messagingClient.send(message, messagingClient.myAddress)
         }
 
-        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_FLOW_TOPIC, DEFAULT_SESSION_ID, "second msg".toByteArray())
+        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_TOPIC, DEFAULT_SESSION_ID, "second msg".toByteArray())
         messagingClient.send(networkMapMessage, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
@@ -207,7 +207,7 @@ class ArtemisMessagingTests {
         messagingClient.addMessageHandler(topic) { message, r ->
             receivedMessages.add(message)
         }
-        messagingClient.addMessageHandler(NetworkMapService.FETCH_FLOW_TOPIC) { message, r ->
+        messagingClient.addMessageHandler(NetworkMapService.FETCH_TOPIC) { message, r ->
             receivedMessages.add(message)
         }
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.

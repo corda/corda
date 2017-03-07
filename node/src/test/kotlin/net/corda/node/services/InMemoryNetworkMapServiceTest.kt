@@ -10,10 +10,6 @@ import net.corda.node.services.network.AbstractNetworkMapService
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.*
-import net.corda.node.services.network.NetworkMapService.Companion.FETCH_FLOW_TOPIC
-import net.corda.node.services.network.NetworkMapService.Companion.PUSH_ACK_FLOW_TOPIC
-import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_FLOW_TOPIC
-import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_FLOW_TOPIC
 import net.corda.node.services.network.NodeRegistration
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.databaseTransaction
@@ -167,23 +163,23 @@ abstract class AbstractNetworkMapServiceTest {
 
     private fun MockNode.registration(mapServiceNode: MockNode, reg: NodeRegistration, privateKey: PrivateKey): ListenableFuture<RegistrationResponse> {
         val req = RegistrationRequest(reg.toWire(privateKey), services.networkService.myAddress)
-        return services.networkService.sendRequest(REGISTER_FLOW_TOPIC, req, mapServiceNode.info.address)
+        return services.networkService.sendRequest(NetworkMapService.REGISTER_TOPIC, req, mapServiceNode.info.address)
     }
 
     private fun MockNode.subscribe(mapServiceNode: MockNode, subscribe: Boolean): ListenableFuture<SubscribeResponse> {
         val req = SubscribeRequest(subscribe, services.networkService.myAddress)
-        return services.networkService.sendRequest(SUBSCRIPTION_FLOW_TOPIC, req, mapServiceNode.info.address)
+        return services.networkService.sendRequest(NetworkMapService.SUBSCRIPTION_TOPIC, req, mapServiceNode.info.address)
     }
 
     private fun MockNode.updateAcknowlege(mapServiceNode: MockNode, mapVersion: Int) {
         val req = UpdateAcknowledge(mapVersion, services.networkService.myAddress)
-        services.networkService.send(PUSH_ACK_FLOW_TOPIC, DEFAULT_SESSION_ID, req, mapServiceNode.info.address)
+        services.networkService.send(NetworkMapService.PUSH_ACK_TOPIC, DEFAULT_SESSION_ID, req, mapServiceNode.info.address)
     }
 
     private fun MockNode.fetchMap(mapServiceNode: MockNode, subscribe: Boolean, ifChangedSinceVersion: Int? = null): Future<Collection<NodeRegistration>?> {
         val net = services.networkService
         val req = FetchMapRequest(subscribe, ifChangedSinceVersion, net.myAddress)
-        return net.sendRequest<FetchMapResponse>(FETCH_FLOW_TOPIC, req, mapServiceNode.info.address).map { it.nodes }
+        return net.sendRequest<FetchMapResponse>(NetworkMapService.FETCH_TOPIC, req, mapServiceNode.info.address).map { it.nodes }
     }
 }
 

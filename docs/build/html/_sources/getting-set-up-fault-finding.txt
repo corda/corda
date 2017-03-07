@@ -6,7 +6,7 @@ Milestone releases
 
 When you clone the corda or cordapp-template repos, they will default to the master branch. The master branch is being continuously developed upon, and its features may not align with the state of Corda as described in the docs. Additionally, the master branch of the CorDapp template may break in response to changes in the main corda repo.
 
-When developing on Corda, you should always check out the latest milestone (i.e. stable) branch instead. For example, to check out milestone 7, you'd run ``git checkout release-M7``.
+When developing on Corda, you should always check out the latest milestone (i.e. stable) branch instead. For example, to check out milestone 0, you'd run ``git checkout release-M0``.
 
 Java issues
 -----------
@@ -24,7 +24,7 @@ JavaFX is not bundled with OpenJDK. If you are using OpenJDK and get an 'Unresol
 If you have APT installed and OpenJFX is part of your Unix distribution's package list, you can do this by running ``sudo apt install openjfx``, and possibly ``sudo apt install libopenjfx-jav``. Other users will want to refer to the guide `here <https://wiki.openjdk.java.net/display/OpenJFX/Building+OpenJFX>`_, or to the list of Community Builds `here <https://wiki.openjdk.java.net/display/OpenJFX/Community+Builds>`_.
 
 IDEA issues
----------------
+-----------
 
 No source files are present
 ***************************
@@ -54,7 +54,7 @@ simple and doesn't require you to re-import the project: just undelete the files
 2. Using the "Version Control" pane in IDEA to undelete the files via the GUI.
 
 IDEA complains about lack of an SDK
-***************************************
+***********************************
 
 If IDEA refuses to open a project because an SDK has not been selected, you may need to fix the project structure. Do this by following `these instructions <https://www.jetbrains.com/help/idea/2016.2/configuring-global-project-and-module-sdks.html>`_. The correct JDK is often found on a path such as ``jdk1.8.0_xx…/Contents/Home``. Ensure that you have the Project language level set at 8.
 

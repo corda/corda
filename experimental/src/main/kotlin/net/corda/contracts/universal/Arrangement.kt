@@ -2,10 +2,12 @@ package net.corda.contracts.universal
 
 import net.corda.core.contracts.Frequency
 import net.corda.core.crypto.Party
+import net.corda.core.serialization.CordaSerializable
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.*
 
+@CordaSerializable
 interface Arrangement
 
 // A base arrangement with no rights and no obligations. Contract cancellation/termination is a transition to ``Zero``.
@@ -30,6 +32,7 @@ data class Obligation(val amount: Perceivable<BigDecimal>, val currency: Currenc
 // The ``And`` combinator cannot be root in a arrangement.
 data class And(val arrangements: Set<Arrangement>) : Arrangement
 
+@CordaSerializable
 data class Action(val name: String, val condition: Perceivable<Boolean>, val arrangement: Arrangement)
 
 // An action combinator. This declares a list of named action that can be taken by anyone of the actors given that

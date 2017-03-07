@@ -1,6 +1,7 @@
 package net.corda.node.services.transactions
 
 import net.corda.core.crypto.Party
+import net.corda.core.flows.FlowLogic
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.flows.NotaryFlow
 import net.corda.node.services.api.ServiceHubInternal
@@ -21,6 +22,6 @@ abstract class NotaryService(services: ServiceHubInternal) : SingletonSerializeA
     }
 
     /** Implement a factory that specifies the transaction commit flow for the notary service to use */
-    abstract fun createFlow(otherParty: Party): NotaryFlow.Service
+    abstract fun createFlow(otherParty: Party): FlowLogic<Void?>
 
 }

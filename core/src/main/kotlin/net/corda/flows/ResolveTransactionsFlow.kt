@@ -6,6 +6,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.recordTransactions
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -67,6 +68,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
 
     }
 
+    @CordaSerializable
     class ExcessivelyLargeTransactionGraph() : Exception()
 
     // Transactions to verify after the dependencies.

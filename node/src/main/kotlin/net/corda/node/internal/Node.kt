@@ -26,8 +26,6 @@ import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.databaseTransaction
-import org.jetbrains.exposed.sql.Database
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
@@ -35,7 +33,6 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Clock
 import javax.management.ObjectName
-import javax.servlet.*
 import kotlin.concurrent.thread
 
 /**
@@ -286,18 +283,6 @@ class Node(override val configuration: FullNodeConfiguration,
         val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
         f.setLength(0)
         f.write(ourProcessID.toByteArray())
-    }
-
-    // Servlet filter to wrap API requests with a database transaction.
-    private class DatabaseTransactionFilter(val database: Database) : Filter {
-        override fun doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) {
-            databaseTransaction(database) {
-                chain.doFilter(request, response)
-            }
-        }
-
-        override fun init(filterConfig: FilterConfig?) {}
-        override fun destroy() {}
     }
 }
 

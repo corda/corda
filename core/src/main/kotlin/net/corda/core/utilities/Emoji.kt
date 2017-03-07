@@ -1,5 +1,7 @@
 package net.corda.core.utilities
 
+import net.corda.core.codePointsString
+
 /**
  * A simple wrapper class that contains icons and support for printing them only when we're connected to a terminal.
  */
@@ -7,15 +9,18 @@ object Emoji {
     // Unfortunately only Apple has a terminal that can do colour emoji AND an emoji font installed by default.
     val hasEmojiTerminal by lazy { listOf("Apple_Terminal", "iTerm.app").contains(System.getenv("TERM_PROGRAM")) }
 
-    const val CODE_SANTA_CLAUS = "\ud83c\udf85"
-    const val CODE_DIAMOND = "\ud83d\udd37"
-    const val CODE_BAG_OF_CASH = "\ud83d\udcb0"
-    const val CODE_NEWSPAPER = "\ud83d\udcf0"
-    const val CODE_RIGHT_ARROW = "\u27a1\ufe0f"
-    const val CODE_LEFT_ARROW = "\u2b05\ufe0f"
-    const val CODE_GREEN_TICK = "\u2705"
-    const val CODE_PAPERCLIP = "\ud83d\udcce"
-    const val CODE_COOL_GUY = "\ud83d\ude0e"
+    @JvmStatic val CODE_SANTA_CLAUS: String = codePointsString(0x1F385)
+    @JvmStatic val CODE_DIAMOND: String = codePointsString(0x1F537)
+    @JvmStatic val CODE_BAG_OF_CASH: String = codePointsString(0x1F4B0)
+    @JvmStatic val CODE_NEWSPAPER: String = codePointsString(0x1F4F0)
+    @JvmStatic val CODE_RIGHT_ARROW: String = codePointsString(0x27A1, 0xFE0F)
+    @JvmStatic val CODE_LEFT_ARROW: String = codePointsString(0x2B05, 0xFE0F)
+    @JvmStatic val CODE_GREEN_TICK: String = codePointsString(0x2705)
+    @JvmStatic val CODE_PAPERCLIP: String = codePointsString(0x1F4CE)
+    @JvmStatic val CODE_COOL_GUY: String = codePointsString(0x1F60E)
+    @JvmStatic val CODE_NO_ENTRY: String = codePointsString(0x1F6AB)
+    @JvmStatic val CODE_SKULL_AND_CROSSBONES: String = codePointsString(0x2620)
+    @JvmStatic val CODE_BOOKS: String = codePointsString(0x1F4DA)
 
     /**
      * When non-null, toString() methods are allowed to use emoji in the output as we're going to render them to a
@@ -31,6 +36,7 @@ object Emoji {
     val leftArrow: String get() = if (emojiMode.get() != null) "$CODE_LEFT_ARROW  " else ""
     val paperclip: String get() = if (emojiMode.get() != null) "$CODE_PAPERCLIP  " else ""
     val coolGuy: String get() = if (emojiMode.get() != null) "$CODE_COOL_GUY  " else ""
+    val books: String get() = if (emojiMode.get() != null) "$CODE_BOOKS  " else ""
 
     inline fun <T> renderIfSupported(body: () -> T): T {
         emojiMode.set(this)   // Could be any object.
@@ -55,4 +61,5 @@ object Emoji {
             emojiMode.set(null)
         }
     }
+
 }

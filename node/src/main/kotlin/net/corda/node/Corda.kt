@@ -8,7 +8,8 @@ import net.corda.core.utilities.Emoji
 import net.corda.node.internal.Node
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.utilities.ANSIProgressObserver
-import net.corda.node.webserver.WebServer
+import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
+import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.LoggerFactory
@@ -59,8 +60,7 @@ fun main(args: Array<String>) {
 
     drawBanner()
 
-    val logDir = if (cmdlineOptions.isWebserver) "logs/web" else "logs"
-    System.setProperty("log-path", (cmdlineOptions.baseDirectory / logDir).toString())
+    System.setProperty("log-path", (cmdlineOptions.baseDirectory / "logs").toString())
 
     val log = LoggerFactory.getLogger("Main")
     printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
@@ -72,6 +72,17 @@ fun main(args: Array<String>) {
         exitProcess(2)
     }
 
+    if (cmdlineOptions.isRegistration) {
+        println()
+        println("******************************************************************")
+        println("*                                                                *")
+        println("*       Registering as a new participant with Corda network      *")
+        println("*                                                                *")
+        println("******************************************************************")
+        NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(conf.certificateSigningService)).buildKeystore()
+        exitProcess(0)
+    }
+
     log.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
     val info = ManagementFactory.getRuntimeMXBean()
     log.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
@@ -81,39 +92,26 @@ fun main(args: Array<String>) {
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
-    if(cmdlineOptions.isWebserver) {
-        log.info("Starting as webserver on ${conf.webAddress}")
-    } else {
-        log.info("Starting as node on ${conf.artemisAddress}")
-    }
+    log.info("Starting as node on ${conf.artemisAddress}")
 
     try {
         cmdlineOptions.baseDirectory.createDirectories()
 
-        // TODO: Webserver should be split and start from inside a WAR container
-        if  (!cmdlineOptions.isWebserver) {
-            val node = conf.createNode()
-            node.start()
-            printPluginsAndServices(node)
+        val node = conf.createNode()
+        node.start()
+        printPluginsAndServices(node)
 
-            node.networkMapRegistrationFuture.success {
-                val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-                printBasicNodeInfo("Node started up and registered in $elapsed sec")
-
-                if (renderBasicInfoToConsole)
-                    ANSIProgressObserver(node.smm)
-            } failure {
-                log.error("Error during network map registration", it)
-                exitProcess(1)
-            }
-            node.run()
-        } else {
-            val server = WebServer(conf)
-            server.start()
+        node.networkMapRegistrationFuture.success {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            printBasicNodeInfo("Webserver started up in $elapsed sec")
-            server.run()
+            printBasicNodeInfo("Node started up and registered in $elapsed sec")
+
+            if (renderBasicInfoToConsole)
+                ANSIProgressObserver(node.smm)
+        } failure {
+            log.error("Error during network map registration", it)
+            exitProcess(1)
         }
+        node.run()
     } catch (e: Exception) {
         log.error("Exception during node startup", e)
         exitProcess(1)
@@ -134,7 +132,9 @@ Corda will now exit...""")
 }
 
 private fun printPluginsAndServices(node: Node) {
-    node.configuration.extraAdvertisedServiceIds.let { if (it.isNotEmpty()) printBasicNodeInfo("Providing network services", it) }
+    node.configuration.extraAdvertisedServiceIds.let {
+        if (it.isNotEmpty()) printBasicNodeInfo("Providing network services", it.joinToString())
+    }
     val plugins = node.pluginRegistries
             .map { it.javaClass.name }
             .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") }
@@ -164,14 +164,21 @@ private fun drawBanner() {
     // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
     AnsiConsole.systemInstall()
 
-    val (msg1, msg2) = Emoji.renderIfSupported { messageOfTheDay() }
+    Emoji.renderIfSupported {
+        val (msg1, msg2) = messageOfTheDay()
 
-    println(Ansi.ansi().fgBrightRed().a(
+        println(Ansi.ansi().fgBrightRed().a(
 """
    ______               __
   / ____/     _________/ /___ _
  / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
 "/ /___  /_/ / /  / /_/ / /_/ /          ").fgBrightBlue().a(msg2).newline().fgBrightRed().a(
 """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
-a("--- DEVELOPER SNAPSHOT ------------------------------------------------------------").newline().reset())
+        a("--- MILESTONE 9 -------------------------------------------------------------------").
+        newline().
+        newline().
+        a("${Emoji.books}New! ").reset().a("Training now available worldwide, see https://corda.net/corda-training/").
+        newline().
+        reset())
+    }
 }

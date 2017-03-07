@@ -7,6 +7,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.utilities.Emoji
 import net.corda.flows.CashIssueFlow
@@ -78,18 +79,24 @@ class ContractUpgradeFlowTest {
 
         val result = resultFuture.get()
 
-        listOf(a, b).forEach {
-            val stx = databaseTransaction(a.database) { a.services.storageService.validatedTransactions.getTransaction(result.ref.txhash) }
-            requireNotNull(stx)
+        fun check(node: MockNetwork.MockNode) {
+            val nodeStx = databaseTransaction(node.database) {
+                node.services.storageService.validatedTransactions.getTransaction(result.ref.txhash)
+            }
+            requireNotNull(nodeStx)
 
             // Verify inputs.
-            val input = databaseTransaction(a.database) { a.services.storageService.validatedTransactions.getTransaction(stx!!.tx.inputs.single().txhash) }
+            val input = databaseTransaction(node.database) {
+                node.services.storageService.validatedTransactions.getTransaction(nodeStx!!.tx.inputs.single().txhash)
+            }
             requireNotNull(input)
             assertTrue(input!!.tx.outputs.single().data is DummyContract.State)
 
             // Verify outputs.
-            assertTrue(stx!!.tx.outputs.single().data is DummyContractV2.State)
+            assertTrue(nodeStx!!.tx.outputs.single().data is DummyContractV2.State)
         }
+        check(a)
+        check(b)
     }
 
     @Test
@@ -159,7 +166,7 @@ class ContractUpgradeFlowTest {
         a.services.startFlow(ContractUpgradeFlow.Instigator(stateAndRef, CashV2::class.java))
         mockNet.runNetwork()
         // Get contract state form the vault.
-        val state = databaseTransaction(a.database) { a.vault.currentVault.states }
+        val state = databaseTransaction(a.database) { a.vault.unconsumedStates<ContractState>() }
         assertTrue(state.single().state.data is CashV2.State, "Contract state is upgraded to the new version.")
         assertEquals(Amount(1000000, USD).`issued by`(a.info.legalIdentity.ref(1)), (state.first().state.data as CashV2.State).amount, "Upgraded cash contain the correct amount.")
         assertEquals(listOf(a.info.legalIdentity.owningKey), (state.first().state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")

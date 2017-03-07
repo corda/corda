@@ -8,6 +8,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.ServiceType
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
@@ -62,6 +63,7 @@ interface NettableState<N : BilateralNettableState<N>, T : Any> : BilateralNetta
  * notary is responsible for ensuring there is no "double spending" by only signing a transaction if the input states
  * are all free.
  */
+@CordaSerializable
 interface ContractState {
     /**
      * An instance of the contract class that will verify this state.
@@ -121,6 +123,7 @@ interface ContractState {
  * A wrapper for [ContractState] containing additional platform-level state information.
  * This is the definitive state that is stored on the ledger and used in transaction outputs.
  */
+@CordaSerializable
 data class TransactionState<out T : ContractState> @JvmOverloads constructor(
         /** The custom contract state */
         val data: T,
@@ -169,6 +172,7 @@ interface IssuanceDefinition
  *
  * @param P the type of product underlying the definition, for example [Currency].
  */
+@CordaSerializable
 data class Issued<out P>(val issuer: PartyAndReference, val product: P) {
     override fun toString() = "$product issued by $issuer"
 }
@@ -239,6 +243,7 @@ interface LinearState : ContractState {
     /**
      * Standard clause to verify the LinearState safety properties.
      */
+    @CordaSerializable
     class ClauseVerifier<S : LinearState, C : CommandData>() : Clause<S, C, Unit>() {
         override fun verify(tx: TransactionForContract,
                             inputs: List<S>,
@@ -334,11 +339,13 @@ fun ContractState.hash(): SecureHash = SecureHash.sha256(serialize().bytes)
  * A stateref is a pointer (reference) to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which
  * transaction defined the state and where in that transaction it was.
  */
+@CordaSerializable
 data class StateRef(val txhash: SecureHash, val index: Int) {
     override fun toString() = "$txhash($index)"
 }
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a vault (which holds available assets) contains these. */
+@CordaSerializable
 data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, val ref: StateRef)
 
 /** Filters a list of [StateAndRef] objects according to the type of the states */
@@ -350,12 +357,14 @@ inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filt
  * Reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
  * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the party.
  */
+@CordaSerializable
 data class PartyAndReference(val party: AnonymousParty, val reference: OpaqueBytes) {
     constructor(party: Party, reference: OpaqueBytes) : this(party.toAnonymous(), reference)
     override fun toString() = "${party}$reference"
 }
 
 /** Marker interface for classes that represent commands */
+@CordaSerializable
 interface CommandData
 
 /** Commands that inherit from this are intended to have no data items: it's only their presence that matters. */
@@ -365,6 +374,7 @@ abstract class TypeOnlyCommandData : CommandData {
 }
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
+@CordaSerializable
 data class Command(val value: CommandData, val signers: List<CompositeKey>) {
     init {
         require(signers.isNotEmpty())
@@ -402,6 +412,7 @@ interface NetCommand : CommandData {
 data class UpgradeCommand(val upgradedContractClass: Class<out UpgradedContract<*, *>>) : CommandData
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
+@CordaSerializable
 data class AuthenticatedObject<out T : Any>(
         val signers: List<CompositeKey>,
         /** If any public keys were recognised, the looked up institutions are available here */
@@ -413,6 +424,7 @@ data class AuthenticatedObject<out T : Any>(
  * If present in a transaction, contains a time that was verified by the uniqueness service. The true time must be
  * between (after, before).
  */
+@CordaSerializable
 data class Timestamp(val after: Instant?, val before: Instant?) {
     init {
         if (after == null && before == null)
@@ -431,7 +443,10 @@ data class Timestamp(val after: Instant?, val before: Instant?) {
  * every [LedgerTransaction] they see on the network, for every input and output state. All contracts must accept the
  * transaction for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted
  * timestamp attached to the transaction itself i.e. it is NOT necessarily the current time.
+ *
+ * TODO: Contract serialization is likely to change, so the annotation is likely temporary.
  */
+@CordaSerializable
 interface Contract {
     /**
      * Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.

@@ -282,7 +282,7 @@ data class TestLedgerDSLInterpreter private constructor (
     override fun verifies(): EnforceVerifyOrFail {
         try {
             val usedInputs = mutableSetOf<StateRef>()
-            services.recordTransactions(transactionsUnverified.map { SignedTransaction(it.serialized, listOf(NullSignature), it.id) })
+            services.recordTransactions(transactionsUnverified.map { SignedTransaction(it.serialized, listOf(NullSignature)) })
             for ((key, value) in transactionWithLocations) {
                 val wtx = value.transaction
                 val ltx = wtx.toLedgerTransaction(services)
@@ -294,7 +294,7 @@ data class TestLedgerDSLInterpreter private constructor (
                     throw DoubleSpentInputs(txIds)
                 }
                 usedInputs.addAll(wtx.inputs)
-                services.recordTransactions(SignedTransaction(wtx.serialized, listOf(NullSignature), wtx.id))
+                services.recordTransactions(SignedTransaction(wtx.serialized, listOf(NullSignature)))
             }
             return EnforceVerifyOrFail.Token
         } catch (exception: TransactionVerificationException) {
@@ -340,7 +340,7 @@ fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: List<KeyPair>)
         val key = keyLookup[it] ?: throw IllegalArgumentException("Missing required key for ${it.toStringShort()}")
         signatures += key.signWithECDSA(wtx.id)
     }
-    SignedTransaction(bits, signatures, wtx.id)
+    SignedTransaction(bits, signatures)
 }
 
 /**

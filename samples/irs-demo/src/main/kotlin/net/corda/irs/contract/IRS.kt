@@ -8,6 +8,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.ServiceType
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.irs.flows.FixingFlow
 import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
@@ -22,6 +23,7 @@ import java.util.*
 val IRS_PROGRAM_ID = InterestRateSwap()
 
 // This is a placeholder for some types that we haven't identified exactly what they are just yet for things still in discussion
+@CordaSerializable
 open class UnknownType() {
 
     override fun equals(other: Any?): Boolean {
@@ -106,6 +108,7 @@ abstract class RatePaymentEvent(date: LocalDate,
  * Basic class for the Fixed Rate Payments on the fixed leg - see [RatePaymentEvent].
  * Assumes that the rate is valid.
  */
+@CordaSerializable
 class FixedRatePaymentEvent(date: LocalDate,
                             accrualStartDate: LocalDate,
                             accrualEndDate: LocalDate,
@@ -128,6 +131,7 @@ class FixedRatePaymentEvent(date: LocalDate,
  * Basic class for the Floating Rate Payments on the floating leg - see [RatePaymentEvent].
  * If the rate is null returns a zero payment. // TODO: Is this the desired behaviour?
  */
+@CordaSerializable
 class FloatingRatePaymentEvent(date: LocalDate,
                                accrualStartDate: LocalDate,
                                accrualEndDate: LocalDate,
@@ -197,6 +201,7 @@ class InterestRateSwap() : Contract {
     /**
      * This Common area contains all the information that is not leg specific.
      */
+    @CordaSerializable
     data class Common(
             val baseCurrency: Currency,
             val eligibleCurrency: Currency,
@@ -222,6 +227,7 @@ class InterestRateSwap() : Contract {
      * data that will changed from state to state (Recall that the design insists that everything is immutable, so we actually
      * copy / update for each transition).
      */
+    @CordaSerializable
     data class Calculation(
             val expression: Expression,
             val floatingLegPaymentSchedule: Map<LocalDate, FloatingRatePaymentEvent>,
@@ -304,6 +310,7 @@ class InterestRateSwap() : Contract {
                 dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment)
     }
 
+    @CordaSerializable
     open class FixedLeg(
             var fixedRatePayer: AnonymousParty,
             notional: Amount<Currency>,
@@ -365,6 +372,7 @@ class InterestRateSwap() : Contract {
 
     }
 
+    @CordaSerializable
     open class FloatingLeg(
             var floatingRatePayer: AnonymousParty,
             notional: Amount<Currency>,

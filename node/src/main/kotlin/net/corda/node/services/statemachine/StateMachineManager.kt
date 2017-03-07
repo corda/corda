@@ -24,7 +24,6 @@ import net.corda.core.messaging.send
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.*
 import net.corda.core.then
-import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
@@ -370,7 +369,15 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun quasarKryo(): Kryo {
         val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
-        return createKryo(serializer.kryo)
+        return createKryo(serializer.kryo).apply {
+            // Because we like to stick a Kryo object in a ThreadLocal to speed things up a bit, we can end up trying to
+            // serialise the Kryo object itself when suspending a fiber. That's dumb, useless AND can cause crashes, so
+            // we avoid it here.  This is checkpointing specific.
+            register(Kryo::class,
+                    read = { kryo, input -> createKryo((Fiber.getFiberSerializer() as KryoSerializer).kryo) },
+                    write = { kryo, output, obj -> }
+            )
+        }
     }
 
     private fun <T> createFiber(logic: FlowLogic<T>): FlowStateMachineImpl<T> {
@@ -391,7 +398,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
         fiber.actionOnEnd = { exception, propagated ->
             try {
-                fiber.logic.progressTracker?.currentStep = ProgressTracker.DONE
                 mutex.locked {
                     stateMachines.remove(fiber)?.let { checkpointStorage.removeCheckpoint(it) }
                     notifyChangeObservers(fiber, AddOrRemove.REMOVE)

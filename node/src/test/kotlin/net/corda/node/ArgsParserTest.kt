@@ -20,7 +20,7 @@ class ArgsParserTest {
                 help = false,
                 logToConsole = false,
                 loggingLevel = Level.INFO,
-                isWebserver = false))
+                isRegistration = false))
     }
 
     @Test
@@ -66,12 +66,6 @@ class ArgsParserTest {
             val cmdLineOptions = parser.parse("--logging-level", level.name)
             assertThat(cmdLineOptions.loggingLevel).isEqualTo(level)
         }
-    }
-
-    @Test
-    fun `webserver`() {
-        val cmdLineOptions = parser.parse("--webserver")
-        assertThat(cmdLineOptions.isWebserver).isTrue()
     }
 
     @Test

@@ -1,12 +1,16 @@
 package net.corda.loadtest
 
+import com.typesafe.config.Config
 import java.nio.file.Path
+import net.corda.node.services.config.*
 
 /**
  * @param sshUser The UNIX username to use for SSH auth.
  * @param localCertificatesBaseDirectory The base directory to put node certificates in.
  * @param localTunnelStartingPort The local starting port to allocate tunneling ports from.
  * @param nodeHosts The nodes' resolvable addresses.
+ * @param rpcUsername The RPC user's name to establish the RPC connection as.
+ * @param rpcPassword The RPC user's password.
  * @param remoteNodeDirectory The remote node directory.
  * @param remoteMessagingPort The remote Artemis messaging port.
  * @param remoteSystemdServiceName The name of the node's systemd service
@@ -16,12 +20,16 @@ import java.nio.file.Path
  *     for disruptions.
  */
 data class LoadTestConfiguration(
-        val sshUser: String,
-        val localCertificatesBaseDirectory: Path,
-        val localTunnelStartingPort: Int,
-        val nodeHosts: List<String>,
-        val remoteNodeDirectory: Path,
-        val remoteMessagingPort: Int,
-        val remoteSystemdServiceName: String,
-        val seed: Long?
-)
+        val config: Config
+) {
+    val sshUser: String by config
+    val localCertificatesBaseDirectory: Path by config
+    val localTunnelStartingPort: Int by config
+    val nodeHosts: List<String> = config.getStringList("nodeHosts")
+    val rpcUsername: String by config
+    val rpcPassword: String by config
+    val remoteNodeDirectory: Path by config
+    val remoteMessagingPort: Int by config
+    val remoteSystemdServiceName: String by config
+    val seed: Long? by config
+}

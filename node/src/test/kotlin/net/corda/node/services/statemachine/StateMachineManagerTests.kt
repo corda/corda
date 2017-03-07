@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.*
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.DummyState
 import net.corda.core.contracts.issuedBy
@@ -10,17 +11,16 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
-import net.corda.core.getOrThrow
-import net.corda.core.map
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.random63BitValue
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.LogHelper
+import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.unwrap
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
@@ -44,6 +44,7 @@ import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import rx.Notification
 import rx.Observable
 import java.util.*
 import kotlin.reflect.KClass
@@ -379,18 +380,36 @@ class StateMachineManagerTests {
         net.runNetwork()
         assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
             resultFuture.getOrThrow()
-        }.withMessageContaining(String::class.java.name)
+        }.withMessageContaining(String::class.java.name)  // Make sure the exception message mentions the type the flow was expecting to receive
     }
 
     @Test
     fun `non-FlowException thrown on other side`() {
-        node2.services.registerFlowInitiator(ReceiveFlow::class) { ExceptionFlow { Exception("evil bug!") } }
-        val resultFuture = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)).resultFuture
-        net.runNetwork()
-        val exceptionResult = assertFailsWith(FlowSessionException::class) {
-            resultFuture.getOrThrow()
+        val erroringFlowFuture = node2.initiateSingleShotFlow(ReceiveFlow::class) {
+            ExceptionFlow { Exception("evil bug!") }
         }
-        assertThat(exceptionResult.message).doesNotContain("evil bug!")
+        val erroringFlowSteps = erroringFlowFuture.flatMap { it.progressSteps }
+
+        val receiveFlow = ReceiveFlow(node2.info.legalIdentity)
+        val receiveFlowSteps = receiveFlow.progressSteps
+        val receiveFlowResult = node1.services.startFlow(receiveFlow).resultFuture
+
+        net.runNetwork()
+
+        assertThat(erroringFlowSteps.get()).containsExactly(
+                Notification.createOnNext(ExceptionFlow.START_STEP),
+                Notification.createOnError(erroringFlowFuture.get().exceptionThrown)
+        )
+
+        val receiveFlowException = assertFailsWith(FlowSessionException::class) {
+            receiveFlowResult.getOrThrow()
+        }
+        assertThat(receiveFlowException.message).doesNotContain("evil bug!")
+        assertThat(receiveFlowSteps.get()).containsExactly(
+                Notification.createOnNext(ReceiveFlow.START_STEP),
+                Notification.createOnError(receiveFlowException)
+        )
+
         assertSessionTransfers(
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
                 node2 sent sessionConfirm to node1,
@@ -400,11 +419,15 @@ class StateMachineManagerTests {
 
     @Test
     fun `FlowException thrown on other side`() {
-        val erroringFlowFuture = node2.initiateSingleShotFlow(ReceiveFlow::class) {
+        val erroringFlow = node2.initiateSingleShotFlow(ReceiveFlow::class) {
             ExceptionFlow { MyFlowException("Nothing useful") }
         }
+        val erroringFlowSteps = erroringFlow.flatMap { it.progressSteps }
+
         val receivingFiber = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)) as FlowStateMachineImpl
+
         net.runNetwork()
+
         assertThatExceptionOfType(MyFlowException::class.java)
                 .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
                 .withMessage("Nothing useful")
@@ -412,13 +435,18 @@ class StateMachineManagerTests {
         databaseTransaction(node2.database) {
             assertThat(node2.checkpointStorage.checkpoints()).isEmpty()
         }
-        val errorFlow = erroringFlowFuture.getOrThrow()
+
         assertThat(receivingFiber.isTerminated).isTrue()
-        assertThat((errorFlow.stateMachine as FlowStateMachineImpl).isTerminated).isTrue()
+        assertThat((erroringFlow.get().stateMachine as FlowStateMachineImpl).isTerminated).isTrue()
+        assertThat(erroringFlowSteps.get()).containsExactly(
+                Notification.createOnNext(ExceptionFlow.START_STEP),
+                Notification.createOnError(erroringFlow.get().exceptionThrown)
+        )
+
         assertSessionTransfers(
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
                 node2 sent sessionConfirm to node1,
-                node2 sent erroredEnd(errorFlow.exceptionThrown) to node1
+                node2 sent erroredEnd(erroringFlow.get().exceptionThrown) to node1
         )
         // Make sure the original stack trace isn't sent down the wire
         assertThat((sessionTransfers.last().message as ErrorSessionEnd).errorResponse!!.stackTrace).isEmpty()
@@ -606,6 +634,15 @@ class StateMachineManagerTests {
     private infix fun MockNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(id, message)
     private infix fun Pair<Int, SessionMessage>.to(node: MockNode): SessionTransfer = SessionTransfer(first, second, node.net.myAddress)
 
+    private val FlowLogic<*>.progressSteps: ListenableFuture<List<Notification<ProgressTracker.Step>>> get() {
+        return progressTracker!!.changes
+                .ofType(Change.Position::class.java)
+                .map { it.newStep }
+                .materialize()
+                .toList()
+                .toFuture()
+    }
+
     private class NoOpFlow(val nonTerminating: Boolean = false) : FlowLogic<Unit>() {
         @Transient var flowStarted = false
 
@@ -630,17 +667,22 @@ class StateMachineManagerTests {
 
 
     private class ReceiveFlow(vararg val otherParties: Party) : FlowLogic<Unit>() {
-        private var nonTerminating: Boolean = false
+        object START_STEP : ProgressTracker.Step("Starting")
+        object RECEIVED_STEP : ProgressTracker.Step("Received")
 
         init {
             require(otherParties.isNotEmpty())
         }
 
+        override val progressTracker: ProgressTracker = ProgressTracker(START_STEP, RECEIVED_STEP)
+        private var nonTerminating: Boolean = false
         @Transient var receivedPayloads: List<String> = emptyList()
 
         @Suspendable
         override fun call() {
+            progressTracker.currentStep = START_STEP
             receivedPayloads = otherParties.map { receive<String>(it).unwrap { it } }
+            progressTracker.currentStep = RECEIVED_STEP
             if (nonTerminating) {
                 Fiber.park()
             }
@@ -664,8 +706,13 @@ class StateMachineManagerTests {
     }
 
     private class ExceptionFlow<E : Exception>(val exception: () -> E) : FlowLogic<Nothing>() {
+        object START_STEP : ProgressTracker.Step("Starting")
+
+        override val progressTracker: ProgressTracker = ProgressTracker(START_STEP)
         lateinit var exceptionThrown: E
+
         override fun call(): Nothing {
+            progressTracker.currentStep = START_STEP
             exceptionThrown = exception()
             throw exceptionThrown
         }

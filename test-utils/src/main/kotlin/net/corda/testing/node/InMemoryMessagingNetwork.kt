@@ -9,6 +9,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.*
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.PartyInfo
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.MessagingServiceBuilder
@@ -55,6 +56,7 @@ class InMemoryMessagingNetwork(
     private var counter = 0   // -1 means stopped.
     private val handleEndpointMap = HashMap<PeerHandle, InMemoryMessaging>()
 
+    @CordaSerializable
     data class MessageTransfer(val sender: PeerHandle, val message: Message, val recipients: MessageRecipients) {
         override fun toString() = "${message.topicSession} from '$sender' to '$recipients'"
     }
@@ -193,12 +195,14 @@ class InMemoryMessagingNetwork(
         }
     }
 
+    @CordaSerializable
     data class PeerHandle(val id: Int, val description: String) : SingleMessageRecipient {
         override fun toString() = description
         override fun equals(other: Any?) = other is PeerHandle && other.id == id
         override fun hashCode() = id.hashCode()
     }
 
+    @CordaSerializable
     data class ServiceHandle(val service: ServiceEntry) : MessageRecipientGroup {
         override fun toString() = "Service($service)"
     }
@@ -265,6 +269,14 @@ class InMemoryMessagingNetwork(
         }
         _sentMessages.onNext(transfer)
     }
+
+    @CordaSerializable
+    private data class InMemoryMessage(override val topicSession: TopicSession, override val data: ByteArray, override val uniqueMessageId: UUID, override val debugTimestamp: Instant = Instant.now()) : Message {
+        override fun toString() = "$topicSession#${String(data)}"
+    }
+
+    @CordaSerializable
+    private data class InMemoryReceivedMessage(override val topicSession: TopicSession, override val data: ByteArray, override val uniqueMessageId: UUID, override val debugTimestamp: Instant, override val peer: X500Name) : ReceivedMessage
 
     /**
      * An [InMemoryMessaging] provides a [MessagingService] that isn't backed by any kind of network or disk storage
@@ -355,13 +367,7 @@ class InMemoryMessagingNetwork(
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
         override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
-            return object : Message {
-                override val topicSession: TopicSession get() = topicSession
-                override val data: ByteArray get() = data
-                override val debugTimestamp: Instant = Instant.now()
-                override val uniqueMessageId: UUID = uuid
-                override fun toString() = "$topicSession#${String(data)}"
-            }
+            return InMemoryMessage(topicSession, data, uuid)
         }
 
         /**
@@ -443,12 +449,9 @@ class InMemoryMessagingNetwork(
             return transfer
         }
 
-        private fun MessageTransfer.toReceivedMessage() = object : ReceivedMessage {
-            override val topicSession: TopicSession get() = message.topicSession
-            override val data: ByteArray get() = message.data.copyOf() // Kryo messes with the buffer so give each client a unique copy
-            override val peer: X500Name get() = X509Utilities.getDevX509Name(sender.description)
-            override val debugTimestamp: Instant get() = message.debugTimestamp
-            override val uniqueMessageId: UUID get() = message.uniqueMessageId
-        }
+        private fun MessageTransfer.toReceivedMessage(): ReceivedMessage = InMemoryReceivedMessage(
+                message.topicSession,
+                message.data.copyOf(), // Kryo messes with the buffer so give each client a unique copy
+                message.uniqueMessageId, message.debugTimestamp, X509Utilities.getDevX509Name(sender.description))
     }
 }

@@ -84,8 +84,7 @@ class SignedTransactionGenerator : Generator<SignedTransaction>(SignedTransactio
         val wireTransaction = WiredTransactionGenerator().generate(random, status)
         return SignedTransaction(
                 txBits = wireTransaction.serialized,
-                sigs = listOf(NullSignature),
-                id = wireTransaction.id
+                sigs = listOf(NullSignature)
         )
     }
 }

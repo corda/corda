@@ -2,6 +2,7 @@ package net.corda.core.node
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.CordaSerializable
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.FileNotFoundException
@@ -24,6 +25,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
     private val pathsToAttachments = HashMap<String, Attachment>()
     private val idsToAttachments = HashMap<SecureHash, Attachment>()
 
+    @CordaSerializable
     class OverlappingAttachments(val path: String) : Exception() {
         override fun toString() = "Multiple attachments define a file at path $path"
     }

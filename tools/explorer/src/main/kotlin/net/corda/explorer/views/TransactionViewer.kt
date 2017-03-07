@@ -22,6 +22,8 @@ import net.corda.client.fxutils.sequence
 import net.corda.client.model.*
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
+import net.corda.core.crypto.AbstractParty
+import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.node.NodeInfo
@@ -219,8 +221,11 @@ class TransactionViewer : CordaView("Transactions") {
                             }
                             row {
                                 label("Issuer :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
-                                label("${data.amount.token.issuer}") {
-                                    tooltip(data.amount.token.issuer.party.owningKey.toBase58String())
+                                val anonymousIssuer: AnonymousParty = data.amount.token.issuer.party
+                                val issuer: AbstractParty = anonymousIssuer.resolveIssuer().value ?: anonymousIssuer
+                                // TODO: Anonymous should probably be italicised or similar
+                                label(issuer.nameOrNull() ?: "Anonymous") {
+                                    tooltip(anonymousIssuer.owningKey.toBase58String())
                                 }
                             }
                             row {

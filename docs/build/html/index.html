@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="#"/>
         <link rel="next" title="What’s included?" href="inthebox.html"/> 
 
@@ -138,6 +135,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
@@ -225,10 +223,10 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">This build of the docs is from the &#8220;latest&#8221; branch, not a milestone release. It may not reflect the
-current state of the code. <a class="reference external" href="https://docs.corda.net/releases/release-M8.0/">Read the docs for milestone release M8</a>.</p>
+current state of the code. <a class="reference external" href="https://docs.corda.net/releases/release-M8.2/">Read the docs for milestone release M8.2</a>.</p>
 </div>
 <p><a class="reference external" href="https://www.corda.net/">Corda</a> is an open-source distributed ledger platform. The latest <em>milestone</em> (i.e. stable)
-release is M8. The codebase is on <a class="reference external" href="https://github.com/corda">GitHub</a>, and our community can be found on
+release is M8.2. The codebase is on <a class="reference external" href="https://github.com/corda">GitHub</a>, and our community can be found on
 <a class="reference external" href="https://slack.corda.net/">Slack</a> and in our <a class="reference external" href="https://discourse.corda.net/">forum</a>.</p>
 <p>If you&#8217;re new to Corda, you should start by learning about its motivating vision and architecture. A good introduction
 is the <a class="reference external" href="https://vimeo.com/192757743/c2ec39c1e1">Introduction to Corda webinar</a> and the <a class="reference external" href="_static/corda-introductory-whitepaper.pdf">Introductory white paper</a>. As
@@ -249,8 +247,8 @@ platform itself. Find out more about <a class="reference external" href="https:/
 </div>
 <div class="section" id="documentation-contents">
 <h1>Documentation Contents:<a class="headerlink" href="#documentation-contents" title="Permalink to this headline">¶</a></h1>
-<div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Getting started</span></p>
+<div class="toctree-wrapper compound" id="getting-started">
+<p class="caption"><span class="caption-text">Getting started</span><a class="headerlink" href="#getting-started" title="Permalink to this toctree">¶</a></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a><ul>
@@ -283,8 +281,8 @@ platform itself. Find out more about <a class="reference external" href="https:/
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Key concepts</span></p>
+<div class="toctree-wrapper compound" id="key-concepts">
+<p class="caption"><span class="caption-text">Key concepts</span><a class="headerlink" href="#key-concepts" title="Permalink to this toctree">¶</a></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="key-concepts.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="key-concepts-ecosystem.html">Corda ecosystem</a><ul>
@@ -325,8 +323,8 @@ platform itself. Find out more about <a class="reference external" href="https:/
 <li class="toctree-l1"><a class="reference internal" href="key-concepts-security-model.html">Security model</a></li>
 </ul>
 </div>
-<div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">CorDapps</span></p>
+<div class="toctree-wrapper compound" id="cordapps">
+<p class="caption"><span class="caption-text">CorDapps</span><a class="headerlink" href="#cordapps" title="Permalink to this toctree">¶</a></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="creating-a-cordapp.html#app-plugins">App plugins</a></li>
@@ -351,8 +349,8 @@ platform itself. Find out more about <a class="reference external" href="https:/
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">The Corda node</span></p>
+<div class="toctree-wrapper compound" id="the-corda-node">
+<p class="caption"><span class="caption-text">The Corda node</span><a class="headerlink" href="#the-corda-node" title="Permalink to this toctree">¶</a></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="clientrpc.html#security">Security</a></li>
@@ -412,15 +410,14 @@ platform itself. Find out more about <a class="reference external" href="https:/
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="permissioning.html#certificate-signing-request-utility">Certificate signing request utility</a></li>
-<li class="toctree-l2"><a class="reference internal" href="permissioning.html#building-the-utility">Building the utility</a></li>
-<li class="toctree-l2"><a class="reference internal" href="permissioning.html#running-the-utility">Running the utility</a></li>
+<li class="toctree-l2"><a class="reference internal" href="permissioning.html#initial-registration">Initial Registration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="permissioning.html#starting-the-registration">Starting the Registration</a></li>
 </ul>
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Tutorials</span></p>
+<div class="toctree-wrapper compound" id="id4">
+<p class="caption"><span class="caption-text">Tutorials</span><a class="headerlink" href="#id4" title="Permalink to this toctree">¶</a></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#where-to-put-your-code">Where to put your code</a></li>
@@ -452,6 +449,13 @@ platform itself. Find out more about <a class="reference external" href="https:/
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-test-dsl.html#testing-single-transactions">Testing single transactions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial-test-dsl.html#chaining-transactions">Chaining transactions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contract-upgrade.html#workflow">Workflow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contract-upgrade.html#authorising-upgrade">Authorising upgrade</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contract-upgrade.html#proposing-an-upgrade">Proposing an upgrade</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contract-upgrade.html#examples">Examples</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
@@ -512,8 +516,8 @@ platform itself. Find out more about <a class="reference external" href="https:/
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Other</span></p>
+<div class="toctree-wrapper compound" id="other">
+<p class="caption"><span class="caption-text">Other</span><a class="headerlink" href="#other" title="Permalink to this toctree">¶</a></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="network-simulator.html#what-it-is-and-is-not">What it is and is not</a></li>
@@ -534,8 +538,8 @@ platform itself. Find out more about <a class="reference external" href="https:/
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Component library</span></p>
+<div class="toctree-wrapper compound" id="component-library">
+<p class="caption"><span class="caption-text">Component library</span><a class="headerlink" href="#component-library" title="Permalink to this toctree">¶</a></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="contract-catalogue.html#cash">Cash</a></li>
@@ -552,8 +556,8 @@ platform itself. Find out more about <a class="reference external" href="https:/
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Appendix</span></p>
+<div class="toctree-wrapper compound" id="appendix">
+<p class="caption"><span class="caption-text">Appendix</span><a class="headerlink" href="#appendix" title="Permalink to this toctree">¶</a></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="loadtesting.html#configuration-of-the-load-testing-cluster">Configuration of the load testing cluster</a></li>
@@ -576,6 +580,7 @@ platform itself. Find out more about <a class="reference external" href="https:/
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-9">Milestone 9</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-8">Milestone 8</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-7">Milestone 7</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-6">Milestone 6</a></li>
@@ -620,8 +625,8 @@ platform itself. Find out more about <a class="reference external" href="https:/
 </li>
 </ul>
 </div>
-<div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Glossary</span></p>
+<div class="toctree-wrapper compound" id="glossary">
+<p class="caption"><span class="caption-text">Glossary</span><a class="headerlink" href="#glossary" title="Permalink to this toctree">¶</a></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>

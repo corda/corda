@@ -163,7 +163,9 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
             configuration.nodeHosts.map { it to configuration.remoteNodeDirectory / "certificates" },
             configuration.remoteMessagingPort,
             PortAllocation.Incremental(configuration.localTunnelStartingPort),
-            configuration.localCertificatesBaseDirectory
+            configuration.localCertificatesBaseDirectory,
+            configuration.rpcUsername,
+            configuration.rpcPassword
     ) { connections ->
         log.info("Connected to all nodes!")
         val hostNodeHandleMap = ConcurrentHashMap<String, NodeHandle>()
@@ -175,6 +177,8 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
             val pubkeysString = otherNodeInfos.map {
                 "    ${it.legalIdentity.name}: ${it.legalIdentity.owningKey.toBase58String()}"
             }.joinToString("\n")
+            log.info("${connection.hostName} waiting for network map")
+            connection.proxy.waitUntilRegisteredWithNetworkMap().get()
             log.info("${connection.hostName} sees\n$pubkeysString")
             val nodeHandle = NodeHandle(configuration, connection, nodeInfo)
             nodeHandle.waitUntilUp()

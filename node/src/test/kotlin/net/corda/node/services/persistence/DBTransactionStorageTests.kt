@@ -93,6 +93,21 @@ class DBTransactionStorageTests {
     }
 
     @Test
+    fun `two transactions with rollback`() {
+        val firstTransaction = newTransaction()
+        val secondTransaction = newTransaction()
+        databaseTransaction(database) {
+            transactionStorage.addTransaction(firstTransaction)
+            transactionStorage.addTransaction(secondTransaction)
+            rollback()
+        }
+
+        databaseTransaction(database) {
+            assertThat(transactionStorage.transactions).isEmpty()
+        }
+    }
+
+    @Test
     fun `two transactions in same DB transaction scope`() {
         val firstTransaction = newTransaction()
         val secondTransaction = newTransaction()
@@ -141,6 +156,6 @@ class DBTransactionStorageTests {
                 type = TransactionType.General(),
                 timestamp = null
         )
-        return SignedTransaction(wtx.serialized, listOf(DigitalSignature.WithKey(NullPublicKey, ByteArray(1))), wtx.id)
+        return SignedTransaction(wtx.serialized, listOf(DigitalSignature.WithKey(NullPublicKey, ByteArray(1))))
     }
 }

@@ -16,7 +16,7 @@ if which osascript >/dev/null; then
     rootdir=`pwd`
     for dir in `ls`; do
         if [ -d $dir ]; then
-            cmd="bash -c 'cd $rootdir/$dir; /usr/libexec/java_home -v 1.8 --exec java -jar JAR_NAME && exit'"
+            cmd="bash -c 'cd $rootdir/$dir; /usr/libexec/java_home -v 1.8 --exec java -jar NODEJAR_NAME && exit'"
             script="$script
     tell application \"System Events\" to tell process \"Terminal\" to keystroke \"t\" using command down
     delay 0.5
@@ -26,7 +26,7 @@ if which osascript >/dev/null; then
     done
     for dir in `ls`; do
         if [ -d $dir ]; then
-            cmd="bash -c 'cd $rootdir/$dir; /usr/libexec/java_home -v 1.8 --exec java -jar JAR_NAME --webserver && exit'"
+            cmd="bash -c 'cd $rootdir/$dir; /usr/libexec/java_home -v 1.8 --exec java -jar WEBJAR_NAME && exit'"
             script="$script
     tell application \"System Events\" to tell process \"Terminal\" to keystroke \"t\" using command down
     delay 0.5
@@ -48,8 +48,8 @@ else
     for dir in `ls`; do
         if [ -d $dir ]; then
             pushd $dir >/dev/null
-            xterm -T "`basename $dir`" -e 'java -jar JAR_NAME' &
-            xterm -T "`basename $dir`" -e 'java -jar JAR_NAME --webserver' &
+            xterm -T "`basename $dir`" -e 'java -jar NODEJAR_NAME' &
+            xterm -T "`basename $dir` Web Server" -e 'java -jar WEBJAR_NAME' &
             popd >/dev/null
         fi
     done

@@ -32,7 +32,7 @@ open class CashPaymentFlow(val amount: Amount<Issued<Currency>>, val recipient: 
                     recipient.owningKey,
                     setOf(amount.token.issuer.party))
         } catch (e: InsufficientBalanceException) {
-            throw CashException("Insufficent cash for spend", e)
+            throw CashException("Insufficient cash for spend", e)
         }
 
         progressTracker.currentStep = SIGNING_TX

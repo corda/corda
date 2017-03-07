@@ -9,6 +9,7 @@ import com.google.common.io.ByteStreams
 import com.google.common.util.concurrent.*
 import kotlinx.support.jdk7.use
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import rx.Observable
 import rx.Observer
@@ -257,6 +258,7 @@ class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()
  *
  * We avoid the use of the word transient here to hopefully reduce confusion with the term in relation to (Java) serialization.
  */
+@CordaSerializable
 abstract class RetryableException(message: String) : Exception(message)
 
 /**
@@ -307,6 +309,7 @@ fun extractZipFile(zipFile: Path, toDirectory: Path) {
 val Throwable.rootCause: Throwable get() = Throwables.getRootCause(this)
 
 /** Representation of an operation that may have thrown an error. */
+@CordaSerializable
 data class ErrorOr<out A> private constructor(val value: A?, val error: Throwable?) {
     // The ErrorOr holds a value iff error == null
     constructor(value: A) : this(value, null)
@@ -403,3 +406,9 @@ private class ObservableToFuture<T>(observable: Observable<T>) : AbstractFuture<
 
 /** Return the sum of an Iterable of [BigDecimal]s. */
 fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a + b }
+
+fun codePointsString(vararg codePoints: Int): String {
+    val builder = StringBuilder()
+    codePoints.forEach { builder.append(Character.toChars(it)) }
+    return builder.toString()
+}

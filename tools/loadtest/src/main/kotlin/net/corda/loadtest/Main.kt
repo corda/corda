@@ -44,24 +44,16 @@ import java.nio.file.Paths
  */
 
 fun main(args: Array<String>) {
-
     if (args.isEmpty()) {
         throw IllegalArgumentException("Usage: <binary> PATH_TO_CONFIG")
     }
     val defaultConfig = ConfigFactory.parseResources("loadtest-reference.conf", ConfigParseOptions.defaults().setAllowMissing(false))
-    val customConfig = ConfigFactory.parseFile(File(args[0]), ConfigParseOptions.defaults().setAllowMissing(false))
-    val resolvedConfig = customConfig.withFallback(defaultConfig).resolve()
-
-    val loadTestConfiguration = LoadTestConfiguration(
-            sshUser = if (resolvedConfig.hasPath("sshUser")) resolvedConfig.getString("sshUser") else System.getProperty("user.name"),
-            localCertificatesBaseDirectory = Paths.get(resolvedConfig.getString("localCertificatesBaseDirectory")),
-            localTunnelStartingPort = resolvedConfig.getInt("localTunnelStartingPort"),
-            nodeHosts = resolvedConfig.getStringList("nodeHosts"),
-            remoteNodeDirectory = Paths.get("/opt/r3cev"),
-            remoteMessagingPort = 31337,
-            remoteSystemdServiceName = "r3cev-node",
-            seed = if (resolvedConfig.hasPath("seed")) resolvedConfig.getLong("seed") else null
+    val defaultSshUserConfig = ConfigFactory.parseMap(
+            if (defaultConfig.hasPath("sshUser")) emptyMap() else mapOf("sshUser" to System.getProperty("user.name"))
     )
+    val customConfig = ConfigFactory.parseFile(File(args[0]), ConfigParseOptions.defaults().setAllowMissing(false))
+    val resolvedConfig = customConfig.withFallback(defaultConfig).withFallback(defaultSshUserConfig).resolve()
+    val loadTestConfiguration = LoadTestConfiguration(resolvedConfig)
 
     if (loadTestConfiguration.nodeHosts.isEmpty()) {
         throw IllegalArgumentException("Please specify at least one node host")
@@ -99,7 +91,7 @@ fun main(args: Array<String>) {
             crossCashTest to LoadTest.RunParameters(
                     parallelism = 4,
                     generateCount = 2000,
-                    clearDatabaseBeforeRun = true,
+                    clearDatabaseBeforeRun = false,
                     gatherFrequency = 10,
                     disruptionPatterns = listOf(
                             listOf(),

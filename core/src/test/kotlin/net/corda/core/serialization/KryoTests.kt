@@ -94,9 +94,11 @@ class KryoTests {
         assertEquals(-1, readRubbishStream.read())
     }
 
+    @CordaSerializable
     private data class Person(val name: String, val birthday: Instant?)
 
     @Suppress("unused")
+    @CordaSerializable
     private class Cyclic(val value: Int) {
         val thisInstance = this
         override fun equals(other: Any?): Boolean = (this === other) || (other is Cyclic && this.value == other.value)

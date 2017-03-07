@@ -1,6 +1,7 @@
 package net.corda.core.utilities
 
 import net.corda.core.TransientProperty
+import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
 import rx.subjects.BehaviorSubject
@@ -32,7 +33,9 @@ import java.util.*
  * A progress tracker is *not* thread safe. You may move events from the thread making progress to another thread by
  * using the [Observable] subscribeOn call.
  */
+@CordaSerializable
 class ProgressTracker(vararg steps: Step) {
+    @CordaSerializable
     sealed class Change {
         class Position(val tracker: ProgressTracker, val newStep: Step) : Change() {
             override fun toString() = newStep.label
@@ -48,6 +51,7 @@ class ProgressTracker(vararg steps: Step) {
     }
 
     /** The superclass of all step objects. */
+    @CordaSerializable
     open class Step(open val label: String) {
         open val changes: Observable<Change> get() = Observable.empty()
         open fun childProgressTracker(): ProgressTracker? = null
@@ -55,7 +59,7 @@ class ProgressTracker(vararg steps: Step) {
 
     /** This class makes it easier to relabel a step on the fly, to provide transient information. */
     open inner class RelabelableStep(currentLabel: String) : Step(currentLabel) {
-        override val changes = BehaviorSubject.create<Change>()
+        override val changes: BehaviorSubject<Change> = BehaviorSubject.create()
 
         var currentLabel: String = currentLabel
             set(value) {
@@ -81,6 +85,7 @@ class ProgressTracker(vararg steps: Step) {
     // This field won't be serialized.
     private val _changes by TransientProperty { PublishSubject.create<Change>() }
 
+    @CordaSerializable
     private data class Child(val tracker: ProgressTracker, @Transient val subscription: Subscription?)
 
     private val childProgressTrackers = HashMap<Step, Child>()
@@ -105,27 +110,26 @@ class ProgressTracker(vararg steps: Step) {
     var currentStep: Step
         get() = steps[stepIndex]
         set(value) {
-            if (currentStep != value) {
-                check(currentStep != DONE) { "Cannot rewind a progress tracker once it reaches the done state" }
+            check(!hasEnded) { "Cannot rewind a progress tracker once it has ended" }
+            if (currentStep == value) return
 
-                val index = steps.indexOf(value)
-                require(index != -1)
+            val index = steps.indexOf(value)
+            require(index != -1)
 
-                if (index < stepIndex) {
-                    // We are going backwards: unlink and unsubscribe from any child nodes that we're rolling back
-                    // through, in preparation for moving through them again.
-                    for (i in stepIndex downTo index) {
-                        removeChildProgressTracker(steps[i])
-                    }
+            if (index < stepIndex) {
+                // We are going backwards: unlink and unsubscribe from any child nodes that we're rolling back
+                // through, in preparation for moving through them again.
+                for (i in stepIndex downTo index) {
+                    removeChildProgressTracker(steps[i])
                 }
-
-                curChangeSubscription?.unsubscribe()
-                stepIndex = index
-                _changes.onNext(Change.Position(this, steps[index]))
-                curChangeSubscription = currentStep.changes.subscribe { _changes.onNext(it) }
-
-                if (currentStep == DONE) _changes.onCompleted()
             }
+
+            curChangeSubscription?.unsubscribe()
+            stepIndex = index
+            _changes.onNext(Change.Position(this, steps[index]))
+            curChangeSubscription = currentStep.changes.subscribe( { _changes.onNext(it) }, { _changes.onError(it) })
+
+            if (currentStep == DONE) _changes.onCompleted()
         }
 
     /** Returns the current step, descending into children to find the deepest step we are up to. */
@@ -147,6 +151,15 @@ class ProgressTracker(vararg steps: Step) {
             it.subscription?.unsubscribe()
         }
         _changes.onNext(Change.Structural(this, step))
+    }
+
+    /**
+     * Ends the progress tracker with the given error, bypassing any remaining steps. [changes] will emit the exception
+     * as an error.
+     */
+    fun endWithError(error: Throwable) {
+        check(!hasEnded) { "Progress tracker has already ended" }
+        _changes.onError(error)
     }
 
     /** The parent of this tracker: set automatically by the parent when a tracker is added as a child */
@@ -195,6 +208,9 @@ class ProgressTracker(vararg steps: Step) {
      * if a step changed its label or rendering).
      */
     val changes: Observable<Change> get() = _changes
+
+    /** Returns true if the progress tracker has ended, either by reaching the [DONE] step or prematurely with an error */
+    val hasEnded: Boolean get() = _changes.hasCompleted() || _changes.hasThrowable()
 }
 
 

@@ -104,7 +104,7 @@ To run from IntelliJ:
    The date change rolls the clock forwards and causes the nodes to agree on the fixings over a period.
 
 This demo also has a web app. To use this, run nodes and upload rates, then navigate to
-http://localhost:10005/web/irsdemo and http://localhost:10007/web/irsdemo to see each node's view of the ledger.
+http://localhost:10007/web/irsdemo and http://localhost:10010/web/irsdemo to see each node's view of the ledger.
 
 To use the web app, click the "Create Deal" button, fill in the form, then click the "Submit" button. You can then
 use the time controls at the top left of the home page to run the fixings. Click any individual trade in the blotter to view it.
@@ -170,9 +170,9 @@ To run from the command line in Windows:
 To run from IntelliJ:
 
 1. Open the Corda project in IntelliJ and import the Gradle project
-2. Run the ``Notary Demo: Run Nodes`` configuration to start the nodes. Once all nodes are started you will see several
+2. Run the ``Raft Notary Demo: Run Nodes`` configuration to start the nodes. Once all nodes are started you will see several
    "Node started up and registered in ..." messages
-3. Run the ``Notary Demo: Run Notarisation`` configuration to make a call to the "Party" node to initiate notarisation requests
+3. Run the ``Raft Notary Demo: Run Notarisation`` configuration to make a call to the "Party" node to initiate notarisation requests
    In a few seconds you will see a message "Notarised 10 transactions" with a list of transaction ids and the signer public keys
 
 Notary nodes store consumed states in a replicated commit log, which is backed by a H2 database on each node.
@@ -340,12 +340,12 @@ To run from IntelliJ:
 
 Then, for all three:
 
-3. Browse to http://localhost:10005/web/simmvaluationdemo
+3. Browse to http://localhost:10007/web/simmvaluationdemo
 4. Select the counterparty (i.e. Bank B)
 5. Enter at least 3 trades - via the "Create New Trade" tab
 6. On the "Agree Valuations" tab, click the "Start Calculations" button
 
-Additionally, you can confirm that these trades are not visible from `Bank C's node <http://localhost:10009/web/simmvaluationdemo/>`_
-and are visible to `Bank B <http://localhost:10007/web/simmvaluationdemo/>`_.
+Additionally, you can confirm that these trades are not visible from `Bank C's node <http://localhost:10013/web/simmvaluationdemo/>`_
+and are visible to `Bank B <http://localhost:10010/web/simmvaluationdemo/>`_.
 
 Please note that any URL path information after `simmvaluationdemo` should not be bookmarked or navigated to directly, as it is only provided for aesthetic purposes.

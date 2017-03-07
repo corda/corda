@@ -9,6 +9,7 @@ import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.randomOrNull
+import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 
 /**
@@ -19,6 +20,7 @@ import rx.Observable
  */
 interface NetworkMapCache {
 
+    @CordaSerializable
     sealed class MapChange(val node: NodeInfo) {
         class Added(node: NodeInfo) : MapChange(node)
         class Removed(node: NodeInfo) : MapChange(node)
@@ -142,6 +144,7 @@ interface NetworkMapCache {
     fun runWithoutMapService()
 }
 
+@CordaSerializable
 sealed class NetworkCacheError : Exception() {
     /** Indicates a failure to deregister, because of a rejected request from the remote node */
     class DeregistrationFailed : NetworkCacheError()

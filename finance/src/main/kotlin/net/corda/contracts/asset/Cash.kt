@@ -12,6 +12,7 @@ import net.corda.core.crypto.*
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
 import net.corda.schemas.CashSchemaV1
@@ -74,6 +75,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
         }
 
+        @CordaSerializable
         class ConserveAmount : AbstractConserveAmount<State, Commands, Currency>()
     }
 
@@ -192,12 +194,12 @@ fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>): Amount<Is
 }
 
 fun Cash.State.ownedBy(owner: CompositeKey) = copy(owner = owner)
-fun Cash.State.issuedBy(party: AnonymousParty) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party.toAnonymous()))))
+fun Cash.State.issuedBy(party: AbstractParty) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party.toAnonymous()))))
 fun Cash.State.issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = deposit)))
 fun Cash.State.withDeposit(deposit: PartyAndReference): Cash.State = copy(amount = amount.copy(token = amount.token.copy(issuer = deposit)))
 
 infix fun Cash.State.`owned by`(owner: CompositeKey) = ownedBy(owner)
-infix fun Cash.State.`issued by`(party: AnonymousParty) = issuedBy(party)
+infix fun Cash.State.`issued by`(party: AbstractParty) = issuedBy(party)
 infix fun Cash.State.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
 infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = withDeposit(deposit)
 

@@ -1,5 +1,6 @@
 package net.corda.node.internal
 
+import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
@@ -27,6 +28,7 @@ import org.jetbrains.exposed.sql.Database
 import rx.Observable
 import java.io.InputStream
 import java.time.Instant
+import java.util.*
 
 /**
  * Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
@@ -48,7 +50,7 @@ class CordaRPCOpsImpl(
     override fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>> {
         return databaseTransaction(database) {
             val (vault, updates) = services.vaultService.track()
-            Pair(vault.states, updates)
+            Pair(vault.states.toList(), updates)
         }
     }
 
@@ -90,6 +92,12 @@ class CordaRPCOpsImpl(
         }
     }
 
+    override fun getCashBalances(): Map<Currency, Amount<Currency>> {
+        return databaseTransaction(database) {
+            services.vaultService.cashBalances
+        }
+    }
+
     // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
         requirePermission(startFlowPermission(logicType))
@@ -102,6 +110,7 @@ class CordaRPCOpsImpl(
     }
 
     override fun attachmentExists(id: SecureHash) = services.storageService.attachments.openAttachment(id) != null
+    override fun openAttachment(id: SecureHash) = services.storageService.attachments.openAttachment(id)!!.open()
     override fun uploadAttachment(jar: InputStream) = services.storageService.attachments.importAttachment(jar)
     override fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>) = services.vaultService.authoriseContractUpgrade(state, upgradedContractClass)
     override fun deauthoriseContractUpgrade(state: StateAndRef<*>) = services.vaultService.deauthoriseContractUpgrade(state)

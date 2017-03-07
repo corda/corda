@@ -11,6 +11,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import java.util.*
 
@@ -86,6 +87,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
         /**
          * Standard clause for conserving the amount from input to output.
          */
+        @CordaSerializable
         class ConserveAmount : AbstractConserveAmount<State, Commands, Commodity>()
     }
 
@@ -112,6 +114,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
     }
 
     // Just for grouping
+    @CordaSerializable
     interface Commands : FungibleAsset.Commands {
         /**
          * A command stating that money has been moved, optionally to fulfil another contract.

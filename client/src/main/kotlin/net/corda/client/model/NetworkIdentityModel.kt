@@ -40,6 +40,7 @@ class NetworkIdentityModel {
         return advertisedServices.any { it.info.type == NetworkMapService.type || it.info.type.isNotary() }
     }
 
+    // TODO: Use Identity Service in service hub instead?
     fun lookup(compositeKey: CompositeKey): ObservableValue<NodeInfo?> = parties.firstOrDefault(notaries.firstOrNullObservable { it.notaryIdentity.owningKey == compositeKey }) {
         it.legalIdentity.owningKey == compositeKey
     }

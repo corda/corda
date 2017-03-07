@@ -8,6 +8,7 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.signWithECDSA
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import java.security.KeyPair
 import java.security.SignatureException
@@ -23,8 +24,7 @@ import java.util.*
  * A transaction ID should be the hash of the [WireTransaction] Merkle tree root. Thus adding or removing a signature does not change it.
  */
 data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
-                             val sigs: List<DigitalSignature.WithKey>,
-                             override val id: SecureHash
+                             val sigs: List<DigitalSignature.WithKey>
 ) : NamedByHash {
     init {
         require(sigs.isNotEmpty())
@@ -33,12 +33,16 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     // TODO: This needs to be reworked to ensure that the inner WireTransaction is only ever deserialised sandboxed.
 
     /** Lazily calculated access to the deserialised/hashed transaction data. */
-    val tx: WireTransaction by lazy {
-        val temp = WireTransaction.deserialize(txBits)
-        check(temp.id == id) { "Supplied transaction ID does not match deserialized transaction's ID - this is probably a problem in serialization/deserialization" }
-        temp
-    }
+    val tx: WireTransaction by lazy { WireTransaction.deserialize(txBits) }
 
+    /**
+     * The Merkle root of the inner [WireTransaction]. Note that this is _not_ the same as the simple hash of
+     * [txBits], which would not use the Merkle tree structure. If the difference isn't clear, please consult
+     * the user guide section "Transaction tear-offs" to learn more about Merkle trees.
+     */
+    override val id: SecureHash get() = tx.id
+
+    @CordaSerializable
     class SignaturesMissingException(val missing: Set<CompositeKey>, val descriptions: List<String>, override val id: SecureHash) : NamedByHash, SignatureException() {
         override fun toString(): String {
             return "Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}"

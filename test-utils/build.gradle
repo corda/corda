@@ -26,6 +26,7 @@ dependencies {
     compile project(':finance')
     compile project(':core')
     compile project(':node')
+    compile project(':node:webserver')
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"

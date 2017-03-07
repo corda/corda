@@ -18,6 +18,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.Ack
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.dealsWith
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.flows.AbstractStateReplacementFlow.Proposal
@@ -40,6 +41,7 @@ object SimmFlow {
      * Represents a new portfolio offer unless the stateRef field is non-null, at which point it represents a
      * portfolio update offer.
      */
+    @CordaSerializable
     data class OfferMessage(val notary: Party,
                             val dealBeingOffered: PortfolioState,
                             val stateRef: StateRef?,
