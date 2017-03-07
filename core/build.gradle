@@ -57,6 +57,9 @@ dependencies {
     // AssertJ: for fluent assertions for testing
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
+    // TODO: Upgrade to junit-quickcheck 0.8, once it is released,
+    //       because it depends on org.javassist:javassist instead
+    //       of javassist:javassist.
     compile "com.pholser:junit-quickcheck-core:$quickcheck_version"
     compile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
 
