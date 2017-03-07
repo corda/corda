@@ -71,6 +71,7 @@ class FullNodeConfiguration(override val baseDirectory: Path, val config: Config
     val messagingServerAddress: HostAndPort? by config.getOrElse { null }
     val extraAdvertisedServiceIds: List<String> = config.getListOrElse<String>("extraAdvertisedServiceIds") { emptyList() }
     val useTestClock: Boolean by config.getOrElse { false }
+    val notaryNodeId: Int? by config.getOrElse { null }
     val notaryNodeAddress: HostAndPort? by config.getOrElse { null }
     val notaryClusterAddresses: List<HostAndPort> = config
             .getListOrElse<String>("notaryClusterAddresses") { emptyList() }
