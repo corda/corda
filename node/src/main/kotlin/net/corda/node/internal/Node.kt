@@ -12,6 +12,7 @@ import net.corda.core.node.Version
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.success
 import net.corda.core.utilities.loggerFor
 import net.corda.node.printBasicNodeInfo
 import net.corda.node.serialization.NodeClock
@@ -230,10 +231,11 @@ class Node(override val configuration: FullNodeConfiguration,
     override fun start(): Node {
         alreadyRunningNodeCheck()
         super.start()
-        // Only start the service API requests once the network map registration is complete
-        thread(name = "WebServer") {
-            networkMapRegistrationFuture.getOrThrow()
-            // Begin exporting our own metrics via JMX.
+
+        networkMapRegistrationFuture.success(serverThread) {
+            // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
+            //
+            // https://jolokia.org/agent/jvm.html
             JmxReporter.
                     forRegistry(services.monitoringService.metrics).
                     inDomain("net.corda").
