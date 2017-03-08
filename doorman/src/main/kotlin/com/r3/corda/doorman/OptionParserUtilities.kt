@@ -9,7 +9,7 @@ import joptsimple.OptionParser
  * Convert commandline arguments to [Config] object will allow us to use kotlin delegate with [ConfigHelper].
  */
 object OptionParserHelper {
-    fun Array<String>.toConfigWithOptions(registerOptions: OptionParser.() -> Unit): Config {
+    fun Array<out String>.toConfigWithOptions(registerOptions: OptionParser.() -> Unit): Config {
         val parser = OptionParser()
         val helpOption = parser.acceptsAll(listOf("h", "?", "help"), "show help").forHelp();
         registerOptions(parser)
