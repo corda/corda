@@ -16,6 +16,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.persistence.DataVending
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.testing.MOCK_IDENTITY_SERVICE
 import net.corda.testing.node.MockNetworkMapCache
 import net.corda.testing.node.MockStorageService
@@ -32,8 +33,11 @@ open class MockServiceHubInternal(
         val scheduler: SchedulerService? = null,
         val overrideClock: Clock? = NodeClock(),
         val flowFactory: FlowLogicRefFactory? = FlowLogicRefFactory(),
-        val schemas: SchemaService? = NodeSchemaService()
+        val schemas: SchemaService? = NodeSchemaService(),
+        val customTransactionVerifierService: TransactionVerifierService? = InMemoryTransactionVerifierService(2)
 ) : ServiceHubInternal() {
+    override val transactionVerifierService: TransactionVerifierService
+        get() = customTransactionVerifierService ?: throw UnsupportedOperationException()
     override val vaultService: VaultService
         get() = customVault ?: throw UnsupportedOperationException()
     override val keyManagementService: KeyManagementService

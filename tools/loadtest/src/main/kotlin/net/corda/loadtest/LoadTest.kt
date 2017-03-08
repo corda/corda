@@ -160,7 +160,7 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
     val random = SplittableRandom(seed)
     connectToNodes(
             configuration.sshUser,
-            configuration.nodeHosts.map { it to configuration.remoteNodeDirectory / "certificates" },
+            configuration.nodeHosts,
             configuration.remoteMessagingPort,
             PortAllocation.Incremental(configuration.localTunnelStartingPort),
             configuration.rpcUsername,
