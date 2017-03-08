@@ -235,7 +235,7 @@ To run from IntelliJ:
 4. Run ``Bank Of Corda Demo: Run Web Cash Issue`` to request issuance of some cash on behalf of Big Corporation via HTTP
 
 .. note:: To verify that the Bank of Corda node is alive and running, navigate to the following URL:
-          http://localhost:10005/api/bank/date
+          http://localhost:10007/api/bank/date
 
 .. note:: The Bank of Corda node explicitly advertises with a node service type as follows:
           ``advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer"))))``
@@ -259,8 +259,8 @@ Launch the Explorer application to visualize the issuance and transfer of cash f
 
 Using the following login details:
 
-- For the Bank of Corda node: localhost / port 10005 / username bankUser / password test
-- For the Big Corporation node: localhost / port 10008 / username bigCorpUser / password test
+- For the Bank of Corda node: localhost / port 10006 / username bankUser / password test
+- For the Big Corporation node: localhost / port 10009 / username bigCorpUser / password test
 
 See https://docs.corda.net/node-explorer.html for further details on usage.
 

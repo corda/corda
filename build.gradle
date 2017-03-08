@@ -170,16 +170,18 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         name "Bank A"
         nearestCity "London"
         advertisedServices = []
-        messagingPort 10004
-        webPort 10005
+        messagingPort 10012
+        webPort 10013
+        rpcPort 10014
         cordapps = []
     }
     node {
         name "Bank B"
         nearestCity "New York"
         advertisedServices = []
-        messagingPort 10006
-        webPort 10007
+        messagingPort 10007
+        rpcPort 10008
+        webPort 10009
         cordapps = []
     }
 }

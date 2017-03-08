@@ -31,7 +31,7 @@ fun main(args: Array<String>) {
     val value = options.valueOf(valueArg)
     when (role) {
         Role.UploadRates -> IRSDemoClientApi(HostAndPort.fromString("localhost:10004")).runUploadRates()
-        Role.Trade -> IRSDemoClientApi(HostAndPort.fromString("localhost:10008")).runTrade(value)
+        Role.Trade -> IRSDemoClientApi(HostAndPort.fromString("localhost:10007")).runTrade(value)
         Role.Date -> IRSDemoClientApi(HostAndPort.fromString("localhost:10010")).runDateChange(value)
     }
 }

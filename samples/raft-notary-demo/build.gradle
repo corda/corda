@@ -90,7 +90,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
         nearestCity "London"
         advertisedServices = []
         messagingPort 10002
-        webPort 10003
+        rpcPort 10003
+        webPort 10004
         cordapps = []
         rpcUsers = [['user': "demo", 'password': "demo", 'permissions': [
                 'StartFlow.net.corda.notarydemo.flows.DummyIssueAndMove',
@@ -101,16 +102,18 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
         name "Counterparty"
         nearestCity "New York"
         advertisedServices = []
-        messagingPort 10004
-        webPort 10005
+        messagingPort 10005
+        rpcPort 10006
+        webPort 10007
         cordapps = []
     }
     node {
         name "Notary 1"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        messagingPort 10007
-        webPort 10008
+        messagingPort 10008
+        rpcPort 10009
+        webPort 10010
         cordapps = []
         notaryNodePort 11002
     }
@@ -118,8 +121,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
         name "Notary 2"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        messagingPort 10010
-        webPort 10011
+        messagingPort 10011
+        rpcPort 10012
+        webPort 10013
         cordapps = []
         notaryNodePort 11004
         notaryClusterAddresses = ["localhost:11002"]
@@ -128,8 +132,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
         name "Notary 3"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        messagingPort 10013
-        webPort 10014
+        messagingPort 10014
+        rpcPort 10015
+        webPort 10016
         cordapps = []
         notaryNodePort 11006
         notaryClusterAddresses = ["localhost:11002"]

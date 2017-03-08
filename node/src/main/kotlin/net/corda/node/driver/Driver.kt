@@ -381,6 +381,7 @@ open class DriverDSL(
         val processFuture = startNode(executorService, configuration, quasarJarPath, debugPort)
         registerProcess(processFuture)
         return processFuture.flatMap { process ->
+            // We continue to use SSL enabled port for RPC when its for node user.
             establishRpc(messagingAddress, configuration).flatMap { rpc ->
                 rpc.waitUntilRegisteredWithNetworkMap().map {
                     NodeHandle(rpc.nodeIdentity(), rpc, configuration, process)

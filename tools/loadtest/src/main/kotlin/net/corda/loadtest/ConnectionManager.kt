@@ -71,8 +71,6 @@ class ConnectionManager(private val username: String, private val jSch: JSch) {
             nodeHost: String,
             remoteMessagingPort: Int,
             localTunnelAddress: HostAndPort,
-            certificatesBaseDirectory: Path,
-            remoteCertificatesDirectory: Path,
             rpcUsername: String,
             rpcPassword: String
     ): NodeConnection {
@@ -87,19 +85,7 @@ class ConnectionManager(private val username: String, private val jSch: JSch) {
         session.setPortForwardingL(localTunnelAddress.port, localTunnelAddress.hostText, remoteMessagingPort)
         log.info("Tunnel created!")
 
-        val certificatesDirectory = certificatesBaseDirectory / nodeHost
-        val sslKeyStoreFileName = "sslkeystore.jks"
-        val trustStoreFileName = "truststore.jks"
-        log.info("Copying server certificates to $certificatesDirectory")
-        certificatesDirectory.createDirectories()
-        val channel = session.openChannel("sftp") as ChannelSftp
-        channel.connect()
-        channel.get((remoteCertificatesDirectory / sslKeyStoreFileName).toString(), certificatesDirectory.toString())
-        channel.get((remoteCertificatesDirectory / trustStoreFileName).toString(), certificatesDirectory.toString())
-        channel.disconnect()
-        log.info("Certificates copied!")
-
-        val connection = NodeConnection(nodeHost, session, localTunnelAddress, certificatesDirectory, rpcUsername, rpcPassword)
+        val connection = NodeConnection(nodeHost, session, localTunnelAddress, rpcUsername, rpcPassword)
         connection.startClient()
         return connection
     }
@@ -122,7 +108,6 @@ fun <A> connectToNodes(
         nodeHostsAndCertificatesPaths: List<Pair<String, Path>>,
         remoteMessagingPort: Int,
         tunnelPortAllocation: PortAllocation,
-        certificatesBaseDirectory: Path,
         rpcUsername: String,
         rpcPassword: String,
         withConnections: (List<NodeConnection>) -> A
@@ -133,8 +118,6 @@ fun <A> connectToNodes(
                 nodeHost = nodeHostAndCertificatesPath.first,
                 remoteMessagingPort = remoteMessagingPort,
                 localTunnelAddress = tunnelPortAllocation.nextHostAndPort(),
-                certificatesBaseDirectory = certificatesBaseDirectory,
-                remoteCertificatesDirectory = nodeHostAndCertificatesPath.second,
                 rpcUsername = rpcUsername,
                 rpcPassword = rpcPassword
         )
@@ -157,17 +140,9 @@ class NodeConnection(
         val hostName: String,
         private val jSchSession: Session,
         private val localTunnelAddress: HostAndPort,
-        private val certificatesDirectory: Path,
         private val rpcUsername: String,
         private val rpcPassword: String
 ) : Closeable {
-
-    private val sslConfig = object : SSLConfiguration {
-        override val certificatesDirectory = this@NodeConnection.certificatesDirectory
-        override val keyStorePassword: String get() = "cordacadevpass"
-        override val trustStorePassword: String get() = "trustpass"
-    }
-
     private var client: CordaRPCClient? = null
     private var _proxy: CordaRPCOps? = null
     val proxy: CordaRPCOps get() = _proxy ?: throw IllegalStateException("proxy requested, but the client is not running")
@@ -202,7 +177,7 @@ class NodeConnection(
             return action()
         } finally {
             log.info("Starting new RPC proxy to $hostName, tunnel at $localTunnelAddress")
-            val newClient = CordaRPCClient(localTunnelAddress, sslConfig)
+            val newClient = CordaRPCClient(localTunnelAddress)
             // TODO expose these somehow?
             newClient.start(rpcUsername, rpcPassword)
             val newProxy = newClient.proxy()
@@ -213,7 +188,7 @@ class NodeConnection(
 
     fun startClient() {
         log.info("Creating RPC proxy to $hostName, tunnel at $localTunnelAddress")
-        val client = CordaRPCClient(localTunnelAddress, sslConfig)
+        val client = CordaRPCClient(localTunnelAddress)
         client.start(rpcUsername, rpcPassword)
         val proxy = client.proxy()
         log.info("Proxy created")
