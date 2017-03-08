@@ -142,9 +142,9 @@ class Node(override val configuration: FullNodeConfiguration,
 
     private fun makeLocalMessageBroker(): HostAndPort {
         with(configuration) {
-            val useHost = tryDetectIfNotPublicHost(artemisAddress.hostText)
-            val useAddress = useHost?.let { HostAndPort.fromParts(it, artemisAddress.port) } ?: artemisAddress
-            messageBroker = ArtemisMessagingServer(this, useAddress, services.networkMapCache, userService)
+            val useHost = tryDetectIfNotPublicHost(messagingAddress.hostText)
+            val useAddress = useHost?.let { HostAndPort.fromParts(it, messagingAddress.port) } ?: messagingAddress
+            messageBroker = ArtemisMessagingServer(this, useAddress, rpcAddress, services.networkMapCache, userService)
             return useAddress
         }
     }
