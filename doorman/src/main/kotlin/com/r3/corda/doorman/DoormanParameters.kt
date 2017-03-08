@@ -10,7 +10,7 @@ import net.corda.node.services.config.getValue
 import java.nio.file.Path
 import java.util.*
 
-class DoormanParameters(args: Array<String>) {
+class DoormanParameters(vararg args: String) {
     private val argConfig = args.toConfigWithOptions {
         accepts("basedir", "Overriding configuration filepath, default to current directory.").withRequiredArg().defaultsTo(".").describedAs("filepath")
         accepts("configFile", "Overriding configuration file, default to <<current directory>>/node.conf.").withRequiredArg().describedAs("filepath")

@@ -201,7 +201,7 @@ private fun DoormanParameters.startDoorman() {
 fun main(args: Array<String>) {
     try {
         // TODO : Remove config overrides and solely use config file after testnet is finalized.
-        DoormanParameters(args).run {
+        DoormanParameters(*args).run {
             when (mode) {
                 DoormanParameters.Mode.ROOT_KEYGEN -> generateRootKeyPair()
                 DoormanParameters.Mode.CA_KEYGEN -> generateCAKeyPair()
