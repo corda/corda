@@ -46,6 +46,7 @@ class DefaultWhitelist : CordaPluginRegistry() {
             addToWhitelist(BigDecimal::class.java)
             addToWhitelist(LocalDate::class.java)
             addToWhitelist(Period::class.java)
+            addToWhitelist(BitSet::class.java)
         }
         return true
     }
