@@ -24,11 +24,13 @@ import org.apache.activemq.artemis.api.core.client.ClientSession
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.Closeable
+import java.lang.ref.WeakReference
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import java.time.Duration
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import javax.annotation.concurrent.GuardedBy
 import javax.annotation.concurrent.ThreadSafe
@@ -108,7 +110,8 @@ class CordaRPCClientImpl(private val session: ClientSession,
     private fun <T : Any> ClientMessage.deserialize(kryo: Kryo): T = ByteArray(bodySize).apply { bodyBuffer.readBytes(this) }.deserialize(kryo)
 
     @GuardedBy("sessionLock")
-    private val addressToQueueObservables = CacheBuilder.newBuilder().build<String, QueuedObservable>()
+    private val addressToQueueObservables = CacheBuilder.newBuilder().weakValues().build<String, QueuedObservable>()
+    private val hardReferencesToQueueObservables = mutableSetOf<QueuedObservable>()
 
     private var producer: ClientProducer? = null
 
@@ -281,7 +284,26 @@ class CordaRPCClientImpl(private val session: ClientSession,
         // This could be made more efficient by using a specialised IntMap
         private val observables = HashMap<Int, Observable<Any>>()
 
-        private var consumer: ClientConsumer? = sessionLock.withLock { session.createConsumer(qName) }.setMessageHandler { deliver(it) }
+        private var consumer: ClientConsumer? = null
+
+        private val referenceCount = AtomicInteger(0)
+
+        init {
+            val weakThis = WeakReference<QueuedObservable>(this)
+            consumer = sessionLock.withLock { session.createConsumer(qName) }.setMessageHandler { weakThis.get()?.deliver(it) }
+        }
+
+        private fun refCountUp() {
+            if(referenceCount.andIncrement == 0) {
+                hardReferencesToQueueObservables.add(this)
+            }
+        }
+
+        private fun refCountDown() {
+            if(referenceCount.decrementAndGet() == 0) {
+                hardReferencesToQueueObservables.remove(this)
+            }
+        }
 
         @Synchronized
         fun getForHandle(handle: Int): Observable<Any> {
@@ -297,7 +319,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
                  * The buffer -> dematerialize order ensures that the Observable may not unsubscribe until the caller
                  * subscribes, which must be after full deserialisation and registering of all top level Observables.
                  */
-                rootShared.filter { it.forHandle == handle }.map { it.what }.bufferUntilSubscribed().dematerialize<Any>().share()
+                rootShared.filter { it.forHandle == handle }.map { it.what }.bufferUntilSubscribed().dematerialize<Any>().doOnSubscribe { refCountUp() }.doOnUnsubscribe { refCountDown() }.share()
             }
         }
 
@@ -325,9 +347,9 @@ class CordaRPCClientImpl(private val session: ClientSession,
         fun finalize() {
             val c = synchronized(this) { consumer }
             if (c != null) {
-                rpcLog.warn("A hot observable returned from an RPC ($rpcName) was never subscribed to or explicitly closed. " +
+                rpcLog.warn("A hot observable returned from an RPC ($rpcName) was never unsubscribed (and maybe never subscribed too). " +
                         "This wastes server-side resources because it was queueing observations for retrieval. " +
-                        "It is being closed now, but please adjust your code to cast the observable to AutoCloseable and then close it explicitly.", rpcLocation)
+                        "It is being closed now, but please adjust your code to unsubscribe from the observable to close it explicitly (which might require subscribing first).", rpcLocation)
                 c.close()
             }
         }
