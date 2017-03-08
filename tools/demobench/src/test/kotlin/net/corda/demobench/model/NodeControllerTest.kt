@@ -46,7 +46,7 @@ class NodeControllerTest {
     fun `test first validated node becomes network map`() {
         val data = NodeData()
         data.legalName.value = "Node 1"
-        data.artemisPort.value = 100000
+        data.messagingPort.value = 100000
 
         assertFalse(controller.hasNetworkMap())
         controller.validate(data)
@@ -112,27 +112,39 @@ class NodeControllerTest {
     }
 
     @Test
-    fun `test artemis port is max`() {
-        val config = createConfig(artemisPort = NodeController.firstPort + 1234)
+    fun `test messaging port is max`() {
+        val portNumber = NodeController.firstPort + 1234
+        val config = createConfig(messagingPort = portNumber)
         assertEquals(NodeController.firstPort, controller.nextPort)
         controller.register(config)
-        assertEquals(NodeController.firstPort + 1235, controller.nextPort)
+        assertEquals(portNumber + 1, controller.nextPort)
+    }
+
+    @Test
+    fun `test rpc port is max`() {
+        val portNumber = NodeController.firstPort + 7777
+        val config = createConfig(rpcPort = portNumber)
+        assertEquals(NodeController.firstPort, controller.nextPort)
+        controller.register(config)
+        assertEquals(portNumber + 1, controller.nextPort)
     }
 
     @Test
     fun `test web port is max`() {
-        val config = createConfig(webPort = NodeController.firstPort + 2356)
+        val portNumber = NodeController.firstPort + 2356
+        val config = createConfig(webPort = portNumber)
         assertEquals(NodeController.firstPort, controller.nextPort)
         controller.register(config)
-        assertEquals(NodeController.firstPort + 2357, controller.nextPort)
+        assertEquals(portNumber + 1, controller.nextPort)
     }
 
     @Test
     fun `test H2 port is max`() {
-        val config = createConfig(h2Port = NodeController.firstPort + 3478)
+        val portNumber = NodeController.firstPort + 3478
+        val config = createConfig(h2Port = portNumber)
         assertEquals(NodeController.firstPort, controller.nextPort)
         controller.register(config)
-        assertEquals(NodeController.firstPort + 3479, controller.nextPort)
+        assertEquals(portNumber + 1, controller.nextPort)
     }
 
     @Test
@@ -150,7 +162,8 @@ class NodeControllerTest {
     private fun createConfig(
             legalName: String = "Unknown",
             nearestCity: String = "Nowhere",
-            artemisPort: Int = -1,
+            messagingPort: Int = -1,
+            rpcPort: Int = -1,
             webPort: Int = -1,
             h2Port: Int = -1,
             services: List<String> = listOf("extra.service"),
@@ -159,7 +172,8 @@ class NodeControllerTest {
             baseDir,
             legalName = legalName,
             nearestCity = nearestCity,
-            artemisPort = artemisPort,
+            messagingPort = messagingPort,
+            rpcPort = rpcPort,
             webPort = webPort,
             h2Port = h2Port,
             extraServices = services,
