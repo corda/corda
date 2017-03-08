@@ -111,9 +111,9 @@ class CordaRPCClientImpl(private val session: ClientSession,
 
     // We by default use a weak reference so GC can happen, otherwise they persist for the life of the client.
     @GuardedBy("sessionLock")
-    private val addressToQueueObservables = CacheBuilder.newBuilder().weakValues().build<String, QueuedObservable>()
+    private val addressToQueuedObservables = CacheBuilder.newBuilder().weakValues().build<String, QueuedObservable>()
     // This is used to hold a reference counted hard reference when we know there are subscribers.
-    private val hardReferencesToQueueObservables = mutableSetOf<QueuedObservable>()
+    private val hardReferencesToQueuedObservables = mutableSetOf<QueuedObservable>()
 
     private var producer: ClientProducer? = null
 
@@ -123,8 +123,8 @@ class CordaRPCClientImpl(private val session: ClientSession,
         override fun read(kryo: Kryo, input: Input, type: Class<Observable<Any>>): Observable<Any> {
             val handle = input.readInt(true)
             val ob = sessionLock.withLock {
-                addressToQueueObservables.getIfPresent(qName) ?: QueuedObservable(qName, rpcName, rpcLocation, this).apply {
-                    addressToQueueObservables.put(qName, this)
+                addressToQueuedObservables.getIfPresent(qName) ?: QueuedObservable(qName, rpcName, rpcLocation, this).apply {
+                    addressToQueuedObservables.put(qName, this)
                 }
             }
             val result = ob.getForHandle(handle)
@@ -310,13 +310,13 @@ class CordaRPCClientImpl(private val session: ClientSession,
          */
         private fun refCountUp() {
             if(referenceCount.andIncrement == 0) {
-                hardReferencesToQueueObservables.add(this)
+                hardReferencesToQueuedObservables.add(this)
             }
         }
 
         private fun refCountDown() {
             if(referenceCount.decrementAndGet() == 0) {
-                hardReferencesToQueueObservables.remove(this)
+                hardReferencesToQueuedObservables.remove(this)
             }
         }
 
