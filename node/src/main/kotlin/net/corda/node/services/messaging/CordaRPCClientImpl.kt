@@ -109,8 +109,10 @@ class CordaRPCClientImpl(private val session: ClientSession,
     // do this.
     private fun <T : Any> ClientMessage.deserialize(kryo: Kryo): T = ByteArray(bodySize).apply { bodyBuffer.readBytes(this) }.deserialize(kryo)
 
+    // We by default use a weak reference so GC can happen, otherwise they persist for the life of the client.
     @GuardedBy("sessionLock")
     private val addressToQueueObservables = CacheBuilder.newBuilder().weakValues().build<String, QueuedObservable>()
+    // This is used to hold a reference counted hard reference when we know there are subscribers.
     private val hardReferencesToQueueObservables = mutableSetOf<QueuedObservable>()
 
     private var producer: ClientProducer? = null
@@ -288,11 +290,24 @@ class CordaRPCClientImpl(private val session: ClientSession,
 
         private val referenceCount = AtomicInteger(0)
 
+        // We have to create a weak reference, otherwise we cannot be GC'd.
         init {
             val weakThis = WeakReference<QueuedObservable>(this)
             consumer = sessionLock.withLock { session.createConsumer(qName) }.setMessageHandler { weakThis.get()?.deliver(it) }
         }
 
+        /**
+         * We have to reference count subscriptions to the returned [Observable]s to prevent early GC because we are
+         * weak referenced.
+         *
+         * Derived [Observables] (e.g. filtered etc) hold a strong reference to the original, but for example, if
+         * the pattern as follows is used, the original passes out of scope and the direction of reference is from the
+         * original to the [Observer].  We use the reference counting to allow for this pattern.
+         *
+         * val observationsSubject = PublishSubject.create<Observation>()
+         * originalObservable.subscribe(observationsSubject)
+         * return observationSubject
+         */
         private fun refCountUp() {
             if(referenceCount.andIncrement == 0) {
                 hardReferencesToQueueObservables.add(this)
@@ -318,6 +333,9 @@ class CordaRPCClientImpl(private val session: ClientSession,
                  *
                  * The buffer -> dematerialize order ensures that the Observable may not unsubscribe until the caller
                  * subscribes, which must be after full deserialisation and registering of all top level Observables.
+                 *
+                 * In addition, when subscribe and unsubscribe is call on the [Observable] returned here, we
+                 * reference count a hard reference to this [QueuedObservable] to prevent premature GC.
                  */
                 rootShared.filter { it.forHandle == handle }.map { it.what }.bufferUntilSubscribed().dematerialize<Any>().doOnSubscribe { refCountUp() }.doOnUnsubscribe { refCountDown() }.share()
             }
@@ -347,9 +365,9 @@ class CordaRPCClientImpl(private val session: ClientSession,
         fun finalize() {
             val c = synchronized(this) { consumer }
             if (c != null) {
-                rpcLog.warn("A hot observable returned from an RPC ($rpcName) was never unsubscribed (and maybe never subscribed too). " +
+                rpcLog.warn("A hot observable returned from an RPC ($rpcName) was never subscribed to. " +
                         "This wastes server-side resources because it was queueing observations for retrieval. " +
-                        "It is being closed now, but please adjust your code to unsubscribe from the observable to close it explicitly (which might require subscribing first).", rpcLocation)
+                        "It is being closed now, but please adjust your code to subscribe and unsubscribe from the observable to close it explicitly.", rpcLocation)
                 c.close()
             }
         }
