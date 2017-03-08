@@ -1,4 +1,4 @@
-package net.corda.webserver.utilities
+package net.corda.jackson
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParseException
@@ -13,10 +13,10 @@ import net.corda.core.contracts.BusinessCalendar
 import net.corda.core.crypto.*
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.corda.core.node.services.IdentityService
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -25,9 +25,11 @@ import java.time.LocalDateTime
  * Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
  * the java.time API, some core types, and Kotlin data classes.
  *
- * TODO: This does not belong in node. It should be moved to the client module or a dedicated webserver module.
+ * Note that Jackson can also be used to serialise/deserialise other formats such as Yaml and XML.
  */
-object JsonSupport {
+object JacksonSupport {
+    // If you change this API please update the docs in the docsite (json.rst)
+
     interface PartyObjectMapper {
         fun partyFromName(partyName: String): Party?
         fun partyFromKey(owningKey: CompositeKey): Party?
@@ -84,13 +86,16 @@ object JsonSupport {
         }
     }
 
-    /* Mapper requiring RPC support to deserialise parties from names */
+    /** Mapper requiring RPC support to deserialise parties from names */
+    @JvmStatic
     fun createDefaultMapper(rpc: CordaRPCOps): ObjectMapper = configureMapper(RpcObjectMapper(rpc))
 
-    /* For testing or situations where deserialising parties is not required */
+    /** For testing or situations where deserialising parties is not required */
+    @JvmStatic
     fun createNonRpcMapper(): ObjectMapper = configureMapper(NoPartyObjectMapper())
 
-    /* For testing with an in memory identity service */
+    /** For testing with an in memory identity service */
+    @JvmStatic
     fun createInMemoryMapper(identityService: IdentityService) = configureMapper(IdentityObjectMapper(identityService))
 
     private fun configureMapper(mapper: ObjectMapper): ObjectMapper = mapper.apply {
@@ -249,3 +254,4 @@ object JsonSupport {
         }
     }
 }
+

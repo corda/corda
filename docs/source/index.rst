@@ -109,6 +109,7 @@ Documentation Contents:
    network-simulator
    clauses
    merkle-trees
+   json
 
 .. toctree::
    :maxdepth: 2
