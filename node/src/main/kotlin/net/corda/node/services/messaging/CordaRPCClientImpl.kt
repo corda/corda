@@ -306,7 +306,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
          *
          * val observationsSubject = PublishSubject.create<Observation>()
          * originalObservable.subscribe(observationsSubject)
-         * return observationSubject
+         * return observationsSubject
          */
         private fun refCountUp() {
             if(referenceCount.andIncrement == 0) {
@@ -334,7 +334,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
                  * The buffer -> dematerialize order ensures that the Observable may not unsubscribe until the caller
                  * subscribes, which must be after full deserialisation and registering of all top level Observables.
                  *
-                 * In addition, when subscribe and unsubscribe is call on the [Observable] returned here, we
+                 * In addition, when subscribe and unsubscribe is called on the [Observable] returned here, we
                  * reference count a hard reference to this [QueuedObservable] to prevent premature GC.
                  */
                 rootShared.filter { it.forHandle == handle }.map { it.what }.bufferUntilSubscribed().dematerialize<Any>().doOnSubscribe { refCountUp() }.doOnUnsubscribe { refCountDown() }.share()
