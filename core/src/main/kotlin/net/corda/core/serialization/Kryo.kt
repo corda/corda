@@ -423,10 +423,6 @@ fun createTestKryo(): Kryo = DefaultKryoCustomizer.customize(CordaKryo(makeNoWhi
  * for existing registrations and then will enter our [CordaClassResolver.getRegistration] method.
  */
 open class CordaKryo(classResolver: ClassResolver) : Kryo(classResolver, MapReferenceResolver()) {
-    init {
-        println("making Kryo")
-        Exception().printStackTrace()
-    }
     override fun register(type: Class<*>?): Registration {
         (classResolver as? CordaClassResolver)?.disableWhitelist()
         try {
