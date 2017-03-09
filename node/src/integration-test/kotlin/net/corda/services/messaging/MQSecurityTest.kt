@@ -154,8 +154,8 @@ abstract class MQSecurityTest : NodeBasedTest() {
         return client
     }
 
-    fun loginToRPC(target: HostAndPort, rpcUser: User): SimpleMQClient {
-        val client = clientTo(target, null)
+    fun loginToRPC(target: HostAndPort, rpcUser: User, sslConfiguration: SSLConfiguration? = null): SimpleMQClient {
+        val client = clientTo(target, sslConfiguration)
         client.loginToRPC(rpcUser)
         return client
     }

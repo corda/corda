@@ -80,13 +80,13 @@ class Node {
     }
 
     /**
-     * Set the Artemis messaging port for this node.
+     * Set the Artemis P2P port for this node.
      *
-     * @param messagingPort The Artemis messaging queue port.
+     * @param p2pPort The Artemis messaging queue port.
      */
-    void messagingPort(Integer messagingPort) {
-        config = config.withValue("messagingAddress",
-                ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$messagingPort".toString()))
+    void p2pPort(Integer p2pPort) {
+        config = config.withValue("p2pAddress",
+                ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$p2pPort".toString()))
     }
 
     /**
@@ -150,10 +150,10 @@ class Node {
     /**
      * Get the artemis address for this node.
      *
-     * @return This node's artemis address.
+     * @return This node's P2P address.
      */
-    String getArtemisAddress() {
-        return config.getString("messagingAddress")
+    String getP2PAddress() {
+        return config.getString("p2pAddress")
     }
 
     /**

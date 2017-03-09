@@ -19,8 +19,9 @@ Milestone 10
 ------------
 
 * Configuration:
-    * Replace ``artemisPort`` with ``messagingPort`` in Gradle configuration
-    * Replace ``artemisAddress`` with ``messagingAddress`` in node configuration
+    * Replace ``artemisPort`` with ``p2pPort`` in Gradle configuration
+    * Replace ``artemisAddress`` with ``p2pAddress`` in node configuration
+    * Added ``rpcAddress`` in node configuration
 
 Milestone 9.1
 -------------

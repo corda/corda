@@ -38,7 +38,7 @@ NetworkMapService plus Simple Notary configuration file.
     nearestCity : "London"
     keyStorePassword : "cordacadevpass"
     trustStorePassword : "trustpass"
-    messagingAddress : "localhost:12345"
+    p2pAddress : "localhost:12345"
     rpcAddress : "localhost:12346"
     webAddress : "localhost:12347"
     extraAdvertisedServiceIds : []
@@ -75,16 +75,15 @@ path to the node's base directory.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
     the only configuration that has been tested, although in the future full support for other storage layers will be validated.
 
-:messagingAddress: The host and port on which the node is available for protocol operations over ArtemisMQ.
+:messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
+
+:p2pAddress: The host and port on which the node is available for protocol operations over ArtemisMQ.
 
     .. note:: In practice the ArtemisMQ messaging services bind to all local addresses on the specified port. However,
         note that the host is the included as the advertised entry in the NetworkMapService. As a result the value listed
         here must be externally accessible when running nodes across a cluster of machines.
 
-:messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
-
-:rpcAddress: The address of the Artemis RPC broker instance. If not provided the node will run one locally, one port higher than
-     the messaging server address.
+:rpcAddress: The address of the Artemis RPC broker instance. If not provided the node will start without RPC connectivity.
 
 :webAddress: The host and port on which the bundled webserver will listen if it is started.
 

@@ -5,6 +5,7 @@ package net.corda.testing
 
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
+import com.typesafe.config.Config
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic

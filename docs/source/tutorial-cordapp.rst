@@ -807,7 +807,7 @@ like to deploy for testing. See further details below:
           name "Controller"                                // Artemis name of node to be deployed.
           nearestCity "London"                             // For use with the network visualiser.
           advertisedServices = ["corda.notary.validating"] // A list of services you wish the node to offer.
-          messagingPort 10002
+          p2pPort 10002
           rpcPort 10003                                    // Usually 1 higher than the messaging port.
           webPort 10004                                    // Usually 1 higher than the RPC port.
           cordapps = []                                    // Add package names of CordaApps.
@@ -816,7 +816,7 @@ like to deploy for testing. See further details below:
           name "NodeA"
           nearestCity "London"
           advertisedServices = []
-          messagingPort 10005
+          p2pPort 10005
           rpcPort 10006
           webPort 10007
           cordapps = []
@@ -878,7 +878,7 @@ controller. Open each node's config file (`[nodeName]/node.conf`), and make
 the following changes:
 
 * Change the Artemis messaging address to the machine's IP address (e.g. 
-`messagingAddress="10.18.0.166:10006"`)
+`p2pAddress="10.18.0.166:10006"`)
 * Change the network map service details to the IP address of the machine where the
 controller node is running and to its legal name (e.g. `networkMapService.address="10.18.0.166:10002"` and
 `networkMapService.legalName=controller`) (please note that the controller will not have the `networkMapService` config)

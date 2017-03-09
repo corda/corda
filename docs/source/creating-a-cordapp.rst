@@ -214,7 +214,7 @@ is a three node example;
             name "Controller"
             nearestCity "London"
             advertisedServices = [ "corda.notary.validating" ]
-            messagingPort 10002
+            p2pPort 10002
             rpcPort 10003
             webPort 10004
             cordapps []
@@ -223,7 +223,7 @@ is a three node example;
             name "NodeA"
             nearestCity "London"
             advertisedServices = []
-            messagingPort 10005
+            p2pPort 10005
             rpcPort 10006
             webPort 10007
             cordapps []
@@ -232,7 +232,7 @@ is a three node example;
             name "NodeB"
             nearestCity "New York"
             advertisedServices = []
-            messagingPort 10008
+            p2pPort 10008
             rpcPort 10009
             webPort 10010
             cordapps []

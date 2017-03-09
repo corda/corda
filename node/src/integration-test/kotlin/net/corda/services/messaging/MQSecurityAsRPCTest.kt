@@ -28,7 +28,7 @@ class MQSecurityAsRPCTest : MQSecurityTest() {
 
     @Test
     fun `login to a ssl port as a RPC user`() {
-        val attacker = clientTo(alice.configuration.messagingAddress)
+        val attacker = clientTo(alice.configuration.p2pAddress)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.loginToRPC(extraRPCUsers[0], enableSSL = true)
         }

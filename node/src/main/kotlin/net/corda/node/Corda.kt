@@ -1,6 +1,7 @@
 @file:JvmName("Corda")
 package net.corda.node
 
+import com.typesafe.config.Config
 import com.jcabi.manifests.Manifests
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
@@ -80,7 +81,9 @@ fun main(args: Array<String>) {
     printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
 
     val conf = try {
-        FullNodeConfiguration(cmdlineOptions.baseDirectory, cmdlineOptions.loadConfig())
+        val conf = cmdlineOptions.loadConfig()
+        checkConfigVersion(conf)
+        FullNodeConfiguration(cmdlineOptions.baseDirectory, conf)
     } catch (e: ConfigException) {
         println("Unable to load the configuration file: ${e.rootCause.message}")
         exitProcess(2)
@@ -110,7 +113,7 @@ fun main(args: Array<String>) {
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
-    log.info("Starting as node on ${conf.messagingAddress}")
+    log.info("Starting as node on ${conf.p2pAddress}")
 
     try {
         cmdlineOptions.baseDirectory.createDirectories()
@@ -136,6 +139,16 @@ fun main(args: Array<String>) {
     }
 
     exitProcess(0)
+}
+
+private fun checkConfigVersion(conf: Config) {
+    // TODO: Remove this check in future milestone.
+    if (conf.hasPath("artemisAddress")) {
+        // artemisAddress has been renamed to p2pAddress in M10.
+        println("artemisAddress has been renamed to p2pAddress in M10, please upgrade your configuration file and start Corda node again.")
+        println("Corda will now exit...")
+        exitProcess(1)
+    }
 }
 
 private fun checkJavaVersion() {

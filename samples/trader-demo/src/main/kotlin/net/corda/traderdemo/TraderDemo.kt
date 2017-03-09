@@ -65,13 +65,4 @@ private class TraderDemo {
         """.trimIndent())
         parser.printHelpOn(System.out)
     }
-
-    // TODO: Take this out once we have a dedicated RPC port and allow SSL on it to be optional.
-    private fun sslConfigFor(nodename: String, certsPath: String?): SSLConfiguration {
-        return object : SSLConfiguration {
-            override val keyStorePassword: String = "cordacadevpass"
-            override val trustStorePassword: String = "trustpass"
-            override val certificatesDirectory: Path = if (certsPath != null) Paths.get(certsPath) else Paths.get("build") / "nodes" / nodename / "certificates"
-        }
-    }
 }

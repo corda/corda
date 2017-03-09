@@ -52,7 +52,7 @@ class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguratio
             check(!running)
             log.logElapsedTime("Startup") {
                 checkStorePasswords()
-                val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport(Outbound(), host.hostText, host.port)).apply {
+                val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport(Outbound(), host.hostText, host.port, enableSSL = config != null)).apply {
                     // TODO: Put these in config file or make it user configurable?
                     threadPoolMaxSize = 1
                     confirmationWindowSize = 100000 // a guess
