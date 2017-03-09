@@ -1,6 +1,8 @@
 package net.corda.carpenter
 
 import org.junit.Test
+import java.lang.reflect.Field
+import java.lang.reflect.Method
 import kotlin.test.assertEquals
 
 
@@ -12,11 +14,16 @@ class ClassCarpenterTest {
 
     val cc = ClassCarpenter()
 
+    // We have to ignore synthetic fields even though ClassCarpenter doesn't create any because the JaCoCo
+    // coverage framework auto-magically injects one method and one field into every class loaded into the JVM.
+    val Class<*>.nonSyntheticFields: List<Field> get() = declaredFields.filterNot { it.isSynthetic }
+    val Class<*>.nonSyntheticMethods: List<Method> get() = declaredMethods.filterNot { it.isSynthetic }
+
     @Test
     fun empty() {
         val clazz = cc.build(ClassCarpenter.Schema("gen.EmptyClass", emptyMap(), null))
-        assertEquals(0, clazz.declaredFields.size)
-        assertEquals(2, clazz.declaredMethods.size)   // get, toString
+        assertEquals(0, clazz.nonSyntheticFields.size)
+        assertEquals(2, clazz.nonSyntheticMethods.size)   // get, toString
         assertEquals(0, clazz.declaredConstructors[0].parameterCount)
         clazz.newInstance()   // just test there's no exception.
     }
@@ -33,9 +40,9 @@ class ClassCarpenterTest {
                 "byteMe" to Byte::class.javaPrimitiveType!!,
                 "booleanField" to Boolean::class.javaPrimitiveType!!
         )))
-        assertEquals(8, clazz.declaredFields.size)
+        assertEquals(8, clazz.nonSyntheticFields.size)
+        assertEquals(10, clazz.nonSyntheticMethods.size)
         assertEquals(8, clazz.declaredConstructors[0].parameterCount)
-        assertEquals(10, clazz.declaredMethods.size)
         val i = clazz.constructors[0].newInstance(1, 2L, 'c', 4.toShort(), 1.23, 4.56F, 127.toByte(), true)
         assertEquals(1, clazz.getMethod("getAnIntField").invoke(i))
         assertEquals(2L, clazz.getMethod("getALongField").invoke(i))
