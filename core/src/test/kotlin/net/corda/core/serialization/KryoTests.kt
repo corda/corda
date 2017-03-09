@@ -1,5 +1,6 @@
 package net.corda.core.serialization
 
+import com.esotericsoftware.kryo.Kryo
 import com.google.common.primitives.Ints
 import net.corda.core.crypto.*
 import net.corda.core.messaging.Ack
@@ -7,6 +8,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.io.InputStream
 import java.security.Security
@@ -16,7 +19,17 @@ import kotlin.test.assertEquals
 
 class KryoTests {
 
-    private val kryo = createKryo()
+    private lateinit var kryo: Kryo
+
+    @Before
+    fun setup() {
+        kryo = threadLocalP2PKryo().borrow()
+    }
+
+    @After
+    fun teardown() {
+        threadLocalP2PKryo().release(kryo)
+    }
 
     @Test
     fun ok() {

@@ -15,12 +15,13 @@ class SerializationTokenTest {
 
     @Before
     fun setup() {
-        kryo = threadLocalStorageKryo()
+        kryo = threadLocalStorageKryo().borrow()
     }
 
     @After
     fun cleanup() {
         SerializeAsTokenSerializer.clearContext(kryo)
+        threadLocalStorageKryo().release(kryo)
     }
 
     // Large tokenizable object so we can tell from the smaller number of serialized bytes it was actually tokenized

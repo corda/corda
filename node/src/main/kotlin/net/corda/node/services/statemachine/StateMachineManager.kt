@@ -367,17 +367,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         return checkpoint.serializedFiber.deserialize(kryo).apply { fromCheckpoint = true }
     }
 
+    // TODO: Add pooling here.
     private fun quasarKryo(): Kryo {
         val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
-        return createKryo(serializer.kryo).apply {
-            // Because we like to stick a Kryo object in a ThreadLocal to speed things up a bit, we can end up trying to
-            // serialise the Kryo object itself when suspending a fiber. That's dumb, useless AND can cause crashes, so
-            // we avoid it here.  This is checkpointing specific.
-            register(Kryo::class,
-                    read = { kryo, input -> createKryo((Fiber.getFiberSerializer() as KryoSerializer).kryo) },
-                    write = { kryo, output, obj -> }
-            )
-        }
+        return DefaultKryoCustomizer.customize(serializer.kryo)
     }
 
     private fun <T> createFiber(logic: FlowLogic<T>): FlowStateMachineImpl<T> {

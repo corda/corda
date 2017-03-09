@@ -3,13 +3,20 @@ package net.corda.core.transactions
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.createKryo
-import net.corda.core.serialization.extendKryoHash
 import net.corda.core.serialization.serialize
+import net.corda.core.serialization.threadLocalP2PKryo
 
 fun <T : Any> serializedHash(x: T): SecureHash {
-    val kryo = extendKryoHash(createKryo()) // Dealing with HashMaps inside states.
-    return x.serialize(kryo).hash
+    //val kryo = extendKryoHash(createKryo()) // Dealing with HashMaps inside states.
+    val kryo = threadLocalP2PKryo()
+    val k = kryo.borrow()
+    k.references = false
+    try {
+        return x.serialize(k).hash
+    } finally {
+        k.references = true
+        kryo.release(k)
+    }
 }
 
 /**

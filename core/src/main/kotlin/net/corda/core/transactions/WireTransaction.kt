@@ -1,6 +1,6 @@
 package net.corda.core.transactions
 
-import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.MerkleTree
@@ -45,7 +45,7 @@ class WireTransaction(
     override val id: SecureHash by lazy { merkleTree.hash }
 
     companion object {
-        fun deserialize(data: SerializedBytes<WireTransaction>, kryo: Kryo = threadLocalP2PKryo()): WireTransaction {
+        fun deserialize(data: SerializedBytes<WireTransaction>, kryo: KryoPool = threadLocalP2PKryo()): WireTransaction {
             val wtx = data.bytes.deserialize<WireTransaction>(kryo)
             wtx.cachedBytes = data
             return wtx
