@@ -1,10 +1,16 @@
 package net.corda.explorer.views.cordapps.cash
 
+import com.google.common.base.Splitter
 import javafx.beans.binding.Bindings
 import javafx.beans.binding.BooleanBinding
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
+import javafx.geometry.Insets
+import javafx.geometry.VPos
 import javafx.scene.control.*
+import javafx.scene.layout.GridPane
+import javafx.scene.text.Font
+import javafx.scene.text.FontWeight
 import javafx.stage.Window
 import net.corda.client.fxutils.ChosenList
 import net.corda.client.fxutils.isNotNull
@@ -22,7 +28,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.transactions.SignedTransaction
+import net.corda.core.then
 import net.corda.explorer.model.CashTransaction
 import net.corda.explorer.model.IssuerModel
 import net.corda.explorer.model.ReportingCurrencyModel
@@ -32,8 +38,7 @@ import net.corda.explorer.views.stringConverter
 import net.corda.flows.CashFlowCommand
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import org.controlsfx.dialog.ExceptionDialog
-import tornadofx.Fragment
-import tornadofx.booleanBinding
+import tornadofx.*
 import java.math.BigDecimal
 import java.util.*
 
@@ -70,7 +75,7 @@ class NewTransaction : Fragment() {
     private val transactionTypes by observableList(IssuerModel::transactionTypes)
 
     private val currencyItems = ChosenList(transactionTypeCB.valueProperty().map {
-        when(it){
+        when (it) {
             CashTransaction.Pay -> supportedCurrencies
             CashTransaction.Issue,
             CashTransaction.Exit -> currencyTypes
@@ -79,56 +84,60 @@ class NewTransaction : Fragment() {
     })
 
     fun show(window: Window): Unit {
-        dialog(window).showAndWait().ifPresent {
+        newTransactionDialog(window).showAndWait().ifPresent { command ->
             val dialog = Alert(Alert.AlertType.INFORMATION).apply {
                 headerText = null
                 contentText = "Transaction Started."
                 dialogPane.isDisable = true
                 initOwner(window)
+                show()
             }
-            dialog.show()
+            val handle = if (command is CashFlowCommand.IssueCash) {
+                rpcProxy.value!!.startFlow(::IssuanceRequester,
+                        command.amount,
+                        command.recipient,
+                        command.issueRef,
+                        myIdentity.value!!.legalIdentity)
+            } else {
+                command.startFlow(rpcProxy.value!!)
+            }
             runAsync {
-                val handle = if (it is CashFlowCommand.IssueCash) {
-                    myIdentity.value?.let { myIdentity ->
-                        rpcProxy.value!!.startFlow(::IssuanceRequester,
-                                it.amount,
-                                it.recipient,
-                                it.issueRef,
-                                myIdentity.legalIdentity)
-                    }
-                } else {
-                    it.startFlow(rpcProxy.value!!)
-                }
-                val response = try {
-                    handle?.returnValue?.getOrThrow()
-                } catch (e: FlowException) {
-                    e
-                }
-                it to response
+                handle.returnValue.then { dialog.dialogPane.isDisable = false }.getOrThrow()
             }.ui {
-                val (command, response) = it
-                val (alertType, contentText) = if (response is FlowException) {
-                    Alert.AlertType.ERROR to response.message
-                } else {
-                    val type = when (command) {
-                        is CashFlowCommand.IssueCash -> "Cash Issued"
-                        is CashFlowCommand.ExitCash -> "Cash Exited"
-                        is CashFlowCommand.PayCash -> "Cash Paid"
-                    }
-                    Alert.AlertType.INFORMATION to "$type \nTransaction ID : ${(response as SignedTransaction).id}"
+                val type = when (command) {
+                    is CashFlowCommand.IssueCash -> "Cash Issued"
+                    is CashFlowCommand.ExitCash -> "Cash Exited"
+                    is CashFlowCommand.PayCash -> "Cash Paid"
                 }
-                dialog.alertType = alertType
-                dialog.contentText = contentText
-                dialog.dialogPane.isDisable = false
+                dialog.alertType = Alert.AlertType.INFORMATION
+                dialog.dialogPane.content = gridpane {
+                    padding = Insets(10.0, 40.0, 10.0, 20.0)
+                    vgap = 10.0
+                    hgap = 10.0
+                    row { label(type) { font = Font.font(font.family, FontWeight.EXTRA_BOLD, font.size + 2) } }
+                    row {
+                        label("Transaction ID :") { GridPane.setValignment(this, VPos.TOP) }
+                        label { text = Splitter.fixedLength(16).split("${it.id}").joinToString("\n") }
+                    }
+                }
                 dialog.dialogPane.scene.window.sizeToScene()
             }.setOnFailed {
-                dialog.close()
-                ExceptionDialog(it.source.exception).apply { initOwner(window) }.showAndWait()
+                val ex = it.source.exception
+                when (ex) {
+                    is FlowException -> {
+                        dialog.alertType = Alert.AlertType.ERROR
+                        dialog.contentText = ex.message
+                    }
+                    else -> {
+                        dialog.close()
+                        ExceptionDialog(ex).apply { initOwner(window) }.showAndWait()
+                    }
+                }
             }
         }
     }
 
-    private fun dialog(window: Window) = Dialog<CashFlowCommand>().apply {
+    private fun newTransactionDialog(window: Window) = Dialog<CashFlowCommand>().apply {
         dialogPane = root
         initOwner(window)
         setResultConverter {
