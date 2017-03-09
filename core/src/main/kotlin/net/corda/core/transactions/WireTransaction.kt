@@ -10,8 +10,8 @@ import net.corda.core.indexOfOrThrow
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.p2PKryo
 import net.corda.core.serialization.serialize
-import net.corda.core.serialization.threadLocalP2PKryo
 import net.corda.core.utilities.Emoji
 import java.security.PublicKey
 
@@ -45,7 +45,7 @@ class WireTransaction(
     override val id: SecureHash by lazy { merkleTree.hash }
 
     companion object {
-        fun deserialize(data: SerializedBytes<WireTransaction>, kryo: KryoPool = threadLocalP2PKryo()): WireTransaction {
+        fun deserialize(data: SerializedBytes<WireTransaction>, kryo: KryoPool = p2PKryo()): WireTransaction {
             val wtx = data.bytes.deserialize<WireTransaction>(kryo)
             wtx.cachedBytes = data
             return wtx

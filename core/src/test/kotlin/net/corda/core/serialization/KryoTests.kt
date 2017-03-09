@@ -23,12 +23,12 @@ class KryoTests {
 
     @Before
     fun setup() {
-        kryo = threadLocalP2PKryo().borrow()
+        kryo = p2PKryo().borrow()
     }
 
     @After
     fun teardown() {
-        threadLocalP2PKryo().release(kryo)
+        p2PKryo().release(kryo)
     }
 
     @Test

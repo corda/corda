@@ -5,8 +5,8 @@ import com.esotericsoftware.kryo.KryoException
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
+import net.corda.core.serialization.p2PKryo
 import net.corda.core.serialization.serialize
-import net.corda.core.serialization.threadLocalP2PKryo
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_PUBKEY_1
@@ -213,7 +213,7 @@ class PartialMerkleTreeTest {
     @Test(expected = KryoException::class)
     fun `hash map serialization not allowed`() {
         val hm1 = hashMapOf("a" to 1, "b" to 2, "c" to 3, "e" to 4)
-        threadLocalP2PKryo().run { kryo ->
+        p2PKryo().run { kryo ->
             hm1.serialize(kryo)
         }
     }
