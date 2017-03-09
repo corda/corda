@@ -6,6 +6,7 @@ import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.support.jdk8.collections.removeIf
@@ -70,6 +71,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                           private val unfinishedFibers: ReusableLatch = ReusableLatch()) {
 
     inner class FiberScheduler : FiberExecutorScheduler("Same thread scheduler", executor)
+
+    private val quasarKryoPool = KryoPool.Builder {
+        val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
+        DefaultKryoCustomizer.customize(serializer.kryo)
+    }.build()
 
     companion object {
         private val logger = loggerFor<StateMachineManager>()
@@ -354,24 +360,22 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun serializeFiber(fiber: FlowStateMachineImpl<*>): SerializedBytes<FlowStateMachineImpl<*>> {
-        val kryo = quasarKryo()
-        // add the map of tokens -> tokenizedServices to the kyro context
-        SerializeAsTokenSerializer.setContext(kryo, serializationContext)
-        return fiber.serialize(kryo)
+        return quasarKryo().run { kryo ->
+            // add the map of tokens -> tokenizedServices to the kyro context
+            SerializeAsTokenSerializer.setContext(kryo, serializationContext)
+            fiber.serialize(kryo)
+        }
     }
 
     private fun deserializeFiber(checkpoint: Checkpoint): FlowStateMachineImpl<*> {
-        val kryo = quasarKryo()
-        // put the map of token -> tokenized into the kryo context
-        SerializeAsTokenSerializer.setContext(kryo, serializationContext)
-        return checkpoint.serializedFiber.deserialize(kryo).apply { fromCheckpoint = true }
+        return quasarKryo().run { kryo ->
+            // put the map of token -> tokenized into the kryo context
+            SerializeAsTokenSerializer.setContext(kryo, serializationContext)
+            checkpoint.serializedFiber.deserialize(kryo).apply { fromCheckpoint = true }
+        }
     }
 
-    // TODO: Add pooling here.
-    private fun quasarKryo(): Kryo {
-        val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
-        return DefaultKryoCustomizer.customize(serializer.kryo)
-    }
+    private fun quasarKryo(): KryoPool = quasarKryoPool
 
     private fun <T> createFiber(logic: FlowLogic<T>): FlowStateMachineImpl<T> {
         val id = StateMachineRunId.createRandom()
