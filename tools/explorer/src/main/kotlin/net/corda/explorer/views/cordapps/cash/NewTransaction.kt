@@ -12,7 +12,10 @@ import javafx.scene.layout.GridPane
 import javafx.scene.text.Font
 import javafx.scene.text.FontWeight
 import javafx.stage.Window
-import net.corda.client.fxutils.*
+import net.corda.client.fxutils.ChosenList
+import net.corda.client.fxutils.isNotNull
+import net.corda.client.fxutils.map
+import net.corda.client.fxutils.unique
 import net.corda.client.model.*
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
@@ -143,7 +146,7 @@ class NewTransaction : Fragment() {
             when (it) {
                 executeButton -> when (transactionTypeCB.value) {
                     CashTransaction.Issue -> {
-                        CashFlowCommand.IssueCash(Amount(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.legalIdentity, notaries.firstOrNull()!!.notaryIdentity)
+                        CashFlowCommand.IssueCash(Amount(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.legalIdentity, notaries.first().notaryIdentity)
                     }
                     CashTransaction.Pay -> CashFlowCommand.PayCash(Amount(amount.value, Issued(PartyAndReference(issuerChoiceBox.value, issueRef), currencyChoiceBox.value)), partyBChoiceBox.value.legalIdentity)
                     CashTransaction.Exit -> CashFlowCommand.ExitCash(Amount(amount.value, currencyChoiceBox.value), issueRef)
