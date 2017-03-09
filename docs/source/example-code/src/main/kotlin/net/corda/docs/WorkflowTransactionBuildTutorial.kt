@@ -7,6 +7,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.linearHeadsOfType
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.flows.FinalityFlow
@@ -32,6 +33,7 @@ inline fun <reified T : LinearState> ServiceHub.latest(ref: StateRef): StateAndR
 // DOCEND 1
 
 // Minimal state model of a manual approval process
+@CordaSerializable
 enum class WorkflowState {
     NEW,
     APPROVED,

@@ -164,14 +164,21 @@ private fun drawBanner() {
     // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
     AnsiConsole.systemInstall()
 
-    val (msg1, msg2) = Emoji.renderIfSupported { messageOfTheDay() }
+    Emoji.renderIfSupported {
+        val (msg1, msg2) = messageOfTheDay()
 
-    println(Ansi.ansi().fgBrightRed().a(
+        println(Ansi.ansi().fgBrightRed().a(
 """
    ______               __
   / ____/     _________/ /___ _
  / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
 "/ /___  /_/ / /  / /_/ / /_/ /          ").fgBrightBlue().a(msg2).newline().fgBrightRed().a(
 """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
-a("--- DEVELOPER SNAPSHOT ------------------------------------------------------------").newline().reset())
+        a("--- MILESTONE 9 -------------------------------------------------------------------").
+        newline().
+        newline().
+        a("${Emoji.books}New! ").reset().a("Training now available worldwide, see https://corda.net/corda-training/").
+        newline().
+        reset())
+    }
 }

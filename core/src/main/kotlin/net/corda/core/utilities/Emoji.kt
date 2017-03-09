@@ -19,7 +19,8 @@ object Emoji {
     @JvmStatic val CODE_PAPERCLIP: String = codePointsString(0x1F4CE)
     @JvmStatic val CODE_COOL_GUY: String = codePointsString(0x1F60E)
     @JvmStatic val CODE_NO_ENTRY: String = codePointsString(0x1F6AB)
-    @JvmStatic val SKULL_AND_CROSSBONES: String = codePointsString(0x2620)
+    @JvmStatic val CODE_SKULL_AND_CROSSBONES: String = codePointsString(0x2620)
+    @JvmStatic val CODE_BOOKS: String = codePointsString(0x1F4DA)
 
     /**
      * When non-null, toString() methods are allowed to use emoji in the output as we're going to render them to a
@@ -35,6 +36,7 @@ object Emoji {
     val leftArrow: String get() = if (emojiMode.get() != null) "$CODE_LEFT_ARROW  " else ""
     val paperclip: String get() = if (emojiMode.get() != null) "$CODE_PAPERCLIP  " else ""
     val coolGuy: String get() = if (emojiMode.get() != null) "$CODE_COOL_GUY  " else ""
+    val books: String get() = if (emojiMode.get() != null) "$CODE_BOOKS  " else ""
 
     inline fun <T> renderIfSupported(body: () -> T): T {
         emojiMode.set(this)   // Could be any object.

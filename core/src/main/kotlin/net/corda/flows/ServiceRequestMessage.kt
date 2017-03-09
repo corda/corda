@@ -3,10 +3,12 @@ package net.corda.flows
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.messaging.*
 import net.corda.core.node.services.DEFAULT_SESSION_ID
+import net.corda.core.serialization.CordaSerializable
 
 /**
  * Abstract superclass for request messages sent to services which expect a reply.
  */
+@CordaSerializable
 interface ServiceRequestMessage {
     val sessionID: Long
     val replyTo: SingleMessageRecipient

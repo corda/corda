@@ -8,6 +8,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -39,17 +40,20 @@ object TwoPartyTradeFlow {
     // and [AbstractStateReplacementFlow].
 
     class UnacceptablePriceException(givenPrice: Amount<Currency>) : FlowException("Unacceptable price: $givenPrice")
+
     class AssetMismatchException(val expectedTypeName: String, val typeName: String) : FlowException() {
         override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
     }
 
     // This object is serialised to the network and is the first flow message the seller sends to the buyer.
+    @CordaSerializable
     data class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
             val price: Amount<Currency>,
             val sellerOwnerKey: CompositeKey
     )
 
+    @CordaSerializable
     data class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
                                     val notarySig: DigitalSignature.WithKey)
 

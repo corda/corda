@@ -9,6 +9,7 @@ import net.corda.core.*
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.AcceptsFileUpload
 import java.io.FilterInputStream
@@ -48,6 +49,7 @@ class NodeAttachmentService(val storePath: Path, metrics: MetricRegistry) : Atta
         require(storePath.isDirectory()) { "$storePath must be a directory" }
     }
 
+    @CordaSerializable
     class OnDiskHashMismatch(val file: Path, val actual: SecureHash) : Exception() {
         override fun toString() = "File $file hashed to $actual: corruption in attachment store?"
     }

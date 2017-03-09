@@ -12,6 +12,7 @@ import net.corda.core.crypto.*
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
 import net.corda.schemas.CashSchemaV1
@@ -74,6 +75,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
         }
 
+        @CordaSerializable
         class ConserveAmount : AbstractConserveAmount<State, Commands, Currency>()
     }
 

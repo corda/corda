@@ -8,6 +8,7 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.signWithECDSA
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import java.security.KeyPair
 import java.security.SignatureException
@@ -41,6 +42,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      */
     override val id: SecureHash get() = tx.id
 
+    @CordaSerializable
     class SignaturesMissingException(val missing: Set<CompositeKey>, val descriptions: List<String>, override val id: SecureHash) : NamedByHash, SignatureException() {
         override fun toString(): String {
             return "Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}"

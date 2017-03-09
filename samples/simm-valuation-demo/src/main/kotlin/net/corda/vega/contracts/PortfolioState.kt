@@ -5,6 +5,7 @@ import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.vega.flows.SimmRevaluation
 import java.security.PublicKey
@@ -23,6 +24,7 @@ data class PortfolioState(val portfolio: List<StateRef>,
                           val valuation: PortfolioValuation? = null,
                           override val linearId: UniqueIdentifier = UniqueIdentifier())
     : RevisionedState<PortfolioState.Update>, SchedulableState, DealState {
+    @CordaSerializable
     data class Update(val portfolio: List<StateRef>? = null, val valuation: PortfolioValuation? = null)
 
     override val parties: List<AnonymousParty> get() = _parties.toList()

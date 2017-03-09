@@ -10,6 +10,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.recordTransactions
 import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -31,17 +32,21 @@ import java.security.KeyPair
  */
 object TwoPartyDealFlow {
 
+    @CordaSerializable
     class DealMismatchException(val expectedDeal: ContractState, val actualDeal: ContractState) : Exception() {
         override fun toString() = "The submitted deal didn't match the expected: $expectedDeal vs $actualDeal"
     }
 
+    @CordaSerializable
     class DealRefMismatchException(val expectedDeal: StateRef, val actualDeal: StateRef) : Exception() {
         override fun toString() = "The submitted deal didn't match the expected: $expectedDeal vs $actualDeal"
     }
 
     // This object is serialised to the network and is the first flow message the seller sends to the buyer.
+    @CordaSerializable
     data class Handshake<out T>(val payload: T, val publicKey: CompositeKey)
 
+    @CordaSerializable
     class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySigs: List<DigitalSignature.WithKey>)
 
     /**
@@ -263,7 +268,7 @@ object TwoPartyDealFlow {
         @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Pair<TransactionBuilder, List<CompositeKey>>
     }
 
-
+    @CordaSerializable
     data class AutoOffer(val notary: Party, val dealBeingOffered: DealState)
 
 

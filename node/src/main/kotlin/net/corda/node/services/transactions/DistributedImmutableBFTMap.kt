@@ -1,23 +1,26 @@
 package net.corda.node.services.transactions
 
-import bftsmart.tom.ServiceProxy
 import bftsmart.tom.MessageContext
+import bftsmart.tom.ServiceProxy
 import bftsmart.tom.ServiceReplica
 import bftsmart.tom.server.defaultservices.DefaultRecoverable
 import bftsmart.tom.server.defaultservices.DefaultReplier
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.utilities.JDBCHashMap
 import net.corda.node.utilities.databaseTransaction
 import org.jetbrains.exposed.sql.Database
-import java.util.LinkedHashMap
+import java.util.*
 
+@CordaSerializable
 enum class RequestType {
     Get,
     Put
 }
 
 /** Sent from [BFTSmartClient] to [BFTSmartServer] */
+@CordaSerializable
 data class Request(val type: RequestType, val data: Any)
 
 class BFTSmartClient<K: Any, V: Any>(id: Int) {

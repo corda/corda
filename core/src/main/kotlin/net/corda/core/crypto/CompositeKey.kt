@@ -2,6 +2,7 @@ package net.corda.core.crypto
 
 import net.corda.core.crypto.CompositeKey.Leaf
 import net.corda.core.crypto.CompositeKey.Node
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import java.security.PublicKey
@@ -19,6 +20,7 @@ import java.security.PublicKey
  * Using these constructs we can express e.g. 1 of N (OR) or N of N (AND) signature requirements. By nesting we can
  * create multi-level requirements such as *"either the CEO or 3 of 5 of his assistants need to sign"*.
  */
+@CordaSerializable
 sealed class CompositeKey {
     /** Checks whether [keys] match a sufficient amount of leaf nodes */
     abstract fun isFulfilledBy(keys: Iterable<PublicKey>): Boolean

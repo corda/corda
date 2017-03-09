@@ -16,6 +16,7 @@ import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceType
 import net.corda.core.random63BitValue
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -50,16 +51,16 @@ import javax.annotation.concurrent.ThreadSafe
 interface NetworkMapService {
 
     companion object {
-        val DEFAULT_EXPIRATION_PERIOD = Period.ofWeeks(4)
-        val FETCH_FLOW_TOPIC = "platform.network_map.fetch"
-        val QUERY_FLOW_TOPIC = "platform.network_map.query"
-        val REGISTER_FLOW_TOPIC = "platform.network_map.register"
-        val SUBSCRIPTION_FLOW_TOPIC = "platform.network_map.subscribe"
+        val DEFAULT_EXPIRATION_PERIOD: Period = Period.ofWeeks(4)
+        val FETCH_TOPIC = "platform.network_map.fetch"
+        val QUERY_TOPIC = "platform.network_map.query"
+        val REGISTER_TOPIC = "platform.network_map.register"
+        val SUBSCRIPTION_TOPIC = "platform.network_map.subscribe"
         // Base topic used when pushing out updates to the network map. Consumed, for example, by the map cache.
         // When subscribing to these updates, remember they must be acknowledged
-        val PUSH_FLOW_TOPIC = "platform.network_map.push"
+        val PUSH_TOPIC = "platform.network_map.push"
         // Base topic for messages acknowledging pushed updates
-        val PUSH_ACK_FLOW_TOPIC = "platform.network_map.push_ack"
+        val PUSH_ACK_TOPIC = "platform.network_map.push_ack"
 
         val logger = loggerFor<NetworkMapService>()
 
@@ -73,27 +74,33 @@ interface NetworkMapService {
                           override val replyTo: SingleMessageRecipient,
                           override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
 
+    @CordaSerializable
     data class FetchMapResponse(val nodes: Collection<NodeRegistration>?, val version: Int)
 
     class QueryIdentityRequest(val identity: Party,
                                override val replyTo: SingleMessageRecipient,
                                override val sessionID: Long) : ServiceRequestMessage
 
+    @CordaSerializable
     data class QueryIdentityResponse(val node: NodeInfo?)
 
     class RegistrationRequest(val wireReg: WireNodeRegistration,
                               override val replyTo: SingleMessageRecipient,
                               override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
 
+    @CordaSerializable
     data class RegistrationResponse(val success: Boolean)
 
     class SubscribeRequest(val subscribe: Boolean,
                            override val replyTo: SingleMessageRecipient,
                            override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
 
+    @CordaSerializable
     data class SubscribeResponse(val confirmed: Boolean)
 
+    @CordaSerializable
     data class Update(val wireReg: WireNodeRegistration, val mapVersion: Int, val replyTo: MessageRecipients)
+    @CordaSerializable
     data class UpdateAcknowledge(val mapVersion: Int, val replyTo: MessageRecipients)
 }
 
@@ -146,19 +153,19 @@ abstract class AbstractNetworkMapService
 
     protected fun setup() {
         // Register message handlers
-        handlers += addMessageHandler(NetworkMapService.FETCH_FLOW_TOPIC,
+        handlers += addMessageHandler(NetworkMapService.FETCH_TOPIC,
                 { req: NetworkMapService.FetchMapRequest -> processFetchAllRequest(req) }
         )
-        handlers += addMessageHandler(NetworkMapService.QUERY_FLOW_TOPIC,
+        handlers += addMessageHandler(NetworkMapService.QUERY_TOPIC,
                 { req: NetworkMapService.QueryIdentityRequest -> processQueryRequest(req) }
         )
-        handlers += addMessageHandler(NetworkMapService.REGISTER_FLOW_TOPIC,
+        handlers += addMessageHandler(NetworkMapService.REGISTER_TOPIC,
                 { req: NetworkMapService.RegistrationRequest -> processRegistrationChangeRequest(req) }
         )
-        handlers += addMessageHandler(NetworkMapService.SUBSCRIPTION_FLOW_TOPIC,
+        handlers += addMessageHandler(NetworkMapService.SUBSCRIPTION_TOPIC,
                 { req: NetworkMapService.SubscribeRequest -> processSubscriptionRequest(req) }
         )
-        handlers += net.addMessageHandler(NetworkMapService.PUSH_ACK_FLOW_TOPIC, DEFAULT_SESSION_ID) { message, r ->
+        handlers += net.addMessageHandler(NetworkMapService.PUSH_ACK_TOPIC, DEFAULT_SESSION_ID) { message, r ->
             val req = message.data.deserialize<NetworkMapService.UpdateAcknowledge>()
             processAcknowledge(req)
         }
@@ -204,7 +211,7 @@ abstract class AbstractNetworkMapService
         //       to a MessageRecipientGroup that nodes join/leave, rather than the network map
         //       service itself managing the group
         val update = NetworkMapService.Update(wireReg, mapVersion, net.myAddress).serialize().bytes
-        val message = net.createMessage(NetworkMapService.PUSH_FLOW_TOPIC, DEFAULT_SESSION_ID, update)
+        val message = net.createMessage(NetworkMapService.PUSH_TOPIC, DEFAULT_SESSION_ID, update)
 
         subscribers.locked {
             val toRemove = mutableListOf<SingleMessageRecipient>()
@@ -331,6 +338,7 @@ abstract class AbstractNetworkMapService
  */
 // TODO: This might alternatively want to have a node and party, with the node being optional, so registering a node
 // involves providing both node and paerty, and deregistering a node involves a request with party but no node.
+@CordaSerializable
 class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddOrRemove, var expires: Instant) {
     /**
      * Build a node registration in wire format.
@@ -348,6 +356,7 @@ class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddOrRemo
 /**
  * A node registration and its signature as a pair.
  */
+@CordaSerializable
 class WireNodeRegistration(raw: SerializedBytes<NodeRegistration>, sig: DigitalSignature.WithKey) : SignedData<NodeRegistration>(raw, sig) {
     @Throws(IllegalArgumentException::class)
     override fun verifyData(data: NodeRegistration) {
@@ -355,6 +364,7 @@ class WireNodeRegistration(raw: SerializedBytes<NodeRegistration>, sig: DigitalS
     }
 }
 
+@CordaSerializable
 sealed class NodeMapError : Exception() {
 
     /** Thrown if the signature on the node info does not match the public key for the identity */
@@ -367,5 +377,8 @@ sealed class NodeMapError : Exception() {
     class UnknownChangeType : NodeMapError()
 }
 
+@CordaSerializable
 data class LastAcknowledgeInfo(val mapVersion: Int)
+
+@CordaSerializable
 data class NodeRegistrationInfo(val reg: NodeRegistration, val mapVersion: Int)

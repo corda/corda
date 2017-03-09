@@ -9,6 +9,7 @@ import java.util.*
  * In an ideal JVM this would be a value type and be completely overhead free. Project Valhalla is adding such
  * functionality to Java, but it won't arrive for a few years yet!
  */
+@CordaSerializable
 open class OpaqueBytes(val bytes: ByteArray) {
     init {
         check(bytes.isNotEmpty())

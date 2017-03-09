@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
@@ -14,6 +15,7 @@ import java.util.*
  * A unique identifier for a single state machine run, valid across node restarts. Note that a single run always
  * has at least one flow, but that flow may also invoke sub-flows: they all share the same run id.
  */
+@CordaSerializable
 data class StateMachineRunId private constructor(val uuid: UUID) {
     companion object {
         fun createRandom(): StateMachineRunId = StateMachineRunId(UUID.randomUUID())

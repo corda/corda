@@ -1,5 +1,7 @@
 package net.corda.core.flows
 
+import net.corda.core.serialization.CordaSerializable
+
 /**
  * Exception which can be thrown by a [FlowLogic] at any point in its logic to unexpectedly bring it to a permanent end.
  * The exception will propagate to all counterparty flows and will be thrown on their end the next time they wait on a
@@ -9,6 +11,7 @@ package net.corda.core.flows
  * [FlowException] (or a subclass) can be a valid expected response from a flow, particularly ones which act as a service.
  * It is recommended a [FlowLogic] document the [FlowException] types it can throw.
  */
+@CordaSerializable
 open class FlowException(override val message: String?, override val cause: Throwable?) : Exception() {
     constructor(message: String?) : this(message, null)
     constructor(cause: Throwable?) : this(cause?.toString(), cause)

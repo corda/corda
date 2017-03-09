@@ -1,7 +1,7 @@
 package net.corda.core.node
 
-import com.esotericsoftware.kryo.Kryo
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.serialization.SerializationCustomization
 import java.util.function.Function
 
 /**
@@ -40,14 +40,12 @@ abstract class CordaPluginRegistry(
         open val servicePlugins: List<Function<PluginServiceHub, out Any>> = emptyList()
 ) {
         /**
-         * Optionally register types with [Kryo] for use over RPC, as we lock down the types that can be serialised in this
-         * particular use case.
-         * For example, if you add an RPC interface that carries some contract states back and forth, you need to register
-         * those classes here using the [register] method on Kryo.
+         * Optionally whitelist types for use in object serialization, as we lock down the types that can be serialized.
          *
-         * TODO: Kryo and likely the requirement to register classes here will go away when we replace the serialization implementation.
-         *
+         * For example, if you add a new [ContractState] it needs to be whitelisted.  You can do that either by
+         * adding the @CordaSerializable annotation or via this method.
+         **
          * @return true if you register types, otherwise you will be filtered out of the list of plugins considered in future.
          */
-        open fun registerRPCKryoTypes(kryo: Kryo): Boolean = false
+        open fun customizeSerialization(custom: SerializationCustomization): Boolean = false
 }

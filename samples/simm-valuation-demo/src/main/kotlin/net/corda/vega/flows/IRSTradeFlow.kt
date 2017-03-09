@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.PluginServiceHub
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.flows.TwoPartyDealFlow
@@ -12,6 +13,7 @@ import net.corda.vega.contracts.OGTrade
 import net.corda.vega.contracts.SwapData
 
 object IRSTradeFlow {
+    @CordaSerializable
     data class OfferMessage(val notary: Party, val dealBeingOffered: IRSState)
 
     class Requester(val swap: SwapData, val otherParty: Party) : FlowLogic<SignedTransaction>() {

@@ -15,7 +15,7 @@ class SerializationTokenTest {
 
     @Before
     fun setup() {
-        kryo = THREAD_LOCAL_KRYO.get()
+        kryo = threadLocalStorageKryo()
     }
 
     @After

@@ -13,6 +13,8 @@ is the `Introduction to Corda webinar <https://vimeo.com/192757743/c2ec39c1e1>`_
 they become more familiar with Corda, readers with a technical background will also want to dive into the `Technical white paper`_,
 which describes the platform's envisioned end-state.
 
+.. note:: Corda training is now available in London, New York and Singapore! `Learn more. <https://www.corda.net/corda-training/>`_
+
 Corda is designed so that developers can easily extend its functionality by writing CorDapps
 (**Cor**\ da **D**\ istributed **App**\ lication\ **s**\ ). Some example CorDapps are available in the Corda repo's
 `samples <https://github.com/corda/corda/tree/master/samples>`_ directory. To run these yourself, make
@@ -70,6 +72,7 @@ Documentation Contents:
    :maxdepth: 2
    :caption: The Corda node
 
+   serialization
    clientrpc
    messaging
    persistence
@@ -123,6 +126,7 @@ Documentation Contents:
    secure-coding-guidelines
    release-process
    release-notes
+   changelog
    codestyle
    building-the-docs
    further-notes-on-kotlin
