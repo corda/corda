@@ -24,6 +24,7 @@ buildscript {
     ext.guava_version = '19.0'
     ext.quickcheck_version = '0.7'
     ext.okhttp_version = '3.5.0'
+    ext.netty_version = '4.1.5.Final'
     ext.typesafe_config_version = '1.3.1'
     ext.junit_version = '4.12'
     ext.jopt_simple_version = '5.0.2'
