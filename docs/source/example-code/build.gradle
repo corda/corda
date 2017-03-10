@@ -49,7 +49,7 @@ dependencies {
     }
 
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":node:webserver", configuration: 'runtimeArtifacts')
+    runtime project(path: ":node:webserver:capsule", configuration: 'runtimeArtifacts')
 }
 
 mainClassName = "net.corda.docs.ClientRpcTutorialKt"
