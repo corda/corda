@@ -1,6 +1,7 @@
 package net.corda.core.crypto
 
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.serialization.serialize
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -20,16 +21,22 @@ class CompositeKeyTests {
 
     val aliceSignature = aliceKey.signWithECDSA(message)
     val bobSignature = bobKey.signWithECDSA(message)
+    val charlieSignature = charlieKey.signWithECDSA(message)
+    val compositeAliceSignature = CompositeSignaturesWithKeys(listOf(aliceSignature))
 
     @Test
     fun `(Alice) fulfilled by Alice signature`() {
         assertTrue { alicePublicKey.isFulfilledBy(aliceSignature.by) }
+        assertFalse { alicePublicKey.isFulfilledBy(charlieSignature.by) }
     }
 
     @Test
-    fun `(Alice or Bob) fulfilled by Bob signature`() {
+    fun `(Alice or Bob) fulfilled by either signature`() {
         val aliceOrBob = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build(threshold = 1)
+        assertTrue { aliceOrBob.isFulfilledBy(aliceSignature.by) }
         assertTrue { aliceOrBob.isFulfilledBy(bobSignature.by) }
+        assertTrue { aliceOrBob.isFulfilledBy(listOf(aliceSignature.by, bobSignature.by)) }
+        assertFalse { aliceOrBob.isFulfilledBy(charlieSignature.by) }
     }
 
     @Test
@@ -37,6 +44,13 @@ class CompositeKeyTests {
         val aliceAndBob = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build()
         val signatures = listOf(aliceSignature, bobSignature)
         assertTrue { aliceAndBob.isFulfilledBy(signatures.byKeys()) }
+    }
+
+    @Test
+    fun `(Alice and Bob) not fulfilled by neither signature alone`() {
+        val aliceAndBob = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build()
+        assertFalse { aliceAndBob.isFulfilledBy(listOf(aliceSignature).byKeys()) }
+        assertFalse { aliceAndBob.isFulfilledBy(listOf(bobSignature).byKeys()) }
     }
 
     @Test
@@ -86,5 +100,28 @@ class CompositeKeyTests {
 
         // Chain of single nodes should throw.
         assertEquals(CompositeKey.Builder().addKeys(tree1).build(), tree1)
+    }
+
+    /**
+     * Check that verifying a composite signature using the [CompositeSignature] engine works.
+     */
+    @Test
+    fun `composite signature verification`() {
+        val twoOfThree = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey, charliePublicKey).build(threshold = 2)
+        val engine = CompositeSignature()
+        engine.initVerify(twoOfThree)
+        engine.update(message.bytes)
+
+        assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature)).serialize().bytes) }
+        assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(bobSignature)).serialize().bytes) }
+        assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(charlieSignature)).serialize().bytes) }
+        assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, bobSignature)).serialize().bytes) }
+        assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, charlieSignature)).serialize().bytes) }
+        assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(bobSignature, charlieSignature)).serialize().bytes) }
+        assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, bobSignature, charlieSignature)).serialize().bytes) }
+
+        // Check the underlying signature is validated
+        val brokenBobSignature = DigitalSignature.WithKey(bobSignature.by, aliceSignature.bytes)
+        assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, brokenBobSignature)).serialize().bytes) }
     }
 }

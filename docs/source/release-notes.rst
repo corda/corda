@@ -29,6 +29,11 @@ Soft locks are automatically applied to coin selection (eg. cash spending) to en
 
 The basic Amount API has been upgraded to have support for advanced financial use cases and to better integrate with currency reference data.
 
+Work has contined on confidential identities, introducing code to enable the Java standard libraries to work with
+composite key signatures. This will form the underlying basis of future work to standardise the public key and signature
+formats to enable interoperability with other systems, as well as enabling the use of composite signatures on X.509
+certificates to prove association between transaction keys and identity keys.
+
 We have added optional out-of-process transaction verification. Any number of external verifier processes may be attached to the node which can handle loadbalanced verification requests.
 
 We have also delivered the long waited Kotlin 1.1 upgrade in M10! The new features in Kotlin allow us to write even more clean and easy to manage code, which greatly increases our productivity.
