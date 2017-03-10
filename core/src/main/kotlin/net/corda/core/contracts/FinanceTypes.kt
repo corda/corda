@@ -39,7 +39,7 @@ import java.util.*
 data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
     companion object {
         /**
-         * Build an amount from a decimal representation. For example, with an input of "12.34" GBP,
+         * Build a currency amount from a decimal representation. For example, with an input of "12.34" GBP,
          * returns an amount with a quantity of "1234".
          *
          * @see Amount<Currency>.toDecimal
@@ -52,7 +52,9 @@ data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
         private val currencySymbols: Map<String, Currency> = mapOf(
                 "$" to USD,
                 "£" to GBP,
-                "€" to EUR
+                "€" to EUR,
+                "¥" to JPY,
+                "₽" to RUB
         )
         private val currencyCodes: Map<String, Currency> by lazy { Currency.getAvailableCurrencies().map { it.currencyCode to it }.toMap() }
 
@@ -68,10 +70,16 @@ data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
          * - €5000
          *
          * Note this method does NOT respect internationalisation rules: it ignores commas and uses . as the
-         * decimal point separator, always. It also ignores the users locale: $ is special cased to be USD,
-         * £ is special cased to GBP and € is special cased to Euro. Thus an input of $12 expecting some other
-         * countries dollar will not work. Do your own parsing if you need correct handling of currency amounts
-         * with locale-sensitive handling.
+         * decimal point separator, always. It also ignores the users locale:
+         *
+         * - $ is always USD,
+         * - £ is always GBP
+         * - € is always the Euro
+         * - ¥ is always Japanese Yen.
+         * - ₽ is always the Russian ruble.
+         *
+         * Thus an input of $12 expecting some other countries dollar will not work. Do your own parsing if
+         * you need correct handling of currency amounts with locale-sensitive handling.
          *
          * @throws IllegalArgumentException if the input string was not understood.
          */
@@ -117,17 +125,17 @@ data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
     constructor(quantity: BigInteger, token: T) : this(quantity.toLong(), token)
 
     operator fun plus(other: Amount<T>): Amount<T> {
-        checkCurrency(other)
+        checkToken(other)
         return Amount(Math.addExact(quantity, other.quantity), token)
     }
 
     operator fun minus(other: Amount<T>): Amount<T> {
-        checkCurrency(other)
+        checkToken(other)
         return Amount(Math.subtractExact(quantity, other.quantity), token)
     }
 
-    private fun checkCurrency(other: Amount<T>) {
-        require(other.token == token) { "Currency mismatch: ${other.token} vs $token" }
+    private fun checkToken(other: Amount<T>) {
+        require(other.token == token) { "Token mismatch: ${other.token} vs $token" }
     }
 
     operator fun div(other: Long): Amount<T> = Amount(quantity / other, token)
@@ -135,10 +143,16 @@ data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
     operator fun div(other: Int): Amount<T> = Amount(quantity / other, token)
     operator fun times(other: Int): Amount<T> = Amount(Math.multiplyExact(quantity, other.toLong()), token)
 
-    override fun toString(): String = (BigDecimal(quantity).divide(BigDecimal(100))).setScale(2).toPlainString() + " " + token
+    override fun toString(): String {
+        val bd = if (token is Currency)
+            BigDecimal(quantity).movePointLeft(token.defaultFractionDigits)
+        else
+            BigDecimal(quantity)
+        return bd.toPlainString() + " " + token
+    }
 
     override fun compareTo(other: Amount<T>): Int {
-        checkCurrency(other)
+        checkToken(other)
         return quantity.compareTo(other.quantity)
     }
 }
