@@ -203,7 +203,7 @@ interface VaultService {
                       onlyFromParties: Set<AbstractParty>? = null): Pair<TransactionBuilder, List<CompositeKey>>
 
     /**
-     * Return [ContractState]s of a given [Contract] type an [Iterable] of [Vault.StateStatus]
+     * Return [ContractState]s of a given [Contract] type and [Iterable] of [Vault.StateStatus].
      */
     fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>): Iterable<StateAndRef<T>>
 }

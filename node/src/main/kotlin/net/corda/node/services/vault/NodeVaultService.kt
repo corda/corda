@@ -165,7 +165,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                 Sequence{iterator}
                         .map { it ->
                             val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
-                            // TODO: revisit Kryo bug when using THREAD_LOCAL_KYRO
+                            // TODO: revisit Kryo bug when using THREAD_LOCAL_KRYO
                             val state = it.contractState.deserialize<TransactionState<T>>(createKryo())
                             StateAndRef(state, stateRef)
                         }

@@ -56,7 +56,6 @@ class DataVendingServiceTests {
             // Check the transaction is in the receiving node
             val actual = vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>().singleOrNull()
             val expected = tx.tx.outRef<Cash.State>(0)
-
             assertEquals(expected, actual)
         }
     }
