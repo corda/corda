@@ -1,13 +1,11 @@
 package net.corda.demobench.model
 
 data class User(val user: String, val password: String, val permissions: List<String>) {
-
     fun toMap() = mapOf(
         "user" to user,
         "password" to password,
         "permissions" to permissions
     )
-
 }
 
 @Suppress("UNCHECKED_CAST")

@@ -66,12 +66,9 @@ class InstallFactory : Controller() {
  * which isn't ready to be instantiated yet.
  */
 class InstallConfig internal constructor(val baseDir: Path, private val config: NodeConfig) : HasPlugins {
-
     val key = config.key
     override val pluginDir: Path = baseDir.resolve("plugins")
 
     fun deleteBaseDir(): Boolean = baseDir.toFile().deleteRecursively()
-
     fun installTo(installDir: Path) = config.moveTo(installDir)
-
 }
