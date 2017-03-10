@@ -98,7 +98,6 @@ object RPCKryoLocationKey
 // The Kryo used for the RPC wire protocol. Every type in the wire protocol is listed here explicitly.
 // This is annoying to write out, but will make it easier to formalise the wire protocol when the time comes,
 // because we can see everything we're using in one place.
-// TODO: refactor things so these can be pooled too.  Right now they are customised per request.
 private class RPCKryo(observableSerializer: Serializer<Observable<Any>>) : CordaKryo(makeStandardClassResolver()) {
     init {
         DefaultKryoCustomizer.customize(this)
