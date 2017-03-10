@@ -102,8 +102,12 @@ fun main(args: Array<String>) {
         exitProcess(0)
     }
 
-    log.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
+    log.info("Version: ${nodeVersionInfo.version}")
+    log.info("Vendor: ${nodeVersionInfo.vendor}")
+    log.info("Revision: ${nodeVersionInfo.revision}")
     val info = ManagementFactory.getRuntimeMXBean()
+    log.info("PID: ${info.name.split("@").firstOrNull()}")  // TODO Java 9 has better support for this
+    log.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
     log.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
     log.info("Application Args: ${args.joinToString(" ")}")
     log.info("bootclasspath: ${info.bootClassPath}")
