@@ -23,6 +23,12 @@ configurations {
     // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
     runtime.exclude module: 'isolated'
 
+    compile {
+        // We don't need these because we already include netty-all.
+        exclude group: 'io.netty', module: 'netty-transport'
+        exclude group: 'io.netty', module: 'netty-handler'
+    }
+
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
 }
@@ -145,7 +151,10 @@ dependencies {
     // Java Atomix: RAFT library
     compile 'io.atomix.copycat:copycat-client:1.1.4'
     compile 'io.atomix.copycat:copycat-server:1.1.4'
-    compile 'io.atomix.catalyst:catalyst-netty:1.1.1'
+    compile 'io.atomix.catalyst:catalyst-netty:1.1.2'
+
+    // Netty: All of it.
+    compile "io.netty:netty-all:$netty_version"
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
