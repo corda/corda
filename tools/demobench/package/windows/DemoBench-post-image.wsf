@@ -4,7 +4,7 @@
     <script language="JScript">
      <![CDATA[
         var oShell = new ActiveXObject("wscript.shell");
-        var binDir = oShell.ExpandEnvironmentStrings("%JAVA_HOME%") + "\\jre\\bin\\";
+        var binDir = oShell.ExpandEnvironmentStrings("%JAVA_HOME%") + "\\bin\\";
         var javaExe = binDir + "java.exe";
         var javawExe = binDir + "javaw.exe";
 

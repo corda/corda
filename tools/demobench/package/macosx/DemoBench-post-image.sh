@@ -20,7 +20,7 @@ cd ../images/image-*/DemoBench.app
 
 INSTALL_HOME=Contents/PlugIns/Java.runtime/Contents/Home/jre/bin
 if (mkdir -p $INSTALL_HOME); then
-    cp $JAVA_HOME/jre/bin/java $INSTALL_HOME
+    cp $JAVA_HOME/bin/java $INSTALL_HOME
 fi
 
 # Switch to image directory in order to sign it.
