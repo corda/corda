@@ -1,10 +1,9 @@
 apply plugin: 'kotlin'
 apply plugin: 'java'
 apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'us.kirchmeier.capsule'
 
 // TODO: Break dependency on node and move to another location  such as a submodule of client.
-description 'Corda webserver module'
+description 'Corda node web server'
 
 repositories {
     mavenLocal()
@@ -18,7 +17,6 @@ repositories {
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
-    runtimeArtifacts
 }
 
 sourceSets {
@@ -74,46 +72,4 @@ dependencies {
 task integrationTest(type: Test) {
     testClassesDir = sourceSets.integrationTest.output.classesDir
     classpath = sourceSets.integrationTest.runtimeClasspath
-}
-
-publish {
-    name = 'corda-webserver'
-    publishWar = false // TODO: Use WAR instead of JAR
-    disableDefaultJar = true
-}
-
-task buildWebserverJar(type: FatCapsule) {
-    applicationClass 'net.corda.webserver.WebServer'
-    archiveName "corda-webserver-${corda_version}.jar"
-    applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
-    from 'NOTICE' // Copy CDDL notice
-
-    capsuleManifest {
-        applicationVersion = corda_version
-        javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
-        systemProperties['visualvm.display.name'] = 'Corda Webserver'
-        systemProperties['corda.version'] = corda_version
-        minJavaVersion = '1.8.0'
-        // This version is known to work and avoids earlier 8u versions that have bugs.
-        minUpdateVersion['1.8'] = '102'
-        caplets = ['CordaCaplet']
-
-        // JVM configuration:
-        // - Constrain to small heap sizes to ease development on low end devices.
-        // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
-        //
-        // If you change these flags, please also update Driver.kt
-        jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
-    }
-
-    manifest {
-        attributes('Corda-Version': corda_version)
-    }
-}
-
-artifacts {
-    runtimeArtifacts buildWebserverJar
-    publish buildWebserverJar {
-        classifier ""
-    }
 }

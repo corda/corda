@@ -1,0 +1,91 @@
+/**
+ * This build.gradle exists to publish our capsule (executable fat jar) to maven. It cannot be placed in the
+ * node project because the bintray plugin cannot publish two modules from one project.
+ */
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'us.kirchmeier.capsule'
+
+description 'Corda node web server capsule'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
+    jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
+}
+
+configurations {
+    runtimeArtifacts
+}
+
+// Force the Caplet to target Java 6. This ensures that running 'java -jar corda.jar' on any Java 6 VM upwards
+// will get as far as the Capsule version checks, meaning that if your JVM is too old, you will at least get
+// a sensible error message telling you what to do rather than a bytecode version exception that doesn't.
+// If we introduce .java files into this module that need Java 8+ then we will have to push the caplet into
+// its own module so its target can be controlled individually, but for now this suffices.
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+sourceSets {
+    test {
+        resources {
+            srcDir "../../../config/test"
+        }
+    }
+    main {
+        resources {
+            srcDir "../../../config/dev"
+        }
+    }
+}
+
+dependencies {
+    compile project(':node:webserver')
+}
+
+task buildWebserverJar(type: FatCapsule) {
+    applicationClass 'net.corda.webserver.WebServer'
+    archiveName "corda-webserver-${corda_version}.jar"
+    applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
+    from 'NOTICE' // Copy CDDL notice
+
+    capsuleManifest {
+        applicationVersion = corda_version
+        javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
+        systemProperties['visualvm.display.name'] = 'Corda Webserver'
+        systemProperties['corda.version'] = corda_version
+        minJavaVersion = '1.8.0'
+        // This version is known to work and avoids earlier 8u versions that have bugs.
+        minUpdateVersion['1.8'] = '102'
+        caplets = ['CordaCaplet']
+
+        // JVM configuration:
+        // - Constrain to small heap sizes to ease development on low end devices.
+        // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
+        //
+        // If you change these flags, please also update Driver.kt
+        jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
+    }
+
+    manifest {
+        attributes('Corda-Version': corda_version)
+    }
+}
+
+artifacts {
+    runtimeArtifacts buildWebserverJar
+    publish buildWebserverJar {
+        classifier ""
+    }
+}
+
+publish {
+    name = 'corda-webserver'
+    publishWar = false // TODO: Use WAR instead of JAR
+    disableDefaultJar = true
+}

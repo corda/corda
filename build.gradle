@@ -113,7 +113,7 @@ dependencies {
     compile project(':node')
     compile "com.google.guava:guava:$guava_version"
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":node:webserver", configuration: 'runtimeArtifacts')
+    runtime project(path: ":node:webserver:capsule", configuration: 'runtimeArtifacts')
 }
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
@@ -179,7 +179,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['client', 'core', 'corda', 'corda-webserver', 'finance', 'node', 'node-schemas', 'test-utils']
+    publications = ['client', 'core', 'corda', 'corda-webserver', 'finance', 'node', 'node-schemas', 'test-utils', 'webserver']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'

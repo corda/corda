@@ -22,7 +22,7 @@ dependencies {
 
     // Corda integration dependencies
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":node:webserver", configuration: 'runtimeArtifacts')
+    runtime project(path: ":node:webserver:capsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':finance')
     testCompile project(':test-utils')
