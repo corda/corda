@@ -3,7 +3,6 @@ buildscript {
     ext.jna_version = '4.1.0'
     ext.purejavacomm_version = '0.0.17'
     ext.guava_version = '14.0.1'
-    ext.slf4j_version = '1.7.22'
     ext.controlsfx_version = '8.40.12'
 
     ext.java_home = System.properties.'java.home'
@@ -45,27 +44,26 @@ repositories {
 
 dependencies {
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
-    compile group: 'no.tornado', name: 'tornadofx', version: tornadofx_version
-    compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib', version: kotlin_version
+    compile "no.tornado:tornadofx:$tornadofx_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
-    compile group: 'org.controlsfx', name: 'controlsfx', version: controlsfx_version
+    compile "org.controlsfx:controlsfx:$controlsfx_version"
 
     // ONLY USING THE RPC CLIENT!?
     compile (project(':node')) {
-        exclude module: 'commons-logging'
         exclude module: 'kotlin-test'
         exclude module: 'junit'
     }
 
-    compile group: 'com.h2database', name: 'h2', version: h2_version
-    compile group: 'net.java.dev.jna', name: 'jna-platform', version: jna_version
-    compile group: 'com.google.guava', name: 'guava', version: guava_version
-    compile group: 'com.sparetimelabs', name: 'purejavacomm', version: purejavacomm_version
-    compile group: 'org.slf4j', name: 'log4j-over-slf4j', version: slf4j_version
-    compile group: 'org.slf4j', name: 'jcl-over-slf4j', version: slf4j_version
-    compile group: 'org.slf4j', name: 'jul-to-slf4j', version: slf4j_version
-    compile group: 'com.typesafe', name: 'config', version: typesafe_config_version
+    compile "com.h2database:h2:$h2_version"
+    compile "net.java.dev.jna:jna-platform:$jna_version"
+    compile "com.google.guava:guava:$guava_version"
+    compile "com.sparetimelabs:purejavacomm:$purejavacomm_version"
+    compile "org.slf4j:log4j-over-slf4j:$slf4j_version"
+    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "com.typesafe:config:$typesafe_config_version"
 
     // These libraries don't exist in any Maven repository I can find.
     // See: https://github.com/JetBrains/jediterm
@@ -75,12 +73,8 @@ dependencies {
     compile ':jediterm-terminal-2.5'
     compile ':pty4j-0.7.2'
 
-    testCompile group: 'junit', name: 'junit', version: junit_version
-    testCompile group: 'org.jetbrains.kotlin', name: 'kotlin-test', version: kotlin_version
-}
-
-compileKotlin {
-    kotlinOptions.jvmTarget = 1.8
+    testCompile "junit:junit:$junit_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 }
 
 jar {
