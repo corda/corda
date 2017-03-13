@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>alltypes - corda</title>
-<link rel="stylesheet" href="..\..\style.css">
+<link rel="stylesheet" href="../../style.css">
 </HEAD>
 <BODY>
 <h3>All Types</h3>
@@ -23,19 +23,6 @@ they are added to the <a href="../net.corda.node.services.statemachine/-state-ma
 <p>Knows how to render a <a href="../net.corda.core.utilities/-progress-tracker/index.html">ProgressTracker</a> to the terminal using coloured, emoji-fied output. Useful when writing small
 command line tools, demos, tests etc. Just set the <a href="../net.corda.node.utilities/-a-n-s-i-progress-renderer/progress-tracker.html">progressTracker</a> field and it will go ahead and start drawing
 if the terminal supports it. Otherwise it just prints out the name of the step whenever it changes.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.node.webserver.api/-a-p-i-server/index.html">net.corda.node.webserver.api.APIServer</a></td>
-<td>
-<p>Top level interface to external interaction with the distributed ledger.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.node.webserver.internal/-a-p-i-server-impl/index.html">net.corda.node.webserver.internal.APIServerImpl</a></td>
-<td>
 </td>
 </tr>
 <tr>
@@ -186,6 +173,12 @@ for ensuring code runs on the right thread, and also for unit testing.</p>
 </tr>
 <tr>
 <td>
+<a href="../net.corda.core.serialization/-all-whitelist/index.html">net.corda.core.serialization.AllWhitelist</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../net.corda.core.contracts/-amount/index.html">net.corda.core.contracts.Amount</a></td>
 <td>
 <p>Amount represents a positive quantity of some token (currency, asset, etc.), measured in quantity of the smallest
@@ -288,13 +281,6 @@ of how attachments are meant to be used include:</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.webserver.servlets/-attachment-download-servlet/index.html">net.corda.node.webserver.servlets.AttachmentDownloadServlet</a></td>
-<td>
-<p>Allows the node administrator to either download full attachment zips, or individual files within those zips.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../net.corda.core.contracts/-attachment-resolution-exception/index.html">net.corda.core.contracts.AttachmentResolutionException</a></td>
 <td>
 </td>
@@ -314,6 +300,12 @@ of how attachments are meant to be used include:</p>
 need to provide JAR streams, and so could be fetched from a database, local disk, etc. Constructing an
 AttachmentsClassLoader is somewhat expensive, as every attachment is scanned to ensure that there are no overlapping
 file paths.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.node.services/-attachments-storage-service/index.html">net.corda.core.node.services.AttachmentsStorageService</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -379,6 +371,12 @@ Bilateral states are used in close-out netting.</p>
 <p>Notify the specified parties about a transaction. The remote peers will download this transaction and its
 dependency graph, verifying them all. The flow returns when all peers have acknowledged the transactions
 as valid. Normally you wouldn't use this directly, it would be called via <a href="../net.corda.flows/-finality-flow/index.html">FinalityFlow</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.serialization/-built-in-exceptions-whitelist/index.html">net.corda.core.serialization.BuiltInExceptionsWhitelist</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -511,6 +509,12 @@ at the time of writing.</p>
 <tr>
 <td>
 <a href="../net.corda.node.services.messaging/-class-serializer/index.html">net.corda.node.services.messaging.ClassSerializer</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.serialization/-class-whitelist/index.html">net.corda.core.serialization.ClassWhitelist</a></td>
 <td>
 </td>
 </tr>
@@ -743,6 +747,20 @@ catch corner case bugs and test algebraic properties of the code, for example de
 </tr>
 <tr>
 <td>
+<a href="../net.corda.core.serialization/-corda-class-resolver/index.html">net.corda.core.serialization.CordaClassResolver</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.serialization/-corda-kryo/index.html">net.corda.core.serialization.CordaKryo</a></td>
+<td>
+<p>We need to disable whitelist checking during calls from our Kryo code to register a serializer, since it checks
+for existing registrations and then will enter our <a href="../net.corda.core.serialization/-corda-class-resolver/get-registration.html">CordaClassResolver.getRegistration</a> method.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../net.corda.core.node/-corda-plugin-registry/index.html">net.corda.core.node.CordaPluginRegistry</a></td>
 <td>
 <p>Implement this interface on a class advertised in a META-INF/services/net.corda.core.node.CordaPluginRegistry file
@@ -782,6 +800,13 @@ thread (i.e. serially). Arguments are serialised and deserialised automatically.
 </tr>
 <tr>
 <td>
+<a href="../net.corda.core.serialization/-corda-serializable/index.html">net.corda.core.serialization.CordaSerializable</a></td>
+<td>
+<p>This annotation is a marker to indicate that a class is permitted and intended to be serialized as part of Node messaging.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../net.corda.core.math/-cubic-spline-interpolator/index.html">net.corda.core.math.CubicSplineInterpolator</a></td>
 <td>
 <p>Interpolates values between the given data points using a <a href="../net.corda.core.math/-spline-function/index.html">SplineFunction</a>.</p>
@@ -817,13 +842,6 @@ thread (i.e. serially). Arguments are serialised and deserialised automatically.
 <td>
 <a href="../net.corda.node.services.persistence/-d-b-transaction-storage/index.html">net.corda.node.services.persistence.DBTransactionStorage</a></td>
 <td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.node.webserver.servlets/-data-upload-servlet/index.html">net.corda.node.webserver.servlets.DataUploadServlet</a></td>
-<td>
-<p>Accepts binary streams, finds the right <a href="../net.corda.node.services.api/-accepts-file-upload/index.html">AcceptsFileUpload</a> implementor and hands the stream off to it.</p>
 </td>
 </tr>
 <tr>
@@ -871,6 +889,18 @@ in the toString lest some people get confused.</p>
 <td>
 <p>Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
 implementation of general flows that manipulate many agreement types.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.serialization/-default-kryo-customizer/index.html">net.corda.core.serialization.DefaultKryoCustomizer</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.node.serialization/-default-whitelist/index.html">net.corda.node.serialization.DefaultWhitelist</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -1014,6 +1044,12 @@ across a Copycat Raft cluster.</p>
 </tr>
 <tr>
 <td>
+<a href="../net.corda.core.serialization/-empty-whitelist/index.html">net.corda.core.serialization.EmptyWhitelist</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../net.corda.core/-error-or/index.html">net.corda.core.ErrorOr</a></td>
 <td>
 <p>Representation of an operation that may have thrown an error.</p>
@@ -1126,7 +1162,7 @@ attachments are saved to local storage automatically.</p>
 <a href="../net.corda.core.transactions/-filtered-leaves/index.html">net.corda.core.transactions.FilteredLeaves</a></td>
 <td>
 <p>Class that holds filtered leaves for a partial Merkle transaction. We assume mixed leaf types, notice that every
-field from WireTransaction can be used in PartialMerkleTree calculation.</p>
+field from <a href="../net.corda.core.transactions/-wire-transaction/index.html">WireTransaction</a> can be used in <a href="../net.corda.core.crypto/-partial-merkle-tree/index.html">PartialMerkleTree</a> calculation.</p>
 </td>
 </tr>
 <tr>
@@ -1346,6 +1382,12 @@ container), shares of the same class in a specific company are fungible and coun
 <a href="../net.corda.client.mock/-generator/index.html">net.corda.client.mock.Generator</a></td>
 <td>
 <p>This file defines a basic <a href="../net.corda.client.mock/-generator/index.html">Generator</a> library for composing random generators of objects.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.serialization/-global-transient-class-white-list/index.html">net.corda.core.serialization.GlobalTransientClassWhiteList</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -1591,14 +1633,6 @@ See <a href="../net.corda.node.utilities/-abstract-j-d-b-c-hash-set/index.html">
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.utilities/-json-support/index.html">net.corda.node.utilities.JsonSupport</a></td>
-<td>
-<p>Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
-the java.time API, some core types, and Kotlin data classes.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../net.corda.core.node.services/-key-management-service/index.html">net.corda.core.node.services.KeyManagementService</a></td>
 <td>
 <p>The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,
@@ -1629,6 +1663,12 @@ associated transaction context.</p>
 <tr>
 <td>
 <a href="../net.corda.core.serialization/com.esotericsoftware.kryo.-kryo/index.html">com.esotericsoftware.kryo.Kryo</a> (extensions in package net.corda.core.serialization)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.serialization/-kryo-serialization-customization/index.html">net.corda.core.serialization.KryoSerializationCustomization</a></td>
 <td>
 </td>
 </tr>
@@ -1716,6 +1756,14 @@ tables.</p>
 <td>
 <a href="../net.corda.core/org.slf4j.-logger/index.html">org.slf4j.Logger</a> (extensions in package net.corda.core)</td>
 <td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.serialization/-logging-whitelist/index.html">net.corda.core.serialization.LoggingWhitelist</a></td>
+<td>
+<p>This class is not currently used, but can be installed to log a large number of missing entries from the whitelist
+and was used to track down the initial set.</p>
 </td>
 </tr>
 <tr>
@@ -1872,6 +1920,12 @@ Used in cases where all parties (or their proxies) are signing, such as central 
 <a href="../net.corda.core.contracts/-multilateral-nettable-state/index.html">net.corda.core.contracts.MultilateralNettableState</a></td>
 <td>
 <p>Interface for state objects that support being netted with other state objects.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.serialization/-mutable-class-whitelist/index.html">net.corda.core.serialization.MutableClassWhitelist</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -2186,14 +2240,6 @@ must point to the same notary.</p>
 <a href="../net.corda.core.crypto/-null-signature.html">net.corda.core.crypto.NullSignature</a></td>
 <td>
 <p>A signature with a key and value of zero. Useful when you want a signature object that you know won't ever be used.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.node.webserver.servlets/-object-mapper-config/index.html">net.corda.node.webserver.servlets.ObjectMapperConfig</a></td>
-<td>
-<p>Primary purpose is to install Kotlin extensions for Jackson ObjectMapper so data classes work
-and to organise serializers / deserializers for java.time.* classes as necessary.</p>
 </td>
 </tr>
 <tr>
@@ -2671,13 +2717,6 @@ checked again.</p>
 </tr>
 <tr>
 <td>
-<a href="../net.corda.node.webserver.servlets/-response-filter/index.html">net.corda.node.webserver.servlets.ResponseFilter</a></td>
-<td>
-<p>This adds headers needed for cross site scripting on API clients.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../net.corda.core/-retryable-exception/index.html">net.corda.core.RetryableException</a></td>
 <td>
 <p>This represents a transient exception or condition that might no longer be thrown if the operation is re-run or called
@@ -2783,6 +2822,12 @@ Provides utilities for generating a cryptographic hash using different algorithm
 </tr>
 <tr>
 <td>
+<a href="../net.corda.core.serialization/-serialization-customization/index.html">net.corda.core.serialization.SerializationCustomization</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../net.corda.core.serialization/-serialization-token/index.html">net.corda.core.serialization.SerializationToken</a></td>
 <td>
 <p>This represents a token in the serialized stream for an instance of a type that implements <a href="../net.corda.core.serialization/-serialize-as-token/index.html">SerializeAsToken</a>.</p>
@@ -2876,6 +2921,14 @@ functionality and you don't want to hard-code which types in the interface.</p>
 <p>Identifier for service types a node can expose over the network to other peers. These types are placed into network
 map advertisements. Services that are purely local and are not providing functionality to other parts of the network
 don't need a declared service type.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../net.corda.core.node/-services-for-resolution/index.html">net.corda.core.node.ServicesForResolution</a></td>
+<td>
+<p>Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
+forms ready for verification.</p>
 </td>
 </tr>
 <tr>
@@ -3095,13 +3148,6 @@ transaction defined the state and where in that transaction it was.</p>
 <td>
 <a href="../net.corda.flows/-state-replacement-exception/index.html">net.corda.flows.StateReplacementException</a></td>
 <td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.node.webserver.api/-states-query/index.html">net.corda.node.webserver.api.StatesQuery</a></td>
-<td>
-<p>Extremely rudimentary query language which should most likely be replaced with a product.</p>
 </td>
 </tr>
 <tr>
@@ -3332,9 +3378,10 @@ used to set it up. Note that the initializer will be called with the TransientPr
 <td>
 <a href="../net.corda.core.transactions/-traversable-transaction/index.html">net.corda.core.transactions.TraversableTransaction</a></td>
 <td>
-<p>Interface implemented by WireTransaction and FilteredLeaves.
-Property traversableList assures that we always calculate hashes in the same order, lets us define which
-fields of WireTransaction will be included in id calculation or partial merkle tree building.</p>
+<p>Implemented by <a href="../net.corda.core.transactions/-wire-transaction/index.html">WireTransaction</a> and <a href="../net.corda.core.transactions/-filtered-leaves/index.html">FilteredLeaves</a>. A TraversableTransaction allows you to iterate
+over the flattened components of the underlying transaction structure, taking into account that some
+may be missing in the case of this representing a "torn" transaction. Please see the user guide section
+"Transaction tear-offs" to learn more about this feature.</p>
 </td>
 </tr>
 <tr>
@@ -3445,7 +3492,7 @@ indeed valid.</p>
 <td>
 <a href="../net.corda.node.services.transactions/-validating-notary-service/index.html">net.corda.node.services.transactions.ValidatingNotaryService</a></td>
 <td>
-<p>A Notary service that validates the transaction chain of he submitted transaction before committing it</p>
+<p>A Notary service that validates the transaction chain of the submitted transaction before committing it</p>
 </td>
 </tr>
 <tr>
@@ -3490,12 +3537,6 @@ consumed by someone else first!</p>
 <tr>
 <td>
 <a href="../net.corda.node.services.statemachine/-waiting-request.html">net.corda.node.services.statemachine.WaitingRequest</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../net.corda.node.webserver/-web-server/index.html">net.corda.node.webserver.WebServer</a></td>
 <td>
 </td>
 </tr>

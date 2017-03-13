@@ -120,6 +120,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -165,6 +166,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -279,6 +281,8 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <dd>The consortium behind Corda</dd>
 <dt>SIMM</dt>
 <dd>Standard Initial Margin Model. A way of determining a counterparty&#8217;s margin payment to another counterparty based on a collection of trades such that, in the event of default, the receiving counterparty has limited exposure.</dd>
+<dt>Serialization</dt>
+<dd>Object serialization is the process of converting objects into a stream of bytes and, deserialization, the reverse process.</dd>
 <dt>Service Hub</dt>
 <dd>A hub in each Corda node that manages the services upon which other components of the node depend. Services may include facilities for identity management, storage management, network map management etc.</dd>
 <dt>Signed Transaction</dt>
@@ -291,6 +295,8 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <dd>Unspent Transaction Output. First introduced by the bitcoin model, an unspent transaction is data that has been output from a transaction but not yet used in another transaction.</dd>
 <dt>Verify</dt>
 <dd>To confirm that the transaction is valid by ensuring the the outputs are correctly derived from the inputs combined with the command of the transaction.</dd>
+<dt>Whitelisting</dt>
+<dd>To indicate that a class is intended to be passed between nodes or between a node and an RPC client, it is added to a whitelist.  This prevents the node presenting a large surface area of all classes in all dependencies of the node as containing possible vulnerabilities.</dd>
 </dl>
 </div>
 

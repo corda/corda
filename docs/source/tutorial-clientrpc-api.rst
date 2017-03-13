@@ -108,6 +108,7 @@ authenticated user is entitled to run).
 
 .. note:: Permissions are represented as *String's* to allow RPC implementations to add their own permissioning.
      Currently the only permission type defined is *StartFlow*, which defines a list of whitelisted flows an authenticated use may execute.
+     An administrator user (or a developer) may also be assigned the ``ALL`` permission, which grants access to any flow.
 
 In the instructions above the server node permissions are configured programmatically in the driver code:
 

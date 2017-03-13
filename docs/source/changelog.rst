@@ -3,6 +3,12 @@ Changelog
 
 Here are brief summaries of what's changed between each snapshot release.
 
+Milestone 9.1
+-------------
+
+* Correct web server ports for IRS demo.
+* Correct which corda-webserver JAR is published to Maven.
+
 Milestone 9
 -----------
 

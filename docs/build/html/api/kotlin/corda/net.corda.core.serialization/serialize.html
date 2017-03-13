@@ -2,14 +2,14 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>serialize - corda</title>
-<link rel="stylesheet" href="..\..\style.css">
+<link rel="stylesheet" href="../../style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">corda</a>&nbsp;/&nbsp;<a href="index.html">net.corda.core.serialization</a>&nbsp;/&nbsp;<a href=".">serialize</a><br/>
 <br/>
 <h1>serialize</h1>
-<a name="net.corda.core.serialization$serialize(net.corda.core.serialization.serialize.T, com.esotericsoftware.kryo.Kryo)"></a>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">T</span><span class="symbol">.</span><span class="identifier">serialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$serialize(net.corda.core.serialization.serialize.T, com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<a name="net.corda.core.serialization$serialize(net.corda.core.serialization.serialize.T, com.esotericsoftware.kryo.Kryo, kotlin.Boolean)"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">T</span><span class="symbol">.</span><span class="identifier">serialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$serialize(net.corda.core.serialization.serialize.T, com.esotericsoftware.kryo.Kryo, kotlin.Boolean)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;threadLocalP2PKryo()<span class="symbol">, </span><span class="identifier" id="net.corda.core.serialization$serialize(net.corda.core.serialization.serialize.T, com.esotericsoftware.kryo.Kryo, kotlin.Boolean)/internalOnly">internalOnly</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span><span class="symbol">: </span><a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
 <p>Can be called on any object to convert it to a byte array (wrapped by <a href="-serialized-bytes/index.html">SerializedBytes</a>), regardless of whether
 the type is marked as serializable or was designed for it (so be careful!).</p>
 </BODY>

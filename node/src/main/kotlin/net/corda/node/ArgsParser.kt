@@ -29,6 +29,7 @@ class ArgsParser {
             .defaultsTo(Level.INFO)
     private val logToConsoleArg = optionParser.accepts("log-to-console", "If set, prints logging to the console as well as to a file.")
     private val isRegistrationArg = optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
+    private val isVersionArg = optionParser.accepts("version", "Print the version and exit")
     private val helpArg = optionParser.accepts("help").forHelp()
 
     fun parse(vararg args: String): CmdLineOptions {
@@ -42,7 +43,8 @@ class ArgsParser {
         val loggingLevel = optionSet.valueOf(loggerLevel)
         val logToConsole = optionSet.has(logToConsoleArg)
         val isRegistration = optionSet.has(isRegistrationArg)
-        return CmdLineOptions(baseDirectory, configFile, help, loggingLevel, logToConsole, isRegistration)
+        val isVersion = optionSet.has(isVersionArg)
+        return CmdLineOptions(baseDirectory, configFile, help, loggingLevel, logToConsole, isRegistration, isVersion)
     }
 
     fun printHelp(sink: PrintStream) = optionParser.printHelpOn(sink)
@@ -53,7 +55,8 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val help: Boolean,
                           val loggingLevel: Level,
                           val logToConsole: Boolean,
-                          val isRegistration: Boolean) {
+                          val isRegistration: Boolean,
+                          val isVersion: Boolean) {
     fun loadConfig(allowMissingConfig: Boolean = false, configOverrides: Map<String, Any?> = emptyMap()): Config {
         return ConfigHelper.loadConfig(baseDirectory, configFile, allowMissingConfig, configOverrides)
     }

@@ -7,20 +7,21 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.node.services.network.InMemoryNetworkMapCache
+import net.corda.testing.MOCK_VERSION
 import rx.Observable
 import rx.subjects.PublishSubject
 
 /**
  * Network map cache with no backing map service.
  */
-class MockNetworkMapCache() : InMemoryNetworkMapCache() {
+class MockNetworkMapCache : InMemoryNetworkMapCache() {
     override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()
 
     data class MockAddress(val id: String): SingleMessageRecipient
 
     init {
-        val mockNodeA = NodeInfo(MockAddress("bankC:8080"), Party("Bank C", DummyPublicKey("Bank C")))
-        val mockNodeB = NodeInfo(MockAddress("bankD:8080"), Party("Bank D", DummyPublicKey("Bank D")))
+        val mockNodeA = NodeInfo(MockAddress("bankC:8080"), Party("Bank C", DummyPublicKey("Bank C")), MOCK_VERSION)
+        val mockNodeB = NodeInfo(MockAddress("bankD:8080"), Party("Bank D", DummyPublicKey("Bank D")), MOCK_VERSION)
         registeredNodes[mockNodeA.legalIdentity.owningKey] = mockNodeA
         registeredNodes[mockNodeB.legalIdentity.owningKey] = mockNodeB
         runWithoutMapService()

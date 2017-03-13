@@ -20,6 +20,8 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.PublicKey
+import java.security.spec.InvalidKeySpecException
+import java.time.Instant
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.*
@@ -549,5 +551,34 @@ object OrderedSerializer : Serializer<HashMap<Any, Any>>() {
     override fun read(kryo: Kryo, input: Input, type: Class<HashMap<Any, Any>>): HashMap<Any, Any> {
         val hm = kryo.readClassAndObject(input) as HashMap<Any, Any>
         return hm
+    }
+}
+
+/** For serialising a MetaData object. */
+@ThreadSafe
+object MetaDataSerializer : Serializer<MetaData>() {
+    override fun write(kryo: Kryo, output: Output, obj: MetaData) {
+        output.writeString(obj.schemeCodeName)
+        output.writeString(obj.versionID)
+        kryo.writeClassAndObject(output, obj.signatureType)
+        kryo.writeClassAndObject(output, obj.timestamp)
+        kryo.writeClassAndObject(output, obj.visibleInputs)
+        kryo.writeClassAndObject(output, obj.signedInputs)
+        output.writeBytesWithLength(obj.merkleRoot)
+        output.writeBytesWithLength(obj.publicKey.encoded)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    @Throws(IllegalArgumentException::class, InvalidKeySpecException::class)
+    override fun read(kryo: Kryo, input: Input, type: Class<MetaData>): MetaData {
+        val schemeCodeName = input.readString()
+        val versionID = input.readString()
+        val signatureType = kryo.readClassAndObject(input) as SignatureType
+        val timestamp = kryo.readClassAndObject(input) as Instant?
+        val visibleInputs = kryo.readClassAndObject(input) as BitSet?
+        val signedInputs = kryo.readClassAndObject(input) as BitSet?
+        val merkleRoot = input.readBytesWithLength()
+        val publicKey = Crypto.decodePublicKey(input.readBytesWithLength(), schemeCodeName)
+        return MetaData(schemeCodeName, versionID, signatureType, timestamp, visibleInputs, signedInputs, merkleRoot, publicKey)
     }
 }

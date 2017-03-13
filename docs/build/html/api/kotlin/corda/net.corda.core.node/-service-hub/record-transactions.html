@@ -2,16 +2,25 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>ServiceHub.recordTransactions - corda</title>
-<link rel="stylesheet" href="..\..\..\style.css">
+<link rel="stylesheet" href="../../../style.css">
 </HEAD>
 <BODY>
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.node</a>&nbsp;/&nbsp;<a href="index.html">ServiceHub</a>&nbsp;/&nbsp;<a href=".">recordTransactions</a><br/>
 <br/>
 <h1>recordTransactions</h1>
-<a name="net.corda.core.node.ServiceHub$recordTransactions(kotlin.collections.Iterable((net.corda.core.transactions.SignedTransaction)))"></a>
+
+<p><a name="net.corda.core.node.ServiceHub$recordTransactions(kotlin.collections.Iterable((net.corda.core.transactions.SignedTransaction)))"></a>
 <code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.ServiceHub$recordTransactions(kotlin.collections.Iterable((net.corda.core.transactions.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
 <p>Given a <a href="../../net.corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>, writes it to the local storage for validated transactions and then
 sends them to the vault for further processing. Expects to be run within a database transaction.</p>
+<h3>Parameters</h3>
+
+<p><a name="txs"></a>
+<code>txs</code> - The transactions to record.
+<p><a name="net.corda.core.node.ServiceHub$recordTransactions(kotlin.Array((net.corda.core.transactions.SignedTransaction)))"></a>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="net.corda.core.node.ServiceHub$recordTransactions(kotlin.Array((net.corda.core.transactions.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Given some <a href="../../net.corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a>s, writes them to the local storage for validated transactions and then
+sends them to the vault for further processing.</p>
 <h3>Parameters</h3>
 
 <p><a name="txs"></a>

@@ -15,6 +15,7 @@ import net.corda.core.div
 import net.corda.core.exists
 import net.corda.core.utilities.loggerFor
 import java.net.URL
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -46,14 +47,12 @@ object ConfigHelper {
     }
 }
 
-@Suppress("UNCHECKED_CAST")
+@Suppress("UNCHECKED_CAST", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 operator fun <T> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
-    if (metadata.returnType.isMarkedNullable && !hasPath(metadata.name)) {
-        return null as T
-    }
     return when (metadata.returnType.javaType) {
         String::class.java -> getString(metadata.name) as T
         Int::class.java -> getInt(metadata.name) as T
+        Integer::class.java -> getInt(metadata.name) as T
         Long::class.java -> getLong(metadata.name) as T
         Double::class.java -> getDouble(metadata.name) as T
         Boolean::class.java -> getBoolean(metadata.name) as T
@@ -102,7 +101,7 @@ inline fun <reified T : Any> Config.getListOrElse(path: String, default: Config.
  */
 fun NodeConfiguration.configureWithDevSSLCertificate() = configureDevKeyAndTrustStores(myLegalName)
 
-fun SSLConfiguration.configureDevKeyAndTrustStores(myLegalName: String) {
+private fun SSLConfiguration.configureDevKeyAndTrustStores(myLegalName: String) {
     certificatesDirectory.createDirectories()
     if (!trustStoreFile.exists()) {
         javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordatruststore.jks").copyTo(trustStoreFile)
@@ -112,5 +111,17 @@ fun SSLConfiguration.configureDevKeyAndTrustStores(myLegalName: String) {
                 javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"),
                 "cordacadevpass")
         X509Utilities.createKeystoreForSSL(keyStoreFile, keyStorePassword, keyStorePassword, caKeyStore, "cordacadevkeypass", myLegalName)
+    }
+}
+
+// TODO Move this to CoreTestUtils.kt once we can pry this from the explorer
+@JvmOverloads
+fun configureTestSSL(legalName: String = "Mega Corp."): SSLConfiguration = object : SSLConfiguration {
+    override val certificatesDirectory = Files.createTempDirectory("certs")
+    override val keyStorePassword: String get() = "cordacadevpass"
+    override val trustStorePassword: String get() = "trustpass"
+
+    init {
+        configureDevKeyAndTrustStores(legalName)
     }
 }

@@ -25,6 +25,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.*
 import net.corda.node.services.api.*
+import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.events.NodeSchedulerService
@@ -96,6 +97,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected abstract val log: Logger
     protected abstract val networkMapAddress: SingleMessageRecipient?
+    protected abstract val version: Version
 
     // We will run as much stuff in this single thread as possible to keep the risk of thread safety bugs low during the
     // low-performance prototyping period.
@@ -281,7 +283,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun makeInfo(): NodeInfo {
         val advertisedServiceEntries = makeServiceEntries()
         val legalIdentity = obtainLegalIdentity()
-        return NodeInfo(net.myAddress, legalIdentity, advertisedServiceEntries, findMyLocation())
+        return NodeInfo(net.myAddress, legalIdentity, version, advertisedServiceEntries, findMyLocation())
     }
 
     /**
@@ -440,6 +442,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             SimpleNotaryService.type -> SimpleNotaryService(services, timestampChecker, uniquenessProvider)
             ValidatingNotaryService.type -> ValidatingNotaryService(services, timestampChecker, uniquenessProvider)
             RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services, timestampChecker, uniquenessProvider as RaftUniquenessProvider)
+            BFTNonValidatingNotaryService.type -> with(configuration as FullNodeConfiguration) {
+                val nodeId = notaryNodeId ?: throw IllegalArgumentException("notaryNodeId value must be specified in the configuration")
+                val client = BFTSMaRt.Client(nodeId)
+                tokenizableServices.add(client)
+                BFTNonValidatingNotaryService(services, timestampChecker, nodeId, database, client)
+            }
             else -> {
                 throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")
             }
@@ -495,7 +503,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         )
     }
 
-    protected open fun constructStorageService(attachments: NodeAttachmentService,
+    protected open fun constructStorageService(attachments: AttachmentStorage,
                                                transactionStorage: TransactionStorage,
                                                stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage) =
             StorageServiceImpl(attachments, transactionStorage, stateMachineRecordedTransactionMappingStorage)
@@ -540,13 +548,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
 
-    protected fun makeAttachmentStorage(dir: Path): NodeAttachmentService {
+    protected fun makeAttachmentStorage(dir: Path): AttachmentStorage {
         val attachmentsDir = dir / "attachments"
         try {
             attachmentsDir.createDirectory()
         } catch (e: FileAlreadyExistsException) {
         }
-        return NodeAttachmentService(attachmentsDir, services.monitoringService.metrics)
+        return NodeAttachmentService(attachmentsDir, configuration.dataSourceProperties, services.monitoringService.metrics)
     }
 
     protected fun createNodeDir() {

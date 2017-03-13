@@ -24,7 +24,6 @@ import net.corda.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.StorageServiceImpl
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.utilities.databaseTransaction
@@ -90,8 +89,11 @@ class TwoPartyTradeFlowTests {
             databaseTransaction(bobNode.database) {
                 bobNode.services.fillWithSomeTestCash(2000.DOLLARS, outputNotary = notaryNode.info.notaryIdentity)
             }
-            val alicesFakePaper = fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
-                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null, notaryNode.info.notaryIdentity).second
+
+            val alicesFakePaper = databaseTransaction(aliceNode.database) {
+                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+                        1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null, notaryNode.info.notaryIdentity).second
+            }
 
             insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, aliceKey, notaryKey)
 
@@ -135,8 +137,10 @@ class TwoPartyTradeFlowTests {
             databaseTransaction(bobNode.database) {
                 bobNode.services.fillWithSomeTestCash(2000.DOLLARS, outputNotary = notaryNode.info.notaryIdentity)
             }
-            val alicesFakePaper = fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
-                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null, notaryNode.info.notaryIdentity).second
+            val alicesFakePaper = databaseTransaction(aliceNode.database) {
+                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+                        1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null, notaryNode.info.notaryIdentity).second
+            }
             insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, aliceKey, notaryKey)
             val aliceFuture = runBuyerAndSeller(notaryNode, aliceNode, bobNode, "alice's paper".outputStateAndRef()).sellerResult
 
@@ -221,7 +225,7 @@ class TwoPartyTradeFlowTests {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                     // That constructs the storage service object in a customised way ...
                     override fun constructStorageService(
-                            attachments: NodeAttachmentService,
+                            attachments: AttachmentStorage,
                             transactionStorage: TransactionStorage,
                             stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage
                     ): StorageServiceImpl {
@@ -248,15 +252,19 @@ class TwoPartyTradeFlowTests {
                 it.write("Our commercial paper is top notch stuff".toByteArray())
                 it.closeEntry()
             }
-            val attachmentID = attachment(ByteArrayInputStream(stream.toByteArray()))
+            val attachmentID = databaseTransaction(aliceNode.database) {
+                attachment(ByteArrayInputStream(stream.toByteArray()))
+            }
 
             val extraKey = bobNode.keyManagement.freshKey()
             val bobsFakeCash = fillUpForBuyer(false, extraKey.public.composite,
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
             val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode, notaryNode, bobNode.services.legalIdentityKey, extraKey)
-            val alicesFakePaper = fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
-                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID, notaryNode.info.notaryIdentity).second
+            val alicesFakePaper = databaseTransaction(aliceNode.database) {
+                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+                        1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID, notaryNode.info.notaryIdentity).second
+            }
             val alicesSignedTxns = insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, aliceKey)
 
             net.runNetwork() // Clear network map registration messages
@@ -283,10 +291,12 @@ class TwoPartyTradeFlowTests {
                 }
 
                 // Bob has downloaded the attachment.
-                bobNode.storage.attachments.openAttachment(attachmentID)!!.openAsJAR().use {
-                    it.nextJarEntry
-                    val contents = it.reader().readText()
-                    assertTrue(contents.contains("Our commercial paper is top notch stuff"))
+                databaseTransaction(bobNode.database) {
+                    bobNode.storage.attachments.openAttachment(attachmentID)!!.openAsJAR().use {
+                        it.nextJarEntry
+                        val contents = it.reader().readText()
+                        assertTrue(contents.contains("Our commercial paper is top notch stuff"))
+                    }
                 }
             }
 
@@ -327,7 +337,7 @@ class TwoPartyTradeFlowTests {
     }
 
     @Test
-    fun `track() works`() {
+    fun `track works`() {
 
         val notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
         val aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name)
@@ -343,14 +353,20 @@ class TwoPartyTradeFlowTests {
                 it.write("Our commercial paper is top notch stuff".toByteArray())
                 it.closeEntry()
             }
-            val attachmentID = attachment(ByteArrayInputStream(stream.toByteArray()))
+            val attachmentID = databaseTransaction(aliceNode.database) {
+                attachment(ByteArrayInputStream(stream.toByteArray()))
+            }
 
             val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public.composite,
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
             insertFakeTransactions(bobsFakeCash, bobNode, notaryNode)
-            val alicesFakePaper = fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
-                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID, notaryNode.info.notaryIdentity).second
+
+            val alicesFakePaper = databaseTransaction(aliceNode.database) {
+                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+                        1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID, notaryNode.info.notaryIdentity).second
+            }
+
             insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, aliceKey)
 
             net.runNetwork() // Clear network map registration messages
@@ -444,8 +460,10 @@ class TwoPartyTradeFlowTests {
 
         val bobsBadCash = fillUpForBuyer(bobError, bobKey.public.composite, DUMMY_CASH_ISSUER.party,
                 notaryNode.info.notaryIdentity).second
-        val alicesFakePaper = fillUpForSeller(aliceError, aliceNode.info.legalIdentity.owningKey,
-                1200.DOLLARS `issued by` issuer, null, notaryNode.info.notaryIdentity).second
+        val alicesFakePaper = databaseTransaction(aliceNode.database) {
+            fillUpForSeller(aliceError, aliceNode.info.legalIdentity.owningKey,
+                    1200.DOLLARS `issued by` issuer, null, notaryNode.info.notaryIdentity).second
+        }
 
         insertFakeTransactions(bobsBadCash, bobNode, notaryNode, bobKey)
         insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, aliceKey)
@@ -467,6 +485,7 @@ class TwoPartyTradeFlowTests {
             assertEquals(expectedMessageSubstring, underlyingMessage)
         }
     }
+
 
     private fun insertFakeTransactions(
             wtxToSign: List<WireTransaction>,

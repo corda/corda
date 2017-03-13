@@ -1,0 +1,84 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>DefaultWhitelist - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.serialization</a>&nbsp;/&nbsp;<a href=".">DefaultWhitelist</a><br/>
+<br/>
+<h1>DefaultWhitelist</h1>
+<code><span class="keyword">class </span><span class="identifier">DefaultWhitelist</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node/-corda-plugin-registry/index.html"><span class="identifier">CordaPluginRegistry</span></a></code>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">DefaultWhitelist</span><span class="symbol">(</span><span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.node/-corda-plugin-registry/required-flows.html">requiredFlows</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">requiredFlows</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>A Map with an entry for each consumed Flow used by the webAPIs.
+The key of each map entry should contain the FlowLogic class name.
+The associated map values are the union of all concrete class names passed to the Flow constructor.
+Standard java.lang.* and kotlin.* types do not need to be included explicitly.
+This is used to extend the white listed Flows that can be initiated from the ServiceHub invokeFlowAsync method.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.node/-corda-plugin-registry/service-plugins.html">servicePlugins</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">servicePlugins</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/function/Function.html"><span class="identifier">Function</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.node/-plugin-service-hub/index.html"><span class="identifier">PluginServiceHub</span></a><span class="symbol">,</span>&nbsp;<span class="keyword">out</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>List of lambdas constructing additional long lived services to be hosted within the node.
+They expect a single <a href="../../net.corda.core.node/-plugin-service-hub/index.html">PluginServiceHub</a> parameter as input.
+The <a href="../../net.corda.core.node/-plugin-service-hub/index.html">PluginServiceHub</a> will be fully constructed before the plugin service is created and will
+allow access to the Flow factory and Flow initiation entry points there.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.node/-corda-plugin-registry/static-serve-dirs.html">staticServeDirs</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">staticServeDirs</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">String</span><span class="symbol">&gt;</span></code>
+<p>Map of static serving endpoints to the matching resource directory. All endpoints will be prefixed with "/web" and postfixed with "\*.
+Resource directories can be either on disk directories (especially when debugging) in the form "a/b/c". Serving from a JAR can
+be specified with: javaClass.getResource("&lt;folder-in-jar&gt;").toExternalForm()</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.node/-corda-plugin-registry/web-apis.html">webApis</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">webApis</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/function/Function.html"><span class="identifier">Function</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.messaging/-corda-r-p-c-ops/index.html"><span class="identifier">CordaRPCOps</span></a><span class="symbol">,</span>&nbsp;<span class="keyword">out</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>List of lambdas returning JAX-RS objects. They may only depend on the RPC interface, as the webserver should
+potentially be able to live in a process separate from the node itself.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="customize-serialization.html">customizeSerialization</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">customizeSerialization</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.serialization.DefaultWhitelist$customizeSerialization(net.corda.core.serialization.SerializationCustomization)/custom">custom</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-serialization-customization/index.html"><span class="identifier">SerializationCustomization</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Optionally whitelist types for use in object serialization, as we lock down the types that can be serialized.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

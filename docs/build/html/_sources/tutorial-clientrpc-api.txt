@@ -85,11 +85,11 @@ Now let's try to visualise the transaction graph. We will use a graph drawing li
 
 If we run the client with ``Visualise`` we should see a simple random graph being drawn as new transactions are being created.
 
-Registering classes from your CorDapp with RPC Kryo
----------------------------------------------------
+Whitelisting classes from your CorDapp with the Corda node
+----------------------------------------------------------
 
-As described in :doc:`clientrpc`, you currently have to register any additional classes you add that are needed in RPC
-requests or responses with the `Kryo` instance RPC uses.  Here's an example of how you do this for an example class.
+As described in :doc:`clientrpc`, you have to whitelist any additional classes you add that are needed in RPC
+requests or responses with the Corda node.  Here's an example of both ways you can do this for a couple of example classes.
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcTutorial.kt
     :language: kotlin
@@ -98,8 +98,7 @@ requests or responses with the `Kryo` instance RPC uses.  Here's an example of h
 
 See more on plugins in :doc:`creating-a-cordapp`.
 
-.. warning:: We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin
-    customisation point will either go away completely or change.
+.. warning:: We will be replacing the use of Kryo in the serialization framework and so additional changes here are likely.
 
 Security
 --------

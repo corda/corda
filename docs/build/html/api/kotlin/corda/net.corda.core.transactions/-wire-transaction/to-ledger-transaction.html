@@ -2,14 +2,14 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>WireTransaction.toLedgerTransaction - corda</title>
-<link rel="stylesheet" href="..\..\..\style.css">
+<link rel="stylesheet" href="../../../style.css">
 </HEAD>
 <BODY>
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.transactions</a>&nbsp;/&nbsp;<a href="index.html">WireTransaction</a>&nbsp;/&nbsp;<a href=".">toLedgerTransaction</a><br/>
 <br/>
 <h1>toLedgerTransaction</h1>
-<a name="net.corda.core.transactions.WireTransaction$toLedgerTransaction(net.corda.core.node.ServiceHub)"></a>
-<code><span class="keyword">fun </span><span class="identifier">toLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions.WireTransaction$toLedgerTransaction(net.corda.core.node.ServiceHub)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a></code>
+<a name="net.corda.core.transactions.WireTransaction$toLedgerTransaction(net.corda.core.node.ServicesForResolution)"></a>
+<code><span class="keyword">fun </span><span class="identifier">toLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions.WireTransaction$toLedgerTransaction(net.corda.core.node.ServicesForResolution)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node/-services-for-resolution/index.html"><span class="identifier">ServicesForResolution</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a></code>
 <p>Looks up identities and attachments from storage to generate a <a href="../-ledger-transaction/index.html">LedgerTransaction</a>. A transaction is expected to
 have been fully resolved using the resolution flow by this point.</p>
 <h3>Exceptions</h3>
