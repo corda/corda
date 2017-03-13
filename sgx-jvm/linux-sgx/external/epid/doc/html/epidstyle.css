@@ -1,0 +1,325 @@
+.image {
+    text-align: left;
+}
+body {
+    color: #333333;
+    background-color: #ffffff;
+    font-family: Verdana, Arial, sans-serif;
+    font-size: 10pt;
+    margin-left: 0px;
+}
+h1 {
+    color: #0860a8;
+    font-size: 15pt;
+    padding-bottom: 1px;
+    margin-left: 0pt;
+    margin-bottom: 0px;
+    border-bottom: 1px solid #0860A8;
+    font-weight: normal;
+}
+h1.title {
+    border-bottom: 0 none;
+    margin-left: 0;
+    font-weight: normal;
+}
+h2 {
+    color: #0860a8;
+    font-weight: lighter;
+    margin-top: 5pt;
+    margin-bottom: 0;
+    font-size: 13pt;
+}
+h3 {
+    color: #333333;
+    font-weight: bold;
+    margin-top: 5pt;
+    margin-bottom: 0;
+    font-size: 11pt;
+}
+a:link {
+    color: #0860a8;
+    text-decoration: none;
+}
+a:visited {
+    color: #0860a8;
+    text-decoration: none;
+}
+a:active {
+    color: #0860a8;
+    text-decoration: underline;
+}
+a:hover {
+    color: #0860a8;
+    text-decoration: underline;
+}
+p {
+    font-size: inherit;
+    line-height: 120%;
+    margin-top: 0;
+    margin-bottom: 5pt;
+    font-family: Verdana, Arial, sans-serif;
+    font-size: 10pt;
+}
+blockquote {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+HR {
+    color: #555555;
+    border: 0;
+    background: #555555;
+    height: 1px;
+    margin-left: 0;
+}
+p.Note {
+    margin-top: 0;
+    margin-left: 25px;
+    margin-bottom: 10pt;
+}
+h3.NoteTipHead {
+    color: #006699;
+    margin-top: 11pt;
+    padding-bottom: 0;
+    line-height: 18px;
+    text-transform: uppercase;
+}
+LI.h3-NoteTipHead {
+    color: #006699;
+    line-height: 18px;
+    text-transform: uppercase;
+}
+h3.NoteTipHead img {
+    vertical-align: middle;
+}
+/*
+table {
+    margin-bottom: 5pt;
+    border-collapse: collapse;
+    margin-top: 0.3em;
+    font-size: 10pt;
+}
+tr {
+    vertical-align: top;
+}
+th {
+    padding: 4px;
+    text-align: left;
+    background-color: #555555;
+    font-weight: bold;
+    margin-top: 0;
+    margin-bottom: 0;
+    color: #ffffff;
+    font-size: 11pt;
+    border: 1px #bababa solid;
+}
+td {
+    border: 1px #bababa solid;
+    vertical-align: top;
+    font-size: 9pt;
+    margin-bottom: 0px;
+    margin-top: 0;
+    margin-left: 0;
+    padding: 0px;
+    text-align: left;
+}
+P.TableCell {
+    margin-top: 0;
+    margin-left: 4px;
+    padding: 0px;
+    margin-bottom: 0;
+    font-size: 9pt;
+    line-height: 120%;
+}
+td p {
+    margin-top: 0;
+    margin-left: 4;
+    padding: 0;
+    margin-bottom: 0;
+    text-align: left;
+    font-size: 9pt;
+    line-height: 120%;
+}
+td h3 {
+    margin-top: 0;
+    margin-left: 0;
+    padding: 0;
+    text-align: left;
+    font-size: inherit;
+    line-height: 120%;
+}
+td ul {
+    font-size: inherit;
+}
+td ol {
+    font-size: inherit;
+}
+td.noBorder {
+    border: 0px none;
+}
+h3.TableHead {
+    padding: 4px;
+    text-align: left;
+    background-color: #555555;
+    font-weight: bold;
+    margin-top: 0;
+    margin-bottom: 0;
+    color: #ffffff;
+    font-size: 11pt;
+}
+td table {
+    margin-left: 0;
+}
+*/
+ol {
+    margin-bottom: 1em;
+    font-size: inherit;
+    margin-top: 0px;
+    line-height: 100%;
+    list-style-type: decimal;
+}
+ol ol {
+    list-style: lower-alpha;
+    margin-bottom: 0em;
+    font-size: inherit;
+}
+ol ul {
+    margin-bottom: 0px;
+    font-size: inherit;
+}
+ol p {
+    margin-bottom: 0.2em;
+    margin-top: 0.2em;
+    margin-left: 0;
+    padding-left: 0;
+    font-size: inherit;
+}
+ol.Note {
+    margin-left: 25px;
+}
+ul {
+    margin-bottom: 1em;
+    font-size: inherit;
+    margin-top: 0px;
+    line-height: 100%;
+}
+ul p {
+    margin-bottom: 0.2em;
+    margin-top: 0.2em;
+    margin-left: 0;
+    padding-left: 0;
+    font-size: inherit;
+}
+ul ol {
+    margin-bottom: 0em;
+    font-size: inherit;
+    list-style-type: decimal;
+}
+ul ul {
+    margin-bottom: 0px;
+    font-size: inherit;
+}
+ul.Note {
+    margin-left: 25px;
+}
+li {
+    font-size: inherit;
+    margin-top: 0px;
+    line-height: 130%;
+}
+li p {
+    margin-bottom: 0.2em;
+    margin-top: 0.2em;
+    margin-left: 0;
+    padding-left: 0;
+    font-size: inherit;
+}
+p.twoColumnListHead {
+    color: #000000;
+    margin-top: 0;
+    margin-bottom: 0;
+    font-weight: bold;
+}
+dl {
+    margin-bottom: 1em;
+    font-size: inherit;
+    margin-top: 0px;
+}
+dt {
+    font-weight: bold;
+    margin-top: 1em;
+}
+dd {
+    font-size: inherit;
+    margin-top: 0;
+}
+dd p {
+    margin-bottom: 0.2em;
+    margin-top: 0.2em;
+    font-size: inherit;
+}
+p.pRelatedLink {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+SPAN.Code {
+    font-family: "Courier New", Courier, monospace;
+}
+span.Variable {
+    font-family: Courier, monospace;
+    font-style: italic;
+}
+SPAN.Superscript {
+    vertical-align: top;
+    font-size: 80%;
+}
+SPAN.Color {
+    color: #6C9A65;
+}
+SPAN.Color2 {
+    color: #0860a8;
+}
+SPAN.Color3 {
+    color: #fd0b01;
+}
+SPAN.Color4 {
+    color: #f8aa06;
+}
+.Code {
+    font-family: "Courier New", Courier, monospace;
+    background-color: #eeeeee;
+}
+.link_buttons {
+    background-color: #EEEEEE;
+    border-color: #EEEEEE;
+    border-width: 1px;
+    padding: 4px;
+}
+.Color {
+    color: #6C9A65;
+}
+.Preformatted {
+    x-text-tab-stops: repeat 1in;
+    margin-top: 0;
+    margin-bottom: 0;
+    font-size: 10pt;
+    font-family: "Courier New", Courier, monospace;
+    background-color: #eeeeee;
+}
+
+/* Hide top level nav-tree node */
+#nav-tree-contents > ul > li > div {
+    display: none;
+}
+
+/* Shift remaining nav-tree nodes left */
+#nav-tree-contents > ul {
+    margin: 0;
+    padding: 0;
+    margin-left: -16px;
+    margin-top: -2em;  /* nav-tree hack*/
+}
+
+#projectlink {
+    color:inherit;
+    text-decoration:none;
+}

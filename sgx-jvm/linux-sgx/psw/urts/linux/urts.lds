@@ -1,0 +1,13 @@
+{
+    global:
+        sgx_create_enclave;
+        sgx_destroy_enclave;
+        sgx_ecall;
+        sgx_thread_wait_untrusted_event_ocall;
+        sgx_thread_set_untrusted_event_ocall;
+        sgx_thread_setwait_untrusted_events_ocall;
+        sgx_thread_set_multiple_untrusted_events_ocall;
+        sgx_oc_cpuidex;
+    local:
+        *;
+};
