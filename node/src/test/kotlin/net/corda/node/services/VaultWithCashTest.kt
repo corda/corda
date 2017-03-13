@@ -24,6 +24,7 @@ import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
@@ -76,15 +77,15 @@ class VaultWithCashTest {
             // Fix the PRNG so that we get the same splits every time.
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
 
-            val w = vault.unconsumedStates<Cash.State>()
-            assertEquals(3, w.toList().size)
+            val w = vault.unconsumedStates<Cash.State>().toList()
+            assertEquals(3, w.size)
 
-            val state = w.toList()[0].state.data
+            val state = w[0].state.data
             assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
             assertEquals(services.key.public.composite, state.owner)
 
-            assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.toList()[2].state.data).amount)
-            assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.toList()[1].state.data).amount)
+            assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[2].state.data).amount)
+            assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[1].state.data).amount)
         }
     }
 
@@ -164,7 +165,7 @@ class VaultWithCashTest {
             dummyIssue.toLedgerTransaction(services).verify()
 
             services.recordTransactions(dummyIssue)
-            assertEquals(1, vault.unconsumedStates<net.corda.contracts.testing.DummyLinearContract.State>().size)
+            assertThat(vault.unconsumedStates<net.corda.contracts.testing.DummyLinearContract.State>()).hasSize(1)
 
             // Move the same state
             val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
@@ -176,7 +177,7 @@ class VaultWithCashTest {
             dummyIssue.toLedgerTransaction(services).verify()
 
             services.recordTransactions(dummyMove)
-            assertEquals(1, vault.unconsumedStates<net.corda.contracts.testing.DummyLinearContract.State>().size)
+            assertThat(vault.unconsumedStates<net.corda.contracts.testing.DummyLinearContract.State>()).hasSize(1)
         }
     }
 
@@ -220,19 +221,19 @@ class VaultWithCashTest {
         databaseTransaction(database) {
 
             services.fillWithSomeTestDeals(listOf("123","456","789"))
-            val deals = vault.unconsumedStates<net.corda.contracts.testing.DummyDealContract.State>()
+            val deals = vault.unconsumedStates<net.corda.contracts.testing.DummyDealContract.State>().toList()
             deals.forEach { println(it.state.data.ref) }
 
             services.fillWithSomeTestLinearStates(3)
-            val linearStates = vault.unconsumedStates<net.corda.contracts.testing.DummyLinearContract.State>()
+            val linearStates = vault.unconsumedStates<net.corda.contracts.testing.DummyLinearContract.State>().toList()
             linearStates.forEach { println(it.state.data.linearId) }
 
             // Create a txn consuming different contract types
             val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
                 addOutputState(net.corda.contracts.testing.DummyLinearContract.State(participants = listOf(freshKey.public.composite)))
                 addOutputState(net.corda.contracts.testing.DummyDealContract.State(ref = "999", participants = listOf(freshKey.public.composite)))
-                addInputState(linearStates[0])
-                addInputState(deals[0])
+                addInputState(linearStates.first())
+                addInputState(deals.first())
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
 
