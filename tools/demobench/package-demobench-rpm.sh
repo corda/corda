@@ -7,4 +7,7 @@ if [ -z "$JAVA_HOME" -o ! -x $JAVA_HOME/bin/java ]; then
     exit 1
 fi
 
-exec $DIRNAME/gradlew -PpackageType=dmg javapackage $*
+$DIRNAME/../../gradlew -PpackageType=rpm javapackage $*
+echo
+echo "Wrote installer to '$(find $DIRNAME/build/javapackage/bundles -type f)'"
+echo

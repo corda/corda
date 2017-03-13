@@ -2,7 +2,10 @@ package net.corda.demobench.model
 
 import com.typesafe.config.*
 import java.lang.String.join
+import java.io.File
 import java.nio.file.Path
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import net.corda.node.services.config.SSLConfiguration
 
 class NodeConfig(
@@ -13,24 +16,16 @@ class NodeConfig(
         val webPort: Int,
         val h2Port: Int,
         val extraServices: List<String>,
-        val users: List<Map<String, Any>> = listOf(defaultUser),
+        val users: List<User> = listOf(user("guest")),
         var networkMap: NetworkMapConfig? = null
-) : NetworkMapConfig(legalName, artemisPort) {
+) : NetworkMapConfig(legalName, artemisPort), HasPlugins {
 
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
-
-        val defaultUser: Map<String, Any> = mapOf(
-            "user" to "guest",
-            "password" to "letmein",
-            "permissions" to listOf(
-                "StartFlow.net.corda.flows.CashFlow",
-                "StartFlow.net.corda.flows.IssuerFlow\$IssuanceRequester"
-            )
-        )
     }
 
     val nodeDir: Path = baseDir.resolve(key)
+    override val pluginDir: Path = nodeDir.resolve("plugins")
     val explorerDir: Path = baseDir.resolve("$key-explorer")
 
     val ssl: SSLConfiguration = object : SSLConfiguration {
@@ -61,7 +56,7 @@ class NodeConfig(
                     .withValue("legalName", valueFor(n.legalName))
             } ))
             .withValue("webAddress", addressValueFor(webPort))
-            .withValue("rpcUsers", valueFor(users))
+            .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
             .withValue("h2port", valueFor(h2Port))
             .withValue("useTestClock", valueFor(true))
 
@@ -70,13 +65,25 @@ class NodeConfig(
     fun moveTo(baseDir: Path) = NodeConfig(
         baseDir, legalName, artemisPort, nearestCity, webPort, h2Port, extraServices, users, networkMap
     )
+
+    fun install(plugins: Collection<Path>) {
+        if (plugins.isNotEmpty() && pluginDir.toFile().forceDirectory()) {
+            plugins.forEach {
+                Files.copy(it, pluginDir.resolve(it.fileName.toString()), StandardCopyOption.REPLACE_EXISTING)
+            }
+        }
+    }
+
+    fun extendUserPermissions(permissions: Collection<String>) = users.forEach { it.extendPermissions(permissions) }
 }
 
 private fun <T> valueFor(any: T): ConfigValue? = ConfigValueFactory.fromAnyRef(any)
 
 private fun addressValueFor(port: Int) = valueFor("localhost:$port")
 
-private fun <T> optional(path: String, obj: T?, body: (Config, T) -> Config): Config {
+private inline fun <T> optional(path: String, obj: T?, body: (Config, T) -> Config): Config {
     val config = ConfigFactory.empty()
     return if (obj == null) config else body(config, obj).atPath(path)
 }
+
+fun File.forceDirectory(): Boolean = this.isDirectory || this.mkdirs()

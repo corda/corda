@@ -3,28 +3,29 @@ package net.corda.demobench.model
 import java.io.IOException
 import java.lang.management.ManagementFactory
 import java.net.ServerSocket
+import java.nio.file.Files
+import java.nio.file.Path
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.logging.Level
+import net.corda.demobench.plugin.PluginController
 import net.corda.demobench.pty.R3Pty
 import tornadofx.Controller
 
 class NodeController : Controller() {
-    private companion object {
+    companion object {
         const val firstPort = 10000
         const val minPort = 1024
         const val maxPort = 65535
     }
 
     private val jvm by inject<JVMConfig>()
+    private val pluginController by inject<PluginController>()
 
-    private var baseDir = baseDirFor(ManagementFactory.getRuntimeMXBean().startTime)
-    private val pluginDir = jvm.applicationDir.resolve("plugins")
-
-    private val bankOfCorda = pluginDir.resolve("bank-of-corda.jar").toFile()
-
-    private val cordaPath = jvm.applicationDir.resolve("corda").resolve("corda.jar")
-    private val command = jvm.commandFor(cordaPath)
+    private var baseDir: Path = baseDirFor(ManagementFactory.getRuntimeMXBean().startTime)
+    private val cordaPath: Path = jvm.applicationDir.resolve("corda").resolve("corda.jar")
+    private val command = jvm.commandFor(cordaPath).toTypedArray()
 
     private val nodes = LinkedHashMap<String, NodeConfig>()
     private val port = AtomicInteger(firstPort)
@@ -40,6 +41,9 @@ class NodeController : Controller() {
         log.info("Corda JAR: $cordaPath")
     }
 
+    /**
+     * Validate a Node configuration provided by [net.corda.demobench.views.NodeTabView].
+     */
     fun validate(nodeData: NodeData): NodeConfig? {
         val config = NodeConfig(
             baseDir,
@@ -85,15 +89,15 @@ class NodeController : Controller() {
         }
     }
 
-    fun isPortValid(port: Int): Boolean = (port >= minPort) && (port <= maxPort)
+    fun isPortValid(port: Int) = (port >= minPort) && (port <= maxPort)
 
     fun keyExists(key: String) = nodes.keys.contains(key)
 
-    fun nameExists(name: String) = keyExists(toKey(name))
+    fun nameExists(name: String) = keyExists(name.toKey())
 
     fun hasNetworkMap(): Boolean = networkMapConfig != null
 
-    fun chooseNetworkMap(config: NodeConfig) {
+    private fun chooseNetworkMap(config: NodeConfig) {
         if (hasNetworkMap()) {
             config.networkMap = networkMapConfig
         } else {
@@ -105,24 +109,24 @@ class NodeController : Controller() {
     fun runCorda(pty: R3Pty, config: NodeConfig): Boolean {
         val nodeDir = config.nodeDir.toFile()
 
-        if (nodeDir.isDirectory || nodeDir.mkdirs()) {
+        if (nodeDir.forceDirectory()) {
             try {
+                // Install any built-in plugins into the working directory.
+                pluginController.populate(config)
+
+                // Ensure that the users have every permission that they need.
+                config.extendUserPermissions(pluginController.permissionsFor(config))
+
                 // Write this node's configuration file into its working directory.
                 val confFile = nodeDir.resolve("node.conf")
                 confFile.writeText(config.toText())
-
-                // Nodes cannot issue cash unless they contain the "Bank of Corda" plugin.
-                if (config.isCashIssuer && bankOfCorda.isFile) {
-                    log.info("Installing 'Bank of Corda' plugin")
-                    bankOfCorda.copyTo(nodeDir.resolve("plugins").resolve(bankOfCorda.name), overwrite=true)
-                }
 
                 // Execute the Corda node
                 pty.run(command, System.getenv(), nodeDir.toString())
                 log.info("Launched node: ${config.legalName}")
                 return true
             } catch (e: Exception) {
-                log.severe("Failed to launch Corda:" + e)
+                log.log(Level.SEVERE, "Failed to launch Corda: ${e.message}", e)
                 return false
             }
         } else {
@@ -139,10 +143,15 @@ class NodeController : Controller() {
         nodes.clear()
     }
 
+    /**
+     * Add a [NodeConfig] object that has been loaded from a profile.
+     */
     fun register(config: NodeConfig): Boolean {
         if (nodes.putIfAbsent(config.key, config) != null) {
             return false
         }
+
+        updatePort(config)
 
         if ((networkMapConfig == null) && config.isNetworkMap()) {
             networkMapConfig = config
@@ -151,9 +160,32 @@ class NodeController : Controller() {
         return true
     }
 
-    fun relocate(config: NodeConfig) = config.moveTo(baseDir)
+    /**
+     * Creates a node directory that can host a running instance of Corda.
+     */
+    @Throws(IOException::class)
+    fun install(config: InstallConfig): NodeConfig {
+        val installed = config.installTo(baseDir)
 
-    private fun baseDirFor(time: Long) = jvm.userHome.resolve("demobench").resolve(localFor(time))
+        pluginController.userPluginsFor(config).forEach {
+            val pluginDir = Files.createDirectories(installed.pluginDir)
+            val plugin = Files.copy(it, pluginDir.resolve(it.fileName.toString()))
+            log.info("Installed: $plugin")
+        }
+
+        if (!config.deleteBaseDir()) {
+            log.warning("Failed to remove '${config.baseDir}'")
+        }
+
+        return installed
+    }
+
+    private fun updatePort(config: NodeConfig) {
+        val nextPort = 1 + arrayOf(config.artemisPort, config.webPort, config.h2Port).max() as Int
+        port.getAndUpdate { Math.max(nextPort, it) }
+    }
+
+    private fun baseDirFor(time: Long): Path = jvm.dataHome.resolve(localFor(time))
     private fun localFor(time: Long) = SimpleDateFormat("yyyyMMddHHmmss").format(Date(time))
 
 }

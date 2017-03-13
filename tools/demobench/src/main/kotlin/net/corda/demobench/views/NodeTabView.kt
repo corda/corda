@@ -1,14 +1,15 @@
 package net.corda.demobench.views
 
+import java.nio.file.Path
 import java.text.DecimalFormat
+import java.util.*
 import javafx.application.Platform
 import javafx.scene.control.SelectionMode.MULTIPLE
+import javafx.scene.input.KeyCode
 import javafx.scene.layout.Pane
+import javafx.stage.FileChooser
 import javafx.util.converter.NumberStringConverter
-import net.corda.demobench.model.NodeConfig
-import net.corda.demobench.model.NodeController
-import net.corda.demobench.model.NodeDataModel
-import net.corda.demobench.model.ServiceController
+import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
 import tornadofx.*
 
@@ -16,16 +17,30 @@ class NodeTabView : Fragment() {
     override val root = stackpane {}
 
     private val main by inject<DemoBenchView>()
-    private val showConfig by param<Boolean>()
+    private val showConfig by param(true)
 
-    private companion object {
+    private companion object : Component() {
+        const val textWidth = 200.0
+        const val numberWidth = 100.0
+        const val maxNameLength = 10
+
         val integerFormat = DecimalFormat()
         val notNumber = "[^\\d]".toRegex()
+
+        val jvm by inject<JVMConfig>()
+
+        init {
+            integerFormat.isGroupingUsed = false
+        }
     }
 
-    private val model = NodeDataModel()
     private val nodeController by inject<NodeController>()
     private val serviceController by inject<ServiceController>()
+    private val chooser = FileChooser()
+
+    private val model = NodeDataModel()
+    private val cordapps = LinkedList<Path>().observable()
+    private val availableServices: List<String> = if (nodeController.hasNetworkMap()) serviceController.services else serviceController.notaries
 
     private val nodeTerminalView = find<NodeTerminalView>()
     private val nodeConfigView = stackpane {
@@ -33,6 +48,8 @@ class NodeTabView : Fragment() {
 
         form {
             fieldset("Configuration") {
+                isFillWidth = false
+
                 field("Node Name", op = { nodeNameField() })
                 field("Nearest City", op = { nearestCityField() })
                 field("P2P Port", op = { p2pPortField() })
@@ -40,10 +57,37 @@ class NodeTabView : Fragment() {
                 field("Database Port", op = { databasePortField() })
             }
 
-            fieldset("Services") {
-                listview(availableServices.observable()) {
-                    selectionModel.selectionMode = MULTIPLE
-                    model.item.extraServices.set(selectionModel.selectedItems)
+            hbox {
+                styleClass.addAll("node-panel")
+
+                fieldset("Services") {
+                    styleClass.addAll("services-panel")
+
+                    listview(availableServices.observable()) {
+                        selectionModel.selectionMode = MULTIPLE
+                        model.item.extraServices.set(selectionModel.selectedItems)
+                    }
+                }
+
+                fieldset("Cordapps") {
+                    styleClass.addAll("cordapps-panel")
+
+                    listview(cordapps) {
+                        setOnKeyPressed { key ->
+                            if ((key.code == KeyCode.DELETE) && !selectionModel.isEmpty) {
+                                cordapps.remove(selectionModel.selectedItem)
+                            }
+                            key.consume()
+                        }
+                    }
+                    button("Add Cordapp") {
+                        setOnAction {
+                            val app = (chooser.showOpenDialog(null) ?: return@setOnAction).toPath()
+                            if (!cordapps.contains(app)) {
+                                cordapps.add(app)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -61,12 +105,7 @@ class NodeTabView : Fragment() {
 
     val nodeTab = CloseableTab("New Node", root)
 
-    private val availableServices: List<String>
-        get() = if (nodeController.hasNetworkMap()) serviceController.services else serviceController.notaries
-
     init {
-        integerFormat.isGroupingUsed = false
-
         // Ensure that we destroy the terminal along with the tab.
         nodeTab.setOnCloseRequest {
             nodeTerminalView.destroy()
@@ -78,11 +117,14 @@ class NodeTabView : Fragment() {
         model.artemisPort.value = nodeController.nextPort
         model.webPort.value = nodeController.nextPort
         model.h2Port.value = nodeController.nextPort
+
+        chooser.title = "Cordapps"
+        chooser.initialDirectory = jvm.dataHome.toFile()
+        chooser.extensionFilters.add(FileChooser.ExtensionFilter("Cordapps (*.jar)", "*.jar", "*.JAR"))
     }
 
     private fun Pane.nodeNameField() = textfield(model.legalName) {
-        minWidth = 200.0
-        maxWidth = 200.0
+        minWidth = textWidth
         validator {
             if (it == null) {
                 error("Node name is required")
@@ -92,7 +134,7 @@ class NodeTabView : Fragment() {
                     error("Node name is required")
                 } else if (nodeController.nameExists(name)) {
                     error("Node with this name already exists")
-                } else if (name.length > 10) {
+                } else if (name.length > maxNameLength) {
                     error("Name is too long")
                 } else {
                     null
@@ -102,8 +144,7 @@ class NodeTabView : Fragment() {
     }
 
     private fun Pane.nearestCityField() = textfield(model.nearestCity) {
-        minWidth = 200.0
-        maxWidth = 200.0
+        minWidth = textWidth
         validator {
             if (it == null) {
                 error("Nearest city is required")
@@ -116,8 +157,7 @@ class NodeTabView : Fragment() {
     }
 
     private fun Pane.p2pPortField() = textfield(model.artemisPort, NumberStringConverter(integerFormat)) {
-        minWidth = 100.0
-        maxWidth = 100.0
+        minWidth = numberWidth
         validator {
             if ((it == null) || it.isEmpty()) {
                 error("Port number required")
@@ -139,8 +179,7 @@ class NodeTabView : Fragment() {
     }
 
     private fun Pane.webPortField() = textfield(model.webPort, NumberStringConverter(integerFormat)) {
-        minWidth = 100.0
-        maxWidth = 100.0
+        minWidth = numberWidth
         validator {
             if ((it == null) || it.isEmpty()) {
                 error("Port number required")
@@ -162,8 +201,7 @@ class NodeTabView : Fragment() {
     }
 
     private fun Pane.databasePortField() = textfield(model.h2Port, NumberStringConverter(integerFormat)) {
-        minWidth = 100.0
-        maxWidth = 100.0
+        minWidth = numberWidth
         validator {
             if ((it == null) || it.isEmpty()) {
                 error("Port number required")
@@ -192,6 +230,7 @@ class NodeTabView : Fragment() {
         val config = nodeController.validate(model.item)
         if (config != null) {
             nodeConfigView.isVisible = false
+            config.install(cordapps)
             launchNode(config)
         }
     }

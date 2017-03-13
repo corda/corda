@@ -7,6 +7,7 @@ import com.pty4j.PtyProcess
 import net.corda.demobench.loggerFor
 
 import java.awt.*
+import java.io.IOException
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.*
 import java.util.concurrent.Executors
@@ -39,6 +40,7 @@ class R3Pty(val name: String, settings: SettingsProvider, dimension: Dimension, 
         }
     }
 
+    @Throws(IOException::class)
     fun run(args: Array<String>, envs: Map<String, String>, workingDir: String?) {
         check(!terminal.isSessionRunning, { "${terminal.sessionName} is already running" })
 

@@ -1,6 +1,7 @@
 package org.h2.server.web
 
 import java.sql.Connection
+import java.sql.SQLException
 
 class LocalWebServer : WebServer() {
 
@@ -8,6 +9,7 @@ class LocalWebServer : WebServer() {
      * Create a new session that will not kill the entire
      * web server if/when we disconnect it.
      */
+    @Throws(SQLException::class)
     override fun addSession(conn: Connection): String {
         val session = createNewSession("local")
         session.setConnection(conn)

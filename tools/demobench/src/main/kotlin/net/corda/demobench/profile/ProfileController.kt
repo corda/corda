@@ -1,38 +1,47 @@
 package net.corda.demobench.profile
 
-import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import java.io.File
+import java.io.IOException
 import java.net.URI
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
 import java.util.*
 import java.util.function.BiPredicate
+import java.util.logging.Level
 import java.util.stream.StreamSupport
 import javafx.stage.FileChooser
 import javafx.stage.FileChooser.ExtensionFilter
 import kotlinx.support.jdk8.collections.spliterator
 import net.corda.demobench.model.*
+import net.corda.demobench.plugin.PluginController
+import net.corda.demobench.plugin.inPluginsDir
+import net.corda.demobench.plugin.isPlugin
 import tornadofx.Controller
 
 class ProfileController : Controller() {
 
     private val jvm by inject<JVMConfig>()
-    private val baseDir = jvm.userHome.resolve("demobench")
+    private val baseDir: Path = jvm.dataHome
     private val nodeController by inject<NodeController>()
-    private val serviceController by inject<ServiceController>()
+    private val pluginController by inject<PluginController>()
+    private val installFactory by inject<InstallFactory>()
     private val chooser = FileChooser()
 
     init {
         chooser.title = "DemoBench Profiles"
         chooser.initialDirectory = baseDir.toFile()
-        chooser.extensionFilters.add(ExtensionFilter("DemoBench profiles (*.zip)", "*.zip", "*.ZIP"))
+        chooser.extensionFilters.add(ExtensionFilter("DemoBench profiles (*.profile)", "*.profile", "*.PROFILE"))
     }
 
+    /**
+     * Saves the active node configurations into a ZIP file, along with their Cordapps.
+     */
+    @Throws(IOException::class)
     fun saveProfile(): Boolean {
-        val target = forceExtension(chooser.showSaveDialog(null) ?: return false, ".zip")
-        log.info("Save profile as: $target")
+        val target = forceExtension(chooser.showSaveDialog(null) ?: return false, ".profile")
+        log.info("Saving profile as: $target")
 
         val configs = nodeController.activeNodes
 
@@ -40,12 +49,29 @@ class ProfileController : Controller() {
         // dialogue has already confirmed that this is OK.
         target.delete()
 
-        FileSystems.newFileSystem(URI.create("jar:" + target.toURI()), mapOf("create" to "true")).use { fs ->
-            configs.forEach { config ->
-                val nodeDir = Files.createDirectories(fs.getPath(config.key))
-                val file = Files.write(nodeDir.resolve("node.conf"), config.toText().toByteArray(UTF_8))
-                log.info("Wrote: $file")
+        // Write the profile as a ZIP file.
+        try {
+            FileSystems.newFileSystem(URI.create("jar:" + target.toURI()), mapOf("create" to "true")).use { fs ->
+                configs.forEach { config ->
+                    // Write the configuration file.
+                    val nodeDir = Files.createDirectories(fs.getPath(config.key))
+                    val file = Files.write(nodeDir.resolve("node.conf"), config.toText().toByteArray(UTF_8))
+                    log.info("Wrote: $file")
+
+                    // Write all of the non-built-in plugins.
+                    val pluginDir = Files.createDirectory(nodeDir.resolve("plugins"))
+                    pluginController.userPluginsFor(config).forEach {
+                        val plugin = Files.copy(it, pluginDir.resolve(it.fileName.toString()))
+                        log.info("Wrote: $plugin")
+                    }
+                }
             }
+
+            log.info("Profile saved.")
+        } catch (e: IOException) {
+            log.log(Level.SEVERE, "Failed to save profile '$target': '${e.message}'", e)
+            target.delete()
+            throw e
         }
 
         return true
@@ -55,24 +81,50 @@ class ProfileController : Controller() {
         return if (target.extension.isEmpty()) File(target.parent, target.name + ext) else target
     }
 
-    fun openProfile(): List<NodeConfig>? {
+    /**
+     * Parses a profile (ZIP) file.
+     */
+    @Throws(IOException::class)
+    fun openProfile(): List<InstallConfig>? {
         val chosen = chooser.showOpenDialog(null) ?: return null
         log.info("Selected profile: $chosen")
 
-        val configs = LinkedList<NodeConfig>()
+        val configs = LinkedList<InstallConfig>()
 
         FileSystems.newFileSystem(chosen.toPath(), null).use { fs ->
+            // Identify the nodes first...
             StreamSupport.stream(fs.rootDirectories.spliterator(), false)
-                .flatMap { Files.find(it, 2, BiPredicate { p, attr -> "node.conf" == p?.fileName.toString() }) }
-                .forEach { file ->
+                .flatMap { Files.find(it, 2, BiPredicate { p, attr -> "node.conf" == p?.fileName.toString() && attr.isRegularFile }) }
+                .map { file ->
                     try {
-                        // Java seems to "walk" through the ZIP file backwards.
-                        // So add new config to the front of the list, so that
-                        // our final list is ordered to match the file.
-                        configs.addFirst(toNodeConfig(parse(file)))
+                        val config = installFactory.toInstallConfig(parse(file), baseDir)
                         log.info("Loaded: $file")
+                        config
                     } catch (e: Exception) {
-                        log.severe("Failed to parse '$file': ${e.message}")
+                        log.log(Level.SEVERE, "Failed to parse '$file': ${e.message}", e)
+                        throw e
+                    }
+                // Java seems to "walk" through the ZIP file backwards.
+                // So add new config to the front of the list, so that
+                // our final list is ordered to match the file.
+                }.forEach { configs.addFirst(it) }
+
+            val nodeIndex = configs.map { it.key to it }.toMap()
+
+            // Now extract all of the plugins from the ZIP file,
+            // and copy them to a temporary location.
+            StreamSupport.stream(fs.rootDirectories.spliterator(), false)
+                .flatMap { Files.find(it, 3, BiPredicate { p, attr -> p.inPluginsDir() && p.isPlugin() && attr.isRegularFile }) }
+                .forEach { plugin ->
+                    val config = nodeIndex[plugin.getName(0).toString()] ?: return@forEach
+
+                    try {
+                        val pluginDir = Files.createDirectories(config.pluginDir)
+                        Files.copy(plugin, pluginDir.resolve(plugin.fileName.toString()))
+                        log.info("Loaded: $plugin")
+                    } catch (e: Exception) {
+                        log.log(Level.SEVERE, "Failed to extract '$plugin': ${e.message}", e)
+                        configs.forEach { c -> c.deleteBaseDir() }
                         throw e
                     }
                 }
@@ -81,51 +133,8 @@ class ProfileController : Controller() {
         return configs
     }
 
-    private fun toNodeConfig(config: Config): NodeConfig {
-        val artemisPort = config.parsePort("artemisAddress")
-        val webPort = config.parsePort("webAddress")
-        val h2Port = config.getInt("h2port")
-        val extraServices = config.parseExtraServices("extraAdvertisedServiceIds")
-
-        val nodeConfig = NodeConfig(
-            baseDir, // temporary value
-            config.getString("myLegalName"),
-            artemisPort,
-            config.getString("nearestCity"),
-            webPort,
-            h2Port,
-            extraServices,
-            config.getObjectList("rpcUsers").map { it.unwrapped() }.toList()
-        )
-
-        if (config.hasPath("networkMapService")) {
-            val nmap = config.getConfig("networkMapService")
-            nodeConfig.networkMap = NetworkMapConfig(nmap.getString("legalName"), nmap.parsePort("address"))
-        } else {
-            log.info("Node '${nodeConfig.legalName}' is the network map")
-        }
-
-        return nodeConfig
-    }
-
     private fun parse(path: Path): Config = Files.newBufferedReader(path).use {
         return ConfigFactory.parseReader(it)
     }
 
-    private fun Config.parsePort(path: String): Int {
-        val address = this.getString(path)
-        val port = HostAndPort.fromString(address).port
-        require(nodeController.isPortValid(port), { "Invalid port $port from '$path'." })
-        return port
-    }
-
-    private fun Config.parseExtraServices(path: String): List<String> {
-        val services = serviceController.services.toSortedSet()
-        return this.getString(path).split(",")
-            .filter { it -> !it.isNullOrEmpty() }
-            .map { svc ->
-                require(svc in services, { "Unknown service '$svc'." } )
-                svc
-            }.toList()
-    }
 }

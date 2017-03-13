@@ -1,5 +1,6 @@
-package net.corda.demobench.model
+package net.corda.demobench.explorer
 
+import net.corda.demobench.model.JVMConfig
 import tornadofx.Controller
 
 class ExplorerController : Controller() {

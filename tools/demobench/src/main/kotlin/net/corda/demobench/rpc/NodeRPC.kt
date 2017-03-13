@@ -22,8 +22,7 @@ class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Un
         val setupTask = object : TimerTask() {
             override fun run() {
                 try {
-                    rpcClient.start(config.users[0].getOrElse("user") { "none" } as String,
-                                    config.users[0].getOrElse("password") { "none" } as String)
+                    rpcClient.start(config.users[0].user, config.users[0].password)
                     val ops = rpcClient.proxy()
 
                     // Cancel the "setup" task now that we've created the RPC client.
