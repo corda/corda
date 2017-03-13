@@ -349,7 +349,7 @@ class NetworkMapVisualiser : Application() {
         // Loopback messages are boring.
         if (transfer.sender == transfer.recipients) return false
         // Network map push acknowledgements are boring.
-        if (NetworkMapService.PUSH_ACK_FLOW_TOPIC in transfer.message.topicSession.topic) return false
+        if (NetworkMapService.PUSH_ACK_TOPIC in transfer.message.topicSession.topic) return false
         val message = transfer.message.data.deserialize<Any>()
         return when (message) {
             is SessionEnd -> false

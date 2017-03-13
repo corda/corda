@@ -72,7 +72,9 @@ class ConnectionManager(private val username: String, private val jSch: JSch) {
             remoteMessagingPort: Int,
             localTunnelAddress: HostAndPort,
             certificatesBaseDirectory: Path,
-            remoteCertificatesDirectory: Path
+            remoteCertificatesDirectory: Path,
+            rpcUsername: String,
+            rpcPassword: String
     ): NodeConnection {
         val session = jSch.getSession(username, nodeHost, 22)
         // We don't check the host fingerprints because they may change often
@@ -97,7 +99,7 @@ class ConnectionManager(private val username: String, private val jSch: JSch) {
         channel.disconnect()
         log.info("Certificates copied!")
 
-        val connection = NodeConnection(nodeHost, session, localTunnelAddress, certificatesDirectory)
+        val connection = NodeConnection(nodeHost, session, localTunnelAddress, certificatesDirectory, rpcUsername, rpcPassword)
         connection.startClient()
         return connection
     }
@@ -121,6 +123,8 @@ fun <A> connectToNodes(
         remoteMessagingPort: Int,
         tunnelPortAllocation: PortAllocation,
         certificatesBaseDirectory: Path,
+        rpcUsername: String,
+        rpcPassword: String,
         withConnections: (List<NodeConnection>) -> A
 ): A {
     val manager = ConnectionManager(username, setupJSchWithSshAgent())
@@ -130,7 +134,9 @@ fun <A> connectToNodes(
                 remoteMessagingPort = remoteMessagingPort,
                 localTunnelAddress = tunnelPortAllocation.nextHostAndPort(),
                 certificatesBaseDirectory = certificatesBaseDirectory,
-                remoteCertificatesDirectory = nodeHostAndCertificatesPath.second
+                remoteCertificatesDirectory = nodeHostAndCertificatesPath.second,
+                rpcUsername = rpcUsername,
+                rpcPassword = rpcPassword
         )
     }.toList()
 
@@ -151,7 +157,9 @@ class NodeConnection(
         val hostName: String,
         private val jSchSession: Session,
         private val localTunnelAddress: HostAndPort,
-        private val certificatesDirectory: Path
+        private val certificatesDirectory: Path,
+        private val rpcUsername: String,
+        private val rpcPassword: String
 ) : Closeable {
 
     private val sslConfig = object : SSLConfiguration {
@@ -187,7 +195,7 @@ class NodeConnection(
     fun <A> doWhileClientStopped(action: () -> A): A {
         val client = client
         val proxy = _proxy
-        check(client == null || proxy == null) { "doWhileClientStopped called with no running client" }
+        require(client != null && proxy != null) { "doWhileClientStopped called with no running client" }
         log.info("Stopping RPC proxy to $hostName, tunnel at $localTunnelAddress")
         client!!.close()
         try {
@@ -196,7 +204,7 @@ class NodeConnection(
             log.info("Starting new RPC proxy to $hostName, tunnel at $localTunnelAddress")
             val newClient = CordaRPCClient(localTunnelAddress, sslConfig)
             // TODO expose these somehow?
-            newClient.start("user1", "test")
+            newClient.start(rpcUsername, rpcPassword)
             val newProxy = newClient.proxy()
             this.client = newClient
             this._proxy = newProxy
@@ -206,7 +214,7 @@ class NodeConnection(
     fun startClient() {
         log.info("Creating RPC proxy to $hostName, tunnel at $localTunnelAddress")
         val client = CordaRPCClient(localTunnelAddress, sslConfig)
-        client.start("user1", "test")
+        client.start(rpcUsername, rpcPassword)
         val proxy = client.proxy()
         log.info("Proxy created")
         this.client = client

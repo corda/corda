@@ -8,9 +8,11 @@
 <a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.flows</a>&nbsp;/&nbsp;<a href="../index.html">NotaryFlow</a>&nbsp;/&nbsp;<a href=".">Client</a><br/>
 <br/>
 <h1>Client</h1>
-<code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span></code>
-<p>A flow to be used for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
+<code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>A flow to be used by a party for obtaining signature(s) from a <a href="#">NotaryService</a> ascertaining the transaction
 timestamp is correct and none of its inputs have been used in another completed transaction.</p>
+<p>In case of a single-node or Raft notary, the flow will return a single signature. For the BFT notary multiple
+signatures will be returned – one from each replica that accepted the input state commit.</p>
 <h3>Exceptions</h3>
 
 <p><a name="NotaryException"></a>
@@ -41,7 +43,7 @@ timestamp is correct and none of its inputs have been used in another completed 
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
 <code><span class="identifier">Client</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.NotaryFlow.Client$<init>(net.corda.core.transactions.SignedTransaction)/stx">stx</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span></code><code><span class="identifier">Client</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.NotaryFlow.Client$<init>(net.corda.core.transactions.SignedTransaction, net.corda.core.utilities.ProgressTracker)/stx">stx</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.flows.NotaryFlow.Client$<init>(net.corda.core.transactions.SignedTransaction, net.corda.core.utilities.ProgressTracker)/progressTracker">progressTracker</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a><span class="symbol">)</span></code>
-<p>A flow to be used for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
+<p>A flow to be used by a party for obtaining signature(s) from a <a href="#">NotaryService</a> ascertaining the transaction
 timestamp is correct and none of its inputs have been used in another completed transaction.</p>
 </td>
 </tr>
@@ -117,7 +119,7 @@ across module boundaries.</p>
 <td>
 <a href="call.html">call</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a></code>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span></code>
 <p>This is where you fill out your business logic. The returned object will usually be ignored, but can be
 helpful if this flow is meant to be used as a subflow.</p>
 </td>
@@ -141,10 +143,10 @@ will do as long as the other side registers with it.</p>
 <td>
 <a href="../../../net.corda.core.flows/-flow-logic/receive.html">receive</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.R)), net.corda.core.crypto.Party)/receiveType">receiveType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.R)), net.corda.core.crypto.Party)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code>
-<p>Suspends until the specified <a href="../../../net.corda.core.flows/-flow-logic/receive.html#net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.R)), net.corda.core.crypto.Party)/otherParty">otherParty</a> sends us a message of type <a href="../../../net.corda.core.flows/-flow-logic/receive.html#net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.R)), net.corda.core.crypto.Party)/receiveType">receiveType</a>.</p>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$receive(net.corda.core.crypto.Party)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code>
 <p>Suspends until the specified <a href="../../../net.corda.core.flows/-flow-logic/receive.html#net.corda.core.flows.FlowLogic$receive(net.corda.core.crypto.Party)/otherParty">otherParty</a> sends us a message of type <a href="#">R</a>.</p>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.R)), net.corda.core.crypto.Party)/receiveType">receiveType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.R)), net.corda.core.crypto.Party)/otherParty">otherParty</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../net.corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code>
+<p>Suspends until the specified <a href="../../../net.corda.core.flows/-flow-logic/receive.html#net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.R)), net.corda.core.crypto.Party)/otherParty">otherParty</a> sends us a message of type <a href="../../../net.corda.core.flows/-flow-logic/receive.html#net.corda.core.flows.FlowLogic$receive(java.lang.Class((net.corda.core.flows.FlowLogic.receive.R)), net.corda.core.crypto.Party)/receiveType">receiveType</a>.</p>
 </td>
 </tr>
 <tr>
@@ -186,6 +188,16 @@ current step in this flow's progress tracker.</p>
 <code><span class="keyword">fun </span><span class="identifier">track</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">?</span></code>
 <p>Returns a pair of the current progress step, as a string, and an observable of stringified changes to the
 <a href="../../../net.corda.core.flows/-flow-logic/progress-tracker.html">progressTracker</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.core.flows/-flow-logic/wait-for-ledger-commit.html">waitForLedgerCommit</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">waitForLedgerCommit</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$waitForLedgerCommit(net.corda.core.crypto.SecureHash)/hash">hash</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a></code>
+<p>Suspends the flow until the transaction with the specified ID is received, successfully verified and
+sent to the vault for processing. Note that this call suspends until the transaction is considered
+valid by the local node, but that doesn't imply the vault will consider it relevant.</p>
 </td>
 </tr>
 </tbody>

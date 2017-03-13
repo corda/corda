@@ -207,6 +207,7 @@ class AttachmentClassLoaderTests {
 
         val kryo = createKryo()
         kryo.classLoader = cl
+        kryo.addToWhitelist(contract.javaClass)
 
         val state2 = bytes.deserialize(kryo)
         assert(state2.javaClass.classLoader is AttachmentsClassLoader)
@@ -214,6 +215,7 @@ class AttachmentClassLoaderTests {
     }
 
     // top level wrapper
+    @CordaSerializable
     class Data(val contract: Contract)
 
     @Test
@@ -222,7 +224,9 @@ class AttachmentClassLoaderTests {
 
         assertNotNull(data.contract)
 
-        val bytes = data.serialize()
+        val kryo2 = createKryo()
+        kryo2.addToWhitelist(data.contract.javaClass)
+        val bytes = data.serialize(kryo2)
 
         val storage = MockAttachmentStorage()
 
@@ -234,6 +238,7 @@ class AttachmentClassLoaderTests {
 
         val kryo = createKryo()
         kryo.classLoader = cl
+        kryo.addToWhitelist(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl))
 
         val state2 = bytes.deserialize(kryo)
         assertEquals(cl, state2.contract.javaClass.classLoader)
@@ -259,6 +264,9 @@ class AttachmentClassLoaderTests {
         val tx = contract.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
         val storage = MockAttachmentStorage()
         val kryo = createKryo()
+        kryo.addToWhitelist(contract.javaClass)
+        kryo.addToWhitelist(Class.forName("net.corda.contracts.isolated.AnotherDummyContract\$State", true, child))
+        kryo.addToWhitelist(Class.forName("net.corda.contracts.isolated.AnotherDummyContract\$Commands\$Create", true, child))
 
         // todo - think about better way to push attachmentStorage down to serializer
         kryo.attachmentStorage = storage

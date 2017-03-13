@@ -1,0 +1,15 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CordaKryo.<init> - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.serialization</a>&nbsp;/&nbsp;<a href="index.html">CordaKryo</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">CordaKryo</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.CordaKryo$<init>(com.esotericsoftware.kryo.ClassResolver)/classResolver">classResolver</span><span class="symbol">:</span>&nbsp;<span class="identifier">ClassResolver</span><span class="symbol">)</span></code>
+<p>We need to disable whitelist checking during calls from our Kryo code to register a serializer, since it checks
+for existing registrations and then will enter our <a href="../-corda-class-resolver/get-registration.html">CordaClassResolver.getRegistration</a> method.</p>
+</BODY>
+</HTML>

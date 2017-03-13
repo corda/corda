@@ -10,6 +10,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.recordTransactions
 import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -31,18 +32,22 @@ import java.security.KeyPair
  */
 object TwoPartyDealFlow {
 
+    @CordaSerializable
     class DealMismatchException(val expectedDeal: ContractState, val actualDeal: ContractState) : Exception() {
         override fun toString() = "The submitted deal didn't match the expected: $expectedDeal vs $actualDeal"
     }
 
+    @CordaSerializable
     class DealRefMismatchException(val expectedDeal: StateRef, val actualDeal: StateRef) : Exception() {
         override fun toString() = "The submitted deal didn't match the expected: $expectedDeal vs $actualDeal"
     }
 
     // This object is serialised to the network and is the first flow message the seller sends to the buyer.
+    @CordaSerializable
     data class Handshake<out T>(val payload: T, val publicKey: CompositeKey)
 
-    class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySig: DigitalSignature.WithKey)
+    @CordaSerializable
+    class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySigs: List<DigitalSignature.WithKey>)
 
     /**
      * [Primary] at the end sends the signed tx to all the regulator parties. This a seperate workflow which needs a
@@ -139,9 +144,9 @@ object TwoPartyDealFlow {
             // These two steps could be done in parallel, in theory. Our framework doesn't support that yet though.
             val ourSignature = computeOurSignature(stx)
             val allPartySignedTx = stx + ourSignature
-            val notarySignature = getNotarySignature(allPartySignedTx)
+            val notarySignatures = getNotarySignatures(allPartySignedTx)
 
-            val fullySigned = sendSignatures(allPartySignedTx, ourSignature, notarySignature)
+            val fullySigned = sendSignatures(allPartySignedTx, ourSignature, notarySignatures)
 
             progressTracker.currentStep = RECORDING
 
@@ -161,7 +166,7 @@ object TwoPartyDealFlow {
         }
 
         @Suspendable
-        private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.WithKey {
+        private fun getNotarySignatures(stx: SignedTransaction): List<DigitalSignature.WithKey> {
             progressTracker.currentStep = NOTARY
             return subFlow(NotaryFlow.Client(stx))
         }
@@ -173,13 +178,13 @@ object TwoPartyDealFlow {
 
         @Suspendable
         private fun sendSignatures(allPartySignedTx: SignedTransaction, ourSignature: DigitalSignature.WithKey,
-                                   notarySignature: DigitalSignature.WithKey): SignedTransaction {
+                                   notarySignatures: List<DigitalSignature.WithKey>): SignedTransaction {
             progressTracker.currentStep = SENDING_SIGS
-            val fullySigned = allPartySignedTx + notarySignature
+            val fullySigned = allPartySignedTx + notarySignatures
 
             logger.trace { "Built finished transaction, sending back to other party!" }
 
-            send(otherParty, SignaturesFromPrimary(ourSignature, notarySignature))
+            send(otherParty, SignaturesFromPrimary(ourSignature, notarySignatures))
             return fullySigned
         }
     }
@@ -217,7 +222,7 @@ object TwoPartyDealFlow {
 
             logger.trace { "Got signatures from other party, verifying ... " }
 
-            val fullySigned = stx + signatures.sellerSig + signatures.notarySig
+            val fullySigned = stx + signatures.sellerSig + signatures.notarySigs
             fullySigned.verifySignatures()
 
             logger.trace { "Signatures received are valid. Deal transaction complete! :-)" }
@@ -263,7 +268,7 @@ object TwoPartyDealFlow {
         @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Pair<TransactionBuilder, List<CompositeKey>>
     }
 
-
+    @CordaSerializable
     data class AutoOffer(val notary: Party, val dealBeingOffered: DealState)
 
 
@@ -300,7 +305,7 @@ object TwoPartyDealFlow {
             // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
             // to have one.
             ptx.setTime(serviceHub.clock.instant(), 30.seconds)
-            return Pair(ptx, arrayListOf(deal.parties.single { it.name == serviceHub.myInfo.legalIdentity.name }.owningKey))
+            return Pair(ptx, arrayListOf(deal.parties.single { it == serviceHub.myInfo.legalIdentity as AbstractParty }.owningKey))
         }
     }
 

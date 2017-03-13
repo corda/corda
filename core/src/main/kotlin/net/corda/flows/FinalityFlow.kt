@@ -74,8 +74,8 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         return stxnsAndParties.map { pair ->
             val stx = pair.first
             val notarised = if (needsNotarySignature(stx)) {
-                val notarySig = subFlow(NotaryFlow.Client(stx))
-                stx + notarySig
+                val notarySignatures = subFlow(NotaryFlow.Client(stx))
+                stx + notarySignatures
             } else {
                 stx
             }
@@ -84,7 +84,12 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         }
     }
 
-    private fun needsNotarySignature(stx: SignedTransaction) = stx.tx.notary != null && hasNoNotarySignature(stx)
+    private fun needsNotarySignature(stx: SignedTransaction): Boolean {
+        val wtx = stx.tx
+        val needsNotarisation = wtx.inputs.isNotEmpty() || wtx.timestamp != null
+        return needsNotarisation && hasNoNotarySignature(stx)
+
+    }
     private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {
         val notaryKey = stx.tx.notary?.owningKey
         val signers = stx.sigs.map { it.by }.toSet()
@@ -117,7 +122,7 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         // Load and verify each transaction.
         return sorted.map { stx ->
             val notary = stx.tx.notary
-            // The notary signature is allowed to be missing but no others.
+            // The notary signature(s) are allowed to be missing but no others.
             val wtx = if (notary != null) stx.verifySignatures(notary.owningKey) else stx.verifySignatures()
             val ltx = wtx.toLedgerTransaction(augmentedLookup)
             ltx.verify()

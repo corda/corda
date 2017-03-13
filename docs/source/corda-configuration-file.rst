@@ -40,7 +40,7 @@ NetworkMapService plus Simple Notary configuration file.
     trustStorePassword : "trustpass"
     artemisAddress : "localhost:12345"
     webAddress : "localhost:12346"
-    extraAdvertisedServiceIds: ""
+    extraAdvertisedServiceIds : []
     useHTTPS : false
     devMode : true
     // Certificate signing service will be hosted by R3 in the near future.
@@ -124,7 +124,7 @@ path to the node's base directory.
         :password: The password
         :permissions: A list of permission strings which RPC methods can use to control access
 
-    If this field is absent or an empty list then RPC is effectively locked down.
+    If this field is absent or an empty list then RPC is effectively locked down. Alternatively, if it contains the string ``ALL`` then the user is permitted to use *any* RPC method. This value is intended for administrator users and for developers.
 
 :devMode: This flag indicate if the node is running in development mode. On startup, if the keystore ``<workspace>/certificates/sslkeystore.jks``
     does not exist, a developer keystore will be used if ``devMode`` is true. The node will exit if ``devMode`` is false

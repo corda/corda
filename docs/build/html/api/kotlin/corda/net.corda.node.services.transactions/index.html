@@ -13,6 +13,34 @@
 <tbody>
 <tr>
 <td>
+<a href="-b-f-t-smart-client/index.html">BFTSmartClient</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">BFTSmartClient</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">V</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-b-f-t-smart-server/index.html">BFTSmartServer</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">BFTSmartServer</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">V</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">DefaultRecoverable</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-b-f-t-smart-uniqueness-provider/index.html">BFTSmartUniquenessProvider</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">BFTSmartUniquenessProvider</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a></code>
+<p>A <a href="../net.corda.core.node.services/-uniqueness-provider/index.html">UniquenessProvider</a> based on the <a href="https://github.com/bft-smart/library">bft-smart library</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-b-f-t-validating-notary-service/index.html">BFTValidatingNotaryService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">BFTValidatingNotaryService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-notary-service/index.html"><span class="identifier">NotaryService</span></a></code>
+<p>A validating notary service operated by a group of parties that don't necessarily trust each other.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-distributed-immutable-map/index.html">DistributedImmutableMap</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">DistributedImmutableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">V</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">StateMachine</span><span class="symbol">, </span><span class="identifier">Snapshottable</span></code>
@@ -63,6 +91,20 @@ persisted in a Raft cluster, using the Copycat framework (http://atomix.io/copyc
 </tr>
 <tr>
 <td>
+<a href="-request/index.html">Request</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Request</span></code>
+<p>Sent from <a href="-b-f-t-smart-client/index.html">BFTSmartClient</a> to <a href="-b-f-t-smart-server/index.html">BFTSmartServer</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-request-type/index.html">RequestType</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">RequestType</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="-simple-notary-service/index.html">SimpleNotaryService</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">SimpleNotaryService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-notary-service/index.html"><span class="identifier">NotaryService</span></a></code>
@@ -74,7 +116,7 @@ persisted in a Raft cluster, using the Copycat framework (http://atomix.io/copyc
 <a href="-validating-notary-service/index.html">ValidatingNotaryService</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">ValidatingNotaryService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-notary-service/index.html"><span class="identifier">NotaryService</span></a></code>
-<p>A Notary service that validates the transaction chain of he submitted transaction before committing it</p>
+<p>A Notary service that validates the transaction chain of the submitted transaction before committing it</p>
 </td>
 </tr>
 </tbody>

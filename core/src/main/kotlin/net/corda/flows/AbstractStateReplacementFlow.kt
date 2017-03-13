@@ -11,6 +11,7 @@ import net.corda.core.crypto.signWithECDSA
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.recordTransactions
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -29,6 +30,7 @@ abstract class AbstractStateReplacementFlow {
      *
      * @param M the type of a class representing proposed modification by the instigator.
      */
+    @CordaSerializable
     data class Proposal<out M>(val stateRef: StateRef, val modification: M, val stx: SignedTransaction)
 
     /**
@@ -63,7 +65,7 @@ abstract class AbstractStateReplacementFlow {
             val me = listOf(myKey)
 
             val signatures = if (participants == me) {
-                listOf(getNotarySignature(stx))
+                getNotarySignatures(stx)
             } else {
                 collectSignatures(participants - me, stx)
             }
@@ -87,7 +89,7 @@ abstract class AbstractStateReplacementFlow {
 
             val allPartySignedTx = stx + participantSignatures
 
-            val allSignatures = participantSignatures + getNotarySignature(allPartySignedTx)
+            val allSignatures = participantSignatures + getNotarySignatures(allPartySignedTx)
             parties.forEach { send(it, allSignatures) }
 
             return allSignatures
@@ -105,7 +107,7 @@ abstract class AbstractStateReplacementFlow {
         }
 
         @Suspendable
-        private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.WithKey {
+        private fun getNotarySignatures(stx: SignedTransaction): List<DigitalSignature.WithKey> {
             progressTracker.currentStep = NOTARY
             try {
                 return subFlow(NotaryFlow.Client(stx))
@@ -115,8 +117,10 @@ abstract class AbstractStateReplacementFlow {
         }
     }
 
+    // Type parameter should ideally be Unit but that prevents Java code from subclassing it (https://youtrack.jetbrains.com/issue/KT-15964).
+    // We use Void? instead of Unit? as that's what you'd use in Java.
     abstract class Acceptor<in T>(val otherSide: Party,
-                                  override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+                                  override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Void?>() {
         companion object {
             object VERIFYING : ProgressTracker.Step("Verifying state replacement proposal")
             object APPROVING : ProgressTracker.Step("State replacement approved")
@@ -126,7 +130,7 @@ abstract class AbstractStateReplacementFlow {
 
         @Suspendable
         @Throws(StateReplacementException::class)
-        override fun call() {
+        override fun call(): Void? {
             progressTracker.currentStep = VERIFYING
             val maybeProposal: UntrustworthyData<Proposal<T>> = receive(otherSide)
             val stx: SignedTransaction = maybeProposal.unwrap {
@@ -135,6 +139,7 @@ abstract class AbstractStateReplacementFlow {
                 it.stx
             }
             approve(stx)
+            return null
         }
 
         @Suspendable

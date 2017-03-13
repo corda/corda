@@ -46,6 +46,12 @@ Provides utilities for generating a cryptographic hash using different algorithm
 <tbody>
 <tr>
 <td>
+<a href="hash-concat.html">hashConcat</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">hashConcat</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.SecureHash$hashConcat(net.corda.core.crypto.SecureHash)/other">other</span><span class="symbol">:</span>&nbsp;<span class="identifier">SecureHash</span><span class="symbol">)</span><span class="symbol">: </span><a href="-s-h-a256/index.html"><span class="identifier">SHA256</span></a></code></td>
+</tr>
+<tr>
+<td>
 <a href="prefix-chars.html">prefixChars</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">prefixChars</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.SecureHash$prefixChars(kotlin.Int)/prefixLen">prefixLen</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;6<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
@@ -80,6 +86,17 @@ Provides utilities for generating a cryptographic hash using different algorithm
 <code><span class="keyword">fun </span><span class="identifier">open</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/io/ByteArrayInputStream.html"><span class="identifier">ByteArrayInputStream</span></a></code>
 <p>Returns a <a href="http://docs.oracle.com/javase/6/docs/api/java/io/ByteArrayInputStream.html">ByteArrayInputStream</a> of the bytes</p>
 </td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="zero-hash.html">zeroHash</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">zeroHash</span><span class="symbol">: </span><a href="-s-h-a256/index.html"><span class="identifier">SHA256</span></a></code></td>
 </tr>
 </tbody>
 </table>
@@ -120,13 +137,7 @@ Provides utilities for generating a cryptographic hash using different algorithm
 <td>
 <a href="../../net.corda.core.serialization/deserialize.html">deserialize</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="../../net.corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.OpaqueBytes, com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../net.corda.core.transactions/hash-concat.html">hashConcat</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">SecureHash</span><span class="symbol">.</span><span class="identifier">hashConcat</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions$hashConcat(net.corda.core.crypto.SecureHash, net.corda.core.crypto.SecureHash)/other">other</span><span class="symbol">:</span>&nbsp;<span class="identifier">SecureHash</span><span class="symbol">)</span><span class="symbol">: </span><a href="-s-h-a256/index.html"><span class="identifier">SHA256</span></a></code></td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="../../net.corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.OpaqueBytes, com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;threadLocalP2PKryo()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
 </tr>
 <tr>
 <td>

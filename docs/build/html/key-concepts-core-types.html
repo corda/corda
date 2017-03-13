@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Financial model" href="key-concepts-financial-model.html"/>
         <link rel="prev" title="Data model" href="key-concepts-data-model.html"/> 
@@ -137,6 +134,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -152,6 +150,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
@@ -181,6 +180,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -311,13 +311,14 @@ write your tests using the <a class="reference internal" href="tutorial-test-dsl
 <h2>Party and CompositeKey<a class="headerlink" href="#party-and-compositekey" title="Permalink to this headline">¶</a></h2>
 <p>Entities using the network are called <em>parties</em>. Parties can sign structures using keys, and a party may have many
 keys under their control.</p>
-<p>Parties may sometimes be identified pseudonymously. For example, in a transaction sent to your node as part of a
-chain of custody it is important you can convince yourself of the transaction&#8217;s validity, but equally important that
-you don&#8217;t learn anything about who was involved in that transaction. In these cases a public key may be present
-without any identifying information about who owns it.</p>
-<p>Identities of parties involved in signing a transaction can be represented simply by a <code class="docutils literal"><span class="pre">CompositeKey</span></code>, or by further
-information (such as name) using the <code class="docutils literal"><span class="pre">Party</span></code> class. An <code class="docutils literal"><span class="pre">AuthenticatedObject</span></code> represents an object (like a command)
-that has been signed by a set of parties.</p>
+<p>Parties can be represented either in full (including name) or pseudonymously, using the <code class="docutils literal"><span class="pre">Party</span></code> or <code class="docutils literal"><span class="pre">AnonymousParty</span></code>
+classes respectively. For example, in a transaction sent to your node as part of a chain of custody it is important you
+can convince yourself of the transaction&#8217;s validity, but equally important that you don&#8217;t learn anything about who was
+involved in that transaction. In these cases <code class="docutils literal"><span class="pre">AnonymousParty</span></code> should be used, which contains a composite public key
+without any identifying information about who owns it. In contrast, for internal processing where extended details of
+a party are required, the <code class="docutils literal"><span class="pre">Party</span></code> class should be used. The identity service provides functionality for resolving
+anonymous parties to full parties.</p>
+<p>An <code class="docutils literal"><span class="pre">AuthenticatedObject</span></code> represents an object (like a command) that has been signed by a set of parties.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">These types are provisional and will change significantly in future as the identity framework becomes more fleshed out.</p>

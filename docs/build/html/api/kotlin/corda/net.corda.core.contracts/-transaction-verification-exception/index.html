@@ -8,7 +8,7 @@
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.contracts</a>&nbsp;/&nbsp;<a href=".">TransactionVerificationException</a><br/>
 <br/>
 <h1>TransactionVerificationException</h1>
-<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">TransactionVerificationException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">TransactionVerificationException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-exception/index.html"><span class="identifier">FlowException</span></a></code>
 <h3>Types</h3>
 <table>
 <tbody>
@@ -75,6 +75,23 @@
 <a href="tx.html">tx</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">tx</span><span class="symbol">: </span><a href="../../net.corda.core.transactions/-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../net.corda.core.flows/-flow-exception/cause.html">cause</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">cause</span><span class="symbol">: </span><span class="identifier">Throwable</span><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.flows/-flow-exception/message.html">message</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">message</span><span class="symbol">: </span><span class="identifier">String</span><span class="symbol">?</span></code></td>
 </tr>
 </tbody>
 </table>

@@ -4,14 +4,15 @@ import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.div
-import net.corda.core.flatMap
-import net.corda.core.getOrThrow
+import net.corda.core.*
 import net.corda.core.messaging.RPCOps
+import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.Version
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.success
 import net.corda.core.utilities.loggerFor
 import net.corda.node.printBasicNodeInfo
 import net.corda.node.serialization.NodeClock
@@ -25,17 +26,14 @@ import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.databaseTransaction
-import org.jetbrains.exposed.sql.Database
+import org.slf4j.Logger
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
-import java.nio.file.Files
-import java.nio.file.Paths
 import java.time.Clock
 import javax.management.ObjectName
-import javax.servlet.*
 import kotlin.concurrent.thread
 
 /**
@@ -49,8 +47,14 @@ import kotlin.concurrent.thread
  */
 class Node(override val configuration: FullNodeConfiguration,
            advertisedServices: Set<ServiceInfo>,
+           val nodeVersionInfo: NodeVersionInfo,
            clock: Clock = NodeClock()) : AbstractNode(configuration, advertisedServices, clock) {
-    override val log = loggerFor<Node>()
+    companion object {
+        private val logger = loggerFor<Node>()
+    }
+
+    override val log: Logger get() = logger
+    override val version: Version get() = nodeVersionInfo.version
     override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
 
     // DISCUSSION
@@ -107,34 +111,62 @@ class Node(override val configuration: FullNodeConfiguration,
     }
 
     /**
-     * Abort starting the node if an existing deployment with a different version is detected in the current directory.
-     * The current version is expected to be specified as a system property. If not provided, the check will be ignored.
+     * Abort starting the node if an existing deployment with a different version is detected in the base directory.
      */
     private fun checkVersionUnchanged() {
-        val currentVersion = System.getProperty("corda.version") ?: return
-        val versionFile = Paths.get("version")
-        if (Files.exists(versionFile)) {
-            val existingVersion = Files.readAllLines(versionFile)[0]
-            check(existingVersion == currentVersion) {
-                "Version change detected - current: $currentVersion, existing: $existingVersion. Node upgrades are not yet supported."
+        val versionFile = configuration.baseDirectory / "version"
+        if (versionFile.exists()) {
+            val previousVersion = Version.parse(versionFile.readAllLines()[0])
+            check(nodeVersionInfo.version.major == previousVersion.major) {
+                "Major version change detected - current: ${nodeVersionInfo.version}, previous: $previousVersion. " +
+                        "Node upgrades across major versions are not yet supported."
             }
-        } else {
-            Files.write(versionFile, currentVersion.toByteArray())
         }
+        versionFile.writeLines(listOf(nodeVersionInfo.version.toString()))
     }
 
     override fun makeMessagingService(): MessagingServiceInternal {
         userService = RPCUserServiceImpl(configuration)
-
-        val serverAddress = with(configuration) {
-            messagingServerAddress ?: {
-                messageBroker = ArtemisMessagingServer(this, artemisAddress, services.networkMapCache, userService)
-                artemisAddress
-            }()
-        }
+        val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val myIdentityOrNullIfNetworkMapService = if (networkMapAddress != null) obtainLegalIdentity().owningKey else null
-        return NodeMessagingClient(configuration, serverAddress, myIdentityOrNullIfNetworkMapService, serverThread, database,
+        return NodeMessagingClient(
+                configuration,
+                nodeVersionInfo,
+                serverAddress,
+                myIdentityOrNullIfNetworkMapService,
+                serverThread,
+                database,
                 networkMapRegistrationFuture)
+    }
+
+    private fun makeLocalMessageBroker(): HostAndPort {
+        with(configuration) {
+            val useHost = tryDetectIfNotPublicHost(artemisAddress.hostText)
+            val useAddress = useHost?.let { HostAndPort.fromParts(it, artemisAddress.port) } ?: artemisAddress
+            messageBroker = ArtemisMessagingServer(this, useAddress, services.networkMapCache, userService)
+            return useAddress
+        }
+    }
+
+    /**
+     * Checks whether the specified [host] is a public IP address or hostname. If not, tries to discover the current
+     * machine's public IP address to be used instead. Note that it will only work if the machine is internet-facing.
+     * If none found, outputs a warning message.
+     */
+    private fun tryDetectIfNotPublicHost(host: String): String? {
+        if (!AddressUtils.isPublic(host)) {
+            val foundPublicIP = AddressUtils.tryDetectPublicIP()
+            if (foundPublicIP == null) {
+                val message = "The specified messaging host \"$host\" is private, " +
+                        "this node will not be reachable by any other nodes outside the private network."
+                println("WARNING: $message")
+                log.warn(message)
+            } else {
+                log.info("Detected public IP: $foundPublicIP. This will be used instead the provided \"$host\" as the advertised address.")
+            }
+            return foundPublicIP?.hostAddress
+        }
+        return null
     }
 
     override fun startMessagingService(rpcOps: RPCOps) {
@@ -199,10 +231,11 @@ class Node(override val configuration: FullNodeConfiguration,
     override fun start(): Node {
         alreadyRunningNodeCheck()
         super.start()
-        // Only start the service API requests once the network map registration is complete
-        thread(name = "WebServer") {
-            networkMapRegistrationFuture.getOrThrow()
-            // Begin exporting our own metrics via JMX.
+
+        networkMapRegistrationFuture.success(serverThread) {
+            // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
+            //
+            // https://jolokia.org/agent/jvm.html
             JmxReporter.
                     forRegistry(services.monitoringService.metrics).
                     inDomain("net.corda").
@@ -286,18 +319,6 @@ class Node(override val configuration: FullNodeConfiguration,
         val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
         f.setLength(0)
         f.write(ourProcessID.toByteArray())
-    }
-
-    // Servlet filter to wrap API requests with a database transaction.
-    private class DatabaseTransactionFilter(val database: Database) : Filter {
-        override fun doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) {
-            databaseTransaction(database) {
-                chain.doFilter(request, response)
-            }
-        }
-
-        override fun init(filterConfig: FilterConfig?) {}
-        override fun destroy() {}
     }
 }
 

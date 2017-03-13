@@ -7,6 +7,7 @@ import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.read
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Inbound
@@ -65,6 +66,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
         val hostAndPort: HostAndPort
     }
 
+    @CordaSerializable
     data class NetworkMapAddress(override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisPeerAddress {
         override val queueName: String get() = NETWORK_MAP_QUEUE
     }
@@ -80,6 +82,7 @@ abstract class ArtemisMessagingComponent() : SingletonSerializeAsToken() {
      * @param queueName The name of the queue this address is associated with.
      * @param hostAndPort The address of the node.
      */
+    @CordaSerializable
     data class NodeAddress(override val queueName: String, override val hostAndPort: HostAndPort) : ArtemisPeerAddress {
         companion object {
             fun asPeer(peerIdentity: CompositeKey, hostAndPort: HostAndPort): NodeAddress {

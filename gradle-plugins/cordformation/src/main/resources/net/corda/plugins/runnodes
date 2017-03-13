@@ -16,7 +16,7 @@ if which osascript >/dev/null; then
     rootdir=`pwd`
     for dir in `ls`; do
         if [ -d $dir ]; then
-            cmd="bash -c 'cd $rootdir/$dir; /usr/libexec/java_home -v 1.8 --exec java -jar JAR_NAME && exit'"
+            cmd="bash -c 'cd $rootdir/$dir; exec ./NODEJAR_NAME && exit'"
             script="$script
     tell application \"System Events\" to tell process \"Terminal\" to keystroke \"t\" using command down
     delay 0.5
@@ -24,16 +24,20 @@ if which osascript >/dev/null; then
             first=false
         fi
     done
-    for dir in `ls`; do
-        if [ -d $dir ]; then
-            cmd="bash -c 'cd $rootdir/$dir; /usr/libexec/java_home -v 1.8 --exec java -jar JAR_NAME --webserver && exit'"
-            script="$script
-    tell application \"System Events\" to tell process \"Terminal\" to keystroke \"t\" using command down
-    delay 0.5
-    do script \"$cmd\" in window 1"
-            first=false
-        fi
-    done
+
+    # Now do the web servers.
+    if [[ "${NO_WEB_SERVER:-}" == "" ]]; then
+        for dir in `ls`; do
+            if [ -d $dir ]; then
+                cmd="bash -c 'cd $rootdir/$dir; /usr/libexec/java_home -v 1.8 --exec java -jar WEBJAR_NAME && exit'"
+                script="$script
+        tell application \"System Events\" to tell process \"Terminal\" to keystroke \"t\" using command down
+        delay 0.5
+        do script \"$cmd\" in window 1"
+                first=false
+            fi
+        done
+    fi
     script="$script
 end tell"
     osascript -e "$script"
@@ -48,8 +52,10 @@ else
     for dir in `ls`; do
         if [ -d $dir ]; then
             pushd $dir >/dev/null
-            xterm -T "`basename $dir`" -e 'java -jar JAR_NAME' &
-            xterm -T "`basename $dir`" -e 'java -jar JAR_NAME --webserver' &
+            xterm -T "`basename $dir`" -e './NODEJAR_NAME' &
+            if [[ "${NO_WEB_SERVER:-}" == "" ]]; then
+                xterm -T "`basename $dir` Web Server" -e 'java -jar WEBJAR_NAME' &
+            fi
             popd >/dev/null
         fi
     done

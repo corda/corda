@@ -1,6 +1,5 @@
 package net.corda.docs
 
-import com.esotericsoftware.kryo.Kryo
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
@@ -10,7 +9,9 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.serialization.SerializationCustomization
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.CashExitFlow
 import net.corda.flows.CashIssueFlow
@@ -132,12 +133,17 @@ fun generateTransactions(proxy: CordaRPCOps) {
 // END 6
 
 // START 7
+// Not annotated, so need to whitelist manually.
 data class ExampleRPCValue(val foo: String)
 
+// Annotated, so no need to whitelist manually.
+@CordaSerializable
+data class ExampleRPCValue2(val bar: Int)
+
 class ExampleRPCCordaPluginRegistry : CordaPluginRegistry() {
-    override fun registerRPCKryoTypes(kryo: Kryo): Boolean {
+    override fun customizeSerialization(custom: SerializationCustomization): Boolean {
         // Add classes like this.
-        kryo.register(ExampleRPCValue::class.java)
+        custom.addToWhitelist(ExampleRPCValue::class.java)
         // You should return true, otherwise your plugin will be ignored for registering classes with Kryo.
         return true
     }

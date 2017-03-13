@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Writing a contract" href="tutorial-contract.html"/>
         <link rel="prev" title="Node Explorer" href="node-explorer.html"/> 
@@ -124,6 +121,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -133,9 +131,8 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Network permissioning</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#certificate-signing-request-utility">Certificate signing request utility</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#building-the-utility">Building the utility</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#running-the-utility">Running the utility</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#initial-registration">Initial Registration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#starting-the-registration">Starting the Registration</a></li>
 </ul>
 </li>
 </ul>
@@ -144,6 +141,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
@@ -173,6 +171,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -236,13 +235,13 @@ as possible.</p>
 certificate for TestNet.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
-<p class="last">The TestNet has not been setup yet as of Milestone 6 release. You will not be able to connect to the
+<p class="last">The TestNet has not been setup yet as of Milestone 8 release. You will not be able to connect to the
 certificate signing server.</p>
 </div>
-<div class="section" id="certificate-signing-request-utility">
-<h2>Certificate signing request utility<a class="headerlink" href="#certificate-signing-request-utility" title="Permalink to this headline">¶</a></h2>
-<p>The utility creates certificate signing request based on node information obtained from the node configuration.
-The following information from the node configuration file is needed to generate a certificate signing request.</p>
+<div class="section" id="initial-registration">
+<h2>Initial Registration<a class="headerlink" href="#initial-registration" title="Permalink to this headline">¶</a></h2>
+<p>The certificate signing request will be created based on node information obtained from the node configuration.
+The following information from the node configuration file is needed to generate the request.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -270,35 +269,21 @@ future.  e.g.&#8221;<a class="reference external" href="https://testnet.certific
 </tr>
 </tbody>
 </table>
-<p>A new pair of private and public keys will be generated by the utility and will be used to create the request.</p>
+<p>A new pair of private and public keys generated by the Corda node will be used to create the request.</p>
 <p>The utility will submit the request to the network permissioning server and poll for a result periodically to retrieve the certificates.
-Once the request has been approved and the certificates downloaded from the server, the utility will create the key store and trust store using the certificates and the generated private key.</p>
+Once the request has been approved and the certificates downloaded from the server, the node will create the keystore and trust store using the certificates and the generated private key.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">You can exit the utility at any time if the approval process is taking longer than expected. The request process will resume on restart.</p>
 </div>
-<p>This process only needs to be done once when the node connects to the network for the first time, or when the certificate expires.</p>
+<p>This process only is needed when the node connects to the network for the first time, or when the certificate expires.</p>
 </div>
-<div class="section" id="building-the-utility">
-<h2>Building the utility<a class="headerlink" href="#building-the-utility" title="Permalink to this headline">¶</a></h2>
-<p>The utility will be created as part of the gradle <code class="docutils literal"><span class="pre">:node</span></code> module <code class="docutils literal"><span class="pre">buildCordaJAR</span></code> task.
-You can also build the utility JAR by run the following command from the Corda project root directory.</p>
-<p><strong>Windows</strong>:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">gradlew</span><span class="p">.</span><span class="n">bat</span> <span class="p">:</span><span class="n">node</span><span class="p">:</span><span class="n">buildCertSigningRequestUtilityJAR</span>
-</pre></div>
-</div>
-<p><strong>Other</strong>:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">gradlew</span> <span class="p">:</span><span class="n">node</span><span class="p">:</span><span class="n">buildCertSigningRequestUtilityJAR</span>
-</pre></div>
-</div>
-<p>The utility JAR will be created in <code class="docutils literal"><span class="pre">&lt;Project</span> <span class="pre">Root</span> <span class="pre">Dir&gt;/node/build/libs/certSigningRequestUtility.jar</span></code></p>
-</div>
-<div class="section" id="running-the-utility">
-<h2>Running the utility<a class="headerlink" href="#running-the-utility" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="starting-the-registration">
+<h2>Starting the Registration<a class="headerlink" href="#starting-the-registration" title="Permalink to this headline">¶</a></h2>
 <p>You will need to specify the working directory of your Corda node using <code class="docutils literal"><span class="pre">--base-dir</span></code> flag. This is defaulted to current directory if left blank.
 You can also specify the location of <code class="docutils literal"><span class="pre">node.conf</span></code> with <code class="docutils literal"><span class="pre">--config-file</span></code> flag if it&#8217;s not in the working directory.</p>
-<p><strong>Running the Utility</strong>:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">java</span> <span class="p">-</span><span class="n">jar</span> <span class="n">certSigningRequestUtility</span><span class="p">.</span><span class="n">jar</span> <span class="p">--</span><span class="n">base</span><span class="p">-</span><span class="n">dir</span> <span class="p">&lt;&lt;</span><span class="n">optional</span><span class="p">&gt;&gt;</span> <span class="p">--</span><span class="n">config</span><span class="p">-</span><span class="n">file</span> <span class="p">&lt;&lt;</span><span class="n">optional</span><span class="p">&gt;&gt;</span>
+<p><strong>To start the registration</strong>:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">java</span> <span class="p">-</span><span class="n">jar</span> <span class="n">corda</span><span class="p">.</span><span class="n">jar</span> <span class="p">--</span><span class="n">initial</span><span class="p">-</span><span class="n">registration</span> <span class="p">--</span><span class="n">base</span><span class="p">-</span><span class="n">dir</span> <span class="p">&lt;&lt;</span><span class="n">optional</span><span class="p">&gt;&gt;</span> <span class="p">--</span><span class="n">config</span><span class="p">-</span><span class="n">file</span> <span class="p">&lt;&lt;</span><span class="n">optional</span><span class="p">&gt;&gt;</span>
 </pre></div>
 </div>
 <p>A <code class="docutils literal"><span class="pre">certificates</span></code> folder containing the keystore and trust store will be created in the base directory when the process is completed.</p>

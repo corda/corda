@@ -24,7 +24,7 @@ TODO: Think about how to bring the system to a clean stop so it can be upgraded 
 TODO: Timeouts
 TODO: Surfacing of exceptions via an API and/or management UI
 TODO: Ability to control checkpointing explicitly, for cases where you know replaying a message can't hurt
-TODO: Implement stub/skel classes that provide a basic RPC framework on top of this.</p>
+TODO: Don't store all active flows in memory, load from the database on demand.</p>
 <h3>Types</h3>
 <table>
 <tbody>
@@ -39,20 +39,6 @@ TODO: Implement stub/skel classes that provide a basic RPC framework on top of t
 <a href="-fiber-scheduler/index.html">FiberScheduler</a></td>
 <td>
 <code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">FiberScheduler</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FiberExecutorScheduler</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-flow-session/index.html">FlowSession</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">FlowSession</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-flow-session-state/index.html">FlowSessionState</a></td>
-<td>
-<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">FlowSessionState</span></code>
-<p><a href="-flow-session-state/index.html">FlowSessionState</a> describes the session's state.</p>
-</td>
 </tr>
 </tbody>
 </table>

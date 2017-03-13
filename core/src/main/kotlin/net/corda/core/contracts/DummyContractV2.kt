@@ -12,7 +12,7 @@ val DUMMY_V2_PROGRAM_ID = DummyContractV2()
  * Dummy contract state for testing of the upgrade process.
  */
 class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.State> {
-    override val legacyContract = DUMMY_PROGRAM_ID
+    override val legacyContract = DummyContract::class.java
 
     data class State(val magicNumber: Int = 0, val owners: List<CompositeKey>) : ContractState {
         override val contract = DUMMY_V2_PROGRAM_ID

@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import com.google.common.primitives.Primitives
 import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -23,8 +24,7 @@ import kotlin.reflect.primaryConstructor
  * TODO: Align with API related logic for passing in FlowLogic references (FlowRef)
  * TODO: Actual support for AppContext / AttachmentsClassLoader
  */
-class FlowLogicRefFactory(private val flowWhitelist: Map<String, Set<String>>) : SingletonSerializeAsToken() {
-
+class FlowLogicRefFactory(val flowWhitelist: Map<String, Set<String>>) : SingletonSerializeAsToken() {
     constructor() : this(mapOf())
 
     // Pending real dependence on AppContext for class loading etc
@@ -186,6 +186,7 @@ class FlowLogicRefFactory(private val flowWhitelist: Map<String, Set<String>>) :
     }
 }
 
+@CordaSerializable
 class IllegalFlowLogicException(type: Class<*>, msg: String) : IllegalArgumentException("${FlowLogicRef::class.java.simpleName} cannot be constructed for ${FlowLogic::class.java.simpleName} of type ${type.name} $msg")
 
 /**
@@ -194,12 +195,14 @@ class IllegalFlowLogicException(type: Class<*>, msg: String) : IllegalArgumentEx
  * Only allows a String reference to the FlowLogic class, and only allows restricted argument types as per [FlowLogicRefFactory].
  */
 // TODO: align this with the existing [FlowRef] in the bank-side API (probably replace some of the API classes)
+@CordaSerializable
 data class FlowLogicRef internal constructor(val flowLogicClassName: String, val appContext: AppContext, val args: Map<String, Any?>)
 
 /**
  * This is just some way to track what attachments need to be in the class loader, but may later include some app
  * properties loaded from the attachments.  And perhaps the authenticated user for an API call?
  */
+@CordaSerializable
 data class AppContext(val attachments: List<SecureHash>) {
     // TODO: build a real [AttachmentsClassLoader] etc
     val classLoader: ClassLoader

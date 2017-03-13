@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Using attachments" href="tutorial-attachments.html"/>
         <link rel="prev" title="Using a notary service" href="using-a-notary.html"/> 
@@ -124,6 +121,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -139,6 +137,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
@@ -184,6 +183,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -323,7 +323,7 @@ the command has the correct data for the asserted time, and signs if so.</li>
 class that binds it to the network layer.</p>
 <p>Here is an extract from the <code class="docutils literal"><span class="pre">NodeInterestRates.Oracle</span></code> class and supporting types:</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="cm">/** A [FixOf] identifies the question side of a fix: what day, tenor and type of fix (&quot;LIBOR&quot;, &quot;EURIBOR&quot; etc) */</span>
-<span class="k">data</span> <span class="k">class</span> <span class="nc">FixOf</span><span class="p">(</span><span class="k">val</span> <span class="py">name</span><span class="p">:</span> <span class="n">String</span><span class="p">,</span> <span class="k">val</span> <span class="py">forDay</span><span class="p">:</span> <span class="n">LocalDate</span><span class="p">,</span> <span class="k">val</span> <span class="py">ofTenor</span><span class="p">:</span> <span class="n">Duration</span><span class="p">)</span>
+<span class="k">data</span> <span class="k">class</span> <span class="nc">FixOf</span><span class="p">(</span><span class="k">val</span> <span class="py">name</span><span class="p">:</span> <span class="n">String</span><span class="p">,</span> <span class="k">val</span> <span class="py">forDay</span><span class="p">:</span> <span class="n">LocalDate</span><span class="p">,</span> <span class="k">val</span> <span class="py">ofTenor</span><span class="p">:</span> <span class="n">Tenor</span><span class="p">)</span>
 
 <span class="cm">/** A [Fix] represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx. */</span>
 <span class="k">data</span> <span class="k">class</span> <span class="nc">Fix</span><span class="p">(</span><span class="k">val</span> <span class="py">of</span><span class="p">:</span> <span class="n">FixOf</span><span class="p">,</span> <span class="k">val</span> <span class="py">value</span><span class="p">:</span> <span class="n">BigDecimal</span><span class="p">)</span> <span class="p">:</span> <span class="n">CommandData</span>
@@ -388,8 +388,8 @@ functionality which we will not discuss further here.</p>
 <p>Assuming you have a data source and can query it, it should be very easy to implement your <code class="docutils literal"><span class="pre">query</span></code> method and the
 parameter and <code class="docutils literal"><span class="pre">CommandData</span></code> classes.</p>
 <p>Let&#8217;s see how the <code class="docutils literal"><span class="pre">sign</span></code> method for <code class="docutils literal"><span class="pre">NodeInterestRates.Oracle</span></code> is written:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        <span class="k">fun</span> <span class="nf">sign</span><span class="p">(</span><span class="n">ftx</span><span class="p">:</span> <span class="n">FilteredTransaction</span><span class="p">,</span> <span class="n">merkleRoot</span><span class="p">:</span> <span class="n">SecureHash</span><span class="p">):</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span> <span class="p">{</span>
-            <span class="k">if</span> <span class="p">(!</span><span class="n">ftx</span><span class="p">.</span><span class="n">verify</span><span class="p">(</span><span class="n">merkleRoot</span><span class="p">))</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>        <span class="k">fun</span> <span class="nf">sign</span><span class="p">(</span><span class="n">ftx</span><span class="p">:</span> <span class="n">FilteredTransaction</span><span class="p">):</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(!</span><span class="n">ftx</span><span class="p">.</span><span class="n">verify</span><span class="p">())</span> <span class="p">{</span>
                 <span class="k">throw</span> <span class="n">MerkleTreeException</span><span class="p">(</span><span class="s">&quot;Rate Fix Oracle: Couldn&#39;t verify partial Merkle tree.&quot;</span><span class="p">)</span>
             <span class="p">}</span>
             <span class="c1">// Performing validation of obtained FilteredLeaves.</span>
@@ -418,7 +418,7 @@ parameter and <code class="docutils literal"><span class="pre">CommandData</span
             <span class="c1">// Note that we will happily sign an invalid transaction, as we are only being presented with a filtered</span>
             <span class="c1">// version so we can&#39;t resolve or check it ourselves. However, that doesn&#39;t matter much, as if we sign</span>
             <span class="c1">// an invalid transaction the signature is worthless.</span>
-            <span class="k">return</span> <span class="n">signingKey</span><span class="p">.</span><span class="n">signWithECDSA</span><span class="p">(</span><span class="n">merkleRoot</span><span class="p">.</span><span class="n">bytes</span><span class="p">,</span> <span class="n">identity</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">signingKey</span><span class="p">.</span><span class="n">signWithECDSA</span><span class="p">(</span><span class="n">ftx</span><span class="p">.</span><span class="n">rootHash</span><span class="p">.</span><span class="n">bytes</span><span class="p">,</span> <span class="n">identity</span><span class="p">)</span>
         <span class="p">}</span>
 </pre></div>
 </div>
@@ -462,7 +462,7 @@ See <a class="reference internal" href="creating-a-cordapp.html"><span class="do
             @Suspendable
             override fun call() {
                 val request = receive&lt;RatesFixFlow.SignRequest&gt;(otherParty).unwrap { it }
-                send(otherParty, service.oracle.sign(request.ftx, request.rootHash))
+                send(otherParty, service.oracle.sign(request.ftx))
             }
         }
 
@@ -531,9 +531,7 @@ those for <code class="docutils literal"><span class="pre">NodeInterestRates.Ora
                       <span class="k">val</span> <span class="py">partialMerkleTx</span><span class="p">:</span> <span class="n">FilteredTransaction</span><span class="p">)</span> <span class="p">:</span> <span class="n">FlowLogic</span><span class="p">&lt;</span><span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span><span class="p">&gt;()</span> <span class="p">{</span>
         <span class="n">@Suspendable</span>
         <span class="k">override</span> <span class="k">fun</span> <span class="nf">call</span><span class="p">():</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span> <span class="p">{</span>
-            <span class="k">val</span> <span class="py">wtx</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">toWireTransaction</span><span class="p">()</span>
-            <span class="k">val</span> <span class="py">rootHash</span> <span class="p">=</span> <span class="n">wtx</span><span class="p">.</span><span class="n">id</span>
-            <span class="k">val</span> <span class="py">resp</span> <span class="p">=</span> <span class="n">sendAndReceive</span><span class="p">&lt;</span><span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span><span class="p">&gt;(</span><span class="n">oracle</span><span class="p">,</span> <span class="n">SignRequest</span><span class="p">(</span><span class="n">rootHash</span><span class="p">,</span> <span class="n">partialMerkleTx</span><span class="p">))</span>
+            <span class="k">val</span> <span class="py">resp</span> <span class="p">=</span> <span class="n">sendAndReceive</span><span class="p">&lt;</span><span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span><span class="p">&gt;(</span><span class="n">oracle</span><span class="p">,</span> <span class="n">SignRequest</span><span class="p">(</span><span class="n">partialMerkleTx</span><span class="p">))</span>
             <span class="k">return</span> <span class="n">resp</span><span class="p">.</span><span class="n">unwrap</span> <span class="p">{</span> <span class="n">sig</span> <span class="p">-&gt;</span>
                 <span class="n">check</span><span class="p">(</span><span class="n">sig</span><span class="p">.</span><span class="n">signer</span> <span class="p">==</span> <span class="n">oracle</span><span class="p">)</span>
                 <span class="n">tx</span><span class="p">.</span><span class="n">checkSignature</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span>

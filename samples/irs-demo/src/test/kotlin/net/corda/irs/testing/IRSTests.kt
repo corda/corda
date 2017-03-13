@@ -20,7 +20,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
         1 -> {
 
             val fixedLeg = InterestRateSwap.FixedLeg(
-                    fixedRatePayer = MEGA_CORP,
+                    fixedRatePayer = MEGA_CORP.toAnonymous(),
                     notional = 15900000.DOLLARS,
                     paymentFrequency = Frequency.SemiAnnual,
                     effectiveDate = LocalDate.of(2016, 3, 10),
@@ -39,7 +39,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
             )
 
             val floatingLeg = InterestRateSwap.FloatingLeg(
-                    floatingRatePayer = MINI_CORP,
+                    floatingRatePayer = MINI_CORP.toAnonymous(),
                     notional = 15900000.DOLLARS,
                     paymentFrequency = Frequency.Quarterly,
                     effectiveDate = LocalDate.of(2016, 3, 10),
@@ -110,7 +110,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
             // I did a mock up start date 10/03/2015 – 10/03/2025 so you have 5 cashflows on float side that have been preset the rest are unknown
 
             val fixedLeg = InterestRateSwap.FixedLeg(
-                    fixedRatePayer = MEGA_CORP,
+                    fixedRatePayer = MEGA_CORP.toAnonymous(),
                     notional = 25000000.DOLLARS,
                     paymentFrequency = Frequency.SemiAnnual,
                     effectiveDate = LocalDate.of(2015, 3, 10),
@@ -129,7 +129,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
             )
 
             val floatingLeg = InterestRateSwap.FloatingLeg(
-                    floatingRatePayer = MINI_CORP,
+                    floatingRatePayer = MINI_CORP.toAnonymous(),
                     notional = 25000000.DOLLARS,
                     paymentFrequency = Frequency.Quarterly,
                     effectiveDate = LocalDate.of(2015, 3, 10),

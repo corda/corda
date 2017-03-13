@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Node configuration" href="corda-configuration-file.html"/>
         <link rel="prev" title="Persistence" href="persistence.html"/> 
@@ -124,6 +121,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -147,6 +145,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
@@ -176,6 +175,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -236,13 +236,11 @@ you can upload and download attachments, access a REST API and so on. A bundled
 Jetty web server exposes the same interface over HTTP.</p>
 <div class="section" id="logging">
 <h2>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h2>
-<p>In the default configuration logs are stored to the logs subdirectory of the node directory and are rotated from time to time. You can
-have logging printed to the console as well by passing the <code class="docutils literal"><span class="pre">--log-to-console</span></code> command line flag. Corda
-uses the SL4J logging façade which is configured with the log4j2 binding framework to manage its logging,
-so you can also configure it in more detail by writing a custom log4j2 logging configuration file and passing <code class="docutils literal"><span class="pre">-Dlog4j.configurationFile=my-config-file.xml</span></code>
-on the command line as well. The default configuration is copied during the build from <code class="docutils literal"><span class="pre">config/dev/log4j2.xml</span></code>, or for the test sourceSet from <code class="docutils literal"><span class="pre">config/test/log4j2.xml</span></code>.</p>
-<p>In corda code a logger is typically instantiated via the <code class="docutils literal"><span class="pre">net.corda.core.utilities.loggerFor</span></code> utility method which will create an SL4J <code class="docutils literal"><span class="pre">Logger</span></code> with a name based on the type parameter.
-Also, available in <code class="docutils literal"><span class="pre">net.corda.core.utilities</span></code>, are extension methods to take a lazily evaluated logging lambda for trace and debug level, which will not evaluate the lambda if the LogLevel threshold is higher.</p>
+<p>By default the node log files are stored to the <code class="docutils literal"><span class="pre">logs</span></code> subdirectory of the working directory and are rotated from time
+to time. You can have logging printed to the console as well by passing the <code class="docutils literal"><span class="pre">--log-to-console</span></code> command line flag.
+The default logging level is <code class="docutils literal"><span class="pre">INFO</span></code> which can be adjusted by the <code class="docutils literal"><span class="pre">--logging-level</span></code> command line argument. For more
+custom logging, the logger settings can be completely overridden with a <a class="reference external" href="https://logging.apache.org/log4j/2.x">Log4j 2</a>
+configuration file assigned to the <code class="docutils literal"><span class="pre">log4j.configurationFile</span></code> system property.</p>
 </div>
 <div class="section" id="database-access">
 <h2>Database access<a class="headerlink" href="#database-access" title="Permalink to this headline">¶</a></h2>

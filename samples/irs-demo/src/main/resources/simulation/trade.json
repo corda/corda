@@ -1,6 +1,6 @@
 {
   "fixedLeg": {
-    "fixedRatePayer": "Bank A",
+    "fixedRatePayer": "3ThWzJauCq7qLrcX4KuKHxKnxZ6HoxnxU7pFL1HwfCkCJLUfTJ9zN92oxRLxnw",
     "notional": {
       "quantity": 2500000000,
       "token": "USD"
@@ -25,7 +25,7 @@
     "interestPeriodAdjustment": "Adjusted"
   },
   "floatingLeg": {
-    "floatingRatePayer": "Bank B",
+    "floatingRatePayer": "3ThWzJauCq7qLrcX4KndaoA3TXWtoLzUSmQ9ia8xVWxHTmVGjXXXFXm9R9Wh2T",
     "notional": {
       "quantity": 2500000000,
       "token": "USD"

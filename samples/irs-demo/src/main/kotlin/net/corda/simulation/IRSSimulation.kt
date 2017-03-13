@@ -18,12 +18,11 @@ import net.corda.flows.TwoPartyDealFlow.Acceptor
 import net.corda.flows.TwoPartyDealFlow.AutoOffer
 import net.corda.flows.TwoPartyDealFlow.Instigator
 import net.corda.irs.contract.InterestRateSwap
+import net.corda.jackson.JacksonSupport
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockIdentityService
-import net.i2p.crypto.eddsa.KeyPairGenerator
-import java.security.SecureRandom
 import java.time.LocalDate
 import java.util.*
 
@@ -32,7 +31,7 @@ import java.util.*
  * A simulation in which banks execute interest rate swaps with each other, including the fixing events.
  */
 class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(networkSendManuallyPumped, runAsync, latencyInjector) {
-    val om = net.corda.node.utilities.JsonSupport.createInMemoryMapper(MockIdentityService(network.identities))
+    val om = JacksonSupport.createInMemoryMapper(MockIdentityService(network.identities))
 
     init {
         currentDateAndTime = LocalDate.of(2016, 3, 8).atStartOfDay()
@@ -117,8 +116,8 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         // have the convenient copy() method that'd let us make small adjustments. Instead they're partly mutable.
         // TODO: We should revisit this in post-Excalibur cleanup and fix, e.g. by introducing an interface.
         val irs = om.readValue<InterestRateSwap.State>(javaClass.classLoader.getResource("simulation/trade.json"))
-        irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity
-        irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity
+        irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity.toAnonymous()
+        irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity.toAnonymous()
 
         @Suppress("UNCHECKED_CAST")
         val acceptorTx = node2.initiateSingleShotFlow(Instigator::class) { Acceptor(it) }.flatMap {

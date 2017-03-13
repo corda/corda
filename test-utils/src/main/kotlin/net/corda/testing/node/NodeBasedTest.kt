@@ -14,6 +14,7 @@ import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.testing.MOCK_NODE_VERSION_INFO
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.getFreeLocalPorts
 import org.junit.After
@@ -121,7 +122,7 @@ abstract class NodeBasedTest {
                 configOverrides = mapOf(
                         "myLegalName" to legalName,
                         "artemisAddress" to freeLocalHostAndPort().toString(),
-                        "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
+                        "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                         "rpcUsers" to rpcUsers.map {
                             mapOf(
                                     "user" to it.username,
@@ -132,7 +133,7 @@ abstract class NodeBasedTest {
                 ) + configOverrides
         )
 
-        val node = FullNodeConfiguration(baseDirectory, config).createNode()
+        val node = FullNodeConfiguration(baseDirectory, config).createNode(MOCK_NODE_VERSION_INFO)
         node.start()
         nodes += node
         thread(name = legalName) {

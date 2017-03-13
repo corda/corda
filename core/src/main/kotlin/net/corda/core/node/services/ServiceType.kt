@@ -1,10 +1,13 @@
 package net.corda.core.node.services
 
+import net.corda.core.serialization.CordaSerializable
+
 /**
  * Identifier for service types a node can expose over the network to other peers. These types are placed into network
  * map advertisements. Services that are purely local and are not providing functionality to other parts of the network
  * don't need a declared service type.
  */
+@CordaSerializable
 sealed class ServiceType(val id: String) {
     init {
         // Enforce:
@@ -43,6 +46,7 @@ sealed class ServiceType(val id: String) {
 
     fun isSubTypeOf(superType: ServiceType) = (id == superType.id) || id.startsWith(superType.id + ".")
     fun isNotary() = isSubTypeOf(notary)
+    fun isValidatingNotary() = isNotary() && id.contains(".validating")
 
     override fun hashCode(): Int = id.hashCode()
     override fun toString(): String = id.toString()

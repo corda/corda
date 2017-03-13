@@ -34,12 +34,9 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Client RPC API tutorial" href="tutorial-clientrpc-api.html"/>
-        <link rel="prev" title="Writing a contract test" href="tutorial-test-dsl.html"/> 
+        <link rel="prev" title="Upgrading Contracts" href="contract-upgrade.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -124,6 +121,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -139,6 +137,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
@@ -168,6 +167,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -236,7 +236,10 @@ subsequently passed around.)</p>
 one to start up node processes from code. It manages a network map
 service and safe shutting down of nodes in the background.</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span>        driver {
-            val testUser = User(&quot;testUser&quot;, &quot;testPassword&quot;, permissions = setOf(startFlowPermission&lt;CashFlow&gt;()))
+            val testUser = User(&quot;testUser&quot;, &quot;testPassword&quot;, permissions = setOf(
+                    startFlowPermission&lt;CashIssueFlow&gt;(),
+                    startFlowPermission&lt;CashPaymentFlow&gt;()
+            ))
             val (alice, bob, notary) = Futures.allAsList(
                     startNode(&quot;Alice&quot;, rpcUsers = listOf(testUser)),
                     startNode(&quot;Bob&quot;, rpcUsers = listOf(testUser)),
@@ -277,15 +280,19 @@ us to start flows and query state.</p>
 query a stream of vault updates from each.</p>
 <p>Now that we&#8217;re all set up we can finally get some Cash action going!</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span>            <span class="k">val</span> <span class="py">issueRef</span> <span class="p">=</span> <span class="n">OpaqueBytes</span><span class="p">.</span><span class="n">of</span><span class="p">(</span><span class="m">0</span><span class="p">)</span>
+            <span class="k">val</span> <span class="py">futures</span> <span class="p">=</span> <span class="n">Stack</span><span class="p">&lt;</span><span class="n">ListenableFuture</span><span class="p">&lt;*&gt;&gt;()</span>
             <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="k">in</span> <span class="m">1</span> <span class="p">..</span> <span class="m">10</span><span class="p">)</span> <span class="p">{</span>
                 <span class="n">thread</span> <span class="p">{</span>
-                    <span class="n">aliceProxy</span><span class="p">.</span><span class="n">startFlow</span><span class="p">(</span><span class="o">::</span><span class="n">CashFlow</span><span class="p">,</span> <span class="n">CashCommand</span><span class="p">.</span><span class="n">IssueCash</span><span class="p">(</span>
-                            <span class="n">amount</span> <span class="p">=</span> <span class="n">i</span><span class="p">.</span><span class="n">DOLLARS</span><span class="p">,</span>
-                            <span class="n">issueRef</span> <span class="p">=</span> <span class="n">issueRef</span><span class="p">,</span>
-                            <span class="n">recipient</span> <span class="p">=</span> <span class="n">bob</span><span class="p">.</span><span class="n">nodeInfo</span><span class="p">.</span><span class="n">legalIdentity</span><span class="p">,</span>
-                            <span class="n">notary</span> <span class="p">=</span> <span class="n">notary</span><span class="p">.</span><span class="n">nodeInfo</span><span class="p">.</span><span class="n">notaryIdentity</span>
-                    <span class="p">))</span>
+                    <span class="n">futures</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">aliceProxy</span><span class="p">.</span><span class="n">startFlow</span><span class="p">(</span><span class="o">::</span><span class="n">CashIssueFlow</span><span class="p">,</span>
+                            <span class="n">i</span><span class="p">.</span><span class="n">DOLLARS</span><span class="p">,</span>
+                            <span class="n">issueRef</span><span class="p">,</span>
+                            <span class="n">bob</span><span class="p">.</span><span class="n">nodeInfo</span><span class="p">.</span><span class="n">legalIdentity</span><span class="p">,</span>
+                            <span class="n">notary</span><span class="p">.</span><span class="n">nodeInfo</span><span class="p">.</span><span class="n">notaryIdentity</span>
+                    <span class="p">).</span><span class="n">returnValue</span><span class="p">)</span>
                 <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="k">while</span> <span class="p">(!</span><span class="n">futures</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+                <span class="n">futures</span><span class="p">.</span><span class="n">pop</span><span class="p">().</span><span class="n">getOrThrow</span><span class="p">()</span>
             <span class="p">}</span>
 
             <span class="n">bobVaultUpdates</span><span class="p">.</span><span class="n">expectEvents</span> <span class="p">{</span>
@@ -322,11 +329,10 @@ we are interested in, which we then print.</p>
 receiving 1,2,...10 dollars from Alice in some unspecified order.</p>
 <p>Next we want Bob to send this Cash back to Alice.</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span>            <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="k">in</span> <span class="m">1</span> <span class="p">..</span> <span class="m">10</span><span class="p">)</span> <span class="p">{</span>
-                <span class="k">val</span> <span class="py">flowHandle</span> <span class="p">=</span> <span class="n">bobProxy</span><span class="p">.</span><span class="n">startFlow</span><span class="p">(</span><span class="o">::</span><span class="n">CashFlow</span><span class="p">,</span> <span class="n">CashCommand</span><span class="p">.</span><span class="n">PayCash</span><span class="p">(</span>
-                        <span class="n">amount</span> <span class="p">=</span> <span class="n">i</span><span class="p">.</span><span class="n">DOLLARS</span><span class="p">.</span><span class="n">issuedBy</span><span class="p">(</span><span class="n">alice</span><span class="p">.</span><span class="n">nodeInfo</span><span class="p">.</span><span class="n">legalIdentity</span><span class="p">.</span><span class="n">ref</span><span class="p">(</span><span class="n">issueRef</span><span class="p">)),</span>
-                        <span class="n">recipient</span> <span class="p">=</span> <span class="n">alice</span><span class="p">.</span><span class="n">nodeInfo</span><span class="p">.</span><span class="n">legalIdentity</span>
-                <span class="p">))</span>
-                <span class="n">flowHandle</span><span class="p">.</span><span class="n">returnValue</span><span class="p">.</span><span class="n">getOrThrow</span><span class="p">()</span>
+                <span class="n">bobProxy</span><span class="p">.</span><span class="n">startFlow</span><span class="p">(</span><span class="o">::</span><span class="n">CashPaymentFlow</span><span class="p">,</span>
+                        <span class="n">i</span><span class="p">.</span><span class="n">DOLLARS</span><span class="p">.</span><span class="n">issuedBy</span><span class="p">(</span><span class="n">alice</span><span class="p">.</span><span class="n">nodeInfo</span><span class="p">.</span><span class="n">legalIdentity</span><span class="p">.</span><span class="n">ref</span><span class="p">(</span><span class="n">issueRef</span><span class="p">)),</span>
+                        <span class="n">alice</span><span class="p">.</span><span class="n">nodeInfo</span><span class="p">.</span><span class="n">legalIdentity</span>
+                <span class="p">).</span><span class="n">returnValue</span><span class="p">.</span><span class="n">getOrThrow</span><span class="p">()</span>
             <span class="p">}</span>
 
             <span class="n">aliceVaultUpdates</span><span class="p">.</span><span class="n">expectEvents</span> <span class="p">{</span>
@@ -373,7 +379,7 @@ from IntelliJ and run the test, or alternatively use gradle:</p>
         <a href="tutorial-clientrpc-api.html" class="btn btn-neutral float-right" title="Client RPC API tutorial" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="tutorial-test-dsl.html" class="btn btn-neutral" title="Writing a contract test" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="contract-upgrade.html" class="btn btn-neutral" title="Upgrading Contracts" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

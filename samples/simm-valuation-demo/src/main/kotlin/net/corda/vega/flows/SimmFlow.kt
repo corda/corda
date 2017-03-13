@@ -12,11 +12,13 @@ import com.opengamma.strata.pricer.rate.ImmutableRatesProvider
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.Ack
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.dealsWith
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.flows.AbstractStateReplacementFlow.Proposal
@@ -39,6 +41,7 @@ object SimmFlow {
      * Represents a new portfolio offer unless the stateRef field is non-null, at which point it represents a
      * portfolio update offer.
      */
+    @CordaSerializable
     data class OfferMessage(val notary: Party,
                             val dealBeingOffered: PortfolioState,
                             val stateRef: StateRef?,
@@ -59,7 +62,7 @@ object SimmFlow {
 
         @Suspendable
         override fun call(): RevisionedState<PortfolioState.Update> {
-            logger.debug("Calling from: ${serviceHub.myInfo.legalIdentity.name}. Sending to: ${otherParty.name}")
+            logger.debug("Calling from: ${serviceHub.myInfo.legalIdentity}. Sending to: ${otherParty}")
             require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
             notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
             myIdentity = serviceHub.myInfo.legalIdentity
@@ -80,7 +83,7 @@ object SimmFlow {
         @Suspendable
         private fun agreePortfolio(portfolio: Portfolio) {
             logger.info("Agreeing portfolio")
-            val parties = Pair(myIdentity, otherParty)
+            val parties = Pair(myIdentity.toAnonymous(), otherParty.toAnonymous())
             val portfolioState = PortfolioState(portfolio.refs, PortfolioSwap(), parties, valuationDate)
 
             send(otherParty, OfferMessage(notary, portfolioState, existing?.ref, valuationDate))
@@ -102,8 +105,9 @@ object SimmFlow {
             logger.info("Agreeing valuations")
             val state = stateRef.state.data
             val portfolio = state.portfolio.toStateAndRef<IRSState>(serviceHub).toPortfolio()
-            val valuer = state.valuer
-            val valuation = agreeValuation(portfolio, valuationDate, valuer)
+            val valuer = serviceHub.identityService.partyFromAnonymous(state.valuer)
+            require(valuer != null) { "Valuer party must be known to this node" }
+            val valuation = agreeValuation(portfolio, valuationDate, valuer!!)
             val update = PortfolioState.Update(valuation = valuation)
             return subFlow(StateRevisionFlow.Requester(stateRef, update), shareParentSessions = true).state.data
         }
@@ -211,6 +215,13 @@ object SimmFlow {
         private fun agree(data: Any): Boolean {
             send(replyToParty, data)
             return receive<Boolean>(replyToParty).unwrap { it == true }
+        }
+
+        @Suspendable
+        private fun agreeValuation(portfolio: Portfolio, asOf: LocalDate, valuer: AnonymousParty): PortfolioValuation {
+            val valuerParty = serviceHub.identityService.partyFromAnonymous(valuer)
+            require(valuerParty != null)
+            return agreeValuation(portfolio, asOf, valuerParty!!)
         }
 
         /**

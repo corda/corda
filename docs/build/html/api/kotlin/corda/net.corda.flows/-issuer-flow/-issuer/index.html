@@ -201,6 +201,16 @@ current step in this flow's progress tracker.</p>
 <a href="../../../net.corda.core.flows/-flow-logic/progress-tracker.html">progressTracker</a>.</p>
 </td>
 </tr>
+<tr>
+<td>
+<a href="../../../net.corda.core.flows/-flow-logic/wait-for-ledger-commit.html">waitForLedgerCommit</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">waitForLedgerCommit</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$waitForLedgerCommit(net.corda.core.crypto.SecureHash)/hash">hash</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a></code>
+<p>Suspends the flow until the transaction with the specified ID is received, successfully verified and
+sent to the vault for processing. Note that this call suspends until the transaction is considered
+valid by the local node, but that doesn't imply the vault will consider it relevant.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3>Companion Object Functions</h3>

@@ -20,15 +20,15 @@
 </tr>
 <tr>
 <td>
-<a href="-n-o-t-a-r-y/index.html">NOTARY</a></td>
+<a href="-c-o-m-m-i-t-t-i-n-g/index.html">COMMITTING</a></td>
 <td>
-<code><span class="keyword">object </span><span class="identifier">NOTARY</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
+<code><span class="keyword">object </span><span class="identifier">COMMITTING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
 </tr>
 <tr>
 <td>
-<a href="-s-e-n-d-i-n-g_-s-i-g-s.html">SENDING_SIGS</a></td>
+<a href="-s-e-n-d-i-n-g_-f-i-n-a-l_-t-x.html">SENDING_FINAL_TX</a></td>
 <td>
-<code><span class="keyword">object </span><span class="identifier">SENDING_SIGS</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
+<code><span class="keyword">object </span><span class="identifier">SENDING_FINAL_TX</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -224,6 +224,16 @@ current step in this flow's progress tracker.</p>
 <code><span class="keyword">fun </span><span class="identifier">track</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Pair</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">Observable</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">?</span></code>
 <p>Returns a pair of the current progress step, as a string, and an observable of stringified changes to the
 <a href="../../../net.corda.core.flows/-flow-logic/progress-tracker.html">progressTracker</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.core.flows/-flow-logic/wait-for-ledger-commit.html">waitForLedgerCommit</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">waitForLedgerCommit</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$waitForLedgerCommit(net.corda.core.crypto.SecureHash)/hash">hash</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a></code>
+<p>Suspends the flow until the transaction with the specified ID is received, successfully verified and
+sent to the vault for processing. Note that this call suspends until the transaction is considered
+valid by the local node, but that doesn't imply the vault will consider it relevant.</p>
 </td>
 </tr>
 </tbody>

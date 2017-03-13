@@ -7,6 +7,7 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.*
 import net.corda.core.random63BitValue
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.NonEmptySet
@@ -227,6 +228,7 @@ class Obligation<P> : Contract {
      * to the state. Most states will not leave the [NORMAL] lifecycle. Note that settled (as an end lifecycle) is
      * represented by absence of the state on transaction output.
      */
+    @CordaSerializable
     enum class Lifecycle {
         /** Default lifecycle state for a contract, in which it can be settled normally */
         NORMAL,
@@ -242,6 +244,7 @@ class Obligation<P> : Contract {
      *
      * @param P the product the obligation is for payment of.
      */
+    @CordaSerializable
     data class Terms<P>(
             /** The hash of the asset contract we're willing to accept in payment for this debt. */
             val acceptableContracts: NonEmptySet<SecureHash>,
@@ -266,12 +269,19 @@ class Obligation<P> : Contract {
     data class State<P>(
             var lifecycle: Lifecycle = Lifecycle.NORMAL,
             /** Where the debt originates from (obligor) */
-            val obligor: Party,
+            val obligor: AnonymousParty,
             val template: Terms<P>,
             val quantity: Long,
             /** The public key of the entity the contract pays to */
             val beneficiary: CompositeKey
     ) : FungibleAsset<Obligation.Terms<P>>, NettableState<State<P>, MultilateralNetState<P>> {
+        constructor(lifecycle: Lifecycle = Lifecycle.NORMAL,
+                    obligor: Party,
+                    template: Terms<P>,
+                    quantity: Long,
+                    beneficiary: CompositeKey)
+                : this(lifecycle, obligor.toAnonymous(), template, quantity, beneficiary)
+
         override val amount: Amount<Issued<Terms<P>>> = Amount(quantity, Issued(obligor.ref(0), template))
         override val contract = OBLIGATION_PROGRAM_ID
         override val exitKeys: Collection<CompositeKey> = setOf(beneficiary)
@@ -316,6 +326,7 @@ class Obligation<P> : Contract {
     }
 
     // Just for grouping
+    @CordaSerializable
     interface Commands : FungibleAsset.Commands {
         /**
          * Net two or more obligation states together in a close-out netting style. Limited to bilateral netting
@@ -456,14 +467,14 @@ class Obligation<P> : Contract {
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
     fun generateIssue(tx: TransactionBuilder,
-                      obligor: Party,
+                      obligor: AbstractParty,
                       issuanceDef: Terms<P>,
                       pennies: Long,
                       beneficiary: CompositeKey,
                       notary: Party) {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().map { it.data }.sumObligationsOrNull<P>() == null)
-        tx.addOutputState(State(Lifecycle.NORMAL, obligor, issuanceDef, pennies, beneficiary), notary)
+        tx.addOutputState(State(Lifecycle.NORMAL, obligor.toAnonymous(), issuanceDef, pennies, beneficiary), notary)
         tx.addCommand(Commands.Issue(), obligor.owningKey)
     }
 
@@ -475,7 +486,7 @@ class Obligation<P> : Contract {
             "all states are in the normal lifecycle state " by (states.all { it.lifecycle == Lifecycle.NORMAL })
         }
         val groups = states.groupBy { it.multilateralNetState }
-        val partyLookup = HashMap<CompositeKey, Party>()
+        val partyLookup = HashMap<CompositeKey, AnonymousParty>()
         val signers = states.map { it.beneficiary }.union(states.map { it.obligor.owningKey }).toSet()
 
         // Create a lookup table of the party that each public key represents.
@@ -700,13 +711,13 @@ fun <P> Iterable<ContractState>.sumObligationsOrZero(issuanceDef: Issued<Obligat
         = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrZero(issuanceDef)
 
 infix fun <T> Obligation.State<T>.at(dueBefore: Instant) = copy(template = template.copy(dueBefore = dueBefore))
-infix fun <T> Obligation.State<T>.between(parties: Pair<Party, CompositeKey>) = copy(obligor = parties.first, beneficiary = parties.second)
+infix fun <T> Obligation.State<T>.between(parties: Pair<AbstractParty, CompositeKey>) = copy(obligor = parties.first.toAnonymous(), beneficiary = parties.second)
 infix fun <T> Obligation.State<T>.`owned by`(owner: CompositeKey) = copy(beneficiary = owner)
-infix fun <T> Obligation.State<T>.`issued by`(party: Party) = copy(obligor = party)
+infix fun <T> Obligation.State<T>.`issued by`(party: AbstractParty) = copy(obligor = party.toAnonymous())
 // For Java users:
 @Suppress("unused") fun <T> Obligation.State<T>.ownedBy(owner: CompositeKey) = copy(beneficiary = owner)
 
-@Suppress("unused") fun <T> Obligation.State<T>.issuedBy(party: Party) = copy(obligor = party)
+@Suppress("unused") fun <T> Obligation.State<T>.issuedBy(party: AnonymousParty) = copy(obligor = party)
 
 /** A randomly generated key. */
 val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
@@ -716,4 +727,4 @@ val DUMMY_OBLIGATION_ISSUER by lazy { Party("Snake Oil Issuer", DUMMY_OBLIGATION
 val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
     get() = Obligation.Terms(nonEmptySetOf(Cash().legalContractReference), nonEmptySetOf(this), TEST_TX_TIME)
 val Amount<Issued<Currency>>.OBLIGATION: Obligation.State<Currency>
-    get() = Obligation.State(Obligation.Lifecycle.NORMAL, DUMMY_OBLIGATION_ISSUER, token.OBLIGATION_DEF, quantity, NullCompositeKey)
+    get() = Obligation.State(Obligation.Lifecycle.NORMAL, DUMMY_OBLIGATION_ISSUER.toAnonymous(), token.OBLIGATION_DEF, quantity, NullCompositeKey)

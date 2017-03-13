@@ -14,12 +14,6 @@
 <tbody>
 <tr>
 <td>
-<a href="session.html">session</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">session</span><span class="symbol">: </span><a href="../-state-machine-manager/-flow-session/index.html"><span class="identifier">FlowSession</span></a></code></td>
-</tr>
-<tr>
-<td>
 <a href="stack-trace-in-case-of-problems.html">stackTraceInCaseOfProblems</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">stackTraceInCaseOfProblems</span><span class="symbol">: </span><a href="../-stack-snapshot/index.html"><span class="identifier">StackSnapshot</span></a></code></td>
@@ -31,15 +25,15 @@
 <tbody>
 <tr>
 <td>
-<a href="../-receive-request/index.html">ReceiveRequest</a></td>
+<a href="../-sessioned-flow-i-o-request/index.html">SessionedFlowIORequest</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">ReceiveRequest</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-session-message.html"><span class="identifier">SessionMessage</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowIORequest</span></code></td>
+<code><span class="keyword">interface </span><span class="identifier">SessionedFlowIORequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowIORequest</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../-send-request/index.html">SendRequest</a></td>
+<a href="../-waiting-request.html">WaitingRequest</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">SendRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowIORequest</span></code></td>
+<code><span class="keyword">interface </span><span class="identifier">WaitingRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowIORequest</span></code></td>
 </tr>
 </tbody>
 </table>

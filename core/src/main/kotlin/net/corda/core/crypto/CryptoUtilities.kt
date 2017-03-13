@@ -2,6 +2,7 @@
 
 package net.corda.core.crypto
 
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
@@ -21,11 +22,8 @@ fun newSecureRandom(): SecureRandom {
     }
 }
 
-/**
- * A wrapper around a digital signature. The covering field is a generic tag usable by whatever is interpreting the
- * signature. It isn't used currently, but experience from Bitcoin suggests such a feature is useful, especially when
- * building partially signed transactions.
- */
+/** A wrapper around a digital signature. */
+@CordaSerializable
 open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
     /** A digital signature that identifies who the public key is owned by. */
     open class WithKey(val by: PublicKey, bits: ByteArray) : DigitalSignature(bits) {
@@ -37,6 +35,7 @@ open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
     class LegallyIdentifiable(val signer: Party, bits: ByteArray) : WithKey(signer.owningKey.singleKey, bits)
 }
 
+@CordaSerializable
 object NullPublicKey : PublicKey, Comparable<PublicKey> {
     override fun getAlgorithm() = "NULL"
     override fun getEncoded() = byteArrayOf(0)
@@ -48,6 +47,7 @@ object NullPublicKey : PublicKey, Comparable<PublicKey> {
 val NullCompositeKey = NullPublicKey.composite
 
 // TODO: Clean up this duplication between Null and Dummy public key
+@CordaSerializable
 class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
     override fun getAlgorithm() = "DUMMY"
     override fun getEncoded() = s.toByteArray()
@@ -59,6 +59,7 @@ class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
 }
 
 /** A signature with a key and value of zero. Useful when you want a signature object that you know won't ever be used. */
+@CordaSerializable
 object NullSignature : DigitalSignature.WithKey(NullPublicKey, ByteArray(32))
 
 /** Utility to simplify the act of signing a byte array */

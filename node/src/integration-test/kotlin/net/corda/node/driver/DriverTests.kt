@@ -26,14 +26,6 @@ class DriverTests {
             // Check that the port is bound
             addressMustNotBeBound(executorService, hostAndPort)
         }
-
-        fun webserverMustBeUp(webserverAddr: HostAndPort) {
-            addressMustBeBound(executorService, webserverAddr)
-        }
-
-        fun webserverMustBeDown(webserverAddr: HostAndPort) {
-            addressMustNotBeBound(executorService, webserverAddr)
-        }
     }
 
     @Test
@@ -68,16 +60,5 @@ class DriverTests {
             nodeInfo.getOrThrow()
         }
         nodeMustBeDown(nodeInfo.nodeInfo)
-    }
-
-    @Test
-    fun `starting a node and independent web server works`() {
-        val addr = driver {
-            val node = startNode("test").getOrThrow()
-            val webserverAddr = startWebserver(node).getOrThrow()
-            webserverMustBeUp(webserverAddr)
-            webserverAddr
-        }
-        webserverMustBeDown(addr)
     }
 }

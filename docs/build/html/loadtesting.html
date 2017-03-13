@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="What is a corda network?" href="setting-up-a-corda-network.html"/>
         <link rel="prev" title="Interest rate swaps" href="contract-irs.html"/> 
@@ -124,6 +121,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -139,6 +137,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
@@ -174,6 +173,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -249,9 +249,11 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 # sshUser = &quot;someusername&quot;, by default it uses the System property &quot;user.name&quot;
 localCertificatesBaseDirectory = &quot;build/load-test/certificates&quot;
 localTunnelStartingPort = 10000
-remoteNodeDirectory = &quot;/opt/r3cev&quot;
-remoteMessagingPort = 31337
-remoteSystemdServiceName = &quot;r3cev-node&quot;
+remoteNodeDirectory = &quot;/opt/corda&quot;
+remoteMessagingPort = 10002
+remoteSystemdServiceName = &quot;corda&quot;
+rpcUsername = &quot;corda&quot;
+rpcPassword = &quot;rgb&quot;
 </pre></div>
 </div>
 </div>
@@ -332,14 +334,14 @@ remoteSystemdServiceName = &quot;r3cev-node&quot;
 </div>
 <p><code class="docutils literal"><span class="pre">LoadTest</span></code> is parameterised over <code class="docutils literal"><span class="pre">T</span></code>, the unit of work, and <code class="docutils literal"><span class="pre">S</span></code>, the state type that aims to track remote node states. As an example let&#8217;s look at the Self Issue test. This test simply creates Cash Issues from nodes to themselves, and then checks the vault to see if the numbers add up:</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">data</span> <span class="k">class</span> <span class="nc">SelfIssueCommand</span><span class="p">(</span>
-        <span class="k">val</span> <span class="py">command</span><span class="p">:</span> <span class="n">CashCommand</span><span class="p">.</span><span class="n">IssueCash</span><span class="p">,</span>
+        <span class="k">val</span> <span class="py">command</span><span class="p">:</span> <span class="n">CashFlowCommand</span><span class="p">.</span><span class="n">IssueCash</span><span class="p">,</span>
         <span class="k">val</span> <span class="py">node</span><span class="p">:</span> <span class="n">NodeHandle</span>
 <span class="p">)</span>
 
 <span class="k">data</span> <span class="k">class</span> <span class="nc">SelfIssueState</span><span class="p">(</span>
-        <span class="k">val</span> <span class="py">vaultsSelfIssued</span><span class="p">:</span> <span class="n">Map</span><span class="p">&lt;</span><span class="n">Party</span><span class="p">,</span> <span class="n">Long</span><span class="p">&gt;</span>
+        <span class="k">val</span> <span class="py">vaultsSelfIssued</span><span class="p">:</span> <span class="n">Map</span><span class="p">&lt;</span><span class="n">AbstractParty</span><span class="p">,</span> <span class="n">Long</span><span class="p">&gt;</span>
 <span class="p">)</span> <span class="p">{</span>
-    <span class="k">fun</span> <span class="nf">copyVaults</span><span class="p">():</span> <span class="n">HashMap</span><span class="p">&lt;</span><span class="n">Party</span><span class="p">,</span> <span class="n">Long</span><span class="p">&gt;</span> <span class="p">{</span>
+    <span class="k">fun</span> <span class="nf">copyVaults</span><span class="p">():</span> <span class="n">HashMap</span><span class="p">&lt;</span><span class="n">AbstractParty</span><span class="p">,</span> <span class="n">Long</span><span class="p">&gt;</span> <span class="p">{</span>
         <span class="k">return</span> <span class="n">HashMap</span><span class="p">(</span><span class="n">vaultsSelfIssued</span><span class="p">)</span>
     <span class="p">}</span>
 <span class="p">}</span>

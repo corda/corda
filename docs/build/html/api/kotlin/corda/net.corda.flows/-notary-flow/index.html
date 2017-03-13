@@ -16,8 +16,8 @@
 <td>
 <a href="-client/index.html">Client</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span></code>
-<p>A flow to be used for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
+<code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>A flow to be used by a party for obtaining signature(s) from a <a href="#">NotaryService</a> ascertaining the transaction
 timestamp is correct and none of its inputs have been used in another completed transaction.</p>
 </td>
 </tr>
@@ -25,16 +25,9 @@ timestamp is correct and none of its inputs have been used in another completed 
 <td>
 <a href="-service/index.html">Service</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code>
-<p>Checks that the timestamp command is valid (if present) and commits the input state, or returns a conflict
-if any of the input states have been previously committed.</p>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.flows/-flow-logic/index.html"><span class="identifier">FlowLogic</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Void.html"><span class="identifier">Void</span></a><span class="symbol">?</span><span class="symbol">&gt;</span></code>
+<p>A flow run by a notary service that handles notarisation requests.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="-sign-request/index.html">SignRequest</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">SignRequest</span></code></td>
 </tr>
 </tbody>
 </table>

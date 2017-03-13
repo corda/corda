@@ -21,6 +21,12 @@
 </tr>
 <tr>
 <td>
+<a href="-dummy-contract-v2/-commands/index.html">Commands</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">Commands</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">CommandData</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="-fungible-asset/-commands/index.html">Commands</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">Commands</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">CommandData</span></code></td>
@@ -58,7 +64,7 @@
 <a href="-move-command/index.html">MoveCommand</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">MoveCommand</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">CommandData</span></code>
-<p>A common move command for contracts which can change owner.</p>
+<p>A common move command for contract states which can change owner.</p>
 </td>
 </tr>
 <tr>
@@ -71,22 +77,18 @@
 </tr>
 <tr>
 <td>
-<a href="../com.cordatest/-t-genesis-command/index.html">TGenesisCommand</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">TGenesisCommand</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">CommandData</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../com.cordatest/-t-tx-command/index.html">TTxCommand</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">TTxCommand</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">CommandData</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="-type-only-command-data/index.html">TypeOnlyCommandData</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">TypeOnlyCommandData</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">CommandData</span></code>
 <p>Commands that inherit from this are intended to have no data items: it's only their presence that matters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-upgrade-command/index.html">UpgradeCommand</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">UpgradeCommand</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">CommandData</span></code>
+<p>Indicates that this transaction replaces the inputs contract state to another contract state</p>
 </td>
 </tr>
 </tbody>

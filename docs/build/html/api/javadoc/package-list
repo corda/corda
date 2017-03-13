@@ -1,4 +1,3 @@
-com.cordatest
 net.corda.client.fxutils
 net.corda.client.mock
 net.corda.client.model
@@ -16,6 +15,8 @@ net.corda.core.messaging
 net.corda.core.node
 net.corda.core.node.services
 net.corda.core.schemas
+net.corda.core.schemas.requery
+net.corda.core.schemas.requery.converters
 net.corda.core.serialization
 net.corda.core.testing
 net.corda.core.transactions
@@ -28,6 +29,7 @@ net.corda.node.serialization
 net.corda.node.services
 net.corda.node.services.api
 net.corda.node.services.config
+net.corda.node.services.database
 net.corda.node.services.events
 net.corda.node.services.identity
 net.corda.node.services.keys
@@ -39,9 +41,5 @@ net.corda.node.services.statemachine
 net.corda.node.services.transactions
 net.corda.node.services.vault
 net.corda.node.utilities
-net.corda.node.utilities.certsigning
-net.corda.node.webserver
-net.corda.node.webserver.api
-net.corda.node.webserver.internal
-net.corda.node.webserver.servlets
+net.corda.node.utilities.registration
 net.corda.schemas

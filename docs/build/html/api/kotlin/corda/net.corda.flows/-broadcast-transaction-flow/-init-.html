@@ -9,8 +9,9 @@
 <br/>
 <h1>&lt;init&gt;</h1>
 <code><span class="identifier">BroadcastTransactionFlow</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.BroadcastTransactionFlow$<init>(net.corda.core.transactions.SignedTransaction, kotlin.collections.Set((net.corda.core.crypto.Party)))/notarisedTransaction">notarisedTransaction</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.flows.BroadcastTransactionFlow$<init>(net.corda.core.transactions.SignedTransaction, kotlin.collections.Set((net.corda.core.crypto.Party)))/participants">participants</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span><span class="symbol">)</span></code>
-<p>Notify all involved parties about a transaction, including storing a copy. Normally this would be called via
-<a href="../-finality-flow/index.html">FinalityFlow</a>.</p>
+<p>Notify the specified parties about a transaction. The remote peers will download this transaction and its
+dependency graph, verifying them all. The flow returns when all peers have acknowledged the transactions
+as valid. Normally you wouldn't use this directly, it would be called via <a href="../-finality-flow/index.html">FinalityFlow</a>.</p>
 <h3>Parameters</h3>
 
 <p><a name="notarisedTransaction"></a>

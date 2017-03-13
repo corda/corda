@@ -16,7 +16,7 @@
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">CmdLineOptions</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.CmdLineOptions$<init>(java.nio.file.Path, java.nio.file.Path, kotlin.Boolean, kotlin.Boolean, kotlin.Boolean)/baseDirectory">baseDirectory</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.CmdLineOptions$<init>(java.nio.file.Path, java.nio.file.Path, kotlin.Boolean, kotlin.Boolean, kotlin.Boolean)/configFile">configFile</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.CmdLineOptions$<init>(java.nio.file.Path, java.nio.file.Path, kotlin.Boolean, kotlin.Boolean, kotlin.Boolean)/help">help</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.CmdLineOptions$<init>(java.nio.file.Path, java.nio.file.Path, kotlin.Boolean, kotlin.Boolean, kotlin.Boolean)/logToConsole">logToConsole</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.CmdLineOptions$<init>(java.nio.file.Path, java.nio.file.Path, kotlin.Boolean, kotlin.Boolean, kotlin.Boolean)/isWebserver">isWebserver</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">)</span></code></td>
+<code><span class="identifier">CmdLineOptions</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.CmdLineOptions$<init>(java.nio.file.Path, java.nio.file.Path, kotlin.Boolean, org.slf4j.event.Level, kotlin.Boolean, kotlin.Boolean)/baseDirectory">baseDirectory</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.CmdLineOptions$<init>(java.nio.file.Path, java.nio.file.Path, kotlin.Boolean, org.slf4j.event.Level, kotlin.Boolean, kotlin.Boolean)/configFile">configFile</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.node.CmdLineOptions$<init>(java.nio.file.Path, java.nio.file.Path, kotlin.Boolean, org.slf4j.event.Level, kotlin.Boolean, kotlin.Boolean)/help">help</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.CmdLineOptions$<init>(java.nio.file.Path, java.nio.file.Path, kotlin.Boolean, org.slf4j.event.Level, kotlin.Boolean, kotlin.Boolean)/loggingLevel">loggingLevel</span><span class="symbol">:</span>&nbsp;<span class="identifier">Level</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.CmdLineOptions$<init>(java.nio.file.Path, java.nio.file.Path, kotlin.Boolean, org.slf4j.event.Level, kotlin.Boolean, kotlin.Boolean)/logToConsole">logToConsole</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.CmdLineOptions$<init>(java.nio.file.Path, java.nio.file.Path, kotlin.Boolean, org.slf4j.event.Level, kotlin.Boolean, kotlin.Boolean)/isRegistration">isRegistration</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">)</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -33,7 +33,7 @@
 <td>
 <a href="config-file.html">configFile</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">configFile</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">?</span></code></td>
+<code><span class="keyword">val </span><span class="identifier">configFile</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -43,15 +43,21 @@
 </tr>
 <tr>
 <td>
-<a href="is-webserver.html">isWebserver</a></td>
+<a href="is-registration.html">isRegistration</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">isWebserver</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+<code><span class="keyword">val </span><span class="identifier">isRegistration</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="log-to-console.html">logToConsole</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">logToConsole</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="logging-level.html">loggingLevel</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">loggingLevel</span><span class="symbol">: </span><span class="identifier">Level</span></code></td>
 </tr>
 </tbody>
 </table>

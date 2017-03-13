@@ -57,16 +57,19 @@ indeed valid.</p>
 <tbody>
 <tr>
 <td>
-<a href="before-commit.html">beforeCommit</a></td>
+<a href="receive-and-verify-tx.html">receiveAndVerifyTx</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">beforeCommit</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.ValidatingNotaryFlow$beforeCommit(net.corda.core.transactions.SignedTransaction)/stx">stx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
-<p>No pre-commit processing is done. Transaction is not checked for contract-validity, as that would require fully
-resolving it into a <a href="#">TransactionForVerification</a>, for which the caller would have to reveal the whole transaction
-history chain.
-As a result, the Notary <emph>will commit invalid transactions</emph> as well, but as it also records the identity of
-the caller, it is possible to raise a dispute and verify the validity of the transaction and subsequently
-undo the commit of the input states (the exact mechanism still needs to be worked out).</p>
+<code><span class="keyword">fun </span><span class="identifier">receiveAndVerifyTx</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-notary-flow/-service/-transaction-parts/index.html"><span class="identifier">TransactionParts</span></a></code>
+<p>The received transaction is checked for contract-validity, which requires fully resolving it into a
+<a href="#">TransactionForVerification</a>, for which the caller also has to to reveal the whole transaction
+dependency chain.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="validate-transaction.html">validateTransaction</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">validateTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.flows.ValidatingNotaryFlow$validateTransaction(net.corda.core.transactions.WireTransaction)/wtx">wtx</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -77,7 +80,7 @@ undo the commit of the input states (the exact mechanism still needs to be worke
 <td>
 <a href="../-notary-flow/-service/call.html">call</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Void.html"><span class="identifier">Void</span></a><span class="symbol">?</span></code>
 <p>This is where you fill out your business logic. The returned object will usually be ignored, but can be
 helpful if this flow is meant to be used as a subflow.</p>
 </td>

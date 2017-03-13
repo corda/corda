@@ -6,22 +6,25 @@ import net.corda.core.crypto.sha256
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.write
 import net.corda.flows.FetchAttachmentsFlow
 import net.corda.flows.FetchDataFlow
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.node.services.persistence.schemas.AttachmentEntity
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.node.MockNetwork
-import net.i2p.crypto.eddsa.KeyPairGenerator
+import net.corda.node.utilities.databaseTransaction
+import net.corda.testing.node.makeTestDataSourceProperties
+import org.jetbrains.exposed.sql.Database
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.Closeable
 import java.math.BigInteger
 import java.security.KeyPair
-import java.security.KeyPairGeneratorSpi
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
@@ -29,10 +32,17 @@ import kotlin.test.assertFailsWith
 
 class AttachmentTests {
     lateinit var network: MockNetwork
+    lateinit var dataSource: Closeable
+    lateinit var database: Database
+    lateinit var configuration: RequeryConfiguration
 
     @Before
     fun setUp() {
         network = MockNetwork()
+
+        val dataSourceProperties = makeTestDataSourceProperties()
+
+        configuration = RequeryConfiguration(dataSourceProperties)
     }
 
     fun fakeAttachment(): ByteArray {
@@ -50,7 +60,9 @@ class AttachmentTests {
         val (n0, n1) = network.createTwoNodes()
 
         // Insert an attachment into node zero's store directly.
-        val id = n0.storage.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
+        val id = databaseTransaction(n0.database) {
+            n0.storage.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
+        }
 
         // Get node one to run a flow to fetch it and insert it.
         network.runNetwork()
@@ -59,7 +71,10 @@ class AttachmentTests {
         assertEquals(0, f1.resultFuture.getOrThrow().fromDisk.size)
 
         // Verify it was inserted into node one's store.
-        val attachment = n1.storage.attachments.openAttachment(id)!!
+        val attachment = databaseTransaction(n1.database) {
+            n1.storage.attachments.openAttachment(id)!!
+        }
+
         assertEquals(id, attachment.open().readBytes().sha256())
 
         // Shut down node zero and ensure node one can still resolve the attachment.
@@ -101,11 +116,23 @@ class AttachmentTests {
         }, true, null, null, ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
         val n1 = network.createNode(n0.info.address)
 
+        val attachment = fakeAttachment()
         // Insert an attachment into node zero's store directly.
-        val id = n0.storage.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
+        val id = databaseTransaction(n0.database) {
+            n0.storage.attachments.importAttachment(ByteArrayInputStream(attachment))
+        }
 
         // Corrupt its store.
-        network.filesystem.getPath("/nodes/0/attachments/$id").write { it.write(byteArrayOf(99, 99, 99, 99)) }
+        val corruptBytes = "arggghhhh".toByteArray()
+        System.arraycopy(corruptBytes, 0, attachment, 0, corruptBytes.size)
+
+        val corruptAttachment = AttachmentEntity()
+        corruptAttachment.attId = id
+        corruptAttachment.content = attachment
+        databaseTransaction(n0.database) {
+            (n0.storage.attachments as NodeAttachmentService).session.update(corruptAttachment)
+        }
+
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
         network.runNetwork()

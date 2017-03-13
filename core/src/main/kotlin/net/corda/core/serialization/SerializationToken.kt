@@ -22,6 +22,7 @@ import java.util.*
  *
  * This models a similar pattern to the readReplace/writeReplace methods in Java serialization.
  */
+@CordaSerializable
 interface SerializeAsToken {
     fun toToken(context: SerializeAsTokenContext): SerializationToken
 }
@@ -100,6 +101,7 @@ class SerializeAsTokenContext(toBeTokenized: Any, kryo: Kryo = createKryo()) {
  * A class representing a [SerializationToken] for some object that is not serializable but can be looked up
  * (when deserialized) via just the class name.
  */
+@CordaSerializable
 data class SingletonSerializationToken private constructor(private val className: String) : SerializationToken {
 
     constructor(toBeTokenized: SerializeAsToken) : this(toBeTokenized.javaClass.name)

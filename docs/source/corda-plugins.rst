@@ -91,9 +91,10 @@ extensions to be created, or registered at startup. In particular:
         functions inside the node, for instance to initiate workflows when 
         certain conditions are met. 
 
-    e. The ``registerRPCKryoTypes`` function allows custom Kryo serialisers 
-    to be registered and whitelisted for the RPC client interface. For 
-    instance new state types passed to flows started via RPC will need 
-    to be explicitly registered. This will be called at various points on 
-    various threads and needs to be stable and thread safe. 
+    e. The ``customizeSerialization`` function allows classes to be whitelisted
+    for object serialisation, over and above those tagged with the ``@CordaSerializable``
+    annotation. In general the annotation should be preferred.  For
+    instance new state types will need to be explicitly registered. This will be called at
+    various points on various threads and needs to be stable and thread safe. See
+    :doc:`serialization`.
 

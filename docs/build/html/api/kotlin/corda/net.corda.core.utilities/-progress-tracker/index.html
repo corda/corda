@@ -119,6 +119,14 @@ the <a href="-d-o-n-e/index.html">DONE</a> state, this tracker is finished and t
 </tr>
 <tr>
 <td>
+<a href="has-ended.html">hasEnded</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">hasEnded</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Returns true if the progress tracker has ended, either by reaching the <a href="-d-o-n-e/index.html">DONE</a> step or prematurely with an error</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="parent.html">parent</a></td>
 <td>
 <code><span class="keyword">var </span><span class="identifier">parent</span><span class="symbol">: </span><span class="identifier">ProgressTracker</span><span class="symbol">?</span></code>
@@ -154,6 +162,15 @@ the <a href="-d-o-n-e/index.html">DONE</a> state, this tracker is finished and t
 <h3>Functions</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="end-with-error.html">endWithError</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">endWithError</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.utilities.ProgressTracker$endWithError(kotlin.Throwable)/error">error</span><span class="symbol">:</span>&nbsp;<span class="identifier">Throwable</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Ends the progress tracker with the given error, bypassing any remaining steps. <a href="changes.html">changes</a> will emit the exception
+as an error.</p>
+</td>
+</tr>
 <tr>
 <td>
 <a href="get-child-progress-tracker.html">getChildProgressTracker</a></td>

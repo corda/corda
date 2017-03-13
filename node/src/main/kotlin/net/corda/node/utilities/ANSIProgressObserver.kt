@@ -2,7 +2,6 @@ package net.corda.node.utilities
 
 import net.corda.core.ThreadBox
 import net.corda.core.flows.FlowLogic
-import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.statemachine.StateMachineManager
 import java.util.*
 
@@ -35,13 +34,12 @@ class ANSIProgressObserver(val smm: StateMachineManager) {
                 if (currentlyRendering?.progressTracker != null) {
                     ANSIProgressRenderer.progressTracker = currentlyRendering!!.progressTracker
                 }
-            } while (currentlyRendering?.progressTracker?.currentStep == ProgressTracker.DONE)
+            } while (currentlyRendering?.progressTracker?.hasEnded ?: false)
         }
     }
 
     private fun removeFlowLogic(flowLogic: FlowLogic<*>) {
         state.locked {
-            flowLogic.progressTracker?.currentStep = ProgressTracker.DONE
             if (currentlyRendering == flowLogic) {
                 wireUpProgressRendering()
             }
@@ -51,7 +49,7 @@ class ANSIProgressObserver(val smm: StateMachineManager) {
     private fun addFlowLogic(flowLogic: FlowLogic<*>) {
         state.locked {
             pending.add(flowLogic)
-            if ((currentlyRendering?.progressTracker?.currentStep ?: ProgressTracker.DONE) == ProgressTracker.DONE) {
+            if (currentlyRendering?.progressTracker?.hasEnded ?: true) {
                 wireUpProgressRendering()
             }
         }

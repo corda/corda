@@ -24,7 +24,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         val logger = loggerFor<TraderDemoClientApi>()
     }
 
-    fun runBuyer(amount: Amount<Currency> = 30000.0.DOLLARS): Boolean {
+    fun runBuyer(amount: Amount<Currency> = 30000.0.DOLLARS) {
         val bankOfCordaParty = rpc.partyFromName(BOC.name)
                 ?: throw Exception("Unable to locate ${BOC.name} in Network Map Service")
         val me = rpc.nodeIdentity()
@@ -35,31 +35,25 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         }
 
         Futures.allAsList(resultFutures).getOrThrow()
-        return true
     }
 
-    fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, counterparty: String): Boolean {
-        val otherParty = rpc.partyFromName(counterparty)
-        if (otherParty != null) {
-            // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
-            //
-            // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
-            // attachment. Make sure we have the transaction prospectus attachment loaded into our store.
-            //
-            // This can also be done via an HTTP upload, but here we short-circuit and do it from code.
-            if (!rpc.attachmentExists(SellerFlow.PROSPECTUS_HASH)) {
-                javaClass.classLoader.getResourceAsStream("bank-of-london-cp.jar").use {
-                    val id = rpc.uploadAttachment(it)
-                    assertEquals(SellerFlow.PROSPECTUS_HASH, id)
-                }
+    fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, counterparty: String) {
+        val otherParty = rpc.partyFromName(counterparty) ?: throw IllegalStateException("Don't know $counterparty")
+        // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
+        //
+        // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
+        // attachment. Make sure we have the transaction prospectus attachment loaded into our store.
+        //
+        // This can also be done via an HTTP upload, but here we short-circuit and do it from code.
+        if (!rpc.attachmentExists(SellerFlow.PROSPECTUS_HASH)) {
+            javaClass.classLoader.getResourceAsStream("bank-of-london-cp.jar").use {
+                val id = rpc.uploadAttachment(it)
+                assertEquals(SellerFlow.PROSPECTUS_HASH, id)
             }
-
-            // The line below blocks and waits for the future to resolve.
-            val stx = rpc.startFlow(::SellerFlow, otherParty, amount).returnValue.getOrThrow()
-            logger.info("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(stx.tx)}")
-            return true
-        } else {
-            return false
         }
+
+        // The line below blocks and waits for the future to resolve.
+        val stx = rpc.startFlow(::SellerFlow, otherParty, amount).returnValue.getOrThrow()
+        logger.info("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(stx.tx)}")
     }
 }

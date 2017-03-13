@@ -12,9 +12,9 @@ class PartyTest {
         val differentKey = entropyToKeyPair(BigInteger.valueOf(7201702L)).public.composite
         val anonymousParty = AnonymousParty(key)
         val party = Party("test key", key)
-        assertEquals(party, anonymousParty)
-        assertEquals(anonymousParty, party)
-        assertNotEquals(AnonymousParty(differentKey), anonymousParty)
-        assertNotEquals(AnonymousParty(differentKey), party)
+        assertEquals<AbstractParty>(party, anonymousParty)
+        assertEquals<AbstractParty>(anonymousParty, party)
+        assertNotEquals<AbstractParty>(AnonymousParty(differentKey), anonymousParty)
+        assertNotEquals<AbstractParty>(AnonymousParty(differentKey), party)
     }
 }

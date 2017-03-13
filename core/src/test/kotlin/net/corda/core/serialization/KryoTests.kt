@@ -1,13 +1,15 @@
 package net.corda.core.serialization
 
 import com.google.common.primitives.Ints
-import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.crypto.*
 import net.corda.core.messaging.Ack
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.junit.Test
 import java.io.InputStream
+import java.security.Security
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
@@ -94,9 +96,27 @@ class KryoTests {
         assertEquals(-1, readRubbishStream.read())
     }
 
+    @Test
+    fun `serialize - deserialize MetaData`() {
+        Security.addProvider(BouncyCastleProvider())
+        Security.addProvider(BouncyCastlePQCProvider())
+        val testString = "Hello World"
+        val testBytes = testString.toByteArray()
+        val keyPair1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val bitSet = java.util.BitSet(10)
+        bitSet.set(3)
+
+        val meta = MetaData("ECDSA_SECP256K1_SHA256", "M9", SignatureType.FULL, Instant.now(), bitSet, bitSet, testBytes, keyPair1.public)
+        val serializedMetaData = meta.bytes()
+        val meta2 = serializedMetaData.deserialize<MetaData>()
+        assertEquals(meta2, meta)
+    }
+
+    @CordaSerializable
     private data class Person(val name: String, val birthday: Instant?)
 
     @Suppress("unused")
+    @CordaSerializable
     private class Cyclic(val value: Int) {
         val thisInstance = this
         override fun equals(other: Any?): Boolean = (this === other) || (other is Cyclic && this.value == other.value)

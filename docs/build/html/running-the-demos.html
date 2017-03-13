@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="CLI vs IDE" href="CLI-vs-IDE.html"/>
         <link rel="prev" title="Troubleshooting" href="getting-set-up-fault-finding.html"/> 
@@ -137,6 +134,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -152,6 +150,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
@@ -181,6 +180,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -415,7 +415,7 @@ major version - even if still in beta.</p>
 <li><p class="first">The H2 web console should start up in a web browser tab. To connect we first need to obtain a JDBC connection string.
 Each node outputs its connection string in the terminal window as it starts up. In a terminal window where a node is running,
 look for the following string:</p>
-<p><code class="docutils literal"><span class="pre">Database</span> <span class="pre">connection</span> <span class="pre">url</span> <span class="pre">is</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">:</span> <span class="pre">jdbc:h2:tcp://10.18.0.150:56736/node</span></code></p>
+<p><code class="docutils literal"><span class="pre">Database</span> <span class="pre">connection</span> <span class="pre">url</span> <span class="pre">is</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="pre">:</span> <span class="pre">jdbc:h2:tcp://10.18.0.150:56736/node</span></code></p>
 <p>You can use the string on the right to connect to the h2 database: just paste it into the <cite>JDBC URL</cite> field and click <em>Connect</em>.
 You will be presented with a web application that enumerates all the available tables and provides an interface for you to query them using SQL</p>
 </li>
@@ -487,8 +487,8 @@ For example, the Explorer tool only allows nodes of this type to issue and exit 
 <div><code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">tools:explorer:run</span></code> (on Unix) or <code class="docutils literal"><span class="pre">gradlew</span> <span class="pre">tools:explorer:run</span></code> (on Windows)</div></blockquote>
 <p>Using the following login details:</p>
 <ul class="simple">
-<li>For the Bank of Corda node: localhost / port 10004 / username user1 / password test</li>
-<li>For the Big Corporation node: localhost / port 10006 / username user1 / password test</li>
+<li>For the Bank of Corda node: localhost / port 10004 / username bankUser / password test</li>
+<li>For the Big Corporation node: localhost / port 10006 / username bigCorpUser / password test</li>
 </ul>
 <p>See <a class="reference external" href="https://docs.corda.net/node-explorer.html">https://docs.corda.net/node-explorer.html</a> for further details on usage.</p>
 </div>

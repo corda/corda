@@ -14,22 +14,26 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import rx.Observable
 import java.io.InputStream
 import java.time.Instant
 import java.util.*
 
+@CordaSerializable
 data class StateMachineInfo(
         val id: StateMachineRunId,
         val flowLogicClassName: String,
         val progressTrackerStepAndUpdates: Pair<String, Observable<String>>?
 )
 
+@CordaSerializable
 sealed class StateMachineUpdate(val id: StateMachineRunId) {
     class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate(stateMachineInfo.id) {
         override fun toString() = "Added($id, ${stateMachineInfo.flowLogicClassName})"
     }
+
     class Removed(id: StateMachineRunId) : StateMachineUpdate(id) {
         override fun toString() = "Removed($id)"
     }
@@ -108,11 +112,16 @@ interface CordaRPCOps : RPCOps {
     fun attachmentExists(id: SecureHash): Boolean
 
     /**
+     * Download an attachment JAR by ID
+     */
+    fun openAttachment(id: SecureHash): InputStream
+
+    /**
      * Uploads a jar to the node, returns it's hash.
      */
     fun uploadAttachment(jar: InputStream): SecureHash
 
-    @Suppress("DEPRECATION")
+    // TODO: Remove this from the interface
     @Deprecated("This service will be removed in a future milestone")
     fun uploadFile(dataType: String, name: String?, file: InputStream): String
 
@@ -122,7 +131,7 @@ interface CordaRPCOps : RPCOps {
      * Invoking this method indicate the node is willing to upgrade the [state] using the [upgradedContractClass].
      * This method will NOT initiate the upgrade process. To start the upgrade process, see [ContractUpgradeFlow.Instigator].
      */
-    fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>)
+    fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>)
 
     /**
      * Authorise a contract state upgrade.
@@ -153,6 +162,9 @@ interface CordaRPCOps : RPCOps {
      * Returns the [Party] with the given name as it's [Party.name]
      */
     fun partyFromName(name: String): Party?
+
+    /** Enumerates the class names of the flows that this node knows about. */
+    fun registeredFlows(): List<String>
 }
 
 /**
@@ -206,6 +218,7 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow
  * @param progress The stream of progress tracker events.
  * @param returnValue A [ListenableFuture] of the flow's return value.
  */
+@CordaSerializable
 data class FlowHandle<A>(
         val id: StateMachineRunId,
         val progress: Observable<String>,

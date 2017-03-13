@@ -1,0 +1,87 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>CordaKryo - corda</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.serialization</a>&nbsp;/&nbsp;<a href=".">CordaKryo</a><br/>
+<br/>
+<h1>CordaKryo</h1>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">CordaKryo</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span></code>
+<p>We need to disable whitelist checking during calls from our Kryo code to register a serializer, since it checks
+for existing registrations and then will enter our <a href="../-corda-class-resolver/get-registration.html">CordaClassResolver.getRegistration</a> method.</p>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">CordaKryo</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.CordaKryo$<init>(com.esotericsoftware.kryo.ClassResolver)/classResolver">classResolver</span><span class="symbol">:</span>&nbsp;<span class="identifier">ClassResolver</span><span class="symbol">)</span></code>
+<p>We need to disable whitelist checking during calls from our Kryo code to register a serializer, since it checks
+for existing registrations and then will enter our <a href="../-corda-class-resolver/get-registration.html">CordaClassResolver.getRegistration</a> method.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="register.html">register</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">register</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.CordaKryo$register(java.lang.Class((kotlin.Any)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Registration</span></code><br/>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">register</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.CordaKryo$register(java.lang.Class((kotlin.Any)), kotlin.Int)/type">type</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.serialization.CordaKryo$register(java.lang.Class((kotlin.Any)), kotlin.Int)/id">id</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Registration</span></code><br/>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">register</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.CordaKryo$register(java.lang.Class((kotlin.Any)), com.esotericsoftware.kryo.Serializer((kotlin.Any)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.serialization.CordaKryo$register(java.lang.Class((kotlin.Any)), com.esotericsoftware.kryo.Serializer((kotlin.Any)))/serializer">serializer</span><span class="symbol">:</span>&nbsp;<span class="identifier">Serializer</span><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Registration</span></code><br/>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">register</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization.CordaKryo$register(com.esotericsoftware.kryo.Registration)/registration">registration</span><span class="symbol">:</span>&nbsp;<span class="identifier">Registration</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Registration</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../com.esotericsoftware.kryo.-kryo/attachment-storage.html">attachmentStorage</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">Kryo</span><span class="symbol">.</span><span class="identifier">attachmentStorage</span><span class="symbol">: </span><a href="../../net.corda.core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">?</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../com.esotericsoftware.kryo.-kryo/add-to-whitelist.html">addToWhitelist</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">Kryo</span><span class="symbol">.</span><span class="identifier">addToWhitelist</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$addToWhitelist(com.esotericsoftware.kryo.Kryo, java.lang.Class((kotlin.Any)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../com.esotericsoftware.kryo.-kryo/no-references-within.html">noReferencesWithin</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">Kryo</span><span class="symbol">.</span><span class="identifier">noReferencesWithin</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code>
+<p>Use this method to mark any types which can have the same instance within it more than once. This will make sure
+the serialised form is stable across multiple serialise-deserialise cycles. Using this on a type with internal cyclic
+references will throw a stack overflow exception during serialisation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.esotericsoftware.kryo.-kryo/register.html">register</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">Kryo</span><span class="symbol">.</span><span class="identifier">register</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$register(com.esotericsoftware.kryo.Kryo, kotlin.reflect.KClass((net.corda.core.serialization.register.T)), kotlin.Function2((com.esotericsoftware.kryo.Kryo, com.esotericsoftware.kryo.io.Input, net.corda.core.serialization.register.T)), kotlin.Function3((com.esotericsoftware.kryo.Kryo, com.esotericsoftware.kryo.io.Output, net.corda.core.serialization.register.T, kotlin.Unit)))/type">type</span><span class="symbol">:</span>&nbsp;<span class="identifier">KClass</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.serialization$register(com.esotericsoftware.kryo.Kryo, kotlin.reflect.KClass((net.corda.core.serialization.register.T)), kotlin.Function2((com.esotericsoftware.kryo.Kryo, com.esotericsoftware.kryo.io.Input, net.corda.core.serialization.register.T)), kotlin.Function3((com.esotericsoftware.kryo.Kryo, com.esotericsoftware.kryo.io.Output, net.corda.core.serialization.register.T, kotlin.Unit)))/read">read</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Kryo</span><span class="symbol">,</span>&nbsp;<span class="identifier">Input</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.serialization$register(com.esotericsoftware.kryo.Kryo, kotlin.reflect.KClass((net.corda.core.serialization.register.T)), kotlin.Function2((com.esotericsoftware.kryo.Kryo, com.esotericsoftware.kryo.io.Input, net.corda.core.serialization.register.T)), kotlin.Function3((com.esotericsoftware.kryo.Kryo, com.esotericsoftware.kryo.io.Output, net.corda.core.serialization.register.T, kotlin.Unit)))/write">write</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Kryo</span><span class="symbol">,</span>&nbsp;<span class="identifier">Output</span><span class="symbol">,</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Registration</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../com.esotericsoftware.kryo.-kryo/use-class-loader.html">useClassLoader</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">Kryo</span><span class="symbol">.</span><span class="identifier">useClassLoader</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$useClassLoader(com.esotericsoftware.kryo.Kryo, java.lang.ClassLoader, kotlin.Function0((net.corda.core.serialization.useClassLoader.T)))/cl">cl</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/ClassLoader.html"><span class="identifier">ClassLoader</span></a><span class="symbol">, </span><span class="identifier" id="net.corda.core.serialization$useClassLoader(com.esotericsoftware.kryo.Kryo, java.lang.ClassLoader, kotlin.Function0((net.corda.core.serialization.useClassLoader.T)))/body">body</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

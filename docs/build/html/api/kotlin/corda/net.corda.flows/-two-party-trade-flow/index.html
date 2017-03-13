@@ -16,16 +16,12 @@ and seller) and the following steps:</p>
 <li>B sends to S a <a href="../../net.corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a> that includes the state as input, B's cash as input, the state with the new
     owner key as output, and any change cash as output. It contains a single signature from B but isn't valid because
     it lacks a signature from S authorising movement of the asset.</li>
-<li>S signs it and hands the now finalised SignedWireTransaction back to B.</li>
+<li>S signs it and commits it to the ledger, notarising it and distributing the final signed transaction back
+    to B.</li>
 </ol>
 <p>Assuming no malicious termination, they both end the flow being in posession of a valid, signed transaction
 that represents an atomic asset swap.</p>
 <p>Note that it's the <emph>seller</emph> who initiates contact with the buyer, not vice-versa as you might imagine.</p>
-<p>To initiate the flow, use either the <a href="#">runBuyer</a> or <a href="#">runSeller</a> methods, depending on which side of the trade
-your node is taking. These methods return a future which will complete once the trade is over and a fully signed
-transaction is available: you can either block your thread waiting for the flow to complete by using
-<a href="#">ListenableFuture.get</a> or more usefully, register a callback that will be invoked when the time comes.</p>
-<p>To see an example of how to use this class, look at the unit tests.</p>
 <h3>Types</h3>
 <table>
 <tbody>

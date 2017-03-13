@@ -1,5 +1,6 @@
 package net.corda.core.schemas
 
+import io.requery.Persistable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.serialization.toHexString
@@ -48,7 +49,7 @@ abstract class MappedSchema(schemaFamily: Class<*>,
  * A super class for all mapped states exported to a schema that ensures the [StateRef] appears on the database row.  The
  * [StateRef] will be set to the correct value by the framework (there's no need to set during mapping generation by the state itself).
  */
-@MappedSuperclass open class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null)
+@MappedSuperclass open class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : Persistable
 
 /**
  * Embedded [StateRef] representation used in state mapping.
@@ -62,5 +63,9 @@ data class PersistentStateRef(
         var index: Int?
 ) : Serializable {
     constructor(stateRef: StateRef) : this(stateRef.txhash.bytes.toHexString(), stateRef.index)
+    /*
+     JPA Query requirement:
+     @Entity classes should have a default (non-arg) constructor to instantiate the objects when retrieving them from the database.
+    */
     constructor() : this(null, null)
 }

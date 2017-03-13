@@ -23,6 +23,7 @@ import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
+import net.corda.testing.MOCK_NODE_VERSION_INFO
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -148,7 +149,7 @@ class ArtemisMessagingTests {
         val message = messagingClient.createMessage(topic, DEFAULT_SESSION_ID, "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
-        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_FLOW_TOPIC, DEFAULT_SESSION_ID, "second msg".toByteArray())
+        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_TOPIC, DEFAULT_SESSION_ID, "second msg".toByteArray())
         messagingClient.send(networkMapMessage, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
@@ -174,7 +175,7 @@ class ArtemisMessagingTests {
             messagingClient.send(message, messagingClient.myAddress)
         }
 
-        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_FLOW_TOPIC, DEFAULT_SESSION_ID, "second msg".toByteArray())
+        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_TOPIC, DEFAULT_SESSION_ID, "second msg".toByteArray())
         messagingClient.send(networkMapMessage, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
@@ -207,7 +208,7 @@ class ArtemisMessagingTests {
         messagingClient.addMessageHandler(topic) { message, r ->
             receivedMessages.add(message)
         }
-        messagingClient.addMessageHandler(NetworkMapService.FETCH_FLOW_TOPIC) { message, r ->
+        messagingClient.addMessageHandler(NetworkMapService.FETCH_TOPIC) { message, r ->
             receivedMessages.add(message)
         }
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
@@ -219,6 +220,7 @@ class ArtemisMessagingTests {
         return databaseTransaction(database) {
             NodeMessagingClient(
                     config,
+                    MOCK_NODE_VERSION_INFO,
                     server,
                     identity.public.composite,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),

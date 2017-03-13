@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Writing flows" href="flow-state-machines.html"/>
         <link rel="prev" title="Client RPC API tutorial" href="tutorial-clientrpc-api.html"/> 
@@ -124,6 +121,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -139,6 +137,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Building transactions</a><ul>
@@ -179,6 +178,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -340,7 +340,7 @@ level <code class="docutils literal"><span class="pre">VaultService</span></code
                             <span class="n">amountRequired</span><span class="p">:</span> <span class="n">Amount</span><span class="p">&lt;</span><span class="n">Issued</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;&gt;,</span>
                             <span class="n">notary</span><span class="p">:</span> <span class="n">Party</span><span class="p">?):</span> <span class="n">Pair</span><span class="p">&lt;</span><span class="n">List</span><span class="p">&lt;</span><span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">Cash</span><span class="p">.</span><span class="n">State</span><span class="p">&gt;&gt;,</span> <span class="n">Long</span><span class="p">&gt;</span> <span class="p">{</span>
     <span class="c1">// Collect cash type inputs</span>
-    <span class="k">val</span> <span class="py">cashStates</span> <span class="p">=</span> <span class="n">serviceHub</span><span class="p">.</span><span class="n">vaultService</span><span class="p">.</span><span class="n">currentVault</span><span class="p">.</span><span class="n">statesOfType</span><span class="p">&lt;</span><span class="n">Cash</span><span class="p">.</span><span class="n">State</span><span class="p">&gt;()</span>
+    <span class="k">val</span> <span class="py">cashStates</span> <span class="p">=</span> <span class="n">serviceHub</span><span class="p">.</span><span class="n">vaultService</span><span class="p">.</span><span class="n">unconsumedStates</span><span class="p">&lt;</span><span class="n">Cash</span><span class="p">.</span><span class="n">State</span><span class="p">&gt;()</span>
     <span class="c1">// extract our key identity for convenience</span>
     <span class="k">val</span> <span class="py">ourKey</span> <span class="p">=</span> <span class="n">serviceHub</span><span class="p">.</span><span class="n">myInfo</span><span class="p">.</span><span class="n">legalIdentity</span><span class="p">.</span><span class="n">owningKey</span>
     <span class="c1">// Filter down to our own cash states with right currency and issuer</span>

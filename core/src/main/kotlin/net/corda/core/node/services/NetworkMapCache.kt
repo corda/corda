@@ -5,12 +5,11 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.Contract
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceEntry
 import net.corda.core.randomOrNull
+import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 
 /**
@@ -21,6 +20,7 @@ import rx.Observable
  */
 interface NetworkMapCache {
 
+    @CordaSerializable
     sealed class MapChange(val node: NodeInfo) {
         class Added(node: NodeInfo) : MapChange(node)
         class Removed(node: NodeInfo) : MapChange(node)
@@ -73,6 +73,7 @@ interface NetworkMapCache {
 
     /** Look up the node info for a specific peer key. */
     fun getNodeByLegalIdentityKey(compositeKey: CompositeKey): NodeInfo?
+
     /** Look up all nodes advertising the service owned by [compositeKey] */
     fun getNodesByAdvertisedServiceIdentityKey(compositeKey: CompositeKey): List<NodeInfo> {
         return partyNodes.filter { it.advertisedServices.any { it.identity.owningKey == compositeKey } }
@@ -108,6 +109,11 @@ interface NetworkMapCache {
     /** Checks whether a given party is an advertised notary identity */
     fun isNotary(party: Party): Boolean = notaryNodes.any { it.notaryIdentity == party }
 
+    /** Checks whether a given party is an advertised validating notary identity */
+    fun isValidatingNotary(party: Party): Boolean {
+        return notaryNodes.any { it.notaryIdentity == party && it.advertisedServices.any { it.info.type.isValidatingNotary() }}
+    }
+
     /**
      * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
      * updates.
@@ -138,6 +144,7 @@ interface NetworkMapCache {
     fun runWithoutMapService()
 }
 
+@CordaSerializable
 sealed class NetworkCacheError : Exception() {
     /** Indicates a failure to deregister, because of a rejected request from the remote node */
     class DeregistrationFailed : NetworkCacheError()

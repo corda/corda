@@ -8,7 +8,7 @@
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.statemachine</a>&nbsp;/&nbsp;<a href=".">ReceiveRequest</a><br/>
 <br/>
 <h1>ReceiveRequest</h1>
-<code><span class="keyword">interface </span><span class="identifier">ReceiveRequest</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-session-message.html"><span class="identifier">SessionMessage</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-flow-i-o-request/index.html"><span class="identifier">FlowIORequest</span></a></code>
+<code><span class="keyword">interface </span><span class="identifier">ReceiveRequest</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-session-message.html"><span class="identifier">SessionMessage</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-sessioned-flow-i-o-request/index.html"><span class="identifier">SessionedFlowIORequest</span></a><span class="symbol">, </span><a href="../-waiting-request.html"><span class="identifier">WaitingRequest</span></a></code>
 <h3>Properties</h3>
 <table>
 <tbody>
@@ -18,6 +18,12 @@
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">receiveType</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
+<tr>
+<td>
+<a href="user-receive-type.html">userReceiveType</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">userReceiveType</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">?</span></code></td>
+</tr>
 </tbody>
 </table>
 <h3>Inherited Properties</h3>
@@ -25,15 +31,9 @@
 <tbody>
 <tr>
 <td>
-<a href="../-flow-i-o-request/session.html">session</a></td>
+<a href="../-sessioned-flow-i-o-request/session.html">session</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">session</span><span class="symbol">: </span><a href="../-state-machine-manager/-flow-session/index.html"><span class="identifier">FlowSession</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="../-flow-i-o-request/stack-trace-in-case-of-problems.html">stackTraceInCaseOfProblems</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">stackTraceInCaseOfProblems</span><span class="symbol">: </span><a href="../-stack-snapshot/index.html"><span class="identifier">StackSnapshot</span></a></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">session</span><span class="symbol">: </span><a href="../-flow-session/index.html"><span class="identifier">FlowSession</span></a></code></td>
 </tr>
 </tbody>
 </table>

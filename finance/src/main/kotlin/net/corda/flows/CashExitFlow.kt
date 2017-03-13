@@ -2,8 +2,13 @@ package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.InsufficientBalanceException
+import net.corda.core.contracts.TransactionType
+import net.corda.core.contracts.issuedBy
 import net.corda.core.crypto.Party
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -34,7 +39,7 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
             Cash().generateExit(
                     builder,
                     amount.issuedBy(issuer),
-                    serviceHub.vaultService.currentVault.statesOfType<Cash.State>().filter { it.state.data.owner == issuer.party.owningKey })
+                    serviceHub.vaultService.unconsumedStates<Cash.State>().filter { it.state.data.owner == issuer.party.owningKey })
         } catch (e: InsufficientBalanceException) {
             throw CashException("Exiting more cash than exists", e)
         }

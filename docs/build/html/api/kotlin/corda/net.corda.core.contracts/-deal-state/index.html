@@ -18,7 +18,7 @@ implementation of general flows that manipulate many agreement types.</p>
 <td>
 <a href="parties.html">parties</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">parties</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span></code>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">parties</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-anonymous-party/index.html"><span class="identifier">AnonymousParty</span></a><span class="symbol">&gt;</span></code>
 <p>Exposes the Parties involved in a generic way.</p>
 </td>
 </tr>
@@ -97,6 +97,12 @@ deal/agreement flow to generate the necessary transaction for potential implemen
 <code><span class="keyword">interface </span><span class="identifier">FixableDealState</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">DealState</span></code>
 <p>Interface adding fixing specific methods.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.contracts.testing/-dummy-deal-contract/-state/index.html">State</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">DealState</span></code></td>
 </tr>
 </tbody>
 </table>

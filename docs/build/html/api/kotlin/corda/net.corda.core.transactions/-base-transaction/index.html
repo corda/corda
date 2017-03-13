@@ -114,6 +114,12 @@ time window to find out when a transaction is deemed to have occurred, from the 
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">hashCode</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
 </tr>
+<tr>
+<td>
+<a href="to-string.html">toString</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
 </tbody>
 </table>
 <h3>Inheritors</h3>
@@ -131,7 +137,7 @@ time window to find out when a transaction is deemed to have occurred, from the 
 <td>
 <a href="../-wire-transaction/index.html">WireTransaction</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">WireTransaction</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">BaseTransaction</span></code>
+<code><span class="keyword">class </span><span class="identifier">WireTransaction</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">BaseTransaction</span><span class="symbol">, </span><a href="../-traversable-transaction/index.html"><span class="identifier">TraversableTransaction</span></a></code>
 <p>A transaction ready for serialisation, without any signatures attached. A WireTransaction is usually wrapped
 by a <a href="../-signed-transaction/index.html">SignedTransaction</a> that carries the signatures over this payload. The hash of the wire transaction is
 the identity of the transaction, that is, it's possible for two <a href="../-signed-transaction/index.html">SignedTransaction</a>s with different sets of

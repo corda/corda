@@ -12,6 +12,7 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PhysicalLocation
 import net.corda.core.node.ServiceEntry
+import net.corda.core.node.Version
 import net.corda.core.node.services.*
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.loggerFor
@@ -27,6 +28,7 @@ import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
+import net.corda.testing.MOCK_VERSION
 import net.corda.testing.TestNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
@@ -98,26 +100,24 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      * Because this executor is shared, we need to be careful about nodes shutting it down.
      */
     private val sharedUserCount = AtomicInteger(0)
-    private val sharedServerThread =
-            object : ServiceAffinityExecutor("Mock network shared node thread", 1) {
-
-                override fun shutdown() {
-                    // We don't actually allow the shutdown of the network-wide shared thread pool until all references to
-                    // it have been shutdown.
-                    if (sharedUserCount.decrementAndGet() == 0) {
-                        super.shutdown()
-                    }
-                }
-
-                override fun awaitTermination(timeout: Long, unit: TimeUnit): Boolean {
-                    if (!isShutdown) {
-                        flush()
-                        return true
-                    } else {
-                        return super.awaitTermination(timeout, unit)
-                    }
-                }
+    private val sharedServerThread = object : ServiceAffinityExecutor("Mock network", 1) {
+        override fun shutdown() {
+            // We don't actually allow the shutdown of the network-wide shared thread pool until all references to
+            // it have been shutdown.
+            if (sharedUserCount.decrementAndGet() == 0) {
+                super.shutdown()
             }
+        }
+
+        override fun awaitTermination(timeout: Long, unit: TimeUnit): Boolean {
+            if (!isShutdown) {
+                flush()
+                return true
+            } else {
+                return super.awaitTermination(timeout, unit)
+            }
+        }
+    }
 
     /**
      * @param overrideServices a set of service entries to use in place of the node's default service entries,
@@ -131,9 +131,11 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                         advertisedServices: Set<ServiceInfo>,
                         val id: Int,
                         val overrideServices: Map<ServiceInfo, KeyPair>?,
-                        val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue())) : AbstractNode(config, advertisedServices, TestClock(), mockNet.busyLatch) {
+                        val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue())) :
+            AbstractNode(config, advertisedServices, TestClock(), mockNet.busyLatch) {
         var counter = entropyRoot
         override val log: Logger = loggerFor<MockNode>()
+        override val version: Version get() = MOCK_VERSION
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
                     ServiceAffinityExecutor("Mock node $id thread", 1)
@@ -151,7 +153,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
 
-        override fun makeVaultService(): VaultService = NodeVaultService(services)
+        override fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
 
         override fun makeKeyManagementService(): KeyManagementService {
             return E2ETestKeyManagementService(partyKeys + (overrideServices?.values ?: emptySet()))

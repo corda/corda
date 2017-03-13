@@ -13,6 +13,24 @@
 <tbody>
 <tr>
 <td>
+<a href="-abstract-party/index.html">AbstractParty</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractParty</span></code>
+<p>An <a href="-abstract-party/index.html">AbstractParty</a> contains the common elements of <a href="-party/index.html">Party</a> and <a href="-anonymous-party/index.html">AnonymousParty</a>, specifically the owning key of
+the party. In most cases <a href="-party/index.html">Party</a> or <a href="-anonymous-party/index.html">AnonymousParty</a> should be used, depending on use-case.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-anonymous-party/index.html">AnonymousParty</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">AnonymousParty</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-party/index.html"><span class="identifier">AbstractParty</span></a></code>
+<p>The <a href="-anonymous-party/index.html">AnonymousParty</a> class contains enough information to uniquely identify a <a href="-party/index.html">Party</a> while excluding private
+information such as name. It is intended to represent a party on the distributed ledger.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-certificate-stream/index.html">CertificateStream</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">CertificateStream</span></code></td>
@@ -43,6 +61,14 @@ building partially signed transactions.</p>
 </tr>
 <tr>
 <td>
+<a href="-merkle-tree/index.html">MerkleTree</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">MerkleTree</span></code>
+<p>Creation and verification of a Merkle Tree for a Wire Transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-null-public-key/index.html">NullPublicKey</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">NullPublicKey</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">, </span><span class="identifier">Comparable</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code></td>
@@ -68,7 +94,7 @@ Partial Merkle Tree is a minimal tree needed to check that a given set of leaves
 <td>
 <a href="-party/index.html">Party</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Party</span></code>
+<code><span class="keyword">class </span><span class="identifier">Party</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-party/index.html"><span class="identifier">AbstractParty</span></a></code>
 <p>The <a href="-party/index.html">Party</a> class represents an entity on the network, which is typically identified by a legal <a href="-party/name.html">name</a> and public key
 that it can sign transactions under. As parties may use multiple keys for signing and, for example, have offline backup
 keys, the "public key" of a party is represented by a composite construct – a <a href="-composite-key/index.html">CompositeKey</a>, which combines multiple
@@ -136,6 +162,12 @@ contained within.</p>
 <tr>
 <td>
 <a href="kotlin.-byte-array/index.html">kotlin.ByteArray</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.-string/index.html">kotlin.String</a></td>
 <td>
 </td>
 </tr>

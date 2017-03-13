@@ -161,6 +161,16 @@ current step in this flow's progress tracker.</p>
 <a href="progress-tracker.html">progressTracker</a>.</p>
 </td>
 </tr>
+<tr>
+<td>
+<a href="wait-for-ledger-commit.html">waitForLedgerCommit</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">waitForLedgerCommit</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.flows.FlowLogic$waitForLedgerCommit(net.corda.core.crypto.SecureHash)/hash">hash</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a></code>
+<p>Suspends the flow until the transaction with the specified ID is received, successfully verified and
+sent to the vault for processing. Note that this call suspends until the transaction is considered
+valid by the local node, but that doesn't imply the vault will consider it relevant.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3>Inheritors</h3>
@@ -168,17 +178,26 @@ current step in this flow's progress tracker.</p>
 <tbody>
 <tr>
 <td>
+<a href="../../net.corda.flows/-abstract-cash-flow/index.html">AbstractCashFlow</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractCashFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code>
+<p>Initiates a flow that produces an Issue/Move or Exit Cash transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../../net.corda.flows/-abstract-state-replacement-flow/-acceptor/index.html">Acceptor</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Acceptor</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Acceptor</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Void.html"><span class="identifier">Void</span></a><span class="symbol">?</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="../../net.corda.flows/-broadcast-transaction-flow/index.html">BroadcastTransactionFlow</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">BroadcastTransactionFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code>
-<p>Notify all involved parties about a transaction, including storing a copy. Normally this would be called via
-<a href="../../net.corda.flows/-finality-flow/index.html">FinalityFlow</a>.</p>
+<p>Notify the specified parties about a transaction. The remote peers will download this transaction and its
+dependency graph, verifying them all. The flow returns when all peers have acknowledged the transactions
+as valid. Normally you wouldn't use this directly, it would be called via <a href="../../net.corda.flows/-finality-flow/index.html">FinalityFlow</a>.</p>
 </td>
 </tr>
 <tr>
@@ -189,18 +208,10 @@ current step in this flow's progress tracker.</p>
 </tr>
 <tr>
 <td>
-<a href="../../net.corda.flows/-cash-flow/index.html">CashFlow</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">CashFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code>
-<p>Initiates a flow that produces an Issue/Move or Exit Cash transaction.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../../net.corda.flows/-notary-flow/-client/index.html">Client</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span></code>
-<p>A flow to be used for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
+<code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>A flow to be used by a party for obtaining signature(s) from a <a href="#">NotaryService</a> ascertaining the transaction
 timestamp is correct and none of its inputs have been used in another completed transaction.</p>
 </td>
 </tr>
@@ -216,15 +227,22 @@ timestamp is correct and none of its inputs have been used in another completed 
 <td>
 <a href="../../net.corda.flows/-finality-flow/index.html">FinalityFlow</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">FinalityFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code>
-<p>Finalise a transaction by notarising it, then recording it locally, and then sending it to all involved parties.</p>
+<code><span class="keyword">class </span><span class="identifier">FinalityFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>Verifies the given transactions, then sends them to the named notaries. If the notary agrees that the transactions
+are acceptable then they are from that point onwards committed to the ledger, and will be written through to the
+vault. Additionally they will be distributed to the parties reflected in the participants list of the states.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="../../net.corda.flows/-abstract-state-replacement-flow/-instigator/index.html">Instigator</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Instigator</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Instigator</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="keyword">out</span>&nbsp;<span class="identifier">M</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code>
+<p>The <a href="../../net.corda.flows/-abstract-state-replacement-flow/-instigator/index.html">Instigator</a> assembles the transaction for state replacement and sends out change proposals to all participants
+(<a href="../../net.corda.flows/-abstract-state-replacement-flow/-acceptor/index.html">Acceptor</a>) of that state. If participants agree to the proposed change, they each sign the transaction.
+Finally, <a href="../../net.corda.flows/-abstract-state-replacement-flow/-instigator/index.html">Instigator</a> sends the transaction containing all participants' signatures to the notary for signature, and
+then back to each participant so they can record it and use the new updated state for future transactions.</p>
+</td>
 </tr>
 <tr>
 <td>
@@ -292,22 +310,9 @@ checked again.</p>
 <td>
 <a href="../../net.corda.flows/-notary-flow/-service/index.html">Service</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code>
-<p>Checks that the timestamp command is valid (if present) and commits the input state, or returns a conflict
-if any of the input states have been previously committed.</p>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Void.html"><span class="identifier">Void</span></a><span class="symbol">?</span><span class="symbol">&gt;</span></code>
+<p>A flow run by a notary service that handles notarisation requests.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="../../com.cordatest/-t-genesis-flow/index.html">TGenesisFlow</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">TGenesisFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><a href="../../net.corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../com.cordatest/-t-tx-flow/index.html">TTxFlow</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">TTxFlow</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FlowLogic</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

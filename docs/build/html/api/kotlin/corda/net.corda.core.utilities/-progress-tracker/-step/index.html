@@ -86,6 +86,12 @@
 </tr>
 <tr>
 <td>
+<a href="../../../net.corda.flows/-two-party-trade-flow/-seller/-c-o-m-m-i-t-t-i-n-g/index.html">COMMITTING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">COMMITTING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="../../../net.corda.flows/-two-party-deal-flow/-primary/-c-o-p-y-i-n-g_-t-o_-r-e-g-u-l-a-t-o-r.html">COPYING_TO_REGULATOR</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">COPYING_TO_REGULATOR</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
@@ -98,15 +104,15 @@
 </tr>
 <tr>
 <td>
-<a href="../../../net.corda.flows/-cash-flow/-e-x-i-t-i-n-g.html">EXITING</a></td>
+<a href="../../../net.corda.flows/-abstract-cash-flow/-f-i-n-a-l-i-s-i-n-g_-t-x.html">FINALISING_TX</a></td>
 <td>
-<code><span class="keyword">object </span><span class="identifier">EXITING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+<code><span class="keyword">object </span><span class="identifier">FINALISING_TX</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../../../net.corda.flows/-cash-flow/-i-s-s-u-i-n-g.html">ISSUING</a></td>
+<a href="../../../net.corda.flows/-abstract-cash-flow/-g-e-n-e-r-a-t-i-n-g_-t-x.html">GENERATING_TX</a></td>
 <td>
-<code><span class="keyword">object </span><span class="identifier">ISSUING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+<code><span class="keyword">object </span><span class="identifier">GENERATING_TX</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
 <tr>
 <td>
@@ -116,7 +122,7 @@
 </tr>
 <tr>
 <td>
-<a href="../../../net.corda.flows/-finality-flow/-n-o-t-a-r-i-s-i-n-g.html">NOTARISING</a></td>
+<a href="../../../net.corda.flows/-finality-flow/-n-o-t-a-r-i-s-i-n-g/index.html">NOTARISING</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">NOTARISING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
@@ -131,18 +137,6 @@
 <a href="../../../net.corda.flows/-two-party-deal-flow/-primary/-n-o-t-a-r-y.html">NOTARY</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">NOTARY</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../../net.corda.flows/-two-party-trade-flow/-seller/-n-o-t-a-r-y/index.html">NOTARY</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">NOTARY</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../../net.corda.flows/-cash-flow/-p-a-y-i-n-g.html">PAYING</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">PAYING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
 <tr>
 <td>
@@ -196,13 +190,19 @@
 </tr>
 <tr>
 <td>
-<a href="../../../net.corda.flows/-two-party-deal-flow/-primary/-s-e-n-d-i-n-g_-s-i-g-s.html">SENDING_SIGS</a></td>
+<a href="../../../net.corda.flows/-two-party-trade-flow/-seller/-s-e-n-d-i-n-g_-f-i-n-a-l_-t-x.html">SENDING_FINAL_TX</a></td>
 <td>
-<code><span class="keyword">object </span><span class="identifier">SENDING_SIGS</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+<code><span class="keyword">object </span><span class="identifier">SENDING_FINAL_TX</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../../../net.corda.flows/-two-party-trade-flow/-seller/-s-e-n-d-i-n-g_-s-i-g-s.html">SENDING_SIGS</a></td>
+<a href="../../../net.corda.flows/-two-party-trade-flow/-buyer/-s-e-n-d-i-n-g_-s-i-g-n-a-t-u-r-e-s.html">SENDING_SIGNATURES</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SENDING_SIGNATURES</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-primary/-s-e-n-d-i-n-g_-s-i-g-s.html">SENDING_SIGS</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">SENDING_SIGS</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
@@ -238,13 +238,13 @@
 </tr>
 <tr>
 <td>
-<a href="../../../net.corda.flows/-two-party-deal-flow/-secondary/-s-w-a-p-p-i-n-g_-s-i-g-n-a-t-u-r-e-s.html">SWAPPING_SIGNATURES</a></td>
+<a href="../../../net.corda.flows/-abstract-cash-flow/-s-i-g-n-i-n-g_-t-x.html">SIGNING_TX</a></td>
 <td>
-<code><span class="keyword">object </span><span class="identifier">SWAPPING_SIGNATURES</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+<code><span class="keyword">object </span><span class="identifier">SIGNING_TX</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../../../net.corda.flows/-two-party-trade-flow/-buyer/-s-w-a-p-p-i-n-g_-s-i-g-n-a-t-u-r-e-s.html">SWAPPING_SIGNATURES</a></td>
+<a href="../../../net.corda.flows/-two-party-deal-flow/-secondary/-s-w-a-p-p-i-n-g_-s-i-g-n-a-t-u-r-e-s.html">SWAPPING_SIGNATURES</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">SWAPPING_SIGNATURES</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
@@ -295,6 +295,12 @@
 <a href="../../../net.corda.flows/-two-party-trade-flow/-buyer/-v-e-r-i-f-y-i-n-g.html">VERIFYING</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">VERIFYING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../net.corda.flows/-two-party-trade-flow/-buyer/-w-a-i-t-i-n-g_-f-o-r_-t-x.html">WAITING_FOR_TX</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">WAITING_FOR_TX</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
 </tbody>
 </table>

@@ -6,6 +6,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 import net.corda.flows.FetchDataFlow.DownloadedVsRequestedDataMismatch
@@ -32,11 +33,18 @@ abstract class FetchDataFlow<T : NamedByHash, in W : Any>(
         protected val requests: Set<SecureHash>,
         protected val otherSide: Party) : FlowLogic<FetchDataFlow.Result<T>>() {
 
+    @CordaSerializable
     class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : IllegalArgumentException()
+
+    @CordaSerializable
     class DownloadedVsRequestedSizeMismatch(val requested: Int, val got: Int) : IllegalArgumentException()
+
     class HashNotFound(val requested: SecureHash) : FlowException()
 
+    @CordaSerializable
     data class Request(val hashes: List<SecureHash>)
+
+    @CordaSerializable
     data class Result<out T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
 
     @Suspendable

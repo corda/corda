@@ -104,7 +104,7 @@ Here is an extract from the ``NodeInterestRates.Oracle`` class and supporting ty
 .. sourcecode:: kotlin
 
    /** A [FixOf] identifies the question side of a fix: what day, tenor and type of fix ("LIBOR", "EURIBOR" etc) */
-   data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Duration)
+   data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Tenor)
 
    /** A [Fix] represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx. */
    data class Fix(val of: FixOf, val value: BigDecimal) : CommandData

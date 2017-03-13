@@ -1,8 +1,8 @@
 package net.corda.flows
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.issuedBy
 import net.corda.core.crypto.Party
@@ -30,6 +30,7 @@ class CashIssueFlow(val amount: Amount<Currency>,
                 recipient: Party,
                 notary: Party) : this(amount, issueRef, recipient, notary, tracker())
 
+    @Suspendable
     override fun call(): SignedTransaction {
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionType.General.Builder(notary = null)

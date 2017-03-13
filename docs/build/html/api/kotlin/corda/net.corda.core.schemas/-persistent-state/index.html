@@ -8,7 +8,7 @@
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.schemas</a>&nbsp;/&nbsp;<a href=".">PersistentState</a><br/>
 <br/>
 <h1>PersistentState</h1>
-<code><span class="identifier">@MappedSuperclass</span> <span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">PersistentState</span></code>
+<code><span class="identifier">@MappedSuperclass</span> <span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">PersistentState</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Persistable</span></code>
 <p>A super class for all mapped states exported to a schema that ensures the <a href="../../net.corda.core.contracts/-state-ref/index.html">StateRef</a> appears on the database row.  The
 <a href="../../net.corda.core.contracts/-state-ref/index.html">StateRef</a> will be set to the correct value by the framework (there's no need to set during mapping generation by the state itself).</p>
 <h3>Constructors</h3>

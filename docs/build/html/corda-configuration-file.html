@@ -34,9 +34,6 @@
   
 
   
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="The Corda plugin framework" href="corda-plugins.html"/>
         <link rel="prev" title="Node administration" href="node-administration.html"/> 
@@ -124,6 +121,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -145,6 +143,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
@@ -174,6 +173,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -262,7 +262,7 @@ for further details.</p>
 <span class="p">}</span>
 <span class="nx">artemisAddress</span> <span class="o">:</span> <span class="s2">&quot;my-corda-node:10002&quot;</span>
 <span class="nx">webAddress</span> <span class="o">:</span> <span class="s2">&quot;localhost:10003&quot;</span>
-<span class="nx">extraAdvertisedServiceIds</span><span class="o">:</span> <span class="s2">&quot;corda.interest_rates&quot;</span>
+<span class="nx">extraAdvertisedServiceIds</span> <span class="o">:</span> <span class="p">[</span> <span class="s2">&quot;corda.interest_rates&quot;</span> <span class="p">]</span>
 <span class="nx">networkMapService</span> <span class="o">:</span> <span class="p">{</span>
     <span class="nx">address</span> <span class="o">:</span> <span class="s2">&quot;my-network-map:10000&quot;</span>
     <span class="nx">legalName</span> <span class="o">:</span> <span class="s2">&quot;Network Map Service&quot;</span>
@@ -283,7 +283,7 @@ for further details.</p>
 <span class="n">trustStorePassword</span> <span class="p">:</span> <span class="s">&quot;trustpass&quot;</span>
 <span class="n">artemisAddress</span> <span class="p">:</span> <span class="s">&quot;localhost:12345&quot;</span>
 <span class="n">webAddress</span> <span class="p">:</span> <span class="s">&quot;localhost:12346&quot;</span>
-<span class="n">extraAdvertisedServiceIds</span><span class="p">:</span> <span class="s">&quot;&quot;</span>
+<span class="n">extraAdvertisedServiceIds</span> <span class="p">:</span> <span class="p">[]</span>
 <span class="n">useHTTPS</span> <span class="p">:</span> <span class="k">false</span>
 <span class="n">devMode</span> <span class="p">:</span> <span class="k">true</span>
 <span class="c1">// Certificate signing service will be hosted by R3 in the near future.</span>

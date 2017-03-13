@@ -168,6 +168,14 @@ implementation of general flows that manipulate many agreement types.</p>
 </tr>
 <tr>
 <td>
+<a href="-dummy-contract-v2/index.html">DummyContractV2</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DummyContractV2</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-upgraded-contract/index.html"><span class="identifier">UpgradedContract</span></a><span class="symbol">&lt;</span><a href="-dummy-contract/-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="-dummy-contract-v2/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span></code>
+<p>Dummy contract state for testing of the upgrade process.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-dummy-state/index.html">DummyState</a></td>
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">DummyState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a></code>
@@ -279,7 +287,7 @@ quantifiable with integer quantities.</p>
 <a href="-move-command/index.html">MoveCommand</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">MoveCommand</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a></code>
-<p>A common move command for contracts which can change owner.</p>
+<p>A common move command for contract states which can change owner.</p>
 </td>
 </tr>
 <tr>
@@ -471,11 +479,33 @@ external ID. Equality and comparison are based on the unique ID only; if two sta
 different external IDs, it would indicate a problem with handling of IDs.</p>
 </td>
 </tr>
+<tr>
+<td>
+<a href="-upgrade-command/index.html">UpgradeCommand</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">UpgradeCommand</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a></code>
+<p>Indicates that this transaction replaces the inputs contract state to another contract state</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-upgraded-contract/index.html">UpgradedContract</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">UpgradedContract</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">OldState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="keyword">out</span>&nbsp;<span class="identifier">NewState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract/index.html"><span class="identifier">Contract</span></a></code>
+<p>Interface which can upgrade state objects issued by a contract to a new state object issued by a different contract.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3>Exceptions</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="-attachment-resolution-exception/index.html">AttachmentResolutionException</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">AttachmentResolutionException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-exception/index.html"><span class="identifier">FlowException</span></a></code></td>
+</tr>
 <tr>
 <td>
 <a href="-insufficient-balance-exception/index.html">InsufficientBalanceException</a></td>
@@ -492,13 +522,13 @@ different external IDs, it would indicate a problem with handling of IDs.</p>
 <td>
 <a href="-transaction-resolution-exception/index.html">TransactionResolutionException</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">TransactionResolutionException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+<code><span class="keyword">class </span><span class="identifier">TransactionResolutionException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-exception/index.html"><span class="identifier">FlowException</span></a></code></td>
 </tr>
 <tr>
 <td>
 <a href="-transaction-verification-exception/index.html">TransactionVerificationException</a></td>
 <td>
-<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">TransactionVerificationException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">TransactionVerificationException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../net.corda.core.flows/-flow-exception/index.html"><span class="identifier">FlowException</span></a></code></td>
 </tr>
 </tbody>
 </table>
@@ -557,6 +587,12 @@ different external IDs, it would indicate a problem with handling of IDs.</p>
 <a href="-d-u-m-m-y_-p-r-o-g-r-a-m_-i-d.html">DUMMY_PROGRAM_ID</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">DUMMY_PROGRAM_ID</span><span class="symbol">: </span><a href="-dummy-contract/index.html"><span class="identifier">DummyContract</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-v2_-p-r-o-g-r-a-m_-i-d.html">DUMMY_V2_PROGRAM_ID</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_V2_PROGRAM_ID</span><span class="symbol">: </span><a href="-dummy-contract-v2/index.html"><span class="identifier">DummyContractV2</span></a></code></td>
 </tr>
 <tr>
 <td>

@@ -4,6 +4,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import java.util.*
 
@@ -94,6 +95,7 @@ class AttachmentResolutionException(val hash : SecureHash) : FlowException() {
     override fun toString(): String = "Attachment resolution failure for $hash"
 }
 
+@CordaSerializable
 class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTransaction, val tx2: LedgerTransaction) : Exception()
 
 sealed class TransactionVerificationException(val tx: LedgerTransaction, cause: Throwable?) : FlowException(cause) {
@@ -116,6 +118,8 @@ sealed class TransactionVerificationException(val tx: LedgerTransaction, cause: 
     class TransactionMissingEncumbranceException(tx: LedgerTransaction, val missing: Int, val inOut: Direction) : TransactionVerificationException(tx, null) {
         override val message: String get() = "Missing required encumbrance $missing in $inOut"
     }
+
+    @CordaSerializable
     enum class Direction {
         INPUT,
         OUTPUT

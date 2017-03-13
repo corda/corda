@@ -147,7 +147,7 @@ sealed class PortAllocation {
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
  * @param useTestClock If true the test clock will be used in Node.
- * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode.
+ * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode and have debug level logging.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
@@ -352,7 +352,7 @@ open class DriverDSL(
                 "myLegalName" to name,
                 "artemisAddress" to messagingAddress.toString(),
                 "webAddress" to apiAddress.toString(),
-                "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
+                "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                 "networkMapService" to mapOf(
                         "address" to networkMapAddress.toString(),
                         "legalName" to networkMapLegalName
@@ -418,7 +418,7 @@ open class DriverDSL(
         }
     }
 
-    private fun queryWebserver(configuration: FullNodeConfiguration): HostAndPort? {
+    private fun queryWebserver(configuration: FullNodeConfiguration, process: Process): HostAndPort? {
         val protocol = if (configuration.useHTTPS) {
             "https://"
         } else {
@@ -427,7 +427,7 @@ open class DriverDSL(
         val url = URL(protocol + configuration.webAddress.toString() + "/api/status")
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
 
-        while (true) try {
+        while (process.isAlive) try {
             val response = client.newCall(Request.Builder().url(url).build()).execute()
             if (response.isSuccessful && (response.body().string() == "started")) {
                 return configuration.webAddress
@@ -435,14 +435,17 @@ open class DriverDSL(
         } catch(e: ConnectException) {
             log.debug("Retrying webserver info at ${configuration.webAddress}")
         }
+
+        log.error("Webserver at ${configuration.webAddress} has died")
+        return null
     }
 
     override fun startWebserver(handle: NodeHandle): ListenableFuture<HostAndPort> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-
-        return future {
-            registerProcess(DriverDSL.startWebserver(executorService, handle.configuration, debugPort))
-            queryWebserver(handle.configuration)!!
+        val process = DriverDSL.startWebserver(executorService, handle.configuration, debugPort)
+        registerProcess(process)
+        return process.map {
+            queryWebserver(handle.configuration, it)!!
         }
     }
 
@@ -463,7 +466,6 @@ open class DriverDSL(
                         //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
                         "webAddress" to apiAddress,
                         "artemisAddress" to networkMapAddress.toString(),
-                        "extraAdvertisedServiceIds" to "",
                         "useTestClock" to useTestClock
                 )
         )
@@ -502,19 +504,19 @@ open class DriverDSL(
             else
                 ""
 
-            val additionalKeys = listOf("amq.delivery.delay.ms")
+            val inheritedProperties = listOf("amq.delivery.delay.ms")
 
             val systemArgs = mutableMapOf(
                     "name" to nodeConf.myLegalName,
                     "visualvm.display.name" to "Corda"
             )
 
-            for (key in additionalKeys) {
-                if (System.getProperty(key) != null) {
-                    systemArgs.set(key, System.getProperty(key))
-                }
+            inheritedProperties.forEach {
+                val property = System.getProperty(it)
+                if (property != null) systemArgs[it] = property
             }
 
+            val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
             val javaArgs = listOf(path) +
                     systemArgs.map { "-D${it.key}=${it.value}" } +
                     listOf(
@@ -524,7 +526,8 @@ open class DriverDSL(
                             "-XX:+UseG1GC",
                             "-cp", classpath,
                             className,
-                            "--base-directory=${nodeConf.baseDirectory}"
+                            "--base-directory=${nodeConf.baseDirectory}",
+                            "--logging-level=$loggingLevel"
                     ).filter(String::isNotEmpty)
             val builder = ProcessBuilder(javaArgs)
             builder.redirectError(Paths.get("error.$className.log").toFile())
@@ -540,7 +543,7 @@ open class DriverDSL(
                 executorService: ScheduledExecutorService,
                 nodeConf: FullNodeConfiguration,
                 debugPort: Int?): ListenableFuture<Process> {
-            val className = "net.corda.node.Corda" // cannot directly get class for this, so just use string
+            val className = "net.corda.webserver.WebServer" // cannot directly get class for this, so just use string
             val separator = System.getProperty("file.separator")
             val classpath = System.getProperty("java.class.path")
             val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
@@ -554,8 +557,7 @@ open class DriverDSL(
                     listOf("-Dname=node-${nodeConf.artemisAddress}-webserver") + debugPortArg +
                     listOf(
                             "-cp", classpath, className,
-                            "--base-directory", nodeConf.baseDirectory.toString(),
-                            "--webserver")
+                            "--base-directory", nodeConf.baseDirectory.toString())
             val builder = ProcessBuilder(javaArgs)
             builder.redirectError(Paths.get("error.$className.log").toFile())
             builder.inheritIO()

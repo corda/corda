@@ -1,5 +1,6 @@
 @file:Suppress("UNUSED_PARAMETER", "UNCHECKED_CAST")
 @file:JvmName("CoreTestUtils")
+
 package net.corda.testing
 
 import com.google.common.net.HostAndPort
@@ -8,7 +9,9 @@ import com.typesafe.config.Config
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
+import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.Version
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
@@ -23,6 +26,7 @@ import net.corda.testing.node.MockIdentityService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import java.net.ServerSocket
+import java.net.URL
 import java.nio.file.Path
 import java.security.KeyPair
 import java.util.*
@@ -79,6 +83,9 @@ val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 
 val MOCK_IDENTITY_SERVICE: MockIdentityService get() = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
+
+val MOCK_VERSION = Version(0, 0, false)
+val MOCK_NODE_VERSION_INFO = NodeVersionInfo(MOCK_VERSION, "Mock revision", "Mock Vendor")
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
@@ -155,6 +162,7 @@ data class TestNodeConfiguration(
         override val nearestCity: String = "Null Island",
         override val emailAddress: String = "",
         override val exportJMXto: String = "",
-        override val devMode: Boolean = true) : NodeConfiguration
+        override val devMode: Boolean = true,
+        override val certificateSigningService: URL = URL("http://localhost")) : NodeConfiguration
 
 fun Config.getHostAndPort(name: String) = HostAndPort.fromString(getString(name))

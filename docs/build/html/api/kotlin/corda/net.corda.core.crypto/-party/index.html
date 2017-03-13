@@ -8,13 +8,13 @@
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.crypto</a>&nbsp;/&nbsp;<a href=".">Party</a><br/>
 <br/>
 <h1>Party</h1>
-<code><span class="keyword">class </span><span class="identifier">Party</span></code>
+<code><span class="keyword">class </span><span class="identifier">Party</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-abstract-party/index.html"><span class="identifier">AbstractParty</span></a></code>
 <p>The Party class represents an entity on the network, which is typically identified by a legal <a href="name.html">name</a> and public key
 that it can sign transactions under. As parties may use multiple keys for signing and, for example, have offline backup
 keys, the "public key" of a party is represented by a composite construct – a <a href="../-composite-key/index.html">CompositeKey</a>, which combines multiple
 cryptographic public key primitives into a tree structure.</p>
 <p>For example: Alice has two key pairs (pub1/priv1 and pub2/priv2), and wants to be able to sign transactions with either of them.
-Her advertised Party then has a legal <a href="name.html">name</a> "Alice" and an <a href="#">owingKey</a> "pub1 or pub2".</p>
+Her advertised Party then has a legal <a href="name.html">name</a> "Alice" and an <a href="../-abstract-party/owning-key.html">owningKey</a> "pub1 or pub2".</p>
 <p>Party is also used for service identities. E.g. Alice may also be running an interest rate oracle on her Corda node,
 which requires a separate signing key (and an identifying name). Services can also be distributed – run by a coordinated
 cluster of Corda nodes. A Party representing a distributed service will use a composite key containing all
@@ -50,9 +50,14 @@ cryptographic public key primitives into a tree structure.</p>
 <td>
 <code><span class="keyword">val </span><span class="identifier">name</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
 </tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
 <tr>
 <td>
-<a href="owning-key.html">owningKey</a></td>
+<a href="../-abstract-party/owning-key.html">owningKey</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">owningKey</span><span class="symbol">: </span><a href="../-composite-key/index.html"><span class="identifier">CompositeKey</span></a></code></td>
 </tr>
@@ -63,30 +68,52 @@ cryptographic public key primitives into a tree structure.</p>
 <tbody>
 <tr>
 <td>
-<a href="equals.html">equals</a></td>
+<a href="name-or-null.html">nameOrNull</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">equals</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.Party$equals(kotlin.Any)/other">other</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
-<p>Anonymised parties do not include any detail apart from owning key, so equality is dependent solely on the key</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="hash-code.html">hashCode</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">hashCode</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">nameOrNull</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span><span class="symbol">?</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="ref.html">ref</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">ref</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.Party$ref(net.corda.core.serialization.OpaqueBytes)/bytes">bytes</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a></code><br/>
-<code><span class="keyword">fun </span><span class="identifier">ref</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="net.corda.core.crypto.Party$ref(kotlin.ByteArray)/bytes">bytes</span><span class="symbol">:</span>&nbsp;<span class="identifier">Byte</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a></code></td>
+<code><span class="keyword">fun </span><span class="identifier">ref</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.Party$ref(net.corda.core.serialization.OpaqueBytes)/bytes">bytes</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="to-anonymous.html">toAnonymous</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toAnonymous</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-anonymous-party/index.html"><span class="identifier">AnonymousParty</span></a></code></td>
 </tr>
 <tr>
 <td>
 <a href="to-string.html">toString</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-abstract-party/equals.html">equals</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">equals</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.crypto.AbstractParty$equals(kotlin.Any)/other">other</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Anonymised parties do not include any detail apart from owning key, so equality is dependent solely on the key</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-party/hash-code.html">hashCode</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">hashCode</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-party/ref.html">ref</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">ref</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="net.corda.core.crypto.AbstractParty$ref(kotlin.ByteArray)/bytes">bytes</span><span class="symbol">:</span>&nbsp;<span class="identifier">Byte</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a></code></td>
 </tr>
 </tbody>
 </table>

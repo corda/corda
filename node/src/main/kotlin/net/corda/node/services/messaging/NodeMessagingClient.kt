@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.messaging.*
+import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.opaque
@@ -21,6 +22,7 @@ import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
+import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ResultRow
@@ -53,6 +55,7 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class NodeMessagingClient(override val config: NodeConfiguration,
+                          nodeVersionInfo: NodeVersionInfo,
                           val serverHostPort: HostAndPort,
                           val myIdentity: CompositeKey?,
                           val nodeExecutor: AffinityExecutor,
@@ -65,9 +68,11 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
         // that will handle messages, like a URL) with the terminology used by underlying MQ libraries, to avoid
         // confusion.
-        const val TOPIC_PROPERTY = "platform-topic"
-        const val SESSION_ID_PROPERTY = "session-id"
-        val AMQ_DELAY = Integer.valueOf(System.getProperty("amq.delivery.delay.ms", "0"))
+        private val topicProperty = SimpleString("platform-topic")
+        private val sessionIdProperty = SimpleString("session-id")
+        private val nodeVersionProperty = SimpleString("node-version")
+        private val nodeVendorProperty = SimpleString("node-vendor")
+        private val amqDelay: Int = Integer.valueOf(System.getProperty("amq.delivery.delay.ms", "0"))
     }
 
     private class InnerState {
@@ -87,13 +92,19 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     data class Handler(val topicSession: TopicSession,
                        val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
+    private val nodeVendor = SimpleString(nodeVersionInfo.vendor)
+    private val version = SimpleString(nodeVersionInfo.version.toString())
     /** An executor for sending messages */
-    private val messagingExecutor = AffinityExecutor.ServiceAffinityExecutor("${config.myLegalName} Messaging", 1)
+    private val messagingExecutor = AffinityExecutor.ServiceAffinityExecutor("Messaging", 1)
 
     /**
      * Apart from the NetworkMapService this is the only other address accessible to the node outside of lookups against the NetworkMapCache.
      */
-    override val myAddress: SingleMessageRecipient = if (myIdentity != null) NodeAddress.asPeer(myIdentity, serverHostPort) else NetworkMapAddress(serverHostPort)
+    override val myAddress: SingleMessageRecipient = if (myIdentity != null) {
+        NodeAddress.asPeer(myIdentity, serverHostPort)
+    } else {
+        NetworkMapAddress(serverHostPort)
+    }
 
     private val state = ThreadBox(InnerState())
     private val handlers = CopyOnWriteArrayList<Handler>()
@@ -108,7 +119,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                 override fun addElementToInsert(insert: InsertStatement, entry: UUID, finalizables: MutableList<() -> Unit>) {
                     insert[table.uuid] = entry
                 }
-            })
+            }
+    )
 
     fun start(rpcOps: RPCOps, userService: RPCUserService) {
         state.locked {
@@ -125,7 +137,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             // using our TLS certificate.
             // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
             // size of 1MB is acknowledged.
-            val session = clientFactory!!.createSession(NODE_USER, NODE_USER, false, true, true, locator.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
+            val session = clientFactory!!.createSession(NODE_USER, NODE_USER, false, true, true, locator.isPreAcknowledge, DEFAULT_ACK_BATCH_SIZE)
             this.session = session
             session.start()
 
@@ -160,7 +172,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     private fun makeP2PConsumer(session: ClientSession, networkMapOnly: Boolean): ClientConsumer {
         return if (networkMapOnly) {
             // Filter for just the network map messages.
-            val messageFilter = "hyphenated_props:$TOPIC_PROPERTY like 'platform.network_map.%'"
+            val messageFilter = "hyphenated_props:$topicProperty like 'platform.network_map.%'"
             session.createConsumer(P2P_QUEUE, messageFilter)
         } else
             session.createConsumer(P2P_QUEUE)
@@ -244,20 +256,12 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
     private fun artemisToCordaMessage(message: ClientMessage): ReceivedMessage? {
         try {
-            if (!message.containsProperty(TOPIC_PROPERTY)) {
-                log.warn("Received message without a $TOPIC_PROPERTY property, ignoring")
-                return null
-            }
-            if (!message.containsProperty(SESSION_ID_PROPERTY)) {
-                log.warn("Received message without a $SESSION_ID_PROPERTY property, ignoring")
-                return null
-            }
-            val topic = message.getStringProperty(TOPIC_PROPERTY)
-            val sessionID = message.getLongProperty(SESSION_ID_PROPERTY)
+            val topic = message.required(topicProperty) { getStringProperty(it) }
+            val sessionID = message.required(sessionIdProperty) { getLongProperty(it) }
             // Use the magic deduplication property built into Artemis as our message identity too
-            val uuid = UUID.fromString(message.getStringProperty(HDR_DUPLICATE_DETECTION_ID))
+            val uuid = message.required(HDR_DUPLICATE_DETECTION_ID) { UUID.fromString(message.getStringProperty(it)) }
             val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
-            log.info("Received message from: ${message.address} user: $user topic: $topic sessionID: $sessionID uuid: $uuid")
+            log.trace { "Received message from: ${message.address} user: $user topic: $topic sessionID: $sessionID uuid: $uuid" }
 
             val body = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
 
@@ -272,9 +276,14 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
             return msg
         } catch (e: Exception) {
-            log.error("Internal error whilst reading MQ message", e)
+            log.error("Unable to process message, ignoring it: $message", e)
             return null
         }
+    }
+
+    private inline fun <T> ClientMessage.required(key: SimpleString, extractor: ClientMessage.(SimpleString) -> T): T {
+        require(containsProperty(key)) { "Missing $key" }
+        return extractor(key)
     }
 
     private fun deliver(msg: ReceivedMessage): Boolean {
@@ -363,25 +372,25 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             state.locked {
                 val mqAddress = getMQAddress(target)
                 val artemisMessage = session!!.createMessage(true).apply {
-                    val sessionID = message.topicSession.sessionID
-                    putStringProperty(TOPIC_PROPERTY, message.topicSession.topic)
-                    putLongProperty(SESSION_ID_PROPERTY, sessionID)
+                    putStringProperty(nodeVendorProperty, nodeVendor)
+                    putStringProperty(nodeVersionProperty, version)
+                    putStringProperty(topicProperty, SimpleString(message.topicSession.topic))
+                    putLongProperty(sessionIdProperty, message.topicSession.sessionID)
                     writeBodyBufferBytes(message.data)
                     // Use the magic deduplication property built into Artemis as our message identity too
                     putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString()))
 
                     // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
-                    if (AMQ_DELAY > 0 && message.topicSession.topic == StateMachineManager.sessionTopic.topic) {
-                        putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + AMQ_DELAY);
+                    if (amqDelay > 0 && message.topicSession.topic == StateMachineManager.sessionTopic.topic) {
+                        putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelay)
                     }
                 }
-                log.info("Send to: $mqAddress topic: ${message.topicSession.topic} sessionID: ${message.topicSession.sessionID} " +
-                        "uuid: ${message.uniqueMessageId}")
+                log.trace { "Send to: $mqAddress topic: ${message.topicSession.topic} " +
+                        "sessionID: ${message.topicSession.sessionID} uuid: ${message.uniqueMessageId}" }
                 producer!!.send(mqAddress, artemisMessage)
             }
         }
     }
-
 
     private fun getMQAddress(target: MessageRecipients): String {
         return if (target == myAddress) {

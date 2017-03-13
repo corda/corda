@@ -18,7 +18,7 @@ that it can sign transactions under. As parties may use multiple keys for signin
 keys, the "public key" of a party is represented by a composite construct – a <a href="../-composite-key/index.html">CompositeKey</a>, which combines multiple
 cryptographic public key primitives into a tree structure.</p>
 <p>For example: Alice has two key pairs (pub1/priv1 and pub2/priv2), and wants to be able to sign transactions with either of them.
-Her advertised <a href="index.html">Party</a> then has a legal <a href="-init-.html#net.corda.core.crypto.Party$<init>(kotlin.String, net.corda.core.crypto.CompositeKey)/name">name</a> "Alice" and an <a href="#">owingKey</a> "pub1 or pub2".</p>
+Her advertised <a href="index.html">Party</a> then has a legal <a href="-init-.html#net.corda.core.crypto.Party$<init>(kotlin.String, net.corda.core.crypto.CompositeKey)/name">name</a> "Alice" and an <a href="-init-.html#net.corda.core.crypto.Party$<init>(kotlin.String, net.corda.core.crypto.CompositeKey)/owningKey">owningKey</a> "pub1 or pub2".</p>
 <p><a href="index.html">Party</a> is also used for service identities. E.g. Alice may also be running an interest rate oracle on her Corda node,
 which requires a separate signing key (and an identifying name). Services can also be distributed – run by a coordinated
 cluster of Corda nodes. A <a href="index.html">Party</a> representing a distributed service will use a composite key containing all

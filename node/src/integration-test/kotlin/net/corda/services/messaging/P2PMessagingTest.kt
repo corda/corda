@@ -8,6 +8,7 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.createMessage
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.flows.ServiceRequestMessage
@@ -118,6 +119,7 @@ class P2PMessagingTest : NodeBasedTest() {
         return net.sendRequest<Any>(javaClass.name, request, target)
     }
 
+    @CordaSerializable
     private data class TestRequest(override val sessionID: Long = random63BitValue(),
                                    override val replyTo: SingleMessageRecipient) : ServiceRequestMessage
 }

@@ -62,7 +62,7 @@
 <td>
 <a href="registered-nodes.html">registeredNodes</a></td>
 <td>
-<code><span class="keyword">var </span><span class="identifier">registeredNodes</span><span class="symbol">: </span><span class="identifier">MutableMap</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">var </span><span class="identifier">registeredNodes</span><span class="symbol">: </span><span class="identifier">MutableMap</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">,</span>&nbsp;<a href="../../net.corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -225,6 +225,14 @@ or the appropriate oracle for a contract.</p>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">isNotary</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$isNotary(net.corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
 <p>Checks whether a given party is an advertised notary identity</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../net.corda.core.node.services/-network-map-cache/is-validating-notary.html">isValidatingNotary</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">isValidatingNotary</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.services.NetworkMapCache$isValidatingNotary(net.corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Checks whether a given party is an advertised validating notary identity</p>
 </td>
 </tr>
 <tr>

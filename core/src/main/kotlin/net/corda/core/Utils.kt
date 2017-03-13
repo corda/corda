@@ -9,6 +9,7 @@ import com.google.common.io.ByteStreams
 import com.google.common.util.concurrent.*
 import kotlinx.support.jdk7.use
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import rx.Observable
 import rx.Observer
@@ -145,6 +146,7 @@ inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = 
 }
 
 inline fun <R> Path.readLines(charset: Charset = UTF_8, block: (Stream<String>) -> R): R = Files.lines(this, charset).use(block)
+fun Path.readAllLines(charset: Charset = UTF_8): List<String> = Files.readAllLines(this, charset)
 fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, vararg options: OpenOption): Path = Files.write(this, lines, charset, *options)
 
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
@@ -203,7 +205,7 @@ inline fun elapsedTime(block: () -> Unit): Duration {
     val start = System.nanoTime()
     block()
     val end = System.nanoTime()
-    return Duration.ofNanos(end-start)
+    return Duration.ofNanos(end - start)
 }
 
 // TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
@@ -257,6 +259,7 @@ class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()
  *
  * We avoid the use of the word transient here to hopefully reduce confusion with the term in relation to (Java) serialization.
  */
+@CordaSerializable
 abstract class RetryableException(message: String) : Exception(message)
 
 /**
@@ -278,13 +281,16 @@ class TransientProperty<out T>(private val initializer: () -> T) {
 /**
  * Given a path to a zip file, extracts it to the given directory.
  */
-fun extractZipFile(zipFile: Path, toDirectory: Path) {
-    val normalisedDirectory = toDirectory.normalize().createDirectories()
+fun extractZipFile(zipFile: Path, toDirectory: Path) = extractZipFile(Files.newInputStream(zipFile), toDirectory)
 
-    zipFile.read {
-        val zip = ZipInputStream(BufferedInputStream(it))
+/**
+ * Given a zip file input stream, extracts it to the given directory.
+ */
+fun extractZipFile(inputStream: InputStream, toDirectory: Path) {
+    val normalisedDirectory = toDirectory.normalize().createDirectories()
+    ZipInputStream(BufferedInputStream(inputStream)).use {
         while (true) {
-            val e = zip.nextEntry ?: break
+            val e = it.nextEntry ?: break
             val outPath = (normalisedDirectory / e.name).normalize()
 
             // Security checks: we should reject a zip that contains tricksy paths that try to escape toDirectory.
@@ -295,9 +301,9 @@ fun extractZipFile(zipFile: Path, toDirectory: Path) {
                 continue
             }
             outPath.write { out ->
-                ByteStreams.copy(zip, out)
+                ByteStreams.copy(it, out)
             }
-            zip.closeEntry()
+            it.closeEntry()
         }
     }
 }
@@ -307,6 +313,7 @@ fun extractZipFile(zipFile: Path, toDirectory: Path) {
 val Throwable.rootCause: Throwable get() = Throwables.getRootCause(this)
 
 /** Representation of an operation that may have thrown an error. */
+@CordaSerializable
 data class ErrorOr<out A> private constructor(val value: A?, val error: Throwable?) {
     // The ErrorOr holds a value iff error == null
     constructor(value: A) : this(value, null)
@@ -391,15 +398,24 @@ private class ObservableToFuture<T>(observable: Observable<T>) : AbstractFuture<
     override fun onNext(value: T) {
         set(value)
     }
+
     override fun onError(e: Throwable) {
         setException(e)
     }
+
     override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
         subscription.unsubscribe()
         return super.cancel(mayInterruptIfRunning)
     }
+
     override fun onCompleted() {}
 }
 
 /** Return the sum of an Iterable of [BigDecimal]s. */
 fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a + b }
+
+fun codePointsString(vararg codePoints: Int): String {
+    val builder = StringBuilder()
+    codePoints.forEach { builder.append(Character.toChars(it)) }
+    return builder.toString()
+}
