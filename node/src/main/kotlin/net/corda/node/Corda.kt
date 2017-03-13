@@ -38,15 +38,14 @@ fun main(args: Array<String>) {
     val startTime = System.currentTimeMillis()
     checkJavaVersion()
 
-    val nodeVersionInfo = if (Manifests.exists("Corda-Version")) {
-        NodeVersionInfo(
-                Version.parse(Manifests.read("Corda-Version")),
-                Manifests.read("Corda-Revision"),
-                Manifests.read("Corda-Vendor"))
-    } else {
-        // If the manifest properties aren't available then we're running from within an IDE
-        NodeVersionInfo(Version(0, 0, false), "~Git revision unavailable~", "Unknown vendor")
-    }
+    // Manifest properties are only available if running from the corda jar
+    fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
+
+    val nodeVersionInfo = NodeVersionInfo(
+            manifestValue("Corda-Version")?.let { Version.parse(it) } ?: Version(0, 0, false),
+            manifestValue("Corda-Revision") ?: "Unknown",
+            manifestValue("Corda-Vendor") ?: "Unknown"
+    )
 
     val argsParser = ArgsParser()
 
@@ -197,7 +196,7 @@ private fun drawBanner(nodeVersionInfo: NodeVersionInfo) {
  / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
 "/ /___  /_/ / /  / /_/ / /_/ /          ").fgBrightBlue().a(msg2).newline().fgBrightRed().a(
 """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
-        a("--- ${nodeVersionInfo.vendor} ${nodeVersionInfo.version} (${nodeVersionInfo.revision.take(6)}) -----------------------------------------------").
+        a("--- ${nodeVersionInfo.vendor} ${nodeVersionInfo.version} (${nodeVersionInfo.revision.take(7)}) -----------------------------------------------").
         newline().
         newline().
         a("${Emoji.books}New! ").reset().a("Training now available worldwide, see https://corda.net/corda-training/").
