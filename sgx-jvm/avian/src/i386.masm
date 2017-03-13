@@ -1,0 +1,134 @@
+comment #
+   Copyright (c) 2008-2015, Avian Contributors
+
+   Permission to use, copy, modify, and/or distribute this software
+   for any purpose with or without fee is hereby granted, provided
+   that the above copyright notice and this permission notice appear
+   in all copies.
+   
+   There is NO WARRANTY for this software.  See license.txt for
+   details.
+
+   ORIGIN: https://github.com/gkvas/avian/tree/wince
+#
+
+.586
+.MODEL FLAT, C 
+ 
+VOID_TYPE equ 0
+INT8_TYPE equ 1
+INT16_TYPE equ 2
+INT32_TYPE equ 3
+INT64_TYPE equ 4
+FLOAT_TYPE equ 5
+DOUBLE_TYPE equ 6
+POINTER_TYPE equ 7
+
+CHECKPOINT_THREAD equ 4
+CHECKPOINT_STACK equ 24
+CHECKPOINT_BASE equ 28
+
+_TEXT SEGMENT
+
+public C vmNativeCall
+vmNativeCall:
+	push ebp
+	mov ebp,esp
+	mov ecx,ds:dword ptr[16+ebp]
+	sub esp,ecx
+	mov ecx,0
+	jmp Ltest
+
+Lloop:
+	mov eax,ecx
+	mov edx,ecx
+	add edx,esp
+	add eax,ds:dword ptr[12+ebp]
+	mov eax,ds:dword ptr[eax]
+	mov ds:dword ptr[edx],eax
+	add ecx,4
+
+Ltest:
+	cmp ecx,ds:dword ptr[16+ebp]
+	jb Lloop
+	call dword ptr[8+ebp]
+	mov ecx,ds:dword ptr[20+ebp]
+
+Lvoid:
+	cmp ecx,offset VOID_TYPE
+	jne Lint64
+	jmp Lexit
+
+Lint64:
+	cmp ecx,offset INT64_TYPE
+	jne Lfloat
+	jmp Lexit
+
+Lfloat:
+	cmp ecx,offset FLOAT_TYPE
+	jne Ldouble
+	fstp ds:dword ptr[8+ebp]
+	mov eax,ds:dword ptr[8+ebp]
+	jmp Lexit
+
+Ldouble:
+	cmp ecx,offset DOUBLE_TYPE
+	jne Lexit
+	fstp ds:qword ptr[8+ebp]
+	mov eax,ds:dword ptr[8+ebp]
+	mov edx,ds:dword ptr[12+ebp]
+
+Lexit:
+	mov esp,ebp
+	pop ebp
+	ret
+
+public C vmJump
+vmJump:
+	mov esi,ds:dword ptr[4+esp]
+	mov ebp,ds:dword ptr[8+esp]
+	mov ebx,ds:dword ptr[16+esp]
+	mov eax,ds:dword ptr[20+esp]
+	mov edx,ds:dword ptr[24+esp]
+	mov esp,ds:dword ptr[12+esp]
+	jmp esi
+
+VMRUN_FRAME_SIZE equ 24
+
+public C vmRun_
+vmRun_:
+	; 8(%ebp): function
+	; 12(%ebp): arguments
+	; 16(%ebp): checkpoint
+	push ebp
+	mov ebp,esp
+	sub esp,offset VMRUN_FRAME_SIZE
+
+	mov ds:dword ptr[8+esp],ebx
+	mov ds:dword ptr[12+esp],esi
+	mov ds:dword ptr[16+esp],edi
+
+	mov eax,ds:dword ptr[12+ebp]
+	mov ds:dword ptr[4+esp],eax
+
+	mov ecx,ds:dword ptr[16+ebp]
+	mov eax,ds:dword ptr[CHECKPOINT_THREAD+ecx]
+	mov ds:dword ptr[0+esp],eax
+
+	mov ds:dword ptr[CHECKPOINT_STACK+ecx],esp
+
+	call dword ptr[8+ebp]
+
+public C vmRun_returnAddress
+vmRun_returnAddress:
+
+	mov ebx,ds:dword ptr[8+esp]
+	mov esi,ds:dword ptr[12+esp]
+	mov edi,ds:dword ptr[16+esp]
+
+	add esp,offset VMRUN_FRAME_SIZE
+	pop ebp
+	ret
+ 
+_TEXT ENDS
+END

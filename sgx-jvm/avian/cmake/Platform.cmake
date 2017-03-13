@@ -1,0 +1,18 @@
+IF (APPLE)
+   INCLUDE_DIRECTORIES ( /Developer/Headers/FlatCarbon )
+   FIND_LIBRARY(CORE_FOUNDATION_LIBRARY CoreFoundation)
+
+   MARK_AS_ADVANCED (CORE_FOUNDATION_LIBRARY)
+
+   SET(PLATFORM_LIBS ${CORE_FOUNDATION_LIBRARY})
+ENDIF()
+
+IF (MSVC)
+	SET(PLATFORM_CXX_FLAGS "/Wall")
+ELSE()
+	SET(PLATFORM_CXX_FLAGS "-Wall -Werror -fno-exceptions -std=c++0x")
+  SET(PLATFORM_LIBS ${PLATFORM_LIBS} pthread dl)
+ENDIF()
+
+find_package(ZLIB REQUIRED)
+include_directories(${ZLIB_INCLUDE_DIRS})
