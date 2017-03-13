@@ -113,7 +113,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
     @GuardedBy("sessionLock")
     private val addressToQueuedObservables = CacheBuilder.newBuilder().weakValues().build<String, QueuedObservable>()
     // This is used to hold a reference counted hard reference when we know there are subscribers.
-    private val hardReferencesToQueuedObservables = mutableSetOf<QueuedObservable>()
+    private val hardReferencesToQueuedObservables = Collections.synchronizedSet(mutableSetOf<QueuedObservable>())
 
     private var producer: ClientProducer? = null
 

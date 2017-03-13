@@ -70,7 +70,7 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
             val subscription = obj.materialize().subscribe { materialised: Notification<out Any> ->
                 val newKryo = createRPCKryoForSerialization(qName, dispatcher)
                 val bits = try { MarshalledObservation(handle, materialised).serialize(newKryo) } finally {
-                    releaseRPCKryoForSerialization(kryo)
+                    releaseRPCKryoForSerialization(newKryo)
                 }
                 rpcLog.debug("RPC sending observation: $materialised")
                 dispatcher.send(bits, qName)
