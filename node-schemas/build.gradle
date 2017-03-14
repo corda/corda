@@ -19,7 +19,7 @@ repositories {
 sourceSets {
     main {
         kotlin {
-            srcDir "${buildDir}/generated/source/kapt/main/"
+            srcDir "${projectDir}/generated/source/kapt/main/"
         }
     }
 }
@@ -34,5 +34,12 @@ dependencies {
     testCompile "com.h2database:h2:1.4.193"
 }
 
+task copyGenerated(type: Copy, dependsOn: [kaptKotlin]) {
+    from "${buildDir}/generated"
+    into "${projectDir}/generated"
+}
+
 // Remove the dependency on compile in kapt to avoid automatic kapt running - run :node-schemas:kaptKotlin explicitly.
-project.afterEvaluate { compileKotlin.dependsOn.remove(kaptKotlin) }
+project.afterEvaluate {
+    compileKotlin.dependsOn.remove(kaptKotlin)
+}
