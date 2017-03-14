@@ -284,11 +284,8 @@ class CordaRPCClientImpl(private val session: ClientSession,
         private val rootShared = root.doOnUnsubscribe { close() }.share()
 
         // This could be made more efficient by using a specialised IntMap
-        /**
-         * When handling this map we synchronise on it explicitly instead of on [this], otherwise there is a race
-         * condition between close() and deliver()
-         */
-        private val observables = HashMap<Int, Observable<Any>>()
+        // When handling this map we don't synchronise on [this], otherwise there is a race condition between close() and deliver()
+        private val observables = Collections.synchronizedMap(HashMap<Int, Observable<Any>>())
 
         private var consumer: ClientConsumer? = null
 
