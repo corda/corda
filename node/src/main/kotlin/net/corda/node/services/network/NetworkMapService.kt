@@ -1,16 +1,11 @@
 package net.corda.node.services.network
 
 import com.google.common.annotations.VisibleForTesting
+import com.google.common.net.HostAndPort
 import kotlinx.support.jdk8.collections.compute
 import net.corda.core.ThreadBox
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.signWithECDSA
-import net.corda.core.messaging.MessageHandlerRegistration
-import net.corda.core.messaging.MessageRecipients
-import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.messaging.createMessage
+import net.corda.core.crypto.*
+import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.NetworkMapCache
@@ -24,6 +19,8 @@ import net.corda.core.utilities.loggerFor
 import net.corda.flows.ServiceRequestMessage
 import net.corda.node.services.api.AbstractNodeService
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.messaging.ArtemisMessagingComponent
+import net.corda.node.services.network.NetworkMapService.Companion.DISCOVER_HOST_TOPIC
 import net.corda.node.utilities.AddOrRemove
 import java.security.PrivateKey
 import java.security.SignatureException
@@ -53,6 +50,7 @@ interface NetworkMapService {
     companion object {
         val DEFAULT_EXPIRATION_PERIOD: Period = Period.ofWeeks(4)
         val FETCH_TOPIC = "platform.network_map.fetch"
+        val DISCOVER_HOST_TOPIC = "platform.network_map.discover"
         val QUERY_TOPIC = "platform.network_map.query"
         val REGISTER_TOPIC = "platform.network_map.register"
         val SUBSCRIPTION_TOPIC = "platform.network_map.subscribe"
@@ -100,8 +98,16 @@ interface NetworkMapService {
 
     @CordaSerializable
     data class Update(val wireReg: WireNodeRegistration, val mapVersion: Int, val replyTo: MessageRecipients)
+
     @CordaSerializable
     data class UpdateAcknowledge(val mapVersion: Int, val replyTo: MessageRecipients)
+
+    @CordaSerializable
+    data class DiscoverHostRequest(val legalName: String,
+                                   override val replyTo: SingleMessageRecipient,
+                                   override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
+    @CordaSerializable
+    data class DiscoverHostResponse(val publicHost: String)
 }
 
 @ThreadSafe
@@ -169,6 +175,25 @@ abstract class AbstractNetworkMapService
             val req = message.data.deserialize<NetworkMapService.UpdateAcknowledge>()
             processAcknowledge(req)
         }
+        handlers += net.addMessageHandler(NetworkMapService.DISCOVER_HOST_TOPIC, DEFAULT_SESSION_ID) { message, r ->
+            val remoteHost = message.originHost ?: throw IllegalStateException("No origin host provided")
+            val request = message.data.deserialize<NetworkMapService.DiscoverHostRequest>()
+            handleHostDiscovery(request, remoteHost)
+        }
+    }
+
+    private fun handleHostDiscovery(request: NetworkMapService.DiscoverHostRequest, remoteHost: String) {
+        val response = NetworkMapService.DiscoverHostResponse(remoteHost)
+        val responseMessage = net.createMessage(DISCOVER_HOST_TOPIC, request.sessionID, response.serialize().bytes)
+
+        val providedReplyTo = (request.replyTo as ArtemisMessagingComponent.NodeAddress)
+        val publicAddress = HostAndPort.fromParts(remoteHost, providedReplyTo.hostAndPort.port)
+
+        val replyInfo = request.legalName to publicAddress
+        val encoded = Base58.encode(replyInfo.serialize().bytes)
+        val queueName = ArtemisMessagingComponent.UNREGISTERED_PEERS_PREFIX + encoded
+        val replyTo = ArtemisMessagingComponent.NodeAddress(queueName, publicAddress)
+        net.send(responseMessage, replyTo)
     }
 
     @VisibleForTesting

@@ -190,6 +190,8 @@ interface Message {
 interface ReceivedMessage : Message {
     /** The authenticated sender. */
     val peer: X500Name
+    /** The remote host name of the sender. */
+    val originHost: String?
 }
 
 /** A singleton that's useful for validating topic strings */

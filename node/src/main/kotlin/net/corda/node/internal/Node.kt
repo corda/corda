@@ -4,25 +4,29 @@ import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.*
 import net.corda.core.messaging.RPCOps
+import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.Version
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.UniquenessProvider
-import net.corda.core.success
 import net.corda.core.utilities.loggerFor
+import net.corda.flows.sendRequest
 import net.corda.node.printBasicNodeInfo
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.messaging.ArtemisMessagingComponent.NetworkMapAddress
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
+import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
@@ -151,20 +155,14 @@ class Node(override val configuration: FullNodeConfiguration,
     /**
      * Checks whether the specified [host] is a public IP address or hostname. If not, tries to discover the current
      * machine's public IP address to be used instead. Note that it will only work if the machine is internet-facing.
-     * If none found, outputs a warning message.
      */
     private fun tryDetectIfNotPublicHost(host: String): String? {
         if (!AddressUtils.isPublic(host)) {
             val foundPublicIP = AddressUtils.tryDetectPublicIP()
-            if (foundPublicIP == null) {
-                val message = "The specified messaging host \"$host\" is private, " +
-                        "this node will not be reachable by any other nodes outside the private network."
-                println("WARNING: $message")
-                log.warn(message)
-            } else {
-                log.info("Detected public IP: $foundPublicIP. This will be used instead the provided \"$host\" as the advertised address.")
+            foundPublicIP?.let {
+                log.info("Detected public IP: $it. This will be used instead the provided \"$host\" as the advertised address.")
+                return it.hostAddress
             }
-            return foundPublicIP?.hostAddress
         }
         return null
     }
@@ -187,7 +185,55 @@ class Node(override val configuration: FullNodeConfiguration,
      */
     override fun registerWithNetworkMap(): ListenableFuture<Unit> {
         val networkMapConnection = messageBroker?.networkMapConnectionFuture ?: Futures.immediateFuture(Unit)
-        return networkMapConnection.flatMap { super.registerWithNetworkMap() }
+        return networkMapConnection.flatMap { initiateNetworkMapRegistration() }
+    }
+
+    /**
+     * Sends a network map registration request. If the message broker's address is private, before registering it
+     * first requests its public address from the network map service, and sends the registration request with
+     * an updated [NodeInfo].
+     */
+    private fun initiateNetworkMapRegistration(): ListenableFuture<Unit> {
+        networkMapAddress?.let {
+            val messageBrokerHost = configuration.messagingServerAddress?.hostText ?: messageBroker!!.myHostPort.hostText
+            if (!AddressUtils.isPublic(messageBrokerHost)) {
+                return discoverPublicHostAndRegister(it)
+            }
+        }
+        return super.registerWithNetworkMap()
+    }
+
+    /**
+     * Sends public host discovery request to the network map service. Once the response is obtained, send the registration
+     * request.
+     *
+     * @return a future that completes once both round trips are finished.
+     */
+    private fun discoverPublicHostAndRegister(it: NetworkMapAddress): ListenableFuture<Unit> {
+        val registrationFuture = SettableFuture.create<Unit>()
+
+        val addressDiscoveryFuture = discoverPublicAddress(it)
+        addressDiscoveryFuture.success { publicAddress ->
+            updateMyInfo(publicAddress.publicHost)
+            super.registerWithNetworkMap().success { registrationFuture.set(Unit) }
+        }
+        return registrationFuture
+    }
+
+    /** Updates the existing NodeInfo with the new `publicHost`. */
+    private fun updateMyInfo(publicHost: String) {
+        val messagingPort = configuration.artemisAddress.port
+        val currentAddress = (net.myAddress as ArtemisMessagingComponent.NodeAddress)
+        val newAddress = currentAddress.copy(hostAndPort = HostAndPort.fromParts(publicHost, messagingPort))
+        info = info.copy(address = newAddress)
+    }
+
+    /** Sends a request to the network map service to obtain this node's public address. */
+    private fun discoverPublicAddress(networkMapAddress: SingleMessageRecipient): ListenableFuture<NetworkMapService.DiscoverHostResponse> {
+        val request = NetworkMapService.DiscoverHostRequest(
+                configuration.myLegalName,
+                replyTo = net.myAddress)
+        return net.sendRequest<NetworkMapService.DiscoverHostResponse>(NetworkMapService.DISCOVER_HOST_TOPIC, request, networkMapAddress)
     }
 
     override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider {

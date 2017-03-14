@@ -14,6 +14,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.seconds
+import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.printBasicNodeInfo
@@ -148,6 +149,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         journalDirectory = (artemisDir / "journal").toString()
         largeMessagesDirectory = (artemisDir / "large-messages").toString()
         acceptorConfigurations = setOf(tcpTransport(Inbound, "0.0.0.0", myHostPort.port))
+
+        if (config.networkMapService == null) incomingInterceptorClassNames = listOf(HostDiscoveryInterceptor::class.java.canonicalName)
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
         // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
         idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
@@ -268,6 +271,13 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                 }
             } catch (e: AddressFormatException) {
                 log.error("Flow violation: Could not parse service queue name as Base 58: $queueName")
+            }
+
+            queueName.startsWith(UNREGISTERED_PEERS_PREFIX) -> try {
+                val (legalName, address) = Base58.decode(queueName.substring(UNREGISTERED_PEERS_PREFIX.length)).deserialize<Pair<String, HostAndPort>>()
+                deployBridge(queueName, address, legalName)
+            } catch (e: AddressFormatException) {
+                log.error("Flow violation: Could not parse unregistered peer queue name as Base 58: $queueName")
             }
         }
     }
