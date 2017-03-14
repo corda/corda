@@ -105,7 +105,6 @@ fun SerializedBytes<WireTransaction>.deserialize(kryo: KryoPool = p2PKryo()): Wi
 
 fun <T : Any> SerializedBytes<T>.deserialize(kryo: KryoPool = if (internalOnly) storageKryo() else p2PKryo()): T = bytes.deserialize(kryo)
 
-// TODO: The preferred usage is with a pool. Try and eliminate use of this for checkpoints and RPC, leaving only tests.
 fun <T : Any> SerializedBytes<T>.deserialize(kryo: Kryo): T = bytes.deserialize(kryo.asPool())
 
 // Internal adapter for use when we haven't yet converted to a pool, or for tests.
@@ -485,21 +484,20 @@ inline fun <reified T : Any> Kryo.noReferencesWithin() {
 class NoReferencesSerializer<T>(val baseSerializer: Serializer<T>) : Serializer<T>() {
 
     override fun read(kryo: Kryo, input: Input, type: Class<T>): T {
-        val previousValue = kryo.setReferences(false)
-        try {
-            return baseSerializer.read(kryo, input, type)
-        } finally {
-            kryo.references = previousValue
-        }
+        return kryo.withoutReferences { baseSerializer.read(kryo, input, type) }
     }
 
     override fun write(kryo: Kryo, output: Output, obj: T) {
-        val previousValue = kryo.setReferences(false)
-        try {
-            baseSerializer.write(kryo, output, obj)
-        } finally {
-            kryo.references = previousValue
-        }
+        kryo.withoutReferences { baseSerializer.write(kryo, output, obj) }
+    }
+}
+
+fun <T> Kryo.withoutReferences(block: () -> T): T {
+    val previousValue = setReferences(false)
+    try {
+        return block()
+    } finally {
+        references = previousValue
     }
 }
 
@@ -533,17 +531,6 @@ var Kryo.attachmentStorage: AttachmentStorage?
     set(value) {
         this.context.put(ATTACHMENT_STORAGE, value)
     }
-
-
-//TODO: It's a little workaround for serialization of HashMaps inside contract states.
-//Used in Merkle tree calculation. It doesn't cover all the cases of unstable serialization format.
-fun extendKryoHash(kryo: Kryo): Kryo {
-    return kryo.apply {
-        references = false
-        register(LinkedHashMap::class.java, MapSerializer())
-        register(HashMap::class.java, OrderedSerializer)
-    }
-}
 
 object OrderedSerializer : Serializer<HashMap<Any, Any>>() {
     override fun write(kryo: Kryo, output: Output, obj: HashMap<Any, Any>) {

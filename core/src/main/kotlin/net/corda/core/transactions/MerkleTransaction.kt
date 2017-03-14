@@ -5,17 +5,10 @@ import net.corda.core.crypto.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.p2PKryo
 import net.corda.core.serialization.serialize
+import net.corda.core.serialization.withoutReferences
 
 fun <T : Any> serializedHash(x: T): SecureHash {
-    val kryo = p2PKryo()
-    val k = kryo.borrow()
-    k.references = false
-    try {
-        return x.serialize(k).hash
-    } finally {
-        k.references = true
-        kryo.release(k)
-    }
+    return p2PKryo().run { kryo -> kryo.withoutReferences { x.serialize(kryo).hash } }
 }
 
 /**
