@@ -26,7 +26,11 @@ private var renderBasicInfoToConsole = true
 /** Used for useful info that we always want to show, even when not logging to the console */
 fun printBasicNodeInfo(description: String, info: String? = null) {
     val msg = if (info == null) description else "$description: $info"
-    LoggerFactory.getLogger("BasicInfo").info(msg)
+    if (renderBasicInfoToConsole) {
+        LoggerFactory.getLogger("BasicInfo").info(msg)
+    } else {
+        LoggerFactory.getLogger("Main").info(msg)
+    }
 }
 
 fun main(args: Array<String>) {
