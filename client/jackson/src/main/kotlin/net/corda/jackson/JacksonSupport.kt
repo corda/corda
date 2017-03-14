@@ -125,7 +125,6 @@ object JacksonSupport {
                 parser.nextToken()
             }
 
-            val mapper = parser.codec as PartyObjectMapper
             // TODO this needs to use some industry identifier(s) instead of these keys
             val key = CompositeKey.parseFromBase58(parser.text)
             return AnonymousParty(key)
