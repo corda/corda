@@ -81,3 +81,8 @@ docs/virtualenv/
 # bft-smart
 node/bft-smart-config/currentView
 node/config/currentView
+
+# Files you may find useful to have in your working directory.
+PLAN
+NOTES
+TODO

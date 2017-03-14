@@ -31,42 +31,42 @@ import java.util.*
  *
  *   The above will generate a random list of animals.
  */
-class Generator<out A : Any>(val generate: (SplittableRandom) -> ErrorOr<A>) {
+class Generator<out A>(val generate: (SplittableRandom) -> ErrorOr<A>) {
 
     // Functor
-    fun <B : Any> map(function: (A) -> B): Generator<B> =
+    fun <B> map(function: (A) -> B): Generator<B> =
             Generator { generate(it).map(function) }
 
     // Applicative
-    fun <B : Any> product(other: Generator<(A) -> B>) =
+    fun <B> product(other: Generator<(A) -> B>) =
             Generator { generate(it).combine(other.generate(it)) { a, f -> f(a) } }
 
-    fun <B : Any, R : Any> combine(other1: Generator<B>, function: (A, B) -> R) =
+    fun <B, R> combine(other1: Generator<B>, function: (A, B) -> R) =
             product<R>(other1.product(pure({ b -> { a -> function(a, b) } })))
 
-    fun <B : Any, C : Any, R : Any> combine(other1: Generator<B>, other2: Generator<C>, function: (A, B, C) -> R) =
+    fun <B, C, R> combine(other1: Generator<B>, other2: Generator<C>, function: (A, B, C) -> R) =
             product<R>(other1.product(other2.product(pure({ c -> { b -> { a -> function(a, b, c) } } }))))
 
-    fun <B : Any, C : Any, D : Any, R : Any> combine(other1: Generator<B>, other2: Generator<C>, other3: Generator<D>, function: (A, B, C, D) -> R) =
+    fun <B, C, D, R> combine(other1: Generator<B>, other2: Generator<C>, other3: Generator<D>, function: (A, B, C, D) -> R) =
             product<R>(other1.product(other2.product(other3.product(pure({ d -> { c -> { b -> { a -> function(a, b, c, d) } } } })))))
 
-    fun <B : Any, C : Any, D : Any, E : Any, R : Any> combine(other1: Generator<B>, other2: Generator<C>, other3: Generator<D>, other4: Generator<E>, function: (A, B, C, D, E) -> R) =
+    fun <B, C, D, E, R> combine(other1: Generator<B>, other2: Generator<C>, other3: Generator<D>, other4: Generator<E>, function: (A, B, C, D, E) -> R) =
             product<R>(other1.product(other2.product(other3.product(other4.product(pure({ e -> { d -> { c -> { b -> { a -> function(a, b, c, d, e) } } } } }))))))
 
     // Monad
-    fun <B : Any> bind(function: (A) -> Generator<B>) =
+    fun <B> bind(function: (A) -> Generator<B>) =
             Generator { generate(it).bind { a -> function(a).generate(it) } }
 
     companion object {
-        fun <A : Any> pure(value: A) = Generator { ErrorOr(value) }
-        fun <A : Any> impure(valueClosure: () -> A) = Generator { ErrorOr(valueClosure()) }
-        fun <A : Any> fail(error: Exception) = Generator<A> { ErrorOr.of(error) }
+        fun <A> pure(value: A) = Generator { ErrorOr(value) }
+        fun <A> impure(valueClosure: () -> A) = Generator { ErrorOr(valueClosure()) }
+        fun <A> fail(error: Exception) = Generator<A> { ErrorOr.of(error) }
 
         // Alternative
-        fun <A : Any> choice(generators: List<Generator<A>>) = intRange(0, generators.size - 1).bind { generators[it] }
+        fun <A> choice(generators: List<Generator<A>>) = intRange(0, generators.size - 1).bind { generators[it] }
 
-        fun <A : Any> success(generate: (SplittableRandom) -> A) = Generator { ErrorOr(generate(it)) }
-        fun <A : Any> frequency(generators: List<Pair<Double, Generator<A>>>): Generator<A> {
+        fun <A> success(generate: (SplittableRandom) -> A) = Generator { ErrorOr(generate(it)) }
+        fun <A> frequency(generators: List<Pair<Double, Generator<A>>>): Generator<A> {
             val ranges = mutableListOf<Pair<Double, Double>>()
             var current = 0.0
             generators.forEach {
@@ -87,7 +87,7 @@ class Generator<out A : Any>(val generate: (SplittableRandom) -> ErrorOr<A>) {
             }
         }
 
-        fun <A : Any> sequence(generators: List<Generator<A>>) = Generator<List<A>> {
+        fun <A> sequence(generators: List<Generator<A>>) = Generator<List<A>> {
             val result = mutableListOf<A>()
             for (generator in generators) {
                 val element = generator.generate(it)
@@ -103,9 +103,9 @@ class Generator<out A : Any>(val generate: (SplittableRandom) -> ErrorOr<A>) {
     }
 }
 
-fun <A : Any> Generator.Companion.frequency(vararg generators: Pair<Double, Generator<A>>) = frequency(generators.toList())
+fun <A> Generator.Companion.frequency(vararg generators: Pair<Double, Generator<A>>) = frequency(generators.toList())
 
-fun <A : Any> Generator<A>.generateOrFail(random: SplittableRandom, numberOfTries: Int = 1): A {
+fun <A> Generator<A>.generateOrFail(random: SplittableRandom, numberOfTries: Int = 1): A {
     var error: Throwable? = null
     for (i in 0..numberOfTries - 1) {
         val result = generate(random)
@@ -124,6 +124,7 @@ fun <A : Any> Generator<A>.generateOrFail(random: SplittableRandom, numberOfTrie
 }
 
 fun Generator.Companion.int() = Generator.success(SplittableRandom::nextInt)
+fun Generator.Companion.long() = Generator.success(SplittableRandom::nextLong)
 fun Generator.Companion.bytes(size: Int): Generator<ByteArray> = Generator.success { random ->
     ByteArray(size) { random.nextInt().toByte() }
 }
@@ -143,7 +144,7 @@ fun Generator.Companion.doubleRange(from: Double, to: Double): Generator<Double>
     from + it.nextDouble() * (to - from)
 }
 
-fun <A : Any> Generator.Companion.replicate(number: Int, generator: Generator<A>): Generator<List<A>> {
+fun <A> Generator.Companion.replicate(number: Int, generator: Generator<A>): Generator<List<A>> {
     val generators = mutableListOf<Generator<A>>()
     for (i in 1..number) {
         generators.add(generator)
@@ -152,7 +153,7 @@ fun <A : Any> Generator.Companion.replicate(number: Int, generator: Generator<A>
 }
 
 
-fun <A : Any> Generator.Companion.replicatePoisson(meanSize: Double, generator: Generator<A>) = Generator<List<A>> {
+fun <A> Generator.Companion.replicatePoisson(meanSize: Double, generator: Generator<A>) = Generator<List<A>> {
     val chance = (meanSize - 1) / meanSize
     val result = mutableListOf<A>()
     var finish = false
@@ -173,8 +174,8 @@ fun <A : Any> Generator.Companion.replicatePoisson(meanSize: Double, generator: 
     ErrorOr(result)
 }
 
-fun <A : Any> Generator.Companion.pickOne(list: List<A>) = Generator.intRange(0, list.size - 1).map { list[it] }
-fun <A : Any> Generator.Companion.pickN(number: Int, list: List<A>) = Generator<List<A>> {
+fun <A> Generator.Companion.pickOne(list: List<A>) = Generator.intRange(0, list.size - 1).map { list[it] }
+fun <A> Generator.Companion.pickN(number: Int, list: List<A>) = Generator<List<A>> {
     val mask = BitSet(list.size)
     val size = Math.min(list.size, number)
     for (i in 0..size - 1) {
@@ -199,15 +200,13 @@ fun <A : Any> Generator.Companion.pickN(number: Int, list: List<A>) = Generator<
 fun <A> Generator.Companion.sampleBernoulli(maxRatio: Double = 1.0, vararg collection: A) =
         sampleBernoulli(listOf(collection), maxRatio)
 
-fun <A> Generator.Companion.sampleBernoulli(collection: Collection<A>, maxRatio: Double = 1.0): Generator<List<A>> =
-        intRange(0, (maxRatio * collection.size).toInt()).bind { howMany ->
-            replicate(collection.size, Generator.doubleRange(0.0, 1.0)).map { chances ->
-                val result = mutableListOf<A>()
-                collection.forEachIndexed { index, element ->
-                    if (chances[index] < howMany.toDouble() / collection.size.toDouble()) {
-                        result.add(element)
-                    }
+fun <A> Generator.Companion.sampleBernoulli(collection: Collection<A>, meanRatio: Double = 1.0): Generator<List<A>> =
+        replicate(collection.size, Generator.doubleRange(0.0, 1.0)).map { chances ->
+            val result = mutableListOf<A>()
+            collection.forEachIndexed { index, element ->
+                if (chances[index] < meanRatio) {
+                    result.add(element)
                 }
-                result
             }
+            result
         }
