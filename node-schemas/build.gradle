@@ -34,12 +34,16 @@ dependencies {
     testCompile "com.h2database:h2:1.4.193"
 }
 
-task copyGenerated(type: Copy, dependsOn: [kaptKotlin]) {
+// Generated files will be removed by gradle clean. Since we aren't running kapt every time we must preserve these files
+// Note: The lines that actually invoke kapt are those in the project.afterEvaluate block.
+task buildKapt(type: Copy) {
     from "${buildDir}/generated"
     into "${projectDir}/generated"
 }
 
 // Remove the dependency on compile in kapt to avoid automatic kapt running - run :node-schemas:kaptKotlin explicitly.
 project.afterEvaluate {
-    compileKotlin.dependsOn.remove(kaptKotlin)
+    compileKotlin.dependsOn.remove kaptKotlin
+    buildKapt.dependsOn kaptKotlin
+    buildKapt.mustRunAfter kaptKotlin
 }
