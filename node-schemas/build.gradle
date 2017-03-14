@@ -33,3 +33,6 @@ dependencies {
     // For H2 database support in persistence
     testCompile "com.h2database:h2:1.4.193"
 }
+
+// Remove the dependency on compile in kapt to avoid automatic kapt running - run :node-schemas:kaptKotlin explicitly.
+project.afterEvaluate { compileKotlin.dependsOn.remove(kaptKotlin) }
