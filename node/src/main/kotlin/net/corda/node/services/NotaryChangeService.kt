@@ -1,9 +1,9 @@
 package net.corda.node.services
 
+import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.flows.NotaryChangeFlow
-import net.corda.core.node.CordaPluginRegistry
 import java.util.function.Function
 
 object NotaryChange {
@@ -17,7 +17,7 @@ object NotaryChange {
      */
     class Service(services: PluginServiceHub) : SingletonSerializeAsToken() {
         init {
-            services.registerFlowInitiator(NotaryChangeFlow.Instigator::class) { NotaryChangeFlow.Acceptor(it) }
+            services.registerFlowInitiator(NotaryChangeFlow.Instigator::class.java) { NotaryChangeFlow.Acceptor(it) }
         }
     }
 }

@@ -21,7 +21,6 @@ import net.corda.testing.node.MockNetworkMapCache
 import net.corda.testing.node.MockStorageService
 import java.time.Clock
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.reflect.KClass
 
 open class MockServiceHubInternal(
         val customVault: VaultService? = null,
@@ -82,8 +81,8 @@ open class MockServiceHubInternal(
         return smm.executor.fetchFrom { smm.add(logic) }
     }
 
-    override fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party) -> FlowLogic<*>) {
-        flowFactories[markerClass.java] = flowFactory
+    override fun registerFlowInitiator(markerClass: Class<*>, flowFactory: (Party) -> FlowLogic<*>) {
+        flowFactories[markerClass] = flowFactory
     }
 
     override fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)? {

@@ -22,7 +22,7 @@ object FixingFlow {
 
     class Service(services: PluginServiceHub) {
         init {
-            services.registerFlowInitiator(Floater::class) { Fixer(it) }
+            services.registerFlowInitiator(Floater::class.java) { Fixer(it) }
         }
     }
 

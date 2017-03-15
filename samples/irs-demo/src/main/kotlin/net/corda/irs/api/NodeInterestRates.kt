@@ -3,7 +3,10 @@ package net.corda.irs.api
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.RetryableException
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.MerkleTreeException
+import net.corda.core.crypto.Party
+import net.corda.core.crypto.signWithECDSA
 import net.corda.core.flows.FlowLogic
 import net.corda.core.math.CubicSplineInterpolator
 import net.corda.core.math.Interpolator
@@ -71,8 +74,8 @@ object NodeInterestRates {
             // Note: access to the singleton oracle property is via the registered SingletonSerializeAsToken Service.
             // Otherwise the Kryo serialisation of the call stack in the Quasar Fiber extends to include
             // the framework Oracle and the flow will crash.
-            services.registerFlowInitiator(RatesFixFlow.FixSignFlow::class) { FixSignHandler(it, this) }
-            services.registerFlowInitiator(RatesFixFlow.FixQueryFlow::class) { FixQueryHandler(it, this) }
+            services.registerFlowInitiator(RatesFixFlow.FixSignFlow::class.java) { FixSignHandler(it, this) }
+            services.registerFlowInitiator(RatesFixFlow.FixQueryFlow::class.java) { FixQueryHandler(it, this) }
         }
 
         private class FixSignHandler(val otherParty: Party, val service: Service) : FlowLogic<Unit>() {

@@ -5,7 +5,6 @@ package net.corda.testing
 
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
-import com.typesafe.config.Config
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
@@ -148,7 +147,7 @@ inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
         markerClass: KClass<out FlowLogic<*>>,
         noinline flowFactory: (Party) -> P): ListenableFuture<P> {
     val future = smm.changes.filter { it.addOrRemove == ADD && it.logic is P }.map { it.logic as P }.toFuture()
-    services.registerFlowInitiator(markerClass, flowFactory)
+    services.registerFlowInitiator(markerClass.java, flowFactory)
     return future
 }
 
@@ -164,5 +163,3 @@ data class TestNodeConfiguration(
         override val exportJMXto: String = "",
         override val devMode: Boolean = true,
         override val certificateSigningService: URL = URL("http://localhost")) : NodeConfiguration
-
-fun Config.getHostAndPort(name: String) = HostAndPort.fromString(getString(name))
