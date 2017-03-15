@@ -97,7 +97,7 @@ object IssuerFlow {
 
         class Service(services: PluginServiceHub) {
             init {
-                services.registerFlowInitiator(IssuanceRequester::class, ::Issuer)
+                services.registerFlowInitiator(IssuanceRequester::class.java, ::Issuer)
             }
         }
     }

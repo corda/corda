@@ -89,7 +89,7 @@ class DataVendingServiceTests {
     }
 
     private fun MockNode.sendNotifyTx(tx: SignedTransaction, walletServiceNode: MockNode) {
-        walletServiceNode.services.registerFlowInitiator(NotifyTxFlow::class, ::NotifyTransactionHandler)
+        walletServiceNode.services.registerFlowInitiator(NotifyTxFlow::class.java, ::NotifyTransactionHandler)
         services.startFlow(NotifyTxFlow(walletServiceNode.info.legalIdentity, tx))
         network.runNetwork()
     }

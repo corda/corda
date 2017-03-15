@@ -59,7 +59,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
-import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -126,10 +125,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             return serverThread.fetchFrom { smm.add(logic) }
         }
 
-        override fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party) -> FlowLogic<*>) {
-            require(markerClass !in flowFactories) { "${markerClass.java.name} has already been used to register a flow" }
-            log.info("Registering flow ${markerClass.java.name}")
-            flowFactories[markerClass.java] = flowFactory
+        override fun registerFlowInitiator(markerClass: Class<*>, flowFactory: (Party) -> FlowLogic<*>) {
+            require(markerClass !in flowFactories) { "${markerClass.name} has already been used to register a flow" }
+            log.info("Registering flow ${markerClass.name}")
+            flowFactories[markerClass] = flowFactory
         }
 
         override fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)? {
@@ -224,7 +223,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 false
             }
             startMessagingService(CordaRPCOpsImpl(services, smm, database))
-            services.registerFlowInitiator(ContractUpgradeFlow.Instigator::class) { ContractUpgradeFlow.Acceptor(it) }
+            services.registerFlowInitiator(ContractUpgradeFlow.Instigator::class.java) { ContractUpgradeFlow.Acceptor(it) }
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
             smm.start()

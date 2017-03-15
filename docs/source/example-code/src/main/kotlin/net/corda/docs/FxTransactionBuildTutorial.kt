@@ -24,7 +24,7 @@ import java.util.*
 object FxTransactionDemoTutorial {
     // Would normally be called by custom service init in a CorDapp
     fun registerFxProtocols(pluginHub: PluginServiceHub) {
-        pluginHub.registerFlowInitiator(ForeignExchangeFlow::class, ::ForeignExchangeRemoteFlow)
+        pluginHub.registerFlowInitiator(ForeignExchangeFlow::class.java, ::ForeignExchangeRemoteFlow)
     }
 }
 

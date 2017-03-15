@@ -7,7 +7,6 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PluginServiceHub
-import net.corda.core.node.recordTransactions
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
@@ -35,9 +34,9 @@ object DataVending {
     @ThreadSafe
     class Service(services: PluginServiceHub) : SingletonSerializeAsToken() {
         init {
-            services.registerFlowInitiator(FetchTransactionsFlow::class, ::FetchTransactionsHandler)
-            services.registerFlowInitiator(FetchAttachmentsFlow::class, ::FetchAttachmentsHandler)
-            services.registerFlowInitiator(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
+            services.registerFlowInitiator(FetchTransactionsFlow::class.java, ::FetchTransactionsHandler)
+            services.registerFlowInitiator(FetchAttachmentsFlow::class.java, ::FetchAttachmentsHandler)
+            services.registerFlowInitiator(BroadcastTransactionFlow::class.java, ::NotifyTransactionHandler)
         }
 
         private class FetchTransactionsHandler(otherParty: Party) : FetchDataHandler<SignedTransaction>(otherParty) {

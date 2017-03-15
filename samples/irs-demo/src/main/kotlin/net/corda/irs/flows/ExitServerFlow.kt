@@ -27,7 +27,7 @@ object ExitServerFlow {
 
     class Service(services: PluginServiceHub) {
         init {
-            services.registerFlowInitiator(Broadcast::class, ::ExitServerHandler)
+            services.registerFlowInitiator(Broadcast::class.java, ::ExitServerHandler)
             enabled = true
         }
     }
