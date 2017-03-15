@@ -7,7 +7,9 @@ import net.corda.core.codePointsString
  */
 object Emoji {
     // Unfortunately only Apple has a terminal that can do colour emoji AND an emoji font installed by default.
-    val hasEmojiTerminal by lazy { listOf("Apple_Terminal", "iTerm.app").contains(System.getenv("TERM_PROGRAM")) }
+    val hasEmojiTerminal by lazy {
+        System.getenv("CORDA_FORCE_EMOJI") != null || System.getenv("TERM_PROGRAM") in listOf("Apple_Terminal", "iTerm.app")
+    }
 
     @JvmStatic val CODE_SANTA_CLAUS: String = codePointsString(0x1F385)
     @JvmStatic val CODE_DIAMOND: String = codePointsString(0x1F537)
@@ -32,14 +34,21 @@ object Emoji {
     val diamond: String get() = if (emojiMode.get() != null) "$CODE_DIAMOND  " else ""
     val bagOfCash: String get() = if (emojiMode.get() != null) "$CODE_BAG_OF_CASH  " else ""
     val newspaper: String get() = if (emojiMode.get() != null) "$CODE_NEWSPAPER  " else ""
-    val rightArrow: String get() = if (emojiMode.get() != null) "$CODE_RIGHT_ARROW  " else ""
     val leftArrow: String get() = if (emojiMode.get() != null) "$CODE_LEFT_ARROW  " else ""
     val paperclip: String get() = if (emojiMode.get() != null) "$CODE_PAPERCLIP  " else ""
     val coolGuy: String get() = if (emojiMode.get() != null) "$CODE_COOL_GUY  " else ""
     val books: String get() = if (emojiMode.get() != null) "$CODE_BOOKS  " else ""
 
+    // These have old/non-emoji symbols with better platform support.
+    val greenTick: String get() = if (emojiMode.get() != null) "$CODE_GREEN_TICK  " else "✓"
+    val rightArrow: String get() = if (emojiMode.get() != null) "$CODE_RIGHT_ARROW  " else "▶︎"
+    val skullAndCrossbones: String get() = if (emojiMode.get() != null) "$CODE_SKULL_AND_CROSSBONES  " else "☂"
+    val noEntry: String get() = if (emojiMode.get() != null) "$CODE_NO_ENTRY  " else "✘"
+
     inline fun <T> renderIfSupported(body: () -> T): T {
-        emojiMode.set(this)   // Could be any object.
+        if (hasEmojiTerminal)
+            emojiMode.set(this)   // Could be any object.
+
         try {
             return body()
         } finally {
