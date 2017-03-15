@@ -119,8 +119,16 @@ repositories {
 dependencies {
     compile project(':node')
     compile "com.google.guava:guava:$guava_version"
+
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":node:webserver", configuration: 'runtimeArtifacts')
+    runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
+
+    // For the buildCordappDependenciesJar task
+    runtime project(':client')
+    runtime project(':core')
+    runtime project(':finance')
+    runtime project(':node:webserver')
+    testCompile project(':test-utils')
 }
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
@@ -186,7 +194,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['client', 'core', 'corda', 'corda-webserver', 'finance', 'node', 'node-schemas', 'test-utils', 'jackson']
+    publications = ['client', 'core', 'corda', 'corda-webserver', 'finance', 'node', 'node-schemas', 'test-utils', 'jackson', 'webserver']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'
@@ -217,3 +225,16 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
 }
 
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
+
+// Build a ZIP of all JARs required to compile the Cordapp template
+// Note: corda.jar is used at runtime so no runtime ZIP is necessary.
+// Resulting ZIP can be found in "build/distributions"
+task buildCordappDependenciesZip(type: Zip) {
+    baseName 'corda-deps'
+    from configurations.runtime
+    from configurations.compile
+    from configurations.testCompile
+    from buildscript.configurations.classpath
+    from 'node/capsule/NOTICE' // CDDL notice
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}

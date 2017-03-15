@@ -40,6 +40,7 @@ class ANSIProgressObserver(val smm: StateMachineManager) {
 
     private fun removeFlowLogic(flowLogic: FlowLogic<*>) {
         state.locked {
+            pending.remove(flowLogic)
             if (currentlyRendering == flowLogic) {
                 wireUpProgressRendering()
             }
