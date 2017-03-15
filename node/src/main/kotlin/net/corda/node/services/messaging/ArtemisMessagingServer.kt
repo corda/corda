@@ -139,7 +139,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
         activeMQServer.start()
-        printBasicNodeInfo("Node listening on address", myHostPort.toString())
+        printBasicNodeInfo("Node ${this.config.myLegalName} listening on address", myHostPort.toString())
     }
 
     private fun createArtemisConfig(): Configuration = ConfigurationImpl().apply {

@@ -121,7 +121,7 @@ fun main(args: Array<String>) {
 
         node.networkMapRegistrationFuture.success {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            printBasicNodeInfo("Node started up and registered in $elapsed sec")
+            printBasicNodeInfo("Node ${node.info.legalIdentity.name} started up and registered in $elapsed sec")
 
             if (renderBasicInfoToConsole)
                 ANSIProgressObserver(node.smm)
