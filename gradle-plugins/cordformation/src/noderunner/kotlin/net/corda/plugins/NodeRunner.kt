@@ -6,8 +6,6 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.Locale
 
-
-
 fun main(args: Array<String>) {
     val headless = (GraphicsEnvironment.isHeadless() || (!args.isEmpty() && (args[0] == "--headless")))
     NodeRunner(headless).run()
@@ -15,7 +13,8 @@ fun main(args: Array<String>) {
 
 class NodeRunner(val headless: Boolean) {
     private companion object {
-        val jarName = "corda.jar"
+        val nodeJarName = "corda.jar"
+        val webJarName = "corda-webserver.jar"
         val nodeConfName = "node.conf"
     }
 
@@ -40,7 +39,8 @@ class NodeRunner(val headless: Boolean) {
     }
 
     private fun isNode(maybeNodeDir: File) = maybeNodeDir.isDirectory
-            && File(maybeNodeDir, jarName).exists()
+            && File(maybeNodeDir, nodeJarName).exists()
+            && File(maybeNodeDir, webJarName).exists()
             && File(maybeNodeDir, nodeConfName).exists()
 
     private fun isWebserver(maybeWebserverDir: File) = isNode(maybeWebserverDir) && hasWebserverPort(maybeWebserverDir)
@@ -50,23 +50,23 @@ class NodeRunner(val headless: Boolean) {
 
     private fun startNode(nodeDir: File) {
         println("Starting node in $nodeDir")
-        startedProcesses.add(startCorda(nodeDir))
+        startedProcesses.add(startJava(nodeJarName, nodeDir))
     }
 
     private fun startWebServer(webserverDir: File) {
         println("Starting webserver in $webserverDir")
-        startedProcesses.add(startCorda(webserverDir, listOf("--webserver")))
+        startedProcesses.add(startJava(webJarName, webserverDir))
     }
 
-    private fun startCorda(dir: File, args: List<String> = listOf()): Process {
+    private fun startJava(jarName: String, dir: File, args: List<String> = listOf()): Process {
         return if (headless) {
-            execCordaJar(dir, args)
+            execJar(jarName, dir, args)
         } else {
-            execCordaInTerminalWindow(dir, args)
+            execJarInTerminalWindow(jarName, dir, args)
         }
     }
 
-    private fun execCordaJar(dir: File, args: List<String> = listOf()): Process {
+    private fun execJar(jarName: String, dir: File, args: List<String> = listOf()): Process {
         val nodeName = dir.toPath().fileName
         val separator = System.getProperty("file.separator")
         val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
@@ -77,9 +77,9 @@ class NodeRunner(val headless: Boolean) {
         return builder.start()
     }
 
-    private fun execCordaInTerminalWindow(dir: File, args: List<String> = listOf()): Process {
+    private fun execJarInTerminalWindow(jarName: String, dir: File, args: List<String> = listOf()): Process {
         val javaCmd = "java -jar $jarName " + args.joinToString(" ") { it }
-        val nodeName = dir.toPath().fileName
+        val nodeName = dir.toPath().fileName + " " + jarName
         val osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH)
         val cmd = if ((osName.indexOf("mac") >= 0) || (osName.indexOf("darwin") >= 0)) {
             """osascript -e "tell app "Terminal

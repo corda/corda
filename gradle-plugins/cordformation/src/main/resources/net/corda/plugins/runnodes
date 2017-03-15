@@ -1,3 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Allow the script to be run from outside the nodes directory.
+basedir=$( dirname "$0" )
+cd "$basedir"
 
 java -jar runnodes.jar
