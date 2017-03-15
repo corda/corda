@@ -57,6 +57,7 @@ class ProgressTracker(vararg steps: Step) {
         open fun childProgressTracker(): ProgressTracker? = null
     }
 
+    // TODO: There's no actual way to create these steps anymore!
     /** This class makes it easier to relabel a step on the fly, to provide transient information. */
     open inner class RelabelableStep(currentLabel: String) : Step(currentLabel) {
         override val changes: BehaviorSubject<Change> = BehaviorSubject.create()

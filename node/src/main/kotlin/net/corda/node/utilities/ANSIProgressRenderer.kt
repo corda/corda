@@ -1,9 +1,6 @@
 package net.corda.node.utilities
 
-import net.corda.core.utilities.Emoji.CODE_GREEN_TICK
-import net.corda.core.utilities.Emoji.CODE_NO_ENTRY
-import net.corda.core.utilities.Emoji.CODE_RIGHT_ARROW
-import net.corda.core.utilities.Emoji.CODE_SKULL_AND_CROSSBONES
+import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.utilities.ANSIProgressRenderer.progressTracker
 import org.apache.logging.log4j.LogManager
@@ -43,11 +40,21 @@ object ANSIProgressRenderer {
             }
 
             // Reset the state when a new tracker is wired up.
-            prevMessagePrinted = null
-            prevLinesDrawn = 0
-            draw(true)
-            subscription = value?.changes?.subscribe({ draw(true) }, { draw(true, it) }, { progressTracker = null; draw(true) })
+            if (value != null) {
+                prevMessagePrinted = null
+                prevLinesDrawn = 0
+                draw(true)
+                subscription = value.changes.subscribe({ draw(true) }, { done(it) }, { done(null) })
+            }
         }
+
+    var onDone: () -> Unit = {}
+
+    private fun done(error: Throwable?) {
+        if (error == null) progressTracker = null
+        draw(true, error)
+        onDone()
+    }
 
     private fun setup() {
         AnsiConsole.systemInstall()
@@ -62,7 +69,7 @@ object ANSIProgressRenderer {
             // than doing things the official way with a dedicated plugin, etc, as it avoids mucking around with all
             // the config XML and lifecycle goop.
             val manager = LogManager.getContext(false) as LoggerContext
-            val consoleAppender = manager.configuration.appenders.values.filterIsInstance<ConsoleAppender>().single()
+            val consoleAppender = manager.configuration.appenders.values.filterIsInstance<ConsoleAppender>().single { it.name == "Console-Appender" }
             val scrollingAppender = object : AbstractOutputStreamAppender<OutputStreamManager>(
                     consoleAppender.name, consoleAppender.layout, consoleAppender.filter,
                     consoleAppender.ignoreExceptions(), true, consoleAppender.manager) {
@@ -115,39 +122,41 @@ object ANSIProgressRenderer {
             return
         }
 
-        // Handle the case where the number of steps in a progress tracker is changed during execution.
-        val ansi = Ansi.ansi()
-        if (prevLinesDrawn > 0 && moveUp)
-            ansi.cursorUp(prevLinesDrawn)
+        Emoji.renderIfSupported {
+            // Handle the case where the number of steps in a progress tracker is changed during execution.
+            val ansi = Ansi.ansi()
+            if (prevLinesDrawn > 0 && moveUp)
+                ansi.cursorUp(prevLinesDrawn)
 
-        // Put a blank line between any logging and us.
-        ansi.eraseLine()
-        ansi.newline()
-        val pt = progressTracker ?: return
-        var newLinesDrawn = 1 + pt.renderLevel(ansi, 0, error != null)
-
-        if (error != null) {
-            // TODO: This should be using emoji only on supported platforms.
-            ansi.a("$CODE_SKULL_AND_CROSSBONES   $error")
-            ansi.eraseLine(Ansi.Erase.FORWARD)
+            // Put a blank line between any logging and us.
+            ansi.eraseLine()
             ansi.newline()
-            newLinesDrawn++
-        }
+            val pt = progressTracker ?: return
+            var newLinesDrawn = 1 + pt.renderLevel(ansi, 0, error != null)
 
-        if (newLinesDrawn < prevLinesDrawn) {
-            // If some steps were removed from the progress tracker, we don't want to leave junk hanging around below.
-            val linesToClear = prevLinesDrawn - newLinesDrawn
-            repeat(linesToClear) {
-                ansi.eraseLine()
+            if (error != null) {
+                ansi.a("${Emoji.skullAndCrossbones} ${error.message}")
+                ansi.eraseLine(Ansi.Erase.FORWARD)
                 ansi.newline()
+                newLinesDrawn++
             }
-            ansi.cursorUp(linesToClear)
-        }
-        prevLinesDrawn = newLinesDrawn
 
-        // Need to force a flush here in order to ensure stderr/stdout sync up properly.
-        System.out.print(ansi)
-        System.out.flush()
+            if (newLinesDrawn < prevLinesDrawn) {
+                // If some steps were removed from the progress tracker, we don't want to leave junk hanging around below.
+                val linesToClear = prevLinesDrawn - newLinesDrawn
+                repeat(linesToClear) {
+                    ansi.eraseLine()
+                    ansi.newline()
+                }
+                ansi.cursorUp(linesToClear)
+            }
+            prevLinesDrawn = newLinesDrawn
+
+            // Need to force a flush here in order to ensure stderr/stdout sync up properly.
+            System.out.print(ansi)
+            System.out.flush()
+        }
+
     }
 
     // Returns number of lines rendered.
@@ -160,11 +169,11 @@ object ANSIProgressRenderer {
                 if (indent > 0 && step == ProgressTracker.DONE) continue
 
                 val marker = when {
-                    index < stepIndex -> "$CODE_GREEN_TICK   "
-                    index == stepIndex && step == ProgressTracker.DONE -> "$CODE_GREEN_TICK   "
-                    index == stepIndex -> "$CODE_RIGHT_ARROW   "
-                    error -> "$CODE_NO_ENTRY   "
-                    else -> "    "
+                    index < stepIndex -> "${Emoji.greenTick} "
+                    index == stepIndex && step == ProgressTracker.DONE -> "${Emoji.greenTick} "
+                    index == stepIndex -> "${Emoji.rightArrow} "
+                    error -> "${Emoji.noEntry} "
+                    else -> "    "   // Not reached yet.
                 }
                 a("    ".repeat(indent))
                 a(marker)
