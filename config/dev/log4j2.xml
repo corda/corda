@@ -17,7 +17,7 @@
         </Console>
 
         <!-- Required for printBasicInfo -->
-        <Console name="Console-Appender-BasicInfo" target="SYSTEM_OUT">
+        <Console name="Console-Appender-Println" target="SYSTEM_OUT">
             <PatternLayout pattern="%msg%n" />
         </Console>
 
@@ -54,7 +54,7 @@
             <AppenderRef ref="RollingFile-Appender" />
         </Root>
         <Logger name="BasicInfo" additivity="false">
-            <AppenderRef ref="Console-Appender-BasicInfo"/>
+            <AppenderRef ref="Console-Appender-Println"/>
             <AppenderRef ref="RollingFile-Appender" />
         </Logger>
     </Loggers>
