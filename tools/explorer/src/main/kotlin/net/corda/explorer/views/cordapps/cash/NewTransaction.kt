@@ -18,8 +18,6 @@ import net.corda.client.fxutils.map
 import net.corda.client.fxutils.unique
 import net.corda.client.model.*
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
-import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.crypto.AbstractParty
 import net.corda.core.crypto.Party
@@ -148,7 +146,7 @@ class NewTransaction : Fragment() {
                     CashTransaction.Issue -> {
                         CashFlowCommand.IssueCash(Amount(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.legalIdentity, notaries.first().notaryIdentity)
                     }
-                    CashTransaction.Pay -> CashFlowCommand.PayCash(Amount(amount.value, Issued(PartyAndReference(issuerChoiceBox.value, issueRef), currencyChoiceBox.value)), partyBChoiceBox.value.legalIdentity)
+                    CashTransaction.Pay -> CashFlowCommand.PayCash(Amount(amount.value, currencyChoiceBox.value), partyBChoiceBox.value.legalIdentity)
                     CashTransaction.Exit -> CashFlowCommand.ExitCash(Amount(amount.value, currencyChoiceBox.value), issueRef)
                     else -> null
                 }
