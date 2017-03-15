@@ -25,13 +25,9 @@ private var renderBasicInfoToConsole = true
 
 /** Used for useful info that we always want to show, even when not logging to the console */
 fun printBasicNodeInfo(description: String, info: String? = null) {
-    if (renderBasicInfoToConsole) {
-        val msg = if (info == null) description else "${description.padEnd(40)}: $info"
-        println(msg)
-    } else {
-        val msg = if (info == null) description else "$description: $info"
-        LoggerFactory.getLogger("Main").info(msg)
-    }
+    val msg = if (info == null) description else "${description.padEnd(40)}: $info"
+    val loggerName = if (renderBasicInfoToConsole) "BasicInfo" else "Main"
+    LoggerFactory.getLogger(loggerName).info(msg)
 }
 
 fun main(args: Array<String>) {
@@ -125,7 +121,7 @@ fun main(args: Array<String>) {
 
         node.networkMapRegistrationFuture.success {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            printBasicNodeInfo("Node started up and registered in $elapsed sec")
+            printBasicNodeInfo("Node ${node.info.legalIdentity.name} started up and registered in $elapsed sec")
 
             if (renderBasicInfoToConsole)
                 ANSIProgressObserver(node.smm)

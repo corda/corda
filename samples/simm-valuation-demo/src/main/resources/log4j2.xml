@@ -18,6 +18,11 @@
             </PatternLayout>
         </Console>
 
+        <!-- Required for printBasicInfo -->
+        <Console name="Console-Appender-Println" target="SYSTEM_OUT">
+            <PatternLayout pattern="%msg%n" />
+        </Console>
+
         <!-- Will generate up to 10 log files for a given day. During every rollover it will delete
              those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingFile name="RollingFile-Appender"
@@ -50,6 +55,10 @@
             <AppenderRef ref="Console-Appender" level="info"/>
             <AppenderRef ref="RollingFile-Appender" level="debug"/>
         </Root>
+        <Logger name="BasicInfo" additivity="false">
+            <AppenderRef ref="Console-Appender-Println"/>
+            <AppenderRef ref="RollingFile-Appender" />
+        </Logger>
     </Loggers>
 
 </Configuration>
