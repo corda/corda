@@ -6,7 +6,6 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.DummyState
-import net.corda.core.contracts.issuedBy
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowException
@@ -326,9 +325,7 @@ class StateMachineManagerTests {
                 notary1.info.notaryIdentity))
         // We pay a couple of times, the notary picking should go round robin
         for (i in 1 .. 3) {
-            node1.services.startFlow(CashPaymentFlow(
-                    500.DOLLARS.issuedBy(node1.info.legalIdentity.ref(0x01)),
-                    node2.info.legalIdentity))
+            node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity))
             net.runNetwork()
         }
         val endpoint = net.messagingNetwork.endpoint(notary1.net.myAddress as InMemoryMessagingNetwork.PeerHandle)!!

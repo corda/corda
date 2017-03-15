@@ -4,8 +4,7 @@ import net.corda.client.model.NodeMonitorModel
 import net.corda.client.model.ProgressTrackingEvent
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
-import net.corda.core.contracts.PartyAndReference
+import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.USD
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.getOrThrow
@@ -123,17 +122,8 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     @Test
     fun `cash issue and move`() {
-        rpc.startFlow(::CashIssueFlow,
-                Amount(100, USD),
-                OpaqueBytes(ByteArray(1, { 1 })),
-                aliceNode.legalIdentity,
-                notaryNode.notaryIdentity
-        ).returnValue.getOrThrow()
-
-        rpc.startFlow(::CashPaymentFlow,
-                Amount(100, Issued(PartyAndReference(aliceNode.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
-                aliceNode.legalIdentity
-        )
+        rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), aliceNode.legalIdentity, notaryNode.notaryIdentity).returnValue.getOrThrow()
+        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, aliceNode.legalIdentity).returnValue.getOrThrow()
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null
