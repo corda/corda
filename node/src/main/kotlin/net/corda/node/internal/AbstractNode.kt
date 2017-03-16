@@ -381,15 +381,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun registerWithNetworkMapIfConfigured(): ListenableFuture<Unit> {
-        require(networkMapAddress != null || NetworkMapService.type in advertisedServices.map { it.type }) {
-            "Initial network map address must indicate a node that provides a network map service"
-        }
         services.networkMapCache.addNode(info)
         // In the unit test environment, we may run without any network map service sometimes.
         return if (networkMapAddress == null && inNodeNetworkMapService == null) {
             services.networkMapCache.runWithoutMapService()
             noNetworkMapConfigured()  // TODO This method isn't needed as runWithoutMapService sets the Future in the cache
-
         } else {
             registerWithNetworkMap()
         }
@@ -400,11 +396,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * updates) if one has been supplied.
      */
     protected open fun registerWithNetworkMap(): ListenableFuture<Unit> {
+        require(networkMapAddress != null || NetworkMapService.type in advertisedServices.map { it.type }) {
+            "Initial network map address must indicate a node that provides a network map service"
+        }
         val address = networkMapAddress ?: info.address
         // Register for updates, even if we're the one running the network map.
         return sendNetworkMapRegistration(address).flatMap { response ->
-            check(response.success) { "The network map service rejected our registration request" }
-            // This Future will complete on the same executor as sendNetworkMapRegistration, namely the one used by net
+            check(response.error == null) { "Unable to register with the network map service: ${response.error}" }
+            // The future returned addMapService will complete on the same executor as sendNetworkMapRegistration, namely the one used by net
             services.networkMapCache.addMapService(net, address, true, null)
         }
     }

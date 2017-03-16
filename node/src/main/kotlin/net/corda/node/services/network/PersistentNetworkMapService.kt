@@ -23,7 +23,7 @@ class PersistentNetworkMapService(services: ServiceHubInternal) : AbstractNetwor
         val registrationInfo = blob("node_registration_info")
     }
 
-    override val registeredNodes: MutableMap<Party, NodeRegistrationInfo> = synchronizedMap(object : AbstractJDBCHashMap<Party, NodeRegistrationInfo, Table>(Table, loadOnInit = true) {
+    override val nodeRegistrations: MutableMap<Party, NodeRegistrationInfo> = synchronizedMap(object : AbstractJDBCHashMap<Party, NodeRegistrationInfo, Table>(Table, loadOnInit = true) {
         override fun keyFromRow(row: ResultRow): Party = Party(row[table.nodeParty.name], row[table.nodeParty.owningKey])
 
         override fun valueFromRow(row: ResultRow): NodeRegistrationInfo = deserializeFromBlob(row[table.registrationInfo])
@@ -42,7 +42,7 @@ class PersistentNetworkMapService(services: ServiceHubInternal) : AbstractNetwor
 
     init {
         // Initialise the network map version with the current highest persisted version, or zero if there are no entries.
-        _mapVersion.set(registeredNodes.values.map { it.mapVersion }.max() ?: 0)
+        _mapVersion.set(nodeRegistrations.values.map { it.mapVersion }.max() ?: 0)
         setup()
     }
 }

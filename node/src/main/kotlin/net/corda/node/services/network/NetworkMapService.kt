@@ -2,6 +2,7 @@ package net.corda.node.services.network
 
 import com.google.common.annotations.VisibleForTesting
 import kotlinx.support.jdk8.collections.compute
+import kotlinx.support.jdk8.collections.removeIf
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
@@ -24,7 +25,16 @@ import net.corda.core.utilities.loggerFor
 import net.corda.flows.ServiceRequestMessage
 import net.corda.node.services.api.AbstractNodeService
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.network.NetworkMapService.*
+import net.corda.node.services.network.NetworkMapService.Companion.FETCH_TOPIC
+import net.corda.node.services.network.NetworkMapService.Companion.PUSH_ACK_TOPIC
+import net.corda.node.services.network.NetworkMapService.Companion.PUSH_TOPIC
+import net.corda.node.services.network.NetworkMapService.Companion.QUERY_TOPIC
+import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_TOPIC
+import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_TOPIC
 import net.corda.node.utilities.AddOrRemove
+import net.corda.node.utilities.AddOrRemove.ADD
+import net.corda.node.utilities.AddOrRemove.REMOVE
 import java.security.PrivateKey
 import java.security.SignatureException
 import java.time.Instant
@@ -62,38 +72,36 @@ interface NetworkMapService {
         // Base topic for messages acknowledging pushed updates
         val PUSH_ACK_TOPIC = "platform.network_map.push_ack"
 
-        val logger = loggerFor<NetworkMapService>()
-
         val type = ServiceType.corda.getSubType("network_map")
     }
 
-    val nodes: List<NodeInfo>
-
-    class FetchMapRequest(val subscribe: Boolean,
-                          val ifChangedSinceVersion: Int?,
-                          override val replyTo: SingleMessageRecipient,
-                          override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
+    data class FetchMapRequest(val subscribe: Boolean,
+                               val ifChangedSinceVersion: Int?,
+                               override val replyTo: SingleMessageRecipient,
+                               override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
 
     @CordaSerializable
-    data class FetchMapResponse(val nodes: Collection<NodeRegistration>?, val version: Int)
+    data class FetchMapResponse(val nodes: List<NodeRegistration>?, val version: Int)
 
-    class QueryIdentityRequest(val identity: Party,
-                               override val replyTo: SingleMessageRecipient,
-                               override val sessionID: Long) : ServiceRequestMessage
+    data class QueryIdentityRequest(val identity: Party,
+                                    override val replyTo: SingleMessageRecipient,
+                                    override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
 
     @CordaSerializable
     data class QueryIdentityResponse(val node: NodeInfo?)
 
-    class RegistrationRequest(val wireReg: WireNodeRegistration,
-                              override val replyTo: SingleMessageRecipient,
-                              override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
+    // TODO Rename this RegistractionChangeRequest or similar (and related classes)
+    data class RegistrationRequest(val wireReg: WireNodeRegistration,
+                                   override val replyTo: SingleMessageRecipient,
+                                   override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
 
+    /** If [error] is null then the registration was successful. If not null then it wasn't and it explains why */
     @CordaSerializable
-    data class RegistrationResponse(val success: Boolean)
+    data class RegistrationResponse(val error: String?)
 
-    class SubscribeRequest(val subscribe: Boolean,
-                           override val replyTo: SingleMessageRecipient,
-                           override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
+    data class SubscribeRequest(val subscribe: Boolean,
+                                override val replyTo: SingleMessageRecipient,
+                                override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
 
     @CordaSerializable
     data class SubscribeResponse(val confirmed: Boolean)
@@ -107,7 +115,7 @@ interface NetworkMapService {
 @ThreadSafe
 class InMemoryNetworkMapService(services: ServiceHubInternal) : AbstractNetworkMapService(services) {
 
-    override val registeredNodes: MutableMap<Party, NodeRegistrationInfo> = ConcurrentHashMap()
+    override val nodeRegistrations: MutableMap<Party, NodeRegistrationInfo> = ConcurrentHashMap()
     override val subscribers = ThreadBox(mutableMapOf<SingleMessageRecipient, LastAcknowledgeInfo>())
 
     init {
@@ -122,9 +130,17 @@ class InMemoryNetworkMapService(services: ServiceHubInternal) : AbstractNetworkM
  * subscriber clean up and is simpler to persist than the previous implementation based on a set of missing messages acks.
  */
 @ThreadSafe
-abstract class AbstractNetworkMapService
-(services: ServiceHubInternal) : NetworkMapService, AbstractNodeService(services) {
-    protected abstract val registeredNodes: MutableMap<Party, NodeRegistrationInfo>
+abstract class AbstractNetworkMapService(services: ServiceHubInternal) : NetworkMapService, AbstractNodeService(services) {
+    companion object {
+        /**
+         * Maximum credible size for a registration request. Generally requests are around 500-600 bytes, so this gives a
+         * 10 times overhead.
+         */
+        private const val MAX_SIZE_REGISTRATION_REQUEST_BYTES = 5500
+        private val logger = loggerFor<AbstractNetworkMapService>()
+    }
+
+    protected abstract val nodeRegistrations: MutableMap<Party, NodeRegistrationInfo>
 
     // Map from subscriber address, to most recently acknowledged update map version.
     protected abstract val subscribers: ThreadBox<MutableMap<SingleMessageRecipient, LastAcknowledgeInfo>>
@@ -135,38 +151,19 @@ abstract class AbstractNetworkMapService
     val mapVersion: Int
         get() = _mapVersion.get()
 
-    private fun mapVersionIncrementAndGet(): Int = _mapVersion.incrementAndGet()
-
     /** Maximum number of unacknowledged updates to send to a node before automatically unregistering them for updates */
     val maxUnacknowledgedUpdates = 10
-    /**
-     * Maximum credible size for a registration request. Generally requests are around 500-600 bytes, so this gives a
-     * 10 times overhead.
-     */
-    val maxSizeRegistrationRequestBytes = 5500
 
     private val handlers = ArrayList<MessageHandlerRegistration>()
 
-    // Filter reduces this to the entries that add a node to the map
-    override val nodes: List<NodeInfo>
-        get() = registeredNodes.mapNotNull { if (it.value.reg.type == AddOrRemove.ADD) it.value.reg.node else null }
-
     protected fun setup() {
         // Register message handlers
-        handlers += addMessageHandler(NetworkMapService.FETCH_TOPIC,
-                { req: NetworkMapService.FetchMapRequest -> processFetchAllRequest(req) }
-        )
-        handlers += addMessageHandler(NetworkMapService.QUERY_TOPIC,
-                { req: NetworkMapService.QueryIdentityRequest -> processQueryRequest(req) }
-        )
-        handlers += addMessageHandler(NetworkMapService.REGISTER_TOPIC,
-                { req: NetworkMapService.RegistrationRequest -> processRegistrationChangeRequest(req) }
-        )
-        handlers += addMessageHandler(NetworkMapService.SUBSCRIPTION_TOPIC,
-                { req: NetworkMapService.SubscribeRequest -> processSubscriptionRequest(req) }
-        )
-        handlers += net.addMessageHandler(NetworkMapService.PUSH_ACK_TOPIC, DEFAULT_SESSION_ID) { message, r ->
-            val req = message.data.deserialize<NetworkMapService.UpdateAcknowledge>()
+        handlers += addMessageHandler(FETCH_TOPIC) { req: FetchMapRequest -> processFetchAllRequest(req) }
+        handlers += addMessageHandler(QUERY_TOPIC) { req: QueryIdentityRequest -> processQueryRequest(req) }
+        handlers += addMessageHandler(REGISTER_TOPIC) { req: RegistrationRequest -> processRegistrationRequest(req) }
+        handlers += addMessageHandler(SUBSCRIPTION_TOPIC) { req: SubscribeRequest -> processSubscriptionRequest(req) }
+        handlers += net.addMessageHandler(PUSH_ACK_TOPIC, DEFAULT_SESSION_ID) { message, r ->
+            val req = message.data.deserialize<UpdateAcknowledge>()
             processAcknowledge(req)
         }
     }
@@ -193,135 +190,105 @@ abstract class AbstractNetworkMapService
         subscribers.locked { remove(subscriber) }
     }
 
-    @VisibleForTesting
-    fun getUnacknowledgedCount(subscriber: SingleMessageRecipient, mapVersion: Int): Int? {
-        return subscribers.locked {
-            val subscriberMapVersion = get(subscriber)?.mapVersion
-            if (subscriberMapVersion != null) {
-                mapVersion - subscriberMapVersion
-            } else {
-                null
+    private fun processAcknowledge(request: UpdateAcknowledge): Unit {
+        if (request.replyTo !is SingleMessageRecipient) throw NodeMapError.InvalidSubscriber()
+        subscribers.locked {
+            val lastVersionAcked = this[request.replyTo]?.mapVersion
+            if ((lastVersionAcked ?: 0) < request.mapVersion) {
+                this[request.replyTo] = LastAcknowledgeInfo(request.mapVersion)
             }
         }
     }
 
-    @VisibleForTesting
-    fun notifySubscribers(wireReg: WireNodeRegistration, mapVersion: Int) {
+    private fun processFetchAllRequest(request: FetchMapRequest): FetchMapResponse {
+        if (request.subscribe) {
+            addSubscriber(request.replyTo)
+        }
+        val currentVersion = mapVersion
+        val nodeRegistrations = if (request.ifChangedSinceVersion == null || request.ifChangedSinceVersion < currentVersion) {
+            // We return back the current state of the entire map including nodes that have been removed
+            ArrayList(nodeRegistrations.values.map { it.reg })  // Snapshot to avoid attempting to serialise Map internals
+        } else {
+            null
+        }
+        return FetchMapResponse(nodeRegistrations, currentVersion)
+    }
+
+    private fun processQueryRequest(request: QueryIdentityRequest): QueryIdentityResponse {
+        val candidate = nodeRegistrations[request.identity]?.reg
+        // If the most recent record we have is of the node being removed from the map, then it's considered
+        // as no match.
+        val node = if (candidate == null || candidate.type == REMOVE) null else candidate.node
+        return QueryIdentityResponse(node)
+    }
+
+    private fun processRegistrationRequest(request: RegistrationRequest): RegistrationResponse {
+        if (request.wireReg.raw.size > MAX_SIZE_REGISTRATION_REQUEST_BYTES) return RegistrationResponse("Request is too big")
+
+        val change = try {
+            request.wireReg.verified()
+        } catch(e: SignatureException) {
+            return RegistrationResponse("Invalid signature on request")
+        }
+
+        val node = change.node
+
+        // Update the current value atomically, so that if multiple updates come
+        // in on different threads, there is no risk of a race condition while checking
+        // sequence numbers.
+        val registrationInfo = try {
+            nodeRegistrations.compute(node.legalIdentity) { mapKey: Party, existing: NodeRegistrationInfo? ->
+                require(!((existing == null || existing.reg.type == REMOVE) && change.type == REMOVE)) {
+                    "Attempting to de-register unknown node"
+                }
+                require(existing == null || existing.reg.serial < change.serial) { "Serial value is too small" }
+                NodeRegistrationInfo(change, _mapVersion.incrementAndGet())
+            }
+        } catch (e: IllegalArgumentException) {
+            return RegistrationResponse(e.message)
+        }
+
+        notifySubscribers(request.wireReg, registrationInfo!!.mapVersion)
+
+        // Update the local cache
+        // TODO: Once local messaging is fixed, this should go over the network layer as it does to other
+        // subscribers
+        when (change.type) {
+            ADD -> {
+                logger.info("Added node ${node.address} to network map")
+                services.networkMapCache.addNode(change.node)
+            }
+            REMOVE -> {
+                logger.info("Removed node ${node.address} from network map")
+                services.networkMapCache.removeNode(change.node)
+            }
+        }
+
+        return RegistrationResponse(null)
+    }
+
+    private fun notifySubscribers(wireReg: WireNodeRegistration, mapVersion: Int) {
         // TODO: Once we have a better established messaging system, we can probably send
         //       to a MessageRecipientGroup that nodes join/leave, rather than the network map
         //       service itself managing the group
         val update = NetworkMapService.Update(wireReg, mapVersion, net.myAddress).serialize().bytes
-        val message = net.createMessage(NetworkMapService.PUSH_TOPIC, DEFAULT_SESSION_ID, update)
+        val message = net.createMessage(PUSH_TOPIC, DEFAULT_SESSION_ID, update)
 
         subscribers.locked {
-            val toRemove = mutableListOf<SingleMessageRecipient>()
-            forEach { subscriber: Map.Entry<SingleMessageRecipient, LastAcknowledgeInfo> ->
-                val unacknowledgedCount = mapVersion - subscriber.value.mapVersion
-                // TODO: introduce some concept of time in the condition to avoid unsubscribes when there's a message burst.
-                if (unacknowledgedCount <= maxUnacknowledgedUpdates) {
-                    net.send(message, subscriber.key)
-                } else {
-                    toRemove.add(subscriber.key)
-                }
-            }
-            toRemove.forEach { remove(it) }
+            // Remove any stale subscribers
+            values.removeIf { lastAckInfo -> mapVersion - lastAckInfo.mapVersion > maxUnacknowledgedUpdates }
+            // TODO: introduce some concept of time in the condition to avoid unsubscribes when there's a message burst.
+            keys.forEach { recipient -> net.send(message, recipient) }
         }
     }
 
-    @VisibleForTesting
-    fun processAcknowledge(req: NetworkMapService.UpdateAcknowledge): Unit {
-        if (req.replyTo !is SingleMessageRecipient) throw NodeMapError.InvalidSubscriber()
-        subscribers.locked {
-            val lastVersionAcked = this[req.replyTo]?.mapVersion
-            if ((lastVersionAcked ?: 0) < req.mapVersion) {
-                this[req.replyTo] = LastAcknowledgeInfo(req.mapVersion)
-            }
-        }
-    }
-
-    @VisibleForTesting
-    fun processFetchAllRequest(req: NetworkMapService.FetchMapRequest): NetworkMapService.FetchMapResponse {
-        if (req.subscribe) {
-            addSubscriber(req.replyTo)
-        }
-        val ver = mapVersion
-        if (req.ifChangedSinceVersion == null || req.ifChangedSinceVersion < ver) {
-            val nodes = ArrayList(registeredNodes.values.map { it.reg })  // Snapshot to avoid attempting to serialise Map internals
-            return NetworkMapService.FetchMapResponse(nodes, ver)
+    private fun processSubscriptionRequest(request: SubscribeRequest): SubscribeResponse {
+        if (request.subscribe) {
+            addSubscriber(request.replyTo)
         } else {
-            return NetworkMapService.FetchMapResponse(null, ver)
+            removeSubscriber(request.replyTo)
         }
-    }
-
-    @VisibleForTesting
-    fun processQueryRequest(req: NetworkMapService.QueryIdentityRequest): NetworkMapService.QueryIdentityResponse {
-        val candidate = registeredNodes[req.identity]?.reg
-
-        // If the most recent record we have is of the node being removed from the map, then it's considered
-        // as no match.
-        if (candidate == null || candidate.type == AddOrRemove.REMOVE) {
-            return NetworkMapService.QueryIdentityResponse(null)
-        } else {
-            return NetworkMapService.QueryIdentityResponse(candidate.node)
-        }
-    }
-
-    @VisibleForTesting
-    fun processRegistrationChangeRequest(req: NetworkMapService.RegistrationRequest): NetworkMapService.RegistrationResponse {
-        require(req.wireReg.raw.size < maxSizeRegistrationRequestBytes)
-        val change: NodeRegistration
-
-        try {
-            change = req.wireReg.verified()
-        } catch(e: SignatureException) {
-            throw NodeMapError.InvalidSignature()
-        }
-        val node = change.node
-
-        var changed: Boolean = false
-        // Update the current value atomically, so that if multiple updates come
-        // in on different threads, there is no risk of a race condition while checking
-        // sequence numbers.
-        val registrationInfo = registeredNodes.compute(node.legalIdentity, { mapKey: Party, existing: NodeRegistrationInfo? ->
-            changed = existing == null || existing.reg.serial < change.serial
-            if (changed) {
-                when (change.type) {
-                    AddOrRemove.ADD -> NodeRegistrationInfo(change, mapVersionIncrementAndGet())
-                    AddOrRemove.REMOVE -> NodeRegistrationInfo(change, mapVersionIncrementAndGet())
-                    else -> throw NodeMapError.UnknownChangeType()
-                }
-            } else {
-                existing
-            }
-        })
-        if (changed) {
-            notifySubscribers(req.wireReg, registrationInfo!!.mapVersion)
-
-            // Update the local cache
-            // TODO: Once local messaging is fixed, this should go over the network layer as it does to other
-            // subscribers
-            when (change.type) {
-                AddOrRemove.ADD -> {
-                    NetworkMapService.logger.info("Added node ${node.address} to network map")
-                    services.networkMapCache.addNode(change.node)
-                }
-                AddOrRemove.REMOVE -> {
-                    NetworkMapService.logger.info("Removed node ${node.address} from network map")
-                    services.networkMapCache.removeNode(change.node)
-                }
-            }
-
-        }
-        return NetworkMapService.RegistrationResponse(changed)
-    }
-
-    @VisibleForTesting
-    fun processSubscriptionRequest(req: NetworkMapService.SubscribeRequest): NetworkMapService.SubscribeResponse {
-        when (req.subscribe) {
-            false -> removeSubscriber(req.replyTo)
-            true -> addSubscriber(req.replyTo)
-        }
-        return NetworkMapService.SubscribeResponse(true)
+        return SubscribeResponse(true)
     }
 }
 
@@ -339,7 +306,7 @@ abstract class AbstractNetworkMapService
 // TODO: This might alternatively want to have a node and party, with the node being optional, so registering a node
 // involves providing both node and paerty, and deregistering a node involves a request with party but no node.
 @CordaSerializable
-class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddOrRemove, var expires: Instant) {
+data class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddOrRemove, var expires: Instant) {
     /**
      * Build a node registration in wire format.
      */
@@ -372,9 +339,6 @@ sealed class NodeMapError : Exception() {
 
     /** Thrown if the replyTo of a subscription change message is not a single message recipient */
     class InvalidSubscriber : NodeMapError()
-
-    /** Thrown if a change arrives which is of an unknown type */
-    class UnknownChangeType : NodeMapError()
 }
 
 @CordaSerializable
