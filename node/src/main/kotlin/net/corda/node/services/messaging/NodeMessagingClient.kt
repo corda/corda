@@ -68,7 +68,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
         // that will handle messages, like a URL) with the terminology used by underlying MQ libraries, to avoid
         // confusion.
-        private val topicProperty = SimpleString("platform-topic")
+        val TOPIC_PROPERTY = SimpleString("platform-topic")
         private val sessionIdProperty = SimpleString("session-id")
         private val nodeVersionProperty = SimpleString("node-version")
         private val nodeVendorProperty = SimpleString("node-vendor")
@@ -172,7 +172,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     private fun makeP2PConsumer(session: ClientSession, networkMapOnly: Boolean): ClientConsumer {
         return if (networkMapOnly) {
             // Filter for just the network map messages.
-            val messageFilter = "hyphenated_props:$topicProperty like 'platform.network_map.%'"
+            val messageFilter = "hyphenated_props:$TOPIC_PROPERTY like 'platform.network_map.%'"
             session.createConsumer(P2P_QUEUE, messageFilter)
         } else
             session.createConsumer(P2P_QUEUE)
@@ -256,7 +256,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
     private fun artemisToCordaMessage(message: ClientMessage): ReceivedMessage? {
         try {
-            val topic = message.required(topicProperty) { getStringProperty(it) }
+            val topic = message.required(TOPIC_PROPERTY) { getStringProperty(it) }
             val sessionID = message.required(sessionIdProperty) { getLongProperty(it) }
             // Use the magic deduplication property built into Artemis as our message identity too
             val uuid = message.required(HDR_DUPLICATE_DETECTION_ID) { UUID.fromString(message.getStringProperty(it)) }
@@ -271,6 +271,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                 override val peer: X500Name = X500Name(user)
                 override val debugTimestamp: Instant = Instant.ofEpochMilli(message.timestamp)
                 override val uniqueMessageId: UUID = uuid
+                override val originHost: String? = message.getStringProperty("originHost")
                 override fun toString() = "$topic#${data.opaque()}"
             }
 
@@ -374,7 +375,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                 val artemisMessage = session!!.createMessage(true).apply {
                     putStringProperty(nodeVendorProperty, nodeVendor)
                     putStringProperty(nodeVersionProperty, version)
-                    putStringProperty(topicProperty, SimpleString(message.topicSession.topic))
+                    putStringProperty(TOPIC_PROPERTY, SimpleString(message.topicSession.topic))
                     putLongProperty(sessionIdProperty, message.topicSession.sessionID)
                     writeBodyBufferBytes(message.data)
                     // Use the magic deduplication property built into Artemis as our message identity too
