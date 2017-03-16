@@ -16,8 +16,15 @@ repositories {
     }
 }
 
+// Kapt plugin is hardcoded in output directory and sourcesets. Use a separate sourceset to keep the generated
+// files in git and outside of the build directory (to avoid cleaning issues)
 sourceSets {
     main {
+        kotlin {
+            srcDir "${buildDir}/generated/source/kapt/main/"
+        }
+    }
+    generated {
         java {
             srcDir "${projectDir}/generated/source/kapt/main/"
         }
@@ -41,9 +48,24 @@ task buildKapt(type: Copy) {
     into "${projectDir}/generated"
 }
 
+// Kapt hijacks anything named "compile"
+task buildGenerated(type: JavaCompile) {
+    source = sourceSets.generated.allJava
+    classpath = sourceSets.generated.compileClasspath + sourceSets.main.compileClasspath + sourceSets.main.output
+    destinationDir = file("$buildDir/classes/generated")
+}
+
 // Remove the dependency on compile in kapt to avoid automatic kapt running - run :node-schemas:kaptKotlin explicitly.
 project.afterEvaluate {
+    jar.dependsOn.each { jar.dependsOn.remove it }
+    buildGenerated.dependsOn.each { buildGenerated.dependsOn.remove it }
+    jar.dependsOn buildGenerated
+    buildGenerated.dependsOn classes
     compileKotlin.dependsOn.remove kaptKotlin
     buildKapt.dependsOn kaptKotlin
     buildKapt.mustRunAfter kaptKotlin
+}
+
+jar {
+    from sourceSets.generated.output
 }
