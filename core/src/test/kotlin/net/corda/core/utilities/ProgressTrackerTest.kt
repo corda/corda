@@ -4,7 +4,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import net.corda.core.serialization.createInternalKryo
+import net.corda.core.serialization.createTestKryo
 import net.corda.core.serialization.serialize
 import org.junit.Before
 import org.junit.Test
@@ -106,7 +106,7 @@ class ProgressTrackerTest {
             }
         }
 
-        val kryo = createInternalKryo().apply {
+        val kryo = createTestKryo().apply {
             // This is required to make sure Kryo walks through the auto-generated members for the lambda below.
             fieldSerializerConfig.isIgnoreSyntheticFields = false
         }

@@ -3,7 +3,7 @@ package net.corda.node.utilities
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.serialization.threadLocalStorageKryo
+import net.corda.core.serialization.storageKryo
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import org.jetbrains.exposed.sql.*
@@ -65,7 +65,7 @@ fun bytesToBlob(value: SerializedBytes<*>, finalizables: MutableList<() -> Unit>
     return blob
 }
 
-fun serializeToBlob(value: Any, finalizables: MutableList<() -> Unit>): Blob = bytesToBlob(value.serialize(threadLocalStorageKryo(), true), finalizables)
+fun serializeToBlob(value: Any, finalizables: MutableList<() -> Unit>): Blob = bytesToBlob(value.serialize(storageKryo(), true), finalizables)
 
 fun <T : Any> bytesFromBlob(blob: Blob): SerializedBytes<T> {
     try {

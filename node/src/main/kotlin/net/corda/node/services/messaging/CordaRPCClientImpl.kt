@@ -113,18 +113,20 @@ class CordaRPCClientImpl(private val session: ClientSession,
     @GuardedBy("sessionLock")
     private val addressToQueuedObservables = CacheBuilder.newBuilder().weakValues().build<String, QueuedObservable>()
     // This is used to hold a reference counted hard reference when we know there are subscribers.
-    private val hardReferencesToQueuedObservables = mutableSetOf<QueuedObservable>()
+    private val hardReferencesToQueuedObservables = Collections.synchronizedSet(mutableSetOf<QueuedObservable>())
 
     private var producer: ClientProducer? = null
 
-    private inner class ObservableDeserializer(private val qName: String,
-                                               private val rpcName: String,
-                                               private val rpcLocation: Throwable) : Serializer<Observable<Any>>() {
+    class ObservableDeserializer() : Serializer<Observable<Any>>() {
         override fun read(kryo: Kryo, input: Input, type: Class<Observable<Any>>): Observable<Any> {
+            val qName = kryo.context[RPCKryoQNameKey] as String
+            val rpcName = kryo.context[RPCKryoMethodNameKey] as String
+            val rpcLocation = kryo.context[RPCKryoLocationKey] as Throwable
+            val rpcClient = kryo.context[RPCKryoClientKey] as CordaRPCClientImpl
             val handle = input.readInt(true)
-            val ob = sessionLock.withLock {
-                addressToQueuedObservables.getIfPresent(qName) ?: QueuedObservable(qName, rpcName, rpcLocation, this).apply {
-                    addressToQueuedObservables.put(qName, this)
+            val ob = rpcClient.sessionLock.withLock {
+                rpcClient.addressToQueuedObservables.getIfPresent(qName) ?: rpcClient.QueuedObservable(qName, rpcName, rpcLocation).apply {
+                    rpcClient.addressToQueuedObservables.put(qName, this)
                 }
             }
             val result = ob.getForHandle(handle)
@@ -182,9 +184,17 @@ class CordaRPCClientImpl(private val session: ClientSession,
 
             checkMethodVersion(method)
 
-            // sendRequest may return a reconfigured Kryo if the method returns observables.
-            val kryo: Kryo = sendRequest(args, location, method) ?: createRPCKryo()
-            val next: ErrorOr<*> = receiveResponse(kryo, method, timeout)
+            val msg: ClientMessage = createMessage(method)
+            // We could of course also check the return type of the method to see if it's Observable, but I'd
+            // rather haved the annotation be used consistently.
+            val returnsObservables = method.isAnnotationPresent(RPCReturnsObservables::class.java)
+            val kryo = if (returnsObservables) maybePrepareForObservables(location, method, msg) else createRPCKryoForDeserialization(this@CordaRPCClientImpl)
+            val next: ErrorOr<*> = try {
+                sendRequest(args, msg)
+                receiveResponse(kryo, method, timeout)
+            } finally {
+                releaseRPCKryoForDeserialization(kryo)
+            }
             rpcLog.debug { "<- RPC <- ${method.name} = $next" }
             return unwrapOrThrow(next)
         }
@@ -215,22 +225,18 @@ class CordaRPCClientImpl(private val session: ClientSession,
             return next
         }
 
-        private fun sendRequest(args: Array<out Any>?, location: Throwable, method: Method): Kryo? {
-            // We could of course also check the return type of the method to see if it's Observable, but I'd
-            // rather haved the annotation be used consistently.
-            val returnsObservables = method.isAnnotationPresent(RPCReturnsObservables::class.java)
-
+        private fun sendRequest(args: Array<out Any>?, msg: ClientMessage) {
             sessionLock.withLock {
-                val msg: ClientMessage = createMessage(method)
-                val kryo = if (returnsObservables) maybePrepareForObservables(location, method, msg) else null
+                val argsKryo = createRPCKryoForDeserialization(this@CordaRPCClientImpl)
                 val serializedArgs = try {
-                    (args ?: emptyArray<Any?>()).serialize(createRPCKryo())
+                    (args ?: emptyArray<Any?>()).serialize(argsKryo)
                 } catch (e: KryoException) {
                     throw RPCException("Could not serialize RPC arguments", e)
+                } finally {
+                    releaseRPCKryoForDeserialization(argsKryo)
                 }
                 msg.writeBodyBufferBytes(serializedArgs.bytes)
                 producer!!.send(ArtemisMessagingComponent.RPC_REQUESTS_QUEUE, msg)
-                return kryo
             }
         }
 
@@ -242,7 +248,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
             msg.putLongProperty(ClientRPCRequestMessage.OBSERVATIONS_TO, observationsId)
             // And make sure that we deserialise observable handles so that they're linked to the right
             // queue. Also record a bit of metadata for debugging purposes.
-            return createRPCKryo(observableSerializer = ObservableDeserializer(observationsQueueName, method.name, location))
+            return createRPCKryoForDeserialization(this@CordaRPCClientImpl, observationsQueueName, method.name, location)
         }
 
         private fun createMessage(method: Method): ClientMessage {
@@ -278,8 +284,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
     @ThreadSafe
     private inner class QueuedObservable(private val qName: String,
                                          private val rpcName: String,
-                                         private val rpcLocation: Throwable,
-                                         private val observableDeserializer: ObservableDeserializer) {
+                                         private val rpcLocation: Throwable) {
         private val root = PublishSubject.create<MarshalledObservation>()
         private val rootShared = root.doOnUnsubscribe { close() }.share()
 
@@ -345,8 +350,10 @@ class CordaRPCClientImpl(private val session: ClientSession,
 
         private fun deliver(msg: ClientMessage) {
             msg.acknowledge()
-            val kryo = createRPCKryo(observableSerializer = observableDeserializer)
-            val received: MarshalledObservation = msg.deserialize(kryo)
+            val kryo = createRPCKryoForDeserialization(this@CordaRPCClientImpl, qName, rpcName, rpcLocation)
+            val received: MarshalledObservation = try { msg.deserialize(kryo) } finally {
+                releaseRPCKryoForDeserialization(kryo)
+            }
             rpcLog.debug { "<- Observable [$rpcName] <- Received $received" }
             synchronized(observables) {
                 // Force creation of the buffer if it doesn't already exist.

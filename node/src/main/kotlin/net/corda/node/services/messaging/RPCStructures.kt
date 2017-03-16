@@ -7,6 +7,7 @@ import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.*
@@ -88,10 +89,16 @@ object ClassSerializer : Serializer<Class<*>>() {
 @CordaSerializable
 class PermissionException(msg: String) : RuntimeException(msg)
 
+object RPCKryoClientKey
+object RPCKryoDispatcherKey
+object RPCKryoQNameKey
+object RPCKryoMethodNameKey
+object RPCKryoLocationKey
+
 // The Kryo used for the RPC wire protocol. Every type in the wire protocol is listed here explicitly.
 // This is annoying to write out, but will make it easier to formalise the wire protocol when the time comes,
 // because we can see everything we're using in one place.
-private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null) : CordaKryo(makeStandardClassResolver()) {
+private class RPCKryo(observableSerializer: Serializer<Observable<Any>>) : CordaKryo(makeStandardClassResolver()) {
     init {
         DefaultKryoCustomizer.customize(this)
 
@@ -99,49 +106,68 @@ private class RPCKryo(observableSerializer: Serializer<Observable<Any>>? = null)
         register(Class::class.java, ClassSerializer)
         register(MultipartStream.ItemInputStream::class.java, InputStreamSerializer)
         register(MarshalledObservation::class.java, ImmutableClassSerializer(MarshalledObservation::class))
-    }
-
-    // TODO: workaround to prevent Observable registration conflict when using plugin registered kyro classes
-    private val observableRegistration: Registration? = observableSerializer?.let { register(Observable::class.java, it, 10000) }
-
-    private val listenableFutureRegistration: Registration? = observableSerializer?.let {
-        // Register ListenableFuture by making use of Observable serialisation.
-        // TODO Serialisation could be made more efficient as a future can only emit one value (or exception)
+        register(Observable::class.java, observableSerializer)
         @Suppress("UNCHECKED_CAST")
         register(ListenableFuture::class,
-                read = { kryo, input -> it.read(kryo, input, Observable::class.java as Class<Observable<Any>>).toFuture() },
-                write = { kryo, output, obj -> it.write(kryo, output, obj.toObservable()) }
+                read = { kryo, input -> observableSerializer.read(kryo, input, Observable::class.java as Class<Observable<Any>>).toFuture() },
+                write = { kryo, output, obj -> observableSerializer.write(kryo, output, obj.toObservable()) }
+        )
+        register(
+                FlowException::class,
+                read = { kryo, input ->
+                    val message = input.readString()
+                    val cause = kryo.readObjectOrNull(input, Throwable::class.java)
+                    FlowException(message, cause)
+                },
+                write = { kryo, output, obj ->
+                    // The subclass may have overridden toString so we use that
+                    val message = if (obj.javaClass != FlowException::class.java) obj.toString() else obj.message
+                    output.writeString(message)
+                    kryo.writeObjectOrNull(output, obj.cause, Throwable::class.java)
+                }
         )
     }
 
-    // Avoid having to worry about the subtypes of FlowException by converting all of them to just FlowException.
-    // This is a temporary hack until a proper serialisation mechanism is in place.
-    private val flowExceptionRegistration: Registration = register(
-            FlowException::class,
-            read = { kryo, input ->
-                val message = input.readString()
-                val cause = kryo.readObjectOrNull(input, Throwable::class.java)
-                FlowException(message, cause)
-            },
-            write = { kryo, output, obj ->
-                // The subclass may have overridden toString so we use that
-                val message = if (obj.javaClass != FlowException::class.java) obj.toString() else obj.message
-                output.writeString(message)
-                kryo.writeObjectOrNull(output, obj.cause, Throwable::class.java)
-            }
-    )
-
     override fun getRegistration(type: Class<*>): Registration {
-        if (Observable::class.java.isAssignableFrom(type))
-            return observableRegistration ?:
-                    throw IllegalStateException("This RPC was not annotated with @RPCReturnsObservables")
-        if (ListenableFuture::class.java.isAssignableFrom(type))
-            return listenableFutureRegistration ?:
-                    throw IllegalStateException("This RPC was not annotated with @RPCReturnsObservables")
+        val annotated = context[RPCKryoQNameKey] != null
+        if (Observable::class.java.isAssignableFrom(type)) {
+            return if (annotated) super.getRegistration(Observable::class.java)
+            else throw IllegalStateException("This RPC was not annotated with @RPCReturnsObservables")
+        }
+        if (ListenableFuture::class.java.isAssignableFrom(type)) {
+            return if (annotated) super.getRegistration(ListenableFuture::class.java)
+            else throw IllegalStateException("This RPC was not annotated with @RPCReturnsObservables")
+        }
         if (FlowException::class.java.isAssignableFrom(type))
-            return flowExceptionRegistration
+            return super.getRegistration(FlowException::class.java)
         return super.getRegistration(type)
     }
 }
 
-fun createRPCKryo(observableSerializer: Serializer<Observable<Any>>? = null): Kryo = RPCKryo(observableSerializer)
+private val rpcSerKryoPool = KryoPool.Builder { RPCKryo(RPCDispatcher.ObservableSerializer()) }.build()
+
+fun createRPCKryoForSerialization(qName: String? = null, dispatcher: RPCDispatcher? = null): Kryo {
+    val kryo = rpcSerKryoPool.borrow()
+    kryo.context.put(RPCKryoQNameKey, qName)
+    kryo.context.put(RPCKryoDispatcherKey, dispatcher)
+    return kryo
+}
+
+fun releaseRPCKryoForSerialization(kryo: Kryo) {
+    rpcSerKryoPool.release(kryo)
+}
+
+private val rpcDesKryoPool = KryoPool.Builder { RPCKryo(CordaRPCClientImpl.ObservableDeserializer()) }.build()
+
+fun createRPCKryoForDeserialization(rpcClient: CordaRPCClientImpl, qName: String? = null, rpcName: String? = null, rpcLocation: Throwable? = null): Kryo {
+    val kryo = rpcDesKryoPool.borrow()
+    kryo.context.put(RPCKryoClientKey, rpcClient)
+    kryo.context.put(RPCKryoQNameKey, qName)
+    kryo.context.put(RPCKryoMethodNameKey, rpcName)
+    kryo.context.put(RPCKryoLocationKey, rpcLocation)
+    return kryo
+}
+
+fun releaseRPCKryoForDeserialization(kryo: Kryo) {
+    rpcDesKryoPool.release(kryo)
+}

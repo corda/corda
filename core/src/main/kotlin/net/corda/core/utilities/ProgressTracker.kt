@@ -88,7 +88,7 @@ class ProgressTracker(vararg steps: Step) {
     @CordaSerializable
     private data class Child(val tracker: ProgressTracker, @Transient val subscription: Subscription?)
 
-    private val childProgressTrackers = HashMap<Step, Child>()
+    private val childProgressTrackers = mutableMapOf<Step, Child>()
 
     init {
         steps.forEach {

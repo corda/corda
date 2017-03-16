@@ -8,7 +8,6 @@ import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.*
 import net.corda.core.crypto.AbstractParty
-import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.ServiceHub
@@ -16,9 +15,9 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.createKryo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.serialization.storageKryo
 import net.corda.core.tee
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -76,8 +75,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                             index = it.key.index
                             stateStatus = Vault.StateStatus.UNCONSUMED
                             contractStateClassName = it.value.state.data.javaClass.name
-                            // TODO: revisit Kryo bug when using THREAD_LOCAL_KYRO
-                            contractState = it.value.state.serialize(createKryo()).bytes
+                            contractState = it.value.state.serialize(storageKryo()).bytes
                             notaryName = it.value.state.notary.name
                             notaryKey = it.value.state.notary.owningKey.toBase58String()
                             recordedTime = services.clock.instant()
@@ -165,8 +163,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                 Sequence{iterator}
                         .map { it ->
                             val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
-                            // TODO: revisit Kryo bug when using THREAD_LOCAL_KRYO
-                            val state = it.contractState.deserialize<TransactionState<T>>(createKryo())
+                            val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
                             StateAndRef(state, stateRef)
                         }
             }
@@ -184,7 +181,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                                 .and(VaultSchema.VaultStates::index eq it.index)
                         result.get()?.each {
                             val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
-                            val state = it.contractState.deserialize<TransactionState<*>>()
+                            val state = it.contractState.deserialize<TransactionState<*>>(storageKryo())
                             results += StateAndRef(state, stateRef)
                         }
                     }
@@ -353,7 +350,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
             while (rs.next()) {
                 val txHash = SecureHash.parse(rs.getString(1))
                 val index = rs.getInt(2)
-                val state = rs.getBytes(3).deserialize<TransactionState<ContractState>>(createKryo())
+                val state = rs.getBytes(3).deserialize<TransactionState<ContractState>>(storageKryo())
                 consumedStates.add(StateAndRef(state, StateRef(txHash, index)))
             }
         }
