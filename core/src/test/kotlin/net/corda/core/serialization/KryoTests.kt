@@ -11,11 +11,13 @@ import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.security.Security
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class KryoTests {
 
@@ -123,6 +125,14 @@ class KryoTests {
         val serializedMetaData = meta.bytes()
         val meta2 = serializedMetaData.deserialize<MetaData>()
         assertEquals(meta2, meta)
+    }
+
+    @Test
+    fun `serialize - deserialize Logger`() {
+        val logger = LoggerFactory.getLogger("aName")
+        val logger2 = logger.serialize(storageKryo()).deserialize(storageKryo())
+        assertEquals(logger.name, logger2.name)
+        assertTrue(logger === logger2)
     }
 
     @CordaSerializable

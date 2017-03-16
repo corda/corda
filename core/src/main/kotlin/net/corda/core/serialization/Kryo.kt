@@ -5,7 +5,6 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.serializers.JavaSerializer
-import com.esotericsoftware.kryo.serializers.MapSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.contracts.*
@@ -17,6 +16,8 @@ import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.*
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
@@ -577,5 +578,17 @@ object MetaDataSerializer : Serializer<MetaData>() {
         val merkleRoot = input.readBytesWithLength()
         val publicKey = Crypto.decodePublicKey(input.readBytesWithLength(), schemeCodeName)
         return MetaData(schemeCodeName, versionID, signatureType, timestamp, visibleInputs, signedInputs, merkleRoot, publicKey)
+    }
+}
+
+/** For serialising a Logger. */
+@ThreadSafe
+object LoggerSerializer : Serializer<Logger>() {
+    override fun write(kryo: Kryo, output: Output, obj: Logger) {
+        output.writeString(obj.name)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<Logger>): Logger {
+        return LoggerFactory.getLogger(input.readString())
     }
 }
