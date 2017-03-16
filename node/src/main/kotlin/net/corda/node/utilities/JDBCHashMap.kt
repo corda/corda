@@ -26,7 +26,7 @@ import kotlin.system.measureTimeMillis
  * TODO: make this value configurable
  * TODO: tune this value, as it's currently mostly a guess
  */
-val DEFAULT_MAX_BUCKETS = (256 * (1 + Math.max(0, Runtime.getRuntime().maxMemory() - 128) / 64)).toInt()
+val DEFAULT_MAX_BUCKETS = (256 * (1 + Math.max(0, (Runtime.getRuntime().maxMemory() - 128) / 64))).toInt()
 
 /**
  * A convenient JDBC table backed hash map with iteration order based on insertion order.
