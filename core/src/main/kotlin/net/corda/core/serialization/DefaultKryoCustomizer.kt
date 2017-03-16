@@ -17,6 +17,7 @@ import net.corda.core.utilities.NonEmptySetSerializer
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.objenesis.strategy.StdInstantiatorStrategy
+import org.slf4j.Logger
 import java.io.BufferedInputStream
 import java.util.*
 
@@ -34,7 +35,7 @@ object DefaultKryoCustomizer {
             // for change to a class.
             setDefaultSerializer(CompatibleFieldSerializer::class.java)
             // Take the safest route here and allow subclasses to have fields named the same as super classes.
-            fieldSerializerConfig.setCachedFieldNameStrategy(FieldSerializer.CachedFieldNameStrategy.EXTENDED)
+            fieldSerializerConfig.cachedFieldNameStrategy = FieldSerializer.CachedFieldNameStrategy.EXTENDED
 
             // Allow construction of objects using a JVM backdoor that skips invoking the constructors, if there is no
             // no-arg constructor available.
@@ -77,6 +78,8 @@ object DefaultKryoCustomizer {
 
             register(MetaData::class.java, MetaDataSerializer)
             register(BitSet::class.java, ReferencesAwareJavaSerializer)
+
+            addDefaultSerializer(Logger::class.java, LoggerSerializer)
 
             val customization = KryoSerializationCustomization(this)
             pluginRegistries.forEach { it.customizeSerialization(customization) }
