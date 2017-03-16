@@ -43,7 +43,7 @@ An example configuration:
 The most important fields regarding network configuration are:
 
 * ``p2pAddress``: This specifies a host and port to which Artemis will bind for messaging with other nodes. Note that the
-  address bound will **NOT** be ``my-corda-node``, but rather ``::`` (all addresses on all interfaces). The hostname specified
+  address bound will **NOT** be ``my-corda-node``, but rather ``::`` (all addresses on all network interfaces). The hostname specified
   is the hostname *that must be externally resolvable by other nodes in the network*. In the above configuration this is the
   resolvable name of a machine in a VPN.
 * ``rpcAddress``: The address to which Artemis will bind for RPC calls.

@@ -83,7 +83,7 @@ path to the node's base directory.
         note that the host is the included as the advertised entry in the NetworkMapService. As a result the value listed
         here must be externally accessible when running nodes across a cluster of machines.
 
-:rpcAddress: The address of the Artemis RPC broker instance. If not provided the node will start without RPC connectivity.
+:rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC.
 
 :webAddress: The host and port on which the bundled webserver will listen if it is started.
 
