@@ -21,11 +21,12 @@ import kotlin.system.measureTimeMillis
 
 /**
  * The default maximum size of the LRU cache.
+ * Current computation is linear to max heap size, ensuring a minimum of 256 buckets.
  *
  * TODO: make this value configurable
  * TODO: tune this value, as it's currently mostly a guess
  */
-val DEFAULT_MAX_BUCKETS = 4096
+val DEFAULT_MAX_BUCKETS = (256 * (1 + Math.max(0, (Runtime.getRuntime().maxMemory()/1000000 - 128) / 64))).toInt()
 
 /**
  * A convenient JDBC table backed hash map with iteration order based on insertion order.
