@@ -1,10 +1,10 @@
 package net.corda.node.services
 
+import net.corda.core.crypto.Party
+import net.corda.core.crypto.composite
+import net.corda.core.crypto.generateKeyPair
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.testing.ALICE
-import net.corda.testing.ALICE_PUBKEY
-import net.corda.testing.BOB
-import net.corda.testing.BOB_PUBKEY
+import net.corda.testing.*
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -40,11 +40,17 @@ class InMemoryIdentityServiceTests {
     }
 
     @Test
-    fun `get identity by name`() {
+    fun `get identity by name with no registered identities`() {
         val service = InMemoryIdentityService()
         assertNull(service.partyFromName(ALICE.name))
-        service.registerIdentity(ALICE)
-        assertEquals(ALICE, service.partyFromName(ALICE.name))
-        assertNull(service.partyFromName(BOB.name))
+    }
+
+    @Test
+    fun `get identity by name`() {
+        val service = InMemoryIdentityService()
+        val identities = listOf("Node A", "Node B", "Node C").map { Party(it, generateKeyPair().public.composite) }
+        assertNull(service.partyFromName(identities.first().name))
+        identities.forEach { service.registerIdentity(it) }
+        identities.forEach { assertEquals(it, service.partyFromName(it.name)) }
     }
 }
