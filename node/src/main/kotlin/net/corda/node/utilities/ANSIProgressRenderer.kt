@@ -62,7 +62,7 @@ object ANSIProgressRenderer {
             // than doing things the official way with a dedicated plugin, etc, as it avoids mucking around with all
             // the config XML and lifecycle goop.
             val manager = LogManager.getContext(false) as LoggerContext
-            val consoleAppender = manager.configuration.appenders.values.filterIsInstance<ConsoleAppender>().single()
+            val consoleAppender = manager.configuration.appenders.values.filterIsInstance<ConsoleAppender>().first()
             val scrollingAppender = object : AbstractOutputStreamAppender<OutputStreamManager>(
                     consoleAppender.name, consoleAppender.layout, consoleAppender.filter,
                     consoleAppender.ignoreExceptions(), true, consoleAppender.manager) {
