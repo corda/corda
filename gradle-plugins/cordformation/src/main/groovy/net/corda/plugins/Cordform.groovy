@@ -92,7 +92,7 @@ class Cordform extends DefaultTask {
         Node networkMapNode = getNodeByName(networkMapNodeName)
         nodes.each {
             if(it != networkMapNode) {
-                it.networkMapAddress(networkMapNode.getArtemisAddress(), networkMapNodeName)
+                it.networkMapAddress(networkMapNode.getP2PAddress(), networkMapNodeName)
             }
             it.build(directory.toFile())
         }

@@ -73,7 +73,7 @@ abstract class NodeBasedTest {
                 rpcUsers,
                 mapOf(
                         "networkMapService" to mapOf(
-                                "address" to networkMapNode.configuration.artemisAddress.toString(),
+                                "address" to networkMapNode.configuration.p2pAddress.toString(),
                                 "legalName" to networkMapNode.info.legalIdentity.name
                         )
                 ) + configOverrides
@@ -121,7 +121,8 @@ abstract class NodeBasedTest {
                 allowMissingConfig = true,
                 configOverrides = mapOf(
                         "myLegalName" to legalName,
-                        "artemisAddress" to freeLocalHostAndPort().toString(),
+                        "p2pAddress" to freeLocalHostAndPort().toString(),
+                        "rpcAddress" to freeLocalHostAndPort().toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                         "rpcUsers" to rpcUsers.map {
                             mapOf(

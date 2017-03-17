@@ -105,7 +105,7 @@ data class NodeHandle(
         val configuration: FullNodeConfiguration,
         val process: Process
 ) {
-    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.artemisAddress, configuration)
+    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!)
 }
 
 sealed class PortAllocation {
@@ -342,16 +342,18 @@ open class DriverDSL(
 
     override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>,
                            rpcUsers: List<User>, customOverrides: Map<String, Any?>): ListenableFuture<NodeHandle> {
-        val messagingAddress = portAllocation.nextHostAndPort()
-        val apiAddress = portAllocation.nextHostAndPort()
+        val p2pAddress = portAllocation.nextHostAndPort()
+        val rpcAddress = portAllocation.nextHostAndPort()
+        val webAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val name = providedName ?: "${pickA(name)}-${messagingAddress.port}"
+        val name = providedName ?: "${pickA(name)}-${p2pAddress.port}"
 
         val baseDirectory = driverDirectory / name
         val configOverrides = mapOf(
                 "myLegalName" to name,
-                "artemisAddress" to messagingAddress.toString(),
-                "webAddress" to apiAddress.toString(),
+                "p2pAddress" to p2pAddress.toString(),
+                "rpcAddress" to rpcAddress.toString(),
+                "webAddress" to webAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                 "networkMapService" to mapOf(
                         "address" to networkMapAddress.toString(),
@@ -379,7 +381,8 @@ open class DriverDSL(
         val processFuture = startNode(executorService, configuration, quasarJarPath, debugPort)
         registerProcess(processFuture)
         return processFuture.flatMap { process ->
-            establishRpc(messagingAddress, configuration).flatMap { rpc ->
+            // We continue to use SSL enabled port for RPC when its for node user.
+            establishRpc(p2pAddress, configuration).flatMap { rpc ->
                 rpc.waitUntilRegisteredWithNetworkMap().map {
                     NodeHandle(rpc.nodeIdentity(), rpc, configuration, process)
                 }
@@ -465,7 +468,7 @@ open class DriverDSL(
                         // TODO: remove the webAddress as NMS doesn't need to run a web server. This will cause all
                         //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
                         "webAddress" to apiAddress,
-                        "artemisAddress" to networkMapAddress.toString(),
+                        "p2pAddress" to networkMapAddress.toString(),
                         "useTestClock" to useTestClock
                 )
         )
@@ -536,7 +539,7 @@ open class DriverDSL(
             val process = builder.start()
             // TODO There is a race condition here. Even though the messaging address is bound it may be the case that
             // the handlers for the advertised services are not yet registered. Needs rethinking.
-            return addressMustBeBound(executorService, nodeConf.artemisAddress).map { process }
+            return addressMustBeBound(executorService, nodeConf.p2pAddress).map { process }
         }
 
         private fun startWebserver(
@@ -554,7 +557,7 @@ open class DriverDSL(
                 emptyList()
 
             val javaArgs = listOf(path) +
-                    listOf("-Dname=node-${nodeConf.artemisAddress}-webserver") + debugPortArg +
+                    listOf("-Dname=node-${nodeConf.p2pAddress}-webserver") + debugPortArg +
                     listOf(
                             "-cp", classpath, className,
                             "--base-directory", nodeConf.baseDirectory.toString())

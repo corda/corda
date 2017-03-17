@@ -18,10 +18,9 @@ import java.nio.file.Paths
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
-    val certPath = getCertPath(args)
-    val host = HostAndPort.fromString("localhost:10002")
+    val host = HostAndPort.fromString("localhost:10003")
     println("Connecting to the recipient node ($host)")
-    CordaRPCClient(host, sslConfigFor("Party", certPath)).use("demo", "demo") {
+    CordaRPCClient(host).use("demo", "demo") {
         val api = NotaryDemoClientApi(this)
         api.startNotarisation()
     }
