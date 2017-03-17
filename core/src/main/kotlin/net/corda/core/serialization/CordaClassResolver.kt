@@ -93,11 +93,9 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
                 || (type.superclass != null && hasAnnotationOnInterface(type.superclass))
     }
 
-    // Always reset, even if references are off (see superclass).
+    // Need to clear out class names from attachments.
     override fun reset() {
-        if (classToNameId != null) classToNameId.clear()
-        if (nameIdToClass != null) nameIdToClass.clear()
-        nextNameId = 0
+        super.reset()
         // Kryo creates a cache of class name to Class<*> which does not work so well with multiple class loaders.
         // TODO: come up with a more efficient way.  e.g. segregate the name space by class loader.
         if(nameToClass != null) {

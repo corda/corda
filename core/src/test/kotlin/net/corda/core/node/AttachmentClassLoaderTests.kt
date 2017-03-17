@@ -253,7 +253,18 @@ class AttachmentClassLoaderTests {
         val state2 = bytes.deserialize(kryo)
         assertEquals(cl, state2.contract.javaClass.classLoader)
         assertNotNull(state2)
+
+        // We should be able to load same class from a different class loader and have them be distinct.
+        val cl2 = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
+
+        kryo.classLoader = cl2
+        kryo.addToWhitelist(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl2))
+
+        val state3 = bytes.deserialize(kryo)
+        assertEquals(cl2, state3.contract.javaClass.classLoader)
+        assertNotNull(state3)
     }
+
 
     @Test
     fun `test serialization of WireTransaction with statically loaded contract`() {
