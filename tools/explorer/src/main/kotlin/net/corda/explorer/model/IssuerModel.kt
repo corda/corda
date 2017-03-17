@@ -1,11 +1,11 @@
 package net.corda.explorer.model
 
 import javafx.collections.ObservableList
-import net.corda.client.fxutils.ChosenList
-import net.corda.client.fxutils.map
-import net.corda.client.model.NetworkIdentityModel
-import net.corda.client.model.observableList
-import net.corda.client.model.observableValue
+import net.corda.client.fx.utils.ChosenList
+import net.corda.client.fx.utils.map
+import net.corda.client.fx.model.NetworkIdentityModel
+import net.corda.client.fx.model.observableList
+import net.corda.client.fx.model.observableValue
 import net.corda.core.contracts.currency
 import net.corda.core.node.NodeInfo
 import tornadofx.observable

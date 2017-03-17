@@ -9,9 +9,9 @@ import javafx.scene.image.Image
 import javafx.stage.Stage
 import jfxtras.resources.JFXtrasFontRoboto
 import joptsimple.OptionParser
+import net.corda.client.fx.model.Models
+import net.corda.client.fx.model.observableValue
 import net.corda.client.mock.EventGenerator
-import net.corda.client.model.Models
-import net.corda.client.model.observableValue
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
 import net.corda.core.node.services.ServiceInfo

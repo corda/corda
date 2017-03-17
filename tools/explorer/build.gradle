@@ -40,7 +40,8 @@ dependencies {
 
     // Corda Core: Data structures and basic types needed to work with Corda.
     compile project(':core')
-    compile project(':client')
+    compile project(':client:javafx')
+    compile project(':client:mock')
     compile project(':node')
     compile project(':finance')
 

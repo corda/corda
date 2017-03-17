@@ -10,9 +10,9 @@ import javafx.scene.layout.GridPane
 import javafx.scene.layout.Priority
 import javafx.scene.text.TextAlignment
 import javafx.util.StringConverter
-import net.corda.client.fxutils.map
-import net.corda.client.model.Models
-import net.corda.client.model.NetworkIdentityModel
+import net.corda.client.fx.model.Models
+import net.corda.client.fx.model.NetworkIdentityModel
+import net.corda.client.fx.utils.map
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.AnonymousParty

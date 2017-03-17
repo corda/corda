@@ -8,11 +8,7 @@ import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.AbstractParty
-import net.corda.core.crypto.AnonymousParty
-import net.corda.core.flows.FlowException
-import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.flows.CashException
 import net.corda.flows.CashFlowCommand
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeHandle

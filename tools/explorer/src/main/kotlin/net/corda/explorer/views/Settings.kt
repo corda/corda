@@ -8,9 +8,9 @@ import javafx.scene.control.CheckBox
 import javafx.scene.control.ComboBox
 import javafx.scene.control.Label
 import javafx.scene.control.TextField
-import net.corda.client.fxutils.map
-import net.corda.client.model.objectProperty
-import net.corda.client.model.observableList
+import net.corda.client.fx.model.objectProperty
+import net.corda.client.fx.model.observableList
+import net.corda.client.fx.utils.map
 import net.corda.explorer.model.CordaView
 import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.model.SettingsModel

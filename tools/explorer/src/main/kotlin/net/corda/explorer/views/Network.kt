@@ -23,8 +23,8 @@ import javafx.scene.shape.Line
 import javafx.scene.text.Font
 import javafx.scene.text.FontWeight
 import javafx.util.Duration
-import net.corda.client.fxutils.*
-import net.corda.client.model.*
+import net.corda.client.fx.model.*
+import net.corda.client.fx.utils.*
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.Party
 import net.corda.core.node.NodeInfo

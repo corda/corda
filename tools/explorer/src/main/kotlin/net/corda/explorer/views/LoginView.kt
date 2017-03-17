@@ -6,9 +6,9 @@ import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.scene.control.*
 import javafx.stage.FileChooser
-import net.corda.client.fxutils.map
-import net.corda.client.model.NodeMonitorModel
-import net.corda.client.model.objectProperty
+import net.corda.client.fx.model.NodeMonitorModel
+import net.corda.client.fx.model.objectProperty
+import net.corda.client.fx.utils.map
 import net.corda.explorer.model.SettingsModel
 import net.corda.node.services.config.SSLConfiguration
 import org.controlsfx.dialog.ExceptionDialog
